@@ -35,11 +35,31 @@ for path in list((ROOT / 'Assets').rglob('*.asset')) + list((ROOT / 'Assets').rg
         if value not in guids and int(value, 16) != 0:
             errors.append('Unresolved GUID ' + value + ' in ' + str(path.relative_to(ROOT)))
 
+assemblies = {}
 for path in list((ROOT / 'Assets').rglob('*.asmdef')) + list((ROOT / 'Assets').rglob('*.json')) + [ROOT / 'Packages/manifest.json']:
     try:
-        json.loads(path.read_text())
+        data = json.loads(path.read_text())
+        if path.suffix == '.asmdef':
+            name = data.get('name')
+            if not name or name in assemblies:
+                errors.append('Missing or duplicate assembly name: ' + str(path.relative_to(ROOT)))
+            else:
+                assemblies[name] = data
     except Exception as exc:
         errors.append('Invalid JSON: ' + str(path.relative_to(ROOT)) + ': ' + str(exc))
+
+# Unity package imports still require the Editor. Check local assembly boundaries and
+# the explicitly declared uGUI dependency here so a misspelled reference cannot pass as JSON.
+dependencies = json.loads((ROOT / 'Packages/manifest.json').read_text()).get('dependencies', {})
+external_assemblies = {'UnityEngine.UI'} if 'com.unity.ugui' in dependencies else set()
+for name, data in assemblies.items():
+    for reference in data.get('references', []):
+        if reference not in assemblies and reference not in external_assemblies:
+            errors.append('Unknown assembly reference: ' + name + ' -> ' + reference)
+        elif reference in assemblies:
+            target = assemblies[reference]
+            if target.get('includePlatforms') == ['Editor'] and data.get('includePlatforms') != ['Editor']:
+                errors.append('Player assembly references Editor-only code: ' + name + ' -> ' + reference)
 
 images = []
 for path in sorted((ROOT / 'Assets').rglob('*.png')):
@@ -76,14 +96,24 @@ asset = (ROOT / 'Assets/Rokas/Resources/RokasAssets.asset').read_text()
 fields = ['home', 'portal', 'subway', 'enemy', 'familiar', 'sans', 'serif', 'contract',
           'homeAmbience', 'subwayAmbience', 'homeMusic', 'missionMusic', 'click', 'hit', 'critical', 'portalSound', 'seal', 'mame']
 for name in fields:
-    if not re.search(r'^  ' + name + r': \{fileID: [1-9][0-9]*, guid: [0-9a-f]{32}, type: 3\}', asset, re.M):
+    matches = re.findall(r'^  ' + name + r': \{fileID: ([1-9][0-9]*), guid: ([0-9a-f]{32}), type: 3\}', asset, re.M)
+    if len(matches) != 1:
         errors.append('Missing presentation binding: ' + name)
+        continue
+    file_id, guid = matches[0]
+    expected = (('12800000', '.ttf') if name in ('sans', 'serif') else
+                ('4900000', '.json') if name == 'contract' else
+                ('2800000', '.png') if name in fields[:5] else ('8300000', '.wav'))
+    target = guids.get(guid)
+    if not target or (file_id, target.suffix.lower()) != expected:
+        errors.append('Wrong imported asset type in binding: ' + name)
 
 if errors:
     print('\n'.join('FAIL: ' + error for error in errors))
     sys.exit(1)
 print(f'PASS: {asset_count} assets, {len(guids)} unique metas, {references} resolved serialized GUID references.')
 print(f'PASS: {len(images)} PNGs (RGBA characters), {audio_count} stereo PCM assets, 18 presentation bindings, enabled bootstrap scene.')
+print(f'PASS: {len(assemblies)} assembly definitions and declared references; presentation binding file types match.')
 for name, width, height in images:
     print(f'  {name}: {width}x{height}')
 print('Unity import, C# presentation compilation, PlayMode and Windows player validation are separate required checks.')

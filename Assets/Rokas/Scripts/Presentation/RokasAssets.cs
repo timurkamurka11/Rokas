@@ -26,7 +26,9 @@ namespace Rokas.Presentation
 
         public bool IsComplete()
         {
-            return home && portal && subway && enemy && familiar && sans && serif && contract;
+            return home && portal && subway && enemy && familiar && sans && serif && contract
+                && homeAmbience && subwayAmbience && homeMusic && missionMusic
+                && click && hit && critical && portalSound && seal && mame;
         }
     }
 }
