@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Rokas.Core;
 
 namespace Rokas.Core.Tests
@@ -19,13 +20,20 @@ namespace Rokas.Core.Tests
             UpgradeCannotOverspend();
             TeaCannotStackAndExpiresOnReturn();
             CorruptPrimaryRecoversBackup();
+            PartialPrimaryRecoversBackupWithoutDiscardingDamage();
+            MissingOrNullSettingsRecoverBackup();
+            JsonShapeUsesObjectKeysRatherThanTextMatches();
             FutureVersionIsPreserved();
+            LossySerializationIsRejectedBeforeRotation();
             ValidSaveRoundTripsAllState();
+            HostileNumericValuesCannotOverflowEconomy();
+            DirectServicesRejectNullState();
         }
 
         private static void InvalidTransitionsAreRejected()
         {
             GameSession session = NewSession();
+            session.State.activeContractId = session.Contract.id;
             float enemyHp = session.State.enemyHp;
 
             Equal(false, session.EnterPortal(), "Home must not jump directly into combat");
@@ -33,6 +41,7 @@ namespace Rokas.Core.Tests
             Equal(false, session.ClaimPayment(), "Home must reject payment claims");
             Equal(RunPhase.Home, session.State.phase, "invalid actions must not mutate the phase");
             Equal(enemyHp, session.State.enemyHp, "invalid combat input must not damage an enemy");
+            Equal(100f, session.State.playerHp, "removing only the phase guard must make this test fail");
         }
 
         private static void PaymentCanOnlyBeClaimedOnce()
@@ -219,6 +228,57 @@ namespace Rokas.Core.Tests
             });
         }
 
+        private static void PartialPrimaryRecoversBackupWithoutDiscardingDamage()
+        {
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveStore store = SeedPrimaryAndBackup(directory, 710, 820);
+                string partial = "{\"version\":1}";
+                File.WriteAllText(store.PrimaryPath, partial, System.Text.Encoding.UTF8);
+
+                SaveLoadResult result = store.Load();
+
+                Equal(SaveLoadStatus.RecoveredBackup, result.Status, "partial primary must not initialize missing fields to defaults");
+                Equal(710, result.Data.yen, "partial-primary recovery should return the last backup");
+                Equal(partial, File.ReadAllText(store.PrimaryPath), "load must preserve partial input for diagnosis");
+            });
+        }
+
+        private static void MissingOrNullSettingsRecoverBackup()
+        {
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveStore store = SeedPrimaryAndBackup(directory, 710, 820);
+                JsonNode root = JsonNode.Parse(File.ReadAllText(store.PrimaryPath));
+                root.AsObject().Remove("settings");
+                File.WriteAllText(store.PrimaryPath, root.ToJsonString(), System.Text.Encoding.UTF8);
+                Equal(SaveLoadStatus.RecoveredBackup, store.Load().Status, "missing settings must reject the primary");
+            });
+
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveStore store = SeedPrimaryAndBackup(directory, 710, 820);
+                JsonNode root = JsonNode.Parse(File.ReadAllText(store.PrimaryPath));
+                root["settings"] = null;
+                File.WriteAllText(store.PrimaryPath, root.ToJsonString(), System.Text.Encoding.UTF8);
+                Equal(SaveLoadStatus.RecoveredBackup, store.Load().Status, "null settings must reject the primary");
+            });
+        }
+
+        private static void JsonShapeUsesObjectKeysRatherThanTextMatches()
+        {
+            string namesHiddenInText = "{\"version\":1,\"note\":\"yen reputation spiritAsh weaponLevel completedRuns phase activeContractId preparedFoodId enemyHp playerHp enemyTimer autoTimer clickTimer combatTime weakPointClaimed lampOn mameInteractions settings masterVolume musicVolume sfxVolume screenShake glitchIntensity damageNumbers fullscreen\"}";
+            string error;
+            Equal(false, SaveJsonShape.HasRequiredShape(namesHiddenInText, out error), "required names inside a string must not satisfy structural fields");
+
+            int version;
+            Equal(false, SaveJsonShape.TryReadVersion("{\"version\":1,\"version\":2}", out version, out error), "duplicate top-level version must be rejected");
+
+            JsonCodec codec = new JsonCodec();
+            string escapedRequiredKey = codec.Serialize(new SaveData()).Replace("\"yen\"", "\"\\u0079en\"");
+            Equal(true, SaveJsonShape.HasRequiredShape(escapedRequiredKey, out error), "escaped JSON property keys should decode structurally");
+        }
+
         private static void FutureVersionIsPreserved()
         {
             WithTempDirectory(delegate(string directory)
@@ -238,6 +298,38 @@ namespace Rokas.Core.Tests
                 SaveWriteResult write = store.Save(new SaveData());
                 Equal(SaveWriteStatus.FutureVersionPreserved, write.Status, "future primary must block overwrite");
                 Equal(original, File.ReadAllText(store.PrimaryPath), "future primary bytes must remain untouched");
+            });
+
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveStore store = new SaveStore(directory, new JsonCodec());
+                Directory.CreateDirectory(directory);
+                string changedFutureShape = "{\"version\":2,\"futureOnly\":true}";
+                File.WriteAllText(store.PrimaryPath, changedFutureShape, System.Text.Encoding.UTF8);
+
+                Equal(SaveLoadStatus.FutureVersion, store.Load().Status, "future schema must be protected before current required-field checks");
+                Equal(SaveWriteStatus.FutureVersionPreserved, store.Save(new SaveData()).Status, "changed future schema must block overwrite");
+                Equal(changedFutureShape, File.ReadAllText(store.PrimaryPath), "changed future schema bytes must remain untouched");
+            });
+        }
+
+        private static void LossySerializationIsRejectedBeforeRotation()
+        {
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveStore seeded = SeedPrimaryAndBackup(directory, 710, 820);
+                string primaryBefore = File.ReadAllText(seeded.PrimaryPath);
+                string backupBefore = File.ReadAllText(seeded.BackupPath);
+                SaveStore lossy = new SaveStore(directory, new LossyJsonCodec());
+                SaveData third = new SaveData();
+                third.yen = 930;
+
+                SaveWriteResult result = lossy.Save(third);
+
+                Equal(SaveWriteStatus.SerializationFailed, result.Status, "serializer field loss must reject the write");
+                Equal(primaryBefore, File.ReadAllText(seeded.PrimaryPath), "rejected serialization must preserve primary bytes");
+                Equal(backupBefore, File.ReadAllText(seeded.BackupPath), "rejected serialization must preserve backup bytes");
+                Equal(820, seeded.Load().Data.yen, "last valid primary must remain readable");
             });
         }
 
@@ -265,21 +357,109 @@ namespace Rokas.Core.Tests
                 state.lampOn = false;
                 state.mameInteractions = 9;
                 state.settings.masterVolume = .2f;
+                state.settings.musicVolume = .31f;
+                state.settings.sfxVolume = .41f;
+                state.settings.screenShake = false;
+                state.settings.glitchIntensity = .52f;
+                state.settings.damageNumbers = false;
                 state.settings.fullscreen = false;
 
                 Equal(SaveWriteStatus.Saved, store.Save(state).Status, "valid state should save");
                 SaveLoadResult result = store.Load();
 
                 Equal(SaveLoadStatus.LoadedPrimary, result.Status, "valid primary should load directly");
+                Equal(SaveData.CurrentVersion, result.Data.version, "version should round-trip");
                 Equal(1234, result.Data.yen, "yen should round-trip");
+                Equal(8, result.Data.reputation, "reputation should round-trip");
                 Equal(4, result.Data.spiritAsh, "spirit ash should round-trip");
+                Equal(3, result.Data.weaponLevel, "weapon level should round-trip");
+                Equal(2, result.Data.completedRuns, "completed runs should round-trip");
                 Equal(RunPhase.Combat, result.Data.phase, "phase should round-trip");
+                Equal("contract_subway_001", result.Data.activeContractId, "active contract should round-trip");
+                Equal("food_green_tea", result.Data.preparedFoodId, "prepared food should round-trip");
                 Equal(77.5f, result.Data.enemyHp, "combat state should round-trip");
+                Equal(65f, result.Data.playerHp, "player health should round-trip");
+                Equal(.6f, result.Data.enemyTimer, "enemy timer should round-trip");
+                Equal(.7f, result.Data.autoTimer, "auto timer should round-trip");
+                Equal(.1f, result.Data.clickTimer, "click timer should round-trip");
+                Equal(2.4f, result.Data.combatTime, "combat time should round-trip");
                 Equal(true, result.Data.weakPointClaimed, "weak-point state should round-trip");
                 Equal(false, result.Data.lampOn, "home state should round-trip");
+                Equal(9, result.Data.mameInteractions, "Mame interactions should round-trip");
                 Equal(.2f, result.Data.settings.masterVolume, "settings should round-trip");
+                Equal(.31f, result.Data.settings.musicVolume, "music volume should round-trip");
+                Equal(.41f, result.Data.settings.sfxVolume, "SFX volume should round-trip");
+                Equal(false, result.Data.settings.screenShake, "screen shake should round-trip");
+                Equal(.52f, result.Data.settings.glitchIntensity, "glitch intensity should round-trip");
+                Equal(false, result.Data.settings.damageNumbers, "damage numbers should round-trip");
                 Equal(false, result.Data.settings.fullscreen, "boolean settings should round-trip");
             });
+        }
+
+        private static void HostileNumericValuesCannotOverflowEconomy()
+        {
+            SaveData upgradeState = new SaveData();
+            upgradeState.weaponLevel = int.MaxValue;
+            upgradeState.yen = int.MaxValue;
+            GameSession upgrade = new GameSession(upgradeState, NewContract());
+            Equal(false, upgrade.UpgradeWeapon(), "unrepresentable upgrade cost must be rejected");
+            Equal(int.MaxValue, upgrade.State.weaponLevel, "rejected high-level upgrade must preserve level");
+            Equal(int.MaxValue, upgrade.State.yen, "rejected high-level upgrade must preserve yen");
+
+            ContractDefinition hugeReward = NewContract();
+            hugeReward.reward = int.MaxValue;
+            SaveData paymentState = new SaveData();
+            paymentState.phase = RunPhase.Payment;
+            paymentState.activeContractId = hugeReward.id;
+            paymentState.yen = 1;
+            paymentState.reputation = 5;
+            paymentState.spiritAsh = 6;
+            GameSession payment = new GameSession(paymentState, hugeReward);
+            Equal(false, payment.ClaimPayment(), "overflowing yen reward must reject the whole payment");
+            Equal(RunPhase.Payment, payment.State.phase, "rejected reward must stay claimable after data repair");
+            Equal(1, payment.State.yen, "rejected reward must preserve yen");
+            Equal(5, payment.State.reputation, "rejected reward must preserve reputation");
+            Equal(6, payment.State.spiritAsh, "rejected reward must preserve ash");
+            Equal(0, payment.State.completedRuns, "rejected reward must preserve completed count");
+
+            ContractDefinition zeroReward = NewContract();
+            zeroReward.reward = 0;
+            zeroReward.reputationReward = 0;
+            zeroReward.ashReward = 0;
+            SaveData completedState = new SaveData();
+            completedState.phase = RunPhase.Payment;
+            completedState.activeContractId = zeroReward.id;
+            completedState.completedRuns = int.MaxValue;
+            GameSession completed = new GameSession(completedState, zeroReward);
+            Equal(false, completed.ClaimPayment(), "completed-run overflow must reject payment before mutation");
+            Equal(int.MaxValue, completed.State.completedRuns, "rejected completion must not wrap the counter");
+
+            ContractDefinition reputationReward = NewContract();
+            reputationReward.reward = 0;
+            reputationReward.reputationReward = 10;
+            reputationReward.ashReward = 0;
+            SaveData reputationState = new SaveData();
+            reputationState.phase = RunPhase.Payment;
+            reputationState.activeContractId = reputationReward.id;
+            reputationState.reputation = int.MaxValue - 5;
+            GameSession reputation = new GameSession(reputationState, reputationReward);
+            Equal(false, reputation.ClaimPayment(), "overflowing reputation reward must reject payment before mutation");
+            Equal(int.MaxValue - 5, reputation.State.reputation, "rejected reputation must not wrap");
+
+            WithTempDirectory(delegate(string directory)
+            {
+                SaveData hostile = new SaveData();
+                hostile.weaponLevel = int.MaxValue;
+                SaveStore store = new SaveStore(directory, new JsonCodec());
+                Equal(SaveWriteStatus.InvalidData, store.Save(hostile).Status, "structurally valid hostile progression must not persist");
+            });
+        }
+
+        private static void DirectServicesRejectNullState()
+        {
+            ThrowsArgumentNull(delegate { new ContractService().LeaveHome(null); }, "contract service should reject null state clearly");
+            ThrowsArgumentNull(delegate { new FoodService().Prepare(null, FoodService.GreenTeaId); }, "food service should reject null state clearly");
+            ThrowsArgumentNull(delegate { new EconomyService().UpgradeWeapon(null); }, "economy service should reject null state clearly");
         }
 
         private static GameSession NewSession(ContractDefinition contract = null)
@@ -299,6 +479,18 @@ namespace Rokas.Core.Tests
         private static ContractDefinition NewContract()
         {
             return new ContractDefinition();
+        }
+
+        private static SaveStore SeedPrimaryAndBackup(string directory, int backupYen, int primaryYen)
+        {
+            SaveStore store = new SaveStore(directory, new JsonCodec());
+            SaveData first = new SaveData();
+            first.yen = backupYen;
+            SaveData second = new SaveData();
+            second.yen = primaryYen;
+            Equal(SaveWriteStatus.Saved, store.Save(first).Status, "test seed backup should save");
+            Equal(SaveWriteStatus.Saved, store.Save(second).Status, "test seed primary should save");
+            return store;
         }
 
         private static void WithTempDirectory(Action<string> action)
@@ -338,6 +530,19 @@ namespace Rokas.Core.Tests
             }
         }
 
+        private static void ThrowsArgumentNull(Action action, string message)
+        {
+            try
+            {
+                action();
+            }
+            catch (ArgumentNullException)
+            {
+                return;
+            }
+            throw new InvalidOperationException(message + ". Expected ArgumentNullException.");
+        }
+
         private sealed class JsonCodec : ISaveCodec
         {
             private readonly JsonSerializerOptions options = new JsonSerializerOptions { IncludeFields = true };
@@ -361,6 +566,21 @@ namespace Rokas.Core.Tests
                     error = exception.Message;
                     return false;
                 }
+            }
+        }
+
+        private sealed class LossyJsonCodec : ISaveCodec
+        {
+            private readonly JsonCodec decoder = new JsonCodec();
+
+            public string Serialize(SaveData data)
+            {
+                return "{\"version\":1}";
+            }
+
+            public bool TryDeserialize(string text, out SaveData data, out string error)
+            {
+                return decoder.TryDeserialize(text, out data, out error);
             }
         }
     }

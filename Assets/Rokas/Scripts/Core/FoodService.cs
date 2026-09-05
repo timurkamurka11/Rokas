@@ -1,3 +1,5 @@
+using System;
+
 namespace Rokas.Core
 {
     public sealed class FoodService
@@ -7,6 +9,7 @@ namespace Rokas.Core
 
         public bool Prepare(SaveData state, string foodId)
         {
+            RequireState(state);
             if ((state.phase != RunPhase.Home && state.phase != RunPhase.Accepted) ||
                 foodId != GreenTeaId ||
                 !string.IsNullOrEmpty(state.preparedFoodId) ||
@@ -22,12 +25,25 @@ namespace Rokas.Core
 
         public float GetAutoInterval(SaveData state, ContractDefinition contract)
         {
+            RequireState(state);
+            if (contract == null)
+            {
+                throw new ArgumentNullException("contract");
+            }
             if (state.preparedFoodId == GreenTeaId)
             {
                 return contract.autoInterval / 1.05f;
             }
 
             return contract.autoInterval;
+        }
+
+        private static void RequireState(SaveData state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException("state");
+            }
         }
     }
 }

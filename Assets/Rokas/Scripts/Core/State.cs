@@ -29,6 +29,7 @@ namespace Rokas.Core
     public sealed class SaveData
     {
         public const int CurrentVersion = 1;
+        public const int MaxWeaponLevel = int.MaxValue / 300;
 
         public int version = CurrentVersion;
         public int yen = 600;

@@ -1,20 +1,31 @@
+using System;
+
 namespace Rokas.Core
 {
     public sealed class EconomyService
     {
         public int GetUpgradeCost(SaveData state)
         {
-            return 300 * state.weaponLevel;
+            RequireState(state);
+            if (state.weaponLevel < 1 || state.weaponLevel > SaveData.MaxWeaponLevel)
+            {
+                return int.MaxValue;
+            }
+            return checked(300 * state.weaponLevel);
         }
 
         public float GetWeaponDamageMultiplier(SaveData state)
         {
+            RequireState(state);
             return 1f + .2f * (state.weaponLevel - 1);
         }
 
         public bool UpgradeWeapon(SaveData state)
         {
-            if (state.phase != RunPhase.Home || state.weaponLevel < 1)
+            RequireState(state);
+            if (state.phase != RunPhase.Home ||
+                state.weaponLevel < 1 ||
+                state.weaponLevel >= SaveData.MaxWeaponLevel)
             {
                 return false;
             }
@@ -32,7 +43,21 @@ namespace Rokas.Core
 
         public bool ClaimPayment(SaveData state, ContractDefinition contract)
         {
+            RequireState(state);
+            if (contract == null)
+            {
+                throw new ArgumentNullException("contract");
+            }
             if (state.phase != RunPhase.Payment || state.activeContractId != contract.id)
+            {
+                return false;
+            }
+
+            if (contract.reward < 0 || contract.reputationReward < 0 || contract.ashReward < 0 ||
+                !CanAdd(state.yen, contract.reward) ||
+                !CanAdd(state.reputation, contract.reputationReward) ||
+                !CanAdd(state.spiritAsh, contract.ashReward) ||
+                state.completedRuns == int.MaxValue)
             {
                 return false;
             }
@@ -46,6 +71,19 @@ namespace Rokas.Core
             state.preparedFoodId = string.Empty;
             ContractService.ResetCombat(state);
             return true;
+        }
+
+        private static bool CanAdd(int value, int addition)
+        {
+            return addition >= 0 && value <= int.MaxValue - addition;
+        }
+
+        private static void RequireState(SaveData state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException("state");
+            }
         }
     }
 }

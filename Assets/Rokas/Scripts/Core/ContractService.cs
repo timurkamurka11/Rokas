@@ -1,9 +1,12 @@
+using System;
+
 namespace Rokas.Core
 {
     public sealed class ContractService
     {
         public bool Accept(SaveData state, ContractDefinition contract)
         {
+            RequireStateAndContract(state, contract);
             if (state.phase != RunPhase.Home || string.IsNullOrEmpty(contract.id))
             {
                 return false;
@@ -17,6 +20,7 @@ namespace Rokas.Core
 
         public bool LeaveHome(SaveData state)
         {
+            RequireState(state);
             if (state.phase != RunPhase.Accepted)
             {
                 return false;
@@ -28,6 +32,7 @@ namespace Rokas.Core
 
         public bool BeginCombat(SaveData state, ContractDefinition contract, float autoInterval)
         {
+            RequireStateAndContract(state, contract);
             if (state.phase != RunPhase.Portal || state.activeContractId != contract.id)
             {
                 return false;
@@ -46,6 +51,7 @@ namespace Rokas.Core
 
         public bool ReturnHome(SaveData state)
         {
+            RequireState(state);
             if (state.phase == RunPhase.Sealed)
             {
                 state.phase = RunPhase.Payment;
@@ -76,6 +82,23 @@ namespace Rokas.Core
             state.clickTimer = 0f;
             state.combatTime = 0f;
             state.weakPointClaimed = false;
+        }
+
+        private static void RequireStateAndContract(SaveData state, ContractDefinition contract)
+        {
+            RequireState(state);
+            if (contract == null)
+            {
+                throw new ArgumentNullException("contract");
+            }
+        }
+
+        private static void RequireState(SaveData state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException("state");
+            }
         }
     }
 }

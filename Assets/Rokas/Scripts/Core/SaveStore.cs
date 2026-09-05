@@ -162,14 +162,35 @@ namespace Rokas.Core
                 return new SaveWriteResult(SaveWriteStatus.SerializationFailed, exception.Message);
             }
 
+            if (string.IsNullOrEmpty(serialized))
+            {
+                return new SaveWriteResult(SaveWriteStatus.SerializationFailed, "Serializer returned empty text.");
+            }
+
+            int serializedVersion;
+            string shapeError;
+            if (!SaveJsonShape.TryReadVersion(serialized, out serializedVersion, out shapeError))
+            {
+                return SerializationFailure(shapeError);
+            }
+            if (serializedVersion != SaveData.CurrentVersion)
+            {
+                return SerializationFailure("Serializer emitted save version " + serializedVersion + ".");
+            }
+            if (!SaveJsonShape.HasRequiredShape(serialized, out shapeError))
+            {
+                return SerializationFailure(shapeError);
+            }
+
             SaveData verification;
             string codecError;
-            if (string.IsNullOrEmpty(serialized) ||
-                !TryDeserialize(serialized, out verification, out codecError) ||
-                !ValidateCurrent(verification, out validationError))
+            if (!TryDeserialize(serialized, out verification, out codecError))
             {
-                string message = string.IsNullOrEmpty(codecError) ? validationError : codecError;
-                return new SaveWriteResult(SaveWriteStatus.SerializationFailed, "Serialized save failed validation: " + message);
+                return SerializationFailure(codecError);
+            }
+            if (!ValidateCurrent(verification, out validationError))
+            {
+                return SerializationFailure(validationError);
             }
 
             Candidate primary = ReadCandidate(PrimaryPath);
@@ -242,20 +263,29 @@ namespace Rokas.Core
 
             SaveData data;
             string error;
-            if (!TryDeserialize(text, out data, out error) || data == null)
+            int serializedVersion;
+            if (!SaveJsonShape.TryReadVersion(text, out serializedVersion, out error))
             {
-                return new Candidate { Status = CandidateStatus.Invalid, Message = "Decode failed: " + error };
+                return new Candidate { Status = CandidateStatus.Invalid, Message = "JSON shape failed: " + error };
             }
-            if (data.version > SaveData.CurrentVersion)
+            if (serializedVersion > SaveData.CurrentVersion)
             {
+                TryDeserialize(text, out data, out error);
                 return new Candidate
                 {
                     Status = CandidateStatus.Future,
                     Data = data,
-                    Message = "Save version " + data.version + " is newer than supported version " + SaveData.CurrentVersion + "."
+                    Message = "Save version " + serializedVersion + " is newer than supported version " + SaveData.CurrentVersion + "."
                 };
             }
-
+            if (!SaveJsonShape.HasRequiredShape(text, out error))
+            {
+                return new Candidate { Status = CandidateStatus.Invalid, Message = "JSON shape failed: " + error };
+            }
+            if (!TryDeserialize(text, out data, out error) || data == null)
+            {
+                return new Candidate { Status = CandidateStatus.Invalid, Message = "Decode failed: " + error };
+            }
             string validationError;
             if (!ValidateCurrent(data, out validationError))
             {
@@ -292,7 +322,8 @@ namespace Rokas.Core
                 return false;
             }
             if (data.yen < 0 || data.reputation < 0 || data.spiritAsh < 0 ||
-                data.weaponLevel < 1 || data.completedRuns < 0 || data.mameInteractions < 0)
+                data.weaponLevel < 1 || data.weaponLevel > SaveData.MaxWeaponLevel ||
+                data.completedRuns < 0 || data.mameInteractions < 0)
             {
                 error = "Save contains invalid progression values.";
                 return false;
@@ -331,6 +362,13 @@ namespace Rokas.Core
         private static bool Finite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private static SaveWriteResult SerializationFailure(string message)
+        {
+            return new SaveWriteResult(
+                SaveWriteStatus.SerializationFailed,
+                "Serialized save failed validation: " + message);
         }
 
         private static void WriteUtf8Durably(string path, string text)

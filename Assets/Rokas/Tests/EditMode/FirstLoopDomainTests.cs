@@ -25,7 +25,10 @@ namespace Rokas.Core.Tests
         [Test]
         public void HomeCannotSkipPhaseGuardIntoCombat()
         {
-            GameSession session = new GameSession(new SaveData(), new ContractDefinition());
+            ContractDefinition contract = new ContractDefinition();
+            SaveData state = new SaveData();
+            state.activeContractId = contract.id;
+            GameSession session = new GameSession(state, contract);
 
             Assert.That(session.EnterPortal(), Is.False);
             Assert.That(session.ClickAttack(false), Is.False);
