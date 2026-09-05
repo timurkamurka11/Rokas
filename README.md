@@ -36,7 +36,7 @@ python3 Tools/validate_assets.py
 
 GitHub Actions запускает компиляцию и поведенческие тесты Core, затем проверку ассетов, GUID-ссылок и стартовой сцены. Эта проверка не компилирует Unity Presentation.
 
-В Unity: **Rokas → Validate Project**, затем **Window → General → Test Runner**, EditMode и PlayMode. Проверка первого цикла: `IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce`.
+В Unity: **Rokas → Validate Project**, затем **Window → General → Test Runner**, EditMode и PlayMode. Validate Project проверяет импортированные ассеты и открывает стартовую сцену в отдельной preview scene для поиска Missing Script и проверки bootstrap; открытая пользовательская сцена не пересохраняется. Проверка первого цикла: `IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce`. Она использует UI pointer handlers и включает паузу и повторную загрузку профиля после оплаты. Сам тест здесь ещё не запускался.
 
 Сборка: установите модуль Windows Build Support для указанного Editor и выберите **Rokas → Build Windows x64**. Результат — `Builds/Windows/Rokas.exe`; запуск player проверяется отдельно.
 
