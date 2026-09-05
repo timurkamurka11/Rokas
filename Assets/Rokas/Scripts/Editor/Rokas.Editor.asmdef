@@ -1,0 +1,5 @@
+{
+  "name": "Rokas.Editor",
+  "references": ["Rokas.Core", "Rokas.Presentation"],
+  "includePlatforms": ["Editor"]
+}

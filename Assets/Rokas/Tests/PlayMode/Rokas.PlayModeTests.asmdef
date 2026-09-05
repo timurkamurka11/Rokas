@@ -1,0 +1,6 @@
+{
+  "name": "Rokas.PlayModeTests",
+  "references": ["Rokas.Core", "Rokas.Presentation", "UnityEngine.UI"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ff3dc6e4a8459e79ab14a22303ead2e, type: 3}
+  m_Name: RokasAssets
+  m_EditorClassIdentifier:
+  home: {fileID: 2800000, guid: 9b1fe41223e65a0bb91140a11bb15a41, type: 3}
+  portal: {fileID: 2800000, guid: a368bee81f565b469fd769ad87abafa0, type: 3}
+  subway: {fileID: 2800000, guid: 4b55f238fbc552188f3df7d5233f2991, type: 3}
+  enemy: {fileID: 2800000, guid: 07ba00304df358ec8c2515ec4f2d3168, type: 3}
+  familiar: {fileID: 2800000, guid: c2051ffeb7545b53b815fa043210af00, type: 3}
+  sans: {fileID: 12800000, guid: 0dc0bc9cd4cc5ac79bc0b3872399cda9, type: 3}
+  serif: {fileID: 12800000, guid: 892cd5852cfe5641acf1657b28d04c33, type: 3}
+  contract: {fileID: 4900000, guid: 0e3e4ead6ff256d79358e239c8c0cac4, type: 3}
+  homeAmbience: {fileID: 8300000, guid: 8f6409b312225bc1b81137c3169fcad1, type: 3}
+  subwayAmbience: {fileID: 8300000, guid: 5b2376309bb75edc850f3ce3300f0edf, type: 3}
+  homeMusic: {fileID: 8300000, guid: e56430b08183503bb580307d23f0d2f5, type: 3}
+  missionMusic: {fileID: 8300000, guid: 55cc3167e2835dc88a8a80c1aea8b443, type: 3}
+  click: {fileID: 8300000, guid: 69dd62c2bd5f50eca5fa82bdae188a99, type: 3}
+  hit: {fileID: 8300000, guid: ec04e3691e8551528445d9e055b54542, type: 3}
+  critical: {fileID: 8300000, guid: 14448a949f495cb7b9dc3fe337265de6, type: 3}
+  portalSound: {fileID: 8300000, guid: 313157f594cf550b8ce07e3a38e0db02, type: 3}
+  seal: {fileID: 8300000, guid: 682c04dfc4975161a96ea71814d2e906, type: 3}
+  mame: {fileID: 8300000, guid: 0b32b4093fc453b7bd7b89d47dff1cad, type: 3}

@@ -17,3 +17,5 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Compile and exercise the real C# domain
         run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+      - name: Validate artwork, audio, metas and scene bindings
+        run: python3 Tools/validate_assets.py

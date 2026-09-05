@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 28
+  productGUID: 87c6a57c102143b881427d00f6c16d53
+  companyName: Rokas
+  productName: ROKAS
+  defaultScreenWidth: 1920
+  defaultScreenHeight: 1080
+  defaultScreenWidthWeb: 1920
+  defaultScreenHeightWeb: 1080
+  m_ActiveColorSpace: 0
+  defaultIsNativeResolution: 1
+  runInBackground: 1
+  resizableWindow: 1
+  fullscreenMode: 1
+  usePlayerLog: 1
+  bundleVersion: 0.1.0
+  applicationIdentifier:
+    Standalone: com.rokas.contracthunter
+  scriptingBackend:
+    Standalone: 0
+  apiCompatibilityLevelPerPlatform:
+    Standalone: 6
+  activeInputHandler: 0
+  scriptingRuntimeVersion: 1
+  gcIncremental: 1
+  allowUnsafeCode: 0
+  useDeterministicCompilation: 1
+  stripEngineCode: 0

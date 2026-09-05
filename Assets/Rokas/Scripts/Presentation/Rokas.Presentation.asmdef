@@ -1,0 +1,5 @@
+{
+  "name": "Rokas.Presentation",
+  "rootNamespace": "Rokas.Presentation",
+  "references": ["Rokas.Core", "UnityEngine.UI"]
+}

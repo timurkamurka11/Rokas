@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: 0b32b4093fc453b7bd7b89d47dff1cad
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 22050
+    compressionFormat: 1
+    quality: 0.85
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 1
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: Original synthesized score and effects; Tools/produce_audio.py
+  assetBundleName:
+  assetBundleVariant:

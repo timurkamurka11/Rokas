@@ -15,6 +15,8 @@ TestResults/
 .worktrees/
 *.tmp
 *.bak
+__pycache__/
+*.pyc
 
 # Private input and internal implementation notes
 Docs/MASTER_PROMPT_V2.md
