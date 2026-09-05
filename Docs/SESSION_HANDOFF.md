@@ -2,10 +2,11 @@ CURRENT BRANCH:
 development
 
 LAST PUSHED COMMIT:
-739fd02761e7f229c841d4812532191591a0e741
+d3a451f0335c2e3a9c804a18371dfff78998ef37
+Проверенный commit кода и ассетов; этот handoff фиксируется следующим документационным commit. Фактический HEAD всегда брать из origin/development, не откатывать ветку к указанному hash.
 
 CURRENT TASK:
-Завершение публикации существующего visual batch и Unity presentation первого контракта.
+Visual batch опубликован. Следующий этап — первый импорт, компиляция и запуск существующей сцены в Unity.
 
 COMPLETED:
 Сцена Rokas, 18 ссылок RokasAssets, .meta, экраны дома/YOMI/чая/верстака/портала/боя/оплаты/настроек, ambient-анимация, аудио и связь с существующим Core. Повторная gameplay-логика не создана.
@@ -14,16 +15,16 @@ PARTIAL:
 Unity import, compilation Presentation/Editor, PlayMode, визуальная проверка Game view и Windows player ещё не выполнены: Unity Editor в текущей среде отсутствует.
 
 ASSETS SUCCESSFULLY UPLOADED:
-17 проверенных Git blobs: 5 PNG, 2 TTF, 10 WAV, всего 20 682 981 байт. Они уже существуют на GitHub; повторно загружать или генерировать их не нужно.
+Все 17 бинарных файлов включены в development: квартира, портал, метро, Безликий, Мамэ; DejaVu Sans/Serif; 10 WAV. Всего 20 682 981 байт. Remote tree 2a02a91a6be90fb71849539bb5e90e7755c904cd содержит 138 файлов; SHA всех 17 бинарных ассетов совпадают с локальными. Ссылки и .meta сохранены. Повторная загрузка/генерация не нужна.
 
 ASSETS STILL PENDING:
-Включение этих blobs и новых текстовых файлов в единый commit development; после успешной публикации обновить этот статус и LAST PUSHED COMMIT.
+Нет. Незавершённых upload batches нет.
 
 TESTED:
-Core Actions run 33977164736 — success, PASS: all Rokas.Core behavior tests. Локально Tools/validate_assets.py — PASS: 50 assets / 69 unique metas / 21 resolved GUID refs; git diff --check — PASS. Unity-тесты добавлены, но не запускались.
+GitHub Actions run 33979227357 на d3a451f — success. Лог job 101341292472: PASS: all Rokas.Core behavior tests; PASS: 50 assets / 69 unique metas / 21 resolved GUID refs; 18 presentation bindings. Локально та же проверка ассетов и git diff --cached --check — PASS. Unity compilation/тесты/PlayMode/Windows build НЕ запускались.
 
 EXACT NEXT ACTION:
-Завершить commit visual integration с существующими binary SHA, обновить origin/development без force, проверить remote tree и Actions. Затем открыть Assets/Rokas/Scenes/Rokas.unity в Unity 6000.3.19f1 для первого запуска.
+После git pull --ff-only origin development открыть существующий проект в Unity 6000.3.19f1 и дождаться завершения импорта/компиляции. При чистой Console открыть Assets/Rokas/Scenes/Rokas.unity и запустить PlayMode-тест IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce. Это первая незавершённая проверка; не повторять Core review или генерацию ассетов. Если Editor недоступен, не выдавать статические проверки за запуск игры.
 
 IMPORTANT FILES:
 Assets/Rokas/Scenes/Rokas.unity
