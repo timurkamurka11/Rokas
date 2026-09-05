@@ -5,15 +5,17 @@
 [Uu]ser[Ss]ettings/
 Builds/
 Build/
+.vs/
+*.csproj.user
+*.sln
 bin/
 obj/
 TestResults/
-.vs/
-*.sln
-*.csproj.user
-*.tmp
-*.bak
 .superpowers/
 .worktrees/
+*.tmp
+*.bak
+
+# Private input and internal implementation notes
 Docs/MASTER_PROMPT_V2.md
 Docs/Plans/

@@ -1,0 +1,22 @@
+{
+  "name": "Rokas.Core.EditModeTests",
+  "rootNamespace": "Rokas.Core.Tests",
+  "references": [
+    "Rokas.Core"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
