@@ -1,12 +1,8 @@
-FIXED:
-CanvasRenderer requirement for dynamically created YOMI custom UI graphics.
-Surface() and Icon() check for an existing CanvasRenderer and add it before the custom Graphic. LaptopSurface and LaptopIcon also declare RequireComponent(CanvasRenderer). Current YOMI design and behavior preserved.
-
-STATIC CHECKS:
-Roslyn C# syntax: 3 changed files, 0 errors. git diff reviewed; git diff --check — PASS. No unguarded or duplicate CanvasRenderer additions found.
+COMPLETED:
+Home BG assigned behind player. Existing approved Assets/Rokas/Art/Home/ApartmentNight.png is already bound to RokasAssets.home. Static inspection confirms BG → character/objects → UI; background raycastTarget is false, hotspots unchanged. No code or asset changes were needed. PNG / GUID / .meta verified.
 
 UNITY:
-NOT RUN — user will test manually.
+NOT RUN — user will verify.
 
 NEXT:
-User opens Unity, presses Play and reports next runtime error if any.
+Manual visual check in Unity.
