@@ -1,6 +1,7 @@
 using System;
 using Rokas.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Rokas.Presentation
@@ -40,29 +41,107 @@ namespace Rokas.Presentation
             weaponWard.rectTransform.localRotation = Quaternion.Euler(0, 0, -12);
             ui.Box(weaponWard.transform, "WardInk", 5, 12, 3, 40, UiKit.Red);
 
-            ui.Button(parent, "LampHotspot", "Свет", 65, 650, 155, 48, () =>
-                act(() => { session.SetLamp(!session.State.lampOn); return true; }, session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
-            ui.Button(parent, "LaptopHotspot", "YOMI  /  Ноутбук", 935, 653, 280, 55, () => open("laptop"), true);
-            ui.Button(parent, "TeaHotspot", "Заварить чай", 644, 727, 250, 50, () => open("tea"));
-            ui.Button(parent, "WorkbenchHotspot", "Снаряжение", 1184, 474, 265, 50, () => open("workbench"));
-            ui.Button(parent, "MameHotspot", "Мамэ", 132, 925, 210, 49, () =>
-            {
-                act(() => { session.PetMame(); return true; }, "");
-                mameReaction = 1;
-                audio.Play(assets.mame);
-                toast(session.State.mameInteractions % 3 == 0 ? "Мамэ внимательно смотрит в пустой угол." : "Мамэ довольно щурится. Почти как обычный питомец.");
-            });
-            ui.Button(parent, "DoorHotspot", "Выйти из дома", 1610, 658, 256, 58, () =>
-            {
-                if (session.State.phase == RunPhase.Accepted)
-                    travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
-                else if (session.State.phase == RunPhase.Payment)
-                    toast("На ноутбук пришло подтверждение оплаты.");
-                else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
-            }, true);
-            ui.Button(parent, "WindowHotspot", "За окном", 502, 443, 194, 48,
-                () => toast("Поезд проходит без остановки. На этот раз — настоящий."));
+            Hotspot(parent, "LampHotspot", 30, 450, 150, 270,
+                new[]
+                {
+                    new Vector2(.18f, .02f), new Vector2(.83f, .02f), new Vector2(.95f, .14f),
+                    new Vector2(.93f, .92f), new Vector2(.78f, .99f), new Vector2(.20f, .99f),
+                    new Vector2(.06f, .90f), new Vector2(.05f, .14f)
+                },
+                () => act(() => { session.SetLamp(!session.State.lampOn); return true; },
+                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
+
+            Hotspot(parent, "LaptopHotspot", 985, 505, 225, 170,
+                new[]
+                {
+                    new Vector2(.10f, .10f), new Vector2(.92f, .02f), new Vector2(.91f, .70f),
+                    new Vector2(.78f, .84f), new Vector2(.12f, .92f), new Vector2(.02f, .80f)
+                },
+                () => open("laptop"));
+
+            Hotspot(parent, "TeaHotspot", 795, 600, 86, 92,
+                new[]
+                {
+                    new Vector2(.18f, .05f), new Vector2(.70f, .03f), new Vector2(.94f, .26f),
+                    new Vector2(.92f, .68f), new Vector2(.72f, .94f), new Vector2(.24f, .94f),
+                    new Vector2(.05f, .70f), new Vector2(.04f, .24f)
+                },
+                () => open("tea"));
+
+            Hotspot(parent, "WorkbenchHotspot", 1160, 325, 300, 112,
+                new[]
+                {
+                    new Vector2(.02f, .38f), new Vector2(.18f, .20f), new Vector2(.78f, .12f),
+                    new Vector2(.98f, .31f), new Vector2(.91f, .64f), new Vector2(.22f, .72f),
+                    new Vector2(.04f, .60f)
+                },
+                () => open("workbench"));
+
+            Hotspot(parent, "MameHotspot", 150, 772, 218, 218,
+                new[]
+                {
+                    new Vector2(.34f, .02f), new Vector2(.55f, .07f), new Vector2(.71f, .20f),
+                    new Vector2(.80f, .42f), new Vector2(.78f, .72f), new Vector2(.65f, .91f),
+                    new Vector2(.45f, .99f), new Vector2(.25f, .91f), new Vector2(.13f, .70f),
+                    new Vector2(.12f, .42f), new Vector2(.20f, .18f)
+                },
+                () =>
+                {
+                    act(() => { session.PetMame(); return true; }, "");
+                    mameReaction = 1;
+                    audio.Play(assets.mame);
+                    toast(session.State.mameInteractions % 3 == 0
+                        ? "Мамэ внимательно смотрит в пустой угол."
+                        : "Мамэ довольно щурится. Почти как обычный питомец.");
+                });
+
+            Hotspot(parent, "DoorHotspot", 1625, 100, 150, 505,
+                new[]
+                {
+                    new Vector2(.13f, .01f), new Vector2(.88f, .04f), new Vector2(.82f, .96f),
+                    new Vector2(.07f, .99f)
+                },
+                () =>
+                {
+                    if (session.State.phase == RunPhase.Accepted)
+                        travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
+                    else if (session.State.phase == RunPhase.Payment)
+                        toast("На ноутбук пришло подтверждение оплаты.");
+                    else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
+                });
+
+            Hotspot(parent, "WindowHotspot", 330, 105, 615, 455,
+                new[]
+                {
+                    new Vector2(.02f, .02f), new Vector2(.98f, .02f), new Vector2(.96f, .96f),
+                    new Vector2(.03f, .99f)
+                },
+                () => toast("Поезд проходит без остановки. На этот раз — настоящий."), .55f);
+
             Refresh();
+        }
+
+        private Button Hotspot(RectTransform parent, string name, float x, float y, float w, float h,
+            Vector2[] shape, Action action, float strength = 1f)
+        {
+            var rect = ui.Rect(parent, name, x, y, w, h);
+            var mask = rect.gameObject.AddComponent<HomeObjectMask>();
+            mask.SetShape(shape);
+            mask.Strength = strength;
+            mask.raycastTarget = true;
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = mask;
+            button.transition = Selectable.Transition.None;
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+            button.onClick.AddListener(() =>
+            {
+                audio.Play(assets.click);
+                action?.Invoke();
+            });
+
+            rect.gameObject.AddComponent<HomeObjectHighlight>().Initialize(mask, button);
+            return button;
         }
 
         public void Refresh()
@@ -91,5 +170,153 @@ namespace Rokas.Presentation
         }
 
         public void ClearReferences() { mame = null; weaponWard = null; objective = null; prepared = null; }
+    }
+
+    [RequireComponent(typeof(CanvasRenderer))]
+    public sealed class HomeObjectMask : MaskableGraphic, ICanvasRaycastFilter
+    {
+        private Vector2[] points = Array.Empty<Vector2>();
+        private float intensity;
+        private float strength = 1f;
+
+        public float Intensity
+        {
+            get { return intensity; }
+            set
+            {
+                float next = Mathf.Max(0, value);
+                if (Mathf.Approximately(intensity, next)) return;
+                intensity = next;
+                SetVerticesDirty();
+            }
+        }
+
+        public float Strength
+        {
+            get { return strength; }
+            set
+            {
+                strength = Mathf.Clamp01(value);
+                SetVerticesDirty();
+            }
+        }
+
+        public void SetShape(Vector2[] value)
+        {
+            points = value ?? Array.Empty<Vector2>();
+            SetVerticesDirty();
+        }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            if (points.Length < 3) return;
+
+            Rect rect = GetPixelAdjustedRect();
+            var verts = new Vector2[points.Length];
+            for (int i = 0; i < points.Length; i++)
+                verts[i] = new Vector2(rect.xMin + points[i].x * rect.width, rect.yMax - points[i].y * rect.height);
+
+            float amount = intensity * strength;
+            Color fill = new Color(.42f, .92f, .84f, .035f * amount);
+            Color glow = new Color(.48f, .98f, .90f, .12f * amount);
+            Color edge = new Color(.72f, 1f, .94f, .36f * amount);
+
+            int start = mesh.currentVertCount;
+            for (int i = 0; i < verts.Length; i++) mesh.AddVert(verts[i], fill, Vector2.zero);
+            for (int i = 1; i < verts.Length - 1; i++) mesh.AddTriangle(start, start + i, start + i + 1);
+
+            AddStroke(mesh, verts, 8f, glow);
+            AddStroke(mesh, verts, 2f, edge);
+        }
+
+        private static void AddStroke(VertexHelper mesh, Vector2[] verts, float width, Color color)
+        {
+            float half = width * .5f;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector2 a = verts[i];
+                Vector2 b = verts[(i + 1) % verts.Length];
+                Vector2 direction = b - a;
+                if (direction.sqrMagnitude < .001f) continue;
+                Vector2 normal = new Vector2(-direction.y, direction.x).normalized * half;
+                int index = mesh.currentVertCount;
+                mesh.AddVert(a - normal, color, Vector2.zero);
+                mesh.AddVert(a + normal, color, Vector2.zero);
+                mesh.AddVert(b + normal, color, Vector2.zero);
+                mesh.AddVert(b - normal, color, Vector2.zero);
+                mesh.AddTriangle(index, index + 1, index + 2);
+                mesh.AddTriangle(index, index + 2, index + 3);
+            }
+        }
+
+        public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
+        {
+            if (points.Length < 3) return false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var local))
+                return false;
+
+            Rect rect = rectTransform.rect;
+            if (rect.width <= 0 || rect.height <= 0) return false;
+            var point = new Vector2((local.x - rect.xMin) / rect.width, (rect.yMax - local.y) / rect.height);
+            return Contains(point);
+        }
+
+        private bool Contains(Vector2 point)
+        {
+            bool inside = false;
+            for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+            {
+                Vector2 a = points[i];
+                Vector2 b = points[j];
+                bool crosses = (a.y > point.y) != (b.y > point.y) &&
+                    point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x;
+                if (crosses) inside = !inside;
+            }
+            return inside;
+        }
+    }
+
+    public sealed class HomeObjectHighlight : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
+        ISelectHandler, IDeselectHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        private HomeObjectMask mask;
+        private Button button;
+        private bool hovered;
+        private bool selected;
+        private bool pressed;
+
+        public void Initialize(HomeObjectMask target, Button owner)
+        {
+            mask = target;
+            button = owner;
+            if (mask) mask.Intensity = 0;
+        }
+
+        public void OnPointerEnter(PointerEventData e) { hovered = true; }
+        public void OnPointerExit(PointerEventData e) { hovered = false; pressed = false; }
+        public void OnSelect(BaseEventData e) { selected = true; }
+        public void OnDeselect(BaseEventData e) { selected = false; pressed = false; }
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (e.button == PointerEventData.InputButton.Left) pressed = true;
+        }
+        public void OnPointerUp(PointerEventData e) { pressed = false; }
+
+        private void Update()
+        {
+            if (!mask || !button) return;
+            bool active = button.IsInteractable() && (hovered || selected);
+            float target = active ? (pressed ? 1.18f : 1f) : 0f;
+            if (active && !pressed) target *= .96f + Mathf.Sin(Time.unscaledTime * 3.2f) * .04f;
+            float factor = 1f - Mathf.Exp(-16f * Time.unscaledDeltaTime);
+            mask.Intensity = Mathf.Lerp(mask.Intensity, target, factor);
+        }
+
+        private void OnDisable()
+        {
+            hovered = selected = pressed = false;
+            if (mask) mask.Intensity = 0;
+        }
     }
 }
