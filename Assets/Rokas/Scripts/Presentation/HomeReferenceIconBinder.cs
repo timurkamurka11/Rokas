@@ -10,7 +10,7 @@ namespace Rokas.Presentation
         private const string ReplacementName = "ReferenceGlyph";
         private static Texture2D atlas;
         private static int lastScanFrame = -1;
-        private static bool warningShown;
+        private static bool loadWarningShown;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Install()
@@ -63,18 +63,37 @@ namespace Rokas.Presentation
         {
             if (atlas) return;
 
-#if UNITY_EDITOR
-            atlas = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/Rokas/Resources/HomeActionIcons.png");
-#else
-            atlas = Resources.Load<Texture2D>("HomeActionIcons");
-#endif
-
-            if (!atlas && !warningShown)
+            var bytesAsset = Resources.Load<TextAsset>("HomeActionIconsBytes");
+            if (!bytesAsset)
             {
-                warningShown = true;
-                Debug.LogWarning("ROKAS HOME reference icon atlas could not be loaded.");
+                WarnOnce("ROKAS HOME icon byte resource could not be loaded from Resources/HomeActionIconsBytes.");
+                return;
             }
+
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, false)
+            {
+                name = "HomeActionIcons_Reference",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            if (!ImageConversion.LoadImage(texture, bytesAsset.bytes, true))
+            {
+                UnityEngine.Object.Destroy(texture);
+                WarnOnce("ROKAS HOME icon byte resource was found but PNG decoding failed.");
+                return;
+            }
+
+            atlas = texture;
+            loadWarningShown = false;
+        }
+
+        private static void WarnOnce(string message)
+        {
+            if (loadWarningShown) return;
+            loadWarningShown = true;
+            Debug.LogWarning(message);
         }
     }
 }
