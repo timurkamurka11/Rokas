@@ -1,0 +1,270 @@
+name: YOMI final media transfer
+
+on:
+  push:
+    branches:
+      - yomi-final-media-transfer
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out development
+        uses: actions/checkout@v4
+        with:
+          ref: development
+          fetch-depth: 0
+
+      - name: Download authoritative media from firestorage and verify source hashes
+        env:
+          VIDEO_SHARE: https://firestorage.ai/ja/f/xaHoJtMEf894
+          POSTER_SHARE: https://firestorage.ai/ja/f/-0iunW1b4D0V
+          VIDEO_SHA256: 31eeba75cb92d34d4e556ffd97c36e13431acb906f9b24404bf5960b987f3bcc
+          POSTER_SHA256: f86a6636f357361acf93048e47f2beb09f6f1645ef88312f320eac83fce738cf
+        run: |
+          python3 -m pip install --quiet selenium
+          python3 - <<'PY'
+          import hashlib, html, os, re, shutil, subprocess, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          VIDEO_SHARE = os.environ['VIDEO_SHARE']
+          POSTER_SHARE = os.environ['POSTER_SHARE']
+          VIDEO_SHA = os.environ['VIDEO_SHA256']
+          POSTER_SHA = os.environ['POSTER_SHA256']
+          outdir = Path('/tmp/yomi-final-media')
+          outdir.mkdir(parents=True, exist_ok=True)
+
+          def sha256(path):
+              h = hashlib.sha256()
+              with open(path, 'rb') as f:
+                  for block in iter(lambda: f.read(1024 * 1024), b''):
+                      h.update(block)
+              return h.hexdigest()
+
+          def request_bytes(url, referer=None):
+              headers = {
+                  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/149 Safari/537.36',
+                  'Accept': '*/*',
+              }
+              if referer:
+                  headers['Referer'] = referer
+              req = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(req, timeout=45) as r:
+                  return r.read(), r.geturl(), (r.headers.get('Content-Type') or '')
+
+          def normalized_text(raw):
+              text = raw.decode('utf-8', 'ignore')
+              text = html.unescape(text)
+              text = text.replace('\\u0026', '&').replace('\\u002F', '/').replace('\\/', '/')
+              return text
+
+          def candidates_from_text(text, base):
+              found = []
+              for m in re.finditer(r'https?://[^\\s\"\'<>]+', text):
+                  found.append(m.group(0))
+              for m in re.finditer(r'(?:href|src|action)=[\"\']([^\"\']+)[\"\']', text, re.I):
+                  found.append(urllib.parse.urljoin(base, m.group(1)))
+              for m in re.finditer(r'[\"\']([^\"\']*(?:download|file|asset)[^\"\']*)[\"\']', text, re.I):
+                  v = m.group(1)
+                  if '/' in v:
+                      found.append(urllib.parse.urljoin(base, v))
+              unique = []
+              seen = set()
+              for u in found:
+                  u = u.rstrip('\\\\,);]')
+                  if u.startswith('http') and u not in seen:
+                      seen.add(u)
+                      unique.append(u)
+              return unique
+
+          def try_url_candidates(share, expected, dest):
+              raw, final, ctype = request_bytes(share)
+              if hashlib.sha256(raw).hexdigest() == expected:
+                  dest.write_bytes(raw)
+                  return True
+              text = normalized_text(raw)
+              ranked = candidates_from_text(text, final)
+              ranked.sort(key=lambda u: (0 if any(k in u.lower() for k in ('download', '.mp4', '.png', 'storage', 'asset', 'file')) else 1, len(u)))
+              for u in ranked[:160]:
+                  try:
+                      data, _, typ = request_bytes(u, share)
+                  except Exception:
+                      continue
+                  if hashlib.sha256(data).hexdigest() == expected:
+                      dest.write_bytes(data)
+                      return True
+              return False
+
+          def selenium_download(share, expected, dest):
+              from selenium import webdriver
+              from selenium.webdriver.common.by import By
+              from selenium.webdriver.chrome.options import Options
+
+              dl = outdir / ('browser-' + dest.stem)
+              if dl.exists():
+                  shutil.rmtree(dl)
+              dl.mkdir(parents=True)
+              opts = Options()
+              opts.add_argument('--headless=new')
+              opts.add_argument('--no-sandbox')
+              opts.add_argument('--disable-dev-shm-usage')
+              opts.add_argument('--window-size=1440,1200')
+              opts.add_experimental_option('prefs', {
+                  'download.default_directory': str(dl),
+                  'download.prompt_for_download': False,
+                  'download.directory_upgrade': True,
+                  'safebrowsing.enabled': True,
+              })
+              driver = webdriver.Chrome(options=opts)
+              try:
+                  driver.get(share)
+                  time.sleep(3)
+
+                  # Dynamic DOM can expose the signed URL even when the initial HTML does not.
+                  for u in candidates_from_text(driver.page_source, driver.current_url):
+                      try:
+                          data, _, _ = request_bytes(u, share)
+                      except Exception:
+                          continue
+                      if hashlib.sha256(data).hexdigest() == expected:
+                          dest.write_bytes(data)
+                          return True
+
+                  elems = driver.find_elements(By.CSS_SELECTOR, 'a,button,input[type=button],input[type=submit]')
+                  preferred = []
+                  rest = []
+                  for e in elems:
+                      try:
+                          txt = ((e.text or '') + ' ' + (e.get_attribute('value') or '') + ' ' + (e.get_attribute('aria-label') or '')).lower()
+                          href = (e.get_attribute('href') or '').lower()
+                      except Exception:
+                          continue
+                      if any(k in txt or k in href for k in ('download', 'ダウンロード', '保存', '受け取', '.mp4', '.png')):
+                          preferred.append(e)
+                      else:
+                          rest.append(e)
+
+                  for e in preferred + rest[:20]:
+                      try:
+                          driver.execute_script('arguments[0].scrollIntoView({block:"center"});', e)
+                          driver.execute_script('arguments[0].click();', e)
+                      except Exception:
+                          continue
+                      for _ in range(25):
+                          time.sleep(0.4)
+                          for p in dl.iterdir():
+                              if p.suffix == '.crdownload' or not p.is_file():
+                                  continue
+                              if sha256(p) == expected:
+                                  shutil.copyfile(p, dest)
+                                  return True
+                  return False
+              finally:
+                  driver.quit()
+
+          def acquire(share, expected, dest):
+              if try_url_candidates(share, expected, dest):
+                  return
+              if selenium_download(share, expected, dest):
+                  return
+              raise SystemExit(f'Could not obtain exact file from {share}; expected sha256={expected}')
+
+          video = outdir / 'ROKAS_YomiRamenNews_1280x720_BT709.mp4'
+          poster = outdir / 'ROKAS_YomiRamenNews_Poster_1280x720.png'
+          acquire(VIDEO_SHARE, VIDEO_SHA, video)
+          acquire(POSTER_SHARE, POSTER_SHA, poster)
+
+          assert sha256(video) == VIDEO_SHA
+          assert sha256(poster) == POSTER_SHA
+          print('VIDEO_SOURCE_SHA256=' + sha256(video))
+          print('POSTER_SOURCE_SHA256=' + sha256(poster))
+          print('VIDEO_BYTES=' + str(video.stat().st_size))
+          print('POSTER_BYTES=' + str(poster.stat().st_size))
+          PY
+
+      - name: Replace only existing YOMI embedded media chunks
+        env:
+          VIDEO_SHA256: 31eeba75cb92d34d4e556ffd97c36e13431acb906f9b24404bf5960b987f3bcc
+          POSTER_SHA256: f86a6636f357361acf93048e47f2beb09f6f1645ef88312f320eac83fce738cf
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, os, struct
+          from pathlib import Path
+
+          root = Path('.')
+          media = Path('/tmp/yomi-final-media')
+          video = media / 'ROKAS_YomiRamenNews_1280x720_BT709.mp4'
+          poster = media / 'ROKAS_YomiRamenNews_Poster_1280x720.png'
+          news = root / 'Assets/Rokas/Resources/News'
+
+          def sha(data): return hashlib.sha256(data).hexdigest()
+          video_bytes = video.read_bytes()
+          poster_bytes = poster.read_bytes()
+          assert sha(video_bytes) == os.environ['VIDEO_SHA256']
+          assert sha(poster_bytes) == os.environ['POSTER_SHA256']
+
+          # Validate authoritative PNG dimensions without modifying it.
+          assert poster_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+          width, height = struct.unpack('>II', poster_bytes[16:24])
+          assert (width, height) == (1280, 720), (width, height)
+
+          def write_chunks(prefix, raw, count):
+              encoded = base64.b64encode(raw).decode('ascii')
+              n = len(encoded)
+              for i in range(count):
+                  a = n * i // count
+                  b = n * (i + 1) // count
+                  (news / f'{prefix}_{i:02d}.txt').write_text(encoded[a:b], encoding='ascii', newline='')
+              rebuilt = ''.join((news / f'{prefix}_{i:02d}.txt').read_text(encoding='ascii').strip() for i in range(count))
+              decoded = base64.b64decode(rebuilt, validate=True)
+              assert decoded == raw
+              return sha(decoded)
+
+          poster_sha = write_chunks('YomiRamenPoster', poster_bytes, 4)
+          video_sha = write_chunks('YomiRamenVideo', video_bytes, 6)
+          assert poster_sha == os.environ['POSTER_SHA256']
+          assert video_sha == os.environ['VIDEO_SHA256']
+          print('POSTER_REBUILT_SHA256=' + poster_sha)
+          print('VIDEO_REBUILT_SHA256=' + video_sha)
+          PY
+
+          ffmpeg -v error -i /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4 -f null -
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -of default=nw=1 /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4
+          ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,channels,sample_rate -of default=nw=1 /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4
+
+      - name: Verify diff and create the single development media commit
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --stat
+          git diff -- Assets/Rokas/Resources/News/YomiRamenPoster_00.txt Assets/Rokas/Resources/News/YomiRamenPoster_01.txt Assets/Rokas/Resources/News/YomiRamenPoster_02.txt Assets/Rokas/Resources/News/YomiRamenPoster_03.txt Assets/Rokas/Resources/News/YomiRamenVideo_00.txt Assets/Rokas/Resources/News/YomiRamenVideo_01.txt Assets/Rokas/Resources/News/YomiRamenVideo_02.txt Assets/Rokas/Resources/News/YomiRamenVideo_03.txt Assets/Rokas/Resources/News/YomiRamenVideo_04.txt Assets/Rokas/Resources/News/YomiRamenVideo_05.txt >/tmp/yomi.diff
+
+          python3 - <<'PY'
+          import subprocess
+          expected = {
+              *(f'Assets/Rokas/Resources/News/YomiRamenPoster_{i:02d}.txt' for i in range(4)),
+              *(f'Assets/Rokas/Resources/News/YomiRamenVideo_{i:02d}.txt' for i in range(6)),
+          }
+          actual = set(subprocess.check_output(['git','diff','--name-only'], text=True).splitlines())
+          if actual != expected:
+              raise SystemExit(f'Unexpected diff. expected={sorted(expected)} actual={sorted(actual)}')
+          print('DIFF_SCOPE_OK=YES')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/Resources/News/YomiRamenPoster_00.txt \
+                  Assets/Rokas/Resources/News/YomiRamenPoster_01.txt \
+                  Assets/Rokas/Resources/News/YomiRamenPoster_02.txt \
+                  Assets/Rokas/Resources/News/YomiRamenPoster_03.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_00.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_01.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_02.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_03.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_04.txt \
+                  Assets/Rokas/Resources/News/YomiRamenVideo_05.txt
+          git commit -m "fix: replace YOMI news media with final assets"
+          git push origin HEAD:development
