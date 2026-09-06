@@ -1,9 +1,9 @@
 using System;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.Video;
 
 namespace Rokas.Presentation
 {
@@ -65,13 +65,16 @@ namespace Rokas.Presentation
         private RawImage posterImage;
         private RawImage videoImage;
         private GameObject videoControls;
-        private VideoPlayer player;
+        private Component player;
+        private Type videoPlayerType;
         private RenderTexture renderTexture;
         private RectTransform progressFill;
         private Text timeLabel;
         private Text playLabel;
         private Text volumeLabel;
         private bool playWhenPrepared;
+        private bool preparationRequested;
+        private bool playbackStarted;
         private bool muted;
 
         private void Awake()
@@ -153,27 +156,55 @@ namespace Rokas.Presentation
             BuildStory(card, "NewsStory4", 632, 578, 600, 72, "РЫНОК  ·  ВЕЧЕР",
                 "Талисманы дорожают после серии ночных исчезновений");
 
-            if (EventSystem.current && playHotspot.IsInteractable()) EventSystem.current.SetSelectedGameObject(playHotspot.gameObject);
+            if (EventSystem.current && playHotspot.IsInteractable())
+                EventSystem.current.SetSelectedGameObject(playHotspot.gameObject);
         }
 
         private void BuildVideoPlayer(Transform media)
         {
+            videoPlayerType = ResolveVideoPlayerType();
+            if (videoPlayerType == null)
+            {
+                Debug.LogWarning("ROKAS YOMI News: Unity Video module is unavailable; news page will remain on the poster.");
+                return;
+            }
+
             var host = new GameObject("NewsVideoPlayer");
             host.transform.SetParent(media, false);
-            player = host.AddComponent<VideoPlayer>();
-            player.playOnAwake = false;
-            player.waitForFirstFrame = true;
-            player.skipOnDrop = true;
-            player.isLooping = false;
-            player.renderMode = VideoRenderMode.RenderTexture;
-            player.targetTexture = renderTexture;
-            player.audioOutputMode = VideoAudioOutputMode.Direct;
+            player = host.AddComponent(videoPlayerType);
+            SetProperty("playOnAwake", false);
+            SetProperty("waitForFirstFrame", true);
+            SetProperty("skipOnDrop", true);
+            SetProperty("isLooping", false);
+            SetEnumProperty("renderMode", "RenderTexture");
+            SetProperty("targetTexture", renderTexture);
+            SetEnumProperty("audioOutputMode", "Direct");
+            SetEnumProperty("source", "Url");
+
             string file = EnsureVideoFile();
-            player.source = VideoSource.Url;
-            player.url = string.IsNullOrEmpty(file) ? string.Empty : new Uri(file).AbsoluteUri;
-            player.prepareCompleted += OnPrepared;
-            player.loopPointReached += OnFinished;
-            player.errorReceived += OnVideoError;
+            SetProperty("url", string.IsNullOrEmpty(file) ? string.Empty : new Uri(file).AbsoluteUri);
+        }
+
+        private static Type ResolveVideoPlayerType()
+        {
+            var type = Type.GetType("UnityEngine.Video.VideoPlayer, UnityEngine.VideoModule", false);
+            if (type != null) return type;
+
+            try
+            {
+                var assembly = Assembly.Load("UnityEngine.VideoModule");
+                type = assembly.GetType("UnityEngine.Video.VideoPlayer", false);
+                if (type != null) return type;
+            }
+            catch { }
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.GetName().Name != "UnityEngine.VideoModule") continue;
+                type = assembly.GetType("UnityEngine.Video.VideoPlayer", false);
+                if (type != null) return type;
+            }
+            return null;
         }
 
         private Texture2D LoadPoster()
@@ -205,7 +236,8 @@ namespace Rokas.Presentation
             string directory = Application.temporaryCachePath;
             Directory.CreateDirectory(directory);
             string path = Path.Combine(directory, "YomiRamenNews.mp4");
-            if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length) File.WriteAllBytes(path, bytes);
+            if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length)
+                File.WriteAllBytes(path, bytes);
             return path;
         }
 
@@ -224,52 +256,33 @@ namespace Rokas.Presentation
 
         private void TogglePlay()
         {
-            if (!player) return;
-            if (player.isPlaying)
+            if (!player)
             {
-                player.Pause();
+                Debug.LogWarning("ROKAS YOMI News video player is unavailable.");
+                return;
+            }
+
+            if (GetBool("isPlaying"))
+            {
+                InvokePlayer("Pause");
                 SetPlayText("Играть");
                 return;
             }
 
-            if (player.isPrepared)
+            if (GetBool("isPrepared"))
             {
                 ShowVideo();
-                player.Play();
+                ApplyAudioState();
+                InvokePlayer("Play");
+                playbackStarted = true;
                 SetPlayText("Пауза");
                 return;
             }
 
             playWhenPrepared = true;
+            preparationRequested = true;
             SetPlayText("Загрузка…");
-            player.Prepare();
-        }
-
-        private void OnPrepared(VideoPlayer source)
-        {
-            source.SetDirectAudioMute(0, muted);
-            source.SetDirectAudioVolume(0, 1f);
-            ShowVideo();
-            if (playWhenPrepared)
-            {
-                playWhenPrepared = false;
-                source.Play();
-                SetPlayText("Пауза");
-            }
-        }
-
-        private void OnFinished(VideoPlayer source)
-        {
-            source.Pause();
-            source.time = 0;
-            SetPlayText("Снова");
-        }
-
-        private void OnVideoError(VideoPlayer source, string message)
-        {
-            playWhenPrepared = false;
-            SetPlayText("Играть");
-            Debug.LogWarning("ROKAS YOMI News video: " + message);
+            InvokePlayer("Prepare");
         }
 
         private void ShowVideo()
@@ -282,15 +295,40 @@ namespace Rokas.Presentation
         private void ToggleMute()
         {
             muted = !muted;
-            if (player && player.isPrepared) player.SetDirectAudioMute(0, muted);
+            if (player && GetBool("isPrepared")) ApplyAudioState();
             if (volumeLabel) volumeLabel.text = muted ? "Без звука" : "Звук";
+        }
+
+        private void ApplyAudioState()
+        {
+            InvokePlayer("SetDirectAudioMute", (ushort)0, muted);
+            InvokePlayer("SetDirectAudioVolume", (ushort)0, 1f);
         }
 
         private void Update()
         {
-            if (!player || !player.isPrepared) return;
-            double duration = player.length > .01 ? player.length : 9.708;
-            double current = Math.Max(0, Math.Min(player.time, duration));
+            if (!player) return;
+
+            bool prepared = GetBool("isPrepared");
+            if (preparationRequested && prepared)
+            {
+                preparationRequested = false;
+                ApplyAudioState();
+                ShowVideo();
+                if (playWhenPrepared)
+                {
+                    playWhenPrepared = false;
+                    InvokePlayer("Play");
+                    playbackStarted = true;
+                    SetPlayText("Пауза");
+                }
+            }
+
+            if (!prepared) return;
+
+            double duration = GetDouble("length", 9.708);
+            if (duration <= .01) duration = 9.708;
+            double current = Math.Max(0, Math.Min(GetDouble("time", 0), duration));
             if (progressFill)
             {
                 var size = progressFill.sizeDelta;
@@ -298,6 +336,64 @@ namespace Rokas.Presentation
                 progressFill.sizeDelta = size;
             }
             if (timeLabel) timeLabel.text = FormatTime(current) + " / " + FormatTime(duration);
+
+            if (playbackStarted && !GetBool("isPlaying") && current >= duration - .08)
+            {
+                playbackStarted = false;
+                SetProperty("time", 0d);
+                SetPlayText("Снова");
+            }
+        }
+
+        private object GetProperty(string name)
+        {
+            if (!player || videoPlayerType == null) return null;
+            var property = videoPlayerType.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            return property != null ? property.GetValue(player, null) : null;
+        }
+
+        private bool GetBool(string name)
+        {
+            var value = GetProperty(name);
+            return value is bool && (bool)value;
+        }
+
+        private double GetDouble(string name, double fallback)
+        {
+            var value = GetProperty(name);
+            if (value == null) return fallback;
+            try { return Convert.ToDouble(value); }
+            catch { return fallback; }
+        }
+
+        private void SetProperty(string name, object value)
+        {
+            if (!player || videoPlayerType == null) return;
+            var property = videoPlayerType.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            if (property != null && property.CanWrite) property.SetValue(player, value, null);
+        }
+
+        private void SetEnumProperty(string name, string value)
+        {
+            if (!player || videoPlayerType == null) return;
+            var property = videoPlayerType.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            if (property == null || !property.CanWrite || !property.PropertyType.IsEnum) return;
+            property.SetValue(player, Enum.Parse(property.PropertyType, value), null);
+        }
+
+        private void InvokePlayer(string name, params object[] args)
+        {
+            if (!player || videoPlayerType == null) return;
+            foreach (var method in videoPlayerType.GetMethods(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (method.Name != name || method.GetParameters().Length != args.Length) continue;
+                try
+                {
+                    method.Invoke(player, args);
+                    return;
+                }
+                catch (ArgumentException) { }
+            }
         }
 
         private void BuildStory(Transform parent, string name, float x, float y, float w, float h, string meta, string title)
@@ -351,13 +447,7 @@ namespace Rokas.Presentation
 
         private void OnDestroy()
         {
-            if (player)
-            {
-                player.prepareCompleted -= OnPrepared;
-                player.loopPointReached -= OnFinished;
-                player.errorReceived -= OnVideoError;
-                player.Stop();
-            }
+            if (player) InvokePlayer("Stop");
             if (renderTexture)
             {
                 renderTexture.Release();
