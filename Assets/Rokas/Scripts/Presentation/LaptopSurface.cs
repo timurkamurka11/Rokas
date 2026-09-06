@@ -4,6 +4,7 @@ using UnityEngine.UI;
 namespace Rokas.Presentation
 {
     // Rounded uGUI geometry avoids generated textures and stays crisp as the canvas scales.
+    [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LaptopSurface : MaskableGraphic
     {
         private float radius = 24;

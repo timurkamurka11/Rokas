@@ -259,7 +259,9 @@ namespace Rokas.Presentation
         private LaptopSurface Surface(Transform parent, string name, float x, float y, float w, float h,
             float radius, Color color, bool blocks = false)
         {
-            var surface = ui.Rect(parent, name, x, y, w, h).gameObject.AddComponent<LaptopSurface>();
+            var go = ui.Rect(parent, name, x, y, w, h).gameObject;
+            if (!go.TryGetComponent<CanvasRenderer>(out _)) go.AddComponent<CanvasRenderer>();
+            var surface = go.AddComponent<LaptopSurface>();
             surface.Radius = radius;
             surface.color = color;
             surface.raycastTarget = blocks;
@@ -268,7 +270,9 @@ namespace Rokas.Presentation
 
         private void Icon(Transform parent, string name, LaptopGlyph glyph, float x, float y, float size, Color color)
         {
-            var icon = ui.Rect(parent, name, x, y, size, size).gameObject.AddComponent<LaptopIcon>();
+            var go = ui.Rect(parent, name, x, y, size, size).gameObject;
+            if (!go.TryGetComponent<CanvasRenderer>(out _)) go.AddComponent<CanvasRenderer>();
+            var icon = go.AddComponent<LaptopIcon>();
             icon.Glyph = glyph;
             icon.color = color;
         }

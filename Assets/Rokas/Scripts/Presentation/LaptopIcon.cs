@@ -12,6 +12,7 @@ namespace Rokas.Presentation
     // Texture-free launcher artwork. Coordinates are authored in a 100-unit square,
     // with a top-left origin, and remain square inside any RectTransform aspect ratio.
     [AddComponentMenu("ROKAS/UI/Laptop Icon")]
+    [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LaptopIcon : MaskableGraphic
     {
         [SerializeField] private LaptopGlyph glyph;
