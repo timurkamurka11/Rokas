@@ -10,6 +10,7 @@ namespace Rokas.Presentation
         private const string ReplacementName = "ReferenceGlyph";
         private static Texture2D atlas;
         private static int lastScanFrame = -1;
+        private static bool warningShown;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Install()
@@ -61,9 +62,19 @@ namespace Rokas.Presentation
         private static void EnsureAtlas()
         {
             if (atlas) return;
+
+#if UNITY_EDITOR
+            atlas = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Rokas/Resources/HomeActionIcons.png");
+#else
             atlas = Resources.Load<Texture2D>("HomeActionIcons");
-            if (!atlas)
-                Debug.LogWarning("ROKAS HOME reference icon atlas could not be loaded from Resources/HomeActionIcons.");
+#endif
+
+            if (!atlas && !warningShown)
+            {
+                warningShown = true;
+                Debug.LogWarning("ROKAS HOME reference icon atlas could not be loaded.");
+            }
         }
     }
 }
