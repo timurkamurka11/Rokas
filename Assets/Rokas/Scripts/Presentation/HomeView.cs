@@ -1,6 +1,7 @@
 using System;
 using Rokas.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Rokas.Presentation
@@ -40,29 +41,52 @@ namespace Rokas.Presentation
             weaponWard.rectTransform.localRotation = Quaternion.Euler(0, 0, -12);
             ui.Box(weaponWard.transform, "WardInk", 5, 12, 3, 40, UiKit.Red);
 
-            ui.Button(parent, "LampHotspot", "Свет", 65, 650, 155, 48, () =>
+            Hotspot(parent, "LampHotspot", 65, 650, 155, 48, () =>
                 act(() => { session.SetLamp(!session.State.lampOn); return true; }, session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
-            ui.Button(parent, "LaptopHotspot", "YOMI  /  Ноутбук", 935, 653, 280, 55, () => open("laptop"), true);
-            ui.Button(parent, "TeaHotspot", "Заварить чай", 644, 727, 250, 50, () => open("tea"));
-            ui.Button(parent, "WorkbenchHotspot", "Снаряжение", 1184, 474, 265, 50, () => open("workbench"));
-            ui.Button(parent, "MameHotspot", "Мамэ", 132, 925, 210, 49, () =>
+            Hotspot(parent, "LaptopHotspot", 935, 653, 280, 55, () => open("laptop"));
+            Hotspot(parent, "TeaHotspot", 644, 727, 250, 50, () => open("tea"));
+            Hotspot(parent, "WorkbenchHotspot", 1184, 474, 265, 50, () => open("workbench"));
+            Hotspot(parent, "MameHotspot", 132, 925, 210, 49, () =>
             {
                 act(() => { session.PetMame(); return true; }, "");
                 mameReaction = 1;
                 audio.Play(assets.mame);
                 toast(session.State.mameInteractions % 3 == 0 ? "Мамэ внимательно смотрит в пустой угол." : "Мамэ довольно щурится. Почти как обычный питомец.");
             });
-            ui.Button(parent, "DoorHotspot", "Выйти из дома", 1610, 658, 256, 58, () =>
+            Hotspot(parent, "DoorHotspot", 1610, 658, 256, 58, () =>
             {
                 if (session.State.phase == RunPhase.Accepted)
                     travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
                 else if (session.State.phase == RunPhase.Payment)
                     toast("На ноутбук пришло подтверждение оплаты.");
                 else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
-            }, true);
-            ui.Button(parent, "WindowHotspot", "За окном", 502, 443, 194, 48,
+            });
+            Hotspot(parent, "WindowHotspot", 502, 443, 194, 48,
                 () => toast("Поезд проходит без остановки. На этот раз — настоящий."));
             Refresh();
+        }
+
+        private Button Hotspot(RectTransform parent, string name, float x, float y, float w, float h, Action action)
+        {
+            // Reuse UiKit.Button so click audio and existing navigation stay intact, then strip the visible chrome.
+            var button = ui.Button(parent, name, "", x, y, w, h, action);
+            button.transition = Selectable.Transition.None;
+
+            var background = button.targetGraphic as Image;
+            if (background)
+            {
+                background.color = new Color(UiKit.Jade.r, UiKit.Jade.g, UiKit.Jade.b, 0f);
+                background.raycastTarget = true;
+            }
+
+            foreach (Transform child in button.transform)
+                child.gameObject.SetActive(false);
+
+            var oldFeedback = button.GetComponent<InteractionFeedback>();
+            if (oldFeedback) oldFeedback.enabled = false;
+
+            button.gameObject.AddComponent<HomeHotspotFeedback>().Initialize(background, button);
+            return button;
         }
 
         public void Refresh()
@@ -91,5 +115,60 @@ namespace Rokas.Presentation
         }
 
         public void ClearReferences() { mame = null; weaponWard = null; objective = null; prepared = null; }
+    }
+
+    // HOME uses diegetic interaction: invisible hit areas only reveal a soft tint on hover/selection.
+    public sealed class HomeHotspotFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
+        ISelectHandler, IDeselectHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        private Image glow;
+        private Button button;
+        private bool hovered;
+        private bool selected;
+        private bool pressed;
+
+        public void Initialize(Image target, Button owner)
+        {
+            glow = target;
+            button = owner;
+            SetAlpha(0f);
+        }
+
+        public void OnPointerEnter(PointerEventData e) { hovered = true; }
+        public void OnPointerExit(PointerEventData e) { hovered = false; pressed = false; }
+        public void OnSelect(BaseEventData e) { selected = true; }
+        public void OnDeselect(BaseEventData e) { selected = false; pressed = false; }
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (e.button == PointerEventData.InputButton.Left) pressed = true;
+        }
+        public void OnPointerUp(PointerEventData e) { pressed = false; }
+
+        private void Update()
+        {
+            if (!glow || !button) return;
+
+            bool active = button.IsInteractable() && (hovered || selected);
+            float targetAlpha = active ? (pressed ? .16f : selected ? .11f : .085f) : 0f;
+            float factor = 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime);
+            var color = glow.color;
+            color.r = UiKit.Jade.r;
+            color.g = UiKit.Jade.g;
+            color.b = UiKit.Jade.b;
+            color.a = Mathf.Lerp(color.a, targetAlpha, factor);
+            glow.color = color;
+        }
+
+        private void SetAlpha(float alpha)
+        {
+            if (!glow) return;
+            glow.color = new Color(UiKit.Jade.r, UiKit.Jade.g, UiKit.Jade.b, alpha);
+        }
+
+        private void OnDisable()
+        {
+            hovered = selected = pressed = false;
+            SetAlpha(0f);
+        }
     }
 }
