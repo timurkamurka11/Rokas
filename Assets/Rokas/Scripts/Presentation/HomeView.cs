@@ -50,7 +50,7 @@ namespace Rokas.Presentation
                 },
                 () => act(() => { session.SetLamp(!session.State.lampOn); return true; },
                     session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."),
-                .78f, .10f, .76f, 1.0f);
+                new Color(1f, .95f, .82f, 1f), 30f, 17f, .30f, .82f, false);
 
             Hotspot(parent, "LaptopHotspot", 985, 505, 225, 170,
                 new[]
@@ -59,7 +59,7 @@ namespace Rokas.Presentation
                     new Vector2(.78f, .84f), new Vector2(.12f, .92f), new Vector2(.02f, .80f)
                 },
                 () => open("laptop"),
-                .95f, .16f, .98f, 1.1f);
+                new Color(1f, .985f, .95f, 1f), 42f, 18f, .40f, 1f, false);
 
             Hotspot(parent, "TeaHotspot", 795, 600, 86, 92,
                 new[]
@@ -69,7 +69,7 @@ namespace Rokas.Presentation
                     new Vector2(.05f, .70f), new Vector2(.04f, .24f)
                 },
                 () => open("tea"),
-                .82f, .13f, .86f, .9f);
+                new Color(1f, .97f, .86f, 1f), 22f, 11f, .32f, .86f, false);
 
             Hotspot(parent, "WorkbenchHotspot", 1160, 325, 300, 112,
                 new[]
@@ -79,7 +79,7 @@ namespace Rokas.Presentation
                     new Vector2(.04f, .60f)
                 },
                 () => open("workbench"),
-                .65f, .08f, .64f, .75f);
+                new Color(.99f, .97f, .91f, 1f), 30f, 14f, .23f, .68f, false);
 
             Hotspot(parent, "MameHotspot", 150, 772, 218, 218,
                 new[]
@@ -98,7 +98,7 @@ namespace Rokas.Presentation
                         ? "Мамэ внимательно смотрит в пустой угол."
                         : "Мамэ довольно щурится. Почти как обычный питомец.");
                 },
-                .92f, .18f, .96f, 1.2f);
+                new Color(.93f, .98f, 1f, 1f), 38f, 17f, .42f, 1f, false);
 
             Hotspot(parent, "DoorHotspot", 1625, 100, 150, 505,
                 new[]
@@ -114,7 +114,7 @@ namespace Rokas.Presentation
                         toast("На ноутбук пришло подтверждение оплаты.");
                     else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
                 },
-                .42f, .045f, .38f, .55f);
+                new Color(1f, .97f, .91f, 1f), 24f, 15f, .14f, .46f, false);
 
             Hotspot(parent, "WindowHotspot", 330, 105, 615, 455,
                 new[]
@@ -123,24 +123,28 @@ namespace Rokas.Presentation
                     new Vector2(.03f, .99f)
                 },
                 () => toast("Поезд проходит без остановки. На этот раз — настоящий."),
-                .42f, .025f, .24f, .22f);
+                new Color(.91f, .96f, 1f, 1f), 0f, 0f, .18f, .52f, true);
 
             Refresh();
         }
 
         private Button Hotspot(RectTransform parent, string name, float x, float y, float w, float h,
-            Vector2[] shape, Action action, float strength = 1f, float idleIntensity = .10f,
-            float hoverIntensity = .82f, float haloScale = 1f)
+            Vector2[] shape, Action action, Color tint, float padding, float blurRadius,
+            float idleIntensity, float hoverIntensity, bool glassMist)
         {
             var rect = ui.Rect(parent, name, x, y, w, h);
-            var mask = rect.gameObject.AddComponent<HomeObjectMask>();
-            mask.SetShape(shape);
-            mask.Strength = strength;
-            mask.HaloScale = haloScale;
-            mask.raycastTarget = true;
+
+            var hitMask = rect.gameObject.AddComponent<HomeObjectMask>();
+            hitMask.SetShape(shape);
+            hitMask.raycastTarget = true;
+
+            var glowRect = ui.Rect(rect, name + "Glow", -padding, -padding, w + padding * 2f, h + padding * 2f);
+            var glow = glowRect.gameObject.AddComponent<HomeSoftGlowGraphic>();
+            glow.raycastTarget = false;
+            glow.Initialize(shape, new Vector2(w, h), padding, blurRadius, tint, glassMist);
 
             var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = mask;
+            button.targetGraphic = hitMask;
             button.transition = Selectable.Transition.None;
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             button.onClick.AddListener(() =>
@@ -150,7 +154,7 @@ namespace Rokas.Presentation
             });
 
             rect.gameObject.AddComponent<HomeObjectHighlight>()
-                .Initialize(mask, button, idleIntensity, hoverIntensity);
+                .Initialize(glow, button, idleIntensity, hoverIntensity);
             return button;
         }
 
@@ -186,43 +190,6 @@ namespace Rokas.Presentation
     public sealed class HomeObjectMask : MaskableGraphic, ICanvasRaycastFilter
     {
         private Vector2[] points = Array.Empty<Vector2>();
-        private float intensity;
-        private float strength = 1f;
-        private float haloScale = 1f;
-
-        private static readonly Color MistWhite = new Color(.97f, .96f, .91f, 1f);
-
-        public float Intensity
-        {
-            get { return intensity; }
-            set
-            {
-                float next = Mathf.Max(0, value);
-                if (Mathf.Approximately(intensity, next)) return;
-                intensity = next;
-                SetVerticesDirty();
-            }
-        }
-
-        public float Strength
-        {
-            get { return strength; }
-            set
-            {
-                strength = Mathf.Clamp01(value);
-                SetVerticesDirty();
-            }
-        }
-
-        public float HaloScale
-        {
-            get { return haloScale; }
-            set
-            {
-                haloScale = Mathf.Max(0, value);
-                SetVerticesDirty();
-            }
-        }
 
         public void SetShape(Vector2[] value)
         {
@@ -233,76 +200,14 @@ namespace Rokas.Presentation
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            if (points.Length < 3) return;
-
             Rect rect = GetPixelAdjustedRect();
-            var verts = new Vector2[points.Length];
-            Vector2 center = Vector2.zero;
-            for (int i = 0; i < points.Length; i++)
-            {
-                verts[i] = new Vector2(rect.xMin + points[i].x * rect.width, rect.yMax - points[i].y * rect.height);
-                center += verts[i];
-            }
-            center /= points.Length;
-
-            float amount = Mathf.Clamp01(intensity) * strength;
-            if (amount <= .0001f) return;
-
-            AddInteriorMist(mesh, verts, center, amount);
-            if (haloScale > .001f)
-                AddSoftHalo(mesh, verts, center, 18f * haloScale, amount);
-        }
-
-        private static void AddInteriorMist(VertexHelper mesh, Vector2[] verts, Vector2 center, float amount)
-        {
-            Color centerColor = WithAlpha(MistWhite, .10f * amount);
-            Color edgeColor = WithAlpha(MistWhite, .028f * amount);
-
-            int centerIndex = mesh.currentVertCount;
-            mesh.AddVert(center, centerColor, Vector2.zero);
-            int firstEdge = mesh.currentVertCount;
-            for (int i = 0; i < verts.Length; i++)
-                mesh.AddVert(verts[i], edgeColor, Vector2.zero);
-
-            for (int i = 0; i < verts.Length; i++)
-            {
-                int next = (i + 1) % verts.Length;
-                mesh.AddTriangle(centerIndex, firstEdge + i, firstEdge + next);
-            }
-        }
-
-        private static void AddSoftHalo(VertexHelper mesh, Vector2[] verts, Vector2 center, float expansion, float amount)
-        {
-            Color inner = WithAlpha(MistWhite, .11f * amount);
-            Color outer = WithAlpha(MistWhite, 0f);
-            int start = mesh.currentVertCount;
-
-            for (int i = 0; i < verts.Length; i++)
-            {
-                Vector2 radial = verts[i] - center;
-                Vector2 expanded = radial.sqrMagnitude > .001f
-                    ? verts[i] + radial.normalized * expansion
-                    : verts[i];
-                mesh.AddVert(verts[i], inner, Vector2.zero);
-                mesh.AddVert(expanded, outer, Vector2.zero);
-            }
-
-            for (int i = 0; i < verts.Length; i++)
-            {
-                int next = (i + 1) % verts.Length;
-                int innerA = start + i * 2;
-                int outerA = innerA + 1;
-                int innerB = start + next * 2;
-                int outerB = innerB + 1;
-                mesh.AddTriangle(innerA, outerA, outerB);
-                mesh.AddTriangle(innerA, outerB, innerB);
-            }
-        }
-
-        private static Color WithAlpha(Color color, float alpha)
-        {
-            color.a = Mathf.Clamp01(alpha);
-            return color;
+            Color32 transparent = new Color32(255, 255, 255, 0);
+            mesh.AddVert(new Vector3(rect.xMin, rect.yMin), transparent, new Vector2(0, 0));
+            mesh.AddVert(new Vector3(rect.xMin, rect.yMax), transparent, new Vector2(0, 1));
+            mesh.AddVert(new Vector3(rect.xMax, rect.yMax), transparent, new Vector2(1, 1));
+            mesh.AddVert(new Vector3(rect.xMax, rect.yMin), transparent, new Vector2(1, 0));
+            mesh.AddTriangle(0, 1, 2);
+            mesh.AddTriangle(0, 2, 3);
         }
 
         public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
@@ -332,10 +237,252 @@ namespace Rokas.Presentation
         }
     }
 
+    [RequireComponent(typeof(CanvasRenderer))]
+    public sealed class HomeSoftGlowGraphic : MaskableGraphic
+    {
+        private Texture2D softMask;
+        private Color tint = Color.white;
+        private float intensity;
+
+        public override Texture mainTexture => softMask ? softMask : s_WhiteTexture;
+
+        public float Intensity
+        {
+            get { return intensity; }
+            set
+            {
+                float next = Mathf.Clamp01(value);
+                if (Mathf.Approximately(intensity, next)) return;
+                intensity = next;
+                ApplyTint();
+            }
+        }
+
+        public void Initialize(Vector2[] sourceShape, Vector2 sourceSize, float padding, float blurRadius,
+            Color glowTint, bool glassMist)
+        {
+            tint = glowTint;
+            BuildTexture(sourceShape ?? Array.Empty<Vector2>(), sourceSize, padding, blurRadius, glassMist);
+            intensity = 0f;
+            ApplyTint();
+            SetMaterialDirty();
+            SetVerticesDirty();
+        }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            Rect rect = GetPixelAdjustedRect();
+            Color32 vertexColor = color;
+            mesh.AddVert(new Vector3(rect.xMin, rect.yMin), vertexColor, new Vector2(0, 0));
+            mesh.AddVert(new Vector3(rect.xMin, rect.yMax), vertexColor, new Vector2(0, 1));
+            mesh.AddVert(new Vector3(rect.xMax, rect.yMax), vertexColor, new Vector2(1, 1));
+            mesh.AddVert(new Vector3(rect.xMax, rect.yMin), vertexColor, new Vector2(1, 0));
+            mesh.AddTriangle(0, 1, 2);
+            mesh.AddTriangle(0, 2, 3);
+        }
+
+        private void ApplyTint()
+        {
+            var c = tint;
+            c.a = intensity;
+            color = c;
+        }
+
+        private void BuildTexture(Vector2[] sourceShape, Vector2 sourceSize, float padding, float blurRadius, bool glassMist)
+        {
+            if (softMask)
+                Destroy(softMask);
+
+            float expandedW = Mathf.Max(1f, sourceSize.x + padding * 2f);
+            float expandedH = Mathf.Max(1f, sourceSize.y + padding * 2f);
+            int width = Mathf.Clamp(Mathf.RoundToInt(expandedW * .55f), 64, 256);
+            int height = Mathf.Clamp(Mathf.RoundToInt(expandedH * .55f), 64, 256);
+
+            softMask = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
+            {
+                name = name + "_SoftMist",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.DontSave
+            };
+
+            float[] baseMask = new float[width * height];
+            RasterizeShape(baseMask, width, height, sourceShape, sourceSize, padding);
+
+            float[] alpha = glassMist
+                ? BuildGlassMist(baseMask, width, height)
+                : BuildObjectMist(baseMask, width, height, expandedW, expandedH, blurRadius);
+
+            var pixels = new Color32[alpha.Length];
+            for (int i = 0; i < alpha.Length; i++)
+            {
+                byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha[i]) * 255f);
+                pixels[i] = new Color32(255, 255, 255, a);
+            }
+
+            softMask.SetPixels32(pixels);
+            softMask.Apply(false, true);
+        }
+
+        private static void RasterizeShape(float[] mask, int width, int height, Vector2[] sourceShape,
+            Vector2 sourceSize, float padding)
+        {
+            if (sourceShape.Length < 3 || sourceSize.x <= 0 || sourceSize.y <= 0) return;
+
+            float expandedW = sourceSize.x + padding * 2f;
+            float expandedH = sourceSize.y + padding * 2f;
+
+            for (int y = 0; y < height; y++)
+            {
+                float topY = expandedH - (y + .5f) / height * expandedH - padding;
+                float normalizedY = topY / sourceSize.y;
+
+                for (int x = 0; x < width; x++)
+                {
+                    float leftX = (x + .5f) / width * expandedW - padding;
+                    float normalizedX = leftX / sourceSize.x;
+                    mask[y * width + x] = Contains(sourceShape, new Vector2(normalizedX, normalizedY)) ? 1f : 0f;
+                }
+            }
+        }
+
+        private static float[] BuildObjectMist(float[] source, int width, int height,
+            float expandedW, float expandedH, float blurRadius)
+        {
+            float scale = .5f * (width / expandedW + height / expandedH);
+            int radius = Mathf.Clamp(Mathf.RoundToInt(Mathf.Max(3f, blurRadius) * scale), 2, 18);
+            float[] blurred = (float[])source.Clone();
+
+            // Three box-blur passes approximate a broad Photoshop-style Gaussian feather,
+            // avoiding the hard polygon edge that made the previous version look like a mask.
+            for (int pass = 0; pass < 3; pass++)
+                blurred = BoxBlur(blurred, width, height, radius);
+
+            var result = new float[source.Length];
+            for (int i = 0; i < result.Length; i++)
+            {
+                // The feather carries nearly all of the visibility. The original shape contributes
+                // only a tiny amount so the object reads as gently lit instead of covered by a veil.
+                float broadMist = blurred[i] * .145f;
+                float innerLift = source[i] * .012f;
+                result[i] = Mathf.Clamp01(broadMist + innerLift);
+            }
+            return result;
+        }
+
+        private static float[] BuildGlassMist(float[] source, int width, int height)
+        {
+            var result = new float[source.Length];
+
+            for (int y = 0; y < height; y++)
+            {
+                float v = (y + .5f) / height;
+                float edgeY = SmoothEdge(v);
+
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    if (source[index] <= 0f) continue;
+
+                    float u = (x + .5f) / width;
+                    float edge = edgeY * SmoothEdge(u);
+
+                    // Broad overlapping clouds keep the window alive without tracing its rectangle.
+                    float cloudA = Gaussian(u, v, .26f, .64f, .34f, .30f);
+                    float cloudB = Gaussian(u, v, .58f, .42f, .42f, .38f);
+                    float cloudC = Gaussian(u, v, .82f, .72f, .30f, .26f);
+                    float verticalHaze = Gaussian(u, v, .53f, .50f, .65f, .80f) * .35f;
+
+                    float mist = Mathf.Clamp01(cloudA * .55f + cloudB * .50f + cloudC * .42f + verticalHaze);
+                    result[index] = mist * edge * .075f;
+                }
+            }
+
+            return result;
+        }
+
+        private static float SmoothEdge(float value)
+        {
+            float nearest = Mathf.Min(value, 1f - value);
+            return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(nearest / .16f));
+        }
+
+        private static float Gaussian(float u, float v, float cx, float cy, float rx, float ry)
+        {
+            float dx = (u - cx) / Mathf.Max(.001f, rx);
+            float dy = (v - cy) / Mathf.Max(.001f, ry);
+            return Mathf.Exp(-(dx * dx + dy * dy) * 2f);
+        }
+
+        private static float[] BoxBlur(float[] source, int width, int height, int radius)
+        {
+            if (radius <= 0) return (float[])source.Clone();
+
+            var horizontal = new float[source.Length];
+            var output = new float[source.Length];
+            int diameter = radius * 2 + 1;
+
+            for (int y = 0; y < height; y++)
+            {
+                int row = y * width;
+                float sum = 0f;
+                for (int k = -radius; k <= radius; k++)
+                    sum += source[row + Mathf.Clamp(k, 0, width - 1)];
+
+                for (int x = 0; x < width; x++)
+                {
+                    horizontal[row + x] = sum / diameter;
+                    int remove = Mathf.Clamp(x - radius, 0, width - 1);
+                    int add = Mathf.Clamp(x + radius + 1, 0, width - 1);
+                    sum += source[row + add] - source[row + remove];
+                }
+            }
+
+            for (int x = 0; x < width; x++)
+            {
+                float sum = 0f;
+                for (int k = -radius; k <= radius; k++)
+                    sum += horizontal[Mathf.Clamp(k, 0, height - 1) * width + x];
+
+                for (int y = 0; y < height; y++)
+                {
+                    output[y * width + x] = sum / diameter;
+                    int remove = Mathf.Clamp(y - radius, 0, height - 1);
+                    int add = Mathf.Clamp(y + radius + 1, 0, height - 1);
+                    sum += horizontal[add * width + x] - horizontal[remove * width + x];
+                }
+            }
+
+            return output;
+        }
+
+        private static bool Contains(Vector2[] polygon, Vector2 point)
+        {
+            bool inside = false;
+            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
+            {
+                Vector2 a = polygon[i];
+                Vector2 b = polygon[j];
+                bool crosses = (a.y > point.y) != (b.y > point.y) &&
+                    point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x;
+                if (crosses) inside = !inside;
+            }
+            return inside;
+        }
+
+        protected override void OnDestroy()
+        {
+            if (softMask)
+                Destroy(softMask);
+            base.OnDestroy();
+        }
+    }
+
     public sealed class HomeObjectHighlight : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
         ISelectHandler, IDeselectHandler, IPointerDownHandler, IPointerUpHandler
     {
-        private HomeObjectMask mask;
+        private HomeSoftGlowGraphic glow;
         private Button button;
         private bool hovered;
         private bool selected;
@@ -343,13 +490,13 @@ namespace Rokas.Presentation
         private float idleIntensity;
         private float hoverIntensity;
 
-        public void Initialize(HomeObjectMask target, Button owner, float idle, float hover)
+        public void Initialize(HomeSoftGlowGraphic target, Button owner, float idle, float hover)
         {
-            mask = target;
+            glow = target;
             button = owner;
-            idleIntensity = Mathf.Max(0, idle);
-            hoverIntensity = Mathf.Max(idleIntensity, hover);
-            if (mask) mask.Intensity = idleIntensity;
+            idleIntensity = Mathf.Clamp01(idle);
+            hoverIntensity = Mathf.Clamp(Mathf.Max(idleIntensity, hover), idleIntensity, 1f);
+            if (glow) glow.Intensity = idleIntensity;
         }
 
         public void OnPointerEnter(PointerEventData e) { hovered = true; }
@@ -364,23 +511,24 @@ namespace Rokas.Presentation
 
         private void Update()
         {
-            if (!mask || !button) return;
+            if (!glow || !button) return;
 
             bool active = button.IsInteractable() && (hovered || selected);
             float target = active ? hoverIntensity : idleIntensity;
-            if (active && pressed)
-                target = hoverIntensity * 1.14f;
-            else if (active)
-                target *= .985f + Mathf.Sin(Time.unscaledTime * 2.35f) * .015f;
 
-            float factor = 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime);
-            mask.Intensity = Mathf.Lerp(mask.Intensity, target, factor);
+            if (active && pressed)
+                target = Mathf.Min(1f, hoverIntensity * 1.08f);
+            else if (active)
+                target *= .996f + Mathf.Sin(Time.unscaledTime * 1.7f) * .004f;
+
+            float factor = 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime);
+            glow.Intensity = Mathf.Lerp(glow.Intensity, target, factor);
         }
 
         private void OnDisable()
         {
             hovered = selected = pressed = false;
-            if (mask) mask.Intensity = idleIntensity;
+            if (glow) glow.Intensity = idleIntensity;
         }
     }
 }
