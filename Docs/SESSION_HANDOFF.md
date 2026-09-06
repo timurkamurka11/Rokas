@@ -1,14 +1,17 @@
 COMPLETED:
-HOME scene-action pill layout remains unchanged and approved. The seven circular medallion glyphs still use the reference-matched silhouettes: Свет/lamp, За окном/torii, Снаряжение/crossed swords, YOMI / Ноутбук/laptop, Заварить чай/cup, Мамэ/cat, Выйти из дома/door. The right chevrons, pill sizes/positions, text, hover/press feedback and all existing actions are unchanged.
+YOMI laptop News page now replaces the placeholder with a Russian news layout. The lead story uses the supplied ramen/YOMI poster as a player preview; clicking the central play area reconstructs and plays the embedded H.264/AAC clip. Play/pause, progress, time and mute controls are included, with four supporting news cards below.
 
-FIX:
-Removed the runtime dependency on PNG/TextureImporter decoding for HOME reference icons. HomeReferenceIconBinder now embeds the icon alpha atlas as gzip-compressed data, reconstructs a standard RGBA32 Texture2D directly with SetPixels32, and applies the gold reference color in memory. This bypasses both the failed Resources Texture2D import path and the failed ImageConversion.LoadImage PNG path.
+SCOPE:
+Only the laptop News presentation/runtime and its embedded media resources were added. HOME actions, YOMI desktop tiles, contracts, food, shop, Core, combat and music were not changed.
+
+MEDIA:
+Poster and video are stored as Resources TextAsset base64 chunks and reconstructed by LaptopNewsRuntime. Video is written into Application.temporaryCachePath before VideoPlayer prepares it.
 
 STATIC VERIFICATION:
-The embedded source alpha data was generated from the approved 896x128 atlas, decompresses to exactly 896*128 alpha bytes, and the generated C# source has balanced braces. Unity/PlayMode was not run from this chat.
+The final commit is built directly on the current development baseline and contains only the News runtime, News media resources and this handoff. Resource prefixes and runtime chunk counts are aligned (4 poster chunks, 6 video chunks).
 
 UNITY:
-NOT RUN — user will validate manually.
+NOT RUN — user will validate visually in Play Mode.
 
 NEXT:
-User pulls development and runs Play. Expected regression check: no HOME icon atlas loading/PNG decoding warning and all seven medallion icons render in the approved HOME pills.
+Pull development, open HOME -> YOMI / Ноутбук -> Новости, confirm the poster/layout, click the center play control, verify video/audio/progress/mute, then report any visual changes desired.
