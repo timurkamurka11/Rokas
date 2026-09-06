@@ -49,7 +49,8 @@ namespace Rokas.Presentation
                     new Vector2(.06f, .90f), new Vector2(.05f, .14f)
                 },
                 () => act(() => { session.SetLamp(!session.State.lampOn); return true; },
-                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
+                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."),
+                .78f, .10f, .76f, 1.0f);
 
             Hotspot(parent, "LaptopHotspot", 985, 505, 225, 170,
                 new[]
@@ -57,7 +58,8 @@ namespace Rokas.Presentation
                     new Vector2(.10f, .10f), new Vector2(.92f, .02f), new Vector2(.91f, .70f),
                     new Vector2(.78f, .84f), new Vector2(.12f, .92f), new Vector2(.02f, .80f)
                 },
-                () => open("laptop"));
+                () => open("laptop"),
+                .95f, .16f, .98f, 1.1f);
 
             Hotspot(parent, "TeaHotspot", 795, 600, 86, 92,
                 new[]
@@ -66,7 +68,8 @@ namespace Rokas.Presentation
                     new Vector2(.92f, .68f), new Vector2(.72f, .94f), new Vector2(.24f, .94f),
                     new Vector2(.05f, .70f), new Vector2(.04f, .24f)
                 },
-                () => open("tea"));
+                () => open("tea"),
+                .82f, .13f, .86f, .9f);
 
             Hotspot(parent, "WorkbenchHotspot", 1160, 325, 300, 112,
                 new[]
@@ -75,7 +78,8 @@ namespace Rokas.Presentation
                     new Vector2(.98f, .31f), new Vector2(.91f, .64f), new Vector2(.22f, .72f),
                     new Vector2(.04f, .60f)
                 },
-                () => open("workbench"));
+                () => open("workbench"),
+                .65f, .08f, .64f, .75f);
 
             Hotspot(parent, "MameHotspot", 150, 772, 218, 218,
                 new[]
@@ -93,7 +97,8 @@ namespace Rokas.Presentation
                     toast(session.State.mameInteractions % 3 == 0
                         ? "Мамэ внимательно смотрит в пустой угол."
                         : "Мамэ довольно щурится. Почти как обычный питомец.");
-                });
+                },
+                .92f, .18f, .96f, 1.2f);
 
             Hotspot(parent, "DoorHotspot", 1625, 100, 150, 505,
                 new[]
@@ -108,7 +113,8 @@ namespace Rokas.Presentation
                     else if (session.State.phase == RunPhase.Payment)
                         toast("На ноутбук пришло подтверждение оплаты.");
                     else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
-                });
+                },
+                .42f, .045f, .38f, .55f);
 
             Hotspot(parent, "WindowHotspot", 330, 105, 615, 455,
                 new[]
@@ -116,18 +122,21 @@ namespace Rokas.Presentation
                     new Vector2(.02f, .02f), new Vector2(.98f, .02f), new Vector2(.96f, .96f),
                     new Vector2(.03f, .99f)
                 },
-                () => toast("Поезд проходит без остановки. На этот раз — настоящий."), .55f);
+                () => toast("Поезд проходит без остановки. На этот раз — настоящий."),
+                .42f, .025f, .24f, .22f);
 
             Refresh();
         }
 
         private Button Hotspot(RectTransform parent, string name, float x, float y, float w, float h,
-            Vector2[] shape, Action action, float strength = 1f)
+            Vector2[] shape, Action action, float strength = 1f, float idleIntensity = .10f,
+            float hoverIntensity = .82f, float haloScale = 1f)
         {
             var rect = ui.Rect(parent, name, x, y, w, h);
             var mask = rect.gameObject.AddComponent<HomeObjectMask>();
             mask.SetShape(shape);
             mask.Strength = strength;
+            mask.HaloScale = haloScale;
             mask.raycastTarget = true;
 
             var button = rect.gameObject.AddComponent<Button>();
@@ -140,7 +149,8 @@ namespace Rokas.Presentation
                 action?.Invoke();
             });
 
-            rect.gameObject.AddComponent<HomeObjectHighlight>().Initialize(mask, button);
+            rect.gameObject.AddComponent<HomeObjectHighlight>()
+                .Initialize(mask, button, idleIntensity, hoverIntensity);
             return button;
         }
 
@@ -178,6 +188,9 @@ namespace Rokas.Presentation
         private Vector2[] points = Array.Empty<Vector2>();
         private float intensity;
         private float strength = 1f;
+        private float haloScale = 1f;
+
+        private static readonly Color MistWhite = new Color(.97f, .96f, .91f, 1f);
 
         public float Intensity
         {
@@ -201,6 +214,16 @@ namespace Rokas.Presentation
             }
         }
 
+        public float HaloScale
+        {
+            get { return haloScale; }
+            set
+            {
+                haloScale = Mathf.Max(0, value);
+                SetVerticesDirty();
+            }
+        }
+
         public void SetShape(Vector2[] value)
         {
             points = value ?? Array.Empty<Vector2>();
@@ -214,40 +237,72 @@ namespace Rokas.Presentation
 
             Rect rect = GetPixelAdjustedRect();
             var verts = new Vector2[points.Length];
+            Vector2 center = Vector2.zero;
             for (int i = 0; i < points.Length; i++)
+            {
                 verts[i] = new Vector2(rect.xMin + points[i].x * rect.width, rect.yMax - points[i].y * rect.height);
+                center += verts[i];
+            }
+            center /= points.Length;
 
-            float amount = intensity * strength;
-            Color fill = new Color(.42f, .92f, .84f, .035f * amount);
-            Color glow = new Color(.48f, .98f, .90f, .12f * amount);
-            Color edge = new Color(.72f, 1f, .94f, .36f * amount);
+            float amount = Mathf.Clamp01(intensity) * strength;
+            if (amount <= .0001f) return;
 
-            int start = mesh.currentVertCount;
-            for (int i = 0; i < verts.Length; i++) mesh.AddVert(verts[i], fill, Vector2.zero);
-            for (int i = 1; i < verts.Length - 1; i++) mesh.AddTriangle(start, start + i, start + i + 1);
-
-            AddStroke(mesh, verts, 8f, glow);
-            AddStroke(mesh, verts, 2f, edge);
+            AddInteriorMist(mesh, verts, center, amount);
+            if (haloScale > .001f)
+                AddSoftHalo(mesh, verts, center, 18f * haloScale, amount);
         }
 
-        private static void AddStroke(VertexHelper mesh, Vector2[] verts, float width, Color color)
+        private static void AddInteriorMist(VertexHelper mesh, Vector2[] verts, Vector2 center, float amount)
         {
-            float half = width * .5f;
+            Color centerColor = WithAlpha(MistWhite, .10f * amount);
+            Color edgeColor = WithAlpha(MistWhite, .028f * amount);
+
+            int centerIndex = mesh.currentVertCount;
+            mesh.AddVert(center, centerColor, Vector2.zero);
+            int firstEdge = mesh.currentVertCount;
+            for (int i = 0; i < verts.Length; i++)
+                mesh.AddVert(verts[i], edgeColor, Vector2.zero);
+
             for (int i = 0; i < verts.Length; i++)
             {
-                Vector2 a = verts[i];
-                Vector2 b = verts[(i + 1) % verts.Length];
-                Vector2 direction = b - a;
-                if (direction.sqrMagnitude < .001f) continue;
-                Vector2 normal = new Vector2(-direction.y, direction.x).normalized * half;
-                int index = mesh.currentVertCount;
-                mesh.AddVert(a - normal, color, Vector2.zero);
-                mesh.AddVert(a + normal, color, Vector2.zero);
-                mesh.AddVert(b + normal, color, Vector2.zero);
-                mesh.AddVert(b - normal, color, Vector2.zero);
-                mesh.AddTriangle(index, index + 1, index + 2);
-                mesh.AddTriangle(index, index + 2, index + 3);
+                int next = (i + 1) % verts.Length;
+                mesh.AddTriangle(centerIndex, firstEdge + i, firstEdge + next);
             }
+        }
+
+        private static void AddSoftHalo(VertexHelper mesh, Vector2[] verts, Vector2 center, float expansion, float amount)
+        {
+            Color inner = WithAlpha(MistWhite, .11f * amount);
+            Color outer = WithAlpha(MistWhite, 0f);
+            int start = mesh.currentVertCount;
+
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector2 radial = verts[i] - center;
+                Vector2 expanded = radial.sqrMagnitude > .001f
+                    ? verts[i] + radial.normalized * expansion
+                    : verts[i];
+                mesh.AddVert(verts[i], inner, Vector2.zero);
+                mesh.AddVert(expanded, outer, Vector2.zero);
+            }
+
+            for (int i = 0; i < verts.Length; i++)
+            {
+                int next = (i + 1) % verts.Length;
+                int innerA = start + i * 2;
+                int outerA = innerA + 1;
+                int innerB = start + next * 2;
+                int outerB = innerB + 1;
+                mesh.AddTriangle(innerA, outerA, outerB);
+                mesh.AddTriangle(innerA, outerB, innerB);
+            }
+        }
+
+        private static Color WithAlpha(Color color, float alpha)
+        {
+            color.a = Mathf.Clamp01(alpha);
+            return color;
         }
 
         public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
@@ -285,12 +340,16 @@ namespace Rokas.Presentation
         private bool hovered;
         private bool selected;
         private bool pressed;
+        private float idleIntensity;
+        private float hoverIntensity;
 
-        public void Initialize(HomeObjectMask target, Button owner)
+        public void Initialize(HomeObjectMask target, Button owner, float idle, float hover)
         {
             mask = target;
             button = owner;
-            if (mask) mask.Intensity = 0;
+            idleIntensity = Mathf.Max(0, idle);
+            hoverIntensity = Mathf.Max(idleIntensity, hover);
+            if (mask) mask.Intensity = idleIntensity;
         }
 
         public void OnPointerEnter(PointerEventData e) { hovered = true; }
@@ -306,17 +365,22 @@ namespace Rokas.Presentation
         private void Update()
         {
             if (!mask || !button) return;
+
             bool active = button.IsInteractable() && (hovered || selected);
-            float target = active ? (pressed ? 1.18f : 1f) : 0f;
-            if (active && !pressed) target *= .96f + Mathf.Sin(Time.unscaledTime * 3.2f) * .04f;
-            float factor = 1f - Mathf.Exp(-16f * Time.unscaledDeltaTime);
+            float target = active ? hoverIntensity : idleIntensity;
+            if (active && pressed)
+                target = hoverIntensity * 1.14f;
+            else if (active)
+                target *= .985f + Mathf.Sin(Time.unscaledTime * 2.35f) * .015f;
+
+            float factor = 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime);
             mask.Intensity = Mathf.Lerp(mask.Intensity, target, factor);
         }
 
         private void OnDisable()
         {
             hovered = selected = pressed = false;
-            if (mask) mask.Intensity = 0;
+            if (mask) mask.Intensity = idleIntensity;
         }
     }
 }
