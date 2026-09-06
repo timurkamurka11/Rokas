@@ -37,9 +37,11 @@ namespace Rokas.Tests
             Assert.That(root.GetComponentInChildren<Canvas>(), Is.Not.Null);
             Assert.That(EventSystem.current, Is.Not.Null);
             Press("LaptopHotspot");
+            Press("LaptopContracts");
             Press("AcceptContract");
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
             Press("ClosePanel");
+            yield return new WaitForSecondsRealtime(.3f);
             Press("TeaHotspot");
             Press("PrepareTea");
             Press("ClosePanel");
@@ -77,6 +79,7 @@ namespace Rokas.Tests
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Payment));
             Press("LaptopHotspot");
+            Press("LaptopContracts");
             long previous = boot.Session.State.yen;
             Press("ClaimPayment");
             Assert.That(boot.Session.State.yen, Is.EqualTo(previous + boot.Session.Contract.reward));
@@ -101,8 +104,46 @@ namespace Rokas.Tests
             Assert.That(boot.Session.State.completedRuns, Is.EqualTo(1));
             Assert.That(boot.Session.State.preparedFoodId, Is.Empty);
             Press("LaptopHotspot");
+            Press("LaptopContracts");
             Assert.That(FindButton("ClaimPayment", false), Is.Null);
             Assert.That(FindButton("AcceptContract").IsInteractable(), Is.True);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator LaptopFoodPreservesPurchaseGuardAndReturnsFocus()
+        {
+            directory = Path.Combine(Path.GetTempPath(), "rokas-laptop-" + Guid.NewGuid().ToString("N"));
+            root = new GameObject("LaptopFixture");
+            var boot = root.AddComponent<RokasBootstrap>();
+            boot.Initialize(directory);
+            yield return null;
+
+            Press("LaptopHotspot");
+            Assert.That(FindButton("LaptopContracts"), Is.Not.Null);
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopContracts").gameObject));
+            Assert.That(FindButton("TeaHotspot").IsInteractable(), Is.False, "House input must stay blocked behind the laptop.");
+            Assert.That(FindButton("DoorHotspot").IsInteractable(), Is.False);
+            int initialYen = boot.Session.State.yen;
+            Press("LaptopFood");
+            Press("PrepareTea");
+            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen - 80));
+            Assert.That(boot.Session.State.preparedFoodId, Is.EqualTo("food_green_tea"));
+            Assert.That(FindButton("PrepareTea").IsInteractable(), Is.False);
+            Press("LaptopBack");
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopFood").gameObject));
+            Press("LaptopFood");
+            Assert.That(FindButton("PrepareTea").IsInteractable(), Is.False, "Reopening Food must not permit a second tea purchase.");
+            Click(FindButton("PrepareTea"));
+            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen - 80));
+            boot.View.Escape();
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopFood").gameObject));
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.3f);
+            Assert.That(FindButton("LaptopContracts", false), Is.Null);
+            Assert.That(FindButton("TeaHotspot").IsInteractable(), Is.True);
+            Assert.That(FindButton("LaptopHotspot").IsInteractable(), Is.True);
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopHotspot").gameObject));
             LogAssert.NoUnexpectedReceived();
         }
 

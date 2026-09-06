@@ -9,6 +9,7 @@
 | `Art/Locations/AbandonedSubway.png` | 1672×941, платформа | Генерация для ROKAS |
 | `Art/Yokai/FacelessCommuter.png` | 1024×1536 RGBA, ёкай | Генерация для ROKAS |
 | `Art/Familiars/Mame.png` | 1254×1254 RGBA, Мамэ | Генерация для ROKAS |
+| `Art/UI/LaptopWallpaper.png` | 1672×941, рабочий стол YOMI | Built-in imagegen по референсу пользователя; 2026-09-06 |
 | `Art/UI/Fonts/RokasSans.ttf` | DejaVu Sans, кириллица | Системная копия DejaVu, шрифт не изменён |
 | `Art/UI/Fonts/RokasSerif.ttf` | DejaVu Serif, заголовки | Системная копия DejaVu, шрифт не изменён |
 | `Audio/HomeRain.wav` | Дом, дождь | Собственный синтез `Tools/produce_audio.py` |
@@ -24,4 +25,10 @@
 
 Лицензионные уведомления DejaVu сохранены в `Docs/Licenses/DejaVu.txt`; переименованы файлы, а не внутренние имена шрифтов. В аудио нет внешних музыкальных записей или сэмплов. Все WAV — stereo PCM16, 22050 Hz. Генератор использует Python и NumPy; для открытия Unity готовых WAV достаточно.
 
-PNG импортируются как UI-текстуры без mip maps, с максимальным размером 2048. В персонажах сохранён alpha. `RokasAssets.asset` содержит назначения всех 17 бинарных ассетов и JSON первого контракта. Дубли в Resources не создаются: используются прямые GUID-ссылки.
+PNG импортируются как UI-текстуры без mip maps, с максимальным размером 2048. В персонажах сохранён alpha. `RokasAssets.asset` содержит назначения всех 18 бинарных ассетов и JSON первого контракта. Дубли в Resources не создаются: используются прямые GUID-ссылки.
+
+## Wallpaper ноутбука YOMI
+
+Новый фон сохранён в `Assets/Rokas/Art/UI/LaptopWallpaper.png`; существующие игровые иллюстрации, шрифты и аудио переиспользованы. Девять иконок приложений рисуются векторной геометрией `LaptopIcon.cs`. Фон — ассет, не скриншот Unity.
+
+Промпт built-in imagegen: “Full-bleed 16:9 cinematic illustrated wallpaper matching the user reference: rainy blue-hour Japanese city viewed from a wooded shrine hillside, distant mountain and slender orange Tokyo-style tower. Dark calm left half for launcher tiles. Right foreground: weathered red shrine post and eaves, blank warm paper lantern, wet stone steps, small warm stone lanterns, foliage. Restrained navy palette, warm lights, mist and rain. No portal, people, hardware, frame, UI, icons, overlays, text, signage, logos or watermarks.”

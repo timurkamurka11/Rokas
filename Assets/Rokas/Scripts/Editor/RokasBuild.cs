@@ -23,7 +23,7 @@ namespace Rokas.Editor
             foreach (var scene in EditorBuildSettings.scenes)
                 if (scene.path == ScenePath && scene.enabled) sceneEnabled = true;
             if (!sceneEnabled) throw new BuildFailedException("ROKAS: add the enabled Rokas scene to Build Settings.");
-            foreach (var texture in new[] { assets.home, assets.portal, assets.subway })
+            foreach (var texture in new[] { assets.home, assets.portal, assets.subway, assets.laptopWallpaper })
                 if (texture.width < 1600 || texture.height < 900) throw new BuildFailedException("ROKAS: room artwork must be HD: " + texture.name);
             ValidateSceneImport();
             Debug.Log("ROKAS imported asset references, startup scene and bootstrap validated. This is not a PlayMode or Windows runtime check.");

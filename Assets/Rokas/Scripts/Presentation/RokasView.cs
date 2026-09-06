@@ -30,6 +30,7 @@ namespace Rokas.Presentation
         private readonly HomeView home;
         private readonly MissionView mission;
         private readonly ContractPanels contracts;
+        private readonly LaptopView laptop;
         private RunPhase phase;
         private string panel;
         private bool transition;
@@ -78,6 +79,7 @@ namespace Rokas.Presentation
             home = new HomeView(ui, assets, session, audio, OpenPanel, Act, Travel, ToastShort);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
+            laptop = new LaptopView(ui, assets, session, contracts, audio.Click, ClosePanel);
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             phase = session.State.phase;
@@ -154,6 +156,8 @@ namespace Rokas.Presentation
         private void OpenPanel(string value)
         {
             if (transition || storageBlocked) return;
+            if (laptop.IsClosing) return;
+            if (value == "laptop") laptop.Reset();
             panel = value;
             RefreshPanel();
         }
@@ -171,17 +175,36 @@ namespace Rokas.Presentation
                 FocusFirst(panels);
                 return;
             }
+            if (panel == "laptop")
+            {
+                laptop.Build(panels);
+                return;
+            }
             contracts.Build(panels, panel);
             FocusFirst(panels);
         }
 
         private void ClosePanel()
         {
+            if (panel == "laptop") { laptop.BeginClose(FinishClosePanel); return; }
+            FinishClosePanel();
+        }
+
+        private void FinishClosePanel()
+        {
+            bool fromLaptop = panel == "laptop";
             panel = null;
             ui.Clear(panels);
             sceneInput.interactable = true;
             settingsButton.interactable = true;
-            if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+            if (EventSystem.current)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+                if (fromLaptop)
+                    foreach (var button in scene.GetComponentsInChildren<Button>())
+                        if (button.name == "LaptopHotspot" && button.IsInteractable())
+                        { EventSystem.current.SetSelectedGameObject(button.gameObject); break; }
+            }
         }
 
         private static void FocusFirst(Transform root)
@@ -198,7 +221,8 @@ namespace Rokas.Presentation
         public void Escape()
         {
             if (transition || storageBlocked) return;
-            if (string.IsNullOrEmpty(panel)) OpenPanel("settings"); else ClosePanel();
+            if (panel == "laptop" && laptop.BackToDesktop()) { audio.Click(); return; }
+            if (string.IsNullOrEmpty(panel)) OpenPanel("settings"); else { audio.Click(); ClosePanel(); }
         }
 
         public void FocusNext()
@@ -225,6 +249,7 @@ namespace Rokas.Presentation
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
             mission.Tick(dt, Paused);
+            if (panel == "laptop") laptop.Tick(dt);
             if (toastTime > 0)
             {
                 toastTime -= dt;

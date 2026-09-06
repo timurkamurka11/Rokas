@@ -28,11 +28,13 @@ for path in sorted((ROOT / 'Assets').rglob('*')):
         errors.append('Duplicate GUID: ' + value)
     guids[value] = path
 
+# Unity serializes built-in resources with reserved GUIDs, not project .meta files.
+BUILTIN_GUIDS = {'0000000000000000e000000000000000', '0000000000000000f000000000000000'}
 references = 0
 for path in list((ROOT / 'Assets').rglob('*.asset')) + list((ROOT / 'Assets').rglob('*.unity')) + list((ROOT / 'ProjectSettings').glob('*.asset')):
     for value in re.findall(r'guid: ([0-9a-f]{32})', path.read_text()):
         references += 1
-        if value not in guids and int(value, 16) != 0:
+        if value not in guids and value not in BUILTIN_GUIDS and int(value, 16) != 0:
             errors.append('Unresolved GUID ' + value + ' in ' + str(path.relative_to(ROOT)))
 
 assemblies = {}
@@ -93,7 +95,7 @@ if not bootstrap_guid or bootstrap_guid not in (ROOT / scene_path).read_text():
     errors.append('Scene does not reference RokasBootstrap.')
 
 asset = (ROOT / 'Assets/Rokas/Resources/RokasAssets.asset').read_text()
-fields = ['home', 'portal', 'subway', 'enemy', 'familiar', 'sans', 'serif', 'contract',
+fields = ['home', 'portal', 'subway', 'enemy', 'familiar', 'laptopWallpaper', 'sans', 'serif', 'contract',
           'homeAmbience', 'subwayAmbience', 'homeMusic', 'missionMusic', 'click', 'hit', 'critical', 'portalSound', 'seal', 'mame']
 for name in fields:
     matches = re.findall(r'^  ' + name + r': \{fileID: ([1-9][0-9]*), guid: ([0-9a-f]{32}), type: 3\}', asset, re.M)
@@ -103,7 +105,7 @@ for name in fields:
     file_id, guid = matches[0]
     expected = (('12800000', '.ttf') if name in ('sans', 'serif') else
                 ('4900000', '.json') if name == 'contract' else
-                ('2800000', '.png') if name in fields[:5] else ('8300000', '.wav'))
+                ('2800000', '.png') if name in fields[:6] else ('8300000', '.wav'))
     target = guids.get(guid)
     if not target or (file_id, target.suffix.lower()) != expected:
         errors.append('Wrong imported asset type in binding: ' + name)
@@ -112,7 +114,7 @@ if errors:
     print('\n'.join('FAIL: ' + error for error in errors))
     sys.exit(1)
 print(f'PASS: {asset_count} assets, {len(guids)} unique metas, {references} resolved serialized GUID references.')
-print(f'PASS: {len(images)} PNGs (RGBA characters), {audio_count} stereo PCM assets, 18 presentation bindings, enabled bootstrap scene.')
+print(f'PASS: {len(images)} PNGs (RGBA characters), {audio_count} stereo PCM assets, {len(fields)} presentation bindings, enabled bootstrap scene.')
 print(f'PASS: {len(assemblies)} assembly definitions and declared references; presentation binding file types match.')
 for name, width, height in images:
     print(f'  {name}: {width}x{height}')

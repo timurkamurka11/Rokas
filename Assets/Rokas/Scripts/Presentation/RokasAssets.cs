@@ -6,6 +6,7 @@ namespace Rokas.Presentation
     public sealed class RokasAssets : ScriptableObject
     {
         public Texture2D home;
+        public Texture2D laptopWallpaper;
         public Texture2D portal;
         public Texture2D subway;
         public Texture2D enemy;
@@ -26,7 +27,7 @@ namespace Rokas.Presentation
 
         public bool IsComplete()
         {
-            return home && portal && subway && enemy && familiar && sans && serif && contract
+            return home && laptopWallpaper && portal && subway && enemy && familiar && sans && serif && contract
                 && homeAmbience && subwayAmbience && homeMusic && missionMusic
                 && click && hit && critical && portalSound && seal && mame;
         }
