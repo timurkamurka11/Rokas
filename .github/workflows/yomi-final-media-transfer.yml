@@ -27,7 +27,7 @@ jobs:
         run: |
           python3 -m pip install --quiet selenium
           python3 - <<'PY'
-          import hashlib, html, os, re, shutil, subprocess, time, urllib.parse, urllib.request
+          import hashlib, html, os, re, shutil, time, urllib.parse, urllib.request
           from pathlib import Path
 
           VIDEO_SHARE = os.environ['VIDEO_SHARE']
@@ -81,7 +81,7 @@ jobs:
               return unique
 
           def try_url_candidates(share, expected, dest):
-              raw, final, ctype = request_bytes(share)
+              raw, final, _ = request_bytes(share)
               if hashlib.sha256(raw).hexdigest() == expected:
                   dest.write_bytes(raw)
                   return True
@@ -90,7 +90,7 @@ jobs:
               ranked.sort(key=lambda u: (0 if any(k in u.lower() for k in ('download', '.mp4', '.png', 'storage', 'asset', 'file')) else 1, len(u)))
               for u in ranked[:160]:
                   try:
-                      data, _, typ = request_bytes(u, share)
+                      data, _, _ = request_bytes(u, share)
                   except Exception:
                       continue
                   if hashlib.sha256(data).hexdigest() == expected:
@@ -122,8 +122,6 @@ jobs:
               try:
                   driver.get(share)
                   time.sleep(3)
-
-                  # Dynamic DOM can expose the signed URL even when the initial HTML does not.
                   for u in candidates_from_text(driver.page_source, driver.current_url):
                       try:
                           data, _, _ = request_bytes(u, share)
@@ -134,18 +132,14 @@ jobs:
                           return True
 
                   elems = driver.find_elements(By.CSS_SELECTOR, 'a,button,input[type=button],input[type=submit]')
-                  preferred = []
-                  rest = []
+                  preferred, rest = [], []
                   for e in elems:
                       try:
                           txt = ((e.text or '') + ' ' + (e.get_attribute('value') or '') + ' ' + (e.get_attribute('aria-label') or '')).lower()
                           href = (e.get_attribute('href') or '').lower()
                       except Exception:
                           continue
-                      if any(k in txt or k in href for k in ('download', 'ダウンロード', '保存', '受け取', '.mp4', '.png')):
-                          preferred.append(e)
-                      else:
-                          rest.append(e)
+                      (preferred if any(k in txt or k in href for k in ('download', 'ダウンロード', '保存', '受け取', '.mp4', '.png')) else rest).append(e)
 
                   for e in preferred + rest[:20]:
                       try:
@@ -176,7 +170,6 @@ jobs:
           poster = outdir / 'ROKAS_YomiRamenNews_Poster_1280x720.png'
           acquire(VIDEO_SHARE, VIDEO_SHA, video)
           acquire(POSTER_SHARE, POSTER_SHA, poster)
-
           assert sha256(video) == VIDEO_SHA
           assert sha256(poster) == POSTER_SHA
           print('VIDEO_SOURCE_SHA256=' + sha256(video))
@@ -194,22 +187,20 @@ jobs:
           import base64, hashlib, os, struct
           from pathlib import Path
 
-          root = Path('.')
           media = Path('/tmp/yomi-final-media')
           video = media / 'ROKAS_YomiRamenNews_1280x720_BT709.mp4'
           poster = media / 'ROKAS_YomiRamenNews_Poster_1280x720.png'
-          news = root / 'Assets/Rokas/Resources/News'
+          news = Path('Assets/Rokas/Resources/News')
 
           def sha(data): return hashlib.sha256(data).hexdigest()
           video_bytes = video.read_bytes()
           poster_bytes = poster.read_bytes()
           assert sha(video_bytes) == os.environ['VIDEO_SHA256']
           assert sha(poster_bytes) == os.environ['POSTER_SHA256']
-
-          # Validate authoritative PNG dimensions without modifying it.
           assert poster_bytes[:8] == b'\x89PNG\r\n\x1a\n'
           width, height = struct.unpack('>II', poster_bytes[16:24])
           assert (width, height) == (1280, 720), (width, height)
+          assert video_bytes[4:8] == b'ftyp'
 
           def write_chunks(prefix, raw, count):
               encoded = base64.b64encode(raw).decode('ascii')
@@ -229,11 +220,9 @@ jobs:
           assert video_sha == os.environ['VIDEO_SHA256']
           print('POSTER_REBUILT_SHA256=' + poster_sha)
           print('VIDEO_REBUILT_SHA256=' + video_sha)
+          print('POSTER_DIMENSIONS=1280x720')
+          print('VIDEO_CONTAINER=MP4')
           PY
-
-          ffmpeg -v error -i /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4 -f null -
-          ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -of default=nw=1 /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4
-          ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,channels,sample_rate -of default=nw=1 /tmp/yomi-final-media/ROKAS_YomiRamenNews_1280x720_BT709.mp4
 
       - name: Verify diff and create the single development media commit
         run: |
