@@ -8,6 +8,11 @@ namespace Rokas.Presentation
 {
     public sealed class HomeView
     {
+        private static readonly Color ActionGold = new Color(.86f, .67f, .34f, 1f);
+        private static readonly Color ActionFace = new Color(.018f, .035f, .038f, .93f);
+        private static readonly Color ActionPaper = new Color(.94f, .92f, .86f, 1f);
+        private static readonly Color ActionCyan = new Color(.12f, .78f, .82f, 1f);
+
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly GameSession session;
@@ -41,54 +46,23 @@ namespace Rokas.Presentation
             weaponWard.rectTransform.localRotation = Quaternion.Euler(0, 0, -12);
             ui.Box(weaponWard.transform, "WardInk", 5, 12, 3, 40, UiKit.Red);
 
-            Hotspot(parent, "LampHotspot", 30, 450, 150, 270,
-                new[]
-                {
-                    new Vector2(.18f, .02f), new Vector2(.83f, .02f), new Vector2(.95f, .14f),
-                    new Vector2(.93f, .92f), new Vector2(.78f, .99f), new Vector2(.20f, .99f),
-                    new Vector2(.06f, .90f), new Vector2(.05f, .14f)
-                },
+            ActionButton(parent, "LampHotspot", "Свет", HomeActionGlyph.Lamp, 62, 620, 252,
                 () => act(() => { session.SetLamp(!session.State.lampOn); return true; },
-                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."),
-                new Color(1f, .95f, .82f, 1f), 30f, 17f, .30f, .82f, false);
+                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
 
-            Hotspot(parent, "LaptopHotspot", 985, 505, 225, 170,
-                new[]
-                {
-                    new Vector2(.10f, .10f), new Vector2(.92f, .02f), new Vector2(.91f, .70f),
-                    new Vector2(.78f, .84f), new Vector2(.12f, .92f), new Vector2(.02f, .80f)
-                },
-                () => open("laptop"),
-                new Color(1f, .985f, .95f, 1f), 42f, 18f, .40f, 1f, false);
+            ActionButton(parent, "WindowHotspot", "За окном", HomeActionGlyph.Torii, 470, 410, 315,
+                () => toast("Поезд проходит без остановки. На этот раз — настоящий."));
 
-            Hotspot(parent, "TeaHotspot", 795, 600, 86, 92,
-                new[]
-                {
-                    new Vector2(.18f, .05f), new Vector2(.70f, .03f), new Vector2(.94f, .26f),
-                    new Vector2(.92f, .68f), new Vector2(.72f, .94f), new Vector2(.24f, .94f),
-                    new Vector2(.05f, .70f), new Vector2(.04f, .24f)
-                },
-                () => open("tea"),
-                new Color(1f, .97f, .86f, 1f), 22f, 11f, .32f, .86f, false);
+            ActionButton(parent, "WorkbenchHotspot", "Снаряжение", HomeActionGlyph.Equipment, 1110, 392, 356,
+                () => open("workbench"));
 
-            Hotspot(parent, "WorkbenchHotspot", 1160, 325, 300, 112,
-                new[]
-                {
-                    new Vector2(.02f, .38f), new Vector2(.18f, .20f), new Vector2(.78f, .12f),
-                    new Vector2(.98f, .31f), new Vector2(.91f, .64f), new Vector2(.22f, .72f),
-                    new Vector2(.04f, .60f)
-                },
-                () => open("workbench"),
-                new Color(.99f, .97f, .91f, 1f), 30f, 14f, .23f, .68f, false);
+            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,
+                () => open("laptop"));
 
-            Hotspot(parent, "MameHotspot", 150, 772, 218, 218,
-                new[]
-                {
-                    new Vector2(.34f, .02f), new Vector2(.55f, .07f), new Vector2(.71f, .20f),
-                    new Vector2(.80f, .42f), new Vector2(.78f, .72f), new Vector2(.65f, .91f),
-                    new Vector2(.45f, .99f), new Vector2(.25f, .91f), new Vector2(.13f, .70f),
-                    new Vector2(.12f, .42f), new Vector2(.20f, .18f)
-                },
+            ActionButton(parent, "TeaHotspot", "Заварить чай", HomeActionGlyph.Tea, 638, 727, 318,
+                () => open("tea"));
+
+            ActionButton(parent, "MameHotspot", "Мамэ", HomeActionGlyph.Mame, 88, 895, 260,
                 () =>
                 {
                     act(() => { session.PetMame(); return true; }, "");
@@ -97,15 +71,9 @@ namespace Rokas.Presentation
                     toast(session.State.mameInteractions % 3 == 0
                         ? "Мамэ внимательно смотрит в пустой угол."
                         : "Мамэ довольно щурится. Почти как обычный питомец.");
-                },
-                new Color(.93f, .98f, 1f, 1f), 38f, 17f, .42f, 1f, false);
+                });
 
-            Hotspot(parent, "DoorHotspot", 1625, 100, 150, 505,
-                new[]
-                {
-                    new Vector2(.13f, .01f), new Vector2(.88f, .04f), new Vector2(.82f, .96f),
-                    new Vector2(.07f, .99f)
-                },
+            ActionButton(parent, "DoorHotspot", "Выйти из дома", HomeActionGlyph.Exit, 1582, 648, 310,
                 () =>
                 {
                     if (session.State.phase == RunPhase.Accepted)
@@ -113,38 +81,43 @@ namespace Rokas.Presentation
                     else if (session.State.phase == RunPhase.Payment)
                         toast("На ноутбук пришло подтверждение оплаты.");
                     else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
-                },
-                new Color(1f, .97f, .91f, 1f), 24f, 15f, .14f, .46f, false);
-
-            Hotspot(parent, "WindowHotspot", 330, 105, 615, 455,
-                new[]
-                {
-                    new Vector2(.02f, .02f), new Vector2(.98f, .02f), new Vector2(.96f, .96f),
-                    new Vector2(.03f, .99f)
-                },
-                () => toast("Поезд проходит без остановки. На этот раз — настоящий."),
-                new Color(.91f, .96f, 1f, 1f), 0f, 0f, .18f, .52f, true);
+                });
 
             Refresh();
         }
 
-        private Button Hotspot(RectTransform parent, string name, float x, float y, float w, float h,
-            Vector2[] shape, Action action, Color tint, float padding, float blurRadius,
-            float idleIntensity, float hoverIntensity, bool glassMist)
+        private Button ActionButton(RectTransform parent, string name, string title, HomeActionGlyph glyph,
+            float x, float y, float width, Action action)
         {
-            var rect = ui.Rect(parent, name, x, y, w, h);
+            const float rootHeight = 82f;
+            const float pillY = 8f;
+            const float pillHeight = 62f;
+            const float iconSize = 82f;
+            const float pillX = 43f;
 
-            var hitMask = rect.gameObject.AddComponent<HomeObjectMask>();
-            hitMask.SetShape(shape);
-            hitMask.raycastTarget = true;
+            var root = ui.Rect(parent, name, x, y, width, rootHeight);
 
-            var glowRect = ui.Rect(rect, name + "Glow", -padding, -padding, w + padding * 2f, h + padding * 2f);
-            var glow = glowRect.gameObject.AddComponent<HomeSoftGlowGraphic>();
-            glow.raycastTarget = false;
-            glow.Initialize(shape, new Vector2(w, h), padding, blurRadius, tint, glassMist);
+            Surface(root, "PillShadow", pillX + 5, pillY + 6, width - pillX, pillHeight,
+                pillHeight * .5f, new Color(0, 0, 0, .48f));
+            var border = Surface(root, "PillGold", pillX, pillY, width - pillX, pillHeight,
+                pillHeight * .5f, ActionGold);
+            var face = Surface(root, "PillFace", pillX + 2, pillY + 2, width - pillX - 4, pillHeight - 4,
+                (pillHeight - 4) * .5f, ActionFace, true);
 
-            var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = hitMask;
+            Surface(root, "IconShadow", 4, 6, iconSize, iconSize, iconSize * .5f, new Color(0, 0, 0, .48f));
+            var iconBorder = Surface(root, "IconGold", 0, 0, iconSize, iconSize, iconSize * .5f, ActionGold);
+            var iconFace = Surface(root, "IconFace", 3, 3, iconSize - 6, iconSize - 6,
+                (iconSize - 6) * .5f, new Color(.018f, .045f, .048f, .98f), true);
+            ActionIcon(root, "ActionGlyph", glyph, 18, 18, 46, new Color(.91f, .73f, .40f, 1f));
+
+            var label = ui.Label(root, "Title", title, 100, pillY, width - 152, pillHeight,
+                22, ActionPaper, false, TextAnchor.MiddleLeft);
+            ActionIcon(root, "Chevron", HomeActionGlyph.Chevron, width - 42, 27, 26, ActionGold);
+
+            var accent = BuildYokaiAccent(root, 25, 68, 118, 14);
+
+            var button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
             button.transition = Selectable.Transition.None;
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             button.onClick.AddListener(() =>
@@ -153,9 +126,48 @@ namespace Rokas.Presentation
                 action?.Invoke();
             });
 
-            rect.gameObject.AddComponent<HomeObjectHighlight>()
-                .Initialize(glow, button, idleIntensity, hoverIntensity);
+            root.gameObject.AddComponent<HomeActionFeedback>()
+                .Initialize(root, button, face, border, iconFace, iconBorder, label, accent);
             return button;
+        }
+
+        private CanvasGroup BuildYokaiAccent(Transform parent, float x, float y, float w, float h)
+        {
+            var root = ui.Rect(parent, "YokaiAccent", x, y, w, h);
+            var group = root.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = .42f;
+            var a = ui.Box(root, "MistA", 0, 4, w * .80f, 2, new Color(ActionCyan.r, ActionCyan.g, ActionCyan.b, .42f));
+            var b = ui.Box(root, "MistB", 13, 8, w * .64f, 2, new Color(ActionCyan.r, ActionCyan.g, ActionCyan.b, .26f));
+            var c = ui.Box(root, "MistC", 38, 1, w * .44f, 1, new Color(.54f, .94f, .94f, .24f));
+            a.rectTransform.localRotation = Quaternion.Euler(0, 0, 1.2f);
+            b.rectTransform.localRotation = Quaternion.Euler(0, 0, -1.8f);
+            c.rectTransform.localRotation = Quaternion.Euler(0, 0, .6f);
+            ui.Box(root, "SparkA", 8, 1, 3, 3, new Color(.42f, .95f, .95f, .38f));
+            ui.Box(root, "SparkB", 91, 7, 2, 2, new Color(.42f, .95f, .95f, .30f));
+            return group;
+        }
+
+        private LaptopSurface Surface(Transform parent, string name, float x, float y, float w, float h,
+            float radius, Color color, bool blocks = false)
+        {
+            var go = ui.Rect(parent, name, x, y, w, h).gameObject;
+            if (!go.TryGetComponent<CanvasRenderer>(out _)) go.AddComponent<CanvasRenderer>();
+            var surface = go.AddComponent<LaptopSurface>();
+            surface.Radius = radius;
+            surface.color = color;
+            surface.raycastTarget = blocks;
+            return surface;
+        }
+
+        private void ActionIcon(Transform parent, string name, HomeActionGlyph glyph,
+            float x, float y, float size, Color color)
+        {
+            var go = ui.Rect(parent, name, x, y, size, size).gameObject;
+            if (!go.TryGetComponent<CanvasRenderer>(out _)) go.AddComponent<CanvasRenderer>();
+            var icon = go.AddComponent<HomeActionIcon>();
+            icon.Glyph = glyph;
+            icon.color = color;
+            icon.raycastTarget = false;
         }
 
         public void Refresh()
@@ -186,349 +198,256 @@ namespace Rokas.Presentation
         public void ClearReferences() { mame = null; weaponWard = null; objective = null; prepared = null; }
     }
 
-    [RequireComponent(typeof(CanvasRenderer))]
-    public sealed class HomeObjectMask : MaskableGraphic, ICanvasRaycastFilter
+    public enum HomeActionGlyph
     {
-        private Vector2[] points = Array.Empty<Vector2>();
+        Lamp, Torii, Equipment, Laptop, Tea, Mame, Exit, Chevron
+    }
 
-        public void SetShape(Vector2[] value)
+    [RequireComponent(typeof(CanvasRenderer))]
+    public sealed class HomeActionIcon : MaskableGraphic
+    {
+        [SerializeField] private HomeActionGlyph glyph;
+        private Rect drawingRect;
+        private float drawingScale;
+
+        public HomeActionGlyph Glyph
         {
-            points = value ?? Array.Empty<Vector2>();
-            SetVerticesDirty();
+            get => glyph;
+            set { glyph = value; SetVerticesDirty(); }
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            raycastTarget = false;
         }
 
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            Rect rect = GetPixelAdjustedRect();
-            Color32 transparent = new Color32(255, 255, 255, 0);
-            mesh.AddVert(new Vector3(rect.xMin, rect.yMin), transparent, new Vector2(0, 0));
-            mesh.AddVert(new Vector3(rect.xMin, rect.yMax), transparent, new Vector2(0, 1));
-            mesh.AddVert(new Vector3(rect.xMax, rect.yMax), transparent, new Vector2(1, 1));
-            mesh.AddVert(new Vector3(rect.xMax, rect.yMin), transparent, new Vector2(1, 0));
-            mesh.AddTriangle(0, 1, 2);
-            mesh.AddTriangle(0, 2, 3);
-        }
+            drawingRect = GetPixelAdjustedRect();
+            drawingScale = Mathf.Min(drawingRect.width, drawingRect.height) / 100f;
+            if (drawingScale <= 0) return;
 
-        public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
-        {
-            if (points.Length < 3) return false;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var local))
-                return false;
-
-            Rect rect = rectTransform.rect;
-            if (rect.width <= 0 || rect.height <= 0) return false;
-            var point = new Vector2((local.x - rect.xMin) / rect.width, (rect.yMax - local.y) / rect.height);
-            return Contains(point);
-        }
-
-        private bool Contains(Vector2 point)
-        {
-            bool inside = false;
-            for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+            switch (glyph)
             {
-                Vector2 a = points[i];
-                Vector2 b = points[j];
-                bool crosses = (a.y > point.y) != (b.y > point.y) &&
-                    point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x;
-                if (crosses) inside = !inside;
+                case HomeActionGlyph.Lamp: DrawLamp(mesh); break;
+                case HomeActionGlyph.Torii: DrawTorii(mesh); break;
+                case HomeActionGlyph.Equipment: DrawEquipment(mesh); break;
+                case HomeActionGlyph.Laptop: DrawLaptop(mesh); break;
+                case HomeActionGlyph.Tea: DrawTea(mesh); break;
+                case HomeActionGlyph.Mame: DrawMame(mesh); break;
+                case HomeActionGlyph.Exit: DrawExit(mesh); break;
+                case HomeActionGlyph.Chevron:
+                    Line(mesh, 38, 28, 64, 50, 7);
+                    Line(mesh, 64, 50, 38, 72, 7);
+                    break;
             }
-            return inside;
+        }
+
+        private void DrawLamp(VertexHelper mesh)
+        {
+            Stroke(mesh, new[] { new Vector2(30, 22), new Vector2(70, 22), new Vector2(80, 49), new Vector2(20, 49) }, 5, true);
+            Line(mesh, 50, 49, 50, 78, 6);
+            Line(mesh, 38, 80, 62, 80, 6);
+            Line(mesh, 43, 68, 57, 68, 4);
+        }
+
+        private void DrawTorii(VertexHelper mesh)
+        {
+            Stroke(mesh, new[] { new Vector2(15, 25), new Vector2(31, 30), new Vector2(50, 32), new Vector2(69, 30), new Vector2(85, 25) }, 7);
+            Line(mesh, 24, 43, 76, 43, 6);
+            Line(mesh, 34, 33, 30, 79, 7);
+            Line(mesh, 66, 33, 70, 79, 7);
+            Line(mesh, 50, 33, 50, 43, 5);
+            Line(mesh, 23, 80, 37, 80, 5);
+            Line(mesh, 63, 80, 77, 80, 5);
+        }
+
+        private void DrawEquipment(VertexHelper mesh)
+        {
+            Line(mesh, 24, 20, 72, 74, 6);
+            Line(mesh, 76, 20, 28, 74, 6);
+            Line(mesh, 20, 24, 33, 37, 5);
+            Line(mesh, 80, 24, 67, 37, 5);
+            Line(mesh, 25, 72, 18, 80, 6);
+            Line(mesh, 75, 72, 82, 80, 6);
+        }
+
+        private void DrawLaptop(VertexHelper mesh)
+        {
+            Stroke(mesh, new[] { new Vector2(22, 24), new Vector2(78, 24), new Vector2(78, 66), new Vector2(22, 66) }, 5, true);
+            Line(mesh, 16, 77, 84, 77, 6);
+            Line(mesh, 29, 68, 71, 68, 4);
+        }
+
+        private void DrawTea(VertexHelper mesh)
+        {
+            Stroke(mesh, new[] { new Vector2(28, 42), new Vector2(67, 42), new Vector2(63, 72), new Vector2(34, 72) }, 5, true);
+            Ellipse(mesh, 69, 55, 10, 11, 5, 22);
+            Line(mesh, 27, 79, 69, 79, 5);
+            Stroke(mesh, new[] { new Vector2(38, 35), new Vector2(35, 29), new Vector2(39, 23) }, 4);
+            Stroke(mesh, new[] { new Vector2(52, 35), new Vector2(49, 29), new Vector2(53, 23) }, 4);
+        }
+
+        private void DrawMame(VertexHelper mesh)
+        {
+            Ellipse(mesh, 49, 43, 18, 16, 5, 24);
+            Polygon(mesh, new[] { new Vector2(34, 33), new Vector2(38, 17), new Vector2(47, 31) });
+            Polygon(mesh, new[] { new Vector2(52, 31), new Vector2(62, 17), new Vector2(65, 34) });
+            Ellipse(mesh, 49, 68, 17, 23, 5, 26);
+            Stroke(mesh, new[] { new Vector2(64, 73), new Vector2(77, 67), new Vector2(81, 54), new Vector2(75, 47) }, 5);
+        }
+
+        private void DrawExit(VertexHelper mesh)
+        {
+            Stroke(mesh, new[] { new Vector2(20, 20), new Vector2(58, 20), new Vector2(58, 80), new Vector2(20, 80) }, 5, true);
+            Line(mesh, 43, 50, 84, 50, 6);
+            Line(mesh, 70, 36, 84, 50, 6);
+            Line(mesh, 84, 50, 70, 64, 6);
+            Disc(mesh, new Vector2(49, 54), 3.5f);
+        }
+
+        private void AddVertex(VertexHelper mesh, Vector2 point)
+        {
+            var center = drawingRect.center;
+            mesh.AddVert(new Vector3(center.x + (point.x - 50) * drawingScale,
+                center.y + (50 - point.y) * drawingScale, 0), color, Vector2.zero);
+        }
+
+        private void Line(VertexHelper mesh, float x1, float y1, float x2, float y2, float thickness)
+        {
+            var a = new Vector2(x1, y1);
+            var b = new Vector2(x2, y2);
+            var direction = (b - a).normalized;
+            var normal = new Vector2(-direction.y, direction.x) * (thickness * .5f);
+            int first = mesh.currentVertCount;
+            AddVertex(mesh, a + normal);
+            AddVertex(mesh, a - normal);
+            AddVertex(mesh, b + normal);
+            AddVertex(mesh, b - normal);
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first + 2, first + 1, first + 3);
+        }
+
+        private void Stroke(VertexHelper mesh, Vector2[] points, float thickness, bool closed = false)
+        {
+            int count = points.Length;
+            if (count < 2) return;
+            for (int i = 0; i < count - 1; i++)
+                Line(mesh, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, thickness);
+            if (closed) Line(mesh, points[count - 1].x, points[count - 1].y, points[0].x, points[0].y, thickness);
+        }
+
+        private void Polygon(VertexHelper mesh, Vector2[] points)
+        {
+            int first = mesh.currentVertCount;
+            for (int i = 0; i < points.Length; i++) AddVertex(mesh, points[i]);
+            for (int i = 1; i < points.Length - 1; i++) mesh.AddTriangle(first, first + i, first + i + 1);
+        }
+
+        private void Disc(VertexHelper mesh, Vector2 center, float radius)
+        {
+            const int segments = 18;
+            int first = mesh.currentVertCount;
+            AddVertex(mesh, center);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = Mathf.PI * 2f * i / segments;
+                AddVertex(mesh, center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius);
+            }
+            for (int i = 0; i < segments; i++)
+                mesh.AddTriangle(first, first + i + 1, first + (i + 1) % segments + 1);
+        }
+
+        private void Ellipse(VertexHelper mesh, float x, float y, float rx, float ry, float thickness, int segments)
+        {
+            float half = thickness * .5f;
+            int first = mesh.currentVertCount;
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = Mathf.PI * 2f * i / segments;
+                var radial = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                var p = new Vector2(x + radial.x * rx, y + radial.y * ry);
+                var normal = new Vector2(radial.x / Mathf.Max(.001f, rx), radial.y / Mathf.Max(.001f, ry)).normalized * half;
+                AddVertex(mesh, p + normal);
+                AddVertex(mesh, p - normal);
+            }
+            for (int i = 0; i < segments; i++)
+            {
+                int a = first + i * 2;
+                int b = first + ((i + 1) % segments) * 2;
+                mesh.AddTriangle(a, a + 1, b);
+                mesh.AddTriangle(b, a + 1, b + 1);
+            }
         }
     }
 
-    [RequireComponent(typeof(CanvasRenderer))]
-    public sealed class HomeSoftGlowGraphic : MaskableGraphic
-    {
-        private Texture2D softMask;
-        private Color tint = Color.white;
-        private float intensity;
-
-        public override Texture mainTexture => softMask ? softMask : s_WhiteTexture;
-
-        public float Intensity
-        {
-            get { return intensity; }
-            set
-            {
-                float next = Mathf.Clamp01(value);
-                if (Mathf.Approximately(intensity, next)) return;
-                intensity = next;
-                ApplyTint();
-            }
-        }
-
-        public void Initialize(Vector2[] sourceShape, Vector2 sourceSize, float padding, float blurRadius,
-            Color glowTint, bool glassMist)
-        {
-            tint = glowTint;
-            BuildTexture(sourceShape ?? Array.Empty<Vector2>(), sourceSize, padding, blurRadius, glassMist);
-            intensity = 0f;
-            ApplyTint();
-            SetMaterialDirty();
-            SetVerticesDirty();
-        }
-
-        protected override void OnPopulateMesh(VertexHelper mesh)
-        {
-            mesh.Clear();
-            Rect rect = GetPixelAdjustedRect();
-            Color32 vertexColor = color;
-            mesh.AddVert(new Vector3(rect.xMin, rect.yMin), vertexColor, new Vector2(0, 0));
-            mesh.AddVert(new Vector3(rect.xMin, rect.yMax), vertexColor, new Vector2(0, 1));
-            mesh.AddVert(new Vector3(rect.xMax, rect.yMax), vertexColor, new Vector2(1, 1));
-            mesh.AddVert(new Vector3(rect.xMax, rect.yMin), vertexColor, new Vector2(1, 0));
-            mesh.AddTriangle(0, 1, 2);
-            mesh.AddTriangle(0, 2, 3);
-        }
-
-        private void ApplyTint()
-        {
-            var c = tint;
-            c.a = intensity;
-            color = c;
-        }
-
-        private void BuildTexture(Vector2[] sourceShape, Vector2 sourceSize, float padding, float blurRadius, bool glassMist)
-        {
-            if (softMask)
-                Destroy(softMask);
-
-            float expandedW = Mathf.Max(1f, sourceSize.x + padding * 2f);
-            float expandedH = Mathf.Max(1f, sourceSize.y + padding * 2f);
-            int width = Mathf.Clamp(Mathf.RoundToInt(expandedW * .55f), 64, 256);
-            int height = Mathf.Clamp(Mathf.RoundToInt(expandedH * .55f), 64, 256);
-
-            softMask = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
-            {
-                name = name + "_SoftMist",
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-                hideFlags = HideFlags.DontSave
-            };
-
-            float[] baseMask = new float[width * height];
-            RasterizeShape(baseMask, width, height, sourceShape, sourceSize, padding);
-
-            float[] alpha = glassMist
-                ? BuildGlassMist(baseMask, width, height)
-                : BuildObjectMist(baseMask, width, height, expandedW, expandedH, blurRadius);
-
-            var pixels = new Color32[alpha.Length];
-            for (int i = 0; i < alpha.Length; i++)
-            {
-                byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha[i]) * 255f);
-                pixels[i] = new Color32(255, 255, 255, a);
-            }
-
-            softMask.SetPixels32(pixels);
-            softMask.Apply(false, true);
-        }
-
-        private static void RasterizeShape(float[] mask, int width, int height, Vector2[] sourceShape,
-            Vector2 sourceSize, float padding)
-        {
-            if (sourceShape.Length < 3 || sourceSize.x <= 0 || sourceSize.y <= 0) return;
-
-            float expandedW = sourceSize.x + padding * 2f;
-            float expandedH = sourceSize.y + padding * 2f;
-
-            for (int y = 0; y < height; y++)
-            {
-                float topY = expandedH - (y + .5f) / height * expandedH - padding;
-                float normalizedY = topY / sourceSize.y;
-
-                for (int x = 0; x < width; x++)
-                {
-                    float leftX = (x + .5f) / width * expandedW - padding;
-                    float normalizedX = leftX / sourceSize.x;
-                    mask[y * width + x] = Contains(sourceShape, new Vector2(normalizedX, normalizedY)) ? 1f : 0f;
-                }
-            }
-        }
-
-        private static float[] BuildObjectMist(float[] source, int width, int height,
-            float expandedW, float expandedH, float blurRadius)
-        {
-            float scale = .5f * (width / expandedW + height / expandedH);
-            int radius = Mathf.Clamp(Mathf.RoundToInt(Mathf.Max(3f, blurRadius) * scale), 2, 18);
-            float[] blurred = (float[])source.Clone();
-
-            // Three box-blur passes approximate a broad Photoshop-style Gaussian feather,
-            // avoiding the hard polygon edge that made the previous version look like a mask.
-            for (int pass = 0; pass < 3; pass++)
-                blurred = BoxBlur(blurred, width, height, radius);
-
-            var result = new float[source.Length];
-            for (int i = 0; i < result.Length; i++)
-            {
-                // The feather carries nearly all of the visibility. The original shape contributes
-                // only a tiny amount so the object reads as gently lit instead of covered by a veil.
-                float broadMist = blurred[i] * .145f;
-                float innerLift = source[i] * .012f;
-                result[i] = Mathf.Clamp01(broadMist + innerLift);
-            }
-            return result;
-        }
-
-        private static float[] BuildGlassMist(float[] source, int width, int height)
-        {
-            var result = new float[source.Length];
-
-            for (int y = 0; y < height; y++)
-            {
-                float v = (y + .5f) / height;
-                float edgeY = SmoothEdge(v);
-
-                for (int x = 0; x < width; x++)
-                {
-                    int index = y * width + x;
-                    if (source[index] <= 0f) continue;
-
-                    float u = (x + .5f) / width;
-                    float edge = edgeY * SmoothEdge(u);
-
-                    // Broad overlapping clouds keep the window alive without tracing its rectangle.
-                    float cloudA = Gaussian(u, v, .26f, .64f, .34f, .30f);
-                    float cloudB = Gaussian(u, v, .58f, .42f, .42f, .38f);
-                    float cloudC = Gaussian(u, v, .82f, .72f, .30f, .26f);
-                    float verticalHaze = Gaussian(u, v, .53f, .50f, .65f, .80f) * .35f;
-
-                    float mist = Mathf.Clamp01(cloudA * .55f + cloudB * .50f + cloudC * .42f + verticalHaze);
-                    result[index] = mist * edge * .075f;
-                }
-            }
-
-            return result;
-        }
-
-        private static float SmoothEdge(float value)
-        {
-            float nearest = Mathf.Min(value, 1f - value);
-            return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(nearest / .16f));
-        }
-
-        private static float Gaussian(float u, float v, float cx, float cy, float rx, float ry)
-        {
-            float dx = (u - cx) / Mathf.Max(.001f, rx);
-            float dy = (v - cy) / Mathf.Max(.001f, ry);
-            return Mathf.Exp(-(dx * dx + dy * dy) * 2f);
-        }
-
-        private static float[] BoxBlur(float[] source, int width, int height, int radius)
-        {
-            if (radius <= 0) return (float[])source.Clone();
-
-            var horizontal = new float[source.Length];
-            var output = new float[source.Length];
-            int diameter = radius * 2 + 1;
-
-            for (int y = 0; y < height; y++)
-            {
-                int row = y * width;
-                float sum = 0f;
-                for (int k = -radius; k <= radius; k++)
-                    sum += source[row + Mathf.Clamp(k, 0, width - 1)];
-
-                for (int x = 0; x < width; x++)
-                {
-                    horizontal[row + x] = sum / diameter;
-                    int remove = Mathf.Clamp(x - radius, 0, width - 1);
-                    int add = Mathf.Clamp(x + radius + 1, 0, width - 1);
-                    sum += source[row + add] - source[row + remove];
-                }
-            }
-
-            for (int x = 0; x < width; x++)
-            {
-                float sum = 0f;
-                for (int k = -radius; k <= radius; k++)
-                    sum += horizontal[Mathf.Clamp(k, 0, height - 1) * width + x];
-
-                for (int y = 0; y < height; y++)
-                {
-                    output[y * width + x] = sum / diameter;
-                    int remove = Mathf.Clamp(y - radius, 0, height - 1);
-                    int add = Mathf.Clamp(y + radius + 1, 0, height - 1);
-                    sum += horizontal[add * width + x] - horizontal[remove * width + x];
-                }
-            }
-
-            return output;
-        }
-
-        private static bool Contains(Vector2[] polygon, Vector2 point)
-        {
-            bool inside = false;
-            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
-            {
-                Vector2 a = polygon[i];
-                Vector2 b = polygon[j];
-                bool crosses = (a.y > point.y) != (b.y > point.y) &&
-                    point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x;
-                if (crosses) inside = !inside;
-            }
-            return inside;
-        }
-
-        protected override void OnDestroy()
-        {
-            if (softMask)
-                Destroy(softMask);
-            base.OnDestroy();
-        }
-    }
-
-    public sealed class HomeObjectHighlight : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
+    public sealed class HomeActionFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
         ISelectHandler, IDeselectHandler, IPointerDownHandler, IPointerUpHandler
     {
-        private HomeSoftGlowGraphic glow;
+        private RectTransform rect;
         private Button button;
+        private LaptopSurface face;
+        private LaptopSurface border;
+        private LaptopSurface iconFace;
+        private LaptopSurface iconBorder;
+        private Text title;
+        private CanvasGroup accent;
+        private Vector2 origin;
         private bool hovered;
         private bool selected;
         private bool pressed;
-        private float idleIntensity;
-        private float hoverIntensity;
 
-        public void Initialize(HomeSoftGlowGraphic target, Button owner, float idle, float hover)
+        public void Initialize(RectTransform root, Button owner, LaptopSurface pillFace, LaptopSurface pillBorder,
+            LaptopSurface circleFace, LaptopSurface circleBorder, Text label, CanvasGroup yokaiAccent)
         {
-            glow = target;
-            button = owner;
-            idleIntensity = Mathf.Clamp01(idle);
-            hoverIntensity = Mathf.Clamp(Mathf.Max(idleIntensity, hover), idleIntensity, 1f);
-            if (glow) glow.Intensity = idleIntensity;
+            rect = root; button = owner; face = pillFace; border = pillBorder;
+            iconFace = circleFace; iconBorder = circleBorder; title = label; accent = yokaiAccent;
+            origin = root.anchoredPosition;
         }
 
         public void OnPointerEnter(PointerEventData e) { hovered = true; }
         public void OnPointerExit(PointerEventData e) { hovered = false; pressed = false; }
         public void OnSelect(BaseEventData e) { selected = true; }
         public void OnDeselect(BaseEventData e) { selected = false; pressed = false; }
-        public void OnPointerDown(PointerEventData e)
-        {
-            if (e.button == PointerEventData.InputButton.Left) pressed = true;
-        }
+        public void OnPointerDown(PointerEventData e) { if (e.button == PointerEventData.InputButton.Left) pressed = true; }
         public void OnPointerUp(PointerEventData e) { pressed = false; }
 
         private void Update()
         {
-            if (!glow || !button) return;
-
+            if (!rect || !button) return;
             bool active = button.IsInteractable() && (hovered || selected);
-            float target = active ? hoverIntensity : idleIntensity;
+            float speed = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);
+            float press = pressed ? 1f : 0f;
+            float focus = active ? 1f : 0f;
 
-            if (active && pressed)
-                target = Mathf.Min(1f, hoverIntensity * 1.08f);
-            else if (active)
-                target *= .996f + Mathf.Sin(Time.unscaledTime * 1.7f) * .004f;
+            rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition,
+                origin + new Vector2(active ? 3f : 0f, pressed ? 1f : 0f), speed);
 
-            float factor = 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime);
-            glow.Intensity = Mathf.Lerp(glow.Intensity, target, factor);
+            Color gold = Color.Lerp(new Color(.86f, .67f, .34f, 1f), new Color(1f, .82f, .45f, 1f), focus);
+            if (pressed) gold = new Color(1f, .90f, .58f, 1f);
+            border.color = Color.Lerp(border.color, gold, speed);
+            iconBorder.color = Color.Lerp(iconBorder.color, gold, speed);
+
+            Color faceTarget = Color.Lerp(new Color(.018f, .035f, .038f, .93f),
+                new Color(.025f, .075f, .075f, .97f), focus);
+            if (pressed) faceTarget = new Color(.035f, .095f, .09f, .99f);
+            face.color = Color.Lerp(face.color, faceTarget, speed);
+            iconFace.color = Color.Lerp(iconFace.color,
+                Color.Lerp(new Color(.018f, .045f, .048f, .98f), new Color(.025f, .09f, .088f, 1f), focus), speed);
+
+            if (title)
+                title.color = Color.Lerp(title.color,
+                    Color.Lerp(new Color(.94f, .92f, .86f, 1f), Color.white, focus), speed);
+            if (accent)
+                accent.alpha = Mathf.Lerp(accent.alpha, active ? (pressed ? 1f : .92f) : .42f, speed);
         }
 
         private void OnDisable()
         {
             hovered = selected = pressed = false;
-            if (glow) glow.Intensity = idleIntensity;
+            if (rect) rect.anchoredPosition = origin;
         }
     }
 }
