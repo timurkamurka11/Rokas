@@ -105,7 +105,8 @@ for name in fields:
     file_id, guid = matches[0]
     expected = (('12800000', '.ttf') if name in ('sans', 'serif') else
                 ('4900000', '.json') if name == 'contract' else
-                ('2800000', '.png') if name in fields[:6] else ('8300000', '.wav'))
+                ('2800000', '.png') if name in fields[:6] else
+                ('8300000', '.mp3') if name == 'homeMusic' else ('8300000', '.wav'))
     target = guids.get(guid)
     if not target or (file_id, target.suffix.lower()) != expected:
         errors.append('Wrong imported asset type in binding: ' + name)

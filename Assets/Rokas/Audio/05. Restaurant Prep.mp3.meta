@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: 7540bd61684b4a768cad4691dbc54972
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 22050
+    compressionFormat: 1
+    quality: 0.85
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 1
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: User-provided HOME music - 05. Restaurant Prep.mp3
+  assetBundleName:
+  assetBundleVariant:
