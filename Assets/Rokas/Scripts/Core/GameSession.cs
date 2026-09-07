@@ -44,6 +44,11 @@ namespace Rokas.Core
             return NotifyIf(food.Prepare(State, foodId));
         }
 
+        public bool ConsumeFood(string foodId)
+        {
+            return NotifyIf(food.Consume(State, foodId));
+        }
+
         public bool LeaveHome()
         {
             return NotifyIf(contracts.LeaveHome(State));

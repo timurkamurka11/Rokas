@@ -19,6 +19,7 @@ namespace Rokas.Core.Tests
             WeakPointBonusRequiresAnActiveUnclaimedWindow();
             UpgradeCannotOverspend();
             TeaCannotStackAndExpiresOnReturn();
+            FoodScreenConsumeActionUsesPreparedSlot();
             CorruptPrimaryRecoversBackup();
             PartialPrimaryRecoversBackupWithoutDiscardingDamage();
             MissingOrNullSettingsRecoverBackup();
@@ -205,6 +206,19 @@ namespace Rokas.Core.Tests
             Equal(520, session.State.yen, "rejected tea must not charge again");
             True(session.ReturnHome(), "accepted contract should be cancellable");
             Equal(string.Empty, session.State.preparedFoodId, "tea should expire when a run returns");
+        }
+
+        private static void FoodScreenConsumeActionUsesPreparedSlot()
+        {
+            GameSession session = NewSession();
+
+            True(session.ConsumeFood(FoodService.RamenId), "ramen should be consumable from the food screen");
+            Equal(FoodService.RamenId, session.State.preparedFoodId, "food screen consume should use the existing prepared-food slot");
+            Equal(false, session.ConsumeFood(FoodService.OnigiriId), "a second food effect must not stack over the active one");
+            Equal(FoodService.RamenId, session.State.preparedFoodId, "rejected food must preserve the active effect");
+            True(session.AcceptContract(), "prepared food should coexist with accepting a contract");
+            True(session.ReturnHome(), "accepted contract should still be cancellable");
+            Equal(string.Empty, session.State.preparedFoodId, "food screen effect should expire through the existing return-home cleanup");
         }
 
         private static void CorruptPrimaryRecoversBackup()

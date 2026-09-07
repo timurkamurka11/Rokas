@@ -26,6 +26,7 @@ namespace Rokas.Presentation
         private readonly RokasAssets assets;
         private readonly GameSession session;
         private readonly ContractPanels contracts;
+        private readonly LaptopFoodView food;
         private readonly Action click;
         private readonly Action close;
         private RectTransform frame;
@@ -43,8 +44,16 @@ namespace Rokas.Presentation
         public bool IsClosing { get; private set; }
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
-            Action click, Action close)
-        { this.ui = ui; this.assets = assets; this.session = session; this.contracts = contracts; this.click = click; this.close = close; }
+            Action<Func<bool>, string> act, Action click, Action close)
+        {
+            this.ui = ui;
+            this.assets = assets;
+            this.session = session;
+            this.contracts = contracts;
+            this.click = click;
+            this.close = close;
+            food = new LaptopFoodView(ui, session, act, click);
+        }
 
         public void Reset()
         {
@@ -104,6 +113,11 @@ namespace Rokas.Presentation
             if (section < 0)
             {
                 BuildDesktop(page);
+                return;
+            }
+            if (section == 2)
+            {
+                food.Build(page, Titles, TileColors, OpenSection);
                 return;
             }
             ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
