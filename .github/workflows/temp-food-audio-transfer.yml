@@ -12,29 +12,21 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve firestorage cushion session
+      - name: Inspect cushion redirect path
         shell: bash
         run: |
           set -euo pipefail
-          API='https://api.firestorage.ai/dev/file'
-          SHARE='qPkPobRsL331'
-          echo '=== CREATE CUSHION ==='
-          curl -sS -D cushion_headers.txt \
-            -H 'Content-Type: application/json' \
-            -X POST "$API/shares/$SHARE/cushion-sessions" \
-            --data '{"password":null}' \
-            -o cushion.json
-          cat cushion_headers.txt
-          cat cushion.json
-          echo
+          URL='https://firestorage.ai/_next/static/chunks/4899-d89df949f2dbd5af.js'
+          curl -LfsS "$URL" -o page.js
           python3 - <<'PY'
-          import json
-          try:
-              j=json.load(open('cushion.json'))
-          except Exception:
-              raise SystemExit(0)
-          print('KEYS',sorted(j.keys()))
-          for k,v in j.items():
-              if isinstance(v,(str,int,float,bool)) or v is None:
-                  print(k,repr(v))
+          import pathlib
+          s=pathlib.Path('page.js').read_text(encoding='utf-8',errors='replace')
+          for needle in ['async function eD','cushionId','const w=','let w=','w=/','const g=','let g=','g=/']:
+              start=0
+              while True:
+                  i=s.find(needle,start)
+                  if i<0: break
+                  print('\n===',needle,i,'===')
+                  print(s[max(0,i-1000):min(len(s),i+3500)])
+                  start=i+len(needle)
           PY
