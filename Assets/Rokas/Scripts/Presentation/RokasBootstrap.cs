@@ -108,6 +108,11 @@ namespace Rokas.Presentation
             }
         }
 
+        public void PlayUiClick()
+        {
+            if (sound != null) sound.Click();
+        }
+
         public void ApplyDisplaySettings()
         {
             if (Session == null) return;
