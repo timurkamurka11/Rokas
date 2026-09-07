@@ -12,43 +12,29 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify firestorage patch download
+      - name: Resolve firestorage cushion session
         shell: bash
         run: |
           set -euo pipefail
           API='https://api.firestorage.ai/dev/file'
           SHARE='qPkPobRsL331'
-          curl -fsS "$API/shares/$SHARE/files?maxResults=1000" -o files.json
-          echo '=== FILES JSON ==='
-          cat files.json
-          FILE_ID="$(python3 - <<'PY'
-          import json
-          j=json.load(open('files.json'))
-          fs=j.get('files') or []
-          if len(fs)!=1:
-              raise SystemExit(f'expected exactly one file, got {len(fs)}')
-          print(fs[0]['fileId'])
-          PY
-          )"
-          echo "FILE_ID=$FILE_ID"
-          DL="$API/shares/$SHARE/files/$FILE_ID/download"
-          curl -sS -D headers.txt "$DL" -o response.bin
-          echo '=== DOWNLOAD HEADERS ==='
-          cat headers.txt
-          echo '=== RESPONSE ==='
-          file response.bin
-          wc -c response.bin
+          echo '=== CREATE CUSHION ==='
+          curl -sS -D cushion_headers.txt \
+            -H 'Content-Type: application/json' \
+            -X POST "$API/shares/$SHARE/cushion-sessions" \
+            --data '{"password":null}' \
+            -o cushion.json
+          cat cushion_headers.txt
+          cat cushion.json
+          echo
           python3 - <<'PY'
-          import pathlib
-          b=pathlib.Path('response.bin').read_bytes()
-          if b[:2] == b'PK':
-              print('ZIP_DIRECT=YES')
-          else:
-              print('ZIP_DIRECT=NO')
-              print(b[:1200].decode('utf-8','replace'))
+          import json
+          try:
+              j=json.load(open('cushion.json'))
+          except Exception:
+              raise SystemExit(0)
+          print('KEYS',sorted(j.keys()))
+          for k,v in j.items():
+              if isinstance(v,(str,int,float,bool)) or v is None:
+                  print(k,repr(v))
           PY
-          echo '=== FOLLOW REDIRECT ==='
-          curl -LfsS "$DL" -o patch.zip
-          file patch.zip
-          wc -c patch.zip
-          sha256sum patch.zip
