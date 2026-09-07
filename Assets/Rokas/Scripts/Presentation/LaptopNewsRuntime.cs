@@ -78,6 +78,7 @@ namespace Rokas.Presentation
         private bool preparationRequested;
         private bool playbackStarted;
         private bool muted;
+        private Action click;
 
         private void Awake()
         {
@@ -88,7 +89,9 @@ namespace Rokas.Presentation
                 return;
             }
 
-            ui = new UiKit(assets, null);
+            var bootstrap = GetComponentInParent<RokasBootstrap>();
+            click = bootstrap != null ? bootstrap.PlayUiClick : null;
+            ui = new UiKit(assets, click);
             Build((RectTransform)transform);
         }
 
@@ -123,7 +126,7 @@ namespace Rokas.Presentation
             var playHotspotFace = ui.Box(media, "NewsPlayPause", 284, 136, 152, 152, new Color(1, 1, 1, .001f), true);
             var playHotspot = playHotspotFace.gameObject.AddComponent<Button>();
             playHotspot.targetGraphic = playHotspotFace;
-            playHotspot.onClick.AddListener(TogglePlay);
+            playHotspot.onClick.AddListener(() => { click?.Invoke(); TogglePlay(); });
             playHotspot.navigation = new Navigation { mode = Navigation.Mode.Automatic };
 
             videoControls = ui.Rect(media, "NewsVideoControls", 12, 347, 696, 48).gameObject;
@@ -473,7 +476,7 @@ namespace Rokas.Presentation
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
 
             ui.Label(surface.transform, "Title", title, 8, 0, w - 16, h, 14, White, false, TextAnchor.MiddleCenter);
-            button.onClick.AddListener(() => action?.Invoke());
+            button.onClick.AddListener(() => { click?.Invoke(); action?.Invoke(); });
             return button;
         }
 

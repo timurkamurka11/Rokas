@@ -1,0 +1,70 @@
+name: TEMP apply YOMI bounded fixes
+on:
+  pull_request:
+    branches: [development]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.head_ref == 'fix/yomi-food-feedback-click'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Apply bounded implementation
+        run: python Tools/temp_apply_yomi_fixes.py
+      - name: GREEN core regression suite
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+      - name: Verify scoped food assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+          root = Path('Assets/Rokas/Resources/Food/Details')
+          names = ['TravelerOnigiri','SpicyMiso','HunterTempura','MoonMochi','GreenTea']
+          for name in names:
+              p = root / f'{name}.png'
+              data = p.read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n', p
+              w, h = struct.unpack('>II', data[16:24])
+              assert w >= 1500 and h >= 700, (p, w, h)
+              meta = (root / f'{name}.png.meta').read_text(encoding='utf-8')
+              assert 'enableMipMap: 0' in meta, p
+              assert 'textureCompression: 0' in meta, p
+              print(f'{name}: {w}x{h}, mipmaps off, compression off')
+          PY
+          test "$(git rev-parse origin/development:Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png)" = "$(git rev-parse HEAD:Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png)"
+      - name: Verify scoped source wiring
+        shell: bash
+        run: |
+          grep -F 'ContractPaymentPending' Assets/Rokas/Scripts/Core/FoodService.cs
+          grep -F 'Сначала сдайте контракт.' Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs
+          grep -F 'paymentPending || (validPhase && empty)' Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs
+          grep -F 'Food/Details/TravelerOnigiri' Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs
+          grep -F 'Food/Details/GreenTea' Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs
+          grep -F 'bootstrap.PlayUiClick' Assets/Rokas/Scripts/Presentation/LaptopNewsRuntime.cs
+      - name: Commit implementation to verification branch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            Assets/Rokas/Scripts/Core/FoodService.cs \
+            Assets/Rokas/Scripts/Core/GameSession.cs \
+            Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs \
+            Assets/Rokas/Scripts/Presentation/LaptopView.cs \
+            Assets/Rokas/Scripts/Presentation/RokasView.cs \
+            Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs \
+            Assets/Rokas/Scripts/Presentation/LaptopNewsRuntime.cs
+          git diff --cached --check
+          git diff --cached --stat
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: finish YOMI food feedback and laptop clicks'
+          git push origin HEAD:${{ github.head_ref }}
