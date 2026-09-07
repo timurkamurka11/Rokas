@@ -2,25 +2,26 @@ name: asset-transport
 on:
   push:
     branches: [asset-transport]
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect firestorage share
+      - name: Inspect firestorage client
         shell: bash
         run: |
           set -euxo pipefail
           base='https://firestorage.ai'
           share='https://firestorage.ai/ja/f/6IZBBacpoxzo'
-          curl -L --fail --retry 2 -A 'Mozilla/5.0' "$share" -o page.html
-          echo '--- share markers ---'
-          grep -Eo '.{0,160}(MoonMochi|01a07cc302ab7555873283c4e0c28275|Hj2P6mENvdY3IEL4|download|presign|object|storage).{0,320}' page.html | head -100 || true
-          js=$(grep -Eo '/_next/static/chunks/app/\(files\)/ja/f/page-[a-z0-9]+\.js' page.html | head -1)
-          echo "JS=$js"
-          curl -L --fail --retry 2 -A 'Mozilla/5.0' "$base$js" -o page.js
-          wc -c page.js
-          echo '--- API-like strings ---'
-          grep -Eo '.{0,180}(/api/|download|presign|share|publicId|fileId|object).{0,360}' page.js | head -200 || true
+          curl -L --fail -A 'Mozilla/5.0' "$share" -o page.html
+          echo '--- scripts ---'
+          grep -Eo 'src="[^"]+\.js"' page.html | sed 's/^src="//;s/"$//' | tee scripts.txt
+          while IFS= read -r js; do
+            f=$(echo "$js" | tr '/()' '___')
+            curl -L --fail -A 'Mozilla/5.0' "$base$js" -o "$f" || continue
+            echo "=== $js ($(wc -c < "$f") bytes) ==="
+            cat "$f" | head -c 400 || true
+            echo
+            grep -Eo '.{0,160}(/api/|download|presign|share|publicId|fileId|object|asset|storage).{0,320}' "$f" | head -80 || true
+          done < scripts.txt
