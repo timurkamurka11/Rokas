@@ -226,7 +226,7 @@ jobs:
               'Assets/Rokas/Scripts/Presentation/RokasView.cs',
               'Tests/Core/DomainBehaviorTests.cs',
           }
-          actual=set(subprocess.check_output(['git','status','--short'],text=True).splitlines())
+          actual=set(subprocess.check_output(['git','status','--short','--untracked-files=all'],text=True).splitlines())
           names={line[3:] for line in actual}
           if names!=expected: raise SystemExit('Unexpected diff scope: '+repr(sorted(names)))
           print('DIFF_SCOPE_OK=YES')
