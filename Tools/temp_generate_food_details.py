@@ -43,10 +43,7 @@ def main():
 
     for name, uv in CROPS.items():
         crop = crop_from_unity_uv(image, uv)
-        # The approved atlas stores these five detail images as small thumbnail cells.
-        # Upscale only those cells for the large hero panel, then apply a conservative
-        # unsharp pass. Content, crop and color stay unchanged.
-        scale = 3
+        scale = 4
         enlarged = crop.resize((crop.width * scale, crop.height * scale), Image.Resampling.LANCZOS)
         enlarged = enlarged.filter(ImageFilter.UnsharpMask(radius=1.2, percent=115, threshold=3))
         path = OUT / f"{name}.png"
