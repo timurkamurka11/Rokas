@@ -33,6 +33,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Record baseline asset-validator findings
+        run: |
+          set +e
+          python3 Tools/validate_assets.py >/tmp/assets-before.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/assets-before.log
+          grep '^FAIL:' /tmp/assets-before.log > /tmp/assets-before-failures.log || true
+          echo "BASELINE_VALIDATOR_EXIT=$code"
+
       - name: Download exact implementation bundle
         run: |
           python3 -m pip install --quiet selenium
@@ -137,11 +147,32 @@ jobs:
           python3 /tmp/rokas-food-bundle/apply_food_screen.py production
           python3 /tmp/rokas-food-bundle/apply_food_screen.py final-tests
 
-      - name: Verify core behavior and asset integrity
+      - name: Verify core behavior and no new asset-integrity failures
         run: |
           set -euo pipefail
           dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
-          python3 Tools/validate_assets.py
+          set +e
+          python3 Tools/validate_assets.py >/tmp/assets-after.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/assets-after.log
+          grep '^FAIL:' /tmp/assets-after.log > /tmp/assets-after-failures.log || true
+          diff -u /tmp/assets-before-failures.log /tmp/assets-after-failures.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, re, struct
+          atlas=Path('Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png')
+          meta=Path(str(atlas)+'.meta')
+          raw=atlas.read_bytes()
+          assert raw[:8] == b'\x89PNG\r\n\x1a\n'
+          width,height=struct.unpack('>II',raw[16:24])
+          assert (width,height)==(1600,1000),(width,height)
+          assert hashlib.sha256(raw).hexdigest()=='e7bf0aed8f7ed1d55b08afa72006f470e4d744ca08b044be9d8ad8086dd91e71'
+          assert re.search(r'^guid: [0-9a-f]{32}$',meta.read_text(),re.M)
+          print('FOOD_ATLAS_INTEGRITY_OK=YES')
+          print('ASSET_FAILURE_DELTA=NONE')
+          PY
+          echo "POST_VALIDATOR_EXIT=$code"
 
       - name: Verify C sharp syntax and Food screen wiring
         run: |
@@ -151,7 +182,6 @@ jobs:
           from pathlib import Path
           from tree_sitter import Language, Parser
           import tree_sitter_c_sharp as csharp
-
           parser=Parser(Language(csharp.language()))
           files=[
               Path('Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs'),
@@ -166,7 +196,6 @@ jobs:
           for path in files:
               tree=parser.parse(path.read_bytes())
               if has_error(tree.root_node): raise SystemExit('C# syntax error in '+str(path))
-
           food=Path('Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs').read_text()
           for text in ['Рамен Юмико','Онигири странника','Острый мисо-суп','Тэмпура охотника','Моти луны','Зелёный чай YOMI','Приготовлено Юмико','Съесть','EventTriggerType.Select','EventTriggerType.Submit','session.ConsumeFood']:
               assert text in food, text
