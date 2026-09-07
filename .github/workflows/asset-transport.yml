@@ -1,0 +1,23 @@
+name: asset-transport
+on:
+  push:
+    branches: [asset-transport]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect firestorage share
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 2 -A 'Mozilla/5.0' 'https://firestorage.ai/ja/f/6IZBBacpoxzo' -o page.html
+          wc -c page.html
+          head -c 2000 page.html
+          echo
+          echo '--- urls ---'
+          grep -Eo 'https?://[^"'"'"' <]+' page.html | head -100 || true
+          echo '--- download-ish paths ---'
+          grep -Eo '/[^"'"'"' <]*(download|file|object|asset)[^"'"'"' <]*' page.html | head -100 || true
