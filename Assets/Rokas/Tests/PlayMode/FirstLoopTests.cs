@@ -131,7 +131,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen));
             Assert.That(boot.Session.State.preparedFoodId, Is.EqualTo(FoodService.GreenTeaId));
             Assert.That(FindButton("EatButton").IsInteractable(), Is.False);
-            Press("LaptopBack");
+            Press("FoodBack");
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopFood").gameObject));
             Press("LaptopFood");
             Press("FoodRowRing_5");
