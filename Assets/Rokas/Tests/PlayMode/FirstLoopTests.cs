@@ -111,7 +111,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator LaptopFoodPreservesPurchaseGuardAndReturnsFocus()
+        public IEnumerator LaptopFoodPreservesConsumeGuardAndReturnsFocus()
         {
             directory = Path.Combine(Path.GetTempPath(), "rokas-laptop-" + Guid.NewGuid().ToString("N"));
             root = new GameObject("LaptopFixture");
@@ -126,16 +126,19 @@ namespace Rokas.Tests
             Assert.That(FindButton("DoorHotspot").IsInteractable(), Is.False);
             int initialYen = boot.Session.State.yen;
             Press("LaptopFood");
-            Press("PrepareTea");
-            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen - 80));
-            Assert.That(boot.Session.State.preparedFoodId, Is.EqualTo("food_green_tea"));
-            Assert.That(FindButton("PrepareTea").IsInteractable(), Is.False);
+            Press("FoodRowRing_5");
+            Press("EatButton");
+            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen));
+            Assert.That(boot.Session.State.preparedFoodId, Is.EqualTo(FoodService.GreenTeaId));
+            Assert.That(FindButton("EatButton").IsInteractable(), Is.False);
             Press("LaptopBack");
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopFood").gameObject));
             Press("LaptopFood");
-            Assert.That(FindButton("PrepareTea").IsInteractable(), Is.False, "Reopening Food must not permit a second tea purchase.");
-            Click(FindButton("PrepareTea"));
-            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen - 80));
+            Press("FoodRowRing_5");
+            Assert.That(FindButton("EatButton").IsInteractable(), Is.False, "Reopening Food must not permit a second food effect.");
+            Click(FindButton("EatButton"));
+            Assert.That(boot.Session.State.yen, Is.EqualTo(initialYen));
+            Assert.That(boot.Session.State.preparedFoodId, Is.EqualTo(FoodService.GreenTeaId));
             boot.View.Escape();
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopFood").gameObject));
             boot.View.Escape();
