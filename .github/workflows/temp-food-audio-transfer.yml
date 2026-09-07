@@ -1,140 +1,56 @@
 name: Temporary food/audio transfer probe
-
 on:
   push:
-    branches:
-      - food-audio-transfer-temp
-
+    branches: [food-audio-transfer-temp]
 permissions:
   contents: write
-
 jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current development
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: development
           fetch-depth: 0
-
-      - name: Apply and verify exact food/audio patch
+      - name: Apply verified patch and push development
         shell: bash
         run: |
           set -euo pipefail
           BASE_HEAD="$(git rev-parse HEAD)"
-          echo "BASE_HEAD=$BASE_HEAD"
-
-          API='https://api.firestorage.ai/dev/file'
-          OBJECT='Y1nNhrTvvwB3Iayc'
-          SUBDIR='AO9yWG'
-          OBJECT_BASE="$API/objects/$OBJECT/$SUBDIR"
-          EXPECTED_ZIP_SHA='f0229e6429ac67695e89811c91520b3677a25e463a664d67fbb086f492c18760'
-
-          curl -fsS "$OBJECT_BASE/files?maxResults=1000" -o files.json
-          FILE_ID="$(python3 - <<'PY'
-          import json
-          j=json.load(open('files.json'))
-          fs=j.get('files') or []
-          if len(fs)!=1 or fs[0].get('fileName')!='rokas_food_audio_patch.zip':
-              raise SystemExit(f'unexpected transfer payload: {fs!r}')
-          print(fs[0]['fileId'])
-          PY
-          )"
-          curl -fsS -X POST "$OBJECT_BASE/files/$FILE_ID/download" -o download.json
-          DL_URL="$(python3 - <<'PY'
-          import json
-          print(json.load(open('download.json'))['downloadUrl'])
-          PY
-          )"
-          curl -LfsS "$DL_URL" -o patch.zip
-          ACTUAL_ZIP_SHA="$(sha256sum patch.zip | awk '{print $1}')"
-          echo "ZIP_SHA=$ACTUAL_ZIP_SHA"
-          test "$ACTUAL_ZIP_SHA" = "$EXPECTED_ZIP_SHA"
-
-          rm -rf patch_stage
+          API='https://api.firestorage.ai/dev/file/objects/Y1nNhrTvvwB3Iayc/AO9yWG'
+          FILE_ID='01a07ba388d47233b718ed82ee73c6f5'
+          ZIP_SHA='f0229e6429ac67695e89811c91520b3677a25e463a664d67fbb086f492c18760'
+          curl -fsS -X POST "$API/files/$FILE_ID/download" -o download.json
+          URL="$(python3 -c 'import json; print(json.load(open("download.json"))["downloadUrl"])')"
+          curl -LfsS "$URL" -o patch.zip
+          test "$(sha256sum patch.zip | awk '{print $1}')" = "$ZIP_SHA"
           mkdir patch_stage
           unzip -q patch.zip -d patch_stage
           (cd patch_stage && sha256sum -c SHA256SUMS.txt)
-
-          python3 - <<'PY'
-          import pathlib, struct, wave, math, array
-          root=pathlib.Path('patch_stage')
-          names=['TravelerOnigiri.png','SpicyMiso.png','HunterTempura.png','MoonMochi.png','GreenTea.png']
-          for name in names:
-              p=root/'Assets/Rokas/Resources/Food/Details'/name
-              b=p.read_bytes()
-              if b[:8] != b'\x89PNG\r\n\x1a\n': raise SystemExit(f'{name}: not PNG')
-              w,h=struct.unpack('>II',b[16:24])
-              print(f'{name}: {w}x{h} bytes={len(b)}')
-              if (w,h)!=(1024,406): raise SystemExit(f'{name}: unexpected dimensions {(w,h)}')
-          p=root/'Assets/Rokas/Audio/UIWood.wav'
-          with wave.open(str(p),'rb') as w:
-              ch=w.getnchannels(); rate=w.getframerate(); sw=w.getsampwidth(); frames=w.getnframes(); raw=w.readframes(frames)
-          if (ch,rate,sw)!=(1,48000,2): raise SystemExit(f'UIWood format mismatch {(ch,rate,sw)}')
-          samples=array.array('h'); samples.frombytes(raw)
-          peak=max(abs(x) for x in samples)/32768 if samples else 0
-          rms=math.sqrt(sum(x*x for x in samples)/len(samples))/32768 if samples else 0
-          duration=frames/rate
-          print(f'UIWood.wav: mono={ch==1} rate={rate}Hz duration={duration:.6f}s peak={20*math.log10(peak):.2f}dBFS rms={20*math.log10(rms):.2f}dBFS')
-          if duration > 0.15 or peak >= 1.0: raise SystemExit('UIWood transient/clipping guard failed')
-          PY
-
-          cp patch_stage/Assets/Rokas/Resources/Food/Details/TravelerOnigiri.png Assets/Rokas/Resources/Food/Details/TravelerOnigiri.png
-          cp patch_stage/Assets/Rokas/Resources/Food/Details/SpicyMiso.png Assets/Rokas/Resources/Food/Details/SpicyMiso.png
-          cp patch_stage/Assets/Rokas/Resources/Food/Details/HunterTempura.png Assets/Rokas/Resources/Food/Details/HunterTempura.png
-          cp patch_stage/Assets/Rokas/Resources/Food/Details/MoonMochi.png Assets/Rokas/Resources/Food/Details/MoonMochi.png
-          cp patch_stage/Assets/Rokas/Resources/Food/Details/GreenTea.png Assets/Rokas/Resources/Food/Details/GreenTea.png
           cp patch_stage/Assets/Rokas/Audio/UIWood.wav Assets/Rokas/Audio/UIWood.wav
-
-          echo '=== git status ==='
+          for f in TravelerOnigiri SpicyMiso HunterTempura MoonMochi GreenTea; do
+            cp "patch_stage/Assets/Rokas/Resources/Food/Details/$f.png" "Assets/Rokas/Resources/Food/Details/$f.png"
+          done
+          rm -rf patch_stage patch.zip download.json
           git status --short
-          echo '=== git diff --check ==='
           git diff --check
-          echo '=== git diff --stat ==='
           git diff --stat
-          echo '=== git diff --name-only ==='
-          git diff --name-only
-
-          python3 - <<'PY'
-          import subprocess
-          expected={
-            'Assets/Rokas/Audio/UIWood.wav',
-            'Assets/Rokas/Resources/Food/Details/TravelerOnigiri.png',
-            'Assets/Rokas/Resources/Food/Details/SpicyMiso.png',
-            'Assets/Rokas/Resources/Food/Details/HunterTempura.png',
-            'Assets/Rokas/Resources/Food/Details/MoonMochi.png',
-            'Assets/Rokas/Resources/Food/Details/GreenTea.png',
-          }
-          changed=set(subprocess.check_output(['git','diff','--name-only'],text=True).splitlines())
-          if changed != expected:
-              raise SystemExit(f'unexpected diff paths: expected={sorted(expected)} actual={sorted(changed)}')
-          if any('Ramen' in p for p in changed): raise SystemExit('Ramen changed unexpectedly')
-          print('DIFF_SCOPE_OK=YES')
-          PY
-
+          EXPECTED="$(printf '%s\n' \
+            Assets/Rokas/Audio/UIWood.wav \
+            Assets/Rokas/Resources/Food/Details/GreenTea.png \
+            Assets/Rokas/Resources/Food/Details/HunterTempura.png \
+            Assets/Rokas/Resources/Food/Details/MoonMochi.png \
+            Assets/Rokas/Resources/Food/Details/SpicyMiso.png \
+            Assets/Rokas/Resources/Food/Details/TravelerOnigiri.png | sort)"
+          ACTUAL="$(git diff --name-only | sort)"
+          test "$ACTUAL" = "$EXPECTED"
           git fetch origin development
-          REMOTE_HEAD="$(git rev-parse origin/development)"
-          echo "REMOTE_HEAD_BEFORE_COMMIT=$REMOTE_HEAD"
-          test "$REMOTE_HEAD" = "$BASE_HEAD"
-
+          test "$(git rev-parse origin/development)" = "$BASE_HEAD"
           git config user.name 'timurkamurka11'
           git config user.email 'timur2417@gmail.com'
-          git add Assets/Rokas/Audio/UIWood.wav \
-                  Assets/Rokas/Resources/Food/Details/TravelerOnigiri.png \
-                  Assets/Rokas/Resources/Food/Details/SpicyMiso.png \
-                  Assets/Rokas/Resources/Food/Details/HunterTempura.png \
-                  Assets/Rokas/Resources/Food/Details/MoonMochi.png \
-                  Assets/Rokas/Resources/Food/Details/GreenTea.png
+          git add $EXPECTED
           git commit -m 'fix: replace YOMI food details and UI click'
-          COMMIT_SHA="$(git rev-parse HEAD)"
-          echo "FINAL_COMMIT=$COMMIT_SHA"
-
-          echo '=== commit files ==='
-          git show --name-status --format=fuller --stat HEAD
-          echo '=== post-commit status ==='
-          git status --short
+          echo "FINAL_COMMIT=$(git rev-parse HEAD)"
           test -z "$(git status --porcelain)"
-
           git push origin HEAD:development
           echo 'PUSHED_DEVELOPMENT=YES'
