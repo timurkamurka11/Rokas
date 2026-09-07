@@ -2,6 +2,15 @@ using System;
 
 namespace Rokas.Core
 {
+    public enum FoodConsumeBlockReason
+    {
+        None,
+        ContractPaymentPending,
+        InvalidPhase,
+        UnknownFood,
+        EffectAlreadyActive
+    }
+
     public sealed class FoodService
     {
         public const string RamenId = "food_yumiko_ramen";
@@ -31,16 +40,20 @@ namespace Rokas.Core
         // The laptop Food screen uses the already persisted prepared-food slot. Non-tea
         // effects are intentionally data-only for now; gameplay can extend by food id
         // without introducing a parallel inventory/save architecture.
-        public bool Consume(SaveData state, string foodId)
+        public FoodConsumeBlockReason GetConsumeBlockReason(SaveData state, string foodId)
         {
             RequireState(state);
-            if ((state.phase != RunPhase.Home && state.phase != RunPhase.Accepted) ||
-                !IsFoodScreenItem(foodId) ||
-                !string.IsNullOrEmpty(state.preparedFoodId))
-            {
-                return false;
-            }
+            if (state.phase == RunPhase.Payment) return FoodConsumeBlockReason.ContractPaymentPending;
+            if (state.phase != RunPhase.Home && state.phase != RunPhase.Accepted)
+                return FoodConsumeBlockReason.InvalidPhase;
+            if (!IsFoodScreenItem(foodId)) return FoodConsumeBlockReason.UnknownFood;
+            if (!string.IsNullOrEmpty(state.preparedFoodId)) return FoodConsumeBlockReason.EffectAlreadyActive;
+            return FoodConsumeBlockReason.None;
+        }
 
+        public bool Consume(SaveData state, string foodId)
+        {
+            if (GetConsumeBlockReason(state, foodId) != FoodConsumeBlockReason.None) return false;
             state.preparedFoodId = foodId;
             return true;
         }

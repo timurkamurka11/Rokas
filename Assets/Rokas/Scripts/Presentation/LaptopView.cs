@@ -44,7 +44,7 @@ namespace Rokas.Presentation
         public bool IsClosing { get; private set; }
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
-            Action<Func<bool>, string> act, Action click, Action close)
+            Action<Func<bool>, string> act, Action click, Action<string> notify, Action close)
         {
             this.ui = ui;
             this.assets = assets;
@@ -52,7 +52,7 @@ namespace Rokas.Presentation
             this.contracts = contracts;
             this.click = click;
             this.close = close;
-            food = new LaptopFoodView(ui, session, act, click);
+            food = new LaptopFoodView(ui, session, act, click, notify);
         }
 
         public void Reset()

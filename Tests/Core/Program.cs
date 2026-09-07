@@ -9,6 +9,7 @@ namespace Rokas.Core.Tests
             try
             {
                 DomainBehaviorTests.RunAll();
+                FoodFeedbackTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }
