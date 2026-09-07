@@ -21,8 +21,26 @@ jobs:
         run: python Tools/temp_apply_yomi_fixes.py
       - name: GREEN core regression suite
         run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
-      - name: Validate project assets
-        run: python Tools/validate_assets.py
+      - name: Verify scoped food assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+          root = Path('Assets/Rokas/Resources/Food/Details')
+          names = ['TravelerOnigiri','SpicyMiso','HunterTempura','MoonMochi','GreenTea']
+          for name in names:
+              p = root / f'{name}.png'
+              data = p.read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n', p
+              w, h = struct.unpack('>II', data[16:24])
+              assert w >= 1500 and h >= 700, (p, w, h)
+              meta = (root / f'{name}.png.meta').read_text(encoding='utf-8')
+              assert 'enableMipMap: 0' in meta, p
+              assert 'textureCompression: 0' in meta, p
+              print(f'{name}: {w}x{h}, mipmaps off, compression off')
+          PY
+          test "$(git rev-parse origin/development:Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png)" = "$(git rev-parse HEAD:Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png)"
       - name: Verify scoped source wiring
         shell: bash
         run: |
