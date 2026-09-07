@@ -12,52 +12,36 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect firestorage client endpoint
+      - name: Inspect firestorage client chunks
         shell: bash
         run: |
           set -euo pipefail
           SHARE='https://firestorage.ai/ja/f/qPkPobRsL331'
           curl -LfsS "$SHARE" -o share.html
-          python3 - <<'PY' > js_path.txt
-          import re
-          s=open('share.html','r',encoding='utf-8',errors='replace').read()
-          hits=re.findall(r'src="([^"]*?/\(files\)/ja/f/page-[^"]+?\.js)"',s)
-          if not hits:
-              hits=re.findall(r'src="([^"]*?page-[^"]+?\.js)"',s)
-          if not hits:
-              raise SystemExit('page JS not found')
-          print(hits[-1])
-          PY
-          JS_PATH="$(cat js_path.txt)"
-          case "$JS_PATH" in
-            http*) JS_URL="$JS_PATH" ;;
-            *) JS_URL="https://firestorage.ai$JS_PATH" ;;
-          esac
-          echo "JS_URL=$JS_URL"
-          curl -LfsS "$JS_URL" -o page.js
-          echo "JS_BYTES=$(wc -c < page.js)"
           python3 - <<'PY'
-          import re
-          s=open('page.js','r',encoding='utf-8',errors='replace').read()
-          terms=['download','presign','signed','share','files','file','objects','object','api/','publicId','shareId','folder','metadata']
-          print('=== CANDIDATE STRING LITERALS ===')
-          strings=re.findall(r'["\']([^"\']{3,500})["\']',s)
-          seen=set()
-          for x in strings:
-              low=x.lower()
-              if any(t.lower() in low for t in terms):
-                  if x not in seen:
-                      seen.add(x)
-                      print(x[:500])
-          print('=== CONTEXT WINDOWS ===')
-          for term in ['download','presign','publicId','shareId','/api/','files/']:
-              start=0
-              shown=0
-              while shown<12:
-                  i=s.lower().find(term.lower(),start)
-                  if i<0: break
-                  print('\n--',term,i,'--')
-                  print(s[max(0,i-350):min(len(s),i+650)])
-                  start=i+len(term)
-                  shown+=1
+          import re, subprocess, pathlib
+          base='https://firestorage.ai'
+          html=pathlib.Path('share.html').read_text(encoding='utf-8',errors='replace')
+          scripts=re.findall(r'<script[^>]+src="([^"]+\.js)"',html)
+          print('SCRIPT_COUNT',len(scripts))
+          for n,p in enumerate(scripts):
+              url=p if p.startswith('http') else base+p
+              out=f'script_{n}.js'
+              try:
+                  subprocess.run(['curl','-LfsS',url,'-o',out],check=True)
+              except Exception as e:
+                  print('FETCH_FAIL',url,e); continue
+              s=pathlib.Path(out).read_text(encoding='utf-8',errors='replace')
+              if '(files)/ja/f/page-' in p or any(t in s.lower() for t in ['download','presign','shareid','publicid','/api/']):
+                  print('\n=== SCRIPT',n,url,'BYTES',len(s),'===')
+                  if len(s)<2000:
+                      print(s)
+                  for term in ['download','presign','shareId','publicId','/api/','api/','objects','files']:
+                      start=0; shown=0
+                      while shown<8:
+                          i=s.lower().find(term.lower(),start)
+                          if i<0: break
+                          print('\n--',term,i,'--')
+                          print(s[max(0,i-260):min(len(s),i+560)])
+                          start=i+len(term); shown+=1
           PY
