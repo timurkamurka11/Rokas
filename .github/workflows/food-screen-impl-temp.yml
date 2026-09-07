@@ -1,0 +1,224 @@
+name: ROKAS bounded food screen implementation
+
+on:
+  push:
+    branches:
+      - food-screen-impl-20260907
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_BASE: b1f051e7604f9f5416e644949c8b33c3e595c47f
+      BUNDLE_SHARE: https://firestorage.ai/ja/f/XlwXzXlD0Q3t
+      BUNDLE_SHA256: 2d9e3443f9421fc1a806388ad77760ce8c8a714c3b3596b8a692f9b870f8c64c
+    steps:
+      - name: Check out current development
+        uses: actions/checkout@v4
+        with:
+          ref: development
+          fetch-depth: 0
+
+      - name: Guard exact continuation point
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_BASE"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Download exact implementation bundle
+        run: |
+          python3 -m pip install --quiet selenium
+          python3 - <<'PY'
+          import hashlib, html, os, re, shutil, time, urllib.parse, urllib.request
+          from pathlib import Path
+          share = os.environ['BUNDLE_SHARE']
+          expected = os.environ['BUNDLE_SHA256']
+          dest = Path('/tmp/rokas-food-bundle.zip')
+
+          def digest(data): return hashlib.sha256(data).hexdigest()
+          def request(url, referer=None):
+              headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/149 Safari/537.36','Accept':'*/*'}
+              if referer: headers['Referer']=referer
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=45) as r: return r.read(),r.geturl()
+          def candidates(text, base):
+              text=html.unescape(text).replace('\\u0026','&').replace('\\u002F','/').replace('\\/','/')
+              found=[]
+              for m in re.finditer(r'https?://[^\\s\"\'<>]+',text): found.append(m.group(0))
+              for m in re.finditer(r'(?:href|src|action)=[\"\']([^\"\']+)[\"\']',text,re.I): found.append(urllib.parse.urljoin(base,m.group(1)))
+              out=[]; seen=set()
+              for u in found:
+                  u=u.rstrip('\\\\,);]')
+                  if u.startswith('http') and u not in seen:
+                      seen.add(u); out.append(u)
+              out.sort(key=lambda u:(0 if any(k in u.lower() for k in ('download','.zip','storage','asset','file')) else 1,len(u)))
+              return out
+
+          raw, final = request(share)
+          if digest(raw)==expected:
+              dest.write_bytes(raw)
+          else:
+              ok=False
+              try:
+                  text=raw.decode('utf-8','ignore')
+                  for u in candidates(text,final)[:180]:
+                      try: data,_=request(u,share)
+                      except Exception: continue
+                      if digest(data)==expected:
+                          dest.write_bytes(data); ok=True; break
+              except Exception: pass
+              if not ok:
+                  from selenium import webdriver
+                  from selenium.webdriver.common.by import By
+                  from selenium.webdriver.chrome.options import Options
+                  dl=Path('/tmp/rokas-food-browser'); shutil.rmtree(dl,ignore_errors=True); dl.mkdir()
+                  opts=Options(); opts.add_argument('--headless=new'); opts.add_argument('--no-sandbox'); opts.add_argument('--disable-dev-shm-usage')
+                  opts.add_experimental_option('prefs',{'download.default_directory':str(dl),'download.prompt_for_download':False,'download.directory_upgrade':True,'safebrowsing.enabled':True})
+                  driver=webdriver.Chrome(options=opts)
+                  try:
+                      driver.get(share); time.sleep(3)
+                      for u in candidates(driver.page_source,driver.current_url):
+                          try: data,_=request(u,share)
+                          except Exception: continue
+                          if digest(data)==expected:
+                              dest.write_bytes(data); ok=True; break
+                      if not ok:
+                          elems=driver.find_elements(By.CSS_SELECTOR,'a,button,input[type=button],input[type=submit]')
+                          preferred=[]; rest=[]
+                          for e in elems:
+                              try:
+                                  txt=((e.text or '')+' '+(e.get_attribute('value') or '')+' '+(e.get_attribute('aria-label') or '')).lower()
+                                  href=(e.get_attribute('href') or '').lower()
+                              except Exception: continue
+                              (preferred if any(k in txt or k in href for k in ('download','ダウンロード','保存','受け取','.zip')) else rest).append(e)
+                          for e in preferred+rest[:20]:
+                              try: driver.execute_script('arguments[0].click();',e)
+                              except Exception: continue
+                              for _ in range(25):
+                                  time.sleep(.4)
+                                  for p in dl.iterdir():
+                                      if p.is_file() and p.suffix!='.crdownload' and hashlib.sha256(p.read_bytes()).hexdigest()==expected:
+                                          shutil.copyfile(p,dest); ok=True; break
+                                  if ok: break
+                              if ok: break
+                  finally: driver.quit()
+              if not ok: raise SystemExit('Could not obtain exact implementation bundle')
+          if hashlib.sha256(dest.read_bytes()).hexdigest()!=expected: raise SystemExit('Bundle hash mismatch')
+          print('BUNDLE_SHA256_OK=' + expected)
+          PY
+          rm -rf /tmp/rokas-food-bundle
+          mkdir -p /tmp/rokas-food-bundle
+          unzip -q /tmp/rokas-food-bundle.zip -d /tmp/rokas-food-bundle
+
+      - name: TDD RED - prove consume action is missing
+        run: |
+          set -euo pipefail
+          python3 /tmp/rokas-food-bundle/apply_food_screen.py red
+          set +e
+          dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release >/tmp/food-red.log 2>&1
+          red_code=$?
+          set -e
+          cat /tmp/food-red.log
+          test "$red_code" -ne 0
+          grep -q "food screen needs a dedicated consume action" /tmp/food-red.log
+          echo "TDD_RED_CONFIRMED=YES"
+
+      - name: Implement bounded Food screen
+        run: |
+          set -euo pipefail
+          python3 /tmp/rokas-food-bundle/apply_food_screen.py production
+          python3 /tmp/rokas-food-bundle/apply_food_screen.py final-tests
+
+      - name: Verify core behavior and asset integrity
+        run: |
+          set -euo pipefail
+          dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+          python3 Tools/validate_assets.py
+
+      - name: Verify C sharp syntax and Food screen wiring
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet tree-sitter tree-sitter-c-sharp
+          python3 - <<'PY'
+          from pathlib import Path
+          from tree_sitter import Language, Parser
+          import tree_sitter_c_sharp as csharp
+
+          parser=Parser(Language(csharp.language()))
+          files=[
+              Path('Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs'),
+              Path('Assets/Rokas/Scripts/Presentation/LaptopView.cs'),
+              Path('Assets/Rokas/Scripts/Presentation/RokasView.cs'),
+              Path('Assets/Rokas/Scripts/Core/FoodService.cs'),
+              Path('Assets/Rokas/Scripts/Core/GameSession.cs'),
+          ]
+          def has_error(node):
+              if node.type=='ERROR' or node.is_missing: return True
+              return any(has_error(c) for c in node.children)
+          for path in files:
+              tree=parser.parse(path.read_bytes())
+              if has_error(tree.root_node): raise SystemExit('C# syntax error in '+str(path))
+
+          food=Path('Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs').read_text()
+          for text in ['Рамен Юмико','Онигири странника','Острый мисо-суп','Тэмпура охотника','Моти луны','Зелёный чай YOMI','Приготовлено Юмико','Съесть','EventTriggerType.Select','EventTriggerType.Submit','session.ConsumeFood']:
+              assert text in food, text
+          laptop=Path('Assets/Rokas/Scripts/Presentation/LaptopView.cs').read_text()
+          assert 'if (section == 2)' in laptop and 'food.Build(page, Titles, TileColors, OpenSection);' in laptop
+          view=Path('Assets/Rokas/Scripts/Presentation/RokasView.cs').read_text()
+          assert 'new LaptopView(ui, assets, session, contracts, Act, audio.Click, ClosePanel)' in view
+          assert 'if (panel == "laptop" && laptop.BackToDesktop())' in view
+          print('FOOD_UI_WIRING_OK=YES')
+          PY
+
+      - name: Verify exact diff scope
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --stat
+          python3 - <<'PY'
+          import subprocess
+          expected={
+              'Assets/Rokas/Resources/Food.meta',
+              'Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png',
+              'Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png.meta',
+              'Assets/Rokas/Scripts/Core/FoodService.cs',
+              'Assets/Rokas/Scripts/Core/GameSession.cs',
+              'Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs',
+              'Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs.meta',
+              'Assets/Rokas/Scripts/Presentation/LaptopView.cs',
+              'Assets/Rokas/Scripts/Presentation/RokasView.cs',
+              'Tests/Core/DomainBehaviorTests.cs',
+          }
+          actual=set(subprocess.check_output(['git','status','--short'],text=True).splitlines())
+          names={line[3:] for line in actual}
+          if names!=expected: raise SystemExit('Unexpected diff scope: '+repr(sorted(names)))
+          print('DIFF_SCOPE_OK=YES')
+          PY
+
+      - name: Commit once and fast-forward development
+        run: |
+          set -euo pipefail
+          git fetch origin development
+          test "$(git rev-parse origin/development)" = "$EXPECTED_BASE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/Resources/Food.meta \
+                  Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png \
+                  Assets/Rokas/Resources/Food/ROKAS_FoodAtlas.png.meta \
+                  Assets/Rokas/Scripts/Core/FoodService.cs \
+                  Assets/Rokas/Scripts/Core/GameSession.cs \
+                  Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs \
+                  Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs.meta \
+                  Assets/Rokas/Scripts/Presentation/LaptopView.cs \
+                  Assets/Rokas/Scripts/Presentation/RokasView.cs \
+                  Tests/Core/DomainBehaviorTests.cs
+          git commit -m "feat: implement YOMI food screen"
+          git push origin HEAD:development
