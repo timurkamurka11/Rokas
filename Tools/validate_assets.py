@@ -6,6 +6,8 @@ import struct
 import sys
 import wave
 
+from asset_validation import validate_png_asset
+
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
 guids = {}
@@ -72,11 +74,9 @@ for path in sorted((ROOT / 'Assets').rglob('*.png')):
         continue
     width, height = struct.unpack('>II', header[16:24])
     images.append((path.name, width, height))
-    if 'Yokai' in path.parts or 'Familiars' in path.parts:
-        if header[25] != 6:
-            errors.append('Character PNG must carry real RGBA: ' + path.name)
-    elif width < 1600 or height < 900:
-        errors.append('Background below HD: ' + path.name)
+    meta = Path(str(path) + '.meta')
+    meta_text = meta.read_text() if meta.exists() else None
+    errors.extend(validate_png_asset(path, width, height, header[25], meta_text))
 
 audio_count = 0
 for path in sorted((ROOT / 'Assets').rglob('*.wav')):
