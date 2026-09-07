@@ -79,7 +79,7 @@ namespace Rokas.Presentation
             home = new HomeView(ui, assets, session, audio, OpenPanel, Act, Travel, ToastShort);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
-            laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ClosePanel);
+            laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel);
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             phase = session.State.phase;
