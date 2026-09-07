@@ -12,33 +12,52 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe firestorage share
+      - name: Inspect firestorage client endpoint
         shell: bash
         run: |
           set -euo pipefail
           SHARE='https://firestorage.ai/ja/f/qPkPobRsL331'
-          curl -LfsS -D headers.txt "$SHARE" -o share.html
-          echo '=== HEADERS ==='
-          cat headers.txt
-          echo '=== SIZE ==='
-          wc -c share.html
-          echo '=== CANDIDATE LINKS ==='
-          python3 - <<'PY'
-          import re, html
+          curl -LfsS "$SHARE" -o share.html
+          python3 - <<'PY' > js_path.txt
+          import re
           s=open('share.html','r',encoding='utf-8',errors='replace').read()
-          s=html.unescape(s)
-          vals=[]
-          for pat in [r'https?://[^\"\'<> ]+', r'(?:href|src|action)=\"([^\"]+)\"', r'(?:href|src|action)=\'([^\']+)\'']:
-              vals += re.findall(pat,s)
+          hits=re.findall(r'src="([^"]*?/\(files\)/ja/f/page-[^"]+?\.js)"',s)
+          if not hits:
+              hits=re.findall(r'src="([^"]*?page-[^"]+?\.js)"',s)
+          if not hits:
+              raise SystemExit('page JS not found')
+          print(hits[-1])
+          PY
+          JS_PATH="$(cat js_path.txt)"
+          case "$JS_PATH" in
+            http*) JS_URL="$JS_PATH" ;;
+            *) JS_URL="https://firestorage.ai$JS_PATH" ;;
+          esac
+          echo "JS_URL=$JS_URL"
+          curl -LfsS "$JS_URL" -o page.js
+          echo "JS_BYTES=$(wc -c < page.js)"
+          python3 - <<'PY'
+          import re
+          s=open('page.js','r',encoding='utf-8',errors='replace').read()
+          terms=['download','presign','signed','share','files','file','objects','object','api/','publicId','shareId','folder','metadata']
+          print('=== CANDIDATE STRING LITERALS ===')
+          strings=re.findall(r'["\']([^"\']{3,500})["\']',s)
           seen=set()
-          for v in vals:
-              if isinstance(v,tuple): v=''.join(v)
-              if v in seen: continue
-              seen.add(v)
-              low=v.lower()
-              if any(k in low for k in ['download','file','object','qpkpob','zip','api']):
-                  print(v[:500])
-          print('=== TEXT MARKERS ===')
-          for key in ['rokas_food_audio_patch.zip','Y1nNhrTvvwB3Iayc','qPkPobRsL331','01a07ba388d47233b718ed82ee73c6f5']:
-              print(key, s.find(key))
+          for x in strings:
+              low=x.lower()
+              if any(t.lower() in low for t in terms):
+                  if x not in seen:
+                      seen.add(x)
+                      print(x[:500])
+          print('=== CONTEXT WINDOWS ===')
+          for term in ['download','presign','publicId','shareId','/api/','files/']:
+              start=0
+              shown=0
+              while shown<12:
+                  i=s.lower().find(term.lower(),start)
+                  if i<0: break
+                  print('\n--',term,i,'--')
+                  print(s[max(0,i-350):min(len(s),i+650)])
+                  start=i+len(term)
+                  shown+=1
           PY
