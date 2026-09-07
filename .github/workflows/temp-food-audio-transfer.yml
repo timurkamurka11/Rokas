@@ -1,0 +1,44 @@
+name: Temporary food/audio transfer probe
+
+on:
+  push:
+    branches:
+      - food-audio-transfer-temp
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe firestorage share
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHARE='https://firestorage.ai/ja/f/qPkPobRsL331'
+          curl -LfsS -D headers.txt "$SHARE" -o share.html
+          echo '=== HEADERS ==='
+          cat headers.txt
+          echo '=== SIZE ==='
+          wc -c share.html
+          echo '=== CANDIDATE LINKS ==='
+          python3 - <<'PY'
+          import re, html
+          s=open('share.html','r',encoding='utf-8',errors='replace').read()
+          s=html.unescape(s)
+          vals=[]
+          for pat in [r'https?://[^\"\'<> ]+', r'(?:href|src|action)=\"([^\"]+)\"', r'(?:href|src|action)=\'([^\']+)\'']:
+              vals += re.findall(pat,s)
+          seen=set()
+          for v in vals:
+              if isinstance(v,tuple): v=''.join(v)
+              if v in seen: continue
+              seen.add(v)
+              low=v.lower()
+              if any(k in low for k in ['download','file','object','qpkpob','zip','api']):
+                  print(v[:500])
+          print('=== TEXT MARKERS ===')
+          for key in ['rokas_food_audio_patch.zip','Y1nNhrTvvwB3Iayc','qPkPobRsL331','01a07ba388d47233b718ed82ee73c6f5']:
+              print(key, s.find(key))
+          PY
