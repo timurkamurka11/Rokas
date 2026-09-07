@@ -30,9 +30,10 @@ namespace Rokas.Presentation
             public readonly string Duration;
             public readonly Rect ThumbUv;
             public readonly Rect DetailUv;
+            public readonly string DetailResource;
 
             public FoodItem(string id, string name, string summary, string symbol, string description,
-                string effectOne, string effectTwo, string duration, Rect thumbUv, Rect detailUv)
+                string effectOne, string effectTwo, string duration, Rect thumbUv, Rect detailUv, string detailResource)
             {
                 Id = id;
                 Name = name;
@@ -44,6 +45,7 @@ namespace Rokas.Presentation
                 Duration = duration;
                 ThumbUv = thumbUv;
                 DetailUv = detailUv;
+                DetailResource = detailResource;
             }
         }
 
@@ -59,7 +61,7 @@ namespace Rokas.Presentation
                 "+10% сопротивление страху",
                 "Длительность: 15 мин",
                 new Rect(0f, .25f, .333125f, .25f),
-                new Rect(0f, .5f, 1f, .5f)),
+                new Rect(0f, .5f, 1f, .5f), null),
             new FoodItem(
                 FoodService.OnigiriId,
                 "Онигири странника",
@@ -70,7 +72,7 @@ namespace Rokas.Presentation
                 "+10% восстановление выносливости",
                 "Длительность: 15 мин",
                 new Rect(.333125f, .25f, .333125f, .25f),
-                new Rect(.333125f, .25f, .333125f, .25f)),
+                new Rect(.333125f, .25f, .333125f, .25f), "Food/Details/TravelerOnigiri"),
             new FoodItem(
                 FoodService.MisoId,
                 "Острый мисо-суп",
@@ -81,7 +83,7 @@ namespace Rokas.Presentation
                 "+10% сопротивление страху",
                 "Длительность: 15 мин",
                 new Rect(.66625f, .25f, .33375f, .25f),
-                new Rect(.66625f, .25f, .33375f, .25f)),
+                new Rect(.66625f, .25f, .33375f, .25f), "Food/Details/SpicyMiso"),
             new FoodItem(
                 FoodService.TempuraId,
                 "Тэмпура охотника",
@@ -92,7 +94,7 @@ namespace Rokas.Presentation
                 "+5% шанс критического удара",
                 "Длительность: 15 мин",
                 new Rect(0f, 0f, .333125f, .25f),
-                new Rect(0f, 0f, .333125f, .25f)),
+                new Rect(0f, 0f, .333125f, .25f), "Food/Details/HunterTempura"),
             new FoodItem(
                 FoodService.MochiId,
                 "Моти луны",
@@ -103,7 +105,7 @@ namespace Rokas.Presentation
                 "+10% длительность слабых точек",
                 "Длительность: 15 мин",
                 new Rect(.333125f, 0f, .333125f, .25f),
-                new Rect(.333125f, 0f, .333125f, .25f)),
+                new Rect(.333125f, 0f, .333125f, .25f), "Food/Details/MoonMochi"),
             new FoodItem(
                 FoodService.GreenTeaId,
                 "Зелёный чай YOMI",
@@ -114,15 +116,17 @@ namespace Rokas.Presentation
                 "Спокойствие перед контрактом",
                 "До возвращения домой",
                 new Rect(.66625f, 0f, .33375f, .25f),
-                new Rect(.66625f, 0f, .33375f, .25f))
+                new Rect(.66625f, 0f, .33375f, .25f), "Food/Details/GreenTea")
         };
 
         private readonly UiKit ui;
         private readonly GameSession session;
         private readonly Action<Func<bool>, string> act;
         private readonly Action click;
+        private readonly Action<string> notify;
 
         private Texture2D atlas;
+        private Texture2D[] detailTextures;
         private int selected;
         private Button[] rowButtons;
         private LaptopSurface[] rowRings;
@@ -138,12 +142,13 @@ namespace Rokas.Presentation
         private Text effectTwo;
         private Text duration;
 
-        public LaptopFoodView(UiKit ui, GameSession session, Action<Func<bool>, string> act, Action click)
+        public LaptopFoodView(UiKit ui, GameSession session, Action<Func<bool>, string> act, Action click, Action<string> notify)
         {
             this.ui = ui;
             this.session = session;
             this.act = act;
             this.click = click;
+            this.notify = notify;
         }
 
         public void Build(RectTransform parent, string[] sectionTitles, Color[] sectionColors, Action<int> openSection)
@@ -151,6 +156,15 @@ namespace Rokas.Presentation
             atlas = Resources.Load<Texture2D>("Food/ROKAS_FoodAtlas");
             if (!atlas)
                 throw new InvalidOperationException("ROKAS Food atlas is missing from Resources/Food.");
+
+            detailTextures = new Texture2D[Items.Length];
+            for (int i = 0; i < Items.Length; i++)
+            {
+                if (string.IsNullOrEmpty(Items[i].DetailResource)) continue;
+                detailTextures[i] = Resources.Load<Texture2D>(Items[i].DetailResource);
+                if (!detailTextures[i])
+                    throw new InvalidOperationException("ROKAS Food detail image is missing: " + Items[i].DetailResource);
+            }
 
             selected = Mathf.Clamp(selected, 0, Items.Length - 1);
             ui.Box(parent, "FoodPageShade", 0, 0, 1744, 812, new Color(.008f, .03f, .055f, .64f));
@@ -290,7 +304,11 @@ namespace Rokas.Presentation
             trigger.triggers = new List<EventTrigger.Entry>();
             AddTrigger(trigger, EventTriggerType.Select, () => UpdateSelection(index));
             AddTrigger(trigger, EventTriggerType.PointerEnter, () => UpdateSelection(index));
-            AddTrigger(trigger, EventTriggerType.PointerClick, () => UpdateSelection(index));
+            AddTrigger(trigger, EventTriggerType.PointerClick, () =>
+            {
+                click?.Invoke();
+                UpdateSelection(index);
+            });
             AddTrigger(trigger, EventTriggerType.Submit, () =>
             {
                 UpdateSelection(index);
@@ -342,7 +360,9 @@ namespace Rokas.Presentation
             }
 
             detailTitle.text = item.Name;
-            detailArt.uvRect = item.DetailUv;
+            Texture2D detailTexture = detailTextures != null ? detailTextures[selected] : null;
+            detailArt.texture = detailTexture ? detailTexture : atlas;
+            detailArt.uvRect = detailTexture ? new Rect(0, 0, 1, 1) : item.DetailUv;
             description.text = item.Description;
             effectOne.text = item.EffectOne;
             effectTwo.text = item.EffectTwo;
@@ -361,6 +381,12 @@ namespace Rokas.Presentation
         {
             selected = Mathf.Clamp(index, 0, Items.Length - 1);
             var item = Items[selected];
+            if (session.GetFoodConsumeBlockReason(item.Id) == FoodConsumeBlockReason.ContractPaymentPending)
+            {
+                notify?.Invoke("Сначала сдайте контракт.");
+                UpdateActionState();
+                return;
+            }
             if (act != null)
                 act(() => session.ConsumeFood(item.Id), item.Name + " — эффект активен.");
             else
@@ -374,7 +400,8 @@ namespace Rokas.Presentation
             bool validPhase = session.State.phase == RunPhase.Home || session.State.phase == RunPhase.Accepted;
             bool empty = string.IsNullOrEmpty(session.State.preparedFoodId);
             bool active = session.State.preparedFoodId == Items[selected].Id;
-            eatButton.interactable = validPhase && empty;
+            bool paymentPending = session.State.phase == RunPhase.Payment;
+            eatButton.interactable = paymentPending || (validPhase && empty);
             eatTitle.text = active ? "Эффект активен" : empty ? "Съесть" : "Другой эффект активен";
         }
 
