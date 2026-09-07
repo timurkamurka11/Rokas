@@ -7,7 +7,6 @@ using UnityEngine.UI;
 
 namespace Rokas.Presentation
 {
-    // Presentation only: contracts, food and equipment still belong to the existing session.
     public sealed class LaptopView
     {
         private static readonly Color White = new Color(.94f, .94f, .91f);
@@ -118,6 +117,7 @@ namespace Rokas.Presentation
             if (section == 2)
             {
                 food.Build(page, Titles, TileColors, OpenSection);
+                ChromeButton(page, "FoodBack", "← Назад", 642, 24, 166, 48, Back);
                 return;
             }
             ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
