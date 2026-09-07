@@ -6,36 +6,53 @@ permissions:
   contents: write
 jobs:
   transport:
-    if: github.event.head_commit.message != 'transport: moon mochi binary'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: asset-transport
-      - name: Download Moon Mochi from transport share
+          ref: development
+          fetch-depth: 0
+      - name: Persist Moon Mochi checkpoint
         shell: bash
         run: |
           set -euxo pipefail
           api='https://api.firestorage.ai/dev/file'
           share='6IZBBacpoxzo'
-          curl -L --fail --max-time 30 "$api/shares/$share/files?maxResults=1000" -o files.json
-          file_id=$(python3 -c "import json; d=json.load(open('files.json')); print(d['files'][0]['fileId'])")
-          curl -L --fail --max-time 30 -X POST "$api/shares/$share/files/$file_id/download" -o download.json
-          url=$(python3 -c "import json; print(json.load(open('download.json'))['downloadUrl'])")
-          curl -L --fail --max-time 60 "$url" -o MoonMochi.png
+          expected_sha='33a36b292b747f4f86b4b68515c2424917eb6ff9a768877e42a33a7c258d6a2f'
+          curl -L --fail --max-time 30 "$api/shares/$share/files?maxResults=1000" -o /tmp/files.json
+          file_id=$(python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/files.json'))
+          matches=[f for f in d['files'] if f.get('fileName')=='MoonMochi_new_opt.png']
+          assert len(matches)==1, d
+          print(matches[0]['fileId'])
+          PY
+          )
+          curl -L --fail --max-time 30 -X POST "$api/shares/$share/files/$file_id/download" -o /tmp/download.json
+          url=$(python3 -c "import json; print(json.load(open('/tmp/download.json'))['downloadUrl'])")
+          curl -L --fail --max-time 90 "$url" -o /tmp/MoonMochi.png
+          actual_sha=$(sha256sum /tmp/MoonMochi.png | awk '{print $1}')
+          echo "MOCHI_SHA256=$actual_sha"
+          test "$actual_sha" = "$expected_sha"
           python3 - <<'PY'
           import struct
-          p='MoonMochi.png'
-          b=open(p,'rb').read(24)
+          b=open('/tmp/MoonMochi.png','rb').read(24)
           assert b[:8] == b'\x89PNG\r\n\x1a\n'
           w,h=struct.unpack('>II',b[16:24])
-          print('MoonMochi dimensions',w,h)
+          print(f'MOCHI_DIMENSIONS={w}x{h}')
           assert (w,h)==(1024,406)
           PY
-          cp MoonMochi.png Assets/Rokas/Resources/Food/Details/MoonMochi.png
-          git config user.name 'rokas-asset-transport'
+          git switch -c checkpoint-mochi
+          cp /tmp/MoonMochi.png Assets/Rokas/Resources/Food/Details/MoonMochi.png
+          changed=$(git status --short)
+          printf '%s\n' "$changed"
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = 'Assets/Rokas/Resources/Food/Details/MoonMochi.png'
+          git diff --check
+          git config user.name 'rokas-checkpoint-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add Assets/Rokas/Resources/Food/Details/MoonMochi.png
           git diff --cached --check
-          git commit -m 'transport: moon mochi binary'
-          git push origin HEAD:asset-transport
+          git commit -m 'wip: checkpoint mochi hero'
+          git rev-parse HEAD
+          git push origin HEAD:checkpoint-mochi
