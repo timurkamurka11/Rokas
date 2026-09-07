@@ -12,21 +12,37 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect cushion redirect path
+      - name: Verify direct firestorage object download
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://firestorage.ai/_next/static/chunks/4899-d89df949f2dbd5af.js'
-          curl -LfsS "$URL" -o page.js
-          python3 - <<'PY'
-          import pathlib
-          s=pathlib.Path('page.js').read_text(encoding='utf-8',errors='replace')
-          for needle in ['async function eD','cushionId','const w=','let w=','w=/','const g=','let g=','g=/']:
-              start=0
-              while True:
-                  i=s.find(needle,start)
-                  if i<0: break
-                  print('\n===',needle,i,'===')
-                  print(s[max(0,i-1000):min(len(s),i+3500)])
-                  start=i+len(needle)
+          API='https://api.firestorage.ai/dev/file'
+          OBJECT='Y1nNhrTvvwB3Iayc'
+          SUBDIR='AO9yWG'
+          BASE="$API/objects/$OBJECT/$SUBDIR"
+          curl -fsS "$BASE/files?maxResults=1000" -o files.json
+          cat files.json
+          FILE_ID="$(python3 - <<'PY'
+          import json
+          j=json.load(open('files.json'))
+          fs=j.get('files') or []
+          if len(fs)!=1: raise SystemExit(f'expected 1 file, got {len(fs)}')
+          print(fs[0]['fileId'])
           PY
+          )"
+          echo "FILE_ID=$FILE_ID"
+          curl -fsS -X POST "$BASE/files/$FILE_ID/download" -o download.json
+          cat download.json
+          echo
+          DL_URL="$(python3 - <<'PY'
+          import json
+          j=json.load(open('download.json'))
+          print(j['downloadUrl'])
+          PY
+          )"
+          curl -LfsS "$DL_URL" -o patch.zip
+          file patch.zip
+          wc -c patch.zip
+          sha256sum patch.zip
+          test "$(sha256sum patch.zip | awk '{print $1}')" = 'f0229e6429ac67695e89811c91520b3677a25e463a664d67fbb086f492c18760'
+          echo 'PATCH_SHA_OK=YES'
