@@ -12,44 +12,75 @@ jobs:
         with:
           ref: development
           fetch-depth: 0
-      - name: Persist Green Tea checkpoint
+      - name: Persist Hunter Tempura runtime fix checkpoint
         shell: bash
         run: |
           set -euxo pipefail
           api='https://api.firestorage.ai/dev/file'
-          share='AK6JicZRRaOy'
-          expected_sha='d86107e586927152778edd61b839baaa04292ef1b249e1ef61e5592f933f8ab0'
-          target='Assets/Rokas/Resources/Food/Details/GreenTea.png'
+          share='8E_rGf95xjG6'
+          expected_sha='e3cba89aa0831e135e1695bed25771f556cc56a70a7586575e4856a0d5a97bd9'
+          target='Assets/Rokas/Resources/Food/Details/HunterTempura.png'
           curl -L --fail --max-time 30 "$api/shares/$share/files?maxResults=1000" -o /tmp/files.json
           file_id=$(python3 - <<'PY'
           import json
           d=json.load(open('/tmp/files.json'))
-          matches=[f for f in d['files'] if f.get('fileName')=='GreenTea.png']
+          matches=[f for f in d['files'] if f.get('fileName')=='HunterTempura.png']
           assert len(matches)==1, d
           print(matches[0]['fileId'])
           PY
           )
           curl -L --fail --max-time 30 -X POST "$api/shares/$share/files/$file_id/download" -o /tmp/download.json
           url=$(python3 -c "import json; print(json.load(open('/tmp/download.json'))['downloadUrl'])")
-          curl -L --fail --max-time 90 "$url" -o /tmp/GreenTea.png
-          actual_sha=$(sha256sum /tmp/GreenTea.png | awk '{print $1}')
+          curl -L --fail --max-time 90 "$url" -o /tmp/HunterTempura.png
+          actual_sha=$(sha256sum /tmp/HunterTempura.png | awk '{print $1}')
           old_sha=$(sha256sum "$target" | awk '{print $1}')
-          echo "GREEN_TEA_SHA256=$actual_sha"
-          echo "OLD_GREEN_TEA_SHA256=$old_sha"
+          echo "HUNTER_TEMPURA_SHA256=$actual_sha"
+          echo "OLD_HUNTER_TEMPURA_SHA256=$old_sha"
           test "$actual_sha" = "$expected_sha"
-          test "$actual_sha" != "$old_sha"
           python3 - <<'PY'
           import struct
-          for label,path in [('NEW','/tmp/GreenTea.png'),('OLD','Assets/Rokas/Resources/Food/Details/GreenTea.png')]:
-              b=open(path,'rb').read(24)
-              assert b[:8] == b'\x89PNG\r\n\x1a\n'
-              w,h=struct.unpack('>II',b[16:24])
-              print(f'{label}_GREEN_TEA_DIMENSIONS={w}x{h}')
-              if label == 'NEW':
-                  assert (w,h)==(1024,406)
+          p='/tmp/HunterTempura.png'
+          b=open(p,'rb').read(24)
+          assert b[:8] == b'\x89PNG\r\n\x1a\n', b[:8]
+          w,h=struct.unpack('>II', b[16:24])
+          print(f'HUNTER_TEMPURA_DIMENSIONS={w}x{h}')
+          assert (w,h)==(1024,406)
+          old=open('Assets/Rokas/Resources/Food/Details/HunterTempura.png','rb').read(8)
+          print('OLD_HUNTER_TEMPURA_SIGNATURE='+old.hex())
+          assert old != b'\x89PNG\r\n\x1a\n'
           PY
-          git switch -c checkpoint-green-tea
-          cp /tmp/GreenTea.png "$target"
+          cp /tmp/HunterTempura.png "$target"
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          root=Path('Assets/Rokas/Resources')
+          checks={
+              'Food/ROKAS_FoodAtlas': root/'Food/ROKAS_FoodAtlas.png',
+              'Food/Details/TravelerOnigiri': root/'Food/Details/TravelerOnigiri.png',
+              'Food/Details/SpicyMiso': root/'Food/Details/SpicyMiso.png',
+              'Food/Details/HunterTempura': root/'Food/Details/HunterTempura.png',
+              'Food/Details/MoonMochi': root/'Food/Details/MoonMochi.png',
+              'Food/Details/GreenTea': root/'Food/Details/GreenTea.png',
+          }
+          for resource,p in checks.items():
+              assert p.is_file(), f'missing file: {p}'
+              meta=Path(str(p)+'.meta')
+              assert meta.is_file(), f'missing meta: {meta}'
+              b=p.read_bytes()
+              assert b[:8] == b'\x89PNG\r\n\x1a\n', f'invalid PNG: {p}'
+              w,h=struct.unpack('>II',b[16:24])
+              m=meta.read_text(encoding='utf-8')
+              assert 'textureType: 0' in m, f'wrong textureType: {meta}'
+              assert 'spriteMode: 0' in m, f'wrong spriteMode: {meta}'
+              print(f'LOOKUP_STATIC_OK {resource} => {p} {w}x{h} Texture2D')
+          code=Path('Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs').read_text(encoding='utf-8')
+          assert 'Resources.Load<Texture2D>(Items[i].DetailResource)' in code
+          for resource in ['Food/Details/TravelerOnigiri','Food/Details/SpicyMiso','Food/Details/HunterTempura','Food/Details/MoonMochi','Food/Details/GreenTea']:
+              assert resource in code, resource
+          assert 'Resources.Load<Texture2D>("Food/ROKAS_FoodAtlas")' in code
+          print('LAPTOP_FOOD_LOOKUP_TYPE=Texture2D')
+          print('STATIC_RESOURCE_LOOKUP_PRECONDITIONS=PASS')
+          PY
           changed=$(git status --short)
           printf '%s\n' "$changed"
           test "$(git diff --name-only | wc -l)" -eq 1
@@ -57,8 +88,9 @@ jobs:
           git diff --check
           git config user.name 'rokas-checkpoint-bot'
           git config user.email 'actions@users.noreply.github.com'
+          git switch -c checkpoint-tempura-runtime-fix
           git add "$target"
           git diff --cached --check
-          git commit -m 'wip: checkpoint green tea hero'
+          git commit -m 'fix: restore hunter tempura resource'
           git rev-parse HEAD
-          git push origin HEAD:checkpoint-green-tea
+          git push origin HEAD:checkpoint-tempura-runtime-fix
