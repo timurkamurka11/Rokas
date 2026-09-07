@@ -2,6 +2,9 @@ name: ROKAS Unity CI
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - development
 
 permissions:
   contents: read
