@@ -118,6 +118,7 @@ namespace Rokas.Presentation
             if (section == 2)
             {
                 food.Build(page, Titles, TileColors, OpenSection);
+                ChromeButton(page, "FoodBack", "← Назад", 208, 732, 180, 52, Back);
                 return;
             }
             ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
