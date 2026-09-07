@@ -5,20 +5,37 @@ on:
 permissions:
   contents: write
 jobs:
-  inspect:
+  transport:
+    if: github.event.head_commit.message != 'transport: moon mochi binary'
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect firestorage route chunk
+      - uses: actions/checkout@v4
+        with:
+          ref: asset-transport
+      - name: Download Moon Mochi from transport share
         shell: bash
         run: |
           set -euxo pipefail
-          base='https://firestorage.ai'
-          share='https://firestorage.ai/ja/f/6IZBBacpoxzo'
-          curl -L --fail --max-time 20 -A 'Mozilla/5.0' "$share" -o page.html
-          js=$(grep -Eo '/_next/static/chunks/app/\(files\)/ja/f/page-[a-z0-9]+\.js' page.html | head -1)
-          curl -L --fail --max-time 20 -A 'Mozilla/5.0' "$base$js" -o route.js
-          echo '--- route.js ---'
-          cat route.js
-          echo
-          echo '--- all chunk refs in page ---'
-          grep -Eo '/_next/static/chunks/[^" ]+\.js' page.html | sort -u
+          api='https://api.firestorage.ai/dev/file'
+          share='6IZBBacpoxzo'
+          curl -L --fail --max-time 30 "$api/shares/$share/files?maxResults=1000" -o files.json
+          file_id=$(python3 -c "import json; d=json.load(open('files.json')); print(d['files'][0]['fileId'])")
+          curl -L --fail --max-time 30 -X POST "$api/shares/$share/files/$file_id/download" -o download.json
+          url=$(python3 -c "import json; print(json.load(open('download.json'))['downloadUrl'])")
+          curl -L --fail --max-time 60 "$url" -o MoonMochi.png
+          python3 - <<'PY'
+          import struct
+          p='MoonMochi.png'
+          b=open(p,'rb').read(24)
+          assert b[:8] == b'\x89PNG\r\n\x1a\n'
+          w,h=struct.unpack('>II',b[16:24])
+          print('MoonMochi dimensions',w,h)
+          assert (w,h)==(1024,406)
+          PY
+          cp MoonMochi.png Assets/Rokas/Resources/Food/Details/MoonMochi.png
+          git config user.name 'rokas-asset-transport'
+          git config user.email 'actions@users.noreply.github.com'
+          git add Assets/Rokas/Resources/Food/Details/MoonMochi.png
+          git diff --cached --check
+          git commit -m 'transport: moon mochi binary'
+          git push origin HEAD:asset-transport
