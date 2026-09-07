@@ -7,17 +7,28 @@ namespace Rokas.Presentation
     {
         private readonly RokasAssets assets;
         private readonly SettingsData settings;
+        private readonly RokasBootstrap bootstrap;
         private readonly AudioSource ambience;
         private readonly AudioSource music;
         private readonly AudioSource[] effects = new AudioSource[4];
         private int voice;
         private bool mission;
         private bool hasLocation;
+        private bool laptopMode;
+        private bool lampStateKnown;
+        private bool lampOn;
 
         public RokasAudio(GameObject parent, RokasAssets assets, SettingsData settings)
         {
             this.assets = assets;
             this.settings = settings;
+            bootstrap = parent.GetComponent<RokasBootstrap>();
+            if (bootstrap && bootstrap.Session != null)
+            {
+                lampOn = bootstrap.Session.State.lampOn;
+                lampStateKnown = true;
+            }
+
             var audioRoot = new GameObject("Audio");
             audioRoot.transform.SetParent(parent.transform, false);
             ambience = MakeSource(audioRoot, true);
@@ -49,11 +60,28 @@ namespace Rokas.Presentation
             if (music.clip) music.Play();
         }
 
+        public void SetLaptopMode(bool active) { laptopMode = active; }
+
         public void Tick(float dt, bool focused)
         {
             float master = focused ? Mathf.Clamp01(settings.masterVolume) : 0;
             ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f, dt);
             music.volume = Mathf.MoveTowards(music.volume, master * settings.musicVolume * .6f, dt);
+
+            if (bootstrap && bootstrap.Session != null)
+            {
+                bool currentLampOn = bootstrap.Session.State.lampOn;
+                if (!lampStateKnown)
+                {
+                    lampOn = currentLampOn;
+                    lampStateKnown = true;
+                }
+                else if (currentLampOn != lampOn)
+                {
+                    lampOn = currentLampOn;
+                    Play(lampOn ? assets.lampOn : assets.lampOff);
+                }
+            }
         }
 
         public void Play(AudioClip clip)
@@ -66,6 +94,11 @@ namespace Rokas.Presentation
             source.Play();
         }
 
-        public void Click() { Play(assets.click); }
+        public void Click()
+        {
+            if (!laptopMode) Play(assets.click);
+        }
+
+        public void LaptopMouseClick() { Play(assets.laptopMouseClick); }
     }
 }

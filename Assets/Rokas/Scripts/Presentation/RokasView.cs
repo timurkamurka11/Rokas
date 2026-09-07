@@ -36,8 +36,10 @@ namespace Rokas.Presentation
         private bool transition;
         private bool storageBlocked;
         private float toastTime;
+        private int laptopOpenedFrame = -1;
 
         public bool Paused { get { return transition || storageBlocked || panel == "settings"; } }
+        public bool LaptopOpen { get { return panel == "laptop"; } }
 
         public RokasView(RokasBootstrap owner, RokasAssets assets, GameSession session, RokasAudio audio, Action save)
         {
@@ -157,8 +159,13 @@ namespace Rokas.Presentation
         {
             if (transition || storageBlocked) return;
             if (laptop.IsClosing) return;
-            if (value == "laptop") laptop.Reset();
+            if (value == "laptop")
+            {
+                laptop.Reset();
+                laptopOpenedFrame = Time.frameCount;
+            }
             panel = value;
+            audio.SetLaptopMode(panel == "laptop");
             RefreshPanel();
         }
 
@@ -194,6 +201,7 @@ namespace Rokas.Presentation
         {
             bool fromLaptop = panel == "laptop";
             panel = null;
+            audio.SetLaptopMode(false);
             ui.Clear(panels);
             sceneInput.interactable = true;
             settingsButton.interactable = true;
@@ -249,7 +257,12 @@ namespace Rokas.Presentation
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
             mission.Tick(dt, Paused);
-            if (panel == "laptop") laptop.Tick(dt);
+            if (panel == "laptop")
+            {
+                if (Time.frameCount != laptopOpenedFrame && Input.GetMouseButtonDown(0))
+                    audio.LaptopMouseClick();
+                laptop.Tick(dt);
+            }
             if (toastTime > 0)
             {
                 toastTime -= dt;
