@@ -12,25 +12,43 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve firestorage file API
+      - name: Verify firestorage patch download
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://firestorage.ai/_next/static/chunks/4899-d89df949f2dbd5af.js'
-          curl -LfsS "$URL" -o page.js
-          python3 - <<'PY'
-          import re, pathlib
-          s=pathlib.Path('page.js').read_text(encoding='utf-8',errors='replace')
-          i=s.find('async function v()')
-          print('V_INDEX',i)
-          print('=== BEFORE_V ===')
-          print(s[max(0,i-5000):i+1200])
-          print('=== ABSOLUTE_URLS ===')
-          for u in sorted(set(re.findall(r'https?://[^"\'` ]+',s))):
-              print(u[:1000])
-          print('=== APIISH_LITERALS ===')
-          for x in sorted(set(re.findall(r'["\'`]([^"\'`]{2,300})["\'`]',s))):
-              low=x.lower()
-              if any(k in low for k in ['/api','api.','shares/','/shares','files/','/files','download','presign']):
-                  print(x[:500])
+          API='https://api.firestorage.ai/dev/file'
+          SHARE='qPkPobRsL331'
+          curl -fsS "$API/shares/$SHARE/files?maxResults=1000" -o files.json
+          echo '=== FILES JSON ==='
+          cat files.json
+          FILE_ID="$(python3 - <<'PY'
+          import json
+          j=json.load(open('files.json'))
+          fs=j.get('files') or []
+          if len(fs)!=1:
+              raise SystemExit(f'expected exactly one file, got {len(fs)}')
+          print(fs[0]['fileId'])
           PY
+          )"
+          echo "FILE_ID=$FILE_ID"
+          DL="$API/shares/$SHARE/files/$FILE_ID/download"
+          curl -sS -D headers.txt "$DL" -o response.bin
+          echo '=== DOWNLOAD HEADERS ==='
+          cat headers.txt
+          echo '=== RESPONSE ==='
+          file response.bin
+          wc -c response.bin
+          python3 - <<'PY'
+          import pathlib
+          b=pathlib.Path('response.bin').read_bytes()
+          if b[:2] == b'PK':
+              print('ZIP_DIRECT=YES')
+          else:
+              print('ZIP_DIRECT=NO')
+              print(b[:1200].decode('utf-8','replace'))
+          PY
+          echo '=== FOLLOW REDIRECT ==='
+          curl -LfsS "$DL" -o patch.zip
+          file patch.zip
+          wc -c patch.zip
+          sha256sum patch.zip
