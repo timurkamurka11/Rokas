@@ -113,7 +113,7 @@ namespace Rokas.Core
             bool delivered = Messages.DeliverIncoming(
                 "guild-contract-completed:" + Contract.id + ":" + State.completedRuns,
                 "guild",
-                "Контракт закрыт. Награда перечислена.");
+                "Контракт закрыт. Награда перечислена. Выполнение №" + State.completedRuns + ".");
             if (!delivered)
             {
                 NotifyChanged();
