@@ -15,6 +15,7 @@ namespace Rokas.Tests
     public sealed class HunterGuildPlayModeTests
     {
         private const string AcceptedText = "Контракт принят. Подготовьтесь к выходу на задание.";
+        private const string AcceptedPreview = "Контракт принят. Подготовьтесь к вых…";
         private GameObject root;
         private string directory;
 
@@ -51,8 +52,8 @@ namespace Rokas.Tests
                 "active Guild conversation should consume its own incoming unread through existing behavior");
             Assert.That(FindRect("MessagesNotification"), Is.Null,
                 "active Guild acceptance follow-up must not create a redundant popup");
-            Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedText),
-                "Guild contact preview must follow the latest real authored message");
+            Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedPreview),
+                "Guild contact preview must compact the latest real authored message without showing stale offer copy");
             Assert.That(FindButton("MessagesAttachment_" + offer.attachment.id).IsInteractable(), Is.False);
 
             boot.SaveNow();
@@ -71,7 +72,7 @@ namespace Rokas.Tests
             Assert.That(FindButton("MessagesAttachment_" + restoredOffer.attachment.id).IsInteractable(), Is.False);
             Assert.That(restored.entries[1].eventId,
                 Is.EqualTo("guild-contract-accepted:" + restoredBoot.Session.Contract.id));
-            Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedText));
+            Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedPreview));
             Assert.That(FindRect("MessagesNotification"), Is.Null,
                 "historical Guild follow-up must not become a fresh notification after reload");
             LogAssert.NoUnexpectedReceived();
