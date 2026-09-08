@@ -109,7 +109,7 @@ namespace Rokas.Core.Tests
                 restored.Changed += () => changes++;
                 Equal("AlreadyActive", Act(restored).Status.ToString(), "reload click is no-op");
                 Equal(false, restored.Messages.DeliverIncoming("guild-contract-test", "guild", "duplicate"), "no redelivery");
-                Equal(1, restored.Messages.GetConversation("guild").entries.Count, "history not duplicated");
+                Equal(2, restored.Messages.GetConversation("guild").entries.Count, "offer plus accepted follow-up remain exactly once");
                 Equal(0, changes, "reload repeat emits no events");
             }
             finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }

@@ -44,12 +44,13 @@ namespace Rokas.Tests
             // A queued second click on the same real Button must be harmless before rebuilding.
             ExecuteEvents.Execute(button.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
             yield return null;
-            Assert.That(conversation.entries.Count, Is.EqualTo(count));
+            Assert.That(conversation.entries.Count, Is.EqualTo(count + 1),
+                "one successful acceptance must append exactly one Guild follow-up");
             Assert.That(FindButton("MessagesAttachment_" + entry.attachment.id).IsInteractable(), Is.False);
             Press(FindButton("MessagesContact_kaito"));
             Press(FindButton("MessagesContact_guild"));
             yield return null;
-            Assert.That(conversation.entries.Count, Is.EqualTo(count), "reopening Guild cannot duplicate delivery");
+            Assert.That(conversation.entries.Count, Is.EqualTo(count + 1), "reopening Guild cannot duplicate delivery");
             Assert.That(FindButton("MessagesAttachment_" + entry.attachment.id).IsInteractable(), Is.False);
             LogAssert.NoUnexpectedReceived();
         }

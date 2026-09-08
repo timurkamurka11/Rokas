@@ -15,6 +15,7 @@ namespace Rokas.Core.Tests
                 ContractAttachmentActionTests.RunAll();
                 GameSessionMessageEventTests.RunAll();
                 DialogueProgressionTests.RunAll();
+                HunterGuildFlowTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }

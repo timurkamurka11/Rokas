@@ -15,6 +15,7 @@
     <Compile Include="ContractAttachmentActionTests.cs" />
     <Compile Include="GameSessionMessageEventTests.cs" />
     <Compile Include="DialogueProgressionTests.cs" />
+    <Compile Include="HunterGuildFlowTests.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/*.cs" />
   </ItemGroup>
 </Project>
