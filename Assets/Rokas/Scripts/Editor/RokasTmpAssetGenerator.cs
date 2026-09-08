@@ -1,9 +1,11 @@
 #if UNITY_EDITOR
 using System;
 using System.IO;
+using System.Text;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 
 namespace Rokas.Editor
 {
@@ -49,8 +51,12 @@ namespace Rokas.Editor
             }
 
             TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-            if (font == null)
+            if (font == null || font.atlasPopulationMode != AtlasPopulationMode.Static || !HasRequiredCharacters(font))
             {
+                if (font != null)
+                {
+                    AssetDatabase.DeleteAsset(FontPath);
+                }
                 font = GenerateProductionFont();
             }
 
@@ -66,20 +72,6 @@ namespace Rokas.Editor
             }
             settingsSerialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(settings);
-
-            if (!font.TryAddCharacters(CyrillicProbe, out string missingCharacters, true) || !string.IsNullOrEmpty(missingCharacters))
-            {
-                throw new InvalidOperationException("RokasSans TMP could not author required Cyrillic glyphs: " + missingCharacters);
-            }
-            EditorUtility.SetDirty(font);
-            if (font.atlasTextures != null)
-            {
-                foreach (Texture2D atlas in font.atlasTextures)
-                {
-                    if (atlas != null) EditorUtility.SetDirty(atlas);
-                }
-            }
-
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
@@ -89,7 +81,7 @@ namespace Rokas.Editor
             {
                 throw new InvalidOperationException("ROKAS TMP production assets were not loadable through Resources after official import and Unity serialization.");
             }
-            if (!loadedFont.HasCharacters(CyrillicProbe, out uint[] missing, true, false) || missing.Length != 0)
+            if (!HasRequiredCharacters(loadedFont))
             {
                 throw new InvalidOperationException("ROKAS TMP production font is missing required Cyrillic glyphs after generation.");
             }
@@ -106,24 +98,88 @@ namespace Rokas.Editor
                 throw new InvalidOperationException("ROKAS source font is missing: " + SourceFontPath);
             }
 
-            TMP_FontAsset font = TMP_FontAsset.CreateFontAsset(source);
+            TMP_FontAsset font = TMP_FontAsset.CreateFontAsset(
+                source,
+                90,
+                9,
+                GlyphRenderMode.SDFAA,
+                2048,
+                2048,
+                AtlasPopulationMode.Dynamic,
+                true);
             if (font == null || font.material == null || font.atlasTextures == null || font.atlasTextures.Length == 0 || font.atlasTextures[0] == null)
             {
                 throw new InvalidOperationException("TextMesh Pro could not create the ROKAS production font asset from RokasSans.ttf.");
             }
+
+            string productionGlyphs = BuildProductionGlyphSet();
+            if (!font.TryAddCharacters(productionGlyphs, out string missingCharacters, true) || !string.IsNullOrEmpty(missingCharacters))
+            {
+                throw new InvalidOperationException("RokasSans TMP could not bake required production glyphs before serialization: " + missingCharacters);
+            }
+            if (!HasRequiredCharacters(font))
+            {
+                throw new InvalidOperationException("RokasSans TMP in-memory font did not contain required Cyrillic glyphs before serialization.");
+            }
+
             font.name = "RokasSans TMP";
-            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            font.atlasPopulationMode = AtlasPopulationMode.Static;
             font.material.name = "RokasSans TMP Material";
-            font.atlasTextures[0].name = "RokasSans TMP Atlas";
+            for (int index = 0; index < font.atlasTextures.Length; index++)
+            {
+                if (font.atlasTextures[index] != null)
+                {
+                    font.atlasTextures[index].name = index == 0 ? "RokasSans TMP Atlas" : "RokasSans TMP Atlas " + index;
+                }
+            }
 
             Material material = font.material;
-            Texture2D atlas = font.atlasTextures[0];
             AssetDatabase.CreateAsset(font, FontPath);
             AssetDatabase.AddObjectToAsset(material, font);
-            AssetDatabase.AddObjectToAsset(atlas, font);
+            foreach (Texture2D atlas in font.atlasTextures)
+            {
+                if (atlas != null)
+                {
+                    AssetDatabase.AddObjectToAsset(atlas, font);
+                }
+            }
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(FontPath, ImportAssetOptions.ForceSynchronousImport);
-            return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+
+            TMP_FontAsset loaded = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+            if (loaded == null || !HasRequiredCharacters(loaded))
+            {
+                throw new InvalidOperationException("RokasSans TMP lost required glyphs during Unity serialization.");
+            }
+            return loaded;
+        }
+
+        private static bool HasRequiredCharacters(TMP_FontAsset font)
+        {
+            if (font == null)
+            {
+                return false;
+            }
+            return font.HasCharacters(CyrillicProbe, out uint[] missing, false, false) && missing.Length == 0;
+        }
+
+        private static string BuildProductionGlyphSet()
+        {
+            var builder = new StringBuilder(512);
+            for (int codePoint = 0x20; codePoint <= 0x7E; codePoint++)
+            {
+                builder.Append((char)codePoint);
+            }
+            for (int codePoint = 0x00A0; codePoint <= 0x00FF; codePoint++)
+            {
+                builder.Append((char)codePoint);
+            }
+            for (int codePoint = 0x0400; codePoint <= 0x04FF; codePoint++)
+            {
+                builder.Append((char)codePoint);
+            }
+            builder.Append("–—…„“”’№₽");
+            return builder.ToString();
         }
 
         private static void ExportArtifacts()
