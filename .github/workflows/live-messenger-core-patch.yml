@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/live-messenger-core-patch.yml
       - Tools/apply_live_messenger_core.py
+      - Tools/apply_live_messenger_core_fix.py
 
 permissions:
   contents: write
@@ -23,7 +24,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply core production patch
-        run: python3 Tools/apply_live_messenger_core.py
+        run: |
+          python3 Tools/apply_live_messenger_core.py
+          python3 Tools/apply_live_messenger_core_fix.py
 
       - name: Literal diff check
         run: git diff --check
