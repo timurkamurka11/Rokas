@@ -15,19 +15,31 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Probe temporary user-asset share
+      - name: Discover temporary user-asset download API
         env:
           SHARE_URL: https://firestorage.ai/ja/f/6mLjVEeLVYvQ
         run: |
           python3 - <<'PY'
           import os, re, requests
-          url = os.environ['SHARE_URL']
-          response = requests.get(url, timeout=30)
-          print('status', response.status_code, 'url', response.url, 'bytes', len(response.content))
-          print('content-type', response.headers.get('content-type'))
-          hrefs = re.findall(r'href=["\']([^"\']+)', response.text)
-          for href in hrefs:
-              if 'download' in href.lower() or '.zip' in href.lower() or '/api/' in href.lower():
-                  print('candidate', href)
-          print('html-head', response.text[:4000].replace('\n', ' '))
+          from urllib.parse import urljoin
+          base = os.environ['SHARE_URL']
+          html = requests.get(base, timeout=30).text
+          scripts = re.findall(r'<script[^>]+src="([^"]+)"', html)
+          print('scripts', len(scripts))
+          needles = ('download', 'shareId', '/api/', 'file-download', 'signed')
+          for src in scripts:
+              url = urljoin(base, src)
+              text = requests.get(url, timeout=30).text
+              if not any(n in text for n in needles):
+                  continue
+              print('SCRIPT', url, 'bytes', len(text))
+              for needle in needles:
+                  start = 0
+                  hits = 0
+                  while hits < 8:
+                      pos = text.find(needle, start)
+                      if pos < 0: break
+                      print('HIT', needle, text[max(0,pos-300):pos+500].replace('\n',' '))
+                      hits += 1
+                      start = pos + len(needle)
           PY
