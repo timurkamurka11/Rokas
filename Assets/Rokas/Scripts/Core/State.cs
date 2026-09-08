@@ -39,6 +39,7 @@ namespace Rokas.Core
         public int completedRuns;
         public RunPhase phase = RunPhase.Home;
         public string activeContractId = string.Empty;
+        public string activeDestinationId = string.Empty;
         public string preparedFoodId = string.Empty;
         public float enemyHp;
         public float playerHp = 100f;

@@ -10,6 +10,25 @@ namespace Rokas.Core
         Contract
     }
 
+    public enum MessageAttachmentActionStatus
+    {
+        Activated,
+        Failed
+    }
+
+    public sealed class MessageAttachmentActionResult
+    {
+        public MessageAttachmentActionStatus Status { get; private set; }
+        public string TargetId { get; private set; }
+        public bool Succeeded { get { return Status == MessageAttachmentActionStatus.Activated; } }
+
+        public MessageAttachmentActionResult(MessageAttachmentActionStatus status, string targetId)
+        {
+            Status = status;
+            TargetId = targetId ?? string.Empty;
+        }
+    }
+
     [Serializable]
     public sealed class MessageAttachment
     {
@@ -253,6 +272,35 @@ namespace Rokas.Core
                 return string.Compare(left.contactId, right.contactId, StringComparison.Ordinal);
             });
             return result;
+        }
+
+        public MessageAttachmentActionResult ActivateAttachment(string contactId, string messageId)
+        {
+            ConversationState conversation = FindConversation(contactId);
+            if (conversation == null || string.IsNullOrEmpty(messageId))
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, string.Empty);
+            }
+
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry == null || !string.Equals(entry.messageId, messageId, StringComparison.Ordinal) || entry.attachment == null)
+                {
+                    continue;
+                }
+                if (entry.attachment.kind != MessageAttachmentKind.Coordinates || string.IsNullOrEmpty(entry.attachment.targetId))
+                {
+                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, entry.attachment.targetId);
+                }
+
+                state.activeDestinationId = entry.attachment.targetId;
+                entry.attachment.opened = true;
+                NotifyChanged();
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, entry.attachment.targetId);
+            }
+
+            return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, string.Empty);
         }
 
         public bool MarkAttachmentOpened(string contactId, string messageId)
