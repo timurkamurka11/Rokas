@@ -9,6 +9,7 @@ on:
       - Tools/apply_live_messenger_presentation.py
       - Tools/fix_live_messenger_presentation_patch.py
       - Tools/apply_live_messenger_playmode_migrations.py
+      - Tools/fix_live_messenger_playmode_migrations.py
 
 permissions:
   contents: write
@@ -27,6 +28,9 @@ jobs:
 
       - name: Migrate stale PlayMode identity assertions
         run: python3 Tools/apply_live_messenger_playmode_migrations.py
+
+      - name: Repair migrated PlayMode helper duplication
+        run: python3 Tools/fix_live_messenger_playmode_migrations.py
 
       - name: Repair presentation patch anchor
         run: python3 Tools/fix_live_messenger_presentation_patch.py
