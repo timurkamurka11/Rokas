@@ -429,7 +429,13 @@ namespace Rokas.Core
             }
 
             attachment.opened = true;
-            NotifyChanged();
+            if (!DeliverIncoming(
+                "guild-contract-accepted:" + targetId,
+                "guild",
+                "Контракт принят. Подготовьтесь к выходу на задание."))
+            {
+                NotifyChanged();
+            }
             return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, targetId);
         }
 
