@@ -11,6 +11,7 @@
     <Compile Include="DomainBehaviorTests.cs" />
     <Compile Include="FoodFeedbackTests.cs" />
     <Compile Include="MessageDomainTests.cs" />
+    <Compile Include="CoordinateAttachmentActionTests.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/*.cs" />
   </ItemGroup>
 </Project>
