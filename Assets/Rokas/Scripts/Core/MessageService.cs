@@ -16,6 +16,9 @@ namespace Rokas.Core
         AlreadyActive,
         MissingDestination,
         UnknownDestination,
+        MissingContract,
+        UnknownContract,
+        ContractUnavailable,
         MessageNotFound,
         MissingAttachment,
         UnsupportedAttachment
@@ -117,6 +120,8 @@ namespace Rokas.Core
 
         private readonly SaveData state;
         private readonly MessageSaveData data;
+        private readonly ContractDefinition contract;
+        private readonly ContractService contracts;
 
         public event Action Changed;
 
@@ -143,6 +148,11 @@ namespace Rokas.Core
         }
 
         public MessageService(SaveData state)
+            : this(state, null, null)
+        {
+        }
+
+        internal MessageService(SaveData state, ContractDefinition contract, ContractService contracts)
         {
             if (state == null)
             {
@@ -150,6 +160,8 @@ namespace Rokas.Core
             }
 
             this.state = state;
+            this.contract = contract;
+            this.contracts = contracts;
             if (state.messages == null)
             {
                 state.messages = new MessageSaveData();
@@ -308,6 +320,10 @@ namespace Rokas.Core
                 {
                     return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MissingAttachment, string.Empty);
                 }
+                if (entry.attachment.kind == MessageAttachmentKind.Contract)
+                {
+                    return ActivateContractAttachment(entry.attachment);
+                }
                 if (entry.attachment.kind != MessageAttachmentKind.Coordinates)
                 {
                     return new MessageAttachmentActionResult(
@@ -356,6 +372,35 @@ namespace Rokas.Core
                 }
             }
             return false;
+        }
+
+        private MessageAttachmentActionResult ActivateContractAttachment(MessageAttachment attachment)
+        {
+            string targetId = attachment.targetId ?? string.Empty;
+            if (attachment.opened)
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.AlreadyActive, targetId);
+            }
+            if (targetId.Length == 0)
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MissingContract, string.Empty);
+            }
+            if (contract == null || !string.Equals(targetId, contract.id, StringComparison.Ordinal))
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.UnknownContract, targetId);
+            }
+            if (contracts == null || state.phase != RunPhase.Home)
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.ContractUnavailable, targetId);
+            }
+            if (!contracts.Accept(state, contract))
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.ContractUnavailable, targetId);
+            }
+
+            attachment.opened = true;
+            NotifyChanged();
+            return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, targetId);
         }
 
         private ConversationState EnsureConversation(string contactId)
