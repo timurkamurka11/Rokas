@@ -12,6 +12,7 @@ namespace Rokas.Core.Tests
                 FoodFeedbackTests.RunAll();
                 MessageDomainTests.RunAll();
                 CoordinateAttachmentActionTests.RunAll();
+                ContractAttachmentActionTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }
