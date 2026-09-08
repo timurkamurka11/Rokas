@@ -49,9 +49,23 @@ namespace Rokas.Core.Tests
             Equal("contract_subway_001", session.State.activeContractId, "real contract identity must be accepted");
             Equal(0f, session.State.enemyHp, "acceptance must use existing combat reset");
             Equal(true, Entry(session).attachment.opened, "successful card must persist opened state");
+            Equal(2, session.Messages.GetConversation("guild").entries.Count,
+                "acceptance must keep one Guild offer plus one Guild follow-up");
+            Equal(2, session.Messages.GetConversation("yumiko").entries.Count,
+                "acceptance must add one Yumiko recommendation plus one one-time gift");
+            Equal(3, messages, "one acceptance must publish the three distinct authored message deliveries");
+            Equal(3, sessions, "session observers must receive the same three authored message changes");
+
+            int messagesAfterAcceptance = messages;
+            int sessionsAfterAcceptance = sessions;
             Equal("AlreadyActive", Act(session).Status.ToString(), "repeat activation must be idempotent");
-            Equal(1, messages, "repeat click must not emit another message event");
-            Equal(1, sessions, "one acceptance must publish one consistent session change");
+            Equal(messagesAfterAcceptance, messages, "repeat click must not emit another message event");
+            Equal(sessionsAfterAcceptance, sessions, "repeat click must not emit another session change");
+            Equal(2, session.Messages.GetConversation("guild").entries.Count,
+                "repeat click must not duplicate Guild history");
+            Equal(2, session.Messages.GetConversation("yumiko").entries.Count,
+                "repeat click must not duplicate Yumiko history");
+
             session.ReturnHome();
             Equal("AlreadyActive", Act(session).Status.ToString(), "consumed card must not restart cancelled contract");
             Equal(RunPhase.Home, session.State.phase, "consumed card must remain consumed after returning home");
@@ -110,6 +124,8 @@ namespace Rokas.Core.Tests
                 Equal("AlreadyActive", Act(restored).Status.ToString(), "reload click is no-op");
                 Equal(false, restored.Messages.DeliverIncoming("guild-contract-test", "guild", "duplicate"), "no redelivery");
                 Equal(2, restored.Messages.GetConversation("guild").entries.Count, "offer plus accepted follow-up remain exactly once");
+                Equal(2, restored.Messages.GetConversation("yumiko").entries.Count,
+                    "Yumiko recommendation and one-time gift survive reload exactly once");
                 Equal(0, changes, "reload repeat emits no events");
             }
             finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
