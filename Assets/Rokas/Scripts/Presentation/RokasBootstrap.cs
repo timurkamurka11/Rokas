@@ -144,6 +144,7 @@ namespace Rokas.Presentation
         private void OnApplicationQuit() { SaveNow(); }
         private void OnDestroy()
         {
+            if (dirty) SaveNow();
             if (Session != null) Session.Changed -= OnChanged;
             if (View != null) View.Dispose();
         }
