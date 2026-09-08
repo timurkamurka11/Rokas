@@ -33,13 +33,34 @@ namespace Rokas.Core
             economy = new EconomyService();
             food = new FoodService();
             Combat = new CombatService(state, contract, economy);
-            Messages = new MessageService(state);
+            Messages = new MessageService(state, contract, contracts);
             Messages.Changed += NotifyChanged;
         }
 
         public bool AcceptContract()
         {
             return NotifyIf(contracts.Accept(State, Contract));
+        }
+
+        public bool EnsureGuildContractOffer()
+        {
+            if (Contract == null || string.IsNullOrEmpty(Contract.id))
+            {
+                return false;
+            }
+
+            return Messages.DeliverIncoming(
+                "guild-contract-offer:" + Contract.id,
+                "guild",
+                "Новый контракт доступен для принятия.",
+                new MessageAttachment
+                {
+                    kind = MessageAttachmentKind.Contract,
+                    id = "contract_" + Contract.id + "_attachment",
+                    title = Contract.title ?? string.Empty,
+                    body = Contract.location ?? string.Empty,
+                    targetId = Contract.id
+                });
         }
 
         public bool PrepareFood(string foodId)
