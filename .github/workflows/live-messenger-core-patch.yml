@@ -1,0 +1,50 @@
+name: Live Messenger Core Patch
+
+on:
+  push:
+    branches:
+      - feature/messages-system
+    paths:
+      - .github/workflows/live-messenger-core-patch.yml
+      - Tools/apply_live_messenger_core.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/messages-system
+          fetch-depth: 0
+
+      - name: Apply core production patch
+        run: python3 Tools/apply_live_messenger_core.py
+
+      - name: Literal diff check
+        run: git diff --check
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run Core behavior tests
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+
+      - name: Persist green core foundation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            Assets/Rokas/Scripts/Core/MessageService.cs \
+            Assets/Rokas/Scripts/Core/GameSession.cs \
+            Assets/Rokas/Scripts/Core/LiveMessengerService.cs \
+            Assets/Rokas/Scripts/Core/LiveMessengerService.cs.meta \
+            Tests/Core/YumikoFoodIntegrationTests.cs
+          git commit -m "feat: add Live Messenger core foundation"
+          git push origin HEAD:feature/messages-system
