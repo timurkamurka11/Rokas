@@ -423,6 +423,15 @@ namespace Rokas.Presentation
                     ui.Art(card.transform, "CoordinateAttachmentIcon", icon, 18, 24, 64, 64);
                 }
             }
+            else if (attachment.kind == MessageAttachmentKind.Contract && selected != null &&
+                     !string.IsNullOrEmpty(selected.portraitResource))
+            {
+                Texture2D senderIdentity = Resources.Load<Texture2D>(selected.portraitResource);
+                if (senderIdentity != null)
+                {
+                    ui.Art(card.transform, "AttachmentSenderIdentity", senderIdentity, 18, 24, 64, 64);
+                }
+            }
 
             TmpLabel(card.transform, "AttachmentTitle", attachment.title ?? string.Empty,
                 102, 16, 586, 32, 19, White, TextAlignmentOptions.MidlineLeft);
