@@ -11,6 +11,7 @@ namespace Rokas.Core
         public SaveData State { get; private set; }
         public ContractDefinition Contract { get; private set; }
         public CombatService Combat { get; private set; }
+        public MessageService Messages { get; private set; }
 
         public event Action Changed;
 
@@ -32,6 +33,8 @@ namespace Rokas.Core
             economy = new EconomyService();
             food = new FoodService();
             Combat = new CombatService(state, contract, economy);
+            Messages = new MessageService(state);
+            Messages.Changed += NotifyChanged;
         }
 
         public bool AcceptContract()

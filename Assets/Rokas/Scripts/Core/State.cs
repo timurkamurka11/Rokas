@@ -49,6 +49,7 @@ namespace Rokas.Core
         public bool weakPointClaimed;
         public bool lampOn = true;
         public int mameInteractions;
+        public MessageSaveData messages = new MessageSaveData();
         public SettingsData settings = new SettingsData();
     }
 }
