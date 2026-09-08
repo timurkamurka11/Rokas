@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using Rokas.Presentation;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
@@ -33,6 +34,26 @@ namespace Rokas.Tests
             Assert.That(FindRect("MessagesHeader"), Is.Not.Null, "Messages must render the active-contact header.");
             Assert.That(FindRect("MessagesConversationViewport"), Is.Not.Null, "Messages must render a clipped conversation viewport.");
             Assert.That(FindButton("MessagesContact_kaito"), Is.Not.Null, "Kaito must be selectable from the real contact list.");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator LaptopMessagesInitializesTmpInCleanPlayMode()
+        {
+            directory = Path.Combine(Path.GetTempPath(), "rokas-messages-tmp-" + Guid.NewGuid().ToString("N"));
+            root = new GameObject("MessagesTmpFixture");
+            var boot = root.AddComponent<RokasBootstrap>();
+            boot.Initialize(directory);
+            yield return null;
+
+            Press("LaptopHotspot");
+            Press("LaptopMessages");
+
+            TMP_InputField input = root.GetComponentInChildren<TMP_InputField>();
+            Assert.That(input, Is.Not.Null, "Messages search must initialize a TMP input field in a clean runtime.");
+            Assert.That(input.textComponent, Is.Not.Null);
+            Assert.That(input.textComponent.font, Is.Not.Null, "Messages TMP text must use a production font asset.");
+            input.textComponent.ForceMeshUpdate();
             LogAssert.NoUnexpectedReceived();
         }
 
