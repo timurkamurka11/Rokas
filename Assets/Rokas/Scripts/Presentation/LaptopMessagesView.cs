@@ -379,7 +379,8 @@ namespace Rokas.Presentation
 
                 if (entry.attachment != null &&
                     (entry.attachment.kind == MessageAttachmentKind.Coordinates ||
-                     entry.attachment.kind == MessageAttachmentKind.Contract))
+                     entry.attachment.kind == MessageAttachmentKind.Contract ||
+                     entry.attachment.kind == MessageAttachmentKind.FoodGift))
                 {
                     y = BuildActionAttachment(entry, y);
                 }
@@ -423,8 +424,9 @@ namespace Rokas.Presentation
                     ui.Art(card.transform, "CoordinateAttachmentIcon", icon, 18, 24, 64, 64);
                 }
             }
-            else if (attachment.kind == MessageAttachmentKind.Contract && selected != null &&
-                     !string.IsNullOrEmpty(selected.portraitResource))
+            else if ((attachment.kind == MessageAttachmentKind.Contract ||
+                      attachment.kind == MessageAttachmentKind.FoodGift) &&
+                     selected != null && !string.IsNullOrEmpty(selected.portraitResource))
             {
                 Texture2D senderIdentity = Resources.Load<Texture2D>(selected.portraitResource);
                 if (senderIdentity != null)
@@ -433,10 +435,16 @@ namespace Rokas.Presentation
                 }
             }
 
+            float textWidth = attachment.kind == MessageAttachmentKind.FoodGift ? 420 : 586;
             TmpLabel(card.transform, "AttachmentTitle", attachment.title ?? string.Empty,
-                102, 16, 586, 32, 19, White, TextAlignmentOptions.MidlineLeft);
+                102, 16, textWidth, 32, 19, White, TextAlignmentOptions.MidlineLeft);
             TmpLabel(card.transform, "AttachmentBody", attachment.body ?? string.Empty,
-                102, 50, 586, 38, 16, Soft, TextAlignmentOptions.MidlineLeft);
+                102, 50, textWidth, 38, 16, Soft, TextAlignmentOptions.MidlineLeft);
+            if (attachment.kind == MessageAttachmentKind.FoodGift)
+            {
+                TmpLabel(card.transform, "AttachmentAction", attachment.opened ? "ПОЛУЧЕНО" : "ЗАБРАТЬ",
+                    548, 30, 140, 52, 14, attachment.opened ? Soft : White, TextAlignmentOptions.Center);
+            }
             return y + height + 14;
         }
 
