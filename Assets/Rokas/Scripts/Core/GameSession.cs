@@ -29,17 +29,27 @@ namespace Rokas.Core
 
             State = state;
             Contract = contract;
+            NormalizeIntegrationState();
             contracts = new ContractService();
             economy = new EconomyService();
             food = new FoodService();
             Combat = new CombatService(state, contract, economy);
-            Messages = new MessageService(state, contract, contracts);
+            Messages = new MessageService(state, contract, contracts, food);
             Messages.Changed += NotifyChanged;
         }
 
         public bool AcceptContract()
         {
-            return NotifyIf(contracts.Accept(State, Contract));
+            if (!contracts.Accept(State, Contract))
+            {
+                return false;
+            }
+
+            if (!Messages.DeliverYumikoContractContext(Contract.id))
+            {
+                NotifyChanged();
+            }
+            return true;
         }
 
         public bool EnsureGuildContractOffer()
@@ -65,7 +75,18 @@ namespace Rokas.Core
 
         public bool PrepareFood(string foodId)
         {
-            return NotifyIf(food.Prepare(State, foodId));
+            int yenBefore = State.yen;
+            if (!food.Prepare(State, foodId))
+            {
+                return false;
+            }
+
+            bool delivered = State.yen < yenBefore && Messages.DeliverYumikoPaidFoodPurchase(foodId);
+            if (!delivered)
+            {
+                NotifyChanged();
+            }
+            return true;
         }
 
         public FoodConsumeBlockReason GetFoodConsumeBlockReason(string foodId)
@@ -100,7 +121,25 @@ namespace Rokas.Core
 
         public bool ReturnHome()
         {
-            return NotifyIf(contracts.ReturnHome(State));
+            RunPhase result = State.phase;
+            string contractId = State.activeContractId ?? string.Empty;
+            int runIdentity = State.contractRunSequence;
+            string preparedFoodId = State.preparedFoodId ?? string.Empty;
+            if (!contracts.ReturnHome(State))
+            {
+                return false;
+            }
+
+            bool delivered = false;
+            if (result == RunPhase.Sealed || result == RunPhase.Failed)
+            {
+                delivered = Messages.DeliverYumikoReturn(contractId, runIdentity, result, preparedFoodId);
+            }
+            if (!delivered)
+            {
+                NotifyChanged();
+            }
+            return true;
         }
 
         public bool ClaimPayment()
@@ -141,6 +180,31 @@ namespace Rokas.Core
         {
             State.mameInteractions++;
             NotifyChanged();
+        }
+
+        private void NormalizeIntegrationState()
+        {
+            State.storedFoodId = State.storedFoodId ?? string.Empty;
+            if (State.storedFoodCount <= 0 || State.storedFoodId.Length == 0)
+            {
+                State.storedFoodCount = 0;
+                State.storedFoodId = string.Empty;
+            }
+            if (State.contractRunSequence < 0)
+            {
+                State.contractRunSequence = 0;
+            }
+
+            int minimumRunSequence = Math.Max(0, State.completedRuns);
+            if (!string.IsNullOrEmpty(State.activeContractId) && State.phase != RunPhase.Home &&
+                minimumRunSequence < int.MaxValue)
+            {
+                minimumRunSequence++;
+            }
+            if (State.contractRunSequence < minimumRunSequence)
+            {
+                State.contractRunSequence = minimumRunSequence;
+            }
         }
 
         private bool NotifyIf(bool changed)

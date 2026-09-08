@@ -7,7 +7,8 @@ namespace Rokas.Core
     {
         None,
         Coordinates,
-        Contract
+        Contract,
+        FoodGift
     }
 
     public enum MessageAttachmentActionStatus
@@ -19,6 +20,9 @@ namespace Rokas.Core
         MissingContract,
         UnknownContract,
         ContractUnavailable,
+        MissingFood,
+        UnknownFood,
+        FoodStorageUnavailable,
         MessageNotFound,
         MissingAttachment,
         UnsupportedAttachment
@@ -108,6 +112,10 @@ namespace Rokas.Core
     public sealed class MessageService
     {
         private const string EastB7DestinationId = "east-b7";
+        private const string YumikoGiftEventId = "yumiko-gift:kisaragi-green-tea-001";
+        private const string YumikoPurchaseText = "Зелёный чай YOMI? Хороший выбор. Только не пей его залпом перед выходом.";
+        private const string YumikoRecommendationText = "На Кисараги? Возьми зелёный чай YOMI. Он поможет держать темп.";
+        private const string YumikoGiftText = "И ещё. Не спорь — это за мой счёт.";
 
         private static readonly ContactDefinition[] Contacts =
         {
@@ -123,6 +131,7 @@ namespace Rokas.Core
         private readonly MessageSaveData data;
         private readonly ContractDefinition contract;
         private readonly ContractService contracts;
+        private readonly FoodService food;
 
         public event Action Changed;
 
@@ -149,11 +158,16 @@ namespace Rokas.Core
         }
 
         public MessageService(SaveData state)
-            : this(state, null, null)
+            : this(state, null, null, new FoodService())
         {
         }
 
         internal MessageService(SaveData state, ContractDefinition contract, ContractService contracts)
+            : this(state, contract, contracts, new FoodService())
+        {
+        }
+
+        internal MessageService(SaveData state, ContractDefinition contract, ContractService contracts, FoodService food)
         {
             if (state == null)
             {
@@ -163,6 +177,7 @@ namespace Rokas.Core
             this.state = state;
             this.contract = contract;
             this.contracts = contracts;
+            this.food = food;
             if (state.messages == null)
             {
                 state.messages = new MessageSaveData();
@@ -354,6 +369,10 @@ namespace Rokas.Core
                 {
                     return ActivateContractAttachment(entry.attachment);
                 }
+                if (entry.attachment.kind == MessageAttachmentKind.FoodGift)
+                {
+                    return ActivateFoodGiftAttachment(entry.attachment);
+                }
                 if (entry.attachment.kind != MessageAttachmentKind.Coordinates)
                 {
                     return new MessageAttachmentActionResult(
@@ -404,6 +423,76 @@ namespace Rokas.Core
             return false;
         }
 
+        internal bool DeliverYumikoPaidFoodPurchase(string foodId)
+        {
+            if (foodId != FoodService.GreenTeaId)
+            {
+                return false;
+            }
+            return DeliverIncoming(
+                "yumiko-food-first:" + foodId,
+                "yumiko",
+                YumikoPurchaseText);
+        }
+
+        internal bool DeliverYumikoContractContext(string contractId)
+        {
+            if (string.IsNullOrEmpty(contractId) || state.contractRunSequence <= 0)
+            {
+                return false;
+            }
+
+            bool delivered = DeliverIncoming(
+                "yumiko-contract-food:" + contractId + ":" + state.contractRunSequence,
+                "yumiko",
+                YumikoRecommendationText);
+            bool giftDelivered = DeliverIncoming(
+                YumikoGiftEventId,
+                "yumiko",
+                YumikoGiftText,
+                new MessageAttachment
+                {
+                    kind = MessageAttachmentKind.FoodGift,
+                    id = "yumiko_green_tea_gift_attachment",
+                    title = "Зелёный чай YOMI",
+                    body = "Подарок от Юмико ×1",
+                    targetId = FoodService.GreenTeaId
+                });
+            return delivered || giftDelivered;
+        }
+
+        internal bool DeliverYumikoReturn(string contractId, int runIdentity, RunPhase result, string preparedFoodId)
+        {
+            if (string.IsNullOrEmpty(contractId) || runIdentity <= 0 ||
+                (result != RunPhase.Sealed && result != RunPhase.Failed))
+            {
+                return false;
+            }
+
+            bool usedFood = !string.IsNullOrEmpty(preparedFoodId);
+            string resultId;
+            string text;
+            if (result == RunPhase.Sealed)
+            {
+                resultId = "sealed";
+                text = usedFood
+                    ? "Вернулся. Значит, всё-таки пригодилось."
+                    : "Вернулся. Хорошо. В следующий раз хотя бы возьми что-нибудь с собой.";
+            }
+            else
+            {
+                resultId = "failed";
+                text = usedFood
+                    ? "Вернулся — уже хорошо. В следующий раз подберём что-нибудь получше."
+                    : "Ты опять пошёл туда без нормальной подготовки?";
+            }
+
+            return DeliverIncoming(
+                "yumiko-return:" + contractId + ":" + runIdentity + ":" + resultId,
+                "yumiko",
+                text);
+        }
+
         private MessageAttachmentActionResult ActivateContractAttachment(MessageAttachment attachment)
         {
             string targetId = attachment.targetId ?? string.Empty;
@@ -429,13 +518,40 @@ namespace Rokas.Core
             }
 
             attachment.opened = true;
-            if (!DeliverIncoming(
+            bool delivered = DeliverIncoming(
                 "guild-contract-accepted:" + targetId,
                 "guild",
-                "Контракт принят. Подготовьтесь к выходу на задание."))
+                "Контракт принят. Подготовьтесь к выходу на задание.");
+            bool yumikoDelivered = DeliverYumikoContractContext(targetId);
+            if (!delivered && !yumikoDelivered)
             {
                 NotifyChanged();
             }
+            return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, targetId);
+        }
+
+        private MessageAttachmentActionResult ActivateFoodGiftAttachment(MessageAttachment attachment)
+        {
+            string targetId = attachment.targetId ?? string.Empty;
+            if (attachment.opened)
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.AlreadyActive, targetId);
+            }
+            if (targetId.Length == 0)
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MissingFood, string.Empty);
+            }
+            if (food == null || !food.IsKnownFood(targetId))
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.UnknownFood, targetId);
+            }
+            if (!food.GrantStoredFood(state, targetId))
+            {
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.FoodStorageUnavailable, targetId);
+            }
+
+            attachment.opened = true;
+            NotifyChanged();
             return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, targetId);
         }
 

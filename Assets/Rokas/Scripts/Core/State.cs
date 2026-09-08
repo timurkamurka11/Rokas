@@ -37,10 +37,13 @@ namespace Rokas.Core
         public int spiritAsh;
         public int weaponLevel = 1;
         public int completedRuns;
+        public int contractRunSequence;
         public RunPhase phase = RunPhase.Home;
         public string activeContractId = string.Empty;
         public string activeDestinationId = string.Empty;
         public string preparedFoodId = string.Empty;
+        public string storedFoodId = string.Empty;
+        public int storedFoodCount;
         public float enemyHp;
         public float playerHp = 100f;
         public float enemyTimer;
