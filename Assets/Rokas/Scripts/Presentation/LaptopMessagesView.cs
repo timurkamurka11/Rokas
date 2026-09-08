@@ -211,7 +211,7 @@ namespace Rokas.Presentation
             }
             ui.Clear(contactContent);
             List<ContactDefinition> matches = OrderedMatches(query);
-            const float rowHeight = 82;
+            const float rowHeight = 94;
             const float gap = 8;
             float y = 0;
             Button preferred = null;
@@ -239,27 +239,27 @@ namespace Rokas.Presentation
                 Texture2D portrait = Resources.Load<Texture2D>(contact.portraitResource);
                 if (portrait != null)
                 {
-                    RawImage art = ui.Art(face.transform, "Portrait", portrait, 10, 10, 58, 58);
+                    RawImage art = ui.Art(face.transform, "Portrait", portrait, 8, 8, 74, 74);
                     art.color = contact.online ? Color.white : new Color(.65f, .69f, .72f, .92f);
                 }
                 else
                 {
-                    Surface(face.transform, "PortraitFallback", 10, 10, 58, 58, 12, new Color(.10f, .18f, .22f));
+                    Surface(face.transform, "PortraitFallback", 8, 8, 74, 74, 12, new Color(.10f, .18f, .22f));
                 }
 
-                TmpLabel(face.transform, "Name", contact.displayName, 82, 7, 212, 28, 20, White, TextAlignmentOptions.MidlineLeft);
+                TmpLabel(face.transform, "Name", contact.displayName, 96, 11, 212, 28, 20, White, TextAlignmentOptions.MidlineLeft);
                 TmpLabel(face.transform, "Preview", last != null ? Compact(last.text, 37) : contact.role,
-                    82, 36, 256, 27, 14, Soft, TextAlignmentOptions.MidlineLeft);
+                    96, 48, 242, 27, 14, Soft, TextAlignmentOptions.MidlineLeft);
                 TmpLabel(face.transform, "Time", last != null ? "СЕЙЧАС" : string.Empty,
-                    326, 6, 78, 22, 11, Soft, TextAlignmentOptions.MidlineRight);
+                    326, 10, 78, 22, 11, Soft, TextAlignmentOptions.MidlineRight);
 
-                Surface(face.transform, "Status", 391, 52, 9, 9, 5,
+                Surface(face.transform, "Status", 391, 66, 9, 9, 5,
                     contact.online ? new Color(.26f, .85f, .66f) : new Color(.42f, .48f, .52f));
                 if (conversation != null && conversation.unreadCount > 0)
                 {
-                    Surface(face.transform, "UnreadBadge", 356, 43, 28, 24, 12, Red);
+                    Surface(face.transform, "UnreadBadge", 356, 55, 28, 24, 12, Red);
                     TmpLabel(face.transform, "UnreadCount", Mathf.Min(conversation.unreadCount, 99).ToString(),
-                        356, 43, 28, 24, 12, White, TextAlignmentOptions.Center);
+                        356, 55, 28, 24, 12, White, TextAlignmentOptions.Center);
                 }
                 y += rowHeight + gap;
             }
