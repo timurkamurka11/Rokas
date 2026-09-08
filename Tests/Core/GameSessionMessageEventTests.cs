@@ -11,6 +11,8 @@ namespace Rokas.Core.Tests
         {
             PaymentCompletionDeliversDeterministicGuildMessageOnce();
             SaveLoadDoesNotRedeliverPaymentCompletion();
+            RepeatedProcessingSameCompletedStateIsIdempotent();
+            LegitimateRepeatRunsHaveDistinctAuthoredCompletionContext();
             UnrelatedTransitionDoesNotDeliverPaymentCompletion();
         }
 
@@ -27,15 +29,11 @@ namespace Rokas.Core.Tests
             MessageEntry entry = guild.entries[0];
             Equal("guild-contract-completed:" + contractId + ":1", entry.eventId,
                 "completion event identity must be deterministic from contract and completed run");
-            Equal("Контракт закрыт. Награда перечислена.", entry.text,
-                "completion message copy must be deterministic authored content");
+            Equal("Контракт закрыт. Награда перечислена. Выполнение №1.", entry.text,
+                "completion message copy must identify the legitimate completed run");
             Equal(false, entry.outgoing, "completion event must be incoming");
             Equal(1, guild.unreadCount, "new completion event must increment Guild unread");
             Equal(1, session.Messages.TotalUnread, "new completion event must increment total unread");
-
-            Equal(false, session.ClaimPayment(), "completed payment cannot be processed twice");
-            Equal(1, guild.entries.Count, "repeated payment processing must not duplicate the event");
-            Equal(1, guild.unreadCount, "repeated processing must not increment unread again");
         }
 
         private static void SaveLoadDoesNotRedeliverPaymentCompletion()
@@ -52,11 +50,13 @@ namespace Rokas.Core.Tests
                 SaveLoadResult loaded = store.Load();
                 Equal(SaveLoadStatus.LoadedPrimary, loaded.Status, "event state should load");
 
-                GameSession restored = new GameSession(loaded.Data, new ContractDefinition());
+                GameSession restored = new GameSession(loaded.Data, original.Contract);
                 ConversationState guild = restored.Messages.GetConversation("guild");
                 True(guild != null, "Guild history must survive reload");
                 Equal(1, guild.entries.Count, "reload must preserve one completion event without redelivery");
                 Equal(expectedEventId, guild.entries[0].eventId, "reload must preserve deterministic event identity");
+                Equal("Контракт закрыт. Награда перечислена. Выполнение №1.", guild.entries[0].text,
+                    "reload must preserve authored completion context");
                 Equal(1, guild.unreadCount, "unread completion state must survive reload");
                 Equal(1, restored.Messages.TotalUnread, "total unread must survive reload");
 
@@ -68,6 +68,67 @@ namespace Rokas.Core.Tests
             {
                 if (Directory.Exists(directory)) Directory.Delete(directory, true);
             }
+        }
+
+        private static void RepeatedProcessingSameCompletedStateIsIdempotent()
+        {
+            GameSession session = PaymentFixture();
+            Equal(true, session.ClaimPayment(), "first payment transition succeeds");
+            ConversationState guild = session.Messages.GetConversation("guild");
+            int history = guild.entries.Count;
+            int unread = guild.unreadCount;
+            int completedRuns = session.State.completedRuns;
+
+            Equal(false, session.ClaimPayment(), "same completed state cannot be claimed again");
+            Equal(completedRuns, session.State.completedRuns, "repeated processing cannot mutate completedRuns");
+            Equal(history, guild.entries.Count, "repeated processing cannot append history");
+            Equal(unread, guild.unreadCount, "repeated processing cannot increment unread");
+        }
+
+        private static void LegitimateRepeatRunsHaveDistinctAuthoredCompletionContext()
+        {
+            ContractDefinition contract = new ContractDefinition
+            {
+                id = "contract_subway_001",
+                enemyHealth = 1f,
+                enemyDamage = 0f,
+                enemyInterval = 10f,
+                autoInterval = .1f,
+                autoDamage = 10f
+            };
+            GameSession session = new GameSession(new SaveData(), contract);
+
+            CompleteRealRun(session);
+            CompleteRealRun(session);
+            CompleteRealRun(session);
+
+            ConversationState guild = session.Messages.GetConversation("guild");
+            True(guild != null, "real repeat runs must create Guild completion history");
+            Equal(3, guild.entries.Count, "three genuine runs must create exactly three completion events");
+            for (int index = 0; index < 3; index++)
+            {
+                int run = index + 1;
+                MessageEntry entry = guild.entries[index];
+                Equal("guild-contract-completed:contract_subway_001:" + run, entry.eventId,
+                    "repeat-run event IDs must retain contract and completedRuns identity");
+                Equal("Контракт закрыт. Награда перечислена. Выполнение №" + run + ".", entry.text,
+                    "legitimate repeat runs must not render as indistinguishable completion spam");
+            }
+            Equal(3, session.State.completedRuns, "three genuine payments must advance completedRuns exactly three times");
+            Equal(3, guild.unreadCount, "each genuine new run remains one legitimate unread event");
+        }
+
+        private static void CompleteRealRun(GameSession session)
+        {
+            Equal(true, session.AcceptContract(), "repeatable contract can be accepted from Home");
+            Equal(true, session.LeaveHome(), "accepted contract can leave Home");
+            Equal(true, session.EnterPortal(), "portal transition begins combat");
+            session.Tick(.2f);
+            Equal(RunPhase.Sealed, session.State.phase, "real combat must seal the contract");
+            Equal(true, session.ReturnHome(), "sealed contract returns to Payment");
+            Equal(RunPhase.Payment, session.State.phase, "sealed run must enter Payment");
+            Equal(true, session.ClaimPayment(), "real repeat-run payment must succeed once");
+            Equal(RunPhase.Home, session.State.phase, "claim returns repeatable lifecycle to Home");
         }
 
         private static void UnrelatedTransitionDoesNotDeliverPaymentCompletion()
