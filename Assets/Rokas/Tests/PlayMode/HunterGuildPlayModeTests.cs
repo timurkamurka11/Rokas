@@ -51,8 +51,15 @@ namespace Rokas.Tests
             Assert.That(guild.entries[1].text, Is.EqualTo(AcceptedText));
             Assert.That(guild.unreadCount, Is.EqualTo(0),
                 "active Guild conversation should consume its own incoming unread through existing behavior");
-            Assert.That(FindRect("MessagesNotification"), Is.Null,
-                "active Guild acceptance follow-up must not create a redundant popup");
+            ConversationState yumiko = boot.Session.Messages.GetConversation("yumiko");
+            Assert.That(yumiko, Is.Not.Null);
+            Assert.That(yumiko.unreadCount, Is.GreaterThan(0),
+                "inactive Yumiko should retain the newly delivered contract context as unread");
+            Assert.That(FindRect("MessagesNotification"), Is.Not.Null,
+                "new inactive Yumiko messages should use the existing compact notification surface");
+            Assert.That(FindTextUnder("MessagesNotification", "MessagesNotificationTitle"),
+                Is.EqualTo("НОВОЕ СООБЩЕНИЕ  /  Yumiko"),
+                "the popup created during active Guild handling must identify Yumiko, not Guild");
             Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedPreview),
                 "Guild contact preview must compact the latest real authored message without showing stale offer copy");
             Button consumedCard = FindButton("MessagesAttachment_" + offer.attachment.id);
