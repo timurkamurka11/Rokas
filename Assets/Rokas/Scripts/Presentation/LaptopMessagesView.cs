@@ -375,7 +375,7 @@ namespace Rokas.Presentation
 
                 if (entry.attachment != null && entry.attachment.kind == MessageAttachmentKind.Coordinates)
                 {
-                    y = BuildCoordinateAttachment(entry.attachment, y);
+                    y = BuildCoordinateAttachment(entry, y);
                 }
             }
 
@@ -388,9 +388,10 @@ namespace Rokas.Presentation
             }
         }
 
-        private float BuildCoordinateAttachment(MessageAttachment attachment, float y)
+        private float BuildCoordinateAttachment(MessageEntry entry, float y)
         {
-            if (attachment == null || string.IsNullOrEmpty(attachment.id))
+            MessageAttachment attachment = entry != null ? entry.attachment : null;
+            if (attachment == null || string.IsNullOrEmpty(attachment.id) || string.IsNullOrEmpty(entry.messageId))
             {
                 return y;
             }
@@ -398,7 +399,13 @@ namespace Rokas.Presentation
             const float width = 720;
             const float height = 112;
             LaptopSurface card = Surface(conversationContent, "MessagesAttachment_" + attachment.id,
-                26, y, width, height, 16, new Color(.025f, .12f, .16f, .98f));
+                26, y, width, height, 16, new Color(.025f, .12f, .16f, .98f), true);
+            Button button = card.gameObject.AddComponent<Button>();
+            button.name = "MessagesAttachment_" + attachment.id;
+            StyleButton(button, card);
+            string contactId = selected.id;
+            string messageId = entry.messageId;
+            button.onClick.AddListener(() => ActivateCoordinateAttachment(contactId, messageId));
             ui.Box(card.transform, "AttachmentAccent", 0, 0, 5, height, new Color(Cyan.r, Cyan.g, Cyan.b, .82f));
 
             Texture2D icon = Resources.Load<Texture2D>("Messages/Icons/CoordinateAttachment");
@@ -412,6 +419,15 @@ namespace Rokas.Presentation
             TmpLabel(card.transform, "AttachmentBody", attachment.body ?? string.Empty,
                 102, 50, 586, 38, 16, Soft, TextAlignmentOptions.MidlineLeft);
             return y + height + 14;
+        }
+
+        private void ActivateCoordinateAttachment(string contactId, string messageId)
+        {
+            if (string.IsNullOrEmpty(contactId) || string.IsNullOrEmpty(messageId))
+            {
+                return;
+            }
+            session.Messages.ActivateAttachment(contactId, messageId);
         }
 
         private void BuildDialogueChoices(ref float y)
