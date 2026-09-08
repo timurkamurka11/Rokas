@@ -15,31 +15,20 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Discover temporary user-asset download API
-        env:
-          SHARE_URL: https://firestorage.ai/ja/f/6mLjVEeLVYvQ
+      - name: Resolve temporary user-asset API contract
         run: |
           python3 - <<'PY'
-          import os, re, requests
+          import re, requests
           from urllib.parse import urljoin
-          base = os.environ['SHARE_URL']
-          html = requests.get(base, timeout=30).text
-          scripts = re.findall(r'<script[^>]+src="([^"]+)"', html)
-          print('scripts', len(scripts))
-          needles = ('download', 'shareId', '/api/', 'file-download', 'signed')
-          for src in scripts:
-              url = urljoin(base, src)
-              text = requests.get(url, timeout=30).text
-              if not any(n in text for n in needles):
-                  continue
-              print('SCRIPT', url, 'bytes', len(text))
-              for needle in needles:
-                  start = 0
-                  hits = 0
-                  while hits < 8:
-                      pos = text.find(needle, start)
-                      if pos < 0: break
-                      print('HIT', needle, text[max(0,pos-300):pos+500].replace('\n',' '))
-                      hits += 1
-                      start = pos + len(needle)
+          base='https://firestorage.ai/ja/f/6mLjVEeLVYvQ'
+          html=requests.get(base,timeout=30).text
+          for src in re.findall(r'<script[^>]+src="([^"]+)"',html):
+              url=urljoin(base,src); text=requests.get(url,timeout=30).text
+              for needle in ('/files?maxResults=1000','download-url','downloadUrl','download-token','downloadToken','/download'):
+                  pos=text.find(needle)
+                  if pos>=0:
+                      print('\nSCRIPT',url,'NEEDLE',needle)
+                      print(text[max(0,pos-2200):pos+3200])
+              for match in sorted(set(re.findall(r'https?://[^"\'`\\ ]+',text))):
+                  if 'firestorage' in match.lower() or '/api' in match.lower(): print('URL',match[:500])
           PY
