@@ -8,6 +8,7 @@ on:
       - .github/workflows/live-messenger-core-patch.yml
       - Tools/apply_live_messenger_core.py
       - Tools/apply_live_messenger_core_fix.py
+      - Tools/apply_live_messenger_hunter_guild_test_fix.py
 
 permissions:
   contents: write
@@ -27,6 +28,7 @@ jobs:
         run: |
           python3 Tools/apply_live_messenger_core.py
           python3 Tools/apply_live_messenger_core_fix.py
+          python3 Tools/apply_live_messenger_hunter_guild_test_fix.py
 
       - name: Literal diff check
         run: git diff --check
@@ -49,6 +51,8 @@ jobs:
             Assets/Rokas/Scripts/Core/LiveMessengerService.cs \
             Assets/Rokas/Scripts/Core/LiveMessengerService.cs.meta \
             Tests/Core/YumikoFoodIntegrationTests.cs \
-            Tests/Core/ContractAttachmentActionTests.cs
+            Tests/Core/ContractAttachmentActionTests.cs \
+            Tests/Core/GameSessionMessageEventTests.cs \
+            Tests/Core/HunterGuildFlowTests.cs
           git commit -m "feat: add Live Messenger core foundation"
           git push origin HEAD:feature/messages-system
