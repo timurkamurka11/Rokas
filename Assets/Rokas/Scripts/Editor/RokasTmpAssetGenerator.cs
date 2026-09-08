@@ -51,7 +51,7 @@ namespace Rokas.Editor
             }
 
             TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-            if (font == null || font.atlasPopulationMode != AtlasPopulationMode.Static || !HasRequiredCharacters(font))
+            if (font == null || font.atlasPopulationMode != AtlasPopulationMode.Static || font.atlasWidth != 1024 || !HasRequiredCharacters(font))
             {
                 if (font != null)
                 {
@@ -100,11 +100,11 @@ namespace Rokas.Editor
 
             TMP_FontAsset font = TMP_FontAsset.CreateFontAsset(
                 source,
-                90,
-                9,
+                48,
+                6,
                 GlyphRenderMode.SDFAA,
-                2048,
-                2048,
+                1024,
+                1024,
                 AtlasPopulationMode.Dynamic,
                 true);
             if (font == null || font.material == null || font.atlasTextures == null || font.atlasTextures.Length == 0 || font.atlasTextures[0] == null)
@@ -166,12 +166,8 @@ namespace Rokas.Editor
 
         private static string BuildProductionGlyphSet()
         {
-            var builder = new StringBuilder(512);
+            var builder = new StringBuilder(384);
             for (int codePoint = 0x20; codePoint <= 0x7E; codePoint++)
-            {
-                builder.Append((char)codePoint);
-            }
-            for (int codePoint = 0x00A0; codePoint <= 0x00FF; codePoint++)
             {
                 builder.Append((char)codePoint);
             }
