@@ -269,9 +269,11 @@ namespace Rokas.Presentation
             {
                 return;
             }
+
+            bool wasSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
             selected = contact;
             bool changed = session.Messages.OpenConversation(contact.id);
-            if (!changed)
+            if (!changed && !wasSelected)
             {
                 BuildContacts();
                 RefreshActiveContact(false);
