@@ -1,4 +1,4 @@
-name: Live Messenger 1.1 Asset Transfer Probe
+name: Live Messenger 1.1 User Asset Transfer
 
 on:
   push:
@@ -7,28 +7,85 @@ on:
       - .github/workflows/live-messenger-11-assets.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  transfer:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
-      - name: Resolve temporary user-asset API contract
+        with:
+          ref: feature/messages-system
+          fetch-depth: 0
+      - name: Transfer exact uploaded audio and reaction pack
         run: |
           python3 - <<'PY'
-          import re, requests
-          from urllib.parse import urljoin
-          base='https://firestorage.ai/ja/f/6mLjVEeLVYvQ'
-          html=requests.get(base,timeout=30).text
-          for src in re.findall(r'<script[^>]+src="([^"]+)"',html):
-              url=urljoin(base,src); text=requests.get(url,timeout=30).text
-              for needle in ('/files?maxResults=1000','download-url','downloadUrl','download-token','downloadToken','/download'):
-                  pos=text.find(needle)
-                  if pos>=0:
-                      print('\nSCRIPT',url,'NEEDLE',needle)
-                      print(text[max(0,pos-2200):pos+3200])
-              for match in sorted(set(re.findall(r'https?://[^"\'`\\ ]+',text))):
-                  if 'firestorage' in match.lower() or '/api' in match.lower(): print('URL',match[:500])
+          import hashlib, io, json, os, pathlib, shutil, zipfile, requests
+
+          share='6mLjVEeLVYvQ'
+          bases=['https://api.firestorage.ai/prod','https://api.firestorage.ai/prod/file']
+          session=requests.Session()
+          api=None; listing=None
+          for base in bases:
+              r=session.get(f'{base}/shares/{share}/files?maxResults=1000',timeout=30)
+              print('candidate',base,'status',r.status_code)
+              if r.ok:
+                  api=base; listing=r.json(); break
+          if api is None:
+              raise SystemExit('Unable to resolve temporary share API')
+          files=listing.get('files') or []
+          if len(files)!=1:
+              raise SystemExit(f'Expected one transfer archive, found {len(files)}')
+          item=files[0]
+          file_id=item.get('fileId')
+          print('transfer file',item.get('fileName'),'bytes',item.get('sizeBytes'))
+          r=session.post(f'{api}/shares/{share}/files/{file_id}/download',timeout=30)
+          r.raise_for_status()
+          download=r.json().get('downloadUrl')
+          if not download: raise SystemExit('Share API returned no downloadUrl')
+          payload=session.get(download,timeout=60)
+          payload.raise_for_status()
+          archive=zipfile.ZipFile(io.BytesIO(payload.content))
+          expected={'MessageArrive.mp3','Reaction.mp3'} | {f'reactions/{name}.png' for name in [
+              'reaction_love','reaction_wink','reaction_angry','reaction_surprised','reaction_cry',
+              'reaction_tasty','reaction_heart','reaction_darkheart','reaction_fox','reaction_thumbsup']}
+          names=set(archive.namelist())
+          if names != expected:
+              raise SystemExit('Transfer archive contents mismatch: '+repr(sorted(names)))
+
+          root=pathlib.Path('Assets/Rokas/Resources/Messages')
+          audio=root/'Audio'; reactions=root/'Reactions'
+          audio.mkdir(parents=True,exist_ok=True); reactions.mkdir(parents=True,exist_ok=True)
+          (audio/'MessageArrive.mp3').write_bytes(archive.read('MessageArrive.mp3'))
+          (audio/'Reaction.mp3').write_bytes(archive.read('Reaction.mp3'))
+          for name in sorted(n for n in expected if n.startswith('reactions/')):
+              (reactions/pathlib.Path(name).name).write_bytes(archive.read(name))
+
+          def guid(path): return hashlib.md5(('ROKAS-LIVE11:'+str(path)).encode()).hexdigest()
+          def folder_meta(path):
+              return f'''fileFormatVersion: 2\nguid: {guid(path)}\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {{}}\n  userData:\n  assetBundleName:\n  assetBundleVariant:\n'''
+          def audio_meta(path):
+              return f'''fileFormatVersion: 2\nguid: {guid(path)}\nAudioImporter:\n  externalObjects: {{}}\n  serializedVersion: 7\n  defaultSettings:\n    serializedVersion: 2\n    loadType: 0\n    sampleRateSetting: 0\n    sampleRateOverride: 44100\n    compressionFormat: 1\n    quality: 0.85\n    conversionMode: 0\n    preloadAudioData: 1\n  platformSettingOverrides: {{}}\n  forceToMono: 0\n  normalize: 1\n  ambisonic: 0\n  3D: 1\n  userData: ROKAS Live Messenger 1.1 user-provided audio\n  assetBundleName:\n  assetBundleVariant:\n'''
+          def texture_meta(path):
+              return f'''fileFormatVersion: 2\nguid: {guid(path)}\nTextureImporter:\n  internalIDToNameTable: []\n  externalObjects: {{}}\n  serializedVersion: 13\n  mipmaps:\n    mipMapMode: 0\n    enableMipMap: 0\n    sRGBTexture: 1\n  isReadable: 0\n  streamingMipmaps: 0\n  grayScaleToAlpha: 0\n  maxTextureSize: 256\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 1\n    aniso: 1\n    wrapU: 1\n    wrapV: 1\n    wrapW: 1\n  nPOTScale: 0\n  compressionQuality: 100\n  spriteMode: 1\n  spriteExtrude: 1\n  spriteMeshType: 1\n  alignment: 0\n  spritePivot: {{x: 0.5, y: 0.5}}\n  spritePixelsToUnits: 100\n  spriteBorder: {{x: 0, y: 0, z: 0, w: 0}}\n  alphaUsage: 1\n  alphaIsTransparency: 1\n  textureType: 8\n  textureShape: 1\n  platformSettings:\n  - serializedVersion: 3\n    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 256\n    textureFormat: -1\n    textureCompression: 0\n    compressionQuality: 100\n    crunchedCompression: 0\n    overridden: 0\n  spriteSheet:\n    serializedVersion: 2\n    sprites: []\n    outline: []\n    physicsShape: []\n    bones: []\n    spriteID: 5e97eb03825dee720800000000000000\n    internalID: 0\n    vertices: []\n    indices:\n    edges: []\n    weights: []\n    secondaryTextures: []\n    nameFileIdTable: {{}}\n  userData: ROKAS Live Messenger 1.1 user-provided reaction pack slice\n  assetBundleName:\n  assetBundleVariant:\n'''
+
+          pathlib.Path(str(audio)+'.meta').write_text(folder_meta(audio),encoding='utf-8')
+          pathlib.Path(str(reactions)+'.meta').write_text(folder_meta(reactions),encoding='utf-8')
+          for path in audio.glob('*.mp3'):
+              pathlib.Path(str(path)+'.meta').write_text(audio_meta(path),encoding='utf-8')
+          for path in reactions.glob('*.png'):
+              pathlib.Path(str(path)+'.meta').write_text(texture_meta(path),encoding='utf-8')
+
+          print('audio bytes',[(p.name,p.stat().st_size) for p in sorted(audio.glob('*.mp3'))])
+          print('reaction assets',len(list(reactions.glob('*.png'))))
           PY
+      - name: Literal asset diff check
+        run: git diff --check
+      - name: Persist exact user assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/Resources/Messages/Audio.meta Assets/Rokas/Resources/Messages/Audio Assets/Rokas/Resources/Messages/Reactions.meta Assets/Rokas/Resources/Messages/Reactions
+          git commit -m "assets: add Live Messenger 1.1 user audio and reactions"
+          git push origin HEAD:feature/messages-system
