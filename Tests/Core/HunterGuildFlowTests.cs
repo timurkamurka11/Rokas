@@ -74,13 +74,24 @@ namespace Rokas.Core.Tests
                 GameSession restored = new GameSession(loaded.Data, new ContractDefinition());
                 ConversationState guild = restored.Messages.GetConversation("guild");
                 ConversationState yumiko = restored.Messages.GetConversation("yumiko");
-                Equal(2, guild.entries.Count, "reload must preserve offer plus one acceptance follow-up");
+                Equal(4, guild.entries.Count,
+                    "reload must preserve core offer/acceptance plus one recovered live offer and acceptance continuation");
+                Equal(1, CountEventPrefix(guild, "guild-contract-offer:"),
+                    "core Guild offer must remain exactly once after live recovery");
+                Equal(1, CountEventPrefix(guild, "guild-contract-accepted:"),
+                    "core Guild acceptance must remain exactly once after live recovery");
+                Equal(1, CountEventPrefix(guild, "live:guild:offer:"),
+                    "pending Guild offer continuation must recover exactly once");
+                Equal(1, CountEventPrefix(guild, "live:guild:accepted:"),
+                    "pending Guild acceptance continuation must recover exactly once");
                 MessageEntry restoredOffer = FindContractOffer(guild);
                 Equal(true, restoredOffer.attachment.opened, "consumed Guild card must remain consumed after reload");
-                Equal("guild-contract-accepted:" + restored.Contract.id, guild.entries[1].eventId,
+                MessageEntry restoredAcceptance = FindEventPrefix(guild, "guild-contract-accepted:");
+                Equal("guild-contract-accepted:" + restored.Contract.id, restoredAcceptance.eventId,
                     "reload must preserve deterministic acceptance event identity");
-                Equal(AcceptedText, guild.entries[1].text, "reload must preserve acceptance copy");
-                Equal(1, guild.unreadCount, "acceptance unread state must survive reload");
+                Equal(AcceptedText, restoredAcceptance.text, "reload must preserve acceptance copy");
+                Equal(3, guild.unreadCount,
+                    "core acceptance plus two distinct recovered live chains must remain unread after reload");
                 Equal(2, yumiko.entries.Count, "reload must preserve Yumiko recommendation plus gift exactly once");
                 Equal(2, yumiko.unreadCount, "Yumiko unread state must survive reload independently");
 
@@ -88,8 +99,16 @@ namespace Rokas.Core.Tests
                 Equal(MessageAttachmentActionStatus.AlreadyActive,
                     restored.Messages.ActivateAttachment("guild", restoredOffer.messageId).Status,
                     "reload click on consumed card must remain a no-op");
-                Equal(2, guild.entries.Count, "reload/repeated processing must not duplicate Guild history");
-                Equal(1, guild.unreadCount, "reload/repeated processing must not increment Guild unread");
+                Equal(4, guild.entries.Count, "reload/repeated processing must not duplicate Guild history");
+                Equal(1, CountEventPrefix(guild, "guild-contract-offer:"),
+                    "repeated processing must keep the core Guild offer exactly once");
+                Equal(1, CountEventPrefix(guild, "guild-contract-accepted:"),
+                    "repeated processing must keep the core Guild acceptance exactly once");
+                Equal(1, CountEventPrefix(guild, "live:guild:offer:"),
+                    "repeated processing must not duplicate the recovered Guild offer continuation");
+                Equal(1, CountEventPrefix(guild, "live:guild:accepted:"),
+                    "repeated processing must not duplicate the recovered Guild acceptance continuation");
+                Equal(3, guild.unreadCount, "reload/repeated processing must not increment Guild unread");
                 Equal(2, yumiko.entries.Count, "reload/repeated processing must not duplicate Yumiko history");
                 Equal(2, yumiko.unreadCount, "reload/repeated processing must not increment Yumiko unread");
             }
@@ -117,6 +136,30 @@ namespace Rokas.Core.Tests
                     return entry;
             }
             throw new InvalidOperationException("Guild contract offer is missing.");
+        }
+
+        private static MessageEntry FindEventPrefix(ConversationState conversation, string prefix)
+        {
+            if (conversation == null || conversation.entries == null) return null;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal))
+                    return entry;
+            }
+            return null;
+        }
+
+        private static int CountEventPrefix(ConversationState conversation, string prefix)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private static void Equal<T>(T expected, T actual, string message)

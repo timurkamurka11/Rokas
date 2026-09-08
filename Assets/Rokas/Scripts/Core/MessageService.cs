@@ -68,7 +68,28 @@ namespace Rokas.Core
         public bool outgoing;
         public string choiceId = string.Empty;
         public int sequence;
+        public string chainId = string.Empty;
+        public bool suppressMainNotification;
+        public string reactionId = string.Empty;
         public MessageAttachment attachment;
+    }
+
+    [Serializable]
+    public sealed class LiveTopicProgress
+    {
+        public string topicId = string.Empty;
+        public int completedCount;
+        public string lastContext = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class LivePendingChainState
+    {
+        public string contactId = string.Empty;
+        public string chainId = string.Empty;
+        public string scriptId = string.Empty;
+        public string flowIdentity = string.Empty;
+        public int nextBubbleIndex;
     }
 
     [Serializable]
@@ -78,6 +99,10 @@ namespace Rokas.Core
         public int unreadCount;
         public int lastSequence;
         public string branchState = string.Empty;
+        public string liveActiveTopicId = string.Empty;
+        public string liveFlowIdentity = string.Empty;
+        public bool liveWaitingForChoice;
+        public List<LiveTopicProgress> liveTopicProgress = new List<LiveTopicProgress>();
         public List<string> selectedChoiceIds = new List<string>();
         public List<string> completedDialogueIds = new List<string>();
         public List<MessageEntry> entries = new List<MessageEntry>();
@@ -87,8 +112,10 @@ namespace Rokas.Core
     public sealed class MessageSaveData
     {
         public int nextSequence;
+        public int nextLiveSequence;
         public List<string> deliveredEventIds = new List<string>();
         public List<ConversationState> conversations = new List<ConversationState>();
+        public List<LivePendingChainState> livePendingChains = new List<LivePendingChainState>();
     }
 
     public sealed class ContactDefinition
@@ -114,7 +141,7 @@ namespace Rokas.Core
         private const string EastB7DestinationId = "east-b7";
         private const string YumikoGiftEventId = "yumiko-gift:kisaragi-green-tea-001";
         private const string YumikoPurchaseText = "Зелёный чай YOMI? Хороший выбор. Только не пей его залпом перед выходом.";
-        private const string YumikoRecommendationText = "На Кисараги? Возьми зелёный чай YOMI. Он поможет держать темп.";
+        private const string YumikoRecommendationText = "На Кисараги? Перед выходом загляни в YOMI Kitchen. Зелёный чай там будет кстати.";
         private const string YumikoGiftText = "И ещё. Не спорь — это за мой счёт.";
 
         private static readonly ContactDefinition[] Contacts =
@@ -189,10 +216,22 @@ namespace Rokas.Core
 
         public bool DeliverIncoming(string eventId, string contactId, string text)
         {
-            return DeliverIncoming(eventId, contactId, text, null);
+            return DeliverIncomingInternal(eventId, contactId, text, null, string.Empty, false);
         }
 
         public bool DeliverIncoming(string eventId, string contactId, string text, MessageAttachment attachment)
+        {
+            return DeliverIncomingInternal(eventId, contactId, text, attachment, string.Empty, false);
+        }
+
+        public bool DeliverIncomingLive(string eventId, string contactId, string text, MessageAttachment attachment,
+            string chainId, bool suppressMainNotification)
+        {
+            return DeliverIncomingInternal(eventId, contactId, text, attachment, chainId, suppressMainNotification);
+        }
+
+        private bool DeliverIncomingInternal(string eventId, string contactId, string text, MessageAttachment attachment,
+            string chainId, bool suppressMainNotification)
         {
             if (string.IsNullOrEmpty(eventId) || !KnownContact(contactId) || text == null)
             {
@@ -212,6 +251,8 @@ namespace Rokas.Core
                 text = text,
                 outgoing = false,
                 sequence = sequence,
+                chainId = chainId ?? string.Empty,
+                suppressMainNotification = suppressMainNotification,
                 attachment = attachment
             });
             conversation.lastSequence = sequence;
@@ -223,6 +264,56 @@ namespace Rokas.Core
             NotifyChanged();
             return true;
         }
+
+        public bool SendOutgoing(string eventId, string contactId, string text, string choiceId, string chainId)
+        {
+            if (string.IsNullOrEmpty(eventId) || !KnownContact(contactId) || text == null ||
+                ContainsOrdinal(data.deliveredEventIds, eventId))
+            {
+                return false;
+            }
+
+            ConversationState conversation = EnsureConversation(contactId);
+            int sequence = NextSequence();
+            conversation.entries.Add(new MessageEntry
+            {
+                messageId = "msg-" + sequence,
+                eventId = eventId,
+                text = text,
+                outgoing = true,
+                choiceId = choiceId ?? string.Empty,
+                sequence = sequence,
+                chainId = chainId ?? string.Empty
+            });
+            conversation.lastSequence = sequence;
+            data.deliveredEventIds.Add(eventId);
+            NotifyChanged();
+            return true;
+        }
+
+        public bool SetReaction(string contactId, string messageId, string reactionId)
+        {
+            ConversationState conversation = FindConversation(contactId);
+            if (conversation == null || string.IsNullOrEmpty(messageId)) return false;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry == null || !string.Equals(entry.messageId, messageId, StringComparison.Ordinal)) continue;
+                string next = reactionId ?? string.Empty;
+                if (string.Equals(entry.reactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
+                entry.reactionId = next;
+                NotifyChanged();
+                return true;
+            }
+            return false;
+        }
+
+        public bool HasDeliveredEvent(string eventId)
+        {
+            return !string.IsNullOrEmpty(eventId) && ContainsOrdinal(data.deliveredEventIds, eventId);
+        }
+
+        internal MessageSaveData SaveData { get { return data; } }
 
         public bool SelectChoice(string contactId, string choiceId, string text, string branchState)
         {
@@ -442,11 +533,15 @@ namespace Rokas.Core
                 return false;
             }
 
-            bool delivered = DeliverIncoming(
+            string chainId = "live:yumiko:contract:" + contractId + ":" + state.contractRunSequence;
+            bool delivered = DeliverIncomingLive(
                 "yumiko-contract-food:" + contractId + ":" + state.contractRunSequence,
                 "yumiko",
-                YumikoRecommendationText);
-            bool giftDelivered = DeliverIncoming(
+                YumikoRecommendationText,
+                null,
+                chainId,
+                false);
+            bool giftDelivered = DeliverIncomingLive(
                 YumikoGiftEventId,
                 "yumiko",
                 YumikoGiftText,
@@ -457,7 +552,9 @@ namespace Rokas.Core
                     title = "Зелёный чай YOMI",
                     body = "Подарок от Юмико ×1",
                     targetId = FoodService.GreenTeaId
-                });
+                },
+                chainId,
+                true);
             return delivered || giftDelivered;
         }
 
@@ -604,6 +701,26 @@ namespace Rokas.Core
             {
                 data.conversations = new List<ConversationState>();
             }
+            if (data.livePendingChains == null)
+            {
+                data.livePendingChains = new List<LivePendingChainState>();
+            }
+            if (data.nextLiveSequence < 0)
+            {
+                data.nextLiveSequence = 0;
+            }
+            for (int pendingIndex = data.livePendingChains.Count - 1; pendingIndex >= 0; pendingIndex--)
+            {
+                LivePendingChainState pending = data.livePendingChains[pendingIndex];
+                if (pending == null || string.IsNullOrEmpty(pending.contactId) || string.IsNullOrEmpty(pending.chainId) ||
+                    string.IsNullOrEmpty(pending.scriptId))
+                {
+                    data.livePendingChains.RemoveAt(pendingIndex);
+                    continue;
+                }
+                pending.flowIdentity = pending.flowIdentity ?? string.Empty;
+                if (pending.nextBubbleIndex < 0) pending.nextBubbleIndex = 0;
+            }
 
             Deduplicate(data.deliveredEventIds);
             int highestSequence = Math.Max(0, data.nextSequence);
@@ -631,6 +748,23 @@ namespace Rokas.Core
                 {
                     conversation.branchState = string.Empty;
                 }
+                conversation.liveActiveTopicId = conversation.liveActiveTopicId ?? string.Empty;
+                conversation.liveFlowIdentity = conversation.liveFlowIdentity ?? string.Empty;
+                if (conversation.liveTopicProgress == null)
+                {
+                    conversation.liveTopicProgress = new List<LiveTopicProgress>();
+                }
+                for (int progressIndex = conversation.liveTopicProgress.Count - 1; progressIndex >= 0; progressIndex--)
+                {
+                    LiveTopicProgress progress = conversation.liveTopicProgress[progressIndex];
+                    if (progress == null || string.IsNullOrEmpty(progress.topicId))
+                    {
+                        conversation.liveTopicProgress.RemoveAt(progressIndex);
+                        continue;
+                    }
+                    progress.lastContext = progress.lastContext ?? string.Empty;
+                    if (progress.completedCount < 0) progress.completedCount = 0;
+                }
                 if (conversation.unreadCount < 0)
                 {
                     conversation.unreadCount = 0;
@@ -650,6 +784,8 @@ namespace Rokas.Core
                     entry.eventId = entry.eventId ?? string.Empty;
                     entry.text = entry.text ?? string.Empty;
                     entry.choiceId = entry.choiceId ?? string.Empty;
+                    entry.chainId = entry.chainId ?? string.Empty;
+                    entry.reactionId = entry.reactionId ?? string.Empty;
                     if (entry.attachment != null)
                     {
                         entry.attachment.id = entry.attachment.id ?? string.Empty;

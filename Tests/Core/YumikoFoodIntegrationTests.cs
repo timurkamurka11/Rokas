@@ -9,7 +9,7 @@ namespace Rokas.Core.Tests
     {
         private const string GiftEventId = "yumiko-gift:kisaragi-green-tea-001";
         private const string PurchaseText = "Зелёный чай YOMI? Хороший выбор. Только не пей его залпом перед выходом.";
-        private const string RecommendationText = "На Кисараги? Возьми зелёный чай YOMI. Он поможет держать темп.";
+        private const string RecommendationText = "На Кисараги? Перед выходом загляни в YOMI Kitchen. Зелёный чай там будет кстати.";
         private const string GiftText = "И ещё. Не спорь — это за мой счёт.";
         private const string SuccessWithFoodText = "Вернулся. Значит, всё-таки пригодилось.";
         private const string FailedWithoutFoodText = "Ты опять пошёл туда без нормальной подготовки?";
@@ -51,13 +51,28 @@ namespace Rokas.Core.Tests
                 Equal(SaveLoadStatus.LoadedPrimary, loaded.Status, "Yumiko first-purchase state must load");
                 GameSession restored = new GameSession(loaded.Data, session.Contract);
                 ConversationState restoredYumiko = RequiredConversation(restored, "yumiko");
-                Equal(1, restoredYumiko.entries.Count, "reload must not synthesize a second first-purchase reaction");
-                Equal("yumiko-food-first:" + FoodService.GreenTeaId, restoredYumiko.entries[0].eventId,
-                    "reload must preserve the deterministic first-purchase event");
+                Equal(2, restoredYumiko.entries.Count,
+                    "reload must preserve the core first-purchase reaction plus one recovered live continuation");
+                Equal(1, CountEventPrefix(restoredYumiko, "yumiko-food-first:"),
+                    "reload must keep the core first-purchase reaction exactly once");
+                Equal(1, CountEventPrefix(restoredYumiko, "live:yumiko:purchase:"),
+                    "reload must recover the pending live purchase continuation exactly once");
+                MessageEntry restoredPurchase = FindEvent(restoredYumiko,
+                    "yumiko-food-first:" + FoodService.GreenTeaId);
+                True(restoredPurchase != null, "reload must preserve the deterministic first-purchase event");
+                Equal(PurchaseText, restoredPurchase.text,
+                    "reload must preserve the authored first-purchase copy");
+                Equal(2, restoredYumiko.unreadCount,
+                    "core purchase reaction plus recovered live continuation must remain unread after reload");
 
                 restored.State.preparedFoodId = string.Empty;
                 Equal(true, restored.PrepareFood(FoodService.GreenTeaId), "post-load legitimate purchase remains supported");
-                Equal(1, restoredYumiko.entries.Count, "post-load purchase must not redeliver historical first-purchase reaction");
+                Equal(2, restoredYumiko.entries.Count,
+                    "post-load purchase must not redeliver the core reaction or recovered live continuation");
+                Equal(1, CountEventPrefix(restoredYumiko, "yumiko-food-first:"),
+                    "post-load purchase must keep the core first-purchase event exactly once");
+                Equal(1, CountEventPrefix(restoredYumiko, "live:yumiko:purchase:"),
+                    "post-load purchase must keep the recovered live continuation exactly once");
             }
             finally
             {
@@ -85,6 +100,7 @@ namespace Rokas.Core.Tests
                     "yumiko-contract-food:" + session.Contract.id + ":1");
                 True(recommendation != null, "real acceptance must create one Yumiko food recommendation");
                 Equal(RecommendationText, recommendation.text, "recommendation must use authored current-slice copy");
+                Equal(null, recommendation.attachment, "recommendation must not imply or carry a free FoodGift");
 
                 MessageEntry gift = FindEvent(yumiko, GiftEventId);
                 True(gift != null, "first real acceptance must deliver the one scripted Yumiko gift");
@@ -171,8 +187,16 @@ namespace Rokas.Core.Tests
                 Equal(SaveLoadStatus.LoadedPrimary, loaded.Status, "post-battle Yumiko state must load");
                 GameSession restored = new GameSession(loaded.Data, contract);
                 ConversationState restoredYumiko = RequiredConversation(restored, "yumiko");
-                Equal(yumiko.entries.Count, restoredYumiko.entries.Count,
-                    "reload/bootstrap must not redeliver any historical post-battle reaction");
+                Equal(yumiko.entries.Count + 2, restoredYumiko.entries.Count,
+                    "reload must preserve history plus one deterministic live continuation for each real return");
+                Equal(1, CountEventPrefix(restoredYumiko,
+                    "yumiko-return:" + contract.id + ":1:sealed"),
+                    "first core post-battle return reaction must remain exactly once");
+                Equal(1, CountEventPrefix(restoredYumiko,
+                    "yumiko-return:" + contract.id + ":2:failed"),
+                    "second core post-battle return reaction must remain exactly once");
+                Equal(2, CountEventPrefix(restoredYumiko, "live:yumiko:return:"),
+                    "two real returns must recover exactly two distinct live continuations");
             }
             finally
             {
@@ -316,6 +340,18 @@ namespace Rokas.Core.Tests
                 if (entry != null && entry.attachment != null && entry.attachment.kind.ToString() == kindName) return entry;
             }
             return null;
+        }
+
+        private static int CountEventPrefix(ConversationState conversation, string prefix)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private static int ReadIntField(SaveData state, string name)

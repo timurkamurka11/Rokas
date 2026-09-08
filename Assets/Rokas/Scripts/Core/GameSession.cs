@@ -12,6 +12,7 @@ namespace Rokas.Core
         public ContractDefinition Contract { get; private set; }
         public CombatService Combat { get; private set; }
         public MessageService Messages { get; private set; }
+        public LiveMessengerService LiveMessages { get; private set; }
 
         public event Action Changed;
 
@@ -36,6 +37,7 @@ namespace Rokas.Core
             Combat = new CombatService(state, contract, economy);
             Messages = new MessageService(state, contract, contracts, food);
             Messages.Changed += NotifyChanged;
+            LiveMessages = new LiveMessengerService(state, Messages);
         }
 
         public bool AcceptContract()
@@ -116,7 +118,9 @@ namespace Rokas.Core
 
         public void Tick(float seconds)
         {
-            NotifyIf(Combat.Tick(seconds));
+            bool combatChanged = Combat.Tick(seconds);
+            LiveMessages.Tick(seconds);
+            NotifyIf(combatChanged);
         }
 
         public bool ReturnHome()

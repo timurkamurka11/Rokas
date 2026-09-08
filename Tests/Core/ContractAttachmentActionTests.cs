@@ -123,12 +123,32 @@ namespace Rokas.Core.Tests
                 restored.Changed += () => changes++;
                 Equal("AlreadyActive", Act(restored).Status.ToString(), "reload click is no-op");
                 Equal(false, restored.Messages.DeliverIncoming("guild-contract-test", "guild", "duplicate"), "no redelivery");
-                Equal(2, restored.Messages.GetConversation("guild").entries.Count, "offer plus accepted follow-up remain exactly once");
+                ConversationState restoredGuild = restored.Messages.GetConversation("guild");
+                Equal(3, restoredGuild.entries.Count,
+                    "offer and accepted follow-up remain exactly once while pending live acceptance context recovers once");
+                Equal(1, CountEventPrefix(restoredGuild, "guild-contract-test"),
+                    "original Guild contract offer identity remains exactly once after live recovery");
+                Equal(1, CountEventPrefix(restoredGuild, "guild-contract-accepted:"),
+                    "original Guild acceptance follow-up remains exactly once after live recovery");
+                Equal(1, CountEventPrefix(restoredGuild, "live:guild:accepted:"),
+                    "pending live acceptance continuation resolves exactly once after reload");
                 Equal(2, restored.Messages.GetConversation("yumiko").entries.Count,
                     "Yumiko recommendation and one-time gift survive reload exactly once");
                 Equal(0, changes, "reload repeat emits no events");
             }
             finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        }
+
+        private static int CountEventPrefix(ConversationState conversation, string prefix)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private static void Equal<T>(T expected, T actual, string message)

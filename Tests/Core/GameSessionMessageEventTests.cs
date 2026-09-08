@@ -53,16 +53,25 @@ namespace Rokas.Core.Tests
                 GameSession restored = new GameSession(loaded.Data, original.Contract);
                 ConversationState guild = restored.Messages.GetConversation("guild");
                 True(guild != null, "Guild history must survive reload");
-                Equal(1, guild.entries.Count, "reload must preserve one completion event without redelivery");
-                Equal(expectedEventId, guild.entries[0].eventId, "reload must preserve deterministic event identity");
-                Equal("Контракт закрыт. Награда перечислена. Выполнение №1.", guild.entries[0].text,
+                Equal(1, CountEventPrefix(guild, expectedEventId),
+                    "reload must preserve the core completion event exactly once without redelivery");
+                Equal(1, CountEventPrefix(guild, "live:guild:completed:"),
+                    "pending authored completion continuation must recover exactly once");
+                MessageEntry completion = FindEvent(guild, expectedEventId);
+                True(completion != null, "reload must preserve deterministic completion identity");
+                Equal("Контракт закрыт. Награда перечислена. Выполнение №1.", completion.text,
                     "reload must preserve authored completion context");
-                Equal(1, guild.unreadCount, "unread completion state must survive reload");
-                Equal(1, restored.Messages.TotalUnread, "total unread must survive reload");
+                int historyAfterRecovery = guild.entries.Count;
+                int unreadAfterRecovery = guild.unreadCount;
+                True(unreadAfterRecovery >= 1, "completion chain must remain unread after reload");
+                Equal(unreadAfterRecovery, restored.Messages.TotalUnread,
+                    "total unread must reflect the recovered Guild completion chain");
 
                 Equal(false, restored.ClaimPayment(), "restored completed run cannot process payment again");
-                Equal(1, guild.entries.Count, "post-load repeated processing must not duplicate the event");
-                Equal(1, guild.unreadCount, "post-load repeated processing must not increment unread");
+                Equal(historyAfterRecovery, guild.entries.Count, "post-load repeated processing must not duplicate history");
+                Equal(unreadAfterRecovery, guild.unreadCount, "post-load repeated processing must not increment unread");
+                Equal(1, CountEventPrefix(guild, expectedEventId),
+                    "post-load repeated processing must keep core completion exactly once");
             }
             finally
             {
@@ -104,18 +113,20 @@ namespace Rokas.Core.Tests
 
             ConversationState guild = session.Messages.GetConversation("guild");
             True(guild != null, "real repeat runs must create Guild completion history");
-            Equal(3, guild.entries.Count, "three genuine runs must create exactly three completion events");
+            Equal(3, CountEventPrefix(guild, "guild-contract-completed:"),
+                "three genuine runs must create exactly three core completion events even with live continuations");
             for (int index = 0; index < 3; index++)
             {
                 int run = index + 1;
-                MessageEntry entry = guild.entries[index];
-                Equal("guild-contract-completed:contract_subway_001:" + run, entry.eventId,
-                    "repeat-run event IDs must retain contract and completedRuns identity");
+                string eventId = "guild-contract-completed:contract_subway_001:" + run;
+                MessageEntry entry = FindEvent(guild, eventId);
+                True(entry != null, "repeat-run event ID must remain present: " + eventId);
                 Equal("Контракт закрыт. Награда перечислена. Выполнение №" + run + ".", entry.text,
-                    "legitimate repeat runs must not render as indistinguishable completion spam");
+                    "legitimate repeat runs must retain their distinct authored completion context");
             }
             Equal(3, session.State.completedRuns, "three genuine payments must advance completedRuns exactly three times");
-            Equal(3, guild.unreadCount, "each genuine new run remains one legitimate unread event");
+            True(guild.unreadCount >= 3,
+                "each genuine core completion must remain represented in unread state even when live follow-ups also exist");
         }
 
         private static void CompleteRealRun(GameSession session)
@@ -150,6 +161,29 @@ namespace Rokas.Core.Tests
                 activeContractId = contract.id
             };
             return new GameSession(state, contract);
+        }
+
+        private static MessageEntry FindEvent(ConversationState conversation, string eventId)
+        {
+            if (conversation == null || conversation.entries == null) return null;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && string.Equals(entry.eventId, eventId, StringComparison.Ordinal)) return entry;
+            }
+            return null;
+        }
+
+        private static int CountEventPrefix(ConversationState conversation, string prefix)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private static void True(bool actual, string message)
