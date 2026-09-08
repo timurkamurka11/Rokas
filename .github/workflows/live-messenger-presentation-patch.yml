@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/live-messenger-presentation-patch.yml
       - Tools/apply_live_messenger_presentation.py
+      - Tools/fix_live_messenger_presentation_patch.py
 
 permissions:
   contents: write
@@ -22,6 +23,9 @@ jobs:
         with:
           ref: feature/messages-system
           fetch-depth: 0
+
+      - name: Repair presentation patch anchor
+        run: python3 Tools/fix_live_messenger_presentation_patch.py
 
       - name: Apply Live Messenger presentation patch
         run: python3 Tools/apply_live_messenger_presentation.py
@@ -54,7 +58,7 @@ jobs:
           checkName: Live Messenger PlayMode Gate
 
       - name: Upload PlayMode artifacts
-        if: always()
+        if: always() && steps.unity-tests.outcome != 'skipped'
         uses: actions/upload-artifact@v7
         with:
           name: live-messenger-playmode-results
@@ -66,6 +70,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- \
+            Tools/apply_live_messenger_presentation.py \
             Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs \
             Assets/Rokas/Scripts/Presentation/LaptopView.cs \
             Assets/Rokas/Scripts/Presentation/HomeView.cs \
