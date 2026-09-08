@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Rokas.Core;
 using UnityEngine;
@@ -26,6 +27,8 @@ namespace Rokas.Presentation
         private YarnTaskCompletionSource<DialogueOption?>? pendingSelection;
         private MessageService? messages;
         private string contactId = string.Empty;
+        private bool selectionQueued;
+        private bool optionsChangedPending;
 
         public IReadOnlyList<MessagesReplyOption> CurrentOptions => currentOptions;
         public bool HasPendingOptions => pendingSelection != null;
@@ -59,6 +62,7 @@ namespace Rokas.Presentation
                 throw new InvalidOperationException("Messages Yarn presenter already has a pending option set.");
             }
 
+            selectionQueued = false;
             currentOptions.Clear();
             List<DialogueOption> available = new List<DialogueOption>();
             for (int index = 0; index < dialogueOptions.Length; index++)
@@ -80,6 +84,7 @@ namespace Rokas.Presentation
             DialogueOption? selected = await pendingSelection.Task;
             pendingSelection = null;
             pendingOptions = Array.Empty<DialogueOption>();
+            selectionQueued = false;
             currentOptions.Clear();
             NotifyOptionsChanged();
             return selected;
@@ -88,7 +93,7 @@ namespace Rokas.Presentation
         public bool SubmitChoice(string choiceId)
         {
             EnsureBound();
-            if (pendingSelection == null || string.IsNullOrEmpty(choiceId))
+            if (pendingSelection == null || selectionQueued || string.IsNullOrEmpty(choiceId))
             {
                 return false;
             }
@@ -102,13 +107,11 @@ namespace Rokas.Presentation
                     continue;
                 }
 
+                selectionQueued = true;
                 string branchState = InferBranchState(stableId);
                 string text = option.Line.Text.Text.Trim();
-                if (!messages!.SelectChoice(contactId, stableId, text, branchState))
-                {
-                    return false;
-                }
-                return pendingSelection.TrySetResult(option);
+                StartCoroutine(CompleteChoiceNextFrame(option, stableId, text, branchState));
+                return true;
             }
             return false;
         }
@@ -123,9 +126,42 @@ namespace Rokas.Presentation
             pendingSelection?.TrySetResult(null);
             pendingSelection = null;
             pendingOptions = Array.Empty<DialogueOption>();
+            selectionQueued = false;
             currentOptions.Clear();
             NotifyOptionsChanged();
             return YarnTask.CompletedTask;
+        }
+
+        private IEnumerator CompleteChoiceNextFrame(DialogueOption option, string stableId, string text, string branchState)
+        {
+            yield return null;
+            if (pendingSelection == null || messages == null)
+            {
+                selectionQueued = false;
+                yield break;
+            }
+            if (!messages.SelectChoice(contactId, stableId, text, branchState))
+            {
+                selectionQueued = false;
+                yield break;
+            }
+            pendingSelection.TrySetResult(option);
+        }
+
+        private void LateUpdate()
+        {
+            if (!optionsChangedPending)
+            {
+                return;
+            }
+            optionsChangedPending = false;
+            Action? handler = OptionsChanged;
+            handler?.Invoke();
+        }
+
+        private void OnDisable()
+        {
+            optionsChangedPending = false;
         }
 
         private string InferBranchState(string choiceId)
@@ -182,8 +218,7 @@ namespace Rokas.Presentation
 
         private void NotifyOptionsChanged()
         {
-            Action? handler = OptionsChanged;
-            handler?.Invoke();
+            optionsChangedPending = true;
         }
     }
 }
