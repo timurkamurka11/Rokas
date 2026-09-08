@@ -17,6 +17,7 @@
     <Compile Include="DialogueProgressionTests.cs" />
     <Compile Include="HunterGuildFlowTests.cs" />
     <Compile Include="YumikoFoodIntegrationTests.cs" />
+    <Compile Include="LiveMessengerCoreTests.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/*.cs" />
   </ItemGroup>
 </Project>
