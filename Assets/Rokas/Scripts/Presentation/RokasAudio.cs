@@ -94,6 +94,26 @@ namespace Rokas.Presentation
             source.Play();
         }
 
+        public void PlayMessageCue(string cue)
+        {
+            AudioClip clip = assets.laptopMouseClick ? assets.laptopMouseClick : assets.click;
+            float scale = cue == "WorldNotification" ? .34f :
+                cue == "LaptopNotification" ? .30f :
+                cue == "ActiveReceive" ? .22f :
+                cue == "SoftReceive" ? .16f : .26f;
+            PlayScaled(clip, scale);
+        }
+
+        private void PlayScaled(AudioClip clip, float scale)
+        {
+            if (!clip) return;
+            var source = effects[voice++ % effects.Length];
+            source.Stop();
+            source.clip = clip;
+            source.volume = Mathf.Clamp01(settings.masterVolume * settings.sfxVolume * Mathf.Clamp01(scale));
+            source.Play();
+        }
+
         public void Click()
         {
             if (!laptopMode) Play(assets.click);

@@ -43,6 +43,8 @@ namespace Rokas.Presentation
         private float pageTime;
         private Action closed;
         public bool IsClosing { get; private set; }
+        public bool MessagesOpen { get { return section == 6 && !IsClosing; } }
+        public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
             Action<Func<bool>, string> act, Action click, Action<string> notify, Action close)

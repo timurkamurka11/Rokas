@@ -39,8 +39,15 @@ namespace Rokas.Presentation
         private MessagesDialoguePresenter dialoguePresenter;
         private string query = string.Empty;
         private bool subscribed;
+        private bool liveSubscribed;
+        private bool liveTopicsOpen;
         private bool refreshPending;
         private bool refreshPreserveScroll = true;
+
+        public string ActiveContactId
+        {
+            get { return root != null && selected != null ? selected.id : string.Empty; }
+        }
 
         public LaptopMessagesView(UiKit ui, RokasAssets assets, GameSession session)
         {
@@ -69,6 +76,8 @@ namespace Rokas.Presentation
 
             session.Messages.Changed += HandleMessagesChanged;
             subscribed = true;
+            session.LiveMessages.Changed += HandleLiveMessagesChanged;
+            liveSubscribed = true;
 
             List<ContactDefinition> contacts = OrderedMatches(string.Empty);
             if (selected == null && contacts.Count > 0)
@@ -87,6 +96,11 @@ namespace Rokas.Presentation
             {
                 session.Messages.Changed -= HandleMessagesChanged;
                 subscribed = false;
+            }
+            if (liveSubscribed)
+            {
+                session.LiveMessages.Changed -= HandleLiveMessagesChanged;
+                liveSubscribed = false;
             }
             if (search != null)
             {
@@ -111,6 +125,7 @@ namespace Rokas.Presentation
             search = null;
             refreshPending = false;
             refreshPreserveScroll = true;
+            liveTopicsOpen = false;
         }
 
         public void Tick(float dt)
@@ -285,6 +300,7 @@ namespace Rokas.Presentation
 
             bool wasSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
             selected = contact;
+            if (!wasSelected) liveTopicsOpen = false;
             if (string.Equals(contact.id, "guild", StringComparison.Ordinal))
             {
                 session.EnsureGuildContractOffer();
@@ -324,8 +340,8 @@ namespace Rokas.Presentation
                     TextAlignmentOptions.MidlineLeft);
                 Surface(header, "MessagesHeaderStatusDot", 993, 29, 10, 10, 5,
                     selected.online ? new Color(.26f, .85f, .66f) : new Color(.42f, .48f, .52f));
-                TmpLabel(header, "MessagesHeaderStatus", selected.online ? "В сети" : "Не в сети",
-                    1012, 18, 94, 34, 13, Soft, TextAlignmentOptions.MidlineLeft);
+                TmpLabel(header, "MessagesHeaderStatus", session.LiveMessages.GetPresenceText(selected.id),
+                    908, 18, 198, 34, 13, Soft, TextAlignmentOptions.MidlineRight);
             }
 
             BuildConversation(preserveScroll);
@@ -342,17 +358,20 @@ namespace Rokas.Presentation
             ui.Clear(conversationContent);
 
             ConversationState conversation = session.Messages.GetConversation(selected.id);
+            float y = 10;
             if (conversation == null || conversation.entries == null || conversation.entries.Count == 0)
             {
-                TmpLabel(conversationContent, "MessagesEmptyTitle", "Нет сообщений", 190, 180, 714, 48, 28, White,
+                TmpLabel(conversationContent, "MessagesEmptyTitle", "Нет сообщений", 190, 104, 714, 48, 28, White,
                     TextAlignmentOptions.Center);
-                TmpLabel(conversationContent, "MessagesEmptyNote", "История появится здесь после первого события или ответа.",
-                    190, 228, 714, 58, 16, Soft, TextAlignmentOptions.Center);
-                conversationContent.sizeDelta = new Vector2(0, 538);
+                TmpLabel(conversationContent, "MessagesEmptyNote", "Выберите тему, чтобы начать разговор.",
+                    190, 152, 714, 58, 16, Soft, TextAlignmentOptions.Center);
+                y = 244;
+                BuildLiveControls(ref y);
+                BuildDialogueChoices(ref y);
+                conversationContent.sizeDelta = new Vector2(0, Mathf.Max(538, y + 10));
                 return;
             }
 
-            float y = 10;
             TmpLabel(conversationContent, "MessagesDateSeparator", "СЕГОДНЯ", 410, y, 274, 28, 12, Soft,
                 TextAlignmentOptions.Center);
             y += 38;
@@ -386,6 +405,8 @@ namespace Rokas.Presentation
                 }
             }
 
+            BuildReactionControls(conversation, ref y);
+            BuildLiveControls(ref y);
             BuildDialogueChoices(ref y);
             conversationContent.sizeDelta = new Vector2(0, Mathf.Max(538, y + 10));
             Canvas.ForceUpdateCanvases();
@@ -457,6 +478,145 @@ namespace Rokas.Presentation
             session.Messages.ActivateAttachment(contactId, messageId);
         }
 
+        private void BuildReactionControls(ConversationState conversation, ref float y)
+        {
+            if (selected == null || conversation == null || conversation.entries == null) return;
+            List<LiveReactionOption> reactions = session.LiveMessages.GetReactionOptions(selected.id);
+            if (reactions == null || reactions.Count == 0) return;
+
+            MessageEntry target = null;
+            for (int index = conversation.entries.Count - 1; index >= 0; index--)
+            {
+                MessageEntry candidate = conversation.entries[index];
+                if (candidate != null && !candidate.outgoing && !string.IsNullOrEmpty(candidate.messageId))
+                {
+                    target = candidate;
+                    break;
+                }
+            }
+            if (target == null) return;
+
+            y += 2;
+            TmpLabel(conversationContent, "MessagesReactionCaption", "РЕАКЦИЯ", 26, y, 130, 24, 11, Soft,
+                TextAlignmentOptions.MidlineLeft);
+            float x = 160;
+            for (int index = 0; index < reactions.Count; index++)
+            {
+                LiveReactionOption option = reactions[index];
+                string messageId = target.messageId;
+                string reactionId = option.Id;
+                string label = option.Icon == "heart" ? "ТЕПЛО" : option.Icon == "dots" ? "..." : "ОК";
+                LaptopSurface face = Surface(conversationContent,
+                    "MessagesReactionFace_" + reactionId, x, y, 104, 28, 12,
+                    new Color(.035f, .12f, .15f, .96f), true);
+                Button button = face.gameObject.AddComponent<Button>();
+                button.name = "MessagesReaction_" + messageId + "_" + reactionId;
+                StyleButton(button, face);
+                button.onClick.AddListener(() =>
+                {
+                    if (session.LiveMessages.SetReaction(selected.id, messageId, reactionId))
+                        RefreshActiveContact(true);
+                });
+                TmpLabel(face.transform, "Label", label, 8, 2, 88, 24, 11, White, TextAlignmentOptions.Center);
+                x += 112;
+            }
+            y += 38;
+        }
+
+        private void BuildLiveControls(ref float y)
+        {
+            if (selected == null) return;
+            string contactId = selected.id;
+
+            if (session.LiveMessages.IsTyping(contactId))
+            {
+                y += 4;
+                LaptopSurface typing = Surface(conversationContent, "MessagesTypingIndicator", 26, y, 312, 42, 15,
+                    new Color(.035f, .10f, .13f, .96f));
+                string typingText = contactId == "guild" ? "Обработка запроса..." : "печатает...";
+                TmpLabel(typing.transform, "Label", typingText, 16, 4, 280, 34, 14, Soft,
+                    TextAlignmentOptions.MidlineLeft);
+                y += 50;
+            }
+
+            List<LiveReplyOption> replies = session.LiveMessages.GetReplyOptions(contactId);
+            if (replies != null && replies.Count > 0)
+            {
+                y += 4;
+                TmpLabel(conversationContent, "MessagesLiveChoicesCaption", "ВАШ ОТВЕТ", 26, y, 1042, 24, 12, Soft,
+                    TextAlignmentOptions.MidlineLeft);
+                y += 30;
+                for (int index = 0; index < replies.Count; index++)
+                {
+                    LiveReplyOption option = replies[index];
+                    string replyId = option.Id;
+                    LaptopSurface face = Surface(conversationContent, "MessagesLiveChoiceFace_" + replyId,
+                        26, y, 1042, 56, 14, new Color(.035f, .14f, .18f, .98f), true);
+                    Button button = face.gameObject.AddComponent<Button>();
+                    button.name = "MessagesLiveChoice_" + replyId;
+                    StyleButton(button, face);
+                    button.onClick.AddListener(() =>
+                    {
+                        if (session.LiveMessages.SubmitReply(contactId, replyId))
+                        {
+                            liveTopicsOpen = false;
+                            RefreshActiveContact(false);
+                        }
+                    });
+                    TmpLabel(face.transform, "Label", option.Text, 18, 7, 1006, 42, 16, White,
+                        TextAlignmentOptions.MidlineLeft);
+                    y += 64;
+                }
+                return;
+            }
+
+            List<LiveTopicOption> topics = session.LiveMessages.GetTopics(contactId);
+            if (topics == null || topics.Count == 0) return;
+            y += 6;
+            if (!liveTopicsOpen)
+            {
+                string launcherText = contactId == "guild" ? "Отправить запрос" :
+                    contactId == "kaito" ? "Написать Кайто" : "Написать Юмико";
+                LaptopSurface face = Surface(conversationContent, "MessagesLiveLauncherFace_" + contactId,
+                    26, y, 1042, 58, 15, new Color(.035f, .16f, .19f, .98f), true);
+                Button launcher = face.gameObject.AddComponent<Button>();
+                launcher.name = "MessagesLiveLauncher_" + contactId;
+                StyleButton(launcher, face);
+                launcher.onClick.AddListener(() =>
+                {
+                    liveTopicsOpen = true;
+                    RefreshActiveContact(false);
+                });
+                TmpLabel(face.transform, "Label", launcherText, 18, 8, 1006, 42, 16, White,
+                    TextAlignmentOptions.Center);
+                y += 66;
+                return;
+            }
+
+            TmpLabel(conversationContent, "MessagesLiveTopicsCaption", contactId == "guild" ? "ЗАПРОСЫ" : "ТЕМЫ",
+                26, y, 1042, 24, 12, Soft, TextAlignmentOptions.MidlineLeft);
+            y += 30;
+            for (int index = 0; index < topics.Count; index++)
+            {
+                LiveTopicOption option = topics[index];
+                string topicId = option.Id;
+                LaptopSurface face = Surface(conversationContent, "MessagesLiveTopicFace_" + topicId,
+                    26, y, 1042, 54, 14, new Color(.028f, .115f, .15f, .98f), true);
+                Button button = face.gameObject.AddComponent<Button>();
+                button.name = "MessagesLiveTopic_" + topicId;
+                StyleButton(button, face);
+                button.onClick.AddListener(() =>
+                {
+                    liveTopicsOpen = false;
+                    if (session.LiveMessages.StartTopic(contactId, topicId))
+                        RefreshActiveContact(false);
+                });
+                TmpLabel(face.transform, "Label", option.Text, 18, 6, 1006, 42, 15, White,
+                    TextAlignmentOptions.MidlineLeft);
+                y += 62;
+            }
+        }
+
         private void BuildDialogueChoices(ref float y)
         {
             if (selected == null || !string.Equals(selected.id, "kaito", StringComparison.Ordinal) || dialoguePresenter == null)
@@ -491,7 +651,8 @@ namespace Rokas.Presentation
 
         private void EnsureDialogueForSelectedContact()
         {
-            if (root == null || selected == null || !string.Equals(selected.id, "kaito", StringComparison.Ordinal) || yarnController != null)
+            if (root == null || selected == null || !string.Equals(selected.id, "kaito", StringComparison.Ordinal) ||
+                yarnController != null || session.Messages.IsDialogueCompleted("kaito", "Kaito_Start"))
             {
                 return;
             }
@@ -533,6 +694,11 @@ namespace Rokas.Presentation
             {
                 QueueRefresh(true);
             }
+        }
+
+        private void HandleLiveMessagesChanged()
+        {
+            if (root != null) QueueRefresh(true);
         }
 
         private void HandleMessagesChanged()

@@ -209,8 +209,8 @@ replace_once(home,
 '''        private Text prepared;\n        private CanvasGroup laptopUnreadIndicator;\n        private float time;\n''', "home unread field")
 
 replace_once(home,
-'''            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,\n                () => open("laptop"));\n\n            ActionButton(parent, "TeaHotspot",\n''',
-'''            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,\n                () => open("laptop"));\n            RectTransform unread = ui.Rect(parent, "HomeLaptopUnreadIndicator", 1260, 628, 34, 34);\n            laptopUnreadIndicator = unread.gameObject.AddComponent<CanvasGroup>();\n            Surface(unread, "UnreadGlow", 0, 0, 34, 34, 17, new Color(.18f, .86f, .90f, .86f));\n            Surface(unread, "UnreadCore", 10, 10, 14, 14, 7, new Color(.90f, .98f, 1f, .95f));\n            UpdateLaptopUnreadIndicator();\n\n            ActionButton(parent, "TeaHotspot",\n''', "home unread build")
+'''            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,\n                () => open("laptop"));\n''',
+'''            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,\n                () => open("laptop"));\n            RectTransform unread = ui.Rect(parent, "HomeLaptopUnreadIndicator", 1260, 628, 34, 34);\n            laptopUnreadIndicator = unread.gameObject.AddComponent<CanvasGroup>();\n            Surface(unread, "UnreadGlow", 0, 0, 34, 34, 17, new Color(.18f, .86f, .90f, .86f));\n            Surface(unread, "UnreadCore", 10, 10, 14, 14, 7, new Color(.90f, .98f, 1f, .95f));\n            UpdateLaptopUnreadIndicator();\n''', "home unread build")
 
 replace_once(home,
 '''            if (weaponWard) weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);\n        }\n\n        public void Tick(float dt)\n''',
@@ -235,8 +235,8 @@ replace_once(view,
 '''using System.Collections;\nusing System.Collections.Generic;\nusing Rokas.Core;\n''', "view generic collections")
 
 replace_once(view,
-'''        private int laptopOpenedFrame = -1;\n\n        public bool Paused\n''',
-'''        private int laptopOpenedFrame = -1;\n        private int observedMessageSequence;\n\n        public string LastMessageAudioCue { get; private set; }\n        public int MessageAudioCueCount { get; private set; }\n        public bool Paused\n''', "view routing state")
+'''        private int laptopOpenedFrame = -1;\n''',
+'''        private int laptopOpenedFrame = -1;\n        private int observedMessageSequence;\n\n        public string LastMessageAudioCue { get; private set; }\n        public int MessageAudioCueCount { get; private set; }\n''', "view routing state")
 
 replace_once(view,
 '''            laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel);\n            messageNotifications = new MessagesNotificationView(ui, stage, session);\n            session.Changed += Refresh;\n''',

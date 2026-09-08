@@ -75,18 +75,42 @@ namespace Rokas.Tests
 
             RokasBootstrap restoredBoot = Bootstrap();
             ConversationState restored = restoredBoot.Session.Messages.GetConversation("guild");
-            Assert.That(restored.entries.Count, Is.EqualTo(2),
-                "Stop/Play must preserve offer plus exactly one acceptance follow-up");
+            string offerEventId = "guild-contract-offer:" + restoredBoot.Session.Contract.id;
+            string acceptedEventId = "guild-contract-accepted:" + restoredBoot.Session.Contract.id;
+            string liveOfferEventId = "live:guild:offer:" + offerEventId + ":bubble:1";
+            string liveAcceptedEventId = "live:guild:accepted:" + acceptedEventId + ":bubble:1";
+            Assert.That(restored.entries.Count, Is.EqualTo(4),
+                "Stop/Play must preserve the two core Guild events plus their two deterministic live continuations");
+            Assert.That(CountEvent(restored, offerEventId), Is.EqualTo(1), "original Guild offer must remain exactly once");
+            Assert.That(CountEvent(restored, acceptedEventId), Is.EqualTo(1), "core Guild acceptance must remain exactly once");
+            Assert.That(CountEvent(restored, liveOfferEventId), Is.EqualTo(1), "live Guild offer continuation must recover exactly once");
+            Assert.That(CountEvent(restored, liveAcceptedEventId), Is.EqualTo(1), "live Guild acceptance continuation must recover exactly once");
+            Assert.That(restored.unreadCount, Is.EqualTo(0),
+                "opening Guild after recovery must consume its legitimate recovered unread without duplicating it");
             MessageEntry restoredOffer = FindContractOffer(restored);
             Assert.That(restoredOffer.attachment.opened, Is.True);
             Button restoredCard = FindButton("MessagesAttachment_" + restoredOffer.attachment.id);
             Assert.That(restoredCard.IsInteractable(), Is.False);
             AssertGuildIdentity(restoredCard);
-            Assert.That(restored.entries[1].eventId,
-                Is.EqualTo("guild-contract-accepted:" + restoredBoot.Session.Contract.id));
-            Assert.That(FindTextUnder("MessagesContactFace_guild", "Preview"), Is.EqualTo(AcceptedPreview));
             Assert.That(FindRect("MessagesNotification"), Is.Null,
-                "historical Guild follow-up must not become a fresh notification after reload");
+                "historical/recovered Guild content must not become a fresh popup after bootstrap");
+
+            restoredBoot.SaveNow();
+            yield return DestroyAndRecreate();
+            Press("LaptopHotspot");
+            Press("LaptopMessages");
+            Press("MessagesContact_guild");
+            for (int frame = 0; frame < 4; frame++) yield return null;
+
+            ConversationState restoredAgain = Bootstrap().Session.Messages.GetConversation("guild");
+            Assert.That(restoredAgain.entries.Count, Is.EqualTo(4), "a second reload must not append another Guild continuation");
+            Assert.That(CountEvent(restoredAgain, offerEventId), Is.EqualTo(1));
+            Assert.That(CountEvent(restoredAgain, acceptedEventId), Is.EqualTo(1));
+            Assert.That(CountEvent(restoredAgain, liveOfferEventId), Is.EqualTo(1));
+            Assert.That(CountEvent(restoredAgain, liveAcceptedEventId), Is.EqualTo(1));
+            Assert.That(restoredAgain.unreadCount, Is.EqualTo(0));
+            Assert.That(FindRect("MessagesNotification"), Is.Null,
+                "second bootstrap must remain silent for already recovered Guild history");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -183,6 +207,18 @@ namespace Rokas.Tests
                     return entry;
             }
             return null;
+        }
+
+        private static int CountEvent(ConversationState conversation, string eventId)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && string.Equals(entry.eventId, eventId, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private void Press(string name)

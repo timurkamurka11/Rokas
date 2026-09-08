@@ -101,11 +101,30 @@ namespace Rokas.Tests
             yield return DestroyAndRecreate();
             for (int frame = 0; frame < 4; frame++) yield return null;
 
-            ConversationState restored = Bootstrap().Session.Messages.GetConversation("yumiko");
-            Assert.That(restored.entries.Count, Is.EqualTo(1), "reload must preserve exactly one historical purchase reaction");
-            Assert.That(restored.unreadCount, Is.EqualTo(1), "historical unread state must survive without redelivery");
+            RokasBootstrap restoredBoot = Bootstrap();
+            ConversationState restored = restoredBoot.Session.Messages.GetConversation("yumiko");
+            string purchaseEventId = "yumiko-food-first:" + FoodService.GreenTeaId;
+            string livePurchaseEventId = "live:yumiko:purchase:" + purchaseEventId + ":bubble:1";
+            Assert.That(restored.entries.Count, Is.EqualTo(2),
+                "reload must preserve the authored purchase reaction plus one deterministic live continuation");
+            Assert.That(CountEvent(restored, purchaseEventId), Is.EqualTo(1), "core first-purchase reaction must remain exactly once");
+            Assert.That(CountEvent(restored, livePurchaseEventId), Is.EqualTo(1), "live Yumiko purchase continuation must recover exactly once");
+            Assert.That(restored.unreadCount, Is.EqualTo(2),
+                "one legitimate recovered continuation may add one unread, but bootstrap must not duplicate either event");
             Assert.That(FindRect("MessagesNotification"), Is.Null,
-                "bootstrap must not turn historical unread into a fresh popup");
+                "bootstrap recovery must not turn historical/live recovered unread into a fresh popup");
+
+            restoredBoot.SaveNow();
+            yield return DestroyAndRecreate();
+            for (int frame = 0; frame < 4; frame++) yield return null;
+
+            ConversationState restoredAgain = Bootstrap().Session.Messages.GetConversation("yumiko");
+            Assert.That(restoredAgain.entries.Count, Is.EqualTo(2), "a second reload must not append another purchase continuation");
+            Assert.That(CountEvent(restoredAgain, purchaseEventId), Is.EqualTo(1));
+            Assert.That(CountEvent(restoredAgain, livePurchaseEventId), Is.EqualTo(1));
+            Assert.That(restoredAgain.unreadCount, Is.EqualTo(2), "second reload must not increment historical unread again");
+            Assert.That(FindRect("MessagesNotification"), Is.Null,
+                "second bootstrap must remain silent for already recovered Yumiko history");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -169,6 +188,18 @@ namespace Rokas.Tests
                 if (entry != null && entry.eventId == eventId) return entry;
             }
             return null;
+        }
+
+        private static int CountEvent(ConversationState conversation, string eventId)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && string.Equals(entry.eventId, eventId, StringComparison.Ordinal)) count++;
+            }
+            return count;
         }
 
         private void Press(string name)

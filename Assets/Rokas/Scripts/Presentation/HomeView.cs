@@ -25,6 +25,7 @@ namespace Rokas.Presentation
         private Image weaponWard;
         private Text objective;
         private Text prepared;
+        private CanvasGroup laptopUnreadIndicator;
         private float time;
         private float mameReaction;
 
@@ -58,6 +59,11 @@ namespace Rokas.Presentation
 
             ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,
                 () => open("laptop"));
+            RectTransform unread = ui.Rect(parent, "HomeLaptopUnreadIndicator", 1260, 628, 34, 34);
+            laptopUnreadIndicator = unread.gameObject.AddComponent<CanvasGroup>();
+            Surface(unread, "UnreadGlow", 0, 0, 34, 34, 17, new Color(.18f, .86f, .90f, .86f));
+            Surface(unread, "UnreadCore", 10, 10, 14, 14, 7, new Color(.90f, .98f, 1f, .95f));
+            UpdateLaptopUnreadIndicator();
 
             ActionButton(parent, "TeaHotspot", "Заварить чай", HomeActionGlyph.Tea, 638, 727, 318,
                 () => open("tea"));
@@ -182,12 +188,25 @@ namespace Rokas.Presentation
                         : "Ночной город спит. В YOMI появился первый заказ.";
             prepared.text = string.IsNullOrEmpty(session.State.preparedFoodId) ? "" : "ЗЕЛЁНЫЙ ЧАЙ  /  +5% АВТОАТАКА";
             if (weaponWard) weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);
+            UpdateLaptopUnreadIndicator();
+        }
+
+        private void UpdateLaptopUnreadIndicator()
+        {
+            if (laptopUnreadIndicator == null) return;
+            if (session.Messages.TotalUnread <= 0)
+            {
+                laptopUnreadIndicator.alpha = 0f;
+                return;
+            }
+            laptopUnreadIndicator.alpha = .68f + .22f * (.5f + .5f * Mathf.Sin(time * 3.2f));
         }
 
         public void Tick(float dt)
         {
             time += dt;
             mameReaction = Mathf.Max(0, mameReaction - dt);
+            UpdateLaptopUnreadIndicator();
             if (mame)
             {
                 mame.rectTransform.localScale = new Vector3(1, 1 + Mathf.Sin(time * 2) * .018f, 1);
@@ -195,7 +214,10 @@ namespace Rokas.Presentation
             }
         }
 
-        public void ClearReferences() { mame = null; weaponWard = null; objective = null; prepared = null; }
+        public void ClearReferences()
+        {
+            mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null;
+        }
     }
 
     public enum HomeActionGlyph

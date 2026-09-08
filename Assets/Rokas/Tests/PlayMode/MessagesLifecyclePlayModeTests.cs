@@ -59,13 +59,52 @@ namespace Rokas.Tests
             Press("MessagesContact_kaito");
             for (int frame = 0; frame < 12; frame++) yield return null;
 
-            ConversationState after = Bootstrap().Session.Messages.GetConversation("kaito");
-            CollectionAssert.AreEqual(idsBefore, MessageIds(after),
-                "reload must not append or reorder authored history while reconstructing the UI");
+            RokasBootstrap restoredBoot = Bootstrap();
+            ConversationState after = restoredBoot.Session.Messages.GetConversation("kaito");
+            string liveCoordinatesEventId = "live:kaito:coordinates:kaito_coordinates_attachment:bubble:1";
+            string[] idsAfter = MessageIds(after);
+            Assert.That(idsAfter.Length, Is.EqualTo(idsBefore.Length + 1),
+                "reload may append only the one persisted deterministic Kaito coordinate continuation");
+            for (int index = 0; index < idsBefore.Length; index++)
+                Assert.That(idsAfter[index], Is.EqualTo(idsBefore[index]),
+                    "reload must not append, reorder, or replace any pre-existing Yarn/dialogue entry at index " + index);
+            Assert.That(CountEvent(after, "kaito_intro_01"), Is.EqualTo(1));
+            Assert.That(CountEvent(after, "kaito_details_reply"), Is.EqualTo(1));
+            Assert.That(CountEvent(after, "kaito_anomaly_01"), Is.EqualTo(1));
+            Assert.That(CountEvent(after, "kaito_guild_details"), Is.EqualTo(1));
+            Assert.That(CountEvent(after, "kaito_coordinates_01"), Is.EqualTo(1));
+            Assert.That(CountEvent(after, "kaito_coordinates_attachment"), Is.EqualTo(1));
+            Assert.That(CountChoice(after, "kaito_choice_details"), Is.EqualTo(1));
+            Assert.That(CountChoice(after, "kaito_choice_guild"), Is.EqualTo(1));
+            Assert.That(after.completedDialogueIds, Does.Contain("Kaito_Start"),
+                "completed Yarn node must remain completed after recovery");
+            Assert.That(CountEvent(after, liveCoordinatesEventId), Is.EqualTo(1),
+                "pending Kaito coordinate continuation must recover exactly once");
+            MessageEntry continuation = FindEvent(after, liveCoordinatesEventId);
+            Assert.That(continuation, Is.Not.Null);
+            Assert.That(continuation.messageId, Is.EqualTo("msg-9"));
+            Assert.That(continuation.sequence, Is.EqualTo(9));
+            Assert.That(continuation.outgoing, Is.False, "recovered continuation must remain an incoming Kaito bubble");
+            Assert.That(continuation.chainId, Is.EqualTo("live:kaito:coordinates:kaito_coordinates_attachment"));
+            Assert.That(continuation.text,
+                Is.EqualTo("Если маркер сместится хотя бы на один сектор — не следуй за ним автоматически."));
             Assert.That(FindButton("MessagesChoice_kaito_choice_details"), Is.Null,
                 "a completed persisted dialogue must not expose its first choice set again");
             Assert.That(FindButton("MessagesChoice_kaito_choice_skeptic"), Is.Null,
                 "a completed persisted dialogue must not visually restart from Kaito_Start");
+
+            restoredBoot.SaveNow();
+            yield return DestroyAndRecreate();
+            for (int frame = 0; frame < 4; frame++) yield return null;
+
+            ConversationState afterSecondReload = Bootstrap().Session.Messages.GetConversation("kaito");
+            Assert.That(afterSecondReload.entries.Count, Is.EqualTo(idsBefore.Length + 1),
+                "a second reload must not append another Kaito coordinate continuation");
+            Assert.That(CountEvent(afterSecondReload, liveCoordinatesEventId), Is.EqualTo(1));
+            Assert.That(CountEvent(afterSecondReload, "kaito_coordinates_attachment"), Is.EqualTo(1));
+            Assert.That(CountChoice(afterSecondReload, "kaito_choice_details"), Is.EqualTo(1));
+            Assert.That(CountChoice(afterSecondReload, "kaito_choice_guild"), Is.EqualTo(1));
+            Assert.That(afterSecondReload.completedDialogueIds, Does.Contain("Kaito_Start"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -223,6 +262,29 @@ namespace Rokas.Tests
                 if (entry != null && string.Equals(entry.eventId, eventId, StringComparison.Ordinal)) count++;
             }
             return count;
+        }
+
+        private static int CountChoice(ConversationState conversation, string choiceId)
+        {
+            int count = 0;
+            if (conversation == null || conversation.entries == null) return count;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && string.Equals(entry.choiceId, choiceId, StringComparison.Ordinal)) count++;
+            }
+            return count;
+        }
+
+        private static MessageEntry FindEvent(ConversationState conversation, string eventId)
+        {
+            if (conversation == null || conversation.entries == null) return null;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && string.Equals(entry.eventId, eventId, StringComparison.Ordinal)) return entry;
+            }
+            return null;
         }
 
         private static string[] MessageIds(ConversationState conversation)
