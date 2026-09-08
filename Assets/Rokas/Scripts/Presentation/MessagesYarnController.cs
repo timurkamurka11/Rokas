@@ -61,7 +61,6 @@ namespace Rokas.Presentation
             try
             {
                 await dialogueRunner!.StartDialogue(nodeName);
-                messages.MarkDialogueCompleted(contactId, nodeName);
             }
             catch (Exception exception)
             {
