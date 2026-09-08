@@ -16,6 +16,7 @@ namespace Rokas.Core.Tests
                 GameSessionMessageEventTests.RunAll();
                 DialogueProgressionTests.RunAll();
                 HunterGuildFlowTests.RunAll();
+                YumikoFoodIntegrationTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }
