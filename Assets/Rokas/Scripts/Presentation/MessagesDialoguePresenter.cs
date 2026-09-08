@@ -72,9 +72,21 @@ namespace Rokas.Presentation
                 {
                     continue;
                 }
+                RequireStableId(option.Line.TextID, "choice");
+                available.Add(option);
+            }
+
+            DialogueOption? persisted = FindPersistedSelection(available);
+            if (persisted != null)
+            {
+                return persisted;
+            }
+
+            for (int index = 0; index < available.Count; index++)
+            {
+                DialogueOption option = available[index];
                 string stableId = RequireStableId(option.Line.TextID, "choice");
                 currentOptions.Add(new MessagesReplyOption(stableId, option.Line.Text.Text.Trim()));
-                available.Add(option);
             }
 
             pendingOptions = available.ToArray();
@@ -130,6 +142,29 @@ namespace Rokas.Presentation
             currentOptions.Clear();
             NotifyOptionsChanged();
             return YarnTask.CompletedTask;
+        }
+
+        private DialogueOption? FindPersistedSelection(List<DialogueOption> available)
+        {
+            ConversationState? conversation = messages!.GetConversation(contactId);
+            if (conversation == null || conversation.selectedChoiceIds == null || conversation.selectedChoiceIds.Count == 0)
+            {
+                return null;
+            }
+
+            for (int optionIndex = 0; optionIndex < available.Count; optionIndex++)
+            {
+                DialogueOption option = available[optionIndex];
+                string stableId = RequireStableId(option.Line.TextID, "choice");
+                for (int selectedIndex = 0; selectedIndex < conversation.selectedChoiceIds.Count; selectedIndex++)
+                {
+                    if (string.Equals(conversation.selectedChoiceIds[selectedIndex], stableId, StringComparison.Ordinal))
+                    {
+                        return option;
+                    }
+                }
+            }
+            return null;
         }
 
         private IEnumerator CompleteChoiceNextFrame(DialogueOption option, string stableId, string text, string branchState)
