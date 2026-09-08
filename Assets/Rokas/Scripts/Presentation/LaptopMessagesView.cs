@@ -195,7 +195,6 @@ namespace Rokas.Presentation
             conversationContent.anchorMin = new Vector2(0, 1);
             conversationContent.anchorMax = new Vector2(1, 1);
             conversationContent.pivot = new Vector2(.5f, 1);
-            contactScroll = contactScroll;
             conversationScroll.viewport = viewport;
             conversationScroll.content = conversationContent;
 
