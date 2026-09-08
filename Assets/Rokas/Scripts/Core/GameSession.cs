@@ -105,7 +105,20 @@ namespace Rokas.Core
 
         public bool ClaimPayment()
         {
-            return NotifyIf(economy.ClaimPayment(State, Contract));
+            if (!economy.ClaimPayment(State, Contract))
+            {
+                return false;
+            }
+
+            bool delivered = Messages.DeliverIncoming(
+                "guild-contract-completed:" + Contract.id + ":" + State.completedRuns,
+                "guild",
+                "Контракт закрыт. Награда перечислена.");
+            if (!delivered)
+            {
+                NotifyChanged();
+            }
+            return true;
         }
 
         public bool UpgradeWeapon()
