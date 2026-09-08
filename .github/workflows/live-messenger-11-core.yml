@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/live-messenger-11-core.yml
       - Tools/apply_live_messenger_11_core.py
+      - Tools/migrate_live_messenger_11_legacy_tests.py
 
 permissions:
   contents: write
@@ -24,6 +25,9 @@ jobs:
       - name: Apply Live Messenger 1.1 core patch
         run: python3 Tools/apply_live_messenger_11_core.py
 
+      - name: Migrate legacy Live Messenger assertions
+        run: python3 Tools/migrate_live_messenger_11_legacy_tests.py
+
       - name: Literal diff check
         run: git diff --check
 
@@ -38,6 +42,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- Assets/Rokas/Scripts/Core/MessageService.cs Assets/Rokas/Scripts/Core/LiveMessengerService.cs
+          git add -- Assets/Rokas/Scripts/Core/MessageService.cs Assets/Rokas/Scripts/Core/LiveMessengerService.cs Tests/Core/YumikoFoodIntegrationTests.cs
           git commit -m "fix: polish Live Messenger 1.1 core behavior"
           git push origin HEAD:feature/messages-system
