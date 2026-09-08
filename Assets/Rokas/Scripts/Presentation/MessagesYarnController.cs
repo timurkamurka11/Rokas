@@ -53,9 +53,15 @@ namespace Rokas.Presentation
             }
 
             SetDiagnostic(string.Empty);
+            if (messages!.IsDialogueCompleted(contactId, nodeName))
+            {
+                return;
+            }
+
             try
             {
                 await dialogueRunner!.StartDialogue(nodeName);
+                messages.MarkDialogueCompleted(contactId, nodeName);
             }
             catch (Exception exception)
             {
