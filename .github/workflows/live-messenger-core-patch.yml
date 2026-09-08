@@ -48,6 +48,7 @@ jobs:
             Assets/Rokas/Scripts/Core/GameSession.cs \
             Assets/Rokas/Scripts/Core/LiveMessengerService.cs \
             Assets/Rokas/Scripts/Core/LiveMessengerService.cs.meta \
-            Tests/Core/YumikoFoodIntegrationTests.cs
+            Tests/Core/YumikoFoodIntegrationTests.cs \
+            Tests/Core/ContractAttachmentActionTests.cs
           git commit -m "feat: add Live Messenger core foundation"
           git push origin HEAD:feature/messages-system
