@@ -225,6 +225,8 @@ namespace Rokas.Tests
             if (parent == null) return null;
             foreach (TextMeshProUGUI text in parent.GetComponentsInChildren<TextMeshProUGUI>(true))
                 if (text.name == childName) return text.text;
+            foreach (Text text in parent.GetComponentsInChildren<Text>(true))
+                if (text.name == childName) return text.text;
             return null;
         }
 
