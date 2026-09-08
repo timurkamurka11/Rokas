@@ -9,6 +9,7 @@ namespace Rokas.Core.Tests
         public static void RunAll()
         {
             CoordinateAttachmentActionActivatesExistingDestinationState();
+            UnknownCoordinateDestinationReturnsTypedDiagnostic();
         }
 
         private static void CoordinateAttachmentActionActivatesExistingDestinationState()
@@ -48,6 +49,34 @@ namespace Rokas.Core.Tests
                 "coordinate action must activate the authored east-b7 destination");
             Equal(1, conversation.entries.Count,
                 "activating coordinates must not create a duplicate message");
+        }
+
+        private static void UnknownCoordinateDestinationReturnsTypedDiagnostic()
+        {
+            SaveData state = new SaveData();
+            MessageService service = new MessageService(state);
+            MessageAttachment attachment = new MessageAttachment
+            {
+                kind = MessageAttachmentKind.Coordinates,
+                id = "bad-coordinate-attachment",
+                title = "Координаты",
+                body = "Неизвестный сектор",
+                targetId = "unknown-sector"
+            };
+
+            True(service.DeliverIncoming("evt-coordinate-unknown", "kaito", "Координаты", attachment),
+                "invalid coordinate target still arrives as authored message data");
+            ConversationState conversation = service.GetConversation("kaito");
+            MessageAttachmentActionResult result = service.ActivateAttachment("kaito", conversation.entries[0].messageId);
+
+            Equal("UnknownDestination", result.Status.ToString(),
+                "unknown coordinate target must return a distinct typed diagnostic");
+            Equal(false, result.Succeeded,
+                "unknown destination must never report fake coordinate-action success");
+            Equal(string.Empty, state.activeDestinationId,
+                "unknown destination must not mutate active game destination state");
+            Equal(1, conversation.entries.Count,
+                "failed coordinate action must not duplicate message history");
         }
 
         private static void True(bool actual, string message)
