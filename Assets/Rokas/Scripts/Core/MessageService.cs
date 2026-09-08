@@ -13,14 +13,26 @@ namespace Rokas.Core
     public enum MessageAttachmentActionStatus
     {
         Activated,
-        Failed
+        AlreadyActive,
+        MissingDestination,
+        UnknownDestination,
+        MessageNotFound,
+        MissingAttachment,
+        UnsupportedAttachment
     }
 
     public sealed class MessageAttachmentActionResult
     {
         public MessageAttachmentActionStatus Status { get; private set; }
         public string TargetId { get; private set; }
-        public bool Succeeded { get { return Status == MessageAttachmentActionStatus.Activated; } }
+        public bool Succeeded
+        {
+            get
+            {
+                return Status == MessageAttachmentActionStatus.Activated ||
+                    Status == MessageAttachmentActionStatus.AlreadyActive;
+            }
+        }
 
         public MessageAttachmentActionResult(MessageAttachmentActionStatus status, string targetId)
         {
@@ -91,6 +103,8 @@ namespace Rokas.Core
 
     public sealed class MessageService
     {
+        private const string EastB7DestinationId = "east-b7";
+
         private static readonly ContactDefinition[] Contacts =
         {
             new ContactDefinition("kaito", "Kaito", "Field Contact", "Messages/Portraits/Kaito", true),
@@ -140,6 +154,7 @@ namespace Rokas.Core
             {
                 state.messages = new MessageSaveData();
             }
+            state.activeDestinationId = state.activeDestinationId ?? string.Empty;
             data = state.messages;
             Normalize();
         }
@@ -279,28 +294,47 @@ namespace Rokas.Core
             ConversationState conversation = FindConversation(contactId);
             if (conversation == null || string.IsNullOrEmpty(messageId))
             {
-                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, string.Empty);
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MessageNotFound, string.Empty);
             }
 
             for (int index = 0; index < conversation.entries.Count; index++)
             {
                 MessageEntry entry = conversation.entries[index];
-                if (entry == null || !string.Equals(entry.messageId, messageId, StringComparison.Ordinal) || entry.attachment == null)
+                if (entry == null || !string.Equals(entry.messageId, messageId, StringComparison.Ordinal))
                 {
                     continue;
                 }
-                if (entry.attachment.kind != MessageAttachmentKind.Coordinates || string.IsNullOrEmpty(entry.attachment.targetId))
+                if (entry.attachment == null)
                 {
-                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, entry.attachment.targetId);
+                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MissingAttachment, string.Empty);
+                }
+                if (entry.attachment.kind != MessageAttachmentKind.Coordinates)
+                {
+                    return new MessageAttachmentActionResult(
+                        MessageAttachmentActionStatus.UnsupportedAttachment, entry.attachment.targetId);
                 }
 
-                state.activeDestinationId = entry.attachment.targetId;
+                string targetId = entry.attachment.targetId ?? string.Empty;
+                if (targetId.Length == 0)
+                {
+                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MissingDestination, string.Empty);
+                }
+                if (!IsKnownCoordinateDestination(targetId))
+                {
+                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.UnknownDestination, targetId);
+                }
+                if (entry.attachment.opened && string.Equals(state.activeDestinationId, targetId, StringComparison.Ordinal))
+                {
+                    return new MessageAttachmentActionResult(MessageAttachmentActionStatus.AlreadyActive, targetId);
+                }
+
+                state.activeDestinationId = targetId;
                 entry.attachment.opened = true;
                 NotifyChanged();
-                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, entry.attachment.targetId);
+                return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Activated, targetId);
             }
 
-            return new MessageAttachmentActionResult(MessageAttachmentActionStatus.Failed, string.Empty);
+            return new MessageAttachmentActionResult(MessageAttachmentActionStatus.MessageNotFound, string.Empty);
         }
 
         public bool MarkAttachmentOpened(string contactId, string messageId)
@@ -414,10 +448,22 @@ namespace Rokas.Core
                     entry.eventId = entry.eventId ?? string.Empty;
                     entry.text = entry.text ?? string.Empty;
                     entry.choiceId = entry.choiceId ?? string.Empty;
+                    if (entry.attachment != null)
+                    {
+                        entry.attachment.id = entry.attachment.id ?? string.Empty;
+                        entry.attachment.title = entry.attachment.title ?? string.Empty;
+                        entry.attachment.body = entry.attachment.body ?? string.Empty;
+                        entry.attachment.targetId = entry.attachment.targetId ?? string.Empty;
+                    }
                     highestSequence = Math.Max(highestSequence, entry.sequence);
                 }
             }
             data.nextSequence = highestSequence;
+        }
+
+        private static bool IsKnownCoordinateDestination(string targetId)
+        {
+            return string.Equals(targetId, EastB7DestinationId, StringComparison.Ordinal);
         }
 
         private static void Deduplicate(List<string> values)
