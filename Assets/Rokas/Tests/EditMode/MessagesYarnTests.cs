@@ -39,6 +39,7 @@ namespace Rokas.Core.Tests
                     presenter.SelectionPlan.Enqueue(1);
                     runner.DialoguePresenters = new[] { presenter };
                     runner.SetProject(project);
+                    RegisterProbeCommands(runner);
 
                     await runner.StartDialogue("Kaito_Start");
 
@@ -76,6 +77,7 @@ namespace Rokas.Core.Tests
                     presenter.SelectionPlan.Enqueue(0);
                     runner.DialoguePresenters = new[] { presenter };
                     runner.SetProject(project);
+                    RegisterProbeCommands(runner);
 
                     await runner.StartDialogue("Kaito_Start");
 
@@ -135,6 +137,13 @@ namespace Rokas.Core.Tests
                     UnityEngine.Object.DestroyImmediate(host);
                 }
             });
+        }
+
+        private static void RegisterProbeCommands(DialogueRunner runner)
+        {
+            runner.AddCommandHandler<string, string, string, string>(
+                "rokas_coordinates",
+                (eventId, title, body, targetId) => { });
         }
 
         private static YarnProject RequireProject()
