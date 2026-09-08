@@ -1,0 +1,33 @@
+name: Live Messenger 1.1 Asset Transfer Probe
+
+on:
+  push:
+    branches: [feature/messages-system]
+    paths:
+      - .github/workflows/live-messenger-11-assets.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Probe temporary user-asset share
+        env:
+          SHARE_URL: https://firestorage.ai/ja/f/6mLjVEeLVYvQ
+        run: |
+          python3 - <<'PY'
+          import os, re, requests
+          url = os.environ['SHARE_URL']
+          response = requests.get(url, timeout=30)
+          print('status', response.status_code, 'url', response.url, 'bytes', len(response.content))
+          print('content-type', response.headers.get('content-type'))
+          hrefs = re.findall(r'href=["\']([^"\']+)', response.text)
+          for href in hrefs:
+              if 'download' in href.lower() or '.zip' in href.lower() or '/api/' in href.lower():
+                  print('candidate', href)
+          print('html-head', response.text[:4000].replace('\n', ' '))
+          PY
