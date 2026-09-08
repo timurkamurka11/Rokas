@@ -13,6 +13,7 @@ namespace Rokas.Core.Tests
                 MessageDomainTests.RunAll();
                 CoordinateAttachmentActionTests.RunAll();
                 ContractAttachmentActionTests.RunAll();
+                GameSessionMessageEventTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }
