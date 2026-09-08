@@ -75,6 +75,7 @@ namespace Rokas.Core
         public int lastSequence;
         public string branchState = string.Empty;
         public List<string> selectedChoiceIds = new List<string>();
+        public List<string> completedDialogueIds = new List<string>();
         public List<MessageEntry> entries = new List<MessageEntry>();
     }
 
@@ -258,6 +259,35 @@ namespace Rokas.Core
         public ConversationState GetConversation(string contactId)
         {
             return FindConversation(contactId);
+        }
+
+        public bool IsDialogueCompleted(string contactId, string dialogueId)
+        {
+            if (!KnownContact(contactId) || string.IsNullOrEmpty(dialogueId))
+            {
+                return false;
+            }
+
+            ConversationState conversation = FindConversation(contactId);
+            return conversation != null && ContainsOrdinal(conversation.completedDialogueIds, dialogueId);
+        }
+
+        public bool MarkDialogueCompleted(string contactId, string dialogueId)
+        {
+            if (!KnownContact(contactId) || string.IsNullOrEmpty(dialogueId))
+            {
+                return false;
+            }
+
+            ConversationState conversation = EnsureConversation(contactId);
+            if (ContainsOrdinal(conversation.completedDialogueIds, dialogueId))
+            {
+                return false;
+            }
+
+            conversation.completedDialogueIds.Add(dialogueId);
+            NotifyChanged();
+            return true;
         }
 
         public List<ContactDefinition> SearchContacts(string query)
@@ -471,6 +501,10 @@ namespace Rokas.Core
                 {
                     conversation.selectedChoiceIds = new List<string>();
                 }
+                if (conversation.completedDialogueIds == null)
+                {
+                    conversation.completedDialogueIds = new List<string>();
+                }
                 if (conversation.branchState == null)
                 {
                     conversation.branchState = string.Empty;
@@ -480,6 +514,7 @@ namespace Rokas.Core
                     conversation.unreadCount = 0;
                 }
                 Deduplicate(conversation.selectedChoiceIds);
+                Deduplicate(conversation.completedDialogueIds);
                 highestSequence = Math.Max(highestSequence, conversation.lastSequence);
                 for (int entryIndex = conversation.entries.Count - 1; entryIndex >= 0; entryIndex--)
                 {
