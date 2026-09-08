@@ -39,6 +39,8 @@ namespace Rokas.Presentation
         private MessagesDialoguePresenter dialoguePresenter;
         private string query = string.Empty;
         private bool subscribed;
+        private bool refreshPending;
+        private bool refreshPreserveScroll = true;
 
         public LaptopMessagesView(UiKit ui, RokasAssets assets, GameSession session)
         {
@@ -107,11 +109,22 @@ namespace Rokas.Presentation
             contactScroll = null;
             conversationScroll = null;
             search = null;
+            refreshPending = false;
+            refreshPreserveScroll = true;
         }
 
         public void Tick(float dt)
         {
-            // Reserved for subtle presentation-only polish; no per-frame domain mutation.
+            if (!refreshPending || root == null)
+            {
+                return;
+            }
+
+            bool preserveScroll = refreshPreserveScroll;
+            refreshPending = false;
+            refreshPreserveScroll = true;
+            BuildContacts();
+            RefreshActiveContact(preserveScroll);
         }
 
         private void BuildSearch(RectTransform parent)
@@ -272,11 +285,10 @@ namespace Rokas.Presentation
 
             bool wasSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
             selected = contact;
-            bool changed = session.Messages.OpenConversation(contact.id);
-            if (!changed && !wasSelected)
+            session.Messages.OpenConversation(contact.id);
+            if (!wasSelected)
             {
-                BuildContacts();
-                RefreshActiveContact(false);
+                QueueRefresh(false);
             }
             EnsureDialogueForSelectedContact();
         }
@@ -453,13 +465,29 @@ namespace Rokas.Presentation
             if (selected != null)
             {
                 ConversationState active = session.Messages.GetConversation(selected.id);
-                if (active != null && active.unreadCount > 0 && session.Messages.OpenConversation(selected.id))
+                if (active != null && active.unreadCount > 0)
                 {
-                    return;
+                    session.Messages.OpenConversation(selected.id);
                 }
             }
-            BuildContacts();
-            RefreshActiveContact(true);
+            QueueRefresh(true);
+        }
+
+        private void QueueRefresh(bool preserveScroll)
+        {
+            if (root == null)
+            {
+                return;
+            }
+            if (!refreshPending)
+            {
+                refreshPreserveScroll = preserveScroll;
+            }
+            else
+            {
+                refreshPreserveScroll &= preserveScroll;
+            }
+            refreshPending = true;
         }
 
         private void OnSearchChanged(string value)
