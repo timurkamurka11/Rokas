@@ -2,7 +2,9 @@
   "name": "Rokas.Core.EditModeTests",
   "rootNamespace": "Rokas.Core.Tests",
   "references": [
-    "Rokas.Core"
+    "Rokas.Core",
+    "Rokas.Presentation",
+    "YarnSpinner.Unity"
   ],
   "includePlatforms": [
     "Editor"

@@ -53,9 +53,13 @@ for path in list((ROOT / 'Assets').rglob('*.asmdef')) + list((ROOT / 'Assets').r
         errors.append('Invalid JSON: ' + str(path.relative_to(ROOT)) + ': ' + str(exc))
 
 # Unity package imports still require the Editor. Check local assembly boundaries and
-# the explicitly declared uGUI dependency here so a misspelled reference cannot pass as JSON.
+# explicitly declared package assemblies here so a misspelled reference cannot pass as JSON.
 dependencies = json.loads((ROOT / 'Packages/manifest.json').read_text()).get('dependencies', {})
-external_assemblies = {'UnityEngine.UI'} if 'com.unity.ugui' in dependencies else set()
+external_assemblies = set()
+if 'com.unity.ugui' in dependencies:
+    external_assemblies.add('UnityEngine.UI')
+if 'dev.yarnspinner.unity' in dependencies:
+    external_assemblies.add('YarnSpinner.Unity')
 for name, data in assemblies.items():
     for reference in data.get('references', []):
         if reference not in assemblies and reference not in external_assemblies:
