@@ -31,6 +31,7 @@ namespace Rokas.Presentation
         private readonly MissionView mission;
         private readonly ContractPanels contracts;
         private readonly LaptopView laptop;
+        private readonly MessagesNotificationView messageNotifications;
         private RunPhase phase;
         private string panel;
         private bool transition;
@@ -82,6 +83,7 @@ namespace Rokas.Presentation
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel);
+            messageNotifications = new MessagesNotificationView(ui, stage, session);
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             phase = session.State.phase;
@@ -263,6 +265,7 @@ namespace Rokas.Presentation
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
             }
+            messageNotifications.Tick(dt);
             if (toastTime > 0)
             {
                 toastTime -= dt;
@@ -286,6 +289,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            messageNotifications.Dispose();
             session.Changed -= Refresh;
             session.Combat.Hit -= OnHit;
         }
