@@ -10,6 +10,7 @@ on:
       - Tools/apply_live_messenger_core_fix.py
       - Tools/apply_live_messenger_hunter_guild_test_fix.py
       - Tools/apply_live_messenger_yumiko_purchase_test_fix.py
+      - Tools/apply_live_messenger_context_fix.py
 
 permissions:
   contents: write
@@ -31,6 +32,7 @@ jobs:
           python3 Tools/apply_live_messenger_core_fix.py
           python3 Tools/apply_live_messenger_hunter_guild_test_fix.py
           python3 Tools/apply_live_messenger_yumiko_purchase_test_fix.py
+          python3 Tools/apply_live_messenger_context_fix.py
 
       - name: Literal diff check
         run: git diff --check
