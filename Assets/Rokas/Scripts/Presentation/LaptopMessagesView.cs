@@ -285,6 +285,10 @@ namespace Rokas.Presentation
 
             bool wasSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
             selected = contact;
+            if (string.Equals(contact.id, "guild", StringComparison.Ordinal))
+            {
+                session.EnsureGuildContractOffer();
+            }
             session.Messages.OpenConversation(contact.id);
             if (!wasSelected)
             {
@@ -373,9 +377,11 @@ namespace Rokas.Presentation
                     width - 108, height - 23, 88, 17, 10, Soft, TextAlignmentOptions.MidlineRight);
                 y += height + 14;
 
-                if (entry.attachment != null && entry.attachment.kind == MessageAttachmentKind.Coordinates)
+                if (entry.attachment != null &&
+                    (entry.attachment.kind == MessageAttachmentKind.Coordinates ||
+                     entry.attachment.kind == MessageAttachmentKind.Contract))
                 {
-                    y = BuildCoordinateAttachment(entry, y);
+                    y = BuildActionAttachment(entry, y);
                 }
             }
 
@@ -388,7 +394,7 @@ namespace Rokas.Presentation
             }
         }
 
-        private float BuildCoordinateAttachment(MessageEntry entry, float y)
+        private float BuildActionAttachment(MessageEntry entry, float y)
         {
             MessageAttachment attachment = entry != null ? entry.attachment : null;
             if (attachment == null || string.IsNullOrEmpty(attachment.id) || string.IsNullOrEmpty(entry.messageId))
@@ -403,15 +409,19 @@ namespace Rokas.Presentation
             Button button = card.gameObject.AddComponent<Button>();
             button.name = "MessagesAttachment_" + attachment.id;
             StyleButton(button, card);
+            button.interactable = !attachment.opened;
             string contactId = selected.id;
             string messageId = entry.messageId;
-            button.onClick.AddListener(() => ActivateCoordinateAttachment(contactId, messageId));
+            button.onClick.AddListener(() => ActivateAttachment(contactId, messageId));
             ui.Box(card.transform, "AttachmentAccent", 0, 0, 5, height, new Color(Cyan.r, Cyan.g, Cyan.b, .82f));
 
-            Texture2D icon = Resources.Load<Texture2D>("Messages/Icons/CoordinateAttachment");
-            if (icon != null)
+            if (attachment.kind == MessageAttachmentKind.Coordinates)
             {
-                ui.Art(card.transform, "CoordinateAttachmentIcon", icon, 18, 24, 64, 64);
+                Texture2D icon = Resources.Load<Texture2D>("Messages/Icons/CoordinateAttachment");
+                if (icon != null)
+                {
+                    ui.Art(card.transform, "CoordinateAttachmentIcon", icon, 18, 24, 64, 64);
+                }
             }
 
             TmpLabel(card.transform, "AttachmentTitle", attachment.title ?? string.Empty,
@@ -421,7 +431,7 @@ namespace Rokas.Presentation
             return y + height + 14;
         }
 
-        private void ActivateCoordinateAttachment(string contactId, string messageId)
+        private void ActivateAttachment(string contactId, string messageId)
         {
             if (string.IsNullOrEmpty(contactId) || string.IsNullOrEmpty(messageId))
             {
