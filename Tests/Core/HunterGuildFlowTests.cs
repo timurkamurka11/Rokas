@@ -37,12 +37,20 @@ namespace Rokas.Core.Tests
             Equal(AcceptedText, followUp.text, "acceptance follow-up must use authored player-facing copy");
             Equal(false, followUp.outgoing, "Guild acceptance follow-up must be incoming");
             Equal(1, guild.unreadCount, "new acceptance follow-up must increment Guild unread once");
-            Equal(1, session.Messages.TotalUnread, "new acceptance follow-up must increment total unread once");
+
+            ConversationState yumiko = session.Messages.GetConversation("yumiko");
+            Equal(2, yumiko.entries.Count, "same acceptance must create one Yumiko recommendation plus one gift");
+            Equal(2, yumiko.unreadCount, "inactive Yumiko contact must keep its two authored acceptance events unread");
+            Equal(3, session.Messages.TotalUnread,
+                "total unread must combine one Guild follow-up with two isolated Yumiko events");
 
             MessageAttachmentActionResult repeated = session.Messages.ActivateAttachment("guild", offer.messageId);
             Equal(MessageAttachmentActionStatus.AlreadyActive, repeated.Status, "repeated card activation remains deterministic");
             Equal(2, guild.entries.Count, "repeated activation must not duplicate the acceptance follow-up");
-            Equal(1, guild.unreadCount, "repeated activation must not increment unread");
+            Equal(1, guild.unreadCount, "repeated activation must not increment Guild unread");
+            Equal(2, yumiko.entries.Count, "repeated activation must not duplicate Yumiko history");
+            Equal(2, yumiko.unreadCount, "repeated activation must not increment Yumiko unread");
+            Equal(3, session.Messages.TotalUnread, "repeated activation must not increment total unread");
         }
 
         private static void AcceptanceFollowUpSurvivesSaveLoad()
@@ -65,6 +73,7 @@ namespace Rokas.Core.Tests
 
                 GameSession restored = new GameSession(loaded.Data, new ContractDefinition());
                 ConversationState guild = restored.Messages.GetConversation("guild");
+                ConversationState yumiko = restored.Messages.GetConversation("yumiko");
                 Equal(2, guild.entries.Count, "reload must preserve offer plus one acceptance follow-up");
                 MessageEntry restoredOffer = FindContractOffer(guild);
                 Equal(true, restoredOffer.attachment.opened, "consumed Guild card must remain consumed after reload");
@@ -72,13 +81,17 @@ namespace Rokas.Core.Tests
                     "reload must preserve deterministic acceptance event identity");
                 Equal(AcceptedText, guild.entries[1].text, "reload must preserve acceptance copy");
                 Equal(1, guild.unreadCount, "acceptance unread state must survive reload");
+                Equal(2, yumiko.entries.Count, "reload must preserve Yumiko recommendation plus gift exactly once");
+                Equal(2, yumiko.unreadCount, "Yumiko unread state must survive reload independently");
 
                 Equal(false, restored.EnsureGuildContractOffer(), "reload must not redeliver the deterministic offer");
                 Equal(MessageAttachmentActionStatus.AlreadyActive,
                     restored.Messages.ActivateAttachment("guild", restoredOffer.messageId).Status,
                     "reload click on consumed card must remain a no-op");
                 Equal(2, guild.entries.Count, "reload/repeated processing must not duplicate Guild history");
-                Equal(1, guild.unreadCount, "reload/repeated processing must not increment unread");
+                Equal(1, guild.unreadCount, "reload/repeated processing must not increment Guild unread");
+                Equal(2, yumiko.entries.Count, "reload/repeated processing must not duplicate Yumiko history");
+                Equal(2, yumiko.unreadCount, "reload/repeated processing must not increment Yumiko unread");
             }
             finally
             {
