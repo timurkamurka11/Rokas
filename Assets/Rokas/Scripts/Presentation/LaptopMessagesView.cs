@@ -409,13 +409,12 @@ namespace Rokas.Presentation
             {
                 return;
             }
-            tmpFont = TMP_FontAsset.CreateFontAsset(assets.sans);
+            tmpFont = Resources.Load<TMP_FontAsset>("RokasSans TMP");
             if (tmpFont == null)
             {
-                throw new InvalidOperationException("ROKAS Messages could not create a TMP font asset from RokasSans.");
+                throw new InvalidOperationException(
+                    "ROKAS Messages requires the persistent TMP font asset at Assets/Rokas/Resources/RokasSans TMP.asset.");
             }
-            tmpFont.name = "ROKAS Messages Runtime TMP";
-            tmpFont.atlasPopulationMode = AtlasPopulationMode.Dynamic;
         }
 
         private TextMeshProUGUI TmpLabel(Transform parent, string name, string value, float x, float y, float w, float h,
