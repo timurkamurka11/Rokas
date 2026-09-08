@@ -452,7 +452,7 @@ namespace Rokas.Presentation
         {
             if (root != null && selected != null && string.Equals(selected.id, "kaito", StringComparison.Ordinal))
             {
-                BuildConversation(true);
+                QueueRefresh(true);
             }
         }
 
