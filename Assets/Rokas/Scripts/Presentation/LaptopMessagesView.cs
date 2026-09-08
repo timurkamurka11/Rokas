@@ -439,7 +439,7 @@ namespace Rokas.Presentation
                 Button button = face.gameObject.AddComponent<Button>();
                 button.name = "MessagesChoice_" + choiceId;
                 StyleButton(button, face);
-                button.onClick.AddListener(() => SubmitDialogueChoice(choiceId));
+                button.onClick.AddListener(() => SubmitDialogueChoice(button, choiceId));
                 TmpLabel(face.transform, "ChoiceText", option.text, 18, 8, 1006, 42, 16, White,
                     TextAlignmentOptions.MidlineLeft);
                 y += 66;
@@ -470,13 +470,18 @@ namespace Rokas.Presentation
             _ = yarnController.StartDialogue("Kaito_Start");
         }
 
-        private void SubmitDialogueChoice(string choiceId)
+        private void SubmitDialogueChoice(Button button, string choiceId)
         {
-            if (yarnController == null || string.IsNullOrEmpty(choiceId))
+            if (yarnController == null || button == null || string.IsNullOrEmpty(choiceId))
             {
                 return;
             }
-            yarnController.SubmitChoice(choiceId);
+            if (!yarnController.SubmitChoice(choiceId))
+            {
+                return;
+            }
+            button.interactable = false;
+            button.name = "MessagesChoiceConsumed_" + choiceId;
         }
 
         private void HandleDialogueOptionsChanged()
