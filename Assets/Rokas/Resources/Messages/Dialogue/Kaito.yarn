@@ -1,0 +1,26 @@
+title: Kaito_Start
+---
+<<declare $kaitoApproach = "unset">>
+Kaito: Нужно обсудить то, что я видел сегодня ночью. #line:kaito_intro_01
+-> Что именно ты видел? #line:kaito_choice_details
+    <<set $kaitoApproach = "details">>
+    Kaito: Ты правильно спрашиваешь. Я видел след, которого там быть не должно. #line:kaito_details_reply
+-> Ты уверен, что это не обычный ёкай? #line:kaito_choice_skeptic
+    <<set $kaitoApproach = "skeptic">>
+    Kaito: Я проверил дважды. Обычный ёкай не оставляет такой след. #line:kaito_skeptic_reply
+Kaito: Похоже, в восточном районе появилась нестабильная аномалия. Это не обычный ёкай. #line:kaito_anomaly_01
+-> Я пойду прямо в сектор B-7. #line:kaito_choice_direct
+    <<if $kaitoApproach == "skeptic">>
+        Kaito: Тогда держи дистанцию, пока не поймёшь, с чем столкнулся. #line:kaito_direct_skeptic
+    <<else>>
+        Kaito: Не спеши входить в очаг. Сначала осмотри периметр. #line:kaito_direct_details
+    <<endif>>
+-> Сначала проверю сведения Гильдии. #line:kaito_choice_guild
+    <<if $kaitoApproach == "details">>
+        Kaito: Хорошо. Сверь мои наблюдения с их последними отчётами. #line:kaito_guild_details
+    <<else>>
+        Kaito: Разумно. Если сомневаешься, подтверждение Гильдии не помешает. #line:kaito_guild_skeptic
+    <<endif>>
+Kaito: Я отправляю тебе координаты. Будь осторожен. #line:kaito_coordinates_01
+<<rokas_coordinates "kaito_coordinates_attachment" "Координаты" "Восточный район, Сектор B-7" "east-b7">>
+===

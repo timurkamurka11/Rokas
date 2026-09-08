@@ -101,6 +101,42 @@ namespace Rokas.Core.Tests
             Assert.That(controllerType.GetMethod("StartDialogue"), Is.Not.Null, "controller must own validated dialogue startup");
         }
 
+        [UnityTest]
+        public IEnumerator ProductionControllerRejectsMissingNodeWithVisibleIdentity()
+        {
+            return YarnTask.ToCoroutine(async () =>
+            {
+                YarnProject project = RequireProject();
+                GameObject host = new GameObject("Messages Yarn Missing Node Test");
+                try
+                {
+                    DialogueRunner runner = host.AddComponent<DialogueRunner>();
+                    Rokas.Presentation.MessagesDialoguePresenter presenter = host.AddComponent<Rokas.Presentation.MessagesDialoguePresenter>();
+                    Rokas.Presentation.MessagesYarnController controller = host.AddComponent<Rokas.Presentation.MessagesYarnController>();
+                    controller.Configure(new MessageService(new SaveData()), project, runner, presenter, "kaito");
+
+                    InvalidOperationException failure = null;
+                    try
+                    {
+                        await controller.StartDialogue("Missing_Node");
+                    }
+                    catch (InvalidOperationException exception)
+                    {
+                        failure = exception;
+                    }
+
+                    Assert.That(failure, Is.Not.Null, "missing node must fail instead of returning fake success");
+                    Assert.That(controller.LastError, Does.Contain("kaito"));
+                    Assert.That(controller.LastError, Does.Contain("Missing_Node"));
+                    Assert.That(controller.LastError, Does.Contain("not found"));
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(host);
+                }
+            });
+        }
+
         private static YarnProject RequireProject()
         {
             YarnProject project = AssetDatabase.LoadAssetAtPath<YarnProject>(ProjectPath);
