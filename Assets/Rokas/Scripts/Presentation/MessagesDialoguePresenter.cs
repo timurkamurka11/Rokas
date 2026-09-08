@@ -161,7 +161,8 @@ namespace Rokas.Presentation
             {
                 throw new InvalidOperationException("Messages Yarn " + kind + " is missing an explicit stable #line id.");
             }
-            return value;
+            const string prefix = "line:";
+            return value.StartsWith(prefix, StringComparison.Ordinal) ? value.Substring(prefix.Length) : value;
         }
 
         private static string ExtractLineText(LocalizedLine line)

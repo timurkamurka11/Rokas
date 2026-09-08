@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Yarn.Unity;
 
 namespace Rokas.Presentation
 {
@@ -33,6 +34,9 @@ namespace Rokas.Presentation
         private TMP_InputField search;
         private TMP_FontAsset tmpFont;
         private ContactDefinition selected;
+        private GameObject dialogueHost;
+        private MessagesYarnController yarnController;
+        private MessagesDialoguePresenter dialoguePresenter;
         private string query = string.Empty;
         private bool subscribed;
 
@@ -72,6 +76,7 @@ namespace Rokas.Presentation
 
             BuildContacts();
             RefreshActiveContact(false);
+            EnsureDialogueForSelectedContact();
         }
 
         public void Hide()
@@ -85,6 +90,17 @@ namespace Rokas.Presentation
             {
                 search.onValueChanged.RemoveListener(OnSearchChanged);
             }
+            if (dialoguePresenter != null)
+            {
+                dialoguePresenter.OptionsChanged -= HandleDialogueOptionsChanged;
+            }
+            if (dialogueHost != null)
+            {
+                UnityEngine.Object.Destroy(dialogueHost);
+            }
+            dialogueHost = null;
+            yarnController = null;
+            dialoguePresenter = null;
             root = null;
             contactContent = null;
             conversationContent = null;
@@ -260,6 +276,7 @@ namespace Rokas.Presentation
                 BuildContacts();
                 RefreshActiveContact(false);
             }
+            EnsureDialogueForSelectedContact();
         }
 
         private void RefreshActiveContact(bool preserveScroll)
@@ -343,11 +360,85 @@ namespace Rokas.Presentation
                 y += height + 14;
             }
 
+            BuildDialogueChoices(ref y);
             conversationContent.sizeDelta = new Vector2(0, Mathf.Max(538, y + 10));
             Canvas.ForceUpdateCanvases();
             if (conversationScroll != null)
             {
                 conversationScroll.verticalNormalizedPosition = wasBottom ? 0 : previous;
+            }
+        }
+
+        private void BuildDialogueChoices(ref float y)
+        {
+            if (selected == null || !string.Equals(selected.id, "kaito", StringComparison.Ordinal) || dialoguePresenter == null)
+            {
+                return;
+            }
+            IReadOnlyList<MessagesReplyOption> options = dialoguePresenter.CurrentOptions;
+            if (options == null || options.Count == 0)
+            {
+                return;
+            }
+
+            y += 4;
+            TmpLabel(conversationContent, "MessagesChoicesCaption", "ВЫБЕРИТЕ ОТВЕТ", 26, y, 1042, 24, 12, Soft,
+                TextAlignmentOptions.MidlineLeft);
+            y += 30;
+            for (int index = 0; index < options.Count; index++)
+            {
+                MessagesReplyOption option = options[index];
+                string choiceId = option.choiceId;
+                LaptopSurface face = Surface(conversationContent, "MessagesChoiceFace_" + choiceId,
+                    26, y, 1042, 58, 14, new Color(.035f, .14f, .18f, .98f), true);
+                Button button = face.gameObject.AddComponent<Button>();
+                button.name = "MessagesChoice_" + choiceId;
+                StyleButton(button, face);
+                button.onClick.AddListener(() => SubmitDialogueChoice(choiceId));
+                TmpLabel(face.transform, "ChoiceText", option.text, 18, 8, 1006, 42, 16, White,
+                    TextAlignmentOptions.MidlineLeft);
+                y += 66;
+            }
+        }
+
+        private void EnsureDialogueForSelectedContact()
+        {
+            if (root == null || selected == null || !string.Equals(selected.id, "kaito", StringComparison.Ordinal) || yarnController != null)
+            {
+                return;
+            }
+
+            YarnProject project = Resources.Load<YarnProject>("Messages/Dialogue/ROKASMessages");
+            if (project == null)
+            {
+                throw new InvalidOperationException(
+                    "ROKAS Messages requires Assets/Rokas/Resources/Messages/Dialogue/ROKASMessages.yarnproject.");
+            }
+
+            dialogueHost = new GameObject("MessagesKaitoDialogue");
+            dialogueHost.transform.SetParent(root, false);
+            DialogueRunner runner = dialogueHost.AddComponent<DialogueRunner>();
+            dialoguePresenter = dialogueHost.AddComponent<MessagesDialoguePresenter>();
+            yarnController = dialogueHost.AddComponent<MessagesYarnController>();
+            dialoguePresenter.OptionsChanged += HandleDialogueOptionsChanged;
+            yarnController.Configure(session.Messages, project, runner, dialoguePresenter, "kaito");
+            _ = yarnController.StartDialogue("Kaito_Start");
+        }
+
+        private void SubmitDialogueChoice(string choiceId)
+        {
+            if (yarnController == null || string.IsNullOrEmpty(choiceId))
+            {
+                return;
+            }
+            yarnController.SubmitChoice(choiceId);
+        }
+
+        private void HandleDialogueOptionsChanged()
+        {
+            if (root != null && selected != null && string.Equals(selected.id, "kaito", StringComparison.Ordinal))
+            {
+                BuildConversation(true);
             }
         }
 
