@@ -18,6 +18,7 @@ namespace Rokas.Core.Tests
                 HunterGuildFlowTests.RunAll();
                 YumikoFoodIntegrationTests.RunAll();
                 LiveMessengerCoreTests.RunAll();
+                LiveMessengerPolishCoreTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }
