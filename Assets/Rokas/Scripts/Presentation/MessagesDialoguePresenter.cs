@@ -144,6 +144,12 @@ namespace Rokas.Presentation
             return YarnTask.CompletedTask;
         }
 
+        public override void OnNodeExit(string nodeName)
+        {
+            EnsureBound();
+            messages!.MarkDialogueCompleted(contactId, nodeName);
+        }
+
         private DialogueOption? FindPersistedSelection(List<DialogueOption> available)
         {
             ConversationState? conversation = messages!.GetConversation(contactId);
