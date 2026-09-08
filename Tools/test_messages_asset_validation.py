@@ -68,6 +68,17 @@ class MessagesAssetValidationTests(unittest.TestCase):
             96, 96, 6, VALID_SPRITE_META)
         self.assertEqual(['Background below HD: SomeBackground.png'], errors)
 
+    def test_ugui_declares_textmeshpro_assembly(self):
+        module = load_helper()
+        assemblies = module.declared_external_assemblies({'com.unity.ugui': '2.0.0'})
+        self.assertIn('UnityEngine.UI', assemblies)
+        self.assertIn('Unity.TextMeshPro', assemblies)
+
+    def test_textmeshpro_is_not_accepted_without_ugui(self):
+        module = load_helper()
+        assemblies = module.declared_external_assemblies({})
+        self.assertNotIn('Unity.TextMeshPro', assemblies)
+
 
 if __name__ == '__main__':
     unittest.main()

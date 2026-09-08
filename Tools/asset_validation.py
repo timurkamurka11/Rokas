@@ -18,6 +18,16 @@ def _meta_int(meta_text, field):
     return int(match.group(1)) if match else None
 
 
+def declared_external_assemblies(dependencies):
+    """Return package assemblies that are justified by the declared Unity dependencies."""
+    assemblies = set()
+    if 'com.unity.ugui' in dependencies:
+        assemblies.update(('UnityEngine.UI', 'Unity.TextMeshPro'))
+    if 'dev.yarnspinner.unity' in dependencies:
+        assemblies.add('YarnSpinner.Unity')
+    return assemblies
+
+
 def validate_png_asset(path, width, height, color_type, meta_text):
     """Return validation errors for one already-signature-checked PNG."""
     path = Path(path)

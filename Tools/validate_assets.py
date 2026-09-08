@@ -6,7 +6,7 @@ import struct
 import sys
 import wave
 
-from asset_validation import validate_png_asset
+from asset_validation import declared_external_assemblies, validate_png_asset
 
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
@@ -55,11 +55,7 @@ for path in list((ROOT / 'Assets').rglob('*.asmdef')) + list((ROOT / 'Assets').r
 # Unity package imports still require the Editor. Check local assembly boundaries and
 # explicitly declared package assemblies here so a misspelled reference cannot pass as JSON.
 dependencies = json.loads((ROOT / 'Packages/manifest.json').read_text()).get('dependencies', {})
-external_assemblies = set()
-if 'com.unity.ugui' in dependencies:
-    external_assemblies.add('UnityEngine.UI')
-if 'dev.yarnspinner.unity' in dependencies:
-    external_assemblies.add('YarnSpinner.Unity')
+external_assemblies = declared_external_assemblies(dependencies)
 for name, data in assemblies.items():
     for reference in data.get('references', []):
         if reference not in assemblies and reference not in external_assemblies:
