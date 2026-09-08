@@ -17,7 +17,8 @@ namespace Rokas.Editor
         private const string CanonicalSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
         private const string FontPath = "Assets/Rokas/Resources/RokasSans TMP.asset";
         private const string SourceFontPath = "Assets/Rokas/Art/UI/Fonts/RokasSans.ttf";
-        private const string CyrillicProbe = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя ПОИСК Имя или роль Сообщения Назад В сети Не в сети";
+        private const string RussianAlphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+        private const string CyrillicProbe = RussianAlphabet + " ПОИСК Имя или роль Сообщения Назад В сети Не в сети";
 
         static RokasTmpAssetGenerator()
         {
@@ -51,7 +52,7 @@ namespace Rokas.Editor
             }
 
             TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-            if (font == null || font.atlasPopulationMode != AtlasPopulationMode.Static || font.atlasWidth != 1024 || !HasRequiredCharacters(font))
+            if (font == null || font.atlasPopulationMode != AtlasPopulationMode.Static || font.atlasWidth != 512 || !HasRequiredCharacters(font))
             {
                 if (font != null)
                 {
@@ -100,11 +101,11 @@ namespace Rokas.Editor
 
             TMP_FontAsset font = TMP_FontAsset.CreateFontAsset(
                 source,
-                48,
-                6,
+                32,
+                4,
                 GlyphRenderMode.SDFAA,
-                1024,
-                1024,
+                512,
+                512,
                 AtlasPopulationMode.Dynamic,
                 true);
             if (font == null || font.material == null || font.atlasTextures == null || font.atlasTextures.Length == 0 || font.atlasTextures[0] == null)
@@ -166,15 +167,12 @@ namespace Rokas.Editor
 
         private static string BuildProductionGlyphSet()
         {
-            var builder = new StringBuilder(384);
+            var builder = new StringBuilder(192);
             for (int codePoint = 0x20; codePoint <= 0x7E; codePoint++)
             {
                 builder.Append((char)codePoint);
             }
-            for (int codePoint = 0x0400; codePoint <= 0x04FF; codePoint++)
-            {
-                builder.Append((char)codePoint);
-            }
+            builder.Append(RussianAlphabet);
             builder.Append("–—…„“”’№₽");
             return builder.ToString();
         }
