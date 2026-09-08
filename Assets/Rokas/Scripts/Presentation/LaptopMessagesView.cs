@@ -195,6 +195,7 @@ namespace Rokas.Presentation
             conversationContent.anchorMin = new Vector2(0, 1);
             conversationContent.anchorMax = new Vector2(1, 1);
             conversationContent.pivot = new Vector2(.5f, 1);
+            contactScroll = contactScroll;
             conversationScroll.viewport = viewport;
             conversationScroll.content = conversationContent;
 
@@ -372,6 +373,11 @@ namespace Rokas.Presentation
                 TmpLabel(bubble.transform, "MessageSequence", entry.sequence > 0 ? "#" + entry.sequence.ToString("000") : string.Empty,
                     width - 108, height - 23, 88, 17, 10, Soft, TextAlignmentOptions.MidlineRight);
                 y += height + 14;
+
+                if (entry.attachment != null && entry.attachment.kind == MessageAttachmentKind.Coordinates)
+                {
+                    y = BuildCoordinateAttachment(entry.attachment, y);
+                }
             }
 
             BuildDialogueChoices(ref y);
@@ -381,6 +387,32 @@ namespace Rokas.Presentation
             {
                 conversationScroll.verticalNormalizedPosition = wasBottom ? 0 : previous;
             }
+        }
+
+        private float BuildCoordinateAttachment(MessageAttachment attachment, float y)
+        {
+            if (attachment == null || string.IsNullOrEmpty(attachment.id))
+            {
+                return y;
+            }
+
+            const float width = 720;
+            const float height = 112;
+            LaptopSurface card = Surface(conversationContent, "MessagesAttachment_" + attachment.id,
+                26, y, width, height, 16, new Color(.025f, .12f, .16f, .98f));
+            ui.Box(card.transform, "AttachmentAccent", 0, 0, 5, height, new Color(Cyan.r, Cyan.g, Cyan.b, .82f));
+
+            Texture2D icon = Resources.Load<Texture2D>("Messages/Icons/CoordinateAttachment");
+            if (icon != null)
+            {
+                ui.Art(card.transform, "CoordinateAttachmentIcon", icon, 18, 24, 64, 64);
+            }
+
+            TmpLabel(card.transform, "AttachmentTitle", attachment.title ?? string.Empty,
+                102, 16, 586, 32, 19, White, TextAlignmentOptions.MidlineLeft);
+            TmpLabel(card.transform, "AttachmentBody", attachment.body ?? string.Empty,
+                102, 50, 586, 38, 16, Soft, TextAlignmentOptions.MidlineLeft);
+            return y + height + 14;
         }
 
         private void BuildDialogueChoices(ref float y)
