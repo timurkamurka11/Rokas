@@ -160,7 +160,8 @@ namespace Rokas.Editor
             {
                 return false;
             }
-            return font.HasCharacters(CyrillicProbe, out uint[] missing, false, false) && missing.Length == 0;
+            bool hasCharacters = font.HasCharacters(CyrillicProbe, out uint[] missing, false, false);
+            return hasCharacters && (missing == null || missing.Length == 0);
         }
 
         private static string BuildProductionGlyphSet()
