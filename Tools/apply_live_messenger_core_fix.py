@@ -22,3 +22,6 @@ if helper_anchor not in contract:
     raise SystemExit("Expected ContractAttachmentActionTests helper anchor was not found")
 contract_path.write_text(contract.replace(helper_anchor, helper, 1), encoding="utf-8")
 print("Updated stale contract reload count while preserving exactly-once event checks")
+
+message_events_path = Path("Tests/Core/GameSessionMessageEventTests.cs")
+events = message_events_path.read_text(encoding="utf-8")n
