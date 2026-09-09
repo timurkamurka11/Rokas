@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/live-messenger-11-presentation.yml
       - Tools/apply_live_messenger_11_presentation.py
+      - Tools/migrate_live_messenger_11_playmode_tests.py
 
 permissions:
   contents: write
@@ -24,6 +25,9 @@ jobs:
 
       - name: Apply Live Messenger 1.1 presentation patch
         run: python3 Tools/apply_live_messenger_11_presentation.py
+
+      - name: Migrate Live Messenger 1.0 PlayMode reaction assertions
+        run: python3 Tools/migrate_live_messenger_11_playmode_tests.py
 
       - name: Literal diff check
         run: git diff --check
@@ -64,6 +68,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- Assets/Rokas/Scripts/Presentation/RokasAudio.cs Assets/Rokas/Scripts/Presentation/RokasView.cs Assets/Rokas/Scripts/Presentation/HomeView.cs Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs Assets/Rokas/Tests/EditMode/MessagesYarnTests.cs
+          git add -- Assets/Rokas/Scripts/Presentation/RokasAudio.cs Assets/Rokas/Scripts/Presentation/RokasView.cs Assets/Rokas/Scripts/Presentation/HomeView.cs Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs Assets/Rokas/Tests/EditMode/MessagesYarnTests.cs Assets/Rokas/Tests/PlayMode/LiveMessengerPlayModeTests.cs
           git commit -m "feat: polish Live Messenger 1.1 reactions audio and unread glow"
           git push origin HEAD:feature/messages-system
