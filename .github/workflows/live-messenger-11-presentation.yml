@@ -1,0 +1,69 @@
+name: Live Messenger 1.1 Presentation Patch
+
+on:
+  push:
+    branches: [feature/messages-system]
+    paths:
+      - .github/workflows/live-messenger-11-presentation.yml
+      - Tools/apply_live_messenger_11_presentation.py
+
+permissions:
+  contents: write
+  checks: write
+
+jobs:
+  playmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feature/messages-system
+          fetch-depth: 0
+
+      - name: Apply Live Messenger 1.1 presentation patch
+        run: python3 Tools/apply_live_messenger_11_presentation.py
+
+      - name: Literal diff check
+        run: git diff --check
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Unity-Live-Messenger-11-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Live-Messenger-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run PlayMode tests
+        id: unity-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Live Messenger 1.1 PlayMode Gate
+
+      - name: Upload PlayMode artifacts
+        if: always() && steps.unity-tests.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-messenger-11-playmode-results
+          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+      - name: Persist green Live Messenger 1.1 presentation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- Assets/Rokas/Scripts/Presentation/RokasAudio.cs Assets/Rokas/Scripts/Presentation/RokasView.cs Assets/Rokas/Scripts/Presentation/HomeView.cs Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs Assets/Rokas/Tests/EditMode/MessagesYarnTests.cs
+          git commit -m "feat: polish Live Messenger 1.1 reactions audio and unread glow"
+          git push origin HEAD:feature/messages-system
