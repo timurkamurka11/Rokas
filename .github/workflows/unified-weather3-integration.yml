@@ -1,4 +1,4 @@
-name: Unified Weather3 Remaining Gates
+name: Unified Weather3 Evidence-Only Finalizer
 
 on:
   push:
@@ -8,303 +8,370 @@ on:
 
 permissions:
   contents: read
-  checks: write
   actions: read
 
 jobs:
-  remaining-gates:
+  evidence-finalizer:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 20
+    env:
+      TESTED_SHA: af541032cd1dd492d9895c5a9c8e92a1e2342745
+      TESTED_TREE: c0003c877acc637deff0f58dabc94bbb6f0a3214
+      UNIFIED_PARENT: 8a65c318420e3727aa9de0cc973e6d507362ec6d
+      WEATHER_PARENT: cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62
+      KNOWN_DEVELOPMENT_BASELINE: 5e494f188b90bdb6916e8e78e35ac38509bd0bce
+      TECH_ARTIFACT_ID: "10123293023"
+      REMAINING_ARTIFACT_ID: "10127076916"
+      APPROVED_BASELINE_ARTIFACT_ID: "10109251262"
     steps:
-      - name: Checkout immutable integration candidate
+      - name: Checkout exact immutable candidate
         uses: actions/checkout@v7
         with:
           ref: af541032cd1dd492d9895c5a9c8e92a1e2342745
           fetch-depth: 0
 
-      - name: Prove exact candidate and snapshot protected refs
+      - name: Fresh checkout hard gate
         shell: bash
         run: |
           set -euo pipefail
-          tested_sha="$(git rev-parse HEAD)"
-          tested_tree="$(git rev-parse HEAD^{tree})"
-          test "$tested_sha" = "af541032cd1dd492d9895c5a9c8e92a1e2342745"
-          test "$tested_tree" = "c0003c877acc637deff0f58dabc94bbb6f0a3214"
-          test "$(git rev-parse HEAD^1)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
-          test "$(git rev-parse HEAD^2)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-          project_version="$(sed -n 's/^m_EditorVersion: //p' ProjectSettings/ProjectVersion.txt)"
-          test "$project_version" = "6000.3.19f1"
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-finalizer"
+          mkdir -p "$OUT"
+          sha="$(git rev-parse HEAD)"
+          tree="$(git rev-parse HEAD^{tree})"
+          p1="$(git rev-parse HEAD^1)"
+          p2="$(git rev-parse HEAD^2)"
+          test "$sha" = "$TESTED_SHA"
+          test "$tree" = "$TESTED_TREE"
+          test "$p1" = "$UNIFIED_PARENT"
+          test "$p2" = "$WEATHER_PARENT"
+          git merge-base --is-ancestor "$UNIFIED_PARENT" HEAD
+          git merge-base --is-ancestor "$WEATHER_PARENT" HEAD
+
           git fetch origin integration/weather3-candidate integration/rokas-unified development
-          test "$(git rev-parse origin/integration/weather3-candidate)" = "$tested_sha"
-          mkdir -p /tmp/unified-remaining
+          candidate_remote="$(git rev-parse origin/integration/weather3-candidate)"
+          unified_remote="$(git rev-parse origin/integration/rokas-unified)"
+          development_remote="$(git rev-parse origin/development)"
+          test "$candidate_remote" = "$TESTED_SHA"
+          test "$unified_remote" = "$UNIFIED_PARENT"
+
+          git status --short > "$OUT/git-status-initial.txt"
+          test ! -s "$OUT/git-status-initial.txt"
+          git diff > "$OUT/git-diff-initial.txt"
+          test ! -s "$OUT/git-diff-initial.txt"
+          git diff --check > "$OUT/git-diff-check-initial.txt"
+          test ! -s "$OUT/git-diff-check-initial.txt"
+
           {
-            echo "TESTED_SHA=$tested_sha"
-            echo "TESTED_TREE=$tested_tree"
-            echo "CI_HEAD=$GITHUB_SHA"
-            echo "PROJECT_VERSION=$project_version"
-            echo "CANDIDATE_REMOTE=$(git rev-parse origin/integration/weather3-candidate)"
-            echo "UNIFIED_REMOTE_BEFORE=$(git rev-parse origin/integration/rokas-unified)"
-            echo "DEVELOPMENT_REMOTE_BEFORE=$(git rev-parse origin/development)"
-            echo "TRANSITION_GREEN_RUN=34408368570"
-            echo "TRANSITION_ARTIFACT=10126332140"
-            echo "FIRST_LOOP_GREEN_RUN=34409767129"
-            echo "FIRST_LOOP_EVIDENCE_ARTIFACT=10126843273"
-            echo "WEATHER_FINAL_REFERENCE_ARTIFACT=10121663621"
-            echo "WEATHER_APPROVED_BASELINE_ARTIFACT=10109251262"
-          } | tee /tmp/unified-remaining/exact-tree.txt
+            echo "TESTED_SHA=$sha"
+            echo "TESTED_TREE=$tree"
+            echo "UNIFIED_PARENT=$p1"
+            echo "WEATHER_PARENT=$p2"
+            echo "CANDIDATE_REMOTE=$candidate_remote"
+            echo "UNIFIED_REMOTE_BEFORE=$unified_remote"
+            echo "DEVELOPMENT_REMOTE_BEFORE=$development_remote"
+            echo "KNOWN_DEVELOPMENT_BASELINE=$KNOWN_DEVELOPMENT_BASELINE"
+            echo "INITIAL_TRACKED_CHANGES=0"
+          } > "$OUT/exact-tree.txt"
 
-      - name: Download already-green transition and first-loop evidence
-        uses: actions/download-artifact@v5
-        with:
-          name: unified-weather3-remaining-results
-          path: /tmp/imported-green
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          run-id: 34409767129
+          {
+            git show -s --format='COMMIT=%H%nTREE=%T%nPARENTS=%P%nSUBJECT=%s' HEAD
+            echo "MERGE_BASE_UNIFIED=$(git merge-base "$UNIFIED_PARENT" HEAD)"
+            echo "MERGE_BASE_WEATHER=$(git merge-base "$WEATHER_PARENT" HEAD)"
+          } > "$OUT/ancestry.txt"
 
-      - name: Prove imported transition and first-loop evidence
+      - name: Download authoritative existing evidence outside repository
         shell: bash
-        run: |
-          set -euo pipefail
-          root=/tmp/imported-green
-          test -f "$root/exact-tree.txt"
-          grep -Fxq 'TESTED_SHA=af541032cd1dd492d9895c5a9c8e92a1e2342745' "$root/exact-tree.txt"
-          grep -Fxq 'TESTED_TREE=c0003c877acc637deff0f58dabc94bbb6f0a3214' "$root/exact-tree.txt"
-          test -f "$root/transition/transition-step-status.txt"
-          grep -Fxq 'outcome=success' "$root/transition/transition-step-status.txt"
-          python3 - <<'PY'
-          from pathlib import Path
-          import shutil, xml.etree.ElementTree as ET
-          root=Path('/tmp/imported-green')
-          out=Path('/tmp/unified-remaining')
-
-          transition_xml=root/'transition/gameci-artifacts/playmode-results.xml'
-          if not transition_xml.exists(): raise SystemExit('NO_TRANSITION_XML')
-          x=ET.parse(transition_xml).getroot()
-          vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
-          expected='Rokas.Tests.UnifiedWeather3IntegrationTransitionPlayModeTests.ActiveLightningCombatTransitionCleansUpAndReschedulesAfterReturn'
-          cases=x.findall('.//test-case')
-          if vals!=(1,1,0,0,0): raise SystemExit(f'BAD_TRANSITION_RESULT {vals}')
-          if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
-              raise SystemExit('TRANSITION_IDENTITY_MISMATCH')
-          (out/'transition-proof.txt').write_text(f'transition: passed=1 total=1 full={expected}\n')
-          shutil.copytree(root/'transition', out/'transition', dirs_exist_ok=True)
-
-          flow_xml=root/'runtime-flow/playmode-results.xml'
-          if not flow_xml.exists(): raise SystemExit('NO_FIRST_LOOP_XML')
-          x=ET.parse(flow_xml).getroot()
-          vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
-          expected='Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce'
-          cases=x.findall('.//test-case')
-          if vals!=(1,1,0,0,0): raise SystemExit(f'BAD_FIRST_LOOP_RESULT {vals}')
-          if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
-              raise SystemExit('FIRST_LOOP_IDENTITY_MISMATCH')
-          (out/'first-loop-summary.txt').write_text(f'first-loop: passed=1 total=1 full={expected}\n')
-          shutil.copytree(root/'runtime-flow', out/'runtime-flow', dirs_exist_ok=True)
-          PY
-
-      - name: Cache Unity Library
-        uses: actions/cache@v6
-        with:
-          path: Library
-          key: Unified-Weather3-Remaining-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Unified-Weather3-Final-${{ runner.os }}-
-            Unified-Weather3-Focused-${{ runner.os }}-
-            Unity-Library-${{ runner.os }}-
-
-      - name: Overlay pinned seven-state Weather visual probe
-        id: overlay
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin ce9a24ff95a4b8803a6b95137cbc84550565d5b8
-          git show ce9a24ff95a4b8803a6b95137cbc84550565d5b8:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'CaptureWeather3VisualQaMatrix' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'TestResults.*HomeWeather3VisualQa' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'captureCamera.Render' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'RenderTexture.active' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          printf '%s\n' 'VISUAL_PROBE_SOURCE=ce9a24ff95a4b8803a6b95137cbc84550565d5b8:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt' > /tmp/unified-remaining/visual-probe-source.txt
-
-      - name: Capture seven Weather states from exact unified candidate
-        id: visual
-        continue-on-error: true
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: PlayMode
-          artifactsPath: artifacts-visual
-          customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests.CaptureWeather3VisualQaMatrix
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Seven-State Visual
-
-      - name: Record visual step status
-        if: always()
-        shell: bash
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/unified-remaining
+          set -euo pipefail
+          IMP="$RUNNER_TEMP/imported-weather3-evidence"
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-finalizer"
+          mkdir -p "$IMP/technical" "$IMP/remaining" "$IMP/approved-baseline"
+          download_artifact() {
+            id="$1"; dest="$2"; zip="$RUNNER_TEMP/artifact-$id.zip"
+            curl --fail --location --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" \
+              -o "$zip"
+            test -s "$zip"
+            unzip -q "$zip" -d "$dest"
+            sha256sum "$zip" >> "$OUT/imported-artifact-zip-sha256.txt"
+          }
+          download_artifact "$TECH_ARTIFACT_ID" "$IMP/technical"
+          download_artifact "$REMAINING_ARTIFACT_ID" "$IMP/remaining"
+          download_artifact "$APPROVED_BASELINE_ARTIFACT_ID" "$IMP/approved-baseline"
           {
-            echo "outcome=${{ steps.visual.outcome }}"
-            echo "conclusion=${{ steps.visual.conclusion }}"
-            echo "overlay_outcome=${{ steps.overlay.outcome }}"
-          } | tee /tmp/unified-remaining/visual-step-status.txt
+            echo "TECH_ARTIFACT_ID=$TECH_ARTIFACT_ID"
+            echo "REMAINING_ARTIFACT_ID=$REMAINING_ARTIFACT_ID"
+            echo "APPROVED_BASELINE_ARTIFACT_ID=$APPROVED_BASELINE_ARTIFACT_ID"
+          } > "$OUT/imported-artifacts.txt"
 
-      - name: Preserve seven Weather captures and remove CI-only probe
-        if: always()
+      - name: Parse actual evidence and build factual matrix
         shell: bash
         run: |
-          set -u
-          mkdir -p /tmp/unified-remaining/visual-test /tmp/unified-remaining/weather-captures
-          if [ -n "${{ steps.visual.outputs.artifactsPath }}" ] && [ -d "${{ steps.visual.outputs.artifactsPath }}" ]; then
-            sudo cp -a "${{ steps.visual.outputs.artifactsPath }}/." /tmp/unified-remaining/visual-test/
-            sudo chown -R "$(id -u):$(id -g)" /tmp/unified-remaining/visual-test
-          fi
-          src=TestResults/HomeWeather3VisualQa
-          if [ -d "$src" ]; then
-            [ -f "$src/01-weather3-light-on.png" ] && cp "$src/01-weather3-light-on.png" /tmp/unified-remaining/weather-captures/01-unified-weather3-light-on.png
-            [ -f "$src/02-weather3-light-off.png" ] && cp "$src/02-weather3-light-off.png" /tmp/unified-remaining/weather-captures/02-unified-weather3-light-off.png
-            [ -f "$src/03-weather3-normal-rain.png" ] && cp "$src/03-weather3-normal-rain.png" /tmp/unified-remaining/weather-captures/03-unified-weather3-normal-rain.png
-            [ -f "$src/04-weather3-wet-glass.png" ] && cp "$src/04-weather3-wet-glass.png" /tmp/unified-remaining/weather-captures/04-unified-weather3-wet-glass.png
-            [ -f "$src/05-weather3-lightning-on.png" ] && cp "$src/05-weather3-lightning-on.png" /tmp/unified-remaining/weather-captures/05-unified-weather3-lightning-on.png
-            [ -f "$src/06-weather3-lightning-off.png" ] && cp "$src/06-weather3-lightning-off.png" /tmp/unified-remaining/weather-captures/06-unified-weather3-lightning-off.png
-            [ -f "$src/07-weather3-idle-depth.png" ] && cp "$src/07-weather3-idle-depth.png" /tmp/unified-remaining/weather-captures/07-unified-weather3-idle-depth.png
-          fi
-          sudo rm -f Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs.meta
-          find /tmp/unified-remaining -maxdepth 3 -type f -printf '%P\n' | sort > /tmp/unified-remaining/remaining-files.txt
-
-      - name: Analyze seven-state visual evidence
-        if: always()
-        shell: bash
-        run: |
-          set +e
+          set -euo pipefail
+          IMP="$RUNNER_TEMP/imported-weather3-evidence"
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-finalizer"
+          export IMP OUT TESTED_SHA TESTED_TREE UNIFIED_PARENT WEATHER_PARENT
           python3 - <<'PY'
+          import hashlib
+          import os
+          import shutil
+          import xml.etree.ElementTree as ET
           from pathlib import Path
-          import hashlib, xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-remaining')
-          expected_files=[
-            '01-unified-weather3-light-on.png',
-            '02-unified-weather3-light-off.png',
-            '03-unified-weather3-normal-rain.png',
-            '04-unified-weather3-wet-glass.png',
-            '05-unified-weather3-lightning-on.png',
-            '06-unified-weather3-lightning-off.png',
-            '07-unified-weather3-idle-depth.png',
-          ]
-          captures=root/'weather-captures'
-          missing=[f for f in expected_files if not (captures/f).is_file() or (captures/f).stat().st_size==0]
-          xmls=list((root/'visual-test').rglob('*results.xml')) or list((root/'visual-test').rglob('*.xml'))
-          problems=[]
-          if missing: problems.append('missing captures: '+', '.join(missing))
-          if not xmls:
-              problems.append('no visual XML')
-          else:
-              x=ET.parse(xmls[0]).getroot()
-              vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
-              expected='Rokas.Tests.HomeWeather3VisualQaPlayModeTests.CaptureWeather3VisualQaMatrix'
-              cases=x.findall('.//test-case')
-              if vals!=(1,1,0,0,0): problems.append(f'visual result {vals}')
-              if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
-                  problems.append('visual identity/result mismatch')
-          if not missing:
-              with (root/'weather-capture-sha256.txt').open('w') as fh:
-                  for f in expected_files:
-                      p=captures/f
-                      fh.write(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {f}\n')
-          status='PASS' if not problems else 'FAIL'
-          (root/'visual-summary.txt').write_text('VISUAL_PROOF='+status+'\nCAPTURES_PRESENT='+str(7-len(missing))+'\n'+'\n'.join(problems)+'\n')
-          print((root/'visual-summary.txt').read_text())
-          PY
-          exit 0
 
-      - name: Aggregate Unity log scan
-        if: always()
+          imp = Path(os.environ["IMP"])
+          out = Path(os.environ["OUT"])
+          tech = imp / "technical"
+          rem = imp / "remaining"
+          baseline = imp / "approved-baseline"
+          tested_sha = os.environ["TESTED_SHA"]
+          tested_tree = os.environ["TESTED_TREE"]
+          unified_parent = os.environ["UNIFIED_PARENT"]
+          weather_parent = os.environ["WEATHER_PARENT"]
+
+          def kv(path):
+              data = {}
+              for line in Path(path).read_text(errors="replace").splitlines():
+                  if "=" in line:
+                      k, v = line.split("=", 1)
+                      data[k.strip()] = v.strip()
+              return data
+
+          def parse_xml(path):
+              root = ET.parse(path).getroot()
+              vals = {
+                  k: int(root.attrib.get(k, "0") or 0)
+                  for k in ("total", "passed", "failed", "skipped", "inconclusive")
+              }
+              cases = root.findall(".//test-case")
+              return root, vals, cases
+
+          tech_meta = kv(tech / "exact-tree.txt")
+          rem_meta = kv(rem / "exact-tree.txt")
+          for meta, label in ((tech_meta, "technical"), (rem_meta, "remaining")):
+              if meta.get("TESTED_SHA") != tested_sha:
+                  raise SystemExit(f"{label} TESTED_SHA mismatch: {meta.get('TESTED_SHA')}")
+              if meta.get("TESTED_TREE") != tested_tree:
+                  raise SystemExit(f"{label} TESTED_TREE mismatch: {meta.get('TESTED_TREE')}")
+          if tech_meta.get("UNIFIED_PARENT") != unified_parent:
+              raise SystemExit("technical UNIFIED_PARENT mismatch")
+          if tech_meta.get("WEATHER_PARENT") != weather_parent:
+              raise SystemExit("technical WEATHER_PARENT mismatch")
+
+          core = (tech / "core/core-output.txt").read_text(errors="replace")
+          if "PASS: all Rokas.Core behavior tests" not in core:
+              raise SystemExit("Core final PASS marker missing")
+          combat_core = sum(1 for x in core.splitlines() if x.startswith("PASS Combat2:"))
+          retirement_markers = [
+              "PASS: idle attacks removed",
+              "PASS: spam blocked before combo recovery",
+              "PASS: timed third strike rewards combo",
+              "PASS: old timed seal button retired",
+          ]
+          if combat_core != 23 or any(x not in core for x in retirement_markers):
+              raise SystemExit("Combat Core evidence mismatch")
+
+          _, edit, edit_cases = parse_xml(tech / "editmode/editmode-results.xml")
+          _, play, play_cases = parse_xml(tech / "playmode/playmode-results.xml")
+          _, weather, weather_cases = parse_xml(tech / "weather/playmode-results.xml")
+          _, home, home_cases = parse_xml(tech / "home/playmode-results.xml")
+          for label, vals in (("EditMode", edit), ("PlayMode", play), ("Weather", weather), ("Home", home)):
+              if vals["failed"] or vals["skipped"] or vals["inconclusive"] or vals["passed"] != vals["total"]:
+                  raise SystemExit(f"{label} not completely green: {vals}")
+
+          messages_yarn = [c for c in edit_cases if "MessagesYarnTests." in c.attrib.get("fullname", "")]
+          combat_edit = [c for c in edit_cases if "CombatFoundationTests.ApprovedCombatBehavior" in c.attrib.get("fullname", "")]
+          messages_play = [
+              c for c in play_cases
+              if any(name in c.attrib.get("fullname", "") for name in
+                     ("LiveMessenger", "Messages", "ContractAttachment", "CoordinateAttachment"))
+          ]
+          combat_play = [c for c in play_cases if "CombatFoundationPlayModeTests." in c.attrib.get("fullname", "")]
+          if len(messages_yarn) != 5:
+              raise SystemExit(f"Messages Yarn expected 5 actual {len(messages_yarn)}")
+          if len(combat_edit) != 23:
+              raise SystemExit(f"Combat edit expected 23 actual {len(combat_edit)}")
+          if len(messages_play) != 22:
+              raise SystemExit(f"Messages play expected 22 actual {len(messages_play)}")
+          if len(combat_play) != 16:
+              raise SystemExit(f"Combat play expected 16 actual {len(combat_play)}")
+          if weather != dict(total=5, passed=5, failed=0, skipped=0, inconclusive=0):
+              raise SystemExit(f"Weather exact inventory mismatch: {weather}")
+          if home != dict(total=5, passed=5, failed=0, skipped=0, inconclusive=0):
+              raise SystemExit(f"Home exact inventory mismatch: {home}")
+
+          _, transition, transition_cases = parse_xml(rem / "transition/gameci-artifacts/playmode-results.xml")
+          _, first_loop, first_loop_cases = parse_xml(rem / "runtime-flow/playmode-results.xml")
+          _, visual, visual_cases = parse_xml(rem / "visual-test/playmode-results.xml")
+          expected_transition = "Rokas.Tests.UnifiedWeather3IntegrationTransitionPlayModeTests.ActiveLightningCombatTransitionCleansUpAndReschedulesAfterReturn"
+          expected_first = "Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce"
+          expected_visual = "Rokas.Tests.HomeWeather3VisualQaPlayModeTests.CaptureWeather3VisualQaMatrix"
+          def require_single(vals, cases, fullname, label):
+              if vals != dict(total=1, passed=1, failed=0, skipped=0, inconclusive=0):
+                  raise SystemExit(f"{label} not 1/1 green: {vals}")
+              if len(cases) != 1 or cases[0].attrib.get("fullname") != fullname or cases[0].attrib.get("result") not in ("Passed", "Success"):
+                  raise SystemExit(f"{label} identity mismatch")
+          require_single(transition, transition_cases, expected_transition, "transition")
+          require_single(first_loop, first_loop_cases, expected_first, "first-loop")
+          require_single(visual, visual_cases, expected_visual, "visual")
+
+          validator = kv(tech / "validator-summary.txt")
+          if validator.get("HISTORICAL_FINDINGS") != "13" or validator.get("NEW_RELEVANT_FINDINGS") != "0":
+              raise SystemExit("validator evidence mismatch")
+          logs = kv(rem / "log-summary.txt")
+          if logs.get("UNITY_LOG_FILES_DISCOVERED") != "3" or logs.get("UNITY_LOG_FILES_SCANNED") != "3" or logs.get("RELEVANT_ERRORS") != "0":
+              raise SystemExit("aggregate Unity log evidence mismatch")
+
+          names = [
+              ("01-unified-weather3-light-on.png", "01-weather3-light-on.png"),
+              ("02-unified-weather3-light-off.png", "02-weather3-light-off.png"),
+              ("03-unified-weather3-normal-rain.png", "03-weather3-normal-rain.png"),
+              ("04-unified-weather3-wet-glass.png", "04-weather3-wet-glass.png"),
+              ("05-unified-weather3-lightning-on.png", "05-weather3-lightning-on.png"),
+              ("06-unified-weather3-lightning-off.png", "06-weather3-lightning-off.png"),
+              ("07-unified-weather3-idle-depth.png", "07-weather3-idle-depth.png"),
+          ]
+          capdir = rem / "weather-captures"
+          baseline_candidates = list(baseline.rglob("TestResults/HomeWeather3VisualQa"))
+          if len(baseline_candidates) != 1:
+              raise SystemExit(f"approved baseline capture directory count={len(baseline_candidates)}")
+          basedir = baseline_candidates[0]
+          comparison = []
+          for integrated_name, baseline_name in names:
+              a = capdir / integrated_name
+              b = basedir / baseline_name
+              if not a.is_file() or not b.is_file():
+                  raise SystemExit(f"missing capture pair {integrated_name} / {baseline_name}")
+              ab = a.read_bytes()
+              bb = b.read_bytes()
+              ah = hashlib.sha256(ab).hexdigest()
+              bh = hashlib.sha256(bb).hexdigest()
+              same = ab == bb
+              comparison.append(f"{integrated_name} integrated_sha256={ah} baseline_sha256={bh} byte_identical={'YES' if same else 'NO'}")
+              if not same:
+                  raise SystemExit(f"approved baseline mismatch: {integrated_name}")
+          (out / "visual-comparison.txt").write_text(
+              "APPROVED_BASELINE_ARTIFACT=10109251262\n"
+              "BYTE_IDENTICAL=7/7\n" + "\n".join(comparison) + "\n"
+          )
+
+          evidence_out = out / "evidence"
+          shutil.copytree(tech, evidence_out / "technical", dirs_exist_ok=True)
+          shutil.copytree(rem, evidence_out / "remaining", dirs_exist_ok=True)
+          shutil.copytree(basedir, evidence_out / "approved-baseline-captures", dirs_exist_ok=True)
+
+          matrix = [
+              "CORE=PASS",
+              f"EDITMODE={edit['passed']}/{edit['total']}",
+              f"PLAYMODE={play['passed']}/{play['total']}",
+              f"WEATHER={weather['passed']}/{weather['total']}",
+              f"HOME={home['passed']}/{home['total']}",
+              f"MESSAGES_PLAYMODE={len(messages_play)}/22",
+              f"MESSAGES_YARN_EDITMODE={len(messages_yarn)}/5",
+              f"COMBAT_SCENARIOS={combat_core}/23",
+              "COMBAT_RETIREMENT=4/4",
+              f"COMBAT_PLAYMODE={len(combat_play)}/16",
+              "TRANSITION=1/1",
+              "FIRST_LOOP=1/1",
+              "VALIDATOR_HISTORICAL=13",
+              "VALIDATOR_NEW_RELEVANT=0",
+              "UNITY_LOGS_DISCOVERED=3",
+              "UNITY_LOGS_SCANNED=3",
+              "UNITY_LOG_RELEVANT_ERRORS=0",
+              "VISUAL_TEST=1/1",
+              "VISUAL_CAPTURES=7/7",
+              "VISUAL_APPROVED_BASELINE_BYTE_IDENTICAL=7/7",
+              "HANDOFF_EDITMODE_EXPECTED=38/38",
+              f"ACTUAL_EDITMODE_XML={edit['passed']}/{edit['total']}",
+              "EDITMODE_EXPECTATION_MATCH=NO",
+          ]
+          (out / "test-matrix.txt").write_text("\n".join(matrix) + "\n")
+
+          old_integrity = (rem / "final-integrity.txt").read_text(errors="replace")
+          old_diffcheck = (rem / "final-working-diff-check.txt").read_text(errors="replace")
+          if "TRACKED_CHANGES=2" not in old_integrity:
+              raise SystemExit("historical TRACKED_CHANGES=2 marker missing")
+          if old_diffcheck.strip():
+              raise SystemExit("historical git diff --check was not empty")
+          rca = [
+              "RUN=34410386283",
+              "TRACKED_CHANGES=2",
+              "TRACKED_FILE_1=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE",
+              "TRACKED_FILE_2=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE",
+              "EXACT_DIFF=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE",
+              "CLASSIFICATION=E_UNKNOWN",
+              "CANDIDATE_COMMIT_TREE_AFFECTED=NO",
+              "HISTORICAL_DIFF_CHECK=PASS_EMPTY",
+              "CI_VISUAL_PROBE_CS_TRACKED_IN_CANDIDATE=NO",
+              "CI_VISUAL_PROBE_META_TRACKED_IN_CANDIDATE=NO",
+              "PACKAGES_LOCK_TRACKED_IN_CANDIDATE=NO",
+              "NOTE=The historical workflow recorded only the tracked-change count, not git status/diff paths; Unity rerun is intentionally not performed.",
+          ]
+          (out / "tracked-changes-RCA.txt").write_text("\n".join(rca) + "\n")
+          PY
+
+          ! git ls-files --error-unmatch Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs >/dev/null 2>&1
+          ! git ls-files --error-unmatch Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs.meta >/dev/null 2>&1
+          ! git ls-files --error-unmatch Packages/packages-lock.json >/dev/null 2>&1
+
+      - name: Final clean-tree and protected-ref proof
         shell: bash
         run: |
-          set +e
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          root=Path('/tmp/unified-remaining')
-          logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
-          strong=[
-            re.compile(r'\bNullReferenceException\b'),
-            re.compile(r'\bMissingReferenceException\b'),
-            re.compile(r'\bMissingComponentException\b'),
-            re.compile(r'\berror CS\d{4}\s*:',re.I),
-            re.compile(r'\bScripts have compiler errors\b',re.I),
-            re.compile(r'\bCompilation failed\b',re.I),
-            re.compile(r'\bUnhandled Exception\b',re.I),
-            re.compile(r'\bAborting batchmode due to failure\b',re.I)
-          ]
-          findings=[]
-          for p in logs:
-              for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
-                  if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
-          out=f'UNITY_LOG_FILES_DISCOVERED={len(logs)}\nUNITY_LOG_FILES_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'
-          (root/'log-summary.txt').write_text(out+'\n'.join(findings))
-          print(out,end='')
-          PY
-          exit 0
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-finalizer"
 
-      - name: Final exact-tree integrity proof
-        if: always()
-        shell: bash
-        run: |
-          set +e
-          status=PASS
-          current_sha="$(git rev-parse HEAD 2>/dev/null)"
-          current_tree="$(git rev-parse HEAD^{tree} 2>/dev/null)"
-          [ "$current_sha" = "af541032cd1dd492d9895c5a9c8e92a1e2342745" ] || status=FAIL
-          [ "$current_tree" = "c0003c877acc637deff0f58dabc94bbb6f0a3214" ] || status=FAIL
-          git diff --check > /tmp/unified-remaining/final-working-diff-check.txt 2>&1 || status=FAIL
-          [ -z "$(git status --porcelain --untracked-files=no)" ] || status=FAIL
-          git fetch origin integration/weather3-candidate integration/rokas-unified development >/tmp/unified-remaining/final-fetch.txt 2>&1 || status=FAIL
-          candidate_final="$(git rev-parse origin/integration/weather3-candidate 2>/dev/null)"
-          unified_final="$(git rev-parse origin/integration/rokas-unified 2>/dev/null)"
-          development_final="$(git rev-parse origin/development 2>/dev/null)"
-          unified_before="$(sed -n 's/^UNIFIED_REMOTE_BEFORE=//p' /tmp/unified-remaining/exact-tree.txt)"
-          development_before="$(sed -n 's/^DEVELOPMENT_REMOTE_BEFORE=//p' /tmp/unified-remaining/exact-tree.txt)"
-          [ "$candidate_final" = "af541032cd1dd492d9895c5a9c8e92a1e2342745" ] || status=FAIL
-          [ "$unified_final" = "$unified_before" ] || status=FAIL
-          [ "$development_final" = "$development_before" ] || status=FAIL
+          git status --short > "$OUT/git-status.txt"
+          git diff > "$OUT/git-diff.txt"
+          git diff --check > "$OUT/git-diff-check.txt"
+          test ! -s "$OUT/git-status.txt"
+          test ! -s "$OUT/git-diff.txt"
+          test ! -s "$OUT/git-diff-check.txt"
+
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$TESTED_TREE"
+
+          git fetch origin integration/weather3-candidate integration/rokas-unified development
+          candidate_final="$(git rev-parse origin/integration/weather3-candidate)"
+          unified_final="$(git rev-parse origin/integration/rokas-unified)"
+          development_final="$(git rev-parse origin/development)"
+          test "$candidate_final" = "$TESTED_SHA"
+          test "$unified_final" = "$UNIFIED_PARENT"
+
           {
-            echo "INTEGRITY=$status"
-            echo "CURRENT_SHA=$current_sha"
-            echo "CURRENT_TREE=$current_tree"
+            echo "FINAL_TRACKED_CHANGES=0"
+            echo "FINAL_SHA=$(git rev-parse HEAD)"
+            echo "FINAL_TREE=$(git rev-parse HEAD^{tree})"
             echo "CANDIDATE_REMOTE_FINAL=$candidate_final"
             echo "UNIFIED_REMOTE_FINAL=$unified_final"
             echo "DEVELOPMENT_REMOTE_FINAL=$development_final"
-            echo "TRACKED_CHANGES=$(git status --porcelain --untracked-files=no | wc -l)"
-          } | tee /tmp/unified-remaining/final-integrity.txt
-          exit 0
+            if [ "$development_final" = "$KNOWN_DEVELOPMENT_BASELINE" ]; then
+              echo "DEVELOPMENT_BASELINE_UNCHANGED=YES"
+            else
+              echo "DEVELOPMENT_BASELINE_UNCHANGED=NO"
+            fi
+            echo "EVIDENCE_FINALIZER=PASS"
+            echo "RCA_CLASSIFICATION=E_UNKNOWN"
+            echo "CHECKPOINT_ALLOWED=NO_UNTIL_RCA_PATHS_ARE_PROVEN"
+          } > "$OUT/verification-summary.txt"
 
-      - name: Upload remaining unified evidence
-        if: always()
+      - name: Upload evidence-only finalizer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unified-weather3-remaining-results
-          path: /tmp/unified-remaining
+          name: rokas-unified-weather3-finalizer
+          path: ${{ runner.temp }}/rokas-unified-weather3-finalizer
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 90
 
-      - name: Final remaining-gates verdict
-        if: always()
+      - name: Finalizer verdict
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ steps.overlay.outcome }}" = "success"
-          test "${{ steps.visual.outcome }}" = "success"
-          grep -Fxq 'VISUAL_PROOF=PASS' /tmp/unified-remaining/visual-summary.txt
-          grep -Fxq 'CAPTURES_PRESENT=7' /tmp/unified-remaining/visual-summary.txt
-          grep -Fxq 'RELEVANT_ERRORS=0' /tmp/unified-remaining/log-summary.txt
-          grep -Eq '^UNITY_LOG_FILES_DISCOVERED=[1-9][0-9]*$' /tmp/unified-remaining/log-summary.txt
-          grep -Eq '^UNITY_LOG_FILES_SCANNED=[1-9][0-9]*$' /tmp/unified-remaining/log-summary.txt
-          grep -Fxq 'INTEGRITY=PASS' /tmp/unified-remaining/final-integrity.txt
-          echo 'REMAINING_GATES=PASS'
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-finalizer"
+          grep -Fxq 'FINAL_TRACKED_CHANGES=0' "$OUT/verification-summary.txt"
+          grep -Fxq 'EVIDENCE_FINALIZER=PASS' "$OUT/verification-summary.txt"
+          grep -Fxq 'VISUAL_APPROVED_BASELINE_BYTE_IDENTICAL=7/7' "$OUT/test-matrix.txt"
+          echo "EVIDENCE_ONLY_FINALIZER=PASS"
