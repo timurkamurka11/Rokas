@@ -1,0 +1,41 @@
+name: Retarget Home Weather 3 Final Gate
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3-retarget-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  retarget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CI branch
+        uses: actions/checkout@v7
+        with:
+          ref: ci/home-weather-3
+          fetch-depth: 0
+
+      - name: Retarget exact-tree gate and push CI only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin ci/home-weather-3 feature/home-weather-3 development integration/rokas-unified
+          test "$(git rev-parse origin/feature/home-weather-3)" = "3035975cce69ba1034ecd3ddd4cf719083715c56"
+          test "$(git rev-parse origin/feature/home-weather-3^{tree})" = "386a02647fef70ad6e196e5ae032ebda84af6fe7"
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          python3 Tools/CI/retarget_weather3_final_gate.py
+          git diff --check
+          test "$(git diff --name-only)" = ".github/workflows/home-weather-3.yml"
+          grep -q '3035975cce69ba1034ecd3ddd4cf719083715c56' .github/workflows/home-weather-3.yml
+          grep -q '386a02647fef70ad6e196e5ae032ebda84af6fe7' .github/workflows/home-weather-3.yml
+          grep -q 'Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs' .github/workflows/home-weather-3.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/home-weather-3.yml
+          git commit -m "ci: retarget Weather 3 final gate to lifecycle fix"
+          git push origin HEAD:refs/heads/ci/home-weather-3
