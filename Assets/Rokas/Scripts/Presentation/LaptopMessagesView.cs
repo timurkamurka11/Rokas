@@ -849,7 +849,7 @@ namespace Rokas.Presentation
             text.color = color;
             text.text = value ?? string.Empty;
             text.alignment = alignment;
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TMPro.TextWrappingModes.Normal;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             return text;
