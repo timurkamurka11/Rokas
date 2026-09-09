@@ -1,0 +1,89 @@
+name: Home Weather 3 Publication Diagnostic
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3-publication-diagnostic.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact pre-fix production tree
+        uses: actions/checkout@v7
+        with:
+          ref: 510cdb2c3c93690e144a5a06842f69f4c6f9badf
+          fetch-depth: 0
+
+      - name: Reconstruct exact GREEN candidate and trace publication
+        shell: bash
+        run: |
+          set -euxo pipefail
+          exec > >(tee /tmp/weather3-publication-diagnostic.txt) 2>&1
+
+          echo '=== ENVIRONMENT ==='
+          pwd
+          id
+          whoami
+          umask
+          git --version
+          git status --short
+          stat -c '%U:%G %a %n' . .git .git/index Assets/Rokas/Scripts/Presentation/WorldEffects.cs Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs
+
+          echo '=== EXACT BASE ==='
+          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          git fetch origin ci/home-weather-3 feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+
+          echo '=== RECONSTRUCT CANDIDATE ==='
+          git show origin/ci/home-weather-3:Tools/CI/add_weather3_lightning_lifecycle_test.py > /tmp/add-weather3-lifecycle-test.py
+          git show origin/ci/home-weather-3:Tools/CI/apply_weather3_lightning_lifecycle_fix.py > /tmp/apply-weather3-lifecycle-fix.py
+          python3 /tmp/add-weather3-lifecycle-test.py
+          python3 /tmp/apply-weather3-lifecycle-fix.py
+          git diff --check
+          git status --short
+          git diff --name-only | sort
+          stat -c '%U:%G %a %n' Assets/Rokas/Scripts/Presentation/WorldEffects.cs Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs
+
+          mapfile -t changed < <(git diff --name-only | sort)
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          test "${changed[1]}" = "Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
+
+          echo '=== LOCAL COMMIT ==='
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/Scripts/Presentation/WorldEffects.cs Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs
+          git status --short
+          git diff --cached --check
+          git diff --cached --name-only | sort
+          git commit -m "fix: reschedule lightning after Home re-entry"
+          echo "CANDIDATE_SHA=$(git rev-parse HEAD)"
+          echo "CANDIDATE_TREE=$(git rev-parse HEAD^{tree})"
+          git show --stat --oneline --decorate HEAD
+
+          echo '=== FAST-FORWARD SAFETY ==='
+          git fetch origin feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          git merge-base --is-ancestor origin/feature/home-weather-3 HEAD
+
+          echo '=== PUSH ==='
+          git push origin HEAD:refs/heads/feature/home-weather-3
+          git fetch origin feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "$(git rev-parse HEAD)"
+          echo "PUBLISHED_SHA=$(git rev-parse origin/feature/home-weather-3)"
+          echo "PUBLISHED_TREE=$(git rev-parse origin/feature/home-weather-3^{tree})"
+
+      - name: Upload publication trace
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-publication-diagnostic
+          path: /tmp/weather3-publication-diagnostic.txt
+          if-no-files-found: error
