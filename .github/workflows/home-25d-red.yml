@@ -1,33 +1,35 @@
-name: Home Hub 2.5D GREEN Gate
+name: Home Hub 2.5D Final Verification
 
 on:
   push:
     branches: [ci/home-25d-rework]
     paths:
       - .github/workflows/home-25d-red.yml
-      - Tools/apply_home_25d_red.py
-      - Tools/apply_home_25d_patch.py
 
 permissions:
-  contents: write
+  contents: read
   checks: write
 
 jobs:
-  green:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - name: Checkout isolated 2.5D gate
+      - name: Checkout persisted Home 2.5D production tree
         uses: actions/checkout@v7
         with:
-          ref: ci/home-25d-rework
+          ref: feature/messages-system
           fetch-depth: 0
 
-      - name: Apply focused 2.5D contracts
-        run: python3 Tools/apply_home_25d_red.py
-
-      - name: Apply scoped Home 2.5D production patch
-        run: python3 Tools/apply_home_25d_patch.py
+      - name: Prove persisted SHA and tree
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          tree="$(git rev-parse HEAD^{tree})"
+          echo "VERIFIED_INPUT_HEAD=$head"
+          echo "VERIFIED_INPUT_TREE=$tree"
+          test "$head" = "8d2ce62c253a37b776a33cb8428c3d8a3f1d9533"
+          test "$tree" = "f6318724b3dff93857011803ff09679e9c8d69b5"
 
       - name: Literal git diff check
         run: git diff --check
@@ -42,10 +44,10 @@ jobs:
       - name: Classify asset validator against historical baseline
         run: |
           set +e
-          python3 Tools/validate_assets.py > /tmp/home25d-validator.txt 2>&1
+          python3 Tools/validate_assets.py > /tmp/home25d-final-validator.txt 2>&1
           code=$?
           set -e
-          cat /tmp/home25d-validator.txt
+          cat /tmp/home25d-final-validator.txt
           VALIDATOR_EXIT=$code python3 - <<'PY'
           from pathlib import Path
           expected = {
@@ -63,8 +65,7 @@ jobs:
               'FAIL: Invalid stereo PCM source: LaptopMouseClick.wav',
               'FAIL: Invalid stereo PCM source: UIWood.wav',
           }
-          lines = Path('/tmp/home25d-validator.txt').read_text().splitlines()
-          failures = [line for line in lines if line.startswith('FAIL: ')]
+          failures = [line for line in Path('/tmp/home25d-final-validator.txt').read_text().splitlines() if line.startswith('FAIL: ')]
           unexpected = [line for line in failures if line not in expected]
           if unexpected:
               raise SystemExit('New validator regressions:\n' + '\n'.join(unexpected))
@@ -75,11 +76,11 @@ jobs:
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-25D-GREEN-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-25D-FINAL-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run full Unity EditMode and PlayMode GREEN gate
+      - name: Run fresh Unity EditMode and PlayMode verification
         id: unity-tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
@@ -92,41 +93,12 @@ jobs:
           unityVersion: auto
           testMode: All
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Hub 2.5D GREEN Tests
+          checkName: Home Hub 2.5D Final Unity Tests
 
-      - name: Upload Home 2.5D GREEN artifact
+      - name: Upload Home 2.5D final artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-25d-green-results
+          name: home-25d-final-results
           path: ${{ steps.unity-tests.outputs.artifactsPath }}
           if-no-files-found: warn
-
-      - name: Persist verified Home 2.5D production slice
-        run: |
-          set -euo pipefail
-          tmp="$(mktemp -d)"
-          files=(
-            Assets/Rokas/Scripts/Presentation/WorldEffects.cs
-            Assets/Rokas/Scripts/Presentation/HomeAtmosphereProfile.cs
-            Assets/Rokas/Resources/HomeAtmosphereProfile.asset
-            Assets/Rokas/Tests/PlayMode/HomeAtmospherePlayModeTests.cs
-          )
-          for f in "${files[@]}"; do
-            mkdir -p "$tmp/$(dirname "$f")"
-            cp "$f" "$tmp/$f"
-          done
-
-          git fetch origin feature/messages-system
-          git checkout -B feature/messages-system origin/feature/messages-system
-          for f in "${files[@]}"; do
-            cp "$tmp/$f" "$f"
-          done
-
-          git diff --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "${files[@]}"
-          git diff --cached --check
-          git commit -m "feat: rework Home Hub 2.5D layered animation"
-          git push origin HEAD:feature/messages-system
