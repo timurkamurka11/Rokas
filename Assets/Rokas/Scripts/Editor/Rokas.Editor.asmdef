@@ -1,5 +1,5 @@
 {
   "name": "Rokas.Editor",
-  "references": ["Rokas.Core", "Rokas.Presentation"],
+  "references": ["Rokas.Core", "Rokas.Presentation", "Unity.TextMeshPro"],
   "includePlatforms": ["Editor"]
 }

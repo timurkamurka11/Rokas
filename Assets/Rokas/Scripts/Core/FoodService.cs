@@ -24,15 +24,24 @@ namespace Rokas.Core
         public bool Prepare(SaveData state, string foodId)
         {
             RequireState(state);
+            NormalizeStoredFood(state);
+            bool stored = state.storedFoodCount > 0 && string.Equals(state.storedFoodId, foodId, StringComparison.Ordinal);
             if ((state.phase != RunPhase.Home && state.phase != RunPhase.Accepted) ||
                 foodId != GreenTeaId ||
                 !string.IsNullOrEmpty(state.preparedFoodId) ||
-                state.yen < GreenTeaCost)
+                (!stored && state.yen < GreenTeaCost))
             {
                 return false;
             }
 
-            state.yen -= GreenTeaCost;
+            if (stored)
+            {
+                ConsumeStoredFood(state);
+            }
+            else
+            {
+                state.yen -= GreenTeaCost;
+            }
             state.preparedFoodId = GreenTeaId;
             return true;
         }
@@ -46,7 +55,7 @@ namespace Rokas.Core
             if (state.phase == RunPhase.Payment) return FoodConsumeBlockReason.ContractPaymentPending;
             if (state.phase != RunPhase.Home && state.phase != RunPhase.Accepted)
                 return FoodConsumeBlockReason.InvalidPhase;
-            if (!IsFoodScreenItem(foodId)) return FoodConsumeBlockReason.UnknownFood;
+            if (!IsKnownFood(foodId)) return FoodConsumeBlockReason.UnknownFood;
             if (!string.IsNullOrEmpty(state.preparedFoodId)) return FoodConsumeBlockReason.EffectAlreadyActive;
             return FoodConsumeBlockReason.None;
         }
@@ -54,8 +63,48 @@ namespace Rokas.Core
         public bool Consume(SaveData state, string foodId)
         {
             if (GetConsumeBlockReason(state, foodId) != FoodConsumeBlockReason.None) return false;
+            NormalizeStoredFood(state);
             state.preparedFoodId = foodId;
+            if (state.storedFoodCount > 0 && string.Equals(state.storedFoodId, foodId, StringComparison.Ordinal))
+            {
+                ConsumeStoredFood(state);
+            }
             return true;
+        }
+
+        public bool GrantStoredFood(SaveData state, string foodId)
+        {
+            RequireState(state);
+            NormalizeStoredFood(state);
+            if (!IsKnownFood(foodId) || state.storedFoodCount == int.MaxValue)
+            {
+                return false;
+            }
+            if (state.storedFoodCount > 0 && !string.Equals(state.storedFoodId, foodId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            state.storedFoodId = foodId;
+            state.storedFoodCount++;
+            return true;
+        }
+
+        public int GetStoredFoodCount(SaveData state, string foodId)
+        {
+            RequireState(state);
+            NormalizeStoredFood(state);
+            return string.Equals(state.storedFoodId, foodId, StringComparison.Ordinal) ? state.storedFoodCount : 0;
+        }
+
+        public bool IsKnownFood(string foodId)
+        {
+            return foodId == RamenId ||
+                   foodId == OnigiriId ||
+                   foodId == MisoId ||
+                   foodId == TempuraId ||
+                   foodId == MochiId ||
+                   foodId == GreenTeaId;
         }
 
         public float GetAutoInterval(SaveData state, ContractDefinition contract)
@@ -73,14 +122,24 @@ namespace Rokas.Core
             return contract.autoInterval;
         }
 
-        private static bool IsFoodScreenItem(string foodId)
+        private static void ConsumeStoredFood(SaveData state)
         {
-            return foodId == RamenId ||
-                   foodId == OnigiriId ||
-                   foodId == MisoId ||
-                   foodId == TempuraId ||
-                   foodId == MochiId ||
-                   foodId == GreenTeaId;
+            state.storedFoodCount--;
+            if (state.storedFoodCount <= 0)
+            {
+                state.storedFoodCount = 0;
+                state.storedFoodId = string.Empty;
+            }
+        }
+
+        private static void NormalizeStoredFood(SaveData state)
+        {
+            state.storedFoodId = state.storedFoodId ?? string.Empty;
+            if (state.storedFoodCount <= 0 || state.storedFoodId.Length == 0)
+            {
+                state.storedFoodCount = 0;
+                state.storedFoodId = string.Empty;
+            }
         }
 
         private static void RequireState(SaveData state)

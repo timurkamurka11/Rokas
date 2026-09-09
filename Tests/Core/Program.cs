@@ -10,6 +10,15 @@ namespace Rokas.Core.Tests
             {
                 DomainBehaviorTests.RunAll();
                 FoodFeedbackTests.RunAll();
+                MessageDomainTests.RunAll();
+                CoordinateAttachmentActionTests.RunAll();
+                ContractAttachmentActionTests.RunAll();
+                GameSessionMessageEventTests.RunAll();
+                DialogueProgressionTests.RunAll();
+                HunterGuildFlowTests.RunAll();
+                YumikoFoodIntegrationTests.RunAll();
+                LiveMessengerCoreTests.RunAll();
+                LiveMessengerPolishCoreTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }

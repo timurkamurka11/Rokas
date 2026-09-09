@@ -6,6 +6,8 @@ import struct
 import sys
 import wave
 
+from asset_validation import declared_external_assemblies, validate_png_asset
+
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
 guids = {}
@@ -51,9 +53,9 @@ for path in list((ROOT / 'Assets').rglob('*.asmdef')) + list((ROOT / 'Assets').r
         errors.append('Invalid JSON: ' + str(path.relative_to(ROOT)) + ': ' + str(exc))
 
 # Unity package imports still require the Editor. Check local assembly boundaries and
-# the explicitly declared uGUI dependency here so a misspelled reference cannot pass as JSON.
+# explicitly declared package assemblies here so a misspelled reference cannot pass as JSON.
 dependencies = json.loads((ROOT / 'Packages/manifest.json').read_text()).get('dependencies', {})
-external_assemblies = {'UnityEngine.UI'} if 'com.unity.ugui' in dependencies else set()
+external_assemblies = declared_external_assemblies(dependencies)
 for name, data in assemblies.items():
     for reference in data.get('references', []):
         if reference not in assemblies and reference not in external_assemblies:
@@ -72,11 +74,9 @@ for path in sorted((ROOT / 'Assets').rglob('*.png')):
         continue
     width, height = struct.unpack('>II', header[16:24])
     images.append((path.name, width, height))
-    if 'Yokai' in path.parts or 'Familiars' in path.parts:
-        if header[25] != 6:
-            errors.append('Character PNG must carry real RGBA: ' + path.name)
-    elif width < 1600 or height < 900:
-        errors.append('Background below HD: ' + path.name)
+    meta = Path(str(path) + '.meta')
+    meta_text = meta.read_text() if meta.exists() else None
+    errors.extend(validate_png_asset(path, width, height, header[25], meta_text))
 
 audio_count = 0
 for path in sorted((ROOT / 'Assets').rglob('*.wav')):

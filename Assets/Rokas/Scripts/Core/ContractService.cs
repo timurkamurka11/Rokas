@@ -7,11 +7,13 @@ namespace Rokas.Core
         public bool Accept(SaveData state, ContractDefinition contract)
         {
             RequireStateAndContract(state, contract);
-            if (state.phase != RunPhase.Home || string.IsNullOrEmpty(contract.id))
+            if (state.phase != RunPhase.Home || string.IsNullOrEmpty(contract.id) ||
+                state.contractRunSequence == int.MaxValue)
             {
                 return false;
             }
 
+            state.contractRunSequence++;
             state.phase = RunPhase.Accepted;
             state.activeContractId = contract.id;
             ResetCombat(state);

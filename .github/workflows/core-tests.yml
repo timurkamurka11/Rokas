@@ -12,6 +12,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Literal git diff check
+        run: git diff --check
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -19,3 +21,6 @@ jobs:
         run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
       - name: Validate artwork, audio, metas and scene bindings
         run: python3 Tools/validate_assets.py
+
+# Live Messenger 1.0 final verification trigger; behavior intentionally unchanged.
+# Live Messenger 1.1 final verification trigger; behavior intentionally unchanged.

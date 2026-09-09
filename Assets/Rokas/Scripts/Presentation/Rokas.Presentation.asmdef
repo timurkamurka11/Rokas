@@ -1,5 +1,21 @@
 {
   "name": "Rokas.Presentation",
   "rootNamespace": "Rokas.Presentation",
-  "references": ["Rokas.Core", "UnityEngine.UI"]
+  "references": [
+    "Rokas.Core",
+    "UnityEngine.UI",
+    "Unity.TextMeshPro",
+    "YarnSpinner.Unity"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "YarnSpinner.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
 }

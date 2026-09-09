@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Rokas.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -31,12 +32,17 @@ namespace Rokas.Presentation
         private readonly MissionView mission;
         private readonly ContractPanels contracts;
         private readonly LaptopView laptop;
+        private readonly MessagesNotificationView messageNotifications;
         private RunPhase phase;
         private string panel;
         private bool transition;
         private bool storageBlocked;
         private float toastTime;
         private int laptopOpenedFrame = -1;
+        private int observedMessageSequence;
+
+        public string LastMessageAudioCue { get; private set; }
+        public int MessageAudioCueCount { get; private set; }
 
         public bool Paused { get { return transition || storageBlocked || panel == "settings"; } }
         public bool LaptopOpen { get { return panel == "laptop"; } }
@@ -58,7 +64,7 @@ namespace Rokas.Presentation
             stage.anchorMin = stage.anchorMax = new Vector2(.5f, .5f);
             stage.pivot = new Vector2(.5f, .5f);
             background = ui.Art(stage, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
-            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings);
+            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings, audio, owner.transform);
             scene = ui.Rect(stage, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
@@ -82,12 +88,91 @@ namespace Rokas.Presentation
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel);
+            messageNotifications = new MessagesNotificationView(ui, stage, session);
+            observedMessageSequence = HighestMessageSequence();
+            LastMessageAudioCue = string.Empty;
+            MessageAudioCueCount = 0;
+            session.Messages.Changed += HandleMessageRoutingChanged;
+            session.LiveMessages.Signal += HandleLiveMessengerSignal;
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             phase = session.State.phase;
             RebuildScene();
             Tick(0);
             Refresh();
+        }
+
+        private void HandleLiveMessengerSignal(LiveMessengerSignal signal)
+        {
+            if (signal == null || signal.Kind != LiveMessengerSignalKind.ReactionChanged) return;
+            LastMessageAudioCue = "Reaction";
+            MessageAudioCueCount++;
+            audio.PlayMessageCue("Reaction");
+        }
+
+        private void HandleMessageRoutingChanged()
+        {
+            int highest = HighestMessageSequence();
+            for (int sequence = observedMessageSequence + 1; sequence <= highest; sequence++)
+            {
+                string contactId;
+                MessageEntry entry = FindMessageBySequence(sequence, out contactId);
+                if (entry == null) continue;
+                string cue;
+                if (entry.outgoing)
+                {
+                    cue = "PlayerSend";
+                }
+                else if (entry.suppressMainNotification)
+                {
+                    cue = LaptopOpen && laptop.MessagesOpen &&
+                        string.Equals(laptop.ActiveMessageContactId, contactId, StringComparison.Ordinal)
+                        ? "ActiveReceive" : "SoftReceive";
+                }
+                else if (LaptopOpen && laptop.MessagesOpen &&
+                    string.Equals(laptop.ActiveMessageContactId, contactId, StringComparison.Ordinal))
+                {
+                    cue = "ActiveReceive";
+                }
+                else
+                {
+                    cue = LaptopOpen ? "LaptopNotification" : "WorldNotification";
+                }
+                LastMessageAudioCue = cue;
+                MessageAudioCueCount++;
+                audio.PlayMessageCue(cue);
+            }
+            observedMessageSequence = Math.Max(observedMessageSequence, highest);
+        }
+
+        private MessageEntry FindMessageBySequence(int sequence, out string contactId)
+        {
+            contactId = string.Empty;
+            List<ConversationState> conversations = session.Messages.GetOrderedConversations();
+            for (int conversationIndex = 0; conversationIndex < conversations.Count; conversationIndex++)
+            {
+                ConversationState conversation = conversations[conversationIndex];
+                if (conversation == null || conversation.entries == null) continue;
+                for (int entryIndex = 0; entryIndex < conversation.entries.Count; entryIndex++)
+                {
+                    MessageEntry entry = conversation.entries[entryIndex];
+                    if (entry != null && entry.sequence == sequence)
+                    {
+                        contactId = conversation.contactId ?? string.Empty;
+                        return entry;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private int HighestMessageSequence()
+        {
+            int highest = 0;
+            List<ConversationState> conversations = session.Messages.GetOrderedConversations();
+            for (int index = 0; index < conversations.Count; index++)
+                if (conversations[index] != null) highest = Math.Max(highest, conversations[index].lastSequence);
+            return highest;
         }
 
         private void Act(Func<bool> action, string message)
@@ -263,6 +348,7 @@ namespace Rokas.Presentation
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
             }
+            messageNotifications.Tick(dt);
             if (toastTime > 0)
             {
                 toastTime -= dt;
@@ -286,6 +372,10 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            effects.Dispose();
+            messageNotifications.Dispose();
+            session.Messages.Changed -= HandleMessageRoutingChanged;
+            session.LiveMessages.Signal -= HandleLiveMessengerSignal;
             session.Changed -= Refresh;
             session.Combat.Hit -= OnHit;
         }

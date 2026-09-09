@@ -27,6 +27,7 @@ namespace Rokas.Presentation
         private readonly GameSession session;
         private readonly ContractPanels contracts;
         private readonly LaptopFoodView food;
+        private readonly LaptopMessagesView messages;
         private readonly Action click;
         private readonly Action close;
         private RectTransform frame;
@@ -42,6 +43,8 @@ namespace Rokas.Presentation
         private float pageTime;
         private Action closed;
         public bool IsClosing { get; private set; }
+        public bool MessagesOpen { get { return section == 6 && !IsClosing; } }
+        public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
             Action<Func<bool>, string> act, Action click, Action<string> notify, Action close)
@@ -53,10 +56,12 @@ namespace Rokas.Presentation
             this.click = click;
             this.close = close;
             food = new LaptopFoodView(ui, session, act, click, notify);
+            messages = new LaptopMessagesView(ui, assets, session);
         }
 
         public void Reset()
         {
+            messages.Hide();
             section = -1;
             lastTile = 0;
             IsClosing = false;
@@ -119,6 +124,18 @@ namespace Rokas.Presentation
             {
                 food.Build(page, Titles, TileColors, OpenSection);
                 ChromeButton(page, "FoodBack", "← Назад", 208, 732, 180, 52, Back);
+                return;
+            }
+            if (section == 6)
+            {
+                ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
+                var messagesBack = ChromeButton(page, "LaptopBack", "Назад", 42, 24, 158, 48, Back);
+                Icon(messagesBack.transform, "BackGlyph", LaptopGlyph.Back, 8, 9, 28, White);
+                Icon(page, "AppGlyph", (LaptopGlyph)section, 238, 23, 47, TileColors[section] * 1.4f);
+                ui.Label(page, "AppTitle", Titles[section], 302, 21, 950, 50, 28, White);
+                messages.Build(page);
+                if (!EventSystem.current || !EventSystem.current.currentSelectedGameObject ||
+                    !EventSystem.current.currentSelectedGameObject.transform.IsChildOf(page)) Select(messagesBack);
                 return;
             }
             ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
@@ -215,6 +232,7 @@ namespace Rokas.Presentation
 
         private void Back()
         {
+            if (section == 6) messages.Hide();
             section = -1;
             BuildContent();
         }
@@ -222,6 +240,7 @@ namespace Rokas.Presentation
         public void BeginClose(Action complete)
         {
             if (IsClosing) return;
+            messages.Hide();
             IsClosing = true;
             closed = complete;
             openTime = .18f;
@@ -258,6 +277,7 @@ namespace Rokas.Presentation
                 contentGroup.alpha = Mathf.SmoothStep(0, 1, pageTime / .16f);
                 ((RectTransform)contentGroup.transform).anchoredPosition = new Vector2(0, -6 * (1 - contentGroup.alpha));
             }
+            if (section == 6) messages.Tick(dt);
             UpdateClock();
         }
 
