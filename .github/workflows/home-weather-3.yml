@@ -155,6 +155,7 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: EditMode
+          artifactsPath: artifacts-editmode
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home Weather 3 Full EditMode
 
@@ -164,7 +165,8 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/weather3-final/editmode
           cp -a "${{ steps.editmode.outputs.artifactsPath }}/." /tmp/weather3-final/editmode/
-          rm -rf "${{ steps.editmode.outputs.artifactsPath }}"
+          test -n "$(find /tmp/weather3-final/editmode -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-final/editmode -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
 
       - name: Run complete PlayMode
         id: playmode
@@ -174,6 +176,7 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
+          artifactsPath: artifacts-playmode
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home Weather 3 Full PlayMode
 
@@ -183,7 +186,8 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/weather3-final/playmode
           cp -a "${{ steps.playmode.outputs.artifactsPath }}/." /tmp/weather3-final/playmode/
-          rm -rf "${{ steps.playmode.outputs.artifactsPath }}"
+          test -n "$(find /tmp/weather3-final/playmode -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-final/playmode -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
 
       - name: Run focused Weather 3 contracts
         id: focused
@@ -193,6 +197,7 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
+          artifactsPath: artifacts-focused
           customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home Weather 3 Focused Final
@@ -203,7 +208,8 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/weather3-final/focused
           cp -a "${{ steps.focused.outputs.artifactsPath }}/." /tmp/weather3-final/focused/
-          rm -rf "${{ steps.focused.outputs.artifactsPath }}"
+          test -n "$(find /tmp/weather3-final/focused -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-final/focused -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
 
       - name: Run Home atmosphere and 2.5D regression
         id: home
@@ -213,6 +219,7 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
+          artifactsPath: artifacts-home
           customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home Weather 3 Home Final
@@ -223,7 +230,77 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/weather3-final/home
           cp -a "${{ steps.home.outputs.artifactsPath }}/." /tmp/weather3-final/home/
-          rm -rf "${{ steps.home.outputs.artifactsPath }}"
+          test -n "$(find /tmp/weather3-final/home -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-final/home -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
+
+      - name: Prove technical test results before visual capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          core_output=Path('/tmp/weather3-final/core/core-output.txt')
+          if not core_output.exists() or 'PASS: all Rokas.Core behavior tests' not in core_output.read_text(errors='replace'):
+              raise SystemExit('Core/domain PASS evidence missing')
+          lines=['core: PASS: all Rokas.Core behavior tests']
+          print(lines[0])
+          for label in ['editmode','playmode','focused','home']:
+              xmls=list((Path('/tmp/weather3-final')/label).rglob('*results.xml'))
+              if not xmls:
+                  xmls=list((Path('/tmp/weather3-final')/label).rglob('*.xml'))
+              if not xmls:
+                  raise SystemExit(f'no XML result for {label}')
+              root=ET.parse(xmls[0]).getroot()
+              def attr(*names):
+                  for n in names:
+                      if n in root.attrib: return root.attrib[n]
+                  return '0'
+              total=attr('total','testcasecount','test-case-count')
+              passed=attr('passed')
+              failed=attr('failed')
+              skipped=attr('skipped')
+              inconclusive=attr('inconclusive')
+              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive} xml={xmls[0].name}'
+              lines.append(line); print(line)
+              if int(failed or 0)!=0: raise SystemExit(f'{label} has failures')
+              if label == 'editmode' and (int(skipped or 0)!=0 or int(inconclusive or 0)!=0):
+                  raise SystemExit('EditMode has skipped/inconclusive tests')
+          Path('/tmp/weather3-final/technical-test-summary.txt').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Prove technical Unity logs before visual capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          root=Path('/tmp/weather3-final')
+          log_files=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
+          print(f'UNITY LOG FILES DISCOVERED: {len(log_files)}')
+          scanned=0; findings=[]
+          strong=[
+              re.compile(r'\bNullReferenceException\b'),
+              re.compile(r'\bMissingReferenceException\b'),
+              re.compile(r'\bMissingComponentException\b'),
+              re.compile(r'\bUnhandled Exception\b', re.I),
+              re.compile(r'\bUnityException\s*:'),
+              re.compile(r'\berror CS\d{4}\s*:', re.I),
+              re.compile(r'\bScripts have compiler errors\b', re.I),
+              re.compile(r'\bCompilation failed\b', re.I),
+              re.compile(r'\bAborting batchmode due to failure\b', re.I),
+          ]
+          for p in log_files:
+              scanned += 1
+              for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+                  if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
+          out=[f'UNITY LOG FILES DISCOVERED: {len(log_files)}',f'UNITY LOG FILES SCANNED: {scanned}',f'UNITY ERROR LINES FOUND: {len(findings)}']+findings
+          Path('/tmp/weather3-final/technical-log-scan.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out[1:]))
+          if scanned == 0: sys.exit(12)
+          if findings: sys.exit(11)
+          PY
 
       - name: Overlay proven seven-state visual probe only
         shell: bash
@@ -242,6 +319,7 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
+          artifactsPath: artifacts-visual
           customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home Weather 3 Final Visual Capture
@@ -252,6 +330,8 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/weather3-final/visual
           cp -a "${{ steps.visual.outputs.artifactsPath }}/." /tmp/weather3-final/visual/
+          test -n "$(find /tmp/weather3-final/visual -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-final/visual -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
           cp -a TestResults/HomeWeather3VisualQa /tmp/weather3-final/visual/captures
           for file in 01-weather3-light-on.png 02-weather3-light-off.png 03-weather3-normal-rain.png 04-weather3-wet-glass.png 05-weather3-lightning-on.png 06-weather3-lightning-off.png 07-weather3-idle-depth.png; do
             test -s "/tmp/weather3-final/visual/captures/$file"
@@ -290,6 +370,8 @@ jobs:
               line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive} xml={xmls[0].name}'
               lines.append(line); print(line)
               if int(failed or 0)!=0: raise SystemExit(f'{label} has failures')
+              if label == 'editmode' and (int(skipped or 0)!=0 or int(inconclusive or 0)!=0):
+                  raise SystemExit('EditMode has skipped/inconclusive tests')
           Path('/tmp/weather3-final/test-summary.txt').write_text('\n'.join(lines)+'\n')
           PY
 
@@ -300,25 +382,30 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re, sys
-          patterns=[
-            'NullReferenceException','MissingReferenceException','MissingComponentException',
-            'RenderTexture','ParticleSystem','shader','material','texture',
-            'AudioSource','AudioClip','Canvas','masking','unhandled exception'
+          root=Path('/tmp/weather3-final')
+          log_files=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
+          print(f'UNITY LOG FILES DISCOVERED: {len(log_files)}')
+          scanned=0; findings=[]
+          strong=[
+              re.compile(r'\bNullReferenceException\b'),
+              re.compile(r'\bMissingReferenceException\b'),
+              re.compile(r'\bMissingComponentException\b'),
+              re.compile(r'\bUnhandled Exception\b', re.I),
+              re.compile(r'\bUnityException\s*:'),
+              re.compile(r'\berror CS\d{4}\s*:', re.I),
+              re.compile(r'\bScripts have compiler errors\b', re.I),
+              re.compile(r'\bCompilation failed\b', re.I),
+              re.compile(r'\bAborting batchmode due to failure\b', re.I),
           ]
-          severe=re.compile(r'(NullReferenceException|MissingReferenceException|MissingComponentException|\b(error|exception)\b)',re.I)
-          relevant=[]
-          logs=[]
-          for p in Path('/tmp/weather3-final').rglob('*.log'):
-              logs.append(p)
+          for p in log_files:
+              scanned += 1
               for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
-                  low=line.lower()
-                  if not any(x.lower() in low for x in patterns): continue
-                  if any(x in low for x in ['unity connect','licensing','license client','license verification']): continue
-                  if severe.search(line): relevant.append(f'{p.name}:{i}:{line}')
-          out=[f'LOG_FILES={len(logs)}',f'RELEVANT_ERROR_LINES={len(relevant)}']+relevant
+                  if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
+          out=[f'UNITY LOG FILES DISCOVERED: {len(log_files)}',f'UNITY LOG FILES SCANNED: {scanned}',f'UNITY ERROR LINES FOUND: {len(findings)}']+findings
           Path('/tmp/weather3-final/log-scan.txt').write_text('\n'.join(out)+'\n')
-          print('\n'.join(out))
-          if relevant: sys.exit(11)
+          print('\n'.join(out[1:]))
+          if scanned == 0: sys.exit(12)
+          if findings: sys.exit(11)
           PY
 
       - name: Final committed-tree integrity proof
@@ -331,7 +418,7 @@ jobs:
           git diff --check HEAD | tee /tmp/weather3-final/final-working-diff-check.txt
 
       - name: Upload complete final-results evidence
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v7
         with:
           name: home-weather-3-final-results
