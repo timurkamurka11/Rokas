@@ -1,17 +1,18 @@
-name: Home Weather 3 Home Regression
+name: Home Weather 3 Visual QA
 
 on:
   push:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3.yml
+      - Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt
 
 permissions:
   contents: read
   checks: write
 
 jobs:
-  home-regression:
+  visual-qa:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -27,24 +28,30 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
           test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
-          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-home-tree.txt
-          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-home-tree.txt
+          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-visual-tree.txt
+          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-visual-tree.txt
 
-      - name: Literal git diff check
+      - name: Overlay only the proven explicit-camera RenderTexture capture probe
         shell: bash
         run: |
           set -euo pipefail
-          git diff --check | tee /tmp/weather3-home-diff-check.txt
+          git fetch origin ci/home-weather-3
+          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt \
+            > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'captureCamera.Render();' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'RenderTexture.active = captureTarget;' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          git status --short | tee /tmp/weather3-visual-overlay-status.txt
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-Weather-3-Home-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-Weather-3-Visual-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run existing Home atmosphere and 2.5D regression tests
+      - name: Capture seven real Weather 3 runtime QA states
         id: unity-tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
@@ -56,17 +63,36 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
+          customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Home Regression
+          checkName: Home Weather 3 Visual QA Capture
 
-      - name: Upload Home regression evidence
+      - name: Prove all required captures exist
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            01-weather3-light-on.png \
+            02-weather3-light-off.png \
+            03-weather3-normal-rain.png \
+            04-weather3-wet-glass.png \
+            05-weather3-lightning-on.png \
+            06-weather3-lightning-off.png \
+            07-weather3-idle-depth.png; do
+              test -s "TestResults/HomeWeather3VisualQa/$file"
+              file "TestResults/HomeWeather3VisualQa/$file"
+          done | tee /tmp/weather3-visual-captures.txt
+
+      - name: Upload visual QA evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-home-regression
+          name: home-weather-3-visual-qa
           path: |
             ${{ steps.unity-tests.outputs.artifactsPath }}
-            /tmp/weather3-home-tree.txt
-            /tmp/weather3-home-diff-check.txt
+            TestResults/HomeWeather3VisualQa
+            /tmp/weather3-visual-tree.txt
+            /tmp/weather3-visual-overlay-status.txt
+            /tmp/weather3-visual-captures.txt
           if-no-files-found: warn
