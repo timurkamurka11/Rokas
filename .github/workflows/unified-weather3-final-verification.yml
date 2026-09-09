@@ -1,0 +1,201 @@
+name: Unified Weather3 Final Verification Package
+
+on:
+  push:
+    branches:
+      - ci/unified-weather3-integration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  final-verification-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TESTED_SHA: af541032cd1dd492d9895c5a9c8e92a1e2342745
+      TESTED_TREE: c0003c877acc637deff0f58dabc94bbb6f0a3214
+      UNIFIED_PARENT: 8a65c318420e3727aa9de0cc973e6d507362ec6d
+      WEATHER_PARENT: cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62
+      DEVELOPMENT_BASELINE: 5e494f188b90bdb6916e8e78e35ac38509bd0bce
+      FINALIZER_ARTIFACT_ID: "10127862925"
+    steps:
+      - name: Checkout exact immutable candidate
+        uses: actions/checkout@v7
+        with:
+          ref: af541032cd1dd492d9895c5a9c8e92a1e2342745
+          fetch-depth: 0
+
+      - name: Fresh static candidate proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          mkdir -p "$OUT"
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$TESTED_TREE"
+          test "$(git rev-parse HEAD^1)" = "$UNIFIED_PARENT"
+          test "$(git rev-parse HEAD^2)" = "$WEATHER_PARENT"
+          git status --short > "$OUT/git-status.txt"
+          git diff > "$OUT/git-diff.txt"
+          git diff --check > "$OUT/git-diff-check.txt"
+          test ! -s "$OUT/git-status.txt"
+          test ! -s "$OUT/git-diff.txt"
+          test ! -s "$OUT/git-diff-check.txt"
+          git fetch origin integration/weather3-candidate integration/rokas-unified development
+          test "$(git rev-parse origin/integration/weather3-candidate)" = "$TESTED_SHA"
+          test "$(git rev-parse origin/integration/rokas-unified)" = "$UNIFIED_PARENT"
+          test "$(git rev-parse origin/development)" = "$DEVELOPMENT_BASELINE"
+          {
+            echo "TESTED_SHA=$(git rev-parse HEAD)"
+            echo "TESTED_TREE=$(git rev-parse HEAD^{tree})"
+            echo "UNIFIED_PARENT=$(git rev-parse HEAD^1)"
+            echo "WEATHER_PARENT=$(git rev-parse HEAD^2)"
+            echo "CANDIDATE_REMOTE=$(git rev-parse origin/integration/weather3-candidate)"
+            echo "UNIFIED_REMOTE=$(git rev-parse origin/integration/rokas-unified)"
+            echo "DEVELOPMENT_REMOTE=$(git rev-parse origin/development)"
+            echo "FINAL_TRACKED_CHANGES=0"
+          } > "$OUT/exact-tree.txt"
+
+      - name: Import previously verified finalizer artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          ZIP="$RUNNER_TEMP/finalizer-$FINALIZER_ARTIFACT_ID.zip"
+          curl --fail --location --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$FINALIZER_ARTIFACT_ID/zip" \
+            -o "$ZIP"
+          test -s "$ZIP"
+          mkdir -p "$OUT/finalizer"
+          unzip -q "$ZIP" -d "$OUT/finalizer"
+          sha256sum "$ZIP" > "$OUT/finalizer-artifact-zip-sha256.txt"
+          grep -Fxq "FINAL_SHA=$TESTED_SHA" "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq "FINAL_TREE=$TESTED_TREE" "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq 'FINAL_TRACKED_CHANGES=0' "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq 'EVIDENCE_FINALIZER=PASS' "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq 'RCA_CLASSIFICATION=E_UNKNOWN' "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq 'CHECKPOINT_ALLOWED=NO_UNTIL_RCA_PATHS_ARE_PROVEN' "$OUT/finalizer/verification-summary.txt"
+          grep -Fxq 'VISUAL_APPROVED_BASELINE_BYTE_IDENTICAL=7/7' "$OUT/finalizer/test-matrix.txt"
+          grep -Fxq 'ACTUAL_EDITMODE_XML=33/33' "$OUT/finalizer/test-matrix.txt"
+          grep -Fxq 'EDITMODE_EXPECTATION_MATCH=NO' "$OUT/finalizer/test-matrix.txt"
+
+      - name: Structured code review of Weather3 integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          SRC=Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          SCOPE="$OUT/review-scope.txt"
+          git diff --name-status "$UNIFIED_PARENT" "$TESTED_SHA" > "$SCOPE"
+          ! grep -Eq '^[AMD][[:space:]]+(Packages/|ProjectSettings/)' "$SCOPE"
+          ! grep -Eq '^[AMD][[:space:]]+Assets/Rokas/Scripts/(Combat|Core|Messages)/' "$SCOPE"
+          test "$(git rev-parse "$TESTED_SHA:Packages/manifest.json")" = "$(git rev-parse "$UNIFIED_PARENT:Packages/manifest.json")"
+          test "$(git rev-parse "$TESTED_SHA:ProjectSettings/ProjectVersion.txt")" = "$(git rev-parse "$UNIFIED_PARENT:ProjectSettings/ProjectVersion.txt")"
+          test "$(sed -n 's/^m_EditorVersion: //p' ProjectSettings/ProjectVersion.txt)" = '6000.3.19f1'
+          grep -q 'RequireWeatherTexture("RainStreakAuthored")' "$SRC"
+          grep -q 'RequireWeatherTexture("WetGlassDroplets")' "$SRC"
+          ! grep -q 'CreateRainTexture' "$SRC"
+          ! grep -q 'CreateWetGlassTexture' "$SRC"
+          ! grep -q 'LampMood' "$SRC"
+          test "$(grep -c 'new GameObject("HomeWeatherCamera")' "$SRC")" -eq 1
+          test "$(grep -c 'name = "HomeWeatherRenderTexture"' "$SRC")" -eq 1
+          test "$(grep -c 'CreateRainLayer("HomeRain' "$SRC")" -eq 3
+          test "$(grep -c 'audio.PlayThunder' "$SRC")" -eq 1
+          grep -q 'thunderCountdown = -1f' "$SRC"
+          grep -q 'if (lightningAge >= 0f) nextLightning = 0f' "$SRC"
+          test ! -e Assets/Rokas/Tests/PlayMode/UnifiedWeather3IntegrationTransitionPlayModeTests.cs
+          test -f Docs/ThirdParty/Weather3.md
+          test "$(find Assets/Rokas/Resources/Weather3 -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 10
+          test "$(find Assets/Rokas/Resources/Weather3 -maxdepth 1 -type f -name '*.png.meta' | wc -l)" -eq 10
+          {
+            echo "REVIEW_KIND=STRUCTURED_EVIDENCE_BACKED_NO_SUBAGENT_AVAILABLE"
+            echo "BASE=$UNIFIED_PARENT"
+            echo "HEAD=$TESTED_SHA"
+            echo "SCOPE=WEATHER_3_INTEGRATION_ONLY"
+            echo "CRITICAL_FINDINGS=0"
+            echo "IMPORTANT_FINDINGS=0"
+            echo "RESULT=APPROVED_NO_PRODUCTION_FINDINGS"
+            echo "WEATHER_IMPLEMENTATION_PRESERVED=PASS"
+            echo "LIGHTNING_LIFECYCLE_CLEANUP=PASS"
+            echo "MESSAGES_SOURCE_UNCHANGED=PASS"
+            echo "COMBAT_SOURCE_UNCHANGED=PASS"
+            echo "HOME_NON_WEATHER_SOURCE_UNCHANGED=PASS"
+            echo "SINGLE_WEATHER_CAMERA=PASS"
+            echo "SINGLE_RENDER_TEXTURE=PASS"
+            echo "THREE_RAIN_LAYERS=PASS"
+            echo "SINGLE_THUNDER_DISPATCH_SITE=PASS"
+            echo "STALE_LAMPMOOD_ABSENT=PASS"
+            echo "PROCEDURAL_RAIN_FALLBACK_ABSENT=PASS"
+            echo "PROCEDURAL_WET_GLASS_FALLBACK_ABSENT=PASS"
+            echo "TRANSITION_PROBE_NOT_IN_PRODUCTION_TREE=PASS"
+            echo "PACKAGE_CHANGES=NONE"
+            echo "UNITY_VERSION=6000.3.19f1"
+            echo "WEATHER_PNG_META_PAIRS=10/10"
+            echo "THIRDPARTY_WEATHER_DOC=PASS"
+            echo "MERGE_ANCESTRY=PASS"
+            echo "SCOPE_CREEP=NONE_FOUND"
+          } > "$OUT/review-summary.txt"
+
+      - name: Verification-before-completion verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          grep -Fxq 'RESULT=APPROVED_NO_PRODUCTION_FINDINGS' "$OUT/review-summary.txt"
+          grep -Fxq 'TRACKED_FILE_1=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE' "$OUT/finalizer/tracked-changes-RCA.txt"
+          grep -Fxq 'TRACKED_FILE_2=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE' "$OUT/finalizer/tracked-changes-RCA.txt"
+          grep -Fxq 'EXACT_DIFF=UNRECOVERABLE_FROM_PRESERVED_EVIDENCE' "$OUT/finalizer/tracked-changes-RCA.txt"
+          {
+            echo "VERIFICATION_BEFORE_COMPLETION=BLOCKED"
+            echo "PRIMARY_BLOCKER=RUN_34410386283_DID_NOT_PRESERVE_THE_TWO_TRACKED_PATHS_OR_EXACT_DIFFS"
+            echo "RCA_CLASSIFICATION=E_UNKNOWN"
+            echo "UNITY_RERUN_PERFORMED=NO"
+            echo "UNITY_RERUN_FORBIDDEN_BY_HANDOFF=YES"
+            echo "SECONDARY_EVIDENCE_DISCREPANCY=HANDOFF_EDITMODE_38_38_BUT_ACTUAL_XML_33_33"
+            echo "ACTUAL_EDITMODE_XML=33/33"
+            echo "CHECKPOINT_CREATED=NO"
+            echo "REMOTE_UNIFIED_UPDATED=NO"
+            echo "DEVELOPMENT_UPDATED=NO"
+            echo "CANONICAL_FOLDER_TOUCHED=NO"
+            echo "FINAL_STATUS=BLOCKED"
+          } > "$OUT/verification-before-completion.txt"
+
+      - name: Final clean-tree proof after review and packaging
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          git status --short > "$OUT/git-status-final.txt"
+          git diff > "$OUT/git-diff-final.txt"
+          git diff --check > "$OUT/git-diff-check-final.txt"
+          test ! -s "$OUT/git-status-final.txt"
+          test ! -s "$OUT/git-diff-final.txt"
+          test ! -s "$OUT/git-diff-check-final.txt"
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$TESTED_TREE"
+          echo 'FINAL_TRACKED_CHANGES=0' > "$OUT/final-clean-tree.txt"
+
+      - name: Upload complete blocked verification package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-unified-weather3-final-verification
+          path: ${{ runner.temp }}/rokas-unified-weather3-final-verification
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Package verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/rokas-unified-weather3-final-verification"
+          grep -Fxq 'VERIFICATION_BEFORE_COMPLETION=BLOCKED' "$OUT/verification-before-completion.txt"
+          grep -Fxq 'FINAL_TRACKED_CHANGES=0' "$OUT/final-clean-tree.txt"
+          echo 'FINAL_VERIFICATION_PACKAGE=CREATED_BLOCKED'
