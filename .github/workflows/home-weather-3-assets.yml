@@ -90,16 +90,24 @@ jobs:
               alpha = image.getchannel('A')
               lo, hi = alpha.getextrema()
               assert hi > 0, f'{path.name}: empty alpha'
-              if path.name != 'WindowGlazingMask.png':
-                  corners = [alpha.getpixel((0, 0)), alpha.getpixel((image.width-1, 0)), alpha.getpixel((0, image.height-1)), alpha.getpixel((image.width-1, image.height-1))]
-                  assert max(corners) <= 12, f'{path.name}: hard visible outer corner alpha {corners}'
+              assert lo == 0, f'{path.name}: alpha must contain transparent pixels, got {(lo, hi)}'
+              corners = [alpha.getpixel((0, 0)), alpha.getpixel((image.width-1, 0)), alpha.getpixel((0, image.height-1)), alpha.getpixel((image.width-1, image.height-1))]
+              assert max(corners) <= 12, f'{path.name}: hard visible outer corner alpha {corners}'
               meta = Path(str(path) + '.meta')
               assert meta.is_file(), f'{path.name}: missing meta'
               print(path.name, image.size, 'alpha', (lo, hi), 'bytes', path.stat().st_size)
+
+          glazing = Image.open(root / 'WindowGlazingMask.png').convert('RGBA').getchannel('A')
+          assert glazing.getpixel((100, 200)) >= 250, 'left glazing panel missing'
+          assert glazing.getpixel((270, 200)) <= 5, 'left mullion gap must be transparent'
+          assert glazing.getpixel((350, 200)) >= 250, 'middle glazing panel missing'
+          assert glazing.getpixel((505, 200)) <= 5, 'right mullion gap must be transparent'
+          assert glazing.getpixel((560, 200)) >= 250, 'right glazing panel missing'
           assert Path('Assets/Rokas/Resources/Weather3.meta').is_file()
           PY
 
       - name: Upload licensed source bundle
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: home-weather-3-licensed-sources-authored
@@ -107,6 +115,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload authored runtime resources
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: home-weather-3-authored-runtime-resources
