@@ -5,14 +5,15 @@ on:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3-assets.yml
+      - Tools/CI/author_weather3_assets.py
 
 permissions:
   contents: read
 
 jobs:
-  acquire:
+  acquire-and-author:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout diagnostic branch
         uses: actions/checkout@v7
@@ -39,16 +40,77 @@ jobs:
             -o Weather3Sources/RaindropsOnWindow.jpg
           cp Assets/Rokas/Art/Home/ApartmentNight.png Weather3Sources/ApartmentNight.png
 
-      - name: Record checksums and dimensions
+      - name: Record source checksums and dimensions
         shell: bash
         run: |
           set -euo pipefail
           sha256sum Weather3Sources/* | tee Weather3Sources/SHA256SUMS.txt
           file Weather3Sources/* | tee Weather3Sources/FILE_INFO.txt
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install deterministic authoring dependencies
+        shell: bash
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pillow numpy opencv-python-headless
+
+      - name: Run existing deterministic Weather 3 authoring script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python Tools/CI/author_weather3_assets.py | tee Weather3Sources/AUTHORING_OUTPUT.txt
+
+      - name: Validate authored alpha resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          root = Path('Assets/Rokas/Resources/Weather3')
+          expected = {
+              'RainStreakAuthored.png',
+              'WetGlassDroplets.png',
+              'WetGlassStreaks.png',
+              'DistantHaze.png',
+              'NearMist.png',
+              'StormCloudMask.png',
+              'WindowGlazingMask.png',
+              'WarmPracticalMask.png',
+              'ColdSpillMask.png',
+              'StormRoomLiftMask.png',
+          }
+          actual = {p.name for p in root.glob('*.png')}
+          assert actual == expected, (actual, expected)
+          for path in sorted(root.glob('*.png')):
+              image = Image.open(path).convert('RGBA')
+              alpha = image.getchannel('A')
+              lo, hi = alpha.getextrema()
+              assert hi > 0, f'{path.name}: empty alpha'
+              if path.name != 'WindowGlazingMask.png':
+                  corners = [alpha.getpixel((0, 0)), alpha.getpixel((image.width-1, 0)), alpha.getpixel((0, image.height-1)), alpha.getpixel((image.width-1, image.height-1))]
+                  assert max(corners) <= 12, f'{path.name}: hard visible outer corner alpha {corners}'
+              meta = Path(str(path) + '.meta')
+              assert meta.is_file(), f'{path.name}: missing meta'
+              print(path.name, image.size, 'alpha', (lo, hi), 'bytes', path.stat().st_size)
+          assert Path('Assets/Rokas/Resources/Weather3.meta').is_file()
+          PY
+
       - name: Upload licensed source bundle
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-licensed-sources
+          name: home-weather-3-licensed-sources-authored
           path: Weather3Sources
+          if-no-files-found: error
+
+      - name: Upload authored runtime resources
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-authored-runtime-resources
+          path: |
+            Assets/Rokas/Resources/Weather3.meta
+            Assets/Rokas/Resources/Weather3/**
           if-no-files-found: error
