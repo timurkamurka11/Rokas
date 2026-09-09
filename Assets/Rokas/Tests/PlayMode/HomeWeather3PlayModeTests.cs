@@ -125,6 +125,44 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash()
+        {
+            Initialize("rokas-weather3-lightning-reentry-");
+            yield return null;
+
+            RokasView view = Bootstrap().View;
+            RawImage storm = FindRawImage("HomeStormFlash");
+            Assert.That(storm, Is.Not.Null);
+
+            ForceLightning(view);
+            view.Tick(.03f);
+            yield return null;
+            Assert.That(storm.color.a, Is.GreaterThan(.001f),
+                "precondition: forced lightning must be active before leaving Home");
+
+            object effects = typeof(RokasView)
+                .GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(view);
+            Assert.That(effects, Is.Not.Null);
+            MethodInfo setLocation = effects.GetType().GetMethod("SetLocation", BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(setLocation, Is.Not.Null);
+
+            setLocation.Invoke(effects, new object[] { false, false });
+            setLocation.Invoke(effects, new object[] { true, false });
+
+            bool automaticLightningObserved = false;
+            for (int index = 0; index < 700 && !automaticLightningObserved; index++)
+            {
+                view.Tick(.05f);
+                automaticLightningObserved = storm.color.a > .001f;
+            }
+
+            Assert.That(automaticLightningObserved, Is.True,
+                "automatic lightning must be scheduled again after Home re-entry when an active flash was interrupted");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator Weather3PreservesBoundedRigAndStationaryLaptopHotspot()
         {
             Initialize("rokas-weather3-safety-");

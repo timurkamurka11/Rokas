@@ -243,6 +243,7 @@ namespace Rokas.Presentation
             if (home && nextLightning <= 0f) ScheduleNextLightning();
             if (!home)
             {
+                if (lightningAge >= 0f) nextLightning = 0f;
                 lightningAge = -1f;
                 thunderCountdown = -1f;
                 smoothedCursorParallax = Vector2.zero;
