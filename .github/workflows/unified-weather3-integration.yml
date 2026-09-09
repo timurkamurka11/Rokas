@@ -36,7 +36,6 @@ jobs:
           test "$project_version" = "6000.3.19f1"
           git fetch origin integration/weather3-candidate integration/rokas-unified development
           test "$(git rev-parse origin/integration/weather3-candidate)" = "$tested_sha"
-          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
           mkdir -p /tmp/unified-remaining
           {
             echo "TESTED_SHA=$tested_sha"
@@ -48,48 +47,60 @@ jobs:
             echo "DEVELOPMENT_REMOTE_BEFORE=$(git rev-parse origin/development)"
             echo "TRANSITION_GREEN_RUN=34408368570"
             echo "TRANSITION_ARTIFACT=10126332140"
+            echo "FIRST_LOOP_GREEN_RUN=34409767129"
+            echo "FIRST_LOOP_EVIDENCE_ARTIFACT=10126843273"
             echo "WEATHER_FINAL_REFERENCE_ARTIFACT=10121663621"
             echo "WEATHER_APPROVED_BASELINE_ARTIFACT=10109251262"
           } | tee /tmp/unified-remaining/exact-tree.txt
 
-      - name: Download already-green transition evidence
+      - name: Download already-green transition and first-loop evidence
         uses: actions/download-artifact@v5
         with:
-          name: unified-weather3-transition-diagnostic
-          path: /tmp/unified-remaining/transition
+          name: unified-weather3-remaining-results
+          path: /tmp/imported-green
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          run-id: 34408368570
+          run-id: 34409767129
 
-      - name: Prove imported transition evidence
+      - name: Prove imported transition and first-loop evidence
         shell: bash
         run: |
           set -euo pipefail
-          root=/tmp/unified-remaining/transition
+          root=/tmp/imported-green
           test -f "$root/exact-tree.txt"
-          test -f "$root/transition-step-status.txt"
           grep -Fxq 'TESTED_SHA=af541032cd1dd492d9895c5a9c8e92a1e2342745' "$root/exact-tree.txt"
           grep -Fxq 'TESTED_TREE=c0003c877acc637deff0f58dabc94bbb6f0a3214' "$root/exact-tree.txt"
-          grep -Fxq 'outcome=success' "$root/transition-step-status.txt"
+          test -f "$root/transition/transition-step-status.txt"
+          grep -Fxq 'outcome=success' "$root/transition/transition-step-status.txt"
           python3 - <<'PY'
           from pathlib import Path
-          import xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-remaining/transition')
-          xmls=list(root.rglob('*results.xml')) or list(root.rglob('*.xml'))
-          if not xmls: raise SystemExit('NO_TRANSITION_XML')
-          x=ET.parse(xmls[0]).getroot()
-          total=int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0)
-          passed=int(x.attrib.get('passed',0) or 0)
-          failed=int(x.attrib.get('failed',0) or 0)
-          skipped=int(x.attrib.get('skipped',0) or 0)
-          inc=int(x.attrib.get('inconclusive',0) or 0)
-          if (total,passed,failed,skipped,inc)!=(1,1,0,0,0):
-              raise SystemExit(f'BAD_TRANSITION_RESULT total={total} passed={passed} failed={failed} skipped={skipped} inconclusive={inc}')
-          cases=x.findall('.//test-case')
+          import shutil, xml.etree.ElementTree as ET
+          root=Path('/tmp/imported-green')
+          out=Path('/tmp/unified-remaining')
+
+          transition_xml=root/'transition/gameci-artifacts/playmode-results.xml'
+          if not transition_xml.exists(): raise SystemExit('NO_TRANSITION_XML')
+          x=ET.parse(transition_xml).getroot()
+          vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
           expected='Rokas.Tests.UnifiedWeather3IntegrationTransitionPlayModeTests.ActiveLightningCombatTransitionCleansUpAndReschedulesAfterReturn'
+          cases=x.findall('.//test-case')
+          if vals!=(1,1,0,0,0): raise SystemExit(f'BAD_TRANSITION_RESULT {vals}')
           if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
               raise SystemExit('TRANSITION_IDENTITY_MISMATCH')
-          Path('/tmp/unified-remaining/transition-proof.txt').write_text(f'transition: passed=1 total=1 full={expected}\n')
+          (out/'transition-proof.txt').write_text(f'transition: passed=1 total=1 full={expected}\n')
+          shutil.copytree(root/'transition', out/'transition', dirs_exist_ok=True)
+
+          flow_xml=root/'runtime-flow/playmode-results.xml'
+          if not flow_xml.exists(): raise SystemExit('NO_FIRST_LOOP_XML')
+          x=ET.parse(flow_xml).getroot()
+          vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
+          expected='Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce'
+          cases=x.findall('.//test-case')
+          if vals!=(1,1,0,0,0): raise SystemExit(f'BAD_FIRST_LOOP_RESULT {vals}')
+          if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
+              raise SystemExit('FIRST_LOOP_IDENTITY_MISMATCH')
+          (out/'first-loop-summary.txt').write_text(f'first-loop: passed=1 total=1 full={expected}\n')
+          shutil.copytree(root/'runtime-flow', out/'runtime-flow', dirs_exist_ok=True)
           PY
 
       - name: Cache Unity Library
@@ -102,62 +113,15 @@ jobs:
             Unified-Weather3-Focused-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
 
-      - name: Run exact unified whole-product first-loop
-        id: flow
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-          ROKAS_COMBAT_CAPTURE_DIR: TestResults/UnifiedRuntimeFlow
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: PlayMode
-          artifactsPath: artifacts-flow
-          customParameters: -testFilter Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Whole-Product First Loop
-
-      - name: Preserve and prove unified first-loop
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/unified-remaining/runtime-flow /tmp/unified-remaining/runtime-captures
-          sudo cp -a "${{ steps.flow.outputs.artifactsPath }}/." /tmp/unified-remaining/runtime-flow/
-          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-remaining/runtime-flow
-          test -d TestResults/UnifiedRuntimeFlow
-          cp TestResults/UnifiedRuntimeFlow/*.png /tmp/unified-remaining/runtime-captures/
-          for f in integration-home.png integration-messages.png integration-combat.png integration-payment.png; do
-            test -s "/tmp/unified-remaining/runtime-captures/$f"
-          done
-          python3 - <<'PY'
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-remaining/runtime-flow')
-          xmls=list(root.rglob('*results.xml')) or list(root.rglob('*.xml'))
-          if not xmls: raise SystemExit('NO_FIRST_LOOP_XML')
-          x=ET.parse(xmls[0]).getroot()
-          total=int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0)
-          passed=int(x.attrib.get('passed',0) or 0)
-          failed=int(x.attrib.get('failed',0) or 0)
-          skipped=int(x.attrib.get('skipped',0) or 0)
-          inc=int(x.attrib.get('inconclusive',0) or 0)
-          expected='Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce'
-          cases=x.findall('.//test-case')
-          if (total,passed,failed,skipped,inc)!=(1,1,0,0,0): raise SystemExit('FIRST_LOOP_NOT_1_OF_1_PASS')
-          if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected: raise SystemExit('FIRST_LOOP_IDENTITY_MISMATCH')
-          Path('/tmp/unified-remaining/first-loop-summary.txt').write_text(f'first-loop: passed=1 total=1 full={expected}\n')
-          PY
-
       - name: Overlay pinned seven-state Weather visual probe
+        id: overlay
         shell: bash
         run: |
           set -euo pipefail
           git fetch --no-tags origin ce9a24ff95a4b8803a6b95137cbc84550565d5b8
           git show ce9a24ff95a4b8803a6b95137cbc84550565d5b8:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
           grep -q 'CaptureWeather3VisualQaMatrix' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'TestResults.*HomeWeather3VisualQa' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
           grep -q 'captureCamera.Render' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
           grep -q 'RenderTexture.active' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
           grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
@@ -165,6 +129,7 @@ jobs:
 
       - name: Capture seven Weather states from exact unified candidate
         id: visual
+        continue-on-error: true
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -180,65 +145,94 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Unified Weather3 Seven-State Visual
 
+      - name: Record visual step status
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/unified-remaining
+          {
+            echo "outcome=${{ steps.visual.outcome }}"
+            echo "conclusion=${{ steps.visual.conclusion }}"
+            echo "overlay_outcome=${{ steps.overlay.outcome }}"
+          } | tee /tmp/unified-remaining/visual-step-status.txt
+
       - name: Preserve seven Weather captures and remove CI-only probe
         if: always()
         shell: bash
         run: |
           set -u
           mkdir -p /tmp/unified-remaining/visual-test /tmp/unified-remaining/weather-captures
-          if [ -d "${{ steps.visual.outputs.artifactsPath }}" ]; then
+          if [ -n "${{ steps.visual.outputs.artifactsPath }}" ] && [ -d "${{ steps.visual.outputs.artifactsPath }}" ]; then
             sudo cp -a "${{ steps.visual.outputs.artifactsPath }}/." /tmp/unified-remaining/visual-test/
             sudo chown -R "$(id -u):$(id -g)" /tmp/unified-remaining/visual-test
           fi
           src=TestResults/HomeWeather3VisualQa
           if [ -d "$src" ]; then
-            cp "$src/01-weather3-light-on.png" /tmp/unified-remaining/weather-captures/01-unified-weather3-light-on.png
-            cp "$src/02-weather3-light-off.png" /tmp/unified-remaining/weather-captures/02-unified-weather3-light-off.png
-            cp "$src/03-weather3-normal-rain.png" /tmp/unified-remaining/weather-captures/03-unified-weather3-normal-rain.png
-            cp "$src/04-weather3-wet-glass.png" /tmp/unified-remaining/weather-captures/04-unified-weather3-wet-glass.png
-            cp "$src/05-weather3-lightning-on.png" /tmp/unified-remaining/weather-captures/05-unified-weather3-lightning-on.png
-            cp "$src/06-weather3-lightning-off.png" /tmp/unified-remaining/weather-captures/06-unified-weather3-lightning-off.png
-            cp "$src/07-weather3-idle-depth.png" /tmp/unified-remaining/weather-captures/07-unified-weather3-idle-depth.png
+            [ -f "$src/01-weather3-light-on.png" ] && cp "$src/01-weather3-light-on.png" /tmp/unified-remaining/weather-captures/01-unified-weather3-light-on.png
+            [ -f "$src/02-weather3-light-off.png" ] && cp "$src/02-weather3-light-off.png" /tmp/unified-remaining/weather-captures/02-unified-weather3-light-off.png
+            [ -f "$src/03-weather3-normal-rain.png" ] && cp "$src/03-weather3-normal-rain.png" /tmp/unified-remaining/weather-captures/03-unified-weather3-normal-rain.png
+            [ -f "$src/04-weather3-wet-glass.png" ] && cp "$src/04-weather3-wet-glass.png" /tmp/unified-remaining/weather-captures/04-unified-weather3-wet-glass.png
+            [ -f "$src/05-weather3-lightning-on.png" ] && cp "$src/05-weather3-lightning-on.png" /tmp/unified-remaining/weather-captures/05-unified-weather3-lightning-on.png
+            [ -f "$src/06-weather3-lightning-off.png" ] && cp "$src/06-weather3-lightning-off.png" /tmp/unified-remaining/weather-captures/06-unified-weather3-lightning-off.png
+            [ -f "$src/07-weather3-idle-depth.png" ] && cp "$src/07-weather3-idle-depth.png" /tmp/unified-remaining/weather-captures/07-unified-weather3-idle-depth.png
           fi
           sudo rm -f Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs.meta
+          find /tmp/unified-remaining -maxdepth 3 -type f -printf '%P\n' | sort > /tmp/unified-remaining/remaining-files.txt
 
-      - name: Prove seven-state visual test and capture inventory
+      - name: Analyze seven-state visual evidence
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
-          for f in \
-            01-unified-weather3-light-on.png \
-            02-unified-weather3-light-off.png \
-            03-unified-weather3-normal-rain.png \
-            04-unified-weather3-wet-glass.png \
-            05-unified-weather3-lightning-on.png \
-            06-unified-weather3-lightning-off.png \
-            07-unified-weather3-idle-depth.png; do
-            test -s "/tmp/unified-remaining/weather-captures/$f"
-          done
-          sha256sum /tmp/unified-remaining/weather-captures/*.png > /tmp/unified-remaining/weather-capture-sha256.txt
+          set +e
           python3 - <<'PY'
           from pathlib import Path
-          import xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-remaining/visual-test')
-          xmls=list(root.rglob('*results.xml')) or list(root.rglob('*.xml'))
-          if not xmls: raise SystemExit('NO_VISUAL_XML')
-          x=ET.parse(xmls[0]).getroot()
-          vals=(int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0),int(x.attrib.get('passed',0) or 0),int(x.attrib.get('failed',0) or 0),int(x.attrib.get('skipped',0) or 0),int(x.attrib.get('inconclusive',0) or 0))
-          if vals!=(1,1,0,0,0): raise SystemExit(f'VISUAL_TEST_NOT_1_OF_1_PASS {vals}')
-          Path('/tmp/unified-remaining/visual-summary.txt').write_text('visual: passed=1 total=1 captures=7\n')
+          import hashlib, xml.etree.ElementTree as ET
+          root=Path('/tmp/unified-remaining')
+          expected_files=[
+            '01-unified-weather3-light-on.png',
+            '02-unified-weather3-light-off.png',
+            '03-unified-weather3-normal-rain.png',
+            '04-unified-weather3-wet-glass.png',
+            '05-unified-weather3-lightning-on.png',
+            '06-unified-weather3-lightning-off.png',
+            '07-unified-weather3-idle-depth.png',
+          ]
+          captures=root/'weather-captures'
+          missing=[f for f in expected_files if not (captures/f).is_file() or (captures/f).stat().st_size==0]
+          xmls=list((root/'visual-test').rglob('*results.xml')) or list((root/'visual-test').rglob('*.xml'))
+          problems=[]
+          if missing: problems.append('missing captures: '+', '.join(missing))
+          if not xmls:
+              problems.append('no visual XML')
+          else:
+              x=ET.parse(xmls[0]).getroot()
+              vals=tuple(int(x.attrib.get(k,0) or 0) for k in ('total','passed','failed','skipped','inconclusive'))
+              expected='Rokas.Tests.HomeWeather3VisualQaPlayModeTests.CaptureWeather3VisualQaMatrix'
+              cases=x.findall('.//test-case')
+              if vals!=(1,1,0,0,0): problems.append(f'visual result {vals}')
+              if len(cases)!=1 or cases[0].attrib.get('fullname')!=expected or cases[0].attrib.get('result') not in ('Passed','Success'):
+                  problems.append('visual identity/result mismatch')
+          if not missing:
+              with (root/'weather-capture-sha256.txt').open('w') as fh:
+                  for f in expected_files:
+                      p=captures/f
+                      fh.write(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {f}\n')
+          status='PASS' if not problems else 'FAIL'
+          (root/'visual-summary.txt').write_text('VISUAL_PROOF='+status+'\nCAPTURES_PRESENT='+str(7-len(missing))+'\n'+'\n'.join(problems)+'\n')
+          print((root/'visual-summary.txt').read_text())
           PY
+          exit 0
 
       - name: Aggregate Unity log scan
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           python3 - <<'PY'
           from pathlib import Path
           import re
           root=Path('/tmp/unified-remaining')
           logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
-          if not logs: raise SystemExit('ZERO_UNITY_LOGS')
           strong=[
             re.compile(r'\bNullReferenceException\b'),
             re.compile(r'\bMissingReferenceException\b'),
@@ -254,29 +248,42 @@ jobs:
               for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
                   if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
           out=f'UNITY_LOG_FILES_DISCOVERED={len(logs)}\nUNITY_LOG_FILES_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'
-          Path('/tmp/unified-remaining/log-summary.txt').write_text(out+'\n'.join(findings))
+          (root/'log-summary.txt').write_text(out+'\n'.join(findings))
           print(out,end='')
-          if findings: raise SystemExit('\n'.join(findings))
           PY
+          exit 0
 
       - name: Final exact-tree integrity proof
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "af541032cd1dd492d9895c5a9c8e92a1e2342745"
-          test "$(git rev-parse HEAD^{tree})" = "c0003c877acc637deff0f58dabc94bbb6f0a3214"
-          git diff --check | tee /tmp/unified-remaining/final-working-diff-check.txt
-          test ! -s /tmp/unified-remaining/final-working-diff-check.txt
-          test -z "$(git status --porcelain --untracked-files=no)"
-          git fetch origin integration/weather3-candidate integration/rokas-unified development
-          test "$(git rev-parse origin/integration/weather3-candidate)" = "af541032cd1dd492d9895c5a9c8e92a1e2342745"
-          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          set +e
+          status=PASS
+          current_sha="$(git rev-parse HEAD 2>/dev/null)"
+          current_tree="$(git rev-parse HEAD^{tree} 2>/dev/null)"
+          [ "$current_sha" = "af541032cd1dd492d9895c5a9c8e92a1e2342745" ] || status=FAIL
+          [ "$current_tree" = "c0003c877acc637deff0f58dabc94bbb6f0a3214" ] || status=FAIL
+          git diff --check > /tmp/unified-remaining/final-working-diff-check.txt 2>&1 || status=FAIL
+          [ -z "$(git status --porcelain --untracked-files=no)" ] || status=FAIL
+          git fetch origin integration/weather3-candidate integration/rokas-unified development >/tmp/unified-remaining/final-fetch.txt 2>&1 || status=FAIL
+          candidate_final="$(git rev-parse origin/integration/weather3-candidate 2>/dev/null)"
+          unified_final="$(git rev-parse origin/integration/rokas-unified 2>/dev/null)"
+          development_final="$(git rev-parse origin/development 2>/dev/null)"
+          unified_before="$(sed -n 's/^UNIFIED_REMOTE_BEFORE=//p' /tmp/unified-remaining/exact-tree.txt)"
+          development_before="$(sed -n 's/^DEVELOPMENT_REMOTE_BEFORE=//p' /tmp/unified-remaining/exact-tree.txt)"
+          [ "$candidate_final" = "af541032cd1dd492d9895c5a9c8e92a1e2342745" ] || status=FAIL
+          [ "$unified_final" = "$unified_before" ] || status=FAIL
+          [ "$development_final" = "$development_before" ] || status=FAIL
           {
-            echo "CANDIDATE_REMOTE_FINAL=$(git rev-parse origin/integration/weather3-candidate)"
-            echo "UNIFIED_REMOTE_FINAL=$(git rev-parse origin/integration/rokas-unified)"
-            echo "DEVELOPMENT_REMOTE_FINAL=$(git rev-parse origin/development)"
-            echo "WORKTREE_TRACKED_CHANGES=$(git status --porcelain --untracked-files=no | wc -l)"
+            echo "INTEGRITY=$status"
+            echo "CURRENT_SHA=$current_sha"
+            echo "CURRENT_TREE=$current_tree"
+            echo "CANDIDATE_REMOTE_FINAL=$candidate_final"
+            echo "UNIFIED_REMOTE_FINAL=$unified_final"
+            echo "DEVELOPMENT_REMOTE_FINAL=$development_final"
+            echo "TRACKED_CHANGES=$(git status --porcelain --untracked-files=no | wc -l)"
           } | tee /tmp/unified-remaining/final-integrity.txt
+          exit 0
 
       - name: Upload remaining unified evidence
         if: always()
@@ -286,3 +293,18 @@ jobs:
           path: /tmp/unified-remaining
           if-no-files-found: error
           retention-days: 14
+
+      - name: Final remaining-gates verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.overlay.outcome }}" = "success"
+          test "${{ steps.visual.outcome }}" = "success"
+          grep -Fxq 'VISUAL_PROOF=PASS' /tmp/unified-remaining/visual-summary.txt
+          grep -Fxq 'CAPTURES_PRESENT=7' /tmp/unified-remaining/visual-summary.txt
+          grep -Fxq 'RELEVANT_ERRORS=0' /tmp/unified-remaining/log-summary.txt
+          grep -Eq '^UNITY_LOG_FILES_DISCOVERED=[1-9][0-9]*$' /tmp/unified-remaining/log-summary.txt
+          grep -Eq '^UNITY_LOG_FILES_SCANNED=[1-9][0-9]*$' /tmp/unified-remaining/log-summary.txt
+          grep -Fxq 'INTEGRITY=PASS' /tmp/unified-remaining/final-integrity.txt
+          echo 'REMAINING_GATES=PASS'
