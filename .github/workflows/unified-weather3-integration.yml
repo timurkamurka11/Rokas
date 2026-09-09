@@ -41,7 +41,7 @@ jobs:
             echo "PROJECT_VERSION_WITH_REVISION=$project_revision"
           } | tee /tmp/unified-weather3-transition-diagnostic/exact-tree.txt
 
-      - name: Overlay unchanged CI-only active-lightning transition probe
+      - name: Overlay CI-only active-lightning transition probe
         shell: bash
         run: |
           set -euo pipefail
@@ -71,7 +71,9 @@ jobs:
                       RawImage storm=Find("HomeStormFlash").GetComponent<RawImage>(); GameObject weatherRuntime=Find("HomeWeatherRuntime"); Assert.That(storm,Is.Not.Null); Assert.That(weatherRuntime,Is.Not.Null);
                       effects.GetType().GetMethod("ForceLightning",BindingFlags.Instance|BindingFlags.Public).Invoke(effects,null); boot.View.Tick(.03f); yield return null;
                       Assert.That(storm.color.a,Is.GreaterThan(.001f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.GreaterThan(0f));
-                      Press("LaptopHotspot"); Press("LaptopContracts"); Press("AcceptContract"); Press("ClosePanel"); Press("DoorHotspot");
+                      Press("LaptopHotspot"); Press("LaptopContracts"); Press("AcceptContract"); Press("ClosePanel");
+                      yield return new WaitForSecondsRealtime(.3f);
+                      Press("DoorHotspot");
                       yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Portal)); Press("EnterPortal"); yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Combat));
                       Assert.That(storm.gameObject.activeInHierarchy,Is.False,"Home storm flash must not leak into Combat"); Assert.That(weatherRuntime.activeInHierarchy,Is.False,"Home weather runtime must not remain active in Combat");
                       Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"pending Home thunder must be cancelled on transition"); Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f));
