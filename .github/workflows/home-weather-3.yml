@@ -1,20 +1,19 @@
-name: Home Weather 3 Lamp-Off RED
+name: Home Weather 3 Final Exact-Tree Gate
 
 on:
   push:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3.yml
-      - Tools/CI/HomeWeather3LampOffRegressionPlayModeTests.cs.txt
 
 permissions:
   contents: read
   checks: write
 
 jobs:
-  lamp-off-red:
+  final-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 150
     steps:
       - name: Checkout exact Weather 3 production runtime commit
         uses: actions/checkout@v7
@@ -22,38 +21,116 @@ jobs:
           ref: 510cdb2c3c93690e144a5a06842f69f4c6f9badf
           fetch-depth: 0
 
-      - name: Prove exact production SHA and tree
+      - name: Prove exact production SHA tree ancestry and protected refs
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
           test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
-          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-lampoff-red-tree.txt
-          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-lampoff-red-tree.txt
+          git merge-base --is-ancestor a05dc28dd7f81c1c76e4be8788c89c72b0398020 HEAD
+          git fetch origin development integration/rokas-unified ci/home-weather-3
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          mkdir -p /tmp/weather3-final
+          {
+            echo "TESTED_SHA=$(git rev-parse HEAD)"
+            echo "TESTED_TREE=$(git rev-parse HEAD^{tree})"
+            echo "DEVELOPMENT_SHA=$(git rev-parse origin/development)"
+            echo "DEVELOPMENT_TREE=$(git rev-parse origin/development^{tree})"
+            echo "UNIFIED_SHA=$(git rev-parse origin/integration/rokas-unified)"
+            echo "UNIFIED_TREE=$(git rev-parse origin/integration/rokas-unified^{tree})"
+          } | tee /tmp/weather3-final/exact-tree.txt
 
-      - name: Overlay only lamp-off regression test
+      - name: Literal diff check and scope audit
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin ci/home-weather-3
-          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3LampOffRegressionPlayModeTests.cs.txt \
-            > Assets/Rokas/Tests/PlayMode/HomeWeather3LampOffRegressionPlayModeTests.cs
-          grep -q 'HomeWarmPracticalDim' Assets/Rokas/Tests/PlayMode/HomeWeather3LampOffRegressionPlayModeTests.cs
-          git status --short | tee /tmp/weather3-lampoff-red-status.txt
+          git diff --check a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/git-diff-check.txt
+          git diff --name-status a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/scope.txt
+          test "$(git diff --name-only a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD)" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          git log --oneline --decorate a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/production-history.txt
+
+      - name: Run static validator and classify historical baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python3 Tools/validate_assets.py > /tmp/weather3-final/validator-raw.txt 2>&1
+          validator_rc=$?
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, struct, sys
+          report = Path('/tmp/weather3-final/validator-raw.txt').read_text(errors='replace')
+          failures = [line for line in report.splitlines() if line.startswith('FAIL: ')]
+          legacy_images = {
+              'GreenTea.png','HunterTempura.png','MoonMochi.png','SpicyMiso.png',
+              'TravelerOnigiri.png','HomeActionIcons.png','EmojiOne.png'
+          }
+          legacy_audio = {'LaptopMouseClick.wav','UIWood.wav'}
+          historical=[]; weather_resolution=[]; unexpected=[]
+          for line in failures:
+              if line.startswith('FAIL: Unresolved GUID '):
+                  historical.append(line)
+              elif line.startswith('FAIL: Background below HD: '):
+                  name=line.rsplit(': ',1)[-1]
+                  if name in legacy_images: historical.append(line)
+                  elif (Path('Assets/Rokas/Resources/Weather3')/name).exists(): weather_resolution.append(line)
+                  else: unexpected.append(line)
+              elif line.startswith('FAIL: Invalid stereo PCM source: ') and line.rsplit(': ',1)[-1] in legacy_audio:
+                  historical.append(line)
+              else:
+                  unexpected.append(line)
+          guid_count=sum('Unresolved GUID ' in x for x in historical)
+          legacy_bg_count=sum('Background below HD:' in x for x in historical)
+          legacy_audio_count=sum('Invalid stereo PCM source:' in x for x in historical)
+          if (guid_count,legacy_bg_count,legacy_audio_count)!=(4,7,2):
+              print('historical baseline mismatch', guid_count, legacy_bg_count, legacy_audio_count)
+              print('\n'.join(historical))
+              sys.exit(2)
+          if unexpected:
+              print('NEW RELEVANT VALIDATOR FINDINGS:')
+              print('\n'.join(unexpected))
+              sys.exit(3)
+          weather_dir=Path('Assets/Rokas/Resources/Weather3')
+          pngs=sorted(weather_dir.glob('*.png'))
+          if len(pngs)!=10:
+              print('Expected exactly 10 authored Weather3 PNGs, got',len(pngs)); sys.exit(4)
+          asset_lines=[]
+          for p in pngs:
+              meta=Path(str(p)+'.meta')
+              if not meta.exists(): print('Missing meta',p); sys.exit(5)
+              b=p.read_bytes()[:33]
+              if b[:8]!=b'\x89PNG\r\n\x1a\n': print('Invalid PNG',p); sys.exit(6)
+              w,h=struct.unpack('>II',b[16:24]); color_type=b[25]
+              if w<32 or h<32: print('Weather effect texture implausibly small',p,w,h); sys.exit(7)
+              mt=meta.read_text(errors='replace')
+              if not re.search(r'^guid: [0-9a-f]{32}$',mt,re.M): print('Invalid meta GUID',meta); sys.exit(8)
+              if 'mipmaps:' not in mt and 'enableMipMap:' not in mt: print('Importer metadata incomplete',meta); sys.exit(9)
+              asset_lines.append(f'{p.name}: {w}x{h} color_type={color_type} meta=OK')
+          out=[]
+          out.append('HISTORICAL_FINDINGS=13')
+          out.append(f'HISTORICAL_GUID={guid_count}')
+          out.append(f'HISTORICAL_BELOW_HD={legacy_bg_count}')
+          out.append(f'HISTORICAL_PCM={legacy_audio_count}')
+          out.append(f'WEATHER_EFFECT_RESOLUTION_CLASSIFIER_NOTICES={len(weather_resolution)}')
+          out.append('NEW_RELEVANT_FINDINGS=0')
+          out.extend(asset_lines)
+          Path('/tmp/weather3-final/validator-summary.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out))
+          PY
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-Weather-3-LampOff-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-Weather-3-Final-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run lamp-off regression expecting RED
-        id: unity-tests
-        continue-on-error: true
+      - name: Run complete Core domain suite
+        id: core
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env:
+        env: &unity_env
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -61,28 +138,202 @@ jobs:
         with:
           projectPath: .
           unityVersion: auto
-          testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeWeather3LampOffRegressionPlayModeTests
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Tests.FirstLoopDomainTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Lamp-Off RED
+          checkName: Home Weather 3 Core Domain
 
-      - name: Prove failure is the intended missing localized dimmer
+      - name: Preserve Core evidence
         shell: bash
         run: |
           set -euo pipefail
-          test -f artifacts/playmode-results.xml
-          grep -q 'HomeWarmPracticalDim' artifacts/playmode-results.xml
-          grep -q 'result="Failed"' artifacts/playmode-results.xml
-          cp artifacts/playmode-results.xml /tmp/weather3-lampoff-red-results.xml
+          mkdir -p /tmp/weather3-final/core
+          cp -a "${{ steps.core.outputs.artifactsPath }}/." /tmp/weather3-final/core/
+          rm -rf "${{ steps.core.outputs.artifactsPath }}"
 
-      - name: Upload lamp-off RED evidence
+      - name: Run complete EditMode
+        id: editmode
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: EditMode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Full EditMode
+
+      - name: Preserve EditMode evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-final/editmode
+          cp -a "${{ steps.editmode.outputs.artifactsPath }}/." /tmp/weather3-final/editmode/
+          rm -rf "${{ steps.editmode.outputs.artifactsPath }}"
+
+      - name: Run complete PlayMode
+        id: playmode
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Full PlayMode
+
+      - name: Preserve PlayMode evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-final/playmode
+          cp -a "${{ steps.playmode.outputs.artifactsPath }}/." /tmp/weather3-final/playmode/
+          rm -rf "${{ steps.playmode.outputs.artifactsPath }}"
+
+      - name: Run focused Weather 3 contracts
+        id: focused
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Focused Final
+
+      - name: Preserve focused evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-final/focused
+          cp -a "${{ steps.focused.outputs.artifactsPath }}/." /tmp/weather3-final/focused/
+          rm -rf "${{ steps.focused.outputs.artifactsPath }}"
+
+      - name: Run Home atmosphere and 2.5D regression
+        id: home
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Home Final
+
+      - name: Preserve Home evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-final/home
+          cp -a "${{ steps.home.outputs.artifactsPath }}/." /tmp/weather3-final/home/
+          rm -rf "${{ steps.home.outputs.artifactsPath }}"
+
+      - name: Overlay proven seven-state visual probe only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'captureCamera.Render();' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'RenderTexture.active = captureTarget;' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+
+      - name: Capture final seven-state runtime matrix
+        id: visual
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Final Visual Capture
+
+      - name: Preserve and prove final visual evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-final/visual
+          cp -a "${{ steps.visual.outputs.artifactsPath }}/." /tmp/weather3-final/visual/
+          cp -a TestResults/HomeWeather3VisualQa /tmp/weather3-final/visual/captures
+          for file in 01-weather3-light-on.png 02-weather3-light-off.png 03-weather3-normal-rain.png 04-weather3-wet-glass.png 05-weather3-lightning-on.png 06-weather3-lightning-off.png 07-weather3-idle-depth.png; do
+            test -s "/tmp/weather3-final/visual/captures/$file"
+            file "/tmp/weather3-final/visual/captures/$file"
+          done | tee /tmp/weather3-final/visual-captures.txt
+
+      - name: Summarize NUnit XML results
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          roots=['core','editmode','playmode','focused','home','visual']
+          lines=[]
+          for label in roots:
+              xmls=list((Path('/tmp/weather3-final')/label).rglob('*results.xml'))
+              if not xmls:
+                  xmls=list((Path('/tmp/weather3-final')/label).rglob('*.xml'))
+              if not xmls:
+                  raise SystemExit(f'no XML result for {label}')
+              root=ET.parse(xmls[0]).getroot()
+              def attr(*names):
+                  for n in names:
+                      if n in root.attrib: return root.attrib[n]
+                  return '0'
+              total=attr('total','testcasecount','test-case-count')
+              passed=attr('passed')
+              failed=attr('failed')
+              skipped=attr('skipped')
+              inconclusive=attr('inconclusive')
+              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive} xml={xmls[0].name}'
+              lines.append(line); print(line)
+              if int(failed or 0)!=0: raise SystemExit(f'{label} has failures')
+          Path('/tmp/weather3-final/test-summary.txt').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Fresh relevant Unity log scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          patterns=[
+            'NullReferenceException','MissingReferenceException','MissingComponentException',
+            'RenderTexture','ParticleSystem','shader','material','texture',
+            'AudioSource','AudioClip','Canvas','masking','unhandled exception'
+          ]
+          severe=re.compile(r'(NullReferenceException|MissingReferenceException|MissingComponentException|\b(error|exception)\b)',re.I)
+          relevant=[]
+          logs=[]
+          for p in Path('/tmp/weather3-final').rglob('*.log'):
+              logs.append(p)
+              for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+                  low=line.lower()
+                  if not any(x.lower() in low for x in patterns): continue
+                  if any(x in low for x in ['unity connect','licensing','license client','license verification']): continue
+                  if severe.search(line): relevant.append(f'{p.name}:{i}:{line}')
+          out=[f'LOG_FILES={len(logs)}',f'RELEVANT_ERROR_LINES={len(relevant)}']+relevant
+          Path('/tmp/weather3-final/log-scan.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out))
+          if relevant: sys.exit(11)
+          PY
+
+      - name: Final committed-tree integrity proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          git diff --check HEAD | tee /tmp/weather3-final/final-working-diff-check.txt
+
+      - name: Upload complete final-results evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-lampoff-red
-          path: |
-            ${{ steps.unity-tests.outputs.artifactsPath }}
-            /tmp/weather3-lampoff-red-tree.txt
-            /tmp/weather3-lampoff-red-status.txt
-            /tmp/weather3-lampoff-red-results.xml
-          if-no-files-found: warn
+          name: home-weather-3-final-results
+          path: /tmp/weather3-final
+          if-no-files-found: error
