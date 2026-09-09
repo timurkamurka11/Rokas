@@ -1,0 +1,15 @@
+FAIL: Unresolved GUID 2705215ac5b84b70bacc50632be6e391 in Assets\TextMesh Pro\Resources\TMP Settings.asset
+FAIL: Unresolved GUID 84a92b25f83d49b9bc132d206b370281 in Assets\TextMesh Pro\Resources\Sprite Assets\EmojiOne.asset
+FAIL: Unresolved GUID ab2114bdc8544297b417dfefe9f1e410 in Assets\TextMesh Pro\Resources\Style Sheets\Default Style Sheet.asset
+FAIL: Unresolved GUID 71c1514a6bd24e1e882cebbe1904ce04 in Assets\Rokas\Resources\RokasSans TMP.asset
+FAIL: Background below HD: GreenTea.png
+FAIL: Background below HD: HunterTempura.png
+FAIL: Background below HD: MoonMochi.png
+FAIL: Background below HD: SpicyMiso.png
+FAIL: Background below HD: TravelerOnigiri.png
+FAIL: Background below HD: HomeActionIcons.png
+FAIL: Background below HD: EmojiOne.png
+FAIL: Invalid stereo PCM source: LaptopMouseClick.wav
+FAIL: Invalid stereo PCM source: UIWood.wav
+
+Command failed: python Tools/validate_assets.py

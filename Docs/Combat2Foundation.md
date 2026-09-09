@@ -1,5 +1,7 @@
 # ROKAS Combat 2.0 — verified foundation
 
+Historical feature report. Normal user QA now uses integration/rokas-unified in D:/Rokas/Rokas; see [UnifiedIntegration.md](UnifiedIntegration.md) and the permanent [AGENTS.md](../AGENTS.md) workflow.
+
 ## Start and recovered state
 
 Worktree: D:/Rokas/combat2-foundation. Branch: codex/combat2-foundation. Starting commit: 2237ea3ed350f6b17fa08d20f66bc6f176d2e193. No remote combat branch existed at recovery. Existing uncommitted domain, presentation, and tests were preserved and completed; no restart, reset, rebase, merge, or replacement worktree occurred.

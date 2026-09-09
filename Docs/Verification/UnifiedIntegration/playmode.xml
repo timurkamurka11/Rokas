@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="54" result="Passed" total="54" passed="54" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:23Z" duration="19,511464">
+  <test-suite type="TestSuite" id="1074" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="54" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:23Z" duration="19.511464" total="54" passed="54" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1070" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/unified-integration/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="54" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:23Z" duration="19.502248" total="54" passed="54" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="22788" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1071" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="54" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:23Z" duration="19.501542" total="54" passed="54" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1072" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="54" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:23Z" duration="19.500774" total="54" passed="54" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="CombatFoundationPlayModeTests" fullname="Rokas.Tests.CombatFoundationPlayModeTests" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:06Z" duration="3.057168" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1017" name="ChargeRingHasRenderableGeometryAndChangesWhileHeld" fullname="Rokas.Tests.CombatFoundationPlayModeTests.ChargeRingHasRenderableGeometryAndChangesWhileHeld" methodname="ChargeRingHasRenderableGeometryAndChangesWhileHeld" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="831676912" result="Passed" start-time="2026-09-09 13:44:03Z" end-time="2026-09-09 13:44:04Z" duration="0.419310" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1009" name="DisabledCombatSurfaceCancelsCharge" fullname="Rokas.Tests.CombatFoundationPlayModeTests.DisabledCombatSurfaceCancelsCharge" methodname="DisabledCombatSurfaceCancelsCharge" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="18975973" result="Passed" start-time="2026-09-09 13:44:04Z" end-time="2026-09-09 13:44:04Z" duration="0.125740" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1002" name="FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" fullname="Rokas.Tests.CombatFoundationPlayModeTests.FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" methodname="FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1272284175" result="Passed" start-time="2026-09-09 13:44:04Z" end-time="2026-09-09 13:44:04Z" duration="0.350876" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1008" name="FocusLossCancelsChargeAndFreezesEnemyClock" fullname="Rokas.Tests.CombatFoundationPlayModeTests.FocusLossCancelsChargeAndFreezesEnemyClock" methodname="FocusLossCancelsChargeAndFreezesEnemyClock" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1102021376" result="Passed" start-time="2026-09-09 13:44:04Z" end-time="2026-09-09 13:44:04Z" duration="0.133588" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" fullname="Rokas.Tests.CombatFoundationPlayModeTests.HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" methodname="HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="402035845" result="Passed" start-time="2026-09-09 13:44:04Z" end-time="2026-09-09 13:44:05Z" duration="0.366789" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1010" name="HunterDeathClearsHeldInputAndCombatHud" fullname="Rokas.Tests.CombatFoundationPlayModeTests.HunterDeathClearsHeldInputAndCombatHud" methodname="HunterDeathClearsHeldInputAndCombatHud" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="498916502" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:05Z" duration="0.119205" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1015" name="LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" fullname="Rokas.Tests.CombatFoundationPlayModeTests.LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" methodname="LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1715401185" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:05Z" duration="0.170549" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1012" name="LiveCueMatchesDodgeAndBarsMatchActualDamage" fullname="Rokas.Tests.CombatFoundationPlayModeTests.LiveCueMatchesDodgeAndBarsMatchActualDamage" methodname="LiveCueMatchesDodgeAndBarsMatchActualDamage" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="2107625759" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:05Z" duration="0.125597" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1005" name="PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" methodname="PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="2074874535" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:05Z" duration="0.122648" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1016" name="PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" methodname="PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1330583275" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:05Z" duration="0.127016" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1014" name="PauseInterruptsComboBeforeResume" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseInterruptsComboBeforeResume" methodname="PauseInterruptsComboBeforeResume" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1919724655" result="Passed" start-time="2026-09-09 13:44:05Z" end-time="2026-09-09 13:44:06Z" duration="0.128081" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="PointerExitCancelsChargeWithoutGhostRelease" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PointerExitCancelsChargeWithoutGhostRelease" methodname="PointerExitCancelsChargeWithoutGhostRelease" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1121432683" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:06Z" duration="0.126431" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1006" name="RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" methodname="RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="2029437510" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:06Z" duration="0.343391" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1003" name="RealPointerTapDamagesOnReleaseAndPauseBlocksIt" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RealPointerTapDamagesOnReleaseAndPauseBlocksIt" methodname="RealPointerTapDamagesOnReleaseAndPauseBlocksIt" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1881312013" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:06Z" duration="0.124822" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1013" name="RitualPointsAreReachableThroughTheRealGraphicRaycaster" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RitualPointsAreReachableThroughTheRealGraphicRaycaster" methodname="RitualPointsAreReachableThroughTheRealGraphicRaycaster" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="33393568" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:06Z" duration="0.124933" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1011" name="SealBreakCannotReuseTheChargeHeldBeforeDeflect" fullname="Rokas.Tests.CombatFoundationPlayModeTests.SealBreakCannotReuseTheChargeHeldBeforeDeflect" methodname="SealBreakCannotReuseTheChargeHeldBeforeDeflect" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1303694120" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:06Z" duration="0.129277" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1018" name="ContractAttachmentPlayModeTests" fullname="Rokas.Tests.ContractAttachmentPlayModeTests" classname="Rokas.Tests.ContractAttachmentPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:07Z" duration="0.541947" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1019" name="GuildContractButtonAcceptsExistingContractOnce" fullname="Rokas.Tests.ContractAttachmentPlayModeTests.GuildContractButtonAcceptsExistingContractOnce" methodname="GuildContractButtonAcceptsExistingContractOnce" classname="Rokas.Tests.ContractAttachmentPlayModeTests" runstate="Runnable" seed="942122539" result="Passed" start-time="2026-09-09 13:44:06Z" end-time="2026-09-09 13:44:07Z" duration="0.527730" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1020" name="CoordinateAttachmentPlayModeTests" fullname="Rokas.Tests.CoordinateAttachmentPlayModeTests" classname="Rokas.Tests.CoordinateAttachmentPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.239817" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1021" name="CoordinateAttachmentClickActivatesDestinationWithoutDuplicatingHistory" fullname="Rokas.Tests.CoordinateAttachmentPlayModeTests.CoordinateAttachmentClickActivatesDestinationWithoutDuplicatingHistory" methodname="CoordinateAttachmentClickActivatesDestinationWithoutDuplicatingHistory" classname="Rokas.Tests.CoordinateAttachmentPlayModeTests" runstate="Runnable" seed="1702490398" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.223012" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1022" name="CriticalResourceSmokeTests" fullname="Rokas.Tests.CriticalResourceSmokeTests" classname="Rokas.Tests.CriticalResourceSmokeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.042601" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1025" name="CriticalLaptopAudioBindingsArePresent" fullname="Rokas.Tests.CriticalResourceSmokeTests.CriticalLaptopAudioBindingsArePresent" methodname="CriticalLaptopAudioBindingsArePresent" classname="Rokas.Tests.CriticalResourceSmokeTests" runstate="Runnable" seed="384901503" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.002538" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1023" name="MissingTextureProbeProvesGuardCanFail" fullname="Rokas.Tests.CriticalResourceSmokeTests.MissingTextureProbeProvesGuardCanFail" methodname="MissingTextureProbeProvesGuardCanFail" classname="Rokas.Tests.CriticalResourceSmokeTests" runstate="Runnable" seed="2050440577" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.002842" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1024" name="ProductionFoodResourcesLoadAsTexture2D" fullname="Rokas.Tests.CriticalResourceSmokeTests.ProductionFoodResourcesLoadAsTexture2D" methodname="ProductionFoodResourcesLoadAsTexture2D" classname="Rokas.Tests.CriticalResourceSmokeTests" runstate="Runnable" seed="260694060" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:07Z" duration="0.018814" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1026" name="FirstLoopTests" fullname="Rokas.Tests.FirstLoopTests" classname="Rokas.Tests.FirstLoopTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:15Z" duration="7.630363" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1027" name="IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce" fullname="Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce" methodname="IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce" classname="Rokas.Tests.FirstLoopTests" runstate="Runnable" seed="2039227022" result="Passed" start-time="2026-09-09 13:44:07Z" end-time="2026-09-09 13:44:14Z" duration="7.129852" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1028" name="LaptopFoodPreservesConsumeGuardAndReturnsFocus" fullname="Rokas.Tests.FirstLoopTests.LaptopFoodPreservesConsumeGuardAndReturnsFocus" methodname="LaptopFoodPreservesConsumeGuardAndReturnsFocus" classname="Rokas.Tests.FirstLoopTests" runstate="Runnable" seed="787317344" result="Passed" start-time="2026-09-09 13:44:14Z" end-time="2026-09-09 13:44:15Z" duration="0.497843" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1029" name="HomeAtmospherePlayModeTests" fullname="Rokas.Tests.HomeAtmospherePlayModeTests" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-09 13:44:15Z" end-time="2026-09-09 13:44:16Z" duration="1.171430" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1030" name="HomeBuildsLayeredParticleRainAndWindowDepth" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLayeredParticleRainAndWindowDepth" methodname="HomeBuildsLayeredParticleRainAndWindowDepth" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="1614862813" result="Passed" start-time="2026-09-09 13:44:15Z" end-time="2026-09-09 13:44:15Z" duration="0.094500" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1032" name="HomeBuildsLogical25DPlanesAndReadableDepth" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLogical25DPlanesAndReadableDepth" methodname="HomeBuildsLogical25DPlanesAndReadableDepth" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="1187574754" result="Passed" start-time="2026-09-09 13:44:15Z" end-time="2026-09-09 13:44:15Z" duration="0.086532" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1033" name="HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" methodname="HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="1916627453" result="Passed" start-time="2026-09-09 13:44:15Z" end-time="2026-09-09 13:44:15Z" duration="0.095859" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1031" name="ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" methodname="ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="918596003" result="Passed" start-time="2026-09-09 13:44:15Z" end-time="2026-09-09 13:44:16Z" duration="0.784261" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1034" name="RepeatedTicksReuseTheBoundedWeatherRig" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.RepeatedTicksReuseTheBoundedWeatherRig" methodname="RepeatedTicksReuseTheBoundedWeatherRig" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="43569063" result="Passed" start-time="2026-09-09 13:44:16Z" end-time="2026-09-09 13:44:16Z" duration="0.099892" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1035" name="HunterGuildPlayModeTests" fullname="Rokas.Tests.HunterGuildPlayModeTests" classname="Rokas.Tests.HunterGuildPlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:44:16Z" end-time="2026-09-09 13:44:17Z" duration="0.635494" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1037" name="CompletionNotificationDoesNotRepeatForSameCompletedState" fullname="Rokas.Tests.HunterGuildPlayModeTests.CompletionNotificationDoesNotRepeatForSameCompletedState" methodname="CompletionNotificationDoesNotRepeatForSameCompletedState" classname="Rokas.Tests.HunterGuildPlayModeTests" runstate="Runnable" seed="1342831041" result="Passed" start-time="2026-09-09 13:44:16Z" end-time="2026-09-09 13:44:16Z" duration="0.164795" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="GuildAcceptanceFollowUpPersistsWithoutPopupOrDuplicate" fullname="Rokas.Tests.HunterGuildPlayModeTests.GuildAcceptanceFollowUpPersistsWithoutPopupOrDuplicate" methodname="GuildAcceptanceFollowUpPersistsWithoutPopupOrDuplicate" classname="Rokas.Tests.HunterGuildPlayModeTests" runstate="Runnable" seed="1247177450" result="Passed" start-time="2026-09-09 13:44:16Z" end-time="2026-09-09 13:44:17Z" duration="0.454056" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1038" name="LiveMessengerPlayModeTests" fullname="Rokas.Tests.LiveMessengerPlayModeTests" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:18Z" duration="1.000947" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1043" name="ActiveContactUsesSoftReceiveInsteadOfWorldOrPopup" fullname="Rokas.Tests.LiveMessengerPlayModeTests.ActiveContactUsesSoftReceiveInsteadOfWorldOrPopup" methodname="ActiveContactUsesSoftReceiveInsteadOfWorldOrPopup" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" seed="1152812427" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:17Z" duration="0.134808" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1040" name="GuildUsesFormalRequestLauncherAndKeepsContractCard" fullname="Rokas.Tests.LiveMessengerPlayModeTests.GuildUsesFormalRequestLauncherAndKeepsContractCard" methodname="GuildUsesFormalRequestLauncherAndKeepsContractCard" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" seed="379519606" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:17Z" duration="0.123461" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="KaitoLauncherCoexistsWithCoordinateAttachmentAfterBaseDialogue" fullname="Rokas.Tests.LiveMessengerPlayModeTests.KaitoLauncherCoexistsWithCoordinateAttachmentAfterBaseDialogue" methodname="KaitoLauncherCoexistsWithCoordinateAttachmentAfterBaseDialogue" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" seed="46037292" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:17Z" duration="0.140587" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1042" name="WorldLaptopUnreadFeedbackTriggersOnceAndHistoricalReloadIsSilent" fullname="Rokas.Tests.LiveMessengerPlayModeTests.WorldLaptopUnreadFeedbackTriggersOnceAndHistoricalReloadIsSilent" methodname="WorldLaptopUnreadFeedbackTriggersOnceAndHistoricalReloadIsSilent" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" seed="1427869284" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:17Z" duration="0.269085" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1039" name="YumikoLauncherTypingChoicesAndReactionAreLive" fullname="Rokas.Tests.LiveMessengerPlayModeTests.YumikoLauncherTypingChoicesAndReactionAreLive" methodname="YumikoLauncherTypingChoicesAndReactionAreLive" classname="Rokas.Tests.LiveMessengerPlayModeTests" runstate="Runnable" seed="1027529963" result="Passed" start-time="2026-09-09 13:44:17Z" end-time="2026-09-09 13:44:18Z" duration="0.317020" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1044" name="LiveMessengerPolishPlayModeTests" fullname="Rokas.Tests.LiveMessengerPolishPlayModeTests" classname="Rokas.Tests.LiveMessengerPolishPlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-09 13:44:18Z" end-time="2026-09-09 13:44:19Z" duration="1.588966" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1047" name="AuthoredNpcReactionAppearsOncePersistsAndIsSilentOnReload" fullname="Rokas.Tests.LiveMessengerPolishPlayModeTests.AuthoredNpcReactionAppearsOncePersistsAndIsSilentOnReload" methodname="AuthoredNpcReactionAppearsOncePersistsAndIsSilentOnReload" classname="Rokas.Tests.LiveMessengerPolishPlayModeTests" runstate="Runnable" seed="1255334433" result="Passed" start-time="2026-09-09 13:44:18Z" end-time="2026-09-09 13:44:18Z" duration="0.219047" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1048" name="FullYomiLaptopGlowTracksTotalUnreadAcrossContactsAndClearsSmoothly" fullname="Rokas.Tests.LiveMessengerPolishPlayModeTests.FullYomiLaptopGlowTracksTotalUnreadAcrossContactsAndClearsSmoothly" methodname="FullYomiLaptopGlowTracksTotalUnreadAcrossContactsAndClearsSmoothly" classname="Rokas.Tests.LiveMessengerPolishPlayModeTests" runstate="Runnable" seed="1230163936" result="Passed" start-time="2026-09-09 13:44:18Z" end-time="2026-09-09 13:44:19Z" duration="0.884420" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1046" name="PerBubblePickerUsesAllTenStickerReactionsAndSupportsChangeRemove" fullname="Rokas.Tests.LiveMessengerPolishPlayModeTests.PerBubblePickerUsesAllTenStickerReactionsAndSupportsChangeRemove" methodname="PerBubblePickerUsesAllTenStickerReactionsAndSupportsChangeRemove" classname="Rokas.Tests.LiveMessengerPolishPlayModeTests" runstate="Runnable" seed="2083126229" result="Passed" start-time="2026-09-09 13:44:19Z" end-time="2026-09-09 13:44:19Z" duration="0.277993" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1045" name="UserAudioAssetsDriveIncomingAndReactionRoutesWithoutReplay" fullname="Rokas.Tests.LiveMessengerPolishPlayModeTests.UserAudioAssetsDriveIncomingAndReactionRoutesWithoutReplay" methodname="UserAudioAssetsDriveIncomingAndReactionRoutesWithoutReplay" classname="Rokas.Tests.LiveMessengerPolishPlayModeTests" runstate="Runnable" seed="1775593956" result="Passed" start-time="2026-09-09 13:44:19Z" end-time="2026-09-09 13:44:19Z" duration="0.190976" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1049" name="MessagesDialogueResumePlayModeTests" fullname="Rokas.Tests.MessagesDialogueResumePlayModeTests" classname="Rokas.Tests.MessagesDialogueResumePlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:44:19Z" end-time="2026-09-09 13:44:20Z" duration="0.340823" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1050" name="PartiallyProgressedDialogueResumesAtNextChoiceAfterReload" fullname="Rokas.Tests.MessagesDialogueResumePlayModeTests.PartiallyProgressedDialogueResumesAtNextChoiceAfterReload" methodname="PartiallyProgressedDialogueResumesAtNextChoiceAfterReload" classname="Rokas.Tests.MessagesDialogueResumePlayModeTests" runstate="Runnable" seed="1721475584" result="Passed" start-time="2026-09-09 13:44:19Z" end-time="2026-09-09 13:44:20Z" duration="0.243747" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1051" name="RepeatedInitializeIsIdempotentForMessagesState" fullname="Rokas.Tests.MessagesDialogueResumePlayModeTests.RepeatedInitializeIsIdempotentForMessagesState" methodname="RepeatedInitializeIsIdempotentForMessagesState" classname="Rokas.Tests.MessagesDialogueResumePlayModeTests" runstate="Runnable" seed="1092044907" result="Passed" start-time="2026-09-09 13:44:20Z" end-time="2026-09-09 13:44:20Z" duration="0.080790" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1052" name="MessagesLifecyclePlayModeTests" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-09 13:44:20Z" end-time="2026-09-09 13:44:21Z" duration="1.502481" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1054" name="CompletedDialogueDoesNotAutoReplayAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.CompletedDialogueDoesNotAutoReplayAfterReload" methodname="CompletedDialogueDoesNotAutoReplayAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="1013009154" result="Passed" start-time="2026-09-09 13:44:20Z" end-time="2026-09-09 13:44:20Z" duration="0.596121" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1055" name="ConsumedCoordinateAttachmentRemainsDisabledAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.ConsumedCoordinateAttachmentRemainsDisabledAfterReload" methodname="ConsumedCoordinateAttachmentRemainsDisabledAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="1963746068" result="Passed" start-time="2026-09-09 13:44:20Z" end-time="2026-09-09 13:44:21Z" duration="0.479794" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1053" name="DestroyAndReloadPersistsDirtyMessageHistory" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.DestroyAndReloadPersistsDirtyMessageHistory" methodname="DestroyAndReloadPersistsDirtyMessageHistory" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="1876500308" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:21Z" duration="0.126644" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1056" name="HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" methodname="HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="21203990" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:21Z" duration="0.275763" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1057" name="MessagesNotificationPlayModeTests" fullname="Rokas.Tests.MessagesNotificationPlayModeTests" classname="Rokas.Tests.MessagesNotificationPlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:21Z" duration="0.346873" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1059" name="ActiveConversationClearsUnreadWithoutNotification" fullname="Rokas.Tests.MessagesNotificationPlayModeTests.ActiveConversationClearsUnreadWithoutNotification" methodname="ActiveConversationClearsUnreadWithoutNotification" classname="Rokas.Tests.MessagesNotificationPlayModeTests" runstate="Runnable" seed="1799309320" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:21Z" duration="0.146555" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1058" name="IncomingUnreadMessageShowsOneCompactNotification" fullname="Rokas.Tests.MessagesNotificationPlayModeTests.IncomingUnreadMessageShowsOneCompactNotification" methodname="IncomingUnreadMessageShowsOneCompactNotification" classname="Rokas.Tests.MessagesNotificationPlayModeTests" runstate="Runnable" seed="445519149" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:21Z" duration="0.183933" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1060" name="MessagesPlayModeTests" fullname="Rokas.Tests.MessagesPlayModeTests" classname="Rokas.Tests.MessagesPlayModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:22Z" duration="0.413723" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1063" name="KaitoDialogueRunsThroughChoicesToCoordinateAttachment" fullname="Rokas.Tests.MessagesPlayModeTests.KaitoDialogueRunsThroughChoicesToCoordinateAttachment" methodname="KaitoDialogueRunsThroughChoicesToCoordinateAttachment" classname="Rokas.Tests.MessagesPlayModeTests" runstate="Runnable" seed="50155306" result="Passed" start-time="2026-09-09 13:44:21Z" end-time="2026-09-09 13:44:22Z" duration="0.203922" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1061" name="LaptopMessagesBuildsRealConversationShell" fullname="Rokas.Tests.MessagesPlayModeTests.LaptopMessagesBuildsRealConversationShell" methodname="LaptopMessagesBuildsRealConversationShell" classname="Rokas.Tests.MessagesPlayModeTests" runstate="Runnable" seed="1021823665" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.097431" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1062" name="LaptopMessagesInitializesTmpInCleanPlayMode" fullname="Rokas.Tests.MessagesPlayModeTests.LaptopMessagesInitializesTmpInCleanPlayMode" methodname="LaptopMessagesInitializesTmpInCleanPlayMode" classname="Rokas.Tests.MessagesPlayModeTests" runstate="Runnable" seed="747678922" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.097445" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1064" name="RokasSansFontPlayModeTests" fullname="Rokas.Tests.RokasSansFontPlayModeTests" classname="Rokas.Tests.RokasSansFontPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.066368" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1065" name="FoodGiftMultiplicationSignIsSupportedByRokasSans" fullname="Rokas.Tests.RokasSansFontPlayModeTests.FoodGiftMultiplicationSignIsSupportedByRokasSans" methodname="FoodGiftMultiplicationSignIsSupportedByRokasSans" classname="Rokas.Tests.RokasSansFontPlayModeTests" runstate="Runnable" seed="1049722528" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.050093" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1066" name="YumikoFoodPlayModeTests" fullname="Rokas.Tests.YumikoFoodPlayModeTests" classname="Rokas.Tests.YumikoFoodPlayModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:23Z" duration="0.916337" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1069" name="ActiveYumikoConversationConsumesPaidTeaUnreadWithoutPopup" fullname="Rokas.Tests.YumikoFoodPlayModeTests.ActiveYumikoConversationConsumesPaidTeaUnreadWithoutPopup" methodname="ActiveYumikoConversationConsumesPaidTeaUnreadWithoutPopup" classname="Rokas.Tests.YumikoFoodPlayModeTests" runstate="Runnable" seed="396990414" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.169518" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1067" name="FoodGiftCardUsesYumikoIdentityClaimsOnceAndPersists" fullname="Rokas.Tests.YumikoFoodPlayModeTests.FoodGiftCardUsesYumikoIdentityClaimsOnceAndPersists" methodname="FoodGiftCardUsesYumikoIdentityClaimsOnceAndPersists" classname="Rokas.Tests.YumikoFoodPlayModeTests" runstate="Runnable" seed="465235831" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:22Z" duration="0.388886" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1068" name="PaidTeaReactionCreatesUnreadNotificationButReloadDoesNotReplayIt" fullname="Rokas.Tests.YumikoFoodPlayModeTests.PaidTeaReactionCreatesUnreadNotificationButReloadDoesNotReplayIt" methodname="PaidTeaReactionCreatesUnreadNotificationButReloadDoesNotReplayIt" classname="Rokas.Tests.YumikoFoodPlayModeTests" runstate="Runnable" seed="397992837" result="Passed" start-time="2026-09-09 13:44:22Z" end-time="2026-09-09 13:44:23Z" duration="0.339889" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:/Rokas/unified-integration-evidence/unified-final-playmode-2.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
