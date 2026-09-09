@@ -1,33 +1,34 @@
-name: Home Weather 3 Runtime RCA
+name: Home Weather 3 Focused RED
 
 on:
   push:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3.yml
-      - Assets/Rokas/Tests/PlayMode/HomeWeather3CapturePlayModeTests.cs
 
 permissions:
   contents: read
   checks: write
 
 jobs:
-  capture-baseline:
+  focused-red:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - name: Checkout Weather 3 diagnostic branch
+      - name: Checkout exact Weather 3 RED tree
         uses: actions/checkout@v7
         with:
-          ref: ci/home-weather-3
+          ref: afd629430e13013e841a0edcbf95381df38c2642
           fetch-depth: 0
 
-      - name: Prove verified Home ancestry
+      - name: Prove exact RED commit and tree
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "afd629430e13013e841a0edcbf95381df38c2642"
+          test "$(git rev-parse HEAD^{tree})" = "cb81ccee5ab3ac56294934e37572d0768ad5df80"
           git merge-base --is-ancestor c68763fb482665ea53cb42c48b2638cc5314c3c0 HEAD
-          echo "DIAGNOSTIC_HEAD=$(git rev-parse HEAD)"
-          echo "VERIFIED_HOME=c68763fb482665ea53cb42c48b2638cc5314c3c0"
+          echo "RED_HEAD=$(git rev-parse HEAD)"
+          echo "RED_TREE=$(git rev-parse HEAD^{tree})"
 
       - name: Literal git diff check
         run: git diff --check
@@ -36,11 +37,11 @@ jobs:
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-Weather-3-RCA-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-Weather-3-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run Home Weather 3 runtime capture probe
+      - name: Run focused Home Weather 3 RED contracts
         id: unity-tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
@@ -52,21 +53,14 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeWeather3CapturePlayModeTests
+          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Runtime RCA Capture
+          checkName: Home Weather 3 Focused RED
 
-      - name: List runtime captures
-        if: always()
-        run: |
-          find TestResults/HomeWeather3Visual -maxdepth 1 -type f -printf '%f %s bytes\n' 2>/dev/null || true
-
-      - name: Upload Home Weather 3 RCA evidence
+      - name: Upload focused RED evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-rca
-          path: |
-            ${{ steps.unity-tests.outputs.artifactsPath }}
-            TestResults/HomeWeather3Visual
+          name: home-weather-3-red
+          path: ${{ steps.unity-tests.outputs.artifactsPath }}
           if-no-files-found: warn
