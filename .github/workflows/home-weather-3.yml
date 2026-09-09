@@ -18,15 +18,15 @@ jobs:
       - name: Checkout exact Weather 3 production runtime commit
         uses: actions/checkout@v7
         with:
-          ref: 510cdb2c3c93690e144a5a06842f69f4c6f9badf
+          ref: 3035975cce69ba1034ecd3ddd4cf719083715c56
           fetch-depth: 0
 
       - name: Prove exact production SHA tree ancestry and protected refs
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
-          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          test "$(git rev-parse HEAD)" = "3035975cce69ba1034ecd3ddd4cf719083715c56"
+          test "$(git rev-parse HEAD^{tree})" = "386a02647fef70ad6e196e5ae032ebda84af6fe7"
           git merge-base --is-ancestor a05dc28dd7f81c1c76e4be8788c89c72b0398020 HEAD
           git fetch origin development integration/rokas-unified ci/home-weather-3
           test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
@@ -46,7 +46,10 @@ jobs:
           set -euo pipefail
           git diff --check a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/git-diff-check.txt
           git diff --name-status a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/scope.txt
-          test "$(git diff --name-only a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD)" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          mapfile -t changed < <(git diff --name-only a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | sort)
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          test "${changed[1]}" = "Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
           git log --oneline --decorate a05dc28dd7f81c1c76e4be8788c89c72b0398020..HEAD | tee /tmp/weather3-final/production-history.txt
 
       - name: Run static validator and classify historical baseline
@@ -412,8 +415,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
-          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          test "$(git rev-parse HEAD)" = "3035975cce69ba1034ecd3ddd4cf719083715c56"
+          test "$(git rev-parse HEAD^{tree})" = "386a02647fef70ad6e196e5ae032ebda84af6fe7"
           test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
           git diff --check HEAD | tee /tmp/weather3-final/final-working-diff-check.txt
 
