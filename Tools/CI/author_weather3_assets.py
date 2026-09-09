@@ -198,7 +198,7 @@ glazing = Image.new("L", (605, 396), 0)
 draw = ImageDraw.Draw(glazing)
 for panel in [(3, 3, 255, 392), (282, 3, 489, 392), (520, 3, 602, 392)]:
     draw.rounded_rectangle(panel, radius=3, fill=255)
-glazing.save(OUT / "WindowGlazingMask.png", optimize=True)
+save_rgba("WindowGlazingMask.png", (255, 255, 255), glazing)
 
 # Project-owned spatial masks derived from the approved lighting-zone reference.
 warm = irregular_mask(
@@ -301,9 +301,9 @@ TextureImporter:
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
-  spritePivot: {{x: 0.5, y: 0.5}}
+  spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {{x: 0, y: 0, z: 0, w: 0}}
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   alphaUsage: 1
   alphaIsTransparency: 1
   spriteTessellationDetail: -1
@@ -339,7 +339,7 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {{}}
+    nameFileIdTable: {}
   mipmapLimitGroupName:
   pSDRemoveMatte: 0
   userData: Weather 3.0 compact authored alpha resource
