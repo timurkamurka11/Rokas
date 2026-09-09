@@ -17,13 +17,11 @@ namespace Rokas.Presentation
         private readonly WorldEffects world;
         private readonly Func<bool> paused;
         private RawImage enemy;
-        private RectTransform enemyBar;
-        private RectTransform playerBar;
-        private RectTransform autoBar;
-        private Text enemyHp;
-        private Text playerHp;
-        private Text weakHint;
-        private Button weakPoint;
+        private CombatHud combatHud;
+        private Image combatFlash;
+        private readonly Image[] sparks = new Image[8];
+        private float sparkTime;
+        public float HitStopRemaining { get; private set; }
         private RectTransform slash;
         private readonly Text[] numbers = new Text[12];
         private readonly float[] numberTimes = new float[12];
@@ -36,9 +34,13 @@ namespace Rokas.Presentation
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world, Func<bool> paused)
         { this.ui = ui; this.assets = assets; this.session = session; this.audio = audio; this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused; }
 
-        private void Attack(bool weak)
+        public void CancelInput() { combatHud?.CancelInput(); }
+        public void HandleInput(bool dodge, bool deflect, bool resonance)
         {
-            if (!paused()) session.ClickAttack(weak);
+            if (paused() || session.State.phase != RunPhase.Combat) return;
+            if (deflect) session.Deflect();
+            else if (dodge) session.Dodge();
+            if (resonance) session.ActivateResonance();
         }
 
         public void Build(RectTransform parent)
@@ -63,29 +65,13 @@ namespace Rokas.Presentation
             enemy = ui.Art(parent, "FacelessCommuter", assets.enemy, 750, 254, 480, 720);
             if (fighting)
             {
-                // The transparent sprite is visual; a narrow body target avoids clicking large empty margins.
-                var target = ui.Box(parent, "EnemyAttack", 839, 297, 286, 644, new Color(1, 1, 1, 0), true);
-                var attack = target.gameObject.AddComponent<Button>();
-                attack.targetGraphic = target;
-                attack.transition = Selectable.Transition.None;
-                attack.onClick.AddListener(() => Attack(false));
-                weakPoint = ui.Button(parent, "WeakPoint", "ПЕЧАТЬ", 1050, 439, 183, 59,
-                    () => Attack(true), true);
-                weakPoint.gameObject.SetActive(false);
-                weakHint = ui.Label(parent, "WeakHint", "", 1270, 411, 530, 110, 23, UiKit.Jade);
-
-                ui.Box(parent, "EnemyBarBack", 656, 239, 650, 8, new Color(.08f, .13f, .14f));
-                enemyBar = ui.Box(parent, "EnemyBar", 656, 239, 650, 8, UiKit.Red).rectTransform;
-                enemyHp = ui.Label(parent, "EnemyHp", "", 1364, 214, 350, 58, 22, UiKit.Paper);
-                var playerPanel = ui.Panel(parent, "HunterVitals", 67, 735, 500, 220);
-                ui.Label(playerPanel, "HunterVitalsLabel", "ОХОТНИК  /  КЛИНОК " + session.State.weaponLevel, 25, 17, 450, 43, 18, UiKit.Gold);
-                playerHp = ui.Label(playerPanel, "HunterHp", "", 25, 68, 440, 40, 23);
-                ui.Box(playerPanel, "HunterBarBack", 25, 124, 447, 7, new Color(.15f, .19f, .2f));
-                playerBar = ui.Box(playerPanel, "HunterBar", 25, 124, 447, 7, UiKit.Jade).rectTransform;
-                ui.Label(playerPanel, "AutoLabel", "АВТОАТАКА АКТИВНА", 25, 151, 440, 37, 17, UiKit.Muted);
-                autoBar = ui.Box(playerPanel, "AutoTimer", 25, 198, 447, 3, UiKit.Gold).rectTransform;
-                ui.Label(parent, "AttackHint", "Нажимайте на ёкая, чтобы помочь автоатаке.\nУспейте снять печать, когда она проявится.", 1280, 738, 540, 160, 23);
-                ui.Button(parent, "ManualAttack", "Удар клинком  /  +клик", 1280, 899, 542, 58, () => Attack(false), true);
+                combatHud = new CombatHud(ui, parent, session, paused);
+                combatFlash = ui.Box(parent, "CombatImpactFlash", 605, 305, 720, 690, Color.clear);
+                for (int i = 0; i < sparks.Length; i++)
+                {
+                    sparks[i] = ui.Box(parent, "ImpactSpark" + i, 970, 535, 5, 24, Color.clear);
+                    sparks[i].rectTransform.localRotation = Quaternion.Euler(0, 0, i * 45);
+                }
                 slash = ui.Box(parent, "Slash", 880, 485, 285, 4, UiKit.Paper).rectTransform;
                 slash.localRotation = Quaternion.Euler(0, 0, 38);
                 slash.gameObject.SetActive(false);
@@ -111,22 +97,22 @@ namespace Rokas.Presentation
             Refresh();
         }
 
-        public void Refresh()
+        public void Refresh() { combatHud?.Refresh(); }
+
+        public void OnAction(CombatAction action)
         {
-            if (!enemyHp) return;
-            var state = session.State;
-            enemyHp.text = Mathf.CeilToInt(state.enemyHp) + " / " + Mathf.CeilToInt(session.Contract.enemyHealth);
-            playerHp.text = "ЗДОРОВЬЕ   " + Mathf.CeilToInt(state.playerHp) + " / 100";
-            enemyBar.sizeDelta = new Vector2(650 * Mathf.Clamp01(state.enemyHp / session.Contract.enemyHealth), 8);
-            playerBar.sizeDelta = new Vector2(447 * Mathf.Clamp01(state.playerHp / 100f), 7);
-            float interval = session.Contract.autoInterval / (string.IsNullOrEmpty(state.preparedFoodId) ? 1 : 1.05f);
-            autoBar.sizeDelta = new Vector2(447 * Mathf.Clamp01(1 - state.autoTimer / interval), 3);
-            if (weakPoint)
+            if (combatHud == null) return;
+            combatHud.ShowFeedback(action);
+            bool strong = action == CombatAction.Deflect || action == CombatAction.PerfectCut || action == CombatAction.Finisher || action == CombatAction.SealBreak || action == CombatAction.RitualSuccess;
+            if (strong)
             {
-                bool active = session.Combat.WeakPointActive;
-                weakPoint.gameObject.SetActive(active);
-                weakHint.text = active ? "СНИМИТЕ ПЕЧАТЬ\nДвойной урон" : state.weakPointClaimed ? "Печать снята. Точный удар." : "";
+                sparkTime = .32f;
+                HitStopRemaining = action == CombatAction.RitualSuccess ? .12f : .06f;
+                hitTime = .3f;
+                world.Impact(action == CombatAction.RitualSuccess || action == CombatAction.SealBreak ? 1.4f : .9f);
+                audio.Play(action == CombatAction.SealBreak || action == CombatAction.RitualSuccess ? assets.seal : assets.critical);
             }
+            if (action == CombatAction.Resonance) { audio.Play(assets.critical); sparkTime = .45f; world.Impact(1); }
         }
 
         public void OnHit(CombatHit hit)
@@ -148,7 +134,19 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool paused)
         {
-            if (paused) return;
+            if (paused) { CancelInput(); return; }
+            HitStopRemaining = Mathf.Max(0, HitStopRemaining - dt);
+            combatHud?.Tick(dt);
+            sparkTime = Mathf.Max(0, sparkTime - dt);
+            if (combatFlash) combatFlash.color = new Color(.5f, .85f, .78f, sparkTime * .22f);
+            for (int i = 0; i < sparks.Length; i++)
+            {
+                if (!sparks[i]) continue;
+                float angle = i * Mathf.PI / 4;
+                float distance = (1 - sparkTime / .45f) * 120;
+                sparks[i].rectTransform.anchoredPosition = new Vector2(980 + Mathf.Cos(angle) * distance, -525 + Mathf.Sin(angle) * distance);
+                sparks[i].color = new Color(.96f, .83f, .5f, sparkTime * 3);
+            }
             age += dt;
             hitTime = Mathf.Max(0, hitTime - dt);
             enemyAttackTime = Mathf.Max(0, enemyAttackTime - dt);
@@ -161,7 +159,11 @@ namespace Rokas.Presentation
                 float scale = 1 + enemyAttackTime * .1f;
                 enemy.rectTransform.localScale = new Vector3(scale, scale + breathe * .005f, 1);
             }
-            if (slash) slash.gameObject.SetActive(hitTime > .1f);
+            if (slash)
+            {
+                slash.gameObject.SetActive(hitTime > .1f);
+                slash.sizeDelta = new Vector2(session.Combat.ResonanceActive ? 390 : 285, session.Combat.ResonanceActive ? 7 : 4);
+            }
             for (int i = 0; i < numbers.Length; i++)
             {
                 if (!numbers[i] || numberTimes[i] <= 0) continue;
@@ -176,8 +178,12 @@ namespace Rokas.Presentation
 
         public void ClearReferences()
         {
-            enemy = null; enemyBar = playerBar = autoBar = slash = null;
-            enemyHp = playerHp = weakHint = null; weakPoint = null;
+            CancelInput();
+            combatHud = null;
+            combatFlash = null;
+            HitStopRemaining = sparkTime = 0;
+            enemy = null; slash = null;
+            for (int i = 0; i < sparks.Length; i++) sparks[i] = null;
             for (int i = 0; i < numbers.Length; i++) { numbers[i] = null; numberTimes[i] = 0; }
         }
     }

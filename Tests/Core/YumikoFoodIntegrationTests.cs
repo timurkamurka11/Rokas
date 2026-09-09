@@ -148,7 +148,7 @@ namespace Rokas.Core.Tests
                 Equal(true, session.ConsumeFood(FoodService.MisoId), "existing prepared-food state must record food for this encounter");
                 Equal(true, session.LeaveHome(), "first run must leave Home");
                 Equal(true, session.EnterPortal(), "first run must begin combat");
-                session.Tick(.2f);
+                Equal(true, session.ClickAttack(false), "manual combat action seals the one-health fixture");
                 Equal(RunPhase.Sealed, session.State.phase, "first real combat must end in Sealed");
                 Equal(true, session.ReturnHome(), "Sealed run must use the real return transition");
 

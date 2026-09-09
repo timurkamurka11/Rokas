@@ -45,6 +45,9 @@ namespace Rokas.Presentation
         public int MessageAudioCueCount { get; private set; }
 
         public bool Paused { get { return transition || storageBlocked || panel == "settings"; } }
+        public bool CombatHitStop { get { return mission.HitStopRemaining > 0; } }
+        public void CancelCombatInput() { mission.CancelInput(); }
+        public void HandleCombatInput(bool dodge, bool deflect, bool resonance) { mission.HandleInput(dodge, deflect, resonance); }
         public bool LaptopOpen { get { return panel == "laptop"; } }
 
         public RokasView(RokasBootstrap owner, RokasAssets assets, GameSession session, RokasAudio audio, Action save)
@@ -96,6 +99,7 @@ namespace Rokas.Presentation
             session.LiveMessages.Signal += HandleLiveMessengerSignal;
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
+            session.Combat.ActionResolved += mission.OnAction;
             phase = session.State.phase;
             RebuildScene();
             Tick(0);
@@ -249,6 +253,7 @@ namespace Rokas.Presentation
                 laptop.Reset();
                 laptopOpenedFrame = Time.frameCount;
             }
+            mission.CancelInput();
             panel = value;
             audio.SetLaptopMode(panel == "laptop");
             RefreshPanel();
@@ -378,6 +383,7 @@ namespace Rokas.Presentation
             session.LiveMessages.Signal -= HandleLiveMessengerSignal;
             session.Changed -= Refresh;
             session.Combat.Hit -= OnHit;
+            session.Combat.ActionResolved -= mission.OnAction;
         }
     }
 }

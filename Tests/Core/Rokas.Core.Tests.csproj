@@ -8,6 +8,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="CombatFoundationRedTests.cs" />
+    <Compile Include="../../Assets/Rokas/Tests/EditMode/CombatFoundationCases.cs" />
     <Compile Include="DomainBehaviorTests.cs" />
     <Compile Include="FoodFeedbackTests.cs" />
     <Compile Include="MessageDomainTests.cs" />

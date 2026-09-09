@@ -108,13 +108,24 @@ namespace Rokas.Core
 
         public bool EnterPortal()
         {
-            return NotifyIf(contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract)));
+            if (!contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract))) return false;
+            Combat.ResetEncounter();
+            NotifyChanged();
+            return true;
         }
 
         public bool ClickAttack(bool weakPoint)
         {
             return NotifyIf(Combat.ClickAttack(weakPoint));
         }
+
+        public bool BeginAttack() { return NotifyIf(Combat.BeginAttack()); }
+        public bool ReleaseAttack() { return NotifyIf(Combat.ReleaseAttack()); }
+        public bool Dodge() { return NotifyIf(Combat.Dodge()); }
+        public bool Deflect() { return NotifyIf(Combat.Deflect()); }
+        public bool TraceRitualPoint(int index) { return NotifyIf(Combat.TraceRitualPoint(index)); }
+        public bool ActivateResonance() { return NotifyIf(Combat.ActivateResonance()); }
+        public bool CancelCombatInput() { return NotifyIf(Combat.CancelCombatInput()); }
 
         public void Tick(float seconds)
         {

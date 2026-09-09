@@ -134,7 +134,7 @@ namespace Rokas.Core.Tests
             Equal(true, session.AcceptContract(), "repeatable contract can be accepted from Home");
             Equal(true, session.LeaveHome(), "accepted contract can leave Home");
             Equal(true, session.EnterPortal(), "portal transition begins combat");
-            session.Tick(.2f);
+            Equal(true, session.ClickAttack(false), "manual combat action seals the one-health fixture");
             Equal(RunPhase.Sealed, session.State.phase, "real combat must seal the contract");
             Equal(true, session.ReturnHome(), "sealed contract returns to Payment");
             Equal(RunPhase.Payment, session.State.phase, "sealed run must enter Payment");
