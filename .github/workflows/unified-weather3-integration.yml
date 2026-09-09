@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout immutable integration candidate
-        uses: actions/checkout@34e114876b0b11e9424a4c0c0b5d80a0bad65002
+        uses: actions/checkout@v7
         with:
           ref: af541032cd1dd492d9895c5a9c8e92a1e2342745
           fetch-depth: 0
