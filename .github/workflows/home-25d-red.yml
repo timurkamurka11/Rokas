@@ -1,4 +1,4 @@
-name: Home Hub 2.5D RED Gate
+name: Home Hub 2.5D GREEN Gate
 
 on:
   push:
@@ -6,37 +6,80 @@ on:
     paths:
       - .github/workflows/home-25d-red.yml
       - Tools/apply_home_25d_red.py
+      - Tools/apply_home_25d_patch.py
 
 permissions:
-  contents: read
+  contents: write
   checks: write
 
 jobs:
-  red:
+  green:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
-      - name: Checkout isolated 2.5D baseline
+      - name: Checkout isolated 2.5D gate
         uses: actions/checkout@v7
         with:
           ref: ci/home-25d-rework
           fetch-depth: 0
 
-      - name: Apply focused 2.5D RED tests only
+      - name: Apply focused 2.5D contracts
         run: python3 Tools/apply_home_25d_red.py
+
+      - name: Apply scoped Home 2.5D production patch
+        run: python3 Tools/apply_home_25d_patch.py
 
       - name: Literal git diff check
         run: git diff --check
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run Core behavior regression guard
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+
+      - name: Classify asset validator against historical baseline
+        run: |
+          set +e
+          python3 Tools/validate_assets.py > /tmp/home25d-validator.txt 2>&1
+          code=$?
+          set -e
+          cat /tmp/home25d-validator.txt
+          VALIDATOR_EXIT=$code python3 - <<'PY'
+          from pathlib import Path
+          expected = {
+              'FAIL: Unresolved GUID 71c1514a6bd24e1e882cebbe1904ce04 in Assets/Rokas/Resources/RokasSans TMP.asset',
+              'FAIL: Unresolved GUID 2705215ac5b84b70bacc50632be6e391 in Assets/TextMesh Pro/Resources/TMP Settings.asset',
+              'FAIL: Unresolved GUID ab2114bdc8544297b417dfefe9f1e410 in Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset',
+              'FAIL: Unresolved GUID 84a92b25f83d49b9bc132d206b370281 in Assets/TextMesh Pro/Resources/Sprite Assets/EmojiOne.asset',
+              'FAIL: Background below HD: GreenTea.png',
+              'FAIL: Background below HD: HunterTempura.png',
+              'FAIL: Background below HD: MoonMochi.png',
+              'FAIL: Background below HD: SpicyMiso.png',
+              'FAIL: Background below HD: TravelerOnigiri.png',
+              'FAIL: Background below HD: HomeActionIcons.png',
+              'FAIL: Background below HD: EmojiOne.png',
+              'FAIL: Invalid stereo PCM source: LaptopMouseClick.wav',
+              'FAIL: Invalid stereo PCM source: UIWood.wav',
+          }
+          lines = Path('/tmp/home25d-validator.txt').read_text().splitlines()
+          failures = [line for line in lines if line.startswith('FAIL: ')]
+          unexpected = [line for line in failures if line not in expected]
+          if unexpected:
+              raise SystemExit('New validator regressions:\n' + '\n'.join(unexpected))
+          print(f'PASS: validator has 0 new relevant regressions; {len(failures)} historical findings remain.')
+          PY
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-25D-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-25D-GREEN-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run full Unity EditMode and PlayMode RED gate
+      - name: Run full Unity EditMode and PlayMode GREEN gate
         id: unity-tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
@@ -49,12 +92,41 @@ jobs:
           unityVersion: auto
           testMode: All
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Hub 2.5D RED Tests
+          checkName: Home Hub 2.5D GREEN Tests
 
-      - name: Upload RED artifact
+      - name: Upload Home 2.5D GREEN artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-25d-red-results
+          name: home-25d-green-results
           path: ${{ steps.unity-tests.outputs.artifactsPath }}
           if-no-files-found: warn
+
+      - name: Persist verified Home 2.5D production slice
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          files=(
+            Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+            Assets/Rokas/Scripts/Presentation/HomeAtmosphereProfile.cs
+            Assets/Rokas/Resources/HomeAtmosphereProfile.asset
+            Assets/Rokas/Tests/PlayMode/HomeAtmospherePlayModeTests.cs
+          )
+          for f in "${files[@]}"; do
+            mkdir -p "$tmp/$(dirname "$f")"
+            cp "$f" "$tmp/$f"
+          done
+
+          git fetch origin feature/messages-system
+          git checkout -B feature/messages-system origin/feature/messages-system
+          for f in "${files[@]}"; do
+            cp "$tmp/$f" "$f"
+          done
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "${files[@]}"
+          git diff --cached --check
+          git commit -m "feat: rework Home Hub 2.5D layered animation"
+          git push origin HEAD:feature/messages-system
