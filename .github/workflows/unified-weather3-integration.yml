@@ -72,25 +72,23 @@ jobs:
           set -e
           python3 - <<'PY'
           from pathlib import Path
-          import sys
           report=Path('/tmp/unified-final/validator-raw.txt').read_text(errors='replace')
           failures=[x for x in report.splitlines() if x.startswith('FAIL: ')]
           legacy_images={'GreenTea.png','HunterTempura.png','MoonMochi.png','SpicyMiso.png','TravelerOnigiri.png','HomeActionIcons.png','EmojiOne.png'}
           legacy_audio={'LaptopMouseClick.wav','UIWood.wav'}
+          weather_names={'ColdSpillMask.png','DistantHaze.png','NearMist.png','RainStreakAuthored.png','StormCloudMask.png','StormRoomLiftMask.png','WarmPracticalMask.png','WetGlassDroplets.png','WetGlassStreaks.png','WindowGlazingMask.png'}
           hist=[]; unexpected=[]
           for line in failures:
+              tail=line.rsplit(': ',1)[-1]
               if line.startswith('FAIL: Unresolved GUID '): hist.append(line)
-              elif line.startswith('FAIL: Background below HD: ') and line.rsplit(': ',1)[-1] in legacy_images: hist.append(line)
-              elif line.startswith('FAIL: Invalid stereo PCM source: ') and line.rsplit(': ',1)[-1] in legacy_audio: hist.append(line)
-              elif 'Assets/Rokas/Resources/Weather3/' in line or line.rsplit(': ',1)[-1] in {'ColdSpillMask.png','DistantHaze.png','NearMist.png','RainStreakAuthored.png','StormCloudMask.png','StormRoomLiftMask.png','WarmPracticalMask.png','WetGlassDroplets.png','WetGlassStreaks.png','WindowGlazingMask.png'}:
-                  # Compact effect textures may be reported by a generic below-HD classifier; they are not background art.
-                  if not line.startswith('FAIL: Background below HD: '): unexpected.append(line)
+              elif line.startswith('FAIL: Background below HD: ') and tail in legacy_images: hist.append(line)
+              elif line.startswith('FAIL: Invalid stereo PCM source: ') and tail in legacy_audio: hist.append(line)
+              elif line.startswith('FAIL: Background below HD: ') and tail in weather_names: pass
               else: unexpected.append(line)
           counts=(sum('Unresolved GUID ' in x for x in hist),sum('Background below HD:' in x for x in hist),sum('Invalid stereo PCM source:' in x for x in hist))
           if counts != (4,7,2): raise SystemExit(f'historical baseline mismatch: {counts}')
           if unexpected: raise SystemExit('NEW_RELEVANT_FINDINGS:\n'+'\n'.join(unexpected))
-          weather=Path('Assets/Rokas/Resources/Weather3')
-          pngs=sorted(weather.glob('*.png'))
+          weather=Path('Assets/Rokas/Resources/Weather3'); pngs=sorted(weather.glob('*.png'))
           if len(pngs)!=10: raise SystemExit(f'expected 10 Weather3 PNGs, got {len(pngs)}')
           for p in pngs:
               if not Path(str(p)+'.meta').exists(): raise SystemExit('missing meta '+str(p))
@@ -215,8 +213,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-final'); lines=[]
-          parsed={}
+          root=Path('/tmp/unified-final'); lines=[]; parsed={}
           for label in ['editmode','playmode','weather','home']:
               xmls=list((root/label).rglob('*results.xml')) or list((root/label).rglob('*.xml'))
               if not xmls: raise SystemExit('NO_XML '+label)
@@ -227,24 +224,25 @@ jobs:
                   return 0
               vals=dict(total=a('total','testcasecount','test-case-count'),passed=a('passed'),failed=a('failed'),skipped=a('skipped'),inconclusive=a('inconclusive'))
               parsed[label]=(x,vals)
-              line=f"{label}: passed={vals['passed']} total={vals['total']} failed={vals['failed']} skipped={vals['skipped']} inconclusive={vals['inconclusive']}"
-              print(line); lines.append(line)
+              line=f"{label}: passed={vals['passed']} total={vals['total']} failed={vals['failed']} skipped={vals['skipped']} inconclusive={vals['inconclusive']}"; print(line); lines.append(line)
               if vals['total']<=0 or vals['failed']!=0 or vals['inconclusive']!=0: raise SystemExit('FAIL '+line)
           if parsed['weather'][1]['passed'] != 5: raise SystemExit('Weather inventory is not 5')
           if parsed['home'][1]['passed'] != 5: raise SystemExit('Home inventory is not 5')
           edit_cases=parsed['editmode'][0].findall('.//test-case'); play_cases=parsed['playmode'][0].findall('.//test-case')
-          combat_edit=[c for c in edit_cases if 'CombatFoundationTests.ApprovedCombatBehavior' in c.attrib.get('fullname','')]
-          messages_edit=[c for c in edit_cases if 'MessagesYarnTests.' in c.attrib.get('fullname','')]
-          combat_play=[c for c in play_cases if 'CombatFoundationPlayModeTests.' in c.attrib.get('fullname','')]
-          messages_play=[c for c in play_cases if any(name in c.attrib.get('fullname','') for name in ['LiveMessenger','Messages','ContractAttachment','CoordinateAttachment'])]
-          first_loop=[c for c in play_cases if 'FirstLoopTests.' in c.attrib.get('fullname','')]
-          weather_cases=[c for c in play_cases if 'HomeWeather3PlayModeTests.' in c.attrib.get('fullname','')]
-          for name,cases in [('combat-edit',combat_edit),('messages-edit',messages_edit),('combat-play',combat_play),('messages-play',messages_play),('first-loop',first_loop),('weather-in-full-play',weather_cases)]:
+          groups={
+            'combat-edit':[c for c in edit_cases if 'CombatFoundationTests.ApprovedCombatBehavior' in c.attrib.get('fullname','')],
+            'messages-edit':[c for c in edit_cases if 'MessagesYarnTests.' in c.attrib.get('fullname','')],
+            'combat-play':[c for c in play_cases if 'CombatFoundationPlayModeTests.' in c.attrib.get('fullname','')],
+            'messages-play':[c for c in play_cases if any(name in c.attrib.get('fullname','') for name in ['LiveMessenger','Messages','ContractAttachment','CoordinateAttachment'])],
+            'first-loop':[c for c in play_cases if 'FirstLoopTests.' in c.attrib.get('fullname','')],
+            'weather-in-full-play':[c for c in play_cases if 'HomeWeather3PlayModeTests.' in c.attrib.get('fullname','')]
+          }
+          for name,cases in groups.items():
               if not cases: raise SystemExit('missing inventory '+name)
               bad=[c.attrib.get('fullname','') for c in cases if c.attrib.get('result') not in ('Passed','Success')]
               if bad: raise SystemExit(name+' failures '+str(bad))
               lines.append(f'{name}: passed={len(cases)} failed=0'); print(lines[-1])
-          if len(combat_edit)!=23: raise SystemExit(f'Combat Edit scenarios expected 23, got {len(combat_edit)}')
+          if len(groups['combat-edit'])!=23: raise SystemExit(f"Combat Edit scenarios expected 23, got {len(groups['combat-edit'])}")
           Path('/tmp/unified-final/test-summary.txt').write_text('\n'.join(lines)+'\n')
           PY
 
@@ -274,41 +272,29 @@ jobs:
                   {
                       directory=Path.Combine(Path.GetTempPath(),"rokas-unified-weather-transition-"+Guid.NewGuid().ToString("N"));
                       root=new GameObject("UnifiedWeatherTransitionFixture"); boot=root.AddComponent<RokasBootstrap>(); boot.Initialize(directory); yield return null;
-                      object effects=typeof(RokasView).GetField("effects",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(boot.View);
-                      Assert.That(effects,Is.Not.Null);
-                      RawImage storm=Find("HomeStormFlash").GetComponent<RawImage>(); GameObject weatherRuntime=Find("HomeWeatherRuntime");
-                      Assert.That(storm,Is.Not.Null); Assert.That(weatherRuntime,Is.Not.Null);
-                      effects.GetType().GetMethod("ForceLightning",BindingFlags.Instance|BindingFlags.Public).Invoke(effects,null);
-                      boot.View.Tick(.03f); yield return null;
+                      object effects=typeof(RokasView).GetField("effects",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(boot.View); Assert.That(effects,Is.Not.Null);
+                      RawImage storm=Find("HomeStormFlash").GetComponent<RawImage>(); GameObject weatherRuntime=Find("HomeWeatherRuntime"); Assert.That(storm,Is.Not.Null); Assert.That(weatherRuntime,Is.Not.Null);
+                      effects.GetType().GetMethod("ForceLightning",BindingFlags.Instance|BindingFlags.Public).Invoke(effects,null); boot.View.Tick(.03f); yield return null;
                       Assert.That(storm.color.a,Is.GreaterThan(.001f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.GreaterThan(0f));
                       Press("LaptopHotspot"); Press("LaptopContracts"); Press("AcceptContract"); Press("ClosePanel"); Press("DoorHotspot");
-                      yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Portal));
-                      Press("EnterPortal"); yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Combat));
-                      Assert.That(storm.gameObject.activeInHierarchy,Is.False,"Home storm flash must not leak into Combat");
-                      Assert.That(weatherRuntime.activeInHierarchy,Is.False,"Home weather runtime must not remain active in Combat");
-                      Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"pending Home thunder must be cancelled on transition");
-                      Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f));
-                      for(int i=0;i<80;i++) boot.View.Tick(.05f);
-                      Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"cancelled thunder must stay cancelled in Combat");
-                      for(int i=0;i<200 && boot.Session.State.phase==RunPhase.Combat;i++) { boot.Session.Tick(.48f); if(boot.Session.State.phase!=RunPhase.Combat) break; if(boot.Session.Combat.Stage==CombatStage.Ritual) TraceRitual(); else if(boot.Session.Combat.Stage==CombatStage.Fighting) TapEnemy(); }
-                      Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Sealed)); Press("ReturnHome"); yield return new WaitForSecondsRealtime(1.6f);
-                      Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Payment));
-                      float scheduled=ReadFloat(effects,"nextLightning"); Assert.That(scheduled,Is.GreaterThan(0f),"Home re-entry must receive a normal future lightning schedule");
-                      Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f));
+                      yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Portal)); Press("EnterPortal"); yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Combat));
+                      Assert.That(storm.gameObject.activeInHierarchy,Is.False,"Home storm flash must not leak into Combat"); Assert.That(weatherRuntime.activeInHierarchy,Is.False,"Home weather runtime must not remain active in Combat");
+                      Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"pending Home thunder must be cancelled on transition"); Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f));
+                      for(int i=0;i<80;i++) boot.View.Tick(.05f); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"cancelled thunder must stay cancelled in Combat");
+                      for(int i=0;i<200 && boot.Session.State.phase==RunPhase.Combat;i++){boot.Session.Tick(.48f);if(boot.Session.State.phase!=RunPhase.Combat)break;if(boot.Session.Combat.Stage==CombatStage.Ritual)TraceRitual();else if(boot.Session.Combat.Stage==CombatStage.Fighting)TapEnemy();}
+                      Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Sealed)); Press("ReturnHome"); yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Payment));
+                      float scheduled=ReadFloat(effects,"nextLightning"); Assert.That(scheduled,Is.GreaterThan(0f),"Home re-entry must receive a normal future lightning schedule"); Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f));
                       boot.View.Tick(.02f); yield return null; Assert.That(storm.color.a,Is.LessThanOrEqualTo(.001f),"re-entry must not force immediate lightning");
-                      bool observed=false; for(int i=0;i<700 && !observed;i++){ boot.View.Tick(.05f); observed=storm.color.a>.001f; }
-                      Assert.That(observed,Is.True,"randomized future lightning must still occur after integrated Combat transition");
-                      Assert.That(Count<Camera>("HomeWeatherCamera"),Is.EqualTo(1)); Assert.That(Count<RawImage>("HomeWeatherComposite"),Is.EqualTo(1));
-                      Assert.That(Count<ParticleSystem>("HomeRainFar"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainMid"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainNear"),Is.EqualTo(1));
-                      LogAssert.NoUnexpectedReceived();
+                      bool observed=false; for(int i=0;i<700 && !observed;i++){boot.View.Tick(.05f);observed=storm.color.a>.001f;} Assert.That(observed,Is.True,"randomized future lightning must still occur after integrated Combat transition");
+                      Assert.That(Count<Camera>("HomeWeatherCamera"),Is.EqualTo(1)); Assert.That(Count<RawImage>("HomeWeatherComposite"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainFar"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainMid"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainNear"),Is.EqualTo(1)); LogAssert.NoUnexpectedReceived();
                   }
                   private float ReadFloat(object o,string name)=>(float)o.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(o);
-                  private GameObject Find(string name){foreach(var t in root.GetComponentsInChildren<Transform>(true))if(t.name==name)return t.gameObject; return null;}
-                  private Button FindButton(string name){foreach(var b in root.GetComponentsInChildren<Button>(true))if(b.name==name)return b; return null;}
+                  private GameObject Find(string name){foreach(var t in root.GetComponentsInChildren<Transform>(true))if(t.name==name)return t.gameObject;return null;}
+                  private Button FindButton(string name){foreach(var b in root.GetComponentsInChildren<Button>(true))if(b.name==name)return b;return null;}
                   private void Press(string name){var b=FindButton(name);Assert.That(b,Is.Not.Null,name);Assert.That(b.IsInteractable(),Is.True,name);var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};Assert.That(ExecuteEvents.Execute(b.gameObject,p,ExecuteEvents.pointerClickHandler),Is.True,name);}
                   private void TapEnemy(){var target=FindButton("EnemyAttack").gameObject;var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};ExecuteEvents.Execute(target,p,ExecuteEvents.pointerDownHandler);ExecuteEvents.Execute(target,p,ExecuteEvents.pointerUpHandler);}
                   private void TraceRitual(){var target=FindButton("EnemyAttack").gameObject;var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};for(int i=1;i<=3;i++){RectTransform point=null;foreach(var r in root.GetComponentsInChildren<RectTransform>())if(r.name=="RitualPoint"+i)point=r;Assert.That(point,Is.Not.Null);p.position=RectTransformUtility.WorldToScreenPoint(null,point.TransformPoint(point.rect.center));if(i==1)ExecuteEvents.Execute(target,p,ExecuteEvents.pointerDownHandler);else ExecuteEvents.Execute(target,p,ExecuteEvents.dragHandler);}ExecuteEvents.Execute(target,p,ExecuteEvents.pointerUpHandler);}
-                  private int Count<T>(string name) where T:Component {int n=0;foreach(var x in root.GetComponentsInChildren<T>(true))if(x.name==name)n++;return n;}
+                  private int Count<T>(string name) where T:Component{int n=0;foreach(var x in root.GetComponentsInChildren<T>(true))if(x.name==name)n++;return n;}
                   [UnityTearDown] public IEnumerator Cleanup(){if(root!=null)UnityEngine.Object.Destroy(root);root=null;yield return null;if(!string.IsNullOrEmpty(directory)&&Directory.Exists(directory))Directory.Delete(directory,true);}
               }
           }
@@ -340,7 +326,10 @@ jobs:
         id: flow
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
-          <<: *unity_env
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
           ROKAS_COMBAT_CAPTURE_DIR: TestResults/UnifiedRuntimeFlow
         with:
           projectPath: .
@@ -416,8 +405,7 @@ jobs:
           for label in ['transition','runtime-flow','visual-test']:
               xmls=list((Path('/tmp/unified-final')/label).rglob('*results.xml')) or list((Path('/tmp/unified-final')/label).rglob('*.xml'))
               if not xmls: raise SystemExit('NO_XML '+label)
-              x=ET.parse(xmls[0]).getroot(); a=lambda n:int(x.attrib.get(n,0) or 0)
-              total=int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0); passed=a('passed'); failed=a('failed'); skipped=a('skipped'); inc=a('inconclusive')
+              x=ET.parse(xmls[0]).getroot(); total=int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0); passed=int(x.attrib.get('passed',0) or 0); failed=int(x.attrib.get('failed',0) or 0); skipped=int(x.attrib.get('skipped',0) or 0); inc=int(x.attrib.get('inconclusive',0) or 0)
               line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inc}'; print(line); lines.append(line)
               if total<=0 or failed or inc: raise SystemExit('FAIL '+line)
           Path('/tmp/unified-final/runtime-proof-summary.txt').write_text('\n'.join(lines)+'\n')
@@ -430,16 +418,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          root=Path('/tmp/unified-final')
-          logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
+          root=Path('/tmp/unified-final'); logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
           if not logs: raise SystemExit('ZERO_UNITY_LOGS')
           strong=[re.compile(r'\bNullReferenceException\b'),re.compile(r'\bMissingReferenceException\b'),re.compile(r'\bMissingComponentException\b'),re.compile(r'\berror CS\d{4}\s*:',re.I),re.compile(r'\bScripts have compiler errors\b',re.I),re.compile(r'\bCompilation failed\b',re.I),re.compile(r'\bUnhandled Exception\b',re.I),re.compile(r'\bAborting batchmode due to failure\b',re.I)]
           findings=[]
           for p in logs:
               for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
                   if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
-          out=f'LOGS_DISCOVERED={len(logs)}\nLOGS_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'
-          Path('/tmp/unified-final/log-summary.txt').write_text(out+'\n'.join(findings)); print(out,end='')
+          out=f'LOGS_DISCOVERED={len(logs)}\nLOGS_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'; Path('/tmp/unified-final/log-summary.txt').write_text(out+'\n'.join(findings)); print(out,end='')
           if findings: raise SystemExit('\n'.join(findings))
           PY
 
