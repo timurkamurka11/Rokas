@@ -1,0 +1,194 @@
+using System;
+using System.Collections;
+using System.IO;
+using System.Reflection;
+using NUnit.Framework;
+using Rokas.Presentation;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+
+namespace Rokas.Tests
+{
+    public sealed class HomeWeather3VisualQaPlayModeTests
+    {
+        private GameObject root;
+        private string saveDirectory;
+        private string captureDirectory;
+        private Camera captureCamera;
+        private Canvas captureCanvas;
+        private RenderTexture captureTarget;
+        private RokasBootstrap bootstrap;
+        private Button lamp;
+
+        [UnityTest]
+        public IEnumerator CaptureWeather3VisualQaMatrix()
+        {
+            saveDirectory = Path.Combine(Path.GetTempPath(), "rokas-weather3-visual-qa-" + Guid.NewGuid().ToString("N"));
+            captureDirectory = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "TestResults", "HomeWeather3VisualQa"));
+            Directory.CreateDirectory(captureDirectory);
+
+            root = new GameObject("HomeWeather3VisualQaFixture");
+            bootstrap = root.AddComponent<RokasBootstrap>();
+            bootstrap.Initialize(saveDirectory);
+            Assert.That(bootstrap.View, Is.Not.Null);
+            Assert.That(bootstrap.Session, Is.Not.Null);
+
+            ConfigureRenderTextureCapture();
+            lamp = FindButton("LampHotspot");
+            Assert.That(lamp, Is.Not.Null, "Home runtime must expose the real LampHotspot interaction");
+            yield return null;
+            yield return null;
+
+            yield return SetLamp(true);
+            TickFrames(bootstrap.View, 30);
+            yield return null;
+            yield return Capture("01-weather3-light-on.png");
+
+            yield return SetLamp(false);
+            TickFrames(bootstrap.View, 30);
+            yield return null;
+            yield return Capture("02-weather3-light-off.png");
+
+            yield return SetLamp(true);
+            TickFrames(bootstrap.View, 90);
+            yield return null;
+            yield return Capture("03-weather3-normal-rain.png");
+
+            TickFrames(bootstrap.View, 330);
+            yield return null;
+            yield return Capture("04-weather3-wet-glass.png");
+
+            yield return SetLamp(true);
+            ForceLightning(bootstrap.View);
+            bootstrap.View.Tick(.035f);
+            yield return null;
+            yield return Capture("05-weather3-lightning-on.png");
+
+            yield return SetLamp(false);
+            ForceLightning(bootstrap.View);
+            bootstrap.View.Tick(.035f);
+            yield return null;
+            yield return Capture("06-weather3-lightning-off.png");
+
+            yield return SetLamp(true);
+            TickFrames(bootstrap.View, 480);
+            yield return null;
+            yield return Capture("07-weather3-idle-depth.png");
+
+            string[] expected =
+            {
+                "01-weather3-light-on.png",
+                "02-weather3-light-off.png",
+                "03-weather3-normal-rain.png",
+                "04-weather3-wet-glass.png",
+                "05-weather3-lightning-on.png",
+                "06-weather3-lightning-off.png",
+                "07-weather3-idle-depth.png"
+            };
+            foreach (string file in expected)
+                Assert.That(File.Exists(Path.Combine(captureDirectory, file)), Is.True, "missing visual QA capture: " + file);
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private IEnumerator SetLamp(bool enabled)
+        {
+            if (bootstrap.Session.State.lampOn != enabled)
+            {
+                lamp.onClick.Invoke();
+                yield return null;
+                yield return null;
+            }
+            Assert.That(bootstrap.Session.State.lampOn, Is.EqualTo(enabled));
+        }
+
+        private static void TickFrames(RokasView view, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+                view.Tick(1f / 60f);
+        }
+
+        private void ConfigureRenderTextureCapture()
+        {
+            captureCamera = root.GetComponentInChildren<Camera>(true);
+            captureCanvas = root.GetComponentInChildren<Canvas>(true);
+            Assert.That(captureCamera, Is.Not.Null, "Visual QA capture needs the real RokasCamera");
+            Assert.That(captureCanvas, Is.Not.Null, "Visual QA capture needs the real RokasCanvas");
+
+            captureTarget = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32)
+            {
+                name = "HomeWeather3VisualQaCapture"
+            };
+            captureTarget.Create();
+
+            captureCamera.targetTexture = captureTarget;
+            captureCamera.cullingMask = ~0;
+            captureCamera.clearFlags = CameraClearFlags.SolidColor;
+            captureCamera.backgroundColor = Color.black;
+
+            captureCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            captureCanvas.worldCamera = captureCamera;
+            captureCanvas.planeDistance = 1f;
+            Canvas.ForceUpdateCanvases();
+        }
+
+        private IEnumerator Capture(string fileName)
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            captureCamera.Render();
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = captureTarget;
+            Texture2D capture = new Texture2D(captureTarget.width, captureTarget.height, TextureFormat.RGB24, false);
+            capture.ReadPixels(new Rect(0, 0, captureTarget.width, captureTarget.height), 0, 0, false);
+            capture.Apply(false, false);
+            RenderTexture.active = previous;
+
+            byte[] png = capture.EncodeToPNG();
+            UnityEngine.Object.Destroy(capture);
+            File.WriteAllBytes(Path.Combine(captureDirectory, fileName), png);
+        }
+
+        private Button FindButton(string name)
+        {
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+                if (button.name == name) return button;
+            return null;
+        }
+
+        private static void ForceLightning(RokasView view)
+        {
+            object effects = typeof(RokasView)
+                .GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(view);
+            Assert.That(effects, Is.Not.Null);
+            MethodInfo trigger = effects.GetType().GetMethod("ForceLightning", BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(trigger, Is.Not.Null);
+            trigger.Invoke(effects, null);
+        }
+
+        [UnityTearDown]
+        public IEnumerator Cleanup()
+        {
+            if (captureCamera != null) captureCamera.targetTexture = null;
+            if (captureTarget != null)
+            {
+                captureTarget.Release();
+                UnityEngine.Object.Destroy(captureTarget);
+            }
+            captureTarget = null;
+            captureCamera = null;
+            captureCanvas = null;
+            bootstrap = null;
+            lamp = null;
+
+            if (root != null) UnityEngine.Object.Destroy(root);
+            root = null;
+            yield return null;
+            if (!string.IsNullOrEmpty(saveDirectory) && Directory.Exists(saveDirectory))
+                Directory.Delete(saveDirectory, true);
+        }
+    }
+}
