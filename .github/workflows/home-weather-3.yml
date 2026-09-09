@@ -1,66 +1,122 @@
-name: Home Weather 3 Focused RED
+name: Home Weather 3 Runtime Implementation
 
 on:
   push:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3.yml
+      - Tools/CI/apply_weather3_runtime.py
 
 permissions:
-  contents: read
-  checks: write
+  contents: write
 
 jobs:
-  focused-red:
+  apply-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 20
     steps:
-      - name: Checkout exact Weather 3 RED tree
+      - name: Checkout current Weather 3 CI branch
         uses: actions/checkout@v7
         with:
-          ref: afd629430e13013e841a0edcbf95381df38c2642
+          ref: ci/home-weather-3
           fetch-depth: 0
 
-      - name: Prove exact RED commit and tree
+      - name: Recover and prove production base
+        shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "afd629430e13013e841a0edcbf95381df38c2642"
-          test "$(git rev-parse HEAD^{tree})" = "cb81ccee5ab3ac56294934e37572d0768ad5df80"
-          git merge-base --is-ancestor c68763fb482665ea53cb42c48b2638cc5314c3c0 HEAD
-          echo "RED_HEAD=$(git rev-parse HEAD)"
-          echo "RED_TREE=$(git rev-parse HEAD^{tree})"
+          git fetch origin feature/home-weather-3
+          production="$(git rev-parse origin/feature/home-weather-3)"
+          git merge-base --is-ancestor a05dc28dd7f81c1c76e4be8788c89c72b0398020 "$production"
+          echo "PRODUCTION_BASE=$production" | tee /tmp/weather3-production-base.txt
+          echo "PRODUCTION_TREE=$(git rev-parse "$production^{tree}")" | tee -a /tmp/weather3-production-base.txt
+
+      - name: Create isolated production worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          production="$(git rev-parse origin/feature/home-weather-3)"
+          rm -rf /tmp/rokas-weather3-runtime
+          git worktree add --detach /tmp/rokas-weather3-runtime "$production"
+
+      - name: Apply existing deterministic runtime helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/Tools/CI/apply_weather3_runtime.py" \
+            /tmp/rokas-weather3-runtime/Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+
+      - name: Inspect and enforce runtime scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-weather3-runtime
+          git status --short | tee /tmp/weather3-runtime-status.txt
+          changed="$(git diff --name-only)"
+          test "$changed" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          git diff -- Assets/Rokas/Scripts/Presentation/WorldEffects.cs | tee /tmp/weather3-runtime.diff
+          ! grep -q 'LampMood' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          ! grep -q 'CreateRainTexture' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          ! grep -q 'CreateWetGlassTexture' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          ! grep -q 'CreateRadialTexture' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          grep -q 'WindowGlazingMask' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          grep -q 'HomeWetGlassDroplets' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          grep -q 'RainStreakAuthored' Assets/Rokas/Scripts/Presentation/WorldEffects.cs
 
       - name: Literal git diff check
-        run: git diff --check
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-weather3-runtime
+          git diff --check | tee /tmp/weather3-runtime-diff-check.txt
 
-      - name: Cache Unity Library
-        uses: actions/cache@v6
-        with:
-          path: Library
-          key: Home-Weather-3-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Unity-Library-${{ runner.os }}-
+      - name: Commit exact production runtime rework
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-weather3-runtime
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+          test "$(git diff --cached --name-only)" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          git diff --cached --check
+          git commit -m 'feat: rework Home Weather 3 cinematic atmosphere'
+          git rev-parse HEAD | tee /tmp/weather3-runtime-commit.txt
+          git rev-parse HEAD^{tree} | tee /tmp/weather3-runtime-tree.txt
 
-      - name: Run focused Home Weather 3 RED contracts
-        id: unity-tests
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Focused RED
+      - name: Fast-forward push production only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-weather3-runtime
+          base="$(sed -n 's/^PRODUCTION_BASE=//p' /tmp/weather3-production-base.txt)"
+          git fetch origin feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "$base"
+          git merge-base --is-ancestor "$base" HEAD
+          git push origin HEAD:feature/home-weather-3
 
-      - name: Upload focused RED evidence
+      - name: Prove remote production and protected branch safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cat /tmp/weather3-runtime-commit.txt)"
+          git fetch origin feature/home-weather-3 development
+          test "$(git rev-parse origin/feature/home-weather-3)" = "$expected"
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          echo "FEATURE_HEAD=$(git rev-parse origin/feature/home-weather-3)"
+          echo "FEATURE_TREE=$(git rev-parse origin/feature/home-weather-3^{tree})"
+          echo "DEVELOPMENT_HEAD=$(git rev-parse origin/development)"
+
+      - name: Upload runtime implementation evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-red
-          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          name: home-weather-3-runtime-implementation
+          path: |
+            /tmp/weather3-production-base.txt
+            /tmp/weather3-runtime-status.txt
+            /tmp/weather3-runtime.diff
+            /tmp/weather3-runtime-diff-check.txt
+            /tmp/weather3-runtime-commit.txt
+            /tmp/weather3-runtime-tree.txt
           if-no-files-found: warn
