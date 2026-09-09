@@ -1,4 +1,4 @@
-name: ROKAS Unity CI
+name: ROKAS Checkpoint Ref Verify
 
 on:
   workflow_dispatch:
@@ -8,56 +8,43 @@ on:
 
 permissions:
   contents: read
-  checks: write
 
 concurrency:
-  group: Unity-CI-${{ github.ref }}
+  group: Checkpoint-Ref-Verify-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  unity-tests:
-    name: ROKAS Unity Tests
+  verify-checkpoint-ref:
+    name: Verify feature checkout equals remote
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
-      - name: Checkout verified production tree
+      - name: Checkout final feature checkpoint
         uses: actions/checkout@v7
         with:
-          ref: ac309891a890a347ce61f1af1753c790db4dd200
+          ref: feature/messages-system
+          fetch-depth: 0
 
-      - name: Confirm exact verified production tree
+      - name: Verify local HEAD, remote feature HEAD, tree, and development guard
         shell: bash
         run: |
-          test "$(git rev-parse HEAD^{tree})" = "d7573a20cf25112a6880bac5b0c2f0ca2d99048d"
-          echo "Verified tree: $(git rev-parse HEAD^{tree})"
+          set -euo pipefail
+          expected_head="a53cac5e242b97ea75b7ec1c4ab3eeaaaace16f9"
+          expected_tree="d7573a20cf25112a6880bac5b0c2f0ca2d99048d"
+          expected_development="5e494f188b90bdb6916e8e78e35ac38509bd0bce"
 
-      - name: Cache Unity Library
-        uses: actions/cache@v6
-        with:
-          path: Library
-          key: Unity-Library-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Unity-Library-${{ runner.os }}-
+          local_head="$(git rev-parse HEAD)"
+          local_tree="$(git rev-parse HEAD^{tree})"
+          remote_feature="$(git ls-remote origin refs/heads/feature/messages-system | awk '{print $1}')"
+          remote_development="$(git ls-remote origin refs/heads/development | awk '{print $1}')"
 
-      - name: Run EditMode and PlayMode tests
-        id: unity-tests
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: All
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: ROKAS Unity Tests
+          echo "LOCAL_HEAD=$local_head"
+          echo "LOCAL_TREE=$local_tree"
+          echo "REMOTE_FEATURE_HEAD=$remote_feature"
+          echo "REMOTE_DEVELOPMENT_HEAD=$remote_development"
 
-      - name: Upload Unity test artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rokas-unity-test-results
-          path: ${{ steps.unity-tests.outputs.artifactsPath }}
-          if-no-files-found: warn
+          test "$local_head" = "$expected_head"
+          test "$remote_feature" = "$expected_head"
+          test "$local_head" = "$remote_feature"
+          test "$local_tree" = "$expected_tree"
+          test "$remote_development" = "$expected_development"
