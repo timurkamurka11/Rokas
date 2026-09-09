@@ -119,6 +119,22 @@ jobs:
           print('\n'.join(out))
           PY
 
+      - name: Setup .NET for Core/domain suite
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run complete Core/domain suite and preserve evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Tests/Core/Rokas.Core.Tests.csproj
+          test -f Tests/Core/Program.cs
+          mkdir -p /tmp/weather3-final/core
+          dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release 2>&1 | tee /tmp/weather3-final/core/core-output.txt
+          test -s /tmp/weather3-final/core/core-output.txt
+          grep -Fxq 'PASS: all Rokas.Core behavior tests' /tmp/weather3-final/core/core-output.txt
+
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
@@ -127,34 +143,14 @@ jobs:
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run complete Core domain suite
-        id: core
+      - name: Run complete EditMode
+        id: editmode
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env: &unity_env
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: EditMode
-          customParameters: -testFilter Rokas.Tests.FirstLoopDomainTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Core Domain
-
-      - name: Preserve Core evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/weather3-final/core
-          cp -a "${{ steps.core.outputs.artifactsPath }}/." /tmp/weather3-final/core/
-          rm -rf "${{ steps.core.outputs.artifactsPath }}"
-
-      - name: Run complete EditMode
-        id: editmode
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env: *unity_env
         with:
           projectPath: .
           unityVersion: auto
@@ -262,15 +258,19 @@ jobs:
             file "/tmp/weather3-final/visual/captures/$file"
           done | tee /tmp/weather3-final/visual-captures.txt
 
-      - name: Summarize NUnit XML results
+      - name: Summarize final test results
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          roots=['core','editmode','playmode','focused','home','visual']
-          lines=[]
+          core_output=Path('/tmp/weather3-final/core/core-output.txt')
+          if not core_output.exists() or 'PASS: all Rokas.Core behavior tests' not in core_output.read_text(errors='replace'):
+              raise SystemExit('Core/domain PASS evidence missing')
+          lines=['core: PASS: all Rokas.Core behavior tests']
+          print(lines[0])
+          roots=['editmode','playmode','focused','home','visual']
           for label in roots:
               xmls=list((Path('/tmp/weather3-final')/label).rglob('*results.xml'))
               if not xmls:
