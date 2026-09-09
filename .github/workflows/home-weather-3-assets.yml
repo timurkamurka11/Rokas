@@ -127,7 +127,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish production-ready assets to feature branch
-        if: github.event.head_commit.message == 'ci: publish Weather 3 production assets'
+        if: "${{ github.event.head_commit.message == 'ci: publish Weather 3 production assets' }}"
         shell: bash
         run: |
           set -euo pipefail
