@@ -1,0 +1,53 @@
+name: Home Weather 3 Licensed Source Assets
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3-assets.yml
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v7
+
+      - name: Download exact CC0 source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Weather3Sources
+          curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
+            'https://opengameart.org/sites/default/files/rain_overlay_0.png' \
+            -o Weather3Sources/rain_overlay.png
+          curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
+            'https://opengameart.org/sites/default/files/fog01.png' \
+            -o Weather3Sources/fog01.png
+          curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
+            'https://opengameart.org/sites/default/files/oga-textures/136561/fx_cloudalpha02.png' \
+            -o Weather3Sources/fx_cloudalpha02.png
+          curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
+            'https://opengameart.org/sites/default/files/oga-textures/136561/fx_cloudalpha05.png' \
+            -o Weather3Sources/fx_cloudalpha05.png
+          curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/RaindropsOnWindow.jpg' \
+            -o Weather3Sources/RaindropsOnWindow.jpg
+
+      - name: Record checksums and dimensions
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum Weather3Sources/* | tee Weather3Sources/SHA256SUMS.txt
+          file Weather3Sources/* | tee Weather3Sources/FILE_INFO.txt
+
+      - name: Upload licensed source bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-licensed-sources
+          path: Weather3Sources
+          if-no-files-found: error
