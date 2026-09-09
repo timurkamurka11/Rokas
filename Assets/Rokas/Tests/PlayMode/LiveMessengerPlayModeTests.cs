@@ -65,8 +65,8 @@ namespace Rokas.Tests
             }
             Assert.That(FindButton("MessagesLiveLauncher_yumiko"), Is.Not.Null,
                 "resolved Yumiko micro-dialogue must return cleanly to the topic launcher");
-            Assert.That(FindButtonWithPrefix("MessagesReaction_"), Is.Not.Null,
-                "Yumiko incoming history should expose lightweight safe reaction controls");
+            Assert.That(FindButtonWithPrefix("MessagesReactionOpen_"), Is.Not.Null,
+                "Yumiko incoming history should expose the per-message Live Messenger 1.1 reaction opener");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -86,8 +86,8 @@ namespace Rokas.Tests
             Press(launcher.name);
             Assert.That(CountButtonsWithPrefix("MessagesLiveTopic_"), Is.GreaterThanOrEqualTo(5),
                 "Guild must expose at least five request topics");
-            Assert.That(FindButtonWithPrefix("MessagesReaction_"), Is.Null,
-                "Guild must not expose casual warm emoji-style reactions");
+            Assert.That(FindButtonWithPrefix("MessagesReactionOpen_"), Is.Not.Null,
+                "player reaction picker must remain available on Guild incoming messages; Guild formality is enforced by authored NPC reaction rules");
 
             ConversationState guild = Bootstrap().Session.Messages.GetConversation("guild");
             Assert.That(guild, Is.Not.Null);

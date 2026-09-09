@@ -93,12 +93,21 @@ namespace Rokas.Presentation
             LastMessageAudioCue = string.Empty;
             MessageAudioCueCount = 0;
             session.Messages.Changed += HandleMessageRoutingChanged;
+            session.LiveMessages.Signal += HandleLiveMessengerSignal;
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             phase = session.State.phase;
             RebuildScene();
             Tick(0);
             Refresh();
+        }
+
+        private void HandleLiveMessengerSignal(LiveMessengerSignal signal)
+        {
+            if (signal == null || signal.Kind != LiveMessengerSignalKind.ReactionChanged) return;
+            LastMessageAudioCue = "Reaction";
+            MessageAudioCueCount++;
+            audio.PlayMessageCue("Reaction");
         }
 
         private void HandleMessageRoutingChanged()
@@ -365,6 +374,7 @@ namespace Rokas.Presentation
         {
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
+            session.LiveMessages.Signal -= HandleLiveMessengerSignal;
             session.Changed -= Refresh;
             session.Combat.Hit -= OnHit;
         }

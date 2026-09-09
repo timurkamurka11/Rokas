@@ -26,6 +26,7 @@ namespace Rokas.Presentation
         private Text objective;
         private Text prepared;
         private CanvasGroup laptopUnreadIndicator;
+        private CanvasGroup laptopUnreadGlow;
         private float time;
         private float mameReaction;
 
@@ -57,6 +58,11 @@ namespace Rokas.Presentation
             ActionButton(parent, "WorkbenchHotspot", "Снаряжение", HomeActionGlyph.Equipment, 1110, 392, 356,
                 () => open("workbench"));
 
+            RectTransform glow = ui.Rect(parent, "HomeLaptopUnreadGlow", 938, 626, 414, 106);
+            laptopUnreadGlow = glow.gameObject.AddComponent<CanvasGroup>();
+            laptopUnreadGlow.alpha = 0f;
+            LaptopSurface glowSurface = Surface(glow, "GlowSurface", 0, 0, 414, 106, 53, new Color(.12f, .82f, .72f, .30f));
+            glowSurface.raycastTarget = false;
             ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,
                 () => open("laptop"));
             RectTransform unread = ui.Rect(parent, "HomeLaptopUnreadIndicator", 1260, 628, 34, 34);
@@ -193,13 +199,16 @@ namespace Rokas.Presentation
 
         private void UpdateLaptopUnreadIndicator()
         {
-            if (laptopUnreadIndicator == null) return;
-            if (session.Messages.TotalUnread <= 0)
+            bool unread = session.Messages.TotalUnread > 0;
+            if (laptopUnreadIndicator != null)
+                laptopUnreadIndicator.alpha = unread ? .68f + .22f * (.5f + .5f * Mathf.Sin(time * 3.2f)) : 0f;
+            if (laptopUnreadGlow != null)
             {
-                laptopUnreadIndicator.alpha = 0f;
-                return;
+                if (unread)
+                    laptopUnreadGlow.alpha = .20f + .18f * (.5f + .5f * Mathf.Sin(time * 2.35f));
+                else
+                    laptopUnreadGlow.alpha = Mathf.MoveTowards(laptopUnreadGlow.alpha, 0f, .08f);
             }
-            laptopUnreadIndicator.alpha = .68f + .22f * (.5f + .5f * Mathf.Sin(time * 3.2f));
         }
 
         public void Tick(float dt)
@@ -216,7 +225,7 @@ namespace Rokas.Presentation
 
         public void ClearReferences()
         {
-            mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null;
+            mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null; laptopUnreadGlow = null;
         }
     }
 

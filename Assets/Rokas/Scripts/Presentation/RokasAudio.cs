@@ -11,6 +11,8 @@ namespace Rokas.Presentation
         private readonly AudioSource ambience;
         private readonly AudioSource music;
         private readonly AudioSource[] effects = new AudioSource[4];
+        private readonly AudioClip messageArrive;
+        private readonly AudioClip reactionCue;
         private int voice;
         private bool mission;
         private bool hasLocation;
@@ -34,6 +36,8 @@ namespace Rokas.Presentation
             ambience = MakeSource(audioRoot, true);
             music = MakeSource(audioRoot, true);
             for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource(audioRoot, false);
+            messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
+            reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
 
         private static AudioSource MakeSource(GameObject root, bool loop)
@@ -96,11 +100,22 @@ namespace Rokas.Presentation
 
         public void PlayMessageCue(string cue)
         {
-            AudioClip clip = assets.laptopMouseClick ? assets.laptopMouseClick : assets.click;
-            float scale = cue == "WorldNotification" ? .34f :
-                cue == "LaptopNotification" ? .30f :
-                cue == "ActiveReceive" ? .22f :
-                cue == "SoftReceive" ? .16f : .26f;
+            if (string.Equals(cue, "Reaction", System.StringComparison.Ordinal))
+            {
+                PlayScaled(reactionCue ? reactionCue : assets.click, .72f);
+                return;
+            }
+            if (string.Equals(cue, "PlayerSend", System.StringComparison.Ordinal))
+            {
+                PlayScaled(assets.laptopMouseClick ? assets.laptopMouseClick : assets.click, .30f);
+                return;
+            }
+
+            AudioClip clip = messageArrive ? messageArrive : (assets.laptopMouseClick ? assets.laptopMouseClick : assets.click);
+            float scale = cue == "WorldNotification" ? .92f :
+                cue == "LaptopNotification" ? .84f :
+                cue == "ActiveReceive" ? .76f :
+                cue == "SoftReceive" ? .40f : .70f;
             PlayScaled(clip, scale);
         }
 

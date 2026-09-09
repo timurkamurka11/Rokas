@@ -41,6 +41,7 @@ namespace Rokas.Presentation
         private bool subscribed;
         private bool liveSubscribed;
         private bool liveTopicsOpen;
+        private string reactionPickerMessageId = string.Empty;
         private bool refreshPending;
         private bool refreshPreserveScroll = true;
 
@@ -126,6 +127,7 @@ namespace Rokas.Presentation
             refreshPending = false;
             refreshPreserveScroll = true;
             liveTopicsOpen = false;
+            reactionPickerMessageId = string.Empty;
         }
 
         public void Tick(float dt)
@@ -300,7 +302,11 @@ namespace Rokas.Presentation
 
             bool wasSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
             selected = contact;
-            if (!wasSelected) liveTopicsOpen = false;
+            if (!wasSelected)
+            {
+                liveTopicsOpen = false;
+                reactionPickerMessageId = string.Empty;
+            }
             if (string.Equals(contact.id, "guild", StringComparison.Ordinal))
             {
                 session.EnsureGuildContractOffer();
@@ -403,9 +409,9 @@ namespace Rokas.Presentation
                 {
                     y = BuildActionAttachment(entry, y);
                 }
+                BuildMessageReactions(entry, ref y);
             }
 
-            BuildReactionControls(conversation, ref y);
             BuildLiveControls(ref y);
             BuildDialogueChoices(ref y);
             conversationContent.sizeDelta = new Vector2(0, Mathf.Max(538, y + 10));
@@ -478,49 +484,100 @@ namespace Rokas.Presentation
             session.Messages.ActivateAttachment(contactId, messageId);
         }
 
-        private void BuildReactionControls(ConversationState conversation, ref float y)
+        private void BuildMessageReactions(MessageEntry entry, ref float y)
         {
-            if (selected == null || conversation == null || conversation.entries == null) return;
+            if (entry == null || string.IsNullOrEmpty(entry.messageId) || selected == null) return;
+            if (entry.outgoing)
+            {
+                if (!string.IsNullOrEmpty(entry.npcReactionId))
+                {
+                    Texture2D npcTexture = Resources.Load<Texture2D>("Messages/Reactions/" + entry.npcReactionId);
+                    LaptopSurface npcChip = Surface(conversationContent, "MessagesNpcReactionChip_" + entry.messageId,
+                        1094 - 86, y - 8, 56, 42, 18, new Color(.025f, .09f, .11f, .96f));
+                    if (npcTexture != null)
+                    {
+                        RawImage art = ui.Art(npcChip.transform, "Sticker", npcTexture, 9, 2, 38, 38);
+                        art.raycastTarget = false;
+                    }
+                    y += 38;
+                }
+                return;
+            }
+
+            string messageId = entry.messageId;
+            float chipX = 26;
+            LaptopSurface openerFace = Surface(conversationContent, "MessagesReactionOpenFace_" + messageId,
+                chipX, y - 5, 40, 30, 15, new Color(.03f, .10f, .13f, .96f), true);
+            Button opener = openerFace.gameObject.AddComponent<Button>();
+            opener.name = "MessagesReactionOpen_" + messageId;
+            StyleButton(opener, openerFace);
+            opener.onClick.AddListener(() =>
+            {
+                reactionPickerMessageId = string.Equals(reactionPickerMessageId, messageId, StringComparison.Ordinal)
+                    ? string.Empty : messageId;
+                RefreshActiveContact(true);
+            });
+            TmpLabel(openerFace.transform, "Icon", "+", 0, 0, 40, 30, 17, Soft, TextAlignmentOptions.Center);
+
+            if (!string.IsNullOrEmpty(entry.reactionId))
+            {
+                Texture2D selectedTexture = Resources.Load<Texture2D>("Messages/Reactions/" + entry.reactionId);
+                LaptopSurface chip = Surface(conversationContent, "MessagesReactionChip_" + messageId,
+                    74, y - 8, 54, 36, 18, new Color(.035f, .13f, .16f, .98f));
+                if (selectedTexture != null)
+                {
+                    RawImage art = ui.Art(chip.transform, "Sticker", selectedTexture, 9, 0, 36, 36);
+                    art.raycastTarget = false;
+                }
+            }
+            y += 32;
+
+            if (!string.Equals(reactionPickerMessageId, messageId, StringComparison.Ordinal)) return;
             List<LiveReactionOption> reactions = session.LiveMessages.GetReactionOptions(selected.id);
             if (reactions == null || reactions.Count == 0) return;
 
-            MessageEntry target = null;
-            for (int index = conversation.entries.Count - 1; index >= 0; index--)
-            {
-                MessageEntry candidate = conversation.entries[index];
-                if (candidate != null && !candidate.outgoing && !string.IsNullOrEmpty(candidate.messageId))
-                {
-                    target = candidate;
-                    break;
-                }
-            }
-            if (target == null) return;
-
-            y += 2;
-            TmpLabel(conversationContent, "MessagesReactionCaption", "РЕАКЦИЯ", 26, y, 130, 24, 11, Soft,
-                TextAlignmentOptions.MidlineLeft);
-            float x = 160;
+            LaptopSurface picker = Surface(conversationContent, "MessagesReactionPicker_" + messageId,
+                26, y, 342, 126, 16, new Color(.016f, .065f, .085f, .99f), true);
             for (int index = 0; index < reactions.Count; index++)
             {
                 LiveReactionOption option = reactions[index];
-                string messageId = target.messageId;
+                int column = index % 5;
+                int row = index / 5;
                 string reactionId = option.Id;
-                string label = option.Icon == "heart" ? "ТЕПЛО" : option.Icon == "dots" ? "..." : "ОК";
-                LaptopSurface face = Surface(conversationContent,
-                    "MessagesReactionFace_" + reactionId, x, y, 104, 28, 12,
-                    new Color(.035f, .12f, .15f, .96f), true);
-                Button button = face.gameObject.AddComponent<Button>();
-                button.name = "MessagesReaction_" + messageId + "_" + reactionId;
-                StyleButton(button, face);
-                button.onClick.AddListener(() =>
+                LaptopSurface pickFace = Surface(picker.transform, "PickFace_" + reactionId,
+                    9 + column * 65, 8 + row * 58, 54, 52, 12, new Color(.035f, .11f, .14f, .98f), true);
+                Button pick = pickFace.gameObject.AddComponent<Button>();
+                pick.name = "MessagesReactionPick_" + messageId + "_" + reactionId;
+                StyleButton(pick, pickFace);
+                pick.onClick.AddListener(() =>
                 {
-                    if (session.LiveMessages.SetReaction(selected.id, messageId, reactionId))
-                        RefreshActiveContact(true);
+                    reactionPickerMessageId = string.Empty;
+                    session.LiveMessages.SetReaction(selected.id, messageId, reactionId);
+                    RefreshActiveContact(true);
                 });
-                TmpLabel(face.transform, "Label", label, 8, 2, 88, 24, 11, White, TextAlignmentOptions.Center);
-                x += 112;
+                Texture2D texture = Resources.Load<Texture2D>("Messages/Reactions/" + reactionId);
+                if (texture != null)
+                {
+                    RawImage art = ui.Art(pickFace.transform, "Sticker", texture, 5, 4, 44, 44);
+                    art.raycastTarget = false;
+                }
             }
-            y += 38;
+            if (!string.IsNullOrEmpty(entry.reactionId))
+            {
+                LaptopSurface removeFace = Surface(picker.transform, "RemoveFace", 276, 93, 56, 25, 10,
+                    new Color(.18f, .055f, .07f, .96f), true);
+                Button remove = removeFace.gameObject.AddComponent<Button>();
+                remove.name = "MessagesReactionRemove_" + messageId;
+                StyleButton(remove, removeFace);
+                remove.onClick.AddListener(() =>
+                {
+                    reactionPickerMessageId = string.Empty;
+                    session.LiveMessages.SetReaction(selected.id, messageId, string.Empty);
+                    RefreshActiveContact(true);
+                });
+                TmpLabel(removeFace.transform, "Label", "×", 0, 0, 56, 25, 15, White, TextAlignmentOptions.Center);
+            }
+            y += 134;
         }
 
         private void BuildLiveControls(ref float y)
