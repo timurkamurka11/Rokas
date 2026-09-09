@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout verified feature baseline
+      - name: Checkout isolated 2.5D baseline
         uses: actions/checkout@v7
         with:
-          ref: feature/messages-system
+          ref: ci/home-25d-rework
           fetch-depth: 0
 
       - name: Apply focused 2.5D RED tests only
