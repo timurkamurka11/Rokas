@@ -15,16 +15,24 @@ MonoBehaviour:
   enabled: 1
   rainEnabled: 1
   lightningEnabled: 1
-  rainIntensity: 0.88
-  rainSpeed: 1
+  rainIntensity: 1.18
+  rainSpeed: 1.12
   farRainEnabled: 1
   midRainEnabled: 1
   nearRainEnabled: 1
   lightningMinInterval: 16
   lightningMaxInterval: 34
-  lightningIntensity: 0.82
+  lightningIntensity: 1.02
   thunderVolume: 0.56
   ambientRainVolume: 0.72
-  glowIntensity: 0.62
-  hazeIntensity: 0.56
-  wetGlassIntensity: 0.58
+  glowIntensity: 0.82
+  hazeIntensity: 0.88
+  wetGlassIntensity: 0.92
+  parallaxIntensity: 0.85
+  cursorParallaxStrength: 0.16
+  parallaxSmoothing: 4.2
+  farParallaxPixels: 0.72
+  roomParallaxPixels: 1.45
+  nearParallaxPixels: 3.85
+  outsideMotionIntensity: 0.92
+  weatherReadability: 1.16
