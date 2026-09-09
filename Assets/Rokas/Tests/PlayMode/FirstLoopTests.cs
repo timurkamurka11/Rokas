@@ -64,15 +64,17 @@ namespace Rokas.Tests
             Assert.That(boot.Session.State.combatTime, Is.EqualTo(pausedTime));
             Press("CloseSettings");
 
-            float beforeAutoAttack = boot.Session.State.enemyHp;
+            float beforeIdleTick = boot.Session.State.enemyHp;
             boot.Session.Tick(boot.Session.Contract.autoInterval + .05f);
-            Assert.That(boot.Session.State.enemyHp, Is.LessThan(beforeAutoAttack));
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(beforeIdleTick));
 
             // Exercise the actual domain and the wired hit button, not a duplicate simulation.
             for (int i = 0; i < 200 && boot.Session.State.phase == RunPhase.Combat; i++)
             {
-                boot.Session.Tick(.2f);
-                if (boot.Session.State.phase == RunPhase.Combat) Press("EnemyAttack");
+                boot.Session.Tick(.48f);
+                if (boot.Session.State.phase != RunPhase.Combat) break;
+                if (boot.Session.Combat.Stage == CombatStage.Ritual) TraceRitual();
+                else if (boot.Session.Combat.Stage == CombatStage.Fighting) TapEnemy();
             }
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Sealed));
             Press("ReturnHome");
@@ -148,6 +150,30 @@ namespace Rokas.Tests
             Assert.That(FindButton("LaptopHotspot").IsInteractable(), Is.True);
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.EqualTo(FindButton("LaptopHotspot").gameObject));
             LogAssert.NoUnexpectedReceived();
+        }
+
+        private void TapEnemy()
+        {
+            var target = FindButton("EnemyAttack").gameObject;
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerUpHandler);
+        }
+
+        private void TraceRitual()
+        {
+            var target = FindButton("EnemyAttack").gameObject;
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            for (int i = 1; i <= 3; i++)
+            {
+                RectTransform point = null;
+                foreach (var rect in root.GetComponentsInChildren<RectTransform>()) if (rect.name == "RitualPoint" + i) point = rect;
+                Assert.That(point, Is.Not.Null);
+                pointer.position = RectTransformUtility.WorldToScreenPoint(null, point.TransformPoint(point.rect.center));
+                if (i == 1) ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerDownHandler);
+                else ExecuteEvents.Execute(target, pointer, ExecuteEvents.dragHandler);
+            }
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerUpHandler);
         }
 
         private void Press(string name)

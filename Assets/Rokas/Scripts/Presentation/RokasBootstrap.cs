@@ -125,10 +125,13 @@ namespace Rokas.Presentation
         {
             if (Session == null || View == null) return;
             float dt = Mathf.Min(Time.unscaledDeltaTime, .1f);
-            if (focused && !saveBlocked && !View.Paused) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
+            if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
+            if (focused && !saveBlocked)
+                View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
+            if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
             View.Tick(dt);
             sound.Tick(dt, focused);
-            if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
+
             if (focused && Input.GetKeyDown(KeyCode.Tab)) View.FocusNext();
             autosave += dt;
             if (dirty && autosave >= 10) SaveNow();
@@ -137,10 +140,10 @@ namespace Rokas.Presentation
         private void OnApplicationFocus(bool value)
         {
             focused = value;
-            if (!value && Session != null) SaveNow();
+            if (!value && Session != null) { View?.CancelCombatInput(); SaveNow(); }
         }
 
-        private void OnApplicationPause(bool value) { if (value) SaveNow(); }
+        private void OnApplicationPause(bool value) { if (value) { View?.CancelCombatInput(); SaveNow(); } }
         private void OnApplicationQuit() { SaveNow(); }
         private void OnDestroy()
         {
