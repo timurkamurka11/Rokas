@@ -37,6 +37,7 @@ jobs:
           curl --fail --location --retry 3 --user-agent 'ROKAS Weather3 asset audit' \
             'https://commons.wikimedia.org/wiki/Special:Redirect/file/RaindropsOnWindow.jpg' \
             -o Weather3Sources/RaindropsOnWindow.jpg
+          cp Assets/Rokas/Art/Home/ApartmentNight.png Weather3Sources/ApartmentNight.png
 
       - name: Record checksums and dimensions
         shell: bash
