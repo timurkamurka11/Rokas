@@ -4,10 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - development
-  pull_request:
-    branches:
-      - development
+      - ci/home-atmosphere-final-verify
 
 permissions:
   contents: read
@@ -23,8 +20,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout repository
+      - name: Checkout verified production tree
         uses: actions/checkout@v7
+        with:
+          ref: ac309891a890a347ce61f1af1753c790db4dd200
+
+      - name: Confirm exact verified production tree
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD^{tree})" = "d7573a20cf25112a6880bac5b0c2f0ca2d99048d"
+          echo "Verified tree: $(git rev-parse HEAD^{tree})"
 
       - name: Cache Unity Library
         uses: actions/cache@v6
@@ -36,7 +41,7 @@ jobs:
 
       - name: Run EditMode and PlayMode tests
         id: unity-tests
-        uses: game-ci/unity-test-runner@v4
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -49,8 +54,6 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: ROKAS Unity Tests
 
-      # Stable unity-test-runner@v4 does not currently expose the documented
-      # coverageEnabled input, so do not pass an ignored opt-out here.
       - name: Upload Unity test artifacts
         if: always()
         uses: actions/upload-artifact@v7
