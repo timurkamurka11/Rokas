@@ -1,0 +1,90 @@
+name: Unified Weather3 Integration Dry Merge
+
+on:
+  push:
+    branches:
+      - ci/unified-weather3-integration
+
+permissions:
+  contents: read
+
+jobs:
+  dry-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CI harness
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch exact source refs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin integration/rokas-unified feature/home-weather-3
+          git rev-parse origin/integration/rokas-unified | tee /tmp/unified-sha.txt
+          git rev-parse origin/feature/home-weather-3 | tee /tmp/weather-sha.txt
+          test "$(cat /tmp/unified-sha.txt)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(cat /tmp/weather-sha.txt)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
+          git merge-base origin/integration/rokas-unified origin/feature/home-weather-3 | tee /tmp/common-base.txt
+
+      - name: Create isolated unified worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/rokas-unified-weather3
+          git worktree add --detach /tmp/rokas-unified-weather3 origin/integration/rokas-unified
+          git -C /tmp/rokas-unified-weather3 config user.name "github-actions[bot]"
+          git -C /tmp/rokas-unified-weather3 config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Dry merge verified Weather 3 checkpoint
+        id: merge
+        shell: bash
+        run: |
+          set +e
+          cd /tmp/rokas-unified-weather3
+          git merge --no-ff --no-commit cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 > /tmp/merge-output.txt 2>&1
+          code=$?
+          echo "merge_exit=$code" >> "$GITHUB_OUTPUT"
+          git status --short > /tmp/status.txt
+          git diff --name-only --diff-filter=U > /tmp/conflicts.txt
+          git diff --cached --name-status > /tmp/staged.txt
+          git diff --check > /tmp/diff-check.txt 2>&1
+          exit 0
+
+      - name: Record ancestry and changed-file overlap
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-unified-weather3
+          {
+            echo "UNIFIED=8a65c318420e3727aa9de0cc973e6d507362ec6d"
+            echo "WEATHER=cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
+            echo "COMMON_BASE=$(cat /tmp/common-base.txt)"
+            echo "MERGE_EXIT=${{ steps.merge.outputs.merge_exit }}"
+            echo "CONFLICTS:"
+            cat /tmp/conflicts.txt
+            echo "STATUS:"
+            cat /tmp/status.txt
+          } > /tmp/integration-map.txt
+
+      - name: Upload dry merge evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-weather3-dry-merge
+          path: |
+            /tmp/integration-map.txt
+            /tmp/merge-output.txt
+            /tmp/conflicts.txt
+            /tmp/status.txt
+            /tmp/staged.txt
+            /tmp/diff-check.txt
+          if-no-files-found: error
+
+      - name: Fail if merge is not clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.merge.outputs.merge_exit }}" = "0"
+          test ! -s /tmp/conflicts.txt
+          test ! -s /tmp/diff-check.txt
