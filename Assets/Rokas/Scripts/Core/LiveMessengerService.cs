@@ -139,16 +139,18 @@ namespace Rokas.Core
             public MessageEntry entry;
         }
 
-        private static readonly LiveReactionOption[] YumikoReactions =
+        private static readonly LiveReactionOption[] Reactions =
         {
-            new LiveReactionOption("warm", "heart"),
-            new LiveReactionOption("agree", "check")
-        };
-
-        private static readonly LiveReactionOption[] KaitoReactions =
-        {
-            new LiveReactionOption("ack", "check"),
-            new LiveReactionOption("noted", "dots")
+            new LiveReactionOption("reaction_love", "reaction_love"),
+            new LiveReactionOption("reaction_wink", "reaction_wink"),
+            new LiveReactionOption("reaction_angry", "reaction_angry"),
+            new LiveReactionOption("reaction_surprised", "reaction_surprised"),
+            new LiveReactionOption("reaction_cry", "reaction_cry"),
+            new LiveReactionOption("reaction_tasty", "reaction_tasty"),
+            new LiveReactionOption("reaction_heart", "reaction_heart"),
+            new LiveReactionOption("reaction_darkheart", "reaction_darkheart"),
+            new LiveReactionOption("reaction_fox", "reaction_fox"),
+            new LiveReactionOption("reaction_thumbsup", "reaction_thumbsup")
         };
 
         private static readonly TopicDefinition[] Topics = BuildTopics();
@@ -159,6 +161,8 @@ namespace Rokas.Core
         private string typingContactId = string.Empty;
         private string typingChainId = string.Empty;
         private float typingRemaining;
+        private string reactionTimerEventId = string.Empty;
+        private float reactionRemaining;
 
         public event Action Changed;
         public event Action<LiveMessengerSignal> Signal;
@@ -170,6 +174,7 @@ namespace Rokas.Core
             this.messages = messages ?? throw new ArgumentNullException("messages");
             data = messages.SaveData;
             RecoverPendingChains();
+            RecoverPendingReactions();
             observedSequence = HighestSequence();
             messages.Changed += HandleMessagesChanged;
         }
@@ -262,29 +267,25 @@ namespace Rokas.Core
         public List<LiveReactionOption> GetReactionOptions(string contactId)
         {
             var result = new List<LiveReactionOption>();
-            LiveReactionOption[] source = null;
-            if (contactId == "yumiko") source = YumikoReactions;
-            else if (contactId == "kaito" && messages.IsDialogueCompleted("kaito", "Kaito_Start")) source = KaitoReactions;
-            if (source == null) return result;
-            for (int index = 0; index < source.Length; index++) result.Add(source[index]);
+            if (!SupportedContact(contactId)) return result;
+            for (int index = 0; index < Reactions.Length; index++) result.Add(Reactions[index]);
             return result;
         }
 
         public bool SetReaction(string contactId, string messageId, string reactionId)
         {
-            List<LiveReactionOption> allowed = GetReactionOptions(contactId);
-            bool found = false;
-            for (int index = 0; index < allowed.Count; index++)
-                if (string.Equals(allowed[index].Id, reactionId, StringComparison.Ordinal)) { found = true; break; }
-            if (!found) return false;
-            if (!messages.SetReaction(contactId, messageId, reactionId)) return false;
-            Emit(new LiveMessengerSignal(LiveMessengerSignalKind.ReactionChanged, contactId, reactionId));
+            string next = reactionId ?? string.Empty;
+            if (next.Length > 0 && !KnownReaction(next)) return false;
+            if (!messages.SetReaction(contactId, messageId, next)) return false;
+            Emit(new LiveMessengerSignal(LiveMessengerSignalKind.ReactionChanged, contactId, next));
             NotifyChanged();
             return true;
         }
 
         public void Tick(float seconds)
         {
+            float elapsed = Math.Max(0f, seconds);
+            TickPendingReaction(elapsed);
             if (data.livePendingChains == null || data.livePendingChains.Count == 0)
             {
                 ClearTyping();
@@ -301,7 +302,7 @@ namespace Rokas.Core
 
             if (typingRemaining <= 0f || !string.Equals(typingChainId, pending.chainId, StringComparison.Ordinal))
                 BeginTyping(pending);
-            typingRemaining = Math.Max(0f, typingRemaining - Math.Max(0f, seconds));
+            typingRemaining = Math.Max(0f, typingRemaining - elapsed);
             if (typingRemaining > 0f) return;
 
             DeliverPendingBubble(pending, bubbles[pending.nextBubbleIndex]);
@@ -334,6 +335,19 @@ namespace Rokas.Core
             ClearTyping();
         }
 
+        private void RecoverPendingReactions()
+        {
+            if (data.livePendingReactions == null || data.livePendingReactions.Count == 0) return;
+            RecoveredPendingContent = true;
+            while (data.livePendingReactions.Count > 0)
+            {
+                LivePendingReactionState pending = data.livePendingReactions[0];
+                messages.SetNpcReaction(pending.contactId, pending.messageId, pending.reactionId);
+                data.livePendingReactions.RemoveAt(0);
+            }
+            ClearReactionTimer();
+        }
+
         private void QueueChain(string contactId, string chainId, string scriptId, string flowIdentity)
         {
             for (int index = 0; index < data.livePendingChains.Count; index++)
@@ -359,7 +373,7 @@ namespace Rokas.Core
         {
             string eventId = pending.chainId + ":bubble:" + (pending.nextBubbleIndex + 1);
             messages.DeliverIncomingLive(eventId, pending.contactId, text, null, pending.chainId,
-                pending.nextBubbleIndex > 0 || pending.chainId.StartsWith("live:", StringComparison.Ordinal));
+                pending.nextBubbleIndex > 0);
         }
 
         private void FinishChain(LivePendingChainState pending)
@@ -400,7 +414,10 @@ namespace Rokas.Core
         {
             typingContactId = pending.contactId;
             typingChainId = pending.chainId;
-            typingRemaining = TypingDelay(pending.contactId, pending.nextBubbleIndex);
+            string[] bubbles = ResolveBubbles(pending.scriptId);
+            string text = bubbles != null && pending.nextBubbleIndex >= 0 && pending.nextBubbleIndex < bubbles.Length
+                ? bubbles[pending.nextBubbleIndex] : string.Empty;
+            typingRemaining = TypingDelay(pending.chainId, text, pending.nextBubbleIndex);
             Emit(new LiveMessengerSignal(LiveMessengerSignalKind.TypingStarted, pending.contactId, pending.chainId));
         }
 
@@ -411,10 +428,46 @@ namespace Rokas.Core
             typingRemaining = 0f;
         }
 
-        private static float TypingDelay(string contactId, int bubbleIndex)
+        private static float TypingDelay(string chainId, string text, int bubbleIndex)
         {
-            if (contactId == "guild") return bubbleIndex == 0 ? .55f : .38f;
-            return bubbleIndex == 0 ? .80f : .48f;
+            int length = (text ?? string.Empty).Trim().Length;
+            float minimum;
+            float maximum;
+            if (length <= 28)
+            {
+                minimum = 3.0f;
+                maximum = 3.6f;
+            }
+            else if (length <= 64)
+            {
+                minimum = 3.5f;
+                maximum = 4.3f;
+            }
+            else
+            {
+                minimum = 4.2f;
+                maximum = 4.9f;
+            }
+            uint hash = StableHash((chainId ?? string.Empty) + "|" + bubbleIndex + "|" + (text ?? string.Empty));
+            float unit = (hash % 1000u) / 999f;
+            float delay = minimum + (maximum - minimum) * unit;
+            if (bubbleIndex > 0) delay = Math.Min(5.0f, delay + .12f);
+            return delay;
+        }
+
+        private static uint StableHash(string value)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                string source = value ?? string.Empty;
+                for (int index = 0; index < source.Length; index++)
+                {
+                    hash ^= source[index];
+                    hash *= 16777619u;
+                }
+                return hash;
+            }
         }
 
         private bool TopicAvailable(TopicDefinition topic, ConversationState conversation)
@@ -479,6 +532,7 @@ namespace Rokas.Core
             if (entry.outgoing)
             {
                 Emit(new LiveMessengerSignal(LiveMessengerSignalKind.PlayerSent, contactId, entry));
+                QueueNpcReaction(contactId, entry);
                 return;
             }
             Emit(new LiveMessengerSignal(LiveMessengerSignalKind.IncomingDelivered, contactId, entry));
@@ -501,9 +555,12 @@ namespace Rokas.Core
                 }
                 else if (eventId.StartsWith("guild-contract-completed:", StringComparison.Ordinal))
                 {
-                    QueueChain("guild", "live:guild:completed:" + eventId, "proactive:guild.completed", string.Empty);
+                    string contractId = StoryContractId(eventId, "guild-contract-completed:", 1);
+                    QueueFirstStoryChain("guild", "live:guild:completed:story:" + contractId,
+                        "live:guild:completed:guild-contract-completed:" + contractId + ":", "proactive:guild.completed");
                     if (messages.IsDialogueCompleted("kaito", "Kaito_Start"))
-                        QueueChain("kaito", "live:kaito:completed:" + eventId, "proactive:kaito.completed", string.Empty);
+                        QueueFirstStoryChain("kaito", "live:kaito:completed:story:" + contractId,
+                            "live:kaito:completed:guild-contract-completed:" + contractId + ":", "proactive:kaito.completed");
                 }
             }
             else if (contactId == "yumiko")
@@ -512,15 +569,140 @@ namespace Rokas.Core
                     QueueChain("yumiko", "live:yumiko:purchase:" + eventId, "proactive:yumiko.purchase", string.Empty);
                 else if (eventId.StartsWith("yumiko-return:", StringComparison.Ordinal))
                 {
-                    QueueChain("yumiko", "live:yumiko:return:" + eventId, "proactive:yumiko.return", string.Empty);
+                    string contractId = StoryContractId(eventId, "yumiko-return:", 2);
+                    QueueFirstStoryChain("yumiko", "live:yumiko:return:story:" + contractId,
+                        "live:yumiko:return:yumiko-return:" + contractId + ":", "proactive:yumiko.return");
                     if (messages.IsDialogueCompleted("kaito", "Kaito_Start"))
-                        QueueChain("kaito", "live:kaito:return:" + eventId, "proactive:kaito.return", string.Empty);
+                        QueueFirstStoryChain("kaito", "live:kaito:return:story:" + contractId,
+                            "live:kaito:return:yumiko-return:" + contractId + ":", "proactive:kaito.return");
                 }
             }
             else if (contactId == "kaito" && entry.attachment != null && entry.attachment.kind == MessageAttachmentKind.Coordinates)
             {
                 QueueChain("kaito", "live:kaito:coordinates:" + eventId, "proactive:kaito.coordinates", string.Empty);
             }
+        }
+
+        private void QueueFirstStoryChain(string contactId, string chainId, string legacyEventPrefix, string scriptId)
+        {
+            if (ConversationHasEventPrefix(contactId, chainId + ":bubble:") ||
+                ConversationHasEventPrefix(contactId, legacyEventPrefix)) return;
+            QueueChain(contactId, chainId, scriptId, string.Empty);
+        }
+
+        private bool ConversationHasEventPrefix(string contactId, string prefix)
+        {
+            ConversationState conversation = messages.GetConversation(contactId);
+            if (conversation == null || conversation.entries == null || string.IsNullOrEmpty(prefix)) return false;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry != null && (entry.eventId ?? string.Empty).StartsWith(prefix, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        private static string StoryContractId(string eventId, string prefix, int suffixSegments)
+        {
+            if (string.IsNullOrEmpty(eventId) || !eventId.StartsWith(prefix, StringComparison.Ordinal)) return string.Empty;
+            string value = eventId.Substring(prefix.Length);
+            for (int index = 0; index < suffixSegments; index++)
+            {
+                int separator = value.LastIndexOf(':');
+                if (separator <= 0) return string.Empty;
+                value = value.Substring(0, separator);
+            }
+            return value;
+        }
+
+        private void QueueNpcReaction(string contactId, MessageEntry entry)
+        {
+            if (entry == null || !entry.outgoing || !string.IsNullOrEmpty(entry.npcReactionId)) return;
+            string reactionId = AuthoredNpcReaction(contactId, entry.choiceId);
+            if (string.IsNullOrEmpty(reactionId)) return;
+            string eventId = "npc-reaction:" + entry.messageId + ":" + reactionId;
+            for (int index = 0; index < data.livePendingReactions.Count; index++)
+            {
+                LivePendingReactionState existing = data.livePendingReactions[index];
+                if (existing != null && string.Equals(existing.eventId, eventId, StringComparison.Ordinal)) return;
+            }
+            data.livePendingReactions.Add(new LivePendingReactionState
+            {
+                contactId = contactId,
+                messageId = entry.messageId,
+                reactionId = reactionId,
+                eventId = eventId
+            });
+            NotifyChanged();
+        }
+
+        private void TickPendingReaction(float seconds)
+        {
+            if (data.livePendingReactions == null || data.livePendingReactions.Count == 0)
+            {
+                ClearReactionTimer();
+                return;
+            }
+            LivePendingReactionState pending = data.livePendingReactions[0];
+            if (!string.Equals(reactionTimerEventId, pending.eventId, StringComparison.Ordinal))
+            {
+                reactionTimerEventId = pending.eventId;
+                reactionRemaining = ReactionDelay(pending.eventId);
+            }
+            reactionRemaining = Math.Max(0f, reactionRemaining - seconds);
+            if (reactionRemaining > 0f) return;
+            bool changed = messages.SetNpcReaction(pending.contactId, pending.messageId, pending.reactionId);
+            data.livePendingReactions.RemoveAt(0);
+            ClearReactionTimer();
+            if (changed)
+            {
+                Emit(new LiveMessengerSignal(LiveMessengerSignalKind.ReactionChanged, pending.contactId, pending.messageId));
+                NotifyChanged();
+            }
+        }
+
+        private void ClearReactionTimer()
+        {
+            reactionTimerEventId = string.Empty;
+            reactionRemaining = 0f;
+        }
+
+        private static float ReactionDelay(string eventId)
+        {
+            return .85f + (StableHash(eventId ?? string.Empty) % 300u) / 1000f;
+        }
+
+        private static string AuthoredNpcReaction(string contactId, string choiceId)
+        {
+            if (contactId == "yumiko")
+            {
+                switch (choiceId ?? string.Empty)
+                {
+                    case "yumiko.food.tea": return "reaction_tasty";
+                    case "yumiko.how.real": return "reaction_heart";
+                    case "yumiko.before-hunt.safe": return "reaction_thumbsup";
+                    case "yumiko.returned.ok": return "reaction_love";
+                    case "yumiko.news.laugh": return "reaction_wink";
+                    case "yumiko.unusual.want": return "reaction_surprised";
+                }
+            }
+            else if (contactId == "kaito")
+            {
+                switch (choiceId ?? string.Empty)
+                {
+                    case "kaito.coordinates.ack": return "reaction_thumbsup";
+                    case "kaito.tactics.normal": return "reaction_angry";
+                    case "kaito.place.simple": return "reaction_thumbsup";
+                }
+            }
+            return string.Empty;
+        }
+
+        private static bool KnownReaction(string reactionId)
+        {
+            for (int index = 0; index < Reactions.Length; index++)
+                if (string.Equals(Reactions[index].Id, reactionId, StringComparison.Ordinal)) return true;
+            return false;
         }
 
         private int HighestSequence()

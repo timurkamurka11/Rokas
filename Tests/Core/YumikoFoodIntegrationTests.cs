@@ -187,16 +187,16 @@ namespace Rokas.Core.Tests
                 Equal(SaveLoadStatus.LoadedPrimary, loaded.Status, "post-battle Yumiko state must load");
                 GameSession restored = new GameSession(loaded.Data, contract);
                 ConversationState restoredYumiko = RequiredConversation(restored, "yumiko");
-                Equal(yumiko.entries.Count + 2, restoredYumiko.entries.Count,
-                    "reload must preserve history plus one deterministic live continuation for each real return");
+                Equal(yumiko.entries.Count + 1, restoredYumiko.entries.Count,
+                    "reload must preserve repeatable core return history plus one first-story live continuation");
                 Equal(1, CountEventPrefix(restoredYumiko,
                     "yumiko-return:" + contract.id + ":1:sealed"),
                     "first core post-battle return reaction must remain exactly once");
                 Equal(1, CountEventPrefix(restoredYumiko,
                     "yumiko-return:" + contract.id + ":2:failed"),
                     "second core post-battle return reaction must remain exactly once");
-                Equal(2, CountEventPrefix(restoredYumiko, "live:yumiko:return:"),
-                    "two real returns must recover exactly two distinct live continuations");
+                Equal(1, CountEventPrefix(restoredYumiko, "live:yumiko:return:"),
+                    "repeatable real returns must keep the first-story Yumiko live continuation exactly once");
             }
             finally
             {

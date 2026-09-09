@@ -171,8 +171,8 @@ namespace Rokas.Core.Tests
             session.Messages.MarkDialogueCompleted("kaito", "Kaito_Start");
             True(Items(Invoke(live, "GetReactionOptions", "kaito")).Count >= 1,
                 "Kaito should allow a limited reaction set");
-            Equal(0, Items(Invoke(live, "GetReactionOptions", "guild")).Count,
-                "Guild must not expose casual emoji-style reactions");
+            Equal(10, Items(Invoke(live, "GetReactionOptions", "guild")).Count,
+                "player reaction picker must expose the 10 stable reactions on Guild incoming messages; Guild formality is enforced by authored NPC reaction rules");
 
             GameSession restored = new GameSession(Clone(session.State), session.Contract);
             MessageEntry restoredEntry = FindEvent(RequiredConversation(restored, "yumiko"), "reaction-yumiko-1");
@@ -211,7 +211,7 @@ namespace Rokas.Core.Tests
 
         private static void DriveUntilChoices(GameSession session, object live, string contactId)
         {
-            for (int index = 0; index < 12; index++)
+            for (int index = 0; index < 20; index++)
             {
                 if (Items(Invoke(live, "GetReplyOptions", contactId)).Count > 0) return;
                 session.Tick(index % 2 == 0 ? .15f : 1.5f);

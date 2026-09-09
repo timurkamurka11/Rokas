@@ -71,6 +71,7 @@ namespace Rokas.Core
         public string chainId = string.Empty;
         public bool suppressMainNotification;
         public string reactionId = string.Empty;
+        public string npcReactionId = string.Empty;
         public MessageAttachment attachment;
     }
 
@@ -90,6 +91,15 @@ namespace Rokas.Core
         public string scriptId = string.Empty;
         public string flowIdentity = string.Empty;
         public int nextBubbleIndex;
+    }
+
+    [Serializable]
+    public sealed class LivePendingReactionState
+    {
+        public string contactId = string.Empty;
+        public string messageId = string.Empty;
+        public string reactionId = string.Empty;
+        public string eventId = string.Empty;
     }
 
     [Serializable]
@@ -116,6 +126,7 @@ namespace Rokas.Core
         public List<string> deliveredEventIds = new List<string>();
         public List<ConversationState> conversations = new List<ConversationState>();
         public List<LivePendingChainState> livePendingChains = new List<LivePendingChainState>();
+        public List<LivePendingReactionState> livePendingReactions = new List<LivePendingReactionState>();
     }
 
     public sealed class ContactDefinition
@@ -302,6 +313,23 @@ namespace Rokas.Core
                 string next = reactionId ?? string.Empty;
                 if (string.Equals(entry.reactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
                 entry.reactionId = next;
+                NotifyChanged();
+                return true;
+            }
+            return false;
+        }
+
+        internal bool SetNpcReaction(string contactId, string messageId, string reactionId)
+        {
+            ConversationState conversation = FindConversation(contactId);
+            if (conversation == null || string.IsNullOrEmpty(messageId)) return false;
+            for (int index = 0; index < conversation.entries.Count; index++)
+            {
+                MessageEntry entry = conversation.entries[index];
+                if (entry == null || !entry.outgoing || !string.Equals(entry.messageId, messageId, StringComparison.Ordinal)) continue;
+                string next = reactionId ?? string.Empty;
+                if (string.Equals(entry.npcReactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
+                entry.npcReactionId = next;
                 NotifyChanged();
                 return true;
             }
@@ -705,6 +733,21 @@ namespace Rokas.Core
             {
                 data.livePendingChains = new List<LivePendingChainState>();
             }
+            if (data.livePendingReactions == null)
+            {
+                data.livePendingReactions = new List<LivePendingReactionState>();
+            }
+            for (int reactionIndex = data.livePendingReactions.Count - 1; reactionIndex >= 0; reactionIndex--)
+            {
+                LivePendingReactionState pendingReaction = data.livePendingReactions[reactionIndex];
+                if (pendingReaction == null || string.IsNullOrEmpty(pendingReaction.contactId) ||
+                    string.IsNullOrEmpty(pendingReaction.messageId) || string.IsNullOrEmpty(pendingReaction.reactionId))
+                {
+                    data.livePendingReactions.RemoveAt(reactionIndex);
+                    continue;
+                }
+                pendingReaction.eventId = pendingReaction.eventId ?? string.Empty;
+            }
             if (data.nextLiveSequence < 0)
             {
                 data.nextLiveSequence = 0;
@@ -786,6 +829,7 @@ namespace Rokas.Core
                     entry.choiceId = entry.choiceId ?? string.Empty;
                     entry.chainId = entry.chainId ?? string.Empty;
                     entry.reactionId = entry.reactionId ?? string.Empty;
+                    entry.npcReactionId = entry.npcReactionId ?? string.Empty;
                     if (entry.attachment != null)
                     {
                         entry.attachment.id = entry.attachment.id ?? string.Empty;
