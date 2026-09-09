@@ -1,0 +1,86 @@
+using System;
+using System.Collections;
+using System.IO;
+using NUnit.Framework;
+using Rokas.Presentation;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+
+namespace Rokas.Tests
+{
+    public sealed class HomeWeather3LampOffRegressionPlayModeTests
+    {
+        private GameObject root;
+        private string directory;
+
+        [UnityTest]
+        public IEnumerator LampOffUsesLocalizedAuthoredPracticalMaskForDimming()
+        {
+            directory = Path.Combine(Path.GetTempPath(), "rokas-weather3-lampoff-red-" + Guid.NewGuid().ToString("N"));
+            root = new GameObject("HomeWeather3LampOffRegressionFixture");
+            RokasBootstrap bootstrap = root.AddComponent<RokasBootstrap>();
+            bootstrap.Initialize(directory);
+            yield return null;
+
+            RawImage glow = FindRawImage("HomeWarmInteriorGlow");
+            RawImage dim = FindRawImage("HomeWarmPracticalDim");
+            Button lamp = FindButton("LampHotspot");
+
+            Assert.That(glow, Is.Not.Null);
+            Assert.That(dim, Is.Not.Null,
+                "Lamp OFF must attenuate baked warm practical sources through a localized authored mask, not leave them visually unchanged.");
+            Assert.That(lamp, Is.Not.Null);
+            Assert.That(dim.texture, Is.SameAs(glow.texture),
+                "The OFF dimmer must reuse the authored WarmPracticalMask so it cannot become a flat full-stage card.");
+            Assert.That(dim.texture.name, Is.EqualTo("WarmPracticalMask"));
+
+            if (!bootstrap.Session.State.lampOn)
+            {
+                lamp.onClick.Invoke();
+                yield return null;
+            }
+            bootstrap.View.Tick(1f / 60f);
+            yield return null;
+            float onAlpha = dim.color.a;
+
+            lamp.onClick.Invoke();
+            yield return null;
+            Assert.That(bootstrap.Session.State.lampOn, Is.False);
+            bootstrap.View.Tick(1f / 60f);
+            yield return null;
+            float offAlpha = dim.color.a;
+
+            Assert.That(onAlpha, Is.LessThanOrEqualTo(.001f));
+            Assert.That(offAlpha, Is.GreaterThanOrEqualTo(.08f),
+                "Lamp OFF needs a material localized attenuation of the baked practical-light regions.");
+            Assert.That(offAlpha, Is.GreaterThan(onAlpha + .07f));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private RawImage FindRawImage(string name)
+        {
+            if (root == null) return null;
+            foreach (RawImage image in root.GetComponentsInChildren<RawImage>(true))
+                if (image.name == name) return image;
+            return null;
+        }
+
+        private Button FindButton(string name)
+        {
+            if (root == null) return null;
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+                if (button.name == name) return button;
+            return null;
+        }
+
+        [UnityTearDown]
+        public IEnumerator Cleanup()
+        {
+            if (root != null) UnityEngine.Object.Destroy(root);
+            root = null;
+            yield return null;
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+}
