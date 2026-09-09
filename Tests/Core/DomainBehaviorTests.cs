@@ -16,7 +16,7 @@ namespace Rokas.Core.Tests
             FailureReturnsHomeAndAllowsRetry();
             HomeTicksDoNotAdvanceCombat();
             AutomaticCombatIsIndependentOfTickPartitioning();
-            WeakPointBonusRequiresAnActiveUnclaimedWindow();
+            LegacyWeakPointInputCannotBypassCombatRules();
             UpgradeCannotOverspend();
             TeaCannotStackAndExpiresOnReturn();
             FoodScreenConsumeActionUsesPreparedSlot();
@@ -90,7 +90,7 @@ namespace Rokas.Core.Tests
             combat.combatTime = 1f;
             GameSession combatSession = new GameSession(combat, contract);
             combatSession.Tick(.2f);
-            Equal(83f, combatSession.State.enemyHp, "restored auto timer should continue rather than restart");
+            Equal(91f, combatSession.State.enemyHp, "legacy auto timer must not resurrect removed automatic damage");
             Equal(76f, combatSession.State.playerHp, "enemy timer should also be restored");
 
             SaveData payment = new SaveData();
@@ -155,28 +155,16 @@ namespace Rokas.Core.Tests
             Near(oneTick.State.enemyTimer, manyTicks.State.enemyTimer, .001f, "enemy timer must be partition independent");
         }
 
-        private static void WeakPointBonusRequiresAnActiveUnclaimedWindow()
+        private static void LegacyWeakPointInputCannotBypassCombatRules()
         {
             GameSession session = ActiveCombat(NewContract());
-            int criticalHits = 0;
-            session.Combat.Hit += delegate(CombatHit hit)
-            {
-                if (hit.targetIsEnemy && hit.critical)
-                {
-                    criticalHits++;
-                }
-            };
-
-            True(session.ClickAttack(true), "weak-point input outside its window should remain a regular attack");
-            Equal(false, session.State.weakPointClaimed, "inactive weak-point input must not consume the bonus");
+            True(session.ClickAttack(true), "legacy input remains a basic attack");
+            Equal(false, session.State.weakPointClaimed, "retired weak-point flag stays unused");
             session.Tick(2.05f);
-            Equal(true, session.Combat.WeakPointActive, "weak point should open at the timed window");
-            True(session.ClickAttack(true), "active weak-point input should attack");
-            Equal(true, session.State.weakPointClaimed, "active weak point should be consumed");
-            Equal(1, criticalHits, "exactly one critical hit should be emitted");
-            session.Tick(.2f);
-            True(session.ClickAttack(true), "later input should still make a regular attack");
-            Equal(1, criticalHits, "weak point should grant only one bonus per run");
+            Equal(false, session.Combat.WeakPointActive, "there is no one-time timed seal button");
+            float before = session.State.enemyHp;
+            True(session.ClickAttack(true), "legacy weak-point call obeys normal attack rules");
+            Near(session.Contract.clickDamage, before - session.State.enemyHp, .001f, "legacy flag gives no damage shortcut");
         }
 
         private static void UpgradeCannotOverspend()

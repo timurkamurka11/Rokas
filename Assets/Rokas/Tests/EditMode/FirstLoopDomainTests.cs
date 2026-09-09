@@ -36,7 +36,7 @@ namespace Rokas.Core.Tests
         }
 
         [Test]
-        public void CombatTimersResumeFromSavedValues()
+        public void CombatReloadPreservesHealthWithoutLegacyAutoDamage()
         {
             ContractDefinition contract = new ContractDefinition();
             SaveData state = new SaveData();
@@ -50,7 +50,7 @@ namespace Rokas.Core.Tests
 
             session.Tick(.2f);
 
-            Assert.That(session.State.enemyHp, Is.EqualTo(83f).Within(.001f));
+            Assert.That(session.State.enemyHp, Is.EqualTo(91f).Within(.001f));
             Assert.That(session.State.playerHp, Is.EqualTo(76f));
         }
     }
