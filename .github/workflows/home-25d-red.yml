@@ -1,0 +1,60 @@
+name: Home Hub 2.5D RED Gate
+
+on:
+  push:
+    branches: [ci/home-25d-rework]
+    paths:
+      - .github/workflows/home-25d-red.yml
+      - Tools/apply_home_25d_red.py
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  red:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout verified feature baseline
+        uses: actions/checkout@v7
+        with:
+          ref: feature/messages-system
+          fetch-depth: 0
+
+      - name: Apply focused 2.5D RED tests only
+        run: python3 Tools/apply_home_25d_red.py
+
+      - name: Literal git diff check
+        run: git diff --check
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Home-25D-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run full Unity EditMode and PlayMode RED gate
+        id: unity-tests
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: All
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Hub 2.5D RED Tests
+
+      - name: Upload RED artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-25d-red-results
+          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          if-no-files-found: warn
