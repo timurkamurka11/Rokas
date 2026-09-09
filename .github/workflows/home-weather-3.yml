@@ -1,4 +1,4 @@
-name: Home Weather 3 Focused GREEN
+name: Home Weather 3 Home Regression
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   checks: write
 
 jobs:
-  focused-green:
+  home-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -27,25 +27,24 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
           test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
-          git merge-base --is-ancestor a05dc28dd7f81c1c76e4be8788c89c72b0398020 HEAD
-          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-focused-tree.txt
-          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-focused-tree.txt
+          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-home-tree.txt
+          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-home-tree.txt
 
       - name: Literal git diff check
         shell: bash
         run: |
           set -euo pipefail
-          git diff --check | tee /tmp/weather3-focused-diff-check.txt
+          git diff --check | tee /tmp/weather3-home-diff-check.txt
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-Weather-3-GREEN-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-Weather-3-Home-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Run focused Home Weather 3 GREEN contracts
+      - name: Run existing Home atmosphere and 2.5D regression tests
         id: unity-tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
@@ -57,17 +56,17 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
+          customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Focused GREEN
+          checkName: Home Weather 3 Home Regression
 
-      - name: Upload focused GREEN evidence
+      - name: Upload Home regression evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-focused-green
+          name: home-weather-3-home-regression
           path: |
             ${{ steps.unity-tests.outputs.artifactsPath }}
-            /tmp/weather3-focused-tree.txt
-            /tmp/weather3-focused-diff-check.txt
+            /tmp/weather3-home-tree.txt
+            /tmp/weather3-home-diff-check.txt
           if-no-files-found: warn
