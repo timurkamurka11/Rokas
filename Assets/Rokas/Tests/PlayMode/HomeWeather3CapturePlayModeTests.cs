@@ -31,7 +31,7 @@ namespace Rokas.Tests
 
             Screen.SetResolution(1280, 720, false);
             yield return null;
-            yield return new WaitForEndOfFrame();
+            yield return null;
 
             yield return Capture("01-light-on-normal.png");
 
@@ -46,7 +46,7 @@ namespace Rokas.Tests
 
             lamp.onClick.Invoke();
             yield return null;
-            yield return new WaitForEndOfFrame();
+            yield return null;
             Assert.That(bootstrap.Session.State.lampOn, Is.False);
             yield return Capture("02-light-off-normal.png");
 
@@ -57,7 +57,7 @@ namespace Rokas.Tests
             ForceLightning(bootstrap.View);
             bootstrap.View.Tick(.02f);
             yield return null;
-            yield return new WaitForEndOfFrame();
+            yield return null;
             yield return Capture("03-lightning-on.png");
 
             lamp.onClick.Invoke();
@@ -65,7 +65,7 @@ namespace Rokas.Tests
             ForceLightning(bootstrap.View);
             bootstrap.View.Tick(.02f);
             yield return null;
-            yield return new WaitForEndOfFrame();
+            yield return null;
             yield return Capture("04-lightning-off.png");
 
             lamp.onClick.Invoke();
@@ -75,7 +75,7 @@ namespace Rokas.Tests
                 bootstrap.View.Tick(1f / 60f);
                 yield return null;
             }
-            yield return new WaitForEndOfFrame();
+            yield return null;
             yield return Capture("05-idle-rain-wet-glass.png");
 
             Assert.That(File.Exists(Path.Combine(captureDirectory, "01-light-on-normal.png")), Is.True);
@@ -88,7 +88,7 @@ namespace Rokas.Tests
 
         private IEnumerator Capture(string fileName)
         {
-            yield return new WaitForEndOfFrame();
+            yield return null;
 
             int width = Mathf.Max(1, Screen.width);
             int height = Mathf.Max(1, Screen.height);
