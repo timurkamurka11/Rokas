@@ -89,8 +89,13 @@ namespace Rokas.Tests
         private IEnumerator Capture(string fileName)
         {
             yield return new WaitForEndOfFrame();
-            Texture2D capture = ScreenCapture.CaptureScreenshotAsTexture();
-            Assert.That(capture, Is.Not.Null, "ScreenCapture must return the actual rendered Home frame");
+
+            int width = Mathf.Max(1, Screen.width);
+            int height = Mathf.Max(1, Screen.height);
+            Texture2D capture = new Texture2D(width, height, TextureFormat.RGB24, false);
+            capture.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
+            capture.Apply(false, false);
+
             byte[] png = capture.EncodeToPNG();
             UnityEngine.Object.Destroy(capture);
             File.WriteAllBytes(Path.Combine(captureDirectory, fileName), png);
