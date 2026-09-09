@@ -8,6 +8,10 @@ namespace Rokas.Presentation
     {
         private const int WeatherLayer = 30;
         private readonly RectTransform background;
+        private readonly RawImage roomIllustration;
+        private readonly Texture homeLightOn;
+        private readonly Texture2D homeLightOff;
+        private readonly RawImage[] windowFrameSlices = new RawImage[4];
         private readonly SettingsData settings;
         private readonly RokasAudio audio;
         private readonly HomeAtmosphereProfile atmosphere;
@@ -77,6 +81,11 @@ namespace Rokas.Presentation
 
             RawImage sourceArt = background.GetComponent<RawImage>();
             Texture homeSource = sourceArt ? sourceArt.texture : null;
+            roomIllustration = sourceArt;
+            homeLightOn = homeSource;
+            homeLightOff = Resources.Load<Texture2D>("Home/ApartmentNightLightOff");
+            if (!homeLightOff)
+                throw new System.InvalidOperationException("Missing required Home light-off artwork: Home/ApartmentNightLightOff");
 
             outsideDepthMask = ui.Rect(parent, "HomeOutsideDepthMask", 350, 107, 605, 396);
             outsideDepthMask.gameObject.AddComponent<RectMask2D>();
@@ -141,10 +150,10 @@ namespace Rokas.Presentation
 
             foregroundDepth = ui.Art(parent, "HomeForegroundDepth", homeSource, 0, 0, 1920, 1080);
             foregroundDepth.color = new Color(1f, 1f, 1f, 0f);
-            CreateArtSlice(ui, foregroundDepth.transform, "FrameTop", homeSource, 326, 83, 653, 30);
-            CreateArtSlice(ui, foregroundDepth.transform, "FrameLeft", homeSource, 326, 113, 34, 390);
-            CreateArtSlice(ui, foregroundDepth.transform, "FrameRight", homeSource, 945, 113, 34, 390);
-            CreateArtSlice(ui, foregroundDepth.transform, "FrameBottom", homeSource, 326, 503, 653, 32);
+            windowFrameSlices[0] = CreateArtSlice(ui, foregroundDepth.transform, "FrameTop", homeSource, 326, 83, 653, 30);
+            windowFrameSlices[1] = CreateArtSlice(ui, foregroundDepth.transform, "FrameLeft", homeSource, 326, 113, 34, 390);
+            windowFrameSlices[2] = CreateArtSlice(ui, foregroundDepth.transform, "FrameRight", homeSource, 945, 113, 34, 390);
+            windowFrameSlices[3] = CreateArtSlice(ui, foregroundDepth.transform, "FrameBottom", homeSource, 326, 503, 653, 32);
 
             coldWindowBounce = ui.Art(parent, "HomeColdWindowBounce", coldSpillTexture, 0, 0, 1920, 1080);
             coldWindowBounce.color = Color.clear;
@@ -534,6 +543,14 @@ namespace Rokas.Presentation
                 return;
             }
 
+            // Practical lamps and their surface illumination are baked into the room art.
+            // Select its authored state before the independent exterior/weather layers.
+            Texture roomSource = lampOn ? homeLightOn : homeLightOff;
+            roomIllustration.texture = roomSource;
+            foregroundDepth.texture = roomSource;
+            for (int i = 0; i < windowFrameSlices.Length; i++)
+                windowFrameSlices[i].texture = roomSource;
+
             float readability = Mathf.Clamp(atmosphere.weatherReadability, .5f, 1.5f);
             stormFlash.color = new Color(.96f, .985f, 1f, Mathf.Clamp01(flash * .62f));
             outsideParallax.color = new Color(
@@ -584,7 +601,7 @@ namespace Rokas.Presentation
             coldWindowBounce.color = new Color(.88f, .96f, 1f,
                 Mathf.Clamp01((.042f + slowPulse * .018f) * glow + flash * .30f));
             warmInteriorGlow.color = new Color(1f, .94f, .84f,
-                Mathf.Clamp01((lampOn ? .115f : .008f) * glow * (.91f + slowPulse * .09f) + flash * .012f));
+                lampOn ? Mathf.Clamp01(.115f * glow * (.91f + slowPulse * .09f)) : 0f);
             stormRoomLift.color = new Color(.90f, .97f, 1f,
                 Mathf.Clamp01(flash * .10f));
         }

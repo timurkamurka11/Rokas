@@ -1,0 +1,104 @@
+{
+  "validator": {
+    "baseline": 23,
+    "final": 23,
+    "added": [],
+    "removed": []
+  },
+  "suites": {
+    "baseline": {
+      "result": "Passed",
+      "total": "10",
+      "passed": "10",
+      "failed": "0",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:15:13Z",
+      "end-time": "2026-09-09 23:15:14Z",
+      "exit": 0
+    },
+    "red": {
+      "result": "Failed(Child)",
+      "total": "8",
+      "passed": "5",
+      "failed": "3",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:17:08Z",
+      "end-time": "2026-09-09 23:17:12Z",
+      "exit": 2
+    },
+    "green": {
+      "result": "Passed",
+      "total": "13",
+      "passed": "13",
+      "failed": "0",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:19:42Z",
+      "end-time": "2026-09-09 23:19:46Z",
+      "exit": 0
+    },
+    "boundaries": {
+      "result": "Passed",
+      "total": "9",
+      "passed": "9",
+      "failed": "0",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:21:00Z",
+      "end-time": "2026-09-09 23:21:10Z",
+      "exit": 0
+    },
+    "save-boundaries": {
+      "result": "Passed",
+      "total": "2",
+      "passed": "2",
+      "failed": "0",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:22:27Z",
+      "end-time": "2026-09-09 23:22:27Z",
+      "exit": 0
+    },
+    "domain-boundaries": {
+      "result": "Passed",
+      "total": "3",
+      "passed": "3",
+      "failed": "0",
+      "skipped": "0",
+      "start-time": "2026-09-09 23:24:13Z",
+      "end-time": "2026-09-09 23:24:13Z",
+      "exit": 0
+    }
+  },
+  "captures": {
+    "light-off-idle.png": {
+      "path": "D:\\Rokas\\home-light-evidence\\green\\light-off-idle.png",
+      "sha256": "262fefcee752998c328a2198ed87a3f5db9999988e77605d3b0f2d74ad00fdb0",
+      "bytes": 2454390
+    },
+    "light-off-lightning.png": {
+      "path": "D:\\Rokas\\home-light-evidence\\green\\light-off-lightning.png",
+      "sha256": "ef81dbb281e9e1357c961e541827393b4bf5161a555d864515d0465359dab19b",
+      "bytes": 2389808
+    },
+    "light-off-normal.png": {
+      "path": "D:\\Rokas\\home-light-evidence\\green\\light-off-normal.png",
+      "sha256": "828dca6bae56ab273b353c05e65f99dbca55aaa7f0d05efd3fb007447db50fef",
+      "bytes": 2453601
+    },
+    "light-on-lightning.png": {
+      "path": "D:\\Rokas\\home-light-evidence\\green\\light-on-lightning.png",
+      "sha256": "1412a3c35be2e4a38000d54656ec928d3e7951458cf337f3c3483995252451c7",
+      "bytes": 2748043
+    },
+    "light-on-normal.png": {
+      "path": "D:\\Rokas\\home-light-evidence\\green\\light-on-normal.png",
+      "sha256": "38c14b01647f4744b1b3e58815e03d5c7e66b4ed53ddc627a819fb32c559c5f1",
+      "bytes": 2809990
+    }
+  },
+  "log_findings": {
+    "baseline": [],
+    "green": [],
+    "boundaries": [],
+    "save-boundaries": [],
+    "domain-boundaries": []
+  }
+}

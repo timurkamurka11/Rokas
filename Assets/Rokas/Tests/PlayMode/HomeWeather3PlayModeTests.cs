@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -15,6 +16,205 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
+
+        [UnityTest]
+        public IEnumerator LampButtonControlsBakedInteriorAndRestoresApprovedOnArt()
+        {
+            Initialize("rokas-interior-art-");
+            yield return null;
+            RokasBootstrap boot = Bootstrap();
+            boot.enabled = false;
+            RawImage background = FindRawImage("WorldIllustration");
+            Texture on = background.texture;
+            Assert.That(boot.Session.State.lampOn, Is.True);
+            boot.View.Tick(.3f);
+            CaptureLighting("light-on-normal");
+
+            Press("LampHotspot");
+            boot.View.Tick(.1f);
+            CaptureLighting("light-off-normal");
+            Texture off = background.texture;
+
+            ForceLightning(boot.View);
+            boot.View.Tick(.055f);
+            CaptureLighting("light-off-lightning");
+            boot.View.Tick(.8f);
+            boot.View.Tick(2f);
+            CaptureLighting("light-off-idle");
+
+            Press("LampHotspot");
+            boot.View.Tick(0);
+            ForceLightning(boot.View);
+            boot.View.Tick(.055f);
+            CaptureLighting("light-on-lightning");
+            boot.View.Tick(.8f);
+
+            // Reusing the ON illustration while OFF leaves the baked lamps lit.
+            Assert.That(off, Is.Not.SameAs(on), "OFF must remove the baked practical light from the room artwork.");
+            Assert.That(off, Is.SameAs(Resources.Load<Texture2D>("Home/ApartmentNightLightOff")));
+            Assert.That(background.texture, Is.SameAs(on), "ON must restore the approved source art.");
+            Assert.That(FindRawImage("HomeWarmInteriorGlow").color.a, Is.GreaterThan(0));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent()
+        {
+            Initialize("rokas-interior-weather-");
+            yield return null;
+            RokasBootstrap boot = Bootstrap();
+            boot.enabled = false;
+            Press("LampHotspot");
+            boot.View.Tick(0);
+            RawImage warm = FindRawImage("HomeWarmInteriorGlow");
+            RawImage cold = FindRawImage("HomeColdWindowBounce");
+            RawImage room = FindRawImage("HomeStormRoomLift");
+            Assert.That(warm.color.a, Is.Zero, "OFF must leave no residual warm practical contribution.");
+            float coldBefore = cold.color.a;
+            Assert.That(coldBefore, Is.GreaterThan(0));
+            Assert.That(FindRawImage("HomeWetGlassDroplets").color.a, Is.GreaterThan(0));
+            Assert.That(FindRawImage("HomeExteriorMistNear").color.a, Is.GreaterThan(0));
+            Assert.That(FindParticle("HomeRainFar").isPlaying, Is.True);
+            Assert.That(FindParticle("HomeRainMid").isPlaying, Is.True);
+            Assert.That(FindParticle("HomeRainNear").isPlaying, Is.True);
+            Texture off = FindRawImage("WorldIllustration").texture;
+            ForceLightning(boot.View);
+            boot.View.Tick(.055f);
+            Assert.That(cold.color.a, Is.GreaterThan(coldBefore));
+            Assert.That(room.color.a, Is.GreaterThan(0));
+            Assert.That(warm.color.a, Is.Zero, "Lightning belongs to cold exterior lighting, never the switched-off practical.");
+            boot.View.Tick(.8f);
+            Assert.That(room.color.a, Is.Zero);
+            Assert.That(boot.Session.State.lampOn, Is.False);
+            Assert.That(FindRawImage("WorldIllustration").texture, Is.SameAs(off));
+            Assert.That(warm.color.a, Is.Zero);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers()
+        {
+            Initialize("rokas-interior-lifecycle-");
+            yield return null;
+            RokasBootstrap boot = Bootstrap();
+            Press("LampHotspot");
+            boot.View.Tick(0);
+            Texture off = FindRawImage("WorldIllustration").texture;
+            int graphics = CountNamedComponents<RawImage>("HomeWarmInteriorGlow");
+            int cameras = CountNamedComponents<Camera>("HomeWeatherCamera");
+            Press("LaptopHotspot");
+            Press("LaptopMessages");
+            yield return new WaitForSecondsRealtime(.3f);
+            Assert.That(FindRect("MessagesRoot"), Is.Not.Null);
+            boot.View.Escape();
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.3f);
+            Assert.That(boot.View.LaptopOpen, Is.False);
+            Assert.That(boot.Session.State.lampOn, Is.False);
+            Assert.That(FindRawImage("WorldIllustration").texture, Is.SameAs(off));
+
+            Assert.That(boot.Session.AcceptContract(), Is.True);
+            Assert.That(boot.Session.LeaveHome(), Is.True);
+            boot.View.Tick(0);
+            Assert.That(FindRawImage("WorldIllustration").texture,
+                Is.SameAs(Resources.Load<RokasAssets>("RokasAssets").portal));
+            Assert.That(boot.Session.EnterPortal(), Is.True);
+            boot.View.Tick(0);
+            Assert.That(FindRawImage("WorldIllustration").texture,
+                Is.SameAs(Resources.Load<RokasAssets>("RokasAssets").subway));
+            Assert.That(FindRawImage("HomeWarmInteriorGlow").gameObject.activeSelf, Is.False);
+            boot.Session.State.enemyHp = 1;
+            Assert.That(boot.Session.ClickAttack(false), Is.True);
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Sealed));
+            Assert.That(boot.Session.ReturnHome(), Is.True);
+            boot.View.Tick(0);
+            Assert.That(boot.Session.State.lampOn, Is.False);
+            Assert.That(FindRawImage("WorldIllustration").texture, Is.SameAs(off));
+            Assert.That(FindRawImage("HomeWarmInteriorGlow").color.a, Is.Zero);
+            Assert.That(CountNamedComponents<RawImage>("HomeWarmInteriorGlow"), Is.EqualTo(graphics));
+            Assert.That(CountNamedComponents<Camera>("HomeWeatherCamera"), Is.EqualTo(cameras));
+            boot.SaveNow();
+            UnityEngine.Object.Destroy(root);
+            yield return null;
+            root = new GameObject("HomeLightingReloadFixture");
+            root.AddComponent<RokasBootstrap>().Initialize(directory);
+            yield return null;
+            Assert.That(Bootstrap().Session.State.lampOn, Is.False);
+            Assert.That(FindRawImage("WorldIllustration").texture,
+                Is.SameAs(Resources.Load<Texture2D>("Home/ApartmentNightLightOff")));
+            Assert.That(FindRawImage("HomeWarmInteriorGlow").color.a, Is.Zero);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private void Press(string name)
+        {
+            Button button = FindRect(name)?.GetComponent<Button>();
+            Assert.That(button, Is.Not.Null, name);
+            Assert.That(button.IsInteractable(), Is.True, name);
+            button.onClick.Invoke();
+        }
+
+        private void CaptureLighting(string name)
+        {
+            string output = Environment.GetEnvironmentVariable("ROKAS_LIGHT_CAPTURE_DIR");
+            if (string.IsNullOrEmpty(output)) return;
+            Assert.That(SystemInfo.graphicsDeviceType,
+                Is.Not.EqualTo(UnityEngine.Rendering.GraphicsDeviceType.Null), "Visual proof requires graphics.");
+            Directory.CreateDirectory(output);
+            var inventory = new System.Text.StringBuilder();
+            foreach (Graphic graphic in root.GetComponentsInChildren<Graphic>(true))
+                inventory.AppendLine(graphic.transform.parent.name + "/" + graphic.name +
+                    " active=" + graphic.gameObject.activeInHierarchy + " color=" + graphic.color +
+                    " texture=" + (graphic.mainTexture ? graphic.mainTexture.name : "null"));
+            File.WriteAllText(Path.Combine(output, name + "-hierarchy.txt"), inventory.ToString());
+            var canvas = root.GetComponentInChildren<Canvas>();
+            RectTransform stage = FindRect("AuthoredStage");
+            RenderMode oldMode = canvas.renderMode;
+            Camera oldCamera = canvas.worldCamera;
+            float oldPlane = canvas.planeDistance;
+            Vector3 oldScale = stage.localScale;
+            var cameraObject = new GameObject("HomeLightingCaptureCamera");
+            var camera = cameraObject.AddComponent<Camera>();
+            var target = new RenderTexture(1920, 1080, 24);
+            var pixels = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                camera.enabled = false;
+                camera.orthographic = true;
+                camera.orthographicSize = 540;
+                camera.nearClipPlane = .01f;
+                camera.farClipPlane = 100;
+                camera.targetTexture = target;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1;
+                stage.localScale = Vector3.one;
+                // Preserve the existing real weather render in the comparison frames.
+                foreach (Camera weather in root.GetComponentsInChildren<Camera>())
+                    if (weather.name == "HomeWeatherCamera") weather.Render();
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                RenderTexture.active = target;
+                pixels.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
+                pixels.Apply();
+                File.WriteAllBytes(Path.Combine(output, name + ".png"), pixels.EncodeToPNG());
+            }
+            finally
+            {
+                canvas.renderMode = oldMode;
+                canvas.worldCamera = oldCamera;
+                canvas.planeDistance = oldPlane;
+                stage.localScale = oldScale;
+                RenderTexture.active = previous;
+                camera.targetTexture = null;
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+                UnityEngine.Object.Destroy(pixels);
+                UnityEngine.Object.Destroy(cameraObject);
+                Canvas.ForceUpdateCanvases();
+            }
+        }
 
         [UnityTest]
         public IEnumerator LampOffDoesNotUseFullStageFlatDarknessCard()
