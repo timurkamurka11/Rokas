@@ -1,0 +1,72 @@
+name: Home Weather 3 Runtime RCA
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3.yml
+      - Assets/Rokas/Tests/PlayMode/HomeWeather3CapturePlayModeTests.cs
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  capture-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout Weather 3 diagnostic branch
+        uses: actions/checkout@v7
+        with:
+          ref: ci/home-weather-3
+          fetch-depth: 0
+
+      - name: Prove verified Home ancestry
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor c68763fb482665ea53cb42c48b2638cc5314c3c0 HEAD
+          echo "DIAGNOSTIC_HEAD=$(git rev-parse HEAD)"
+          echo "VERIFIED_HOME=c68763fb482665ea53cb42c48b2638cc5314c3c0"
+
+      - name: Literal git diff check
+        run: git diff --check
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Home-Weather-3-RCA-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run Home Weather 3 runtime capture probe
+        id: unity-tests
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.HomeWeather3CapturePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Runtime RCA Capture
+
+      - name: List runtime captures
+        if: always()
+        run: |
+          find TestResults/HomeWeather3Visual -maxdepth 1 -type f -printf '%f %s bytes\n' 2>/dev/null || true
+
+      - name: Upload Home Weather 3 RCA evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-rca
+          path: |
+            ${{ steps.unity-tests.outputs.artifactsPath }}
+            TestResults/HomeWeather3Visual
+          if-no-files-found: warn
