@@ -1,18 +1,18 @@
-name: Home Weather 3 Visual QA
+name: Home Weather 3 Lamp-Off RED
 
 on:
   push:
     branches: [ci/home-weather-3]
     paths:
       - .github/workflows/home-weather-3.yml
-      - Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt
+      - Tools/CI/HomeWeather3LampOffRegressionPlayModeTests.cs.txt
 
 permissions:
   contents: read
   checks: write
 
 jobs:
-  visual-qa:
+  lamp-off-red:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -28,31 +28,30 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
           test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
-          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-visual-tree.txt
-          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-visual-tree.txt
+          echo "TESTED_SHA=$(git rev-parse HEAD)" | tee /tmp/weather3-lampoff-red-tree.txt
+          echo "TESTED_TREE=$(git rev-parse HEAD^{tree})" | tee -a /tmp/weather3-lampoff-red-tree.txt
 
-      - name: Overlay only the proven explicit-camera RenderTexture capture probe
+      - name: Overlay only lamp-off regression test
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin ci/home-weather-3
-          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt \
-            > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'captureCamera.Render();' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'RenderTexture.active = captureTarget;' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
-          git status --short | tee /tmp/weather3-visual-overlay-status.txt
+          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3LampOffRegressionPlayModeTests.cs.txt \
+            > Assets/Rokas/Tests/PlayMode/HomeWeather3LampOffRegressionPlayModeTests.cs
+          grep -q 'HomeWarmPracticalDim' Assets/Rokas/Tests/PlayMode/HomeWeather3LampOffRegressionPlayModeTests.cs
+          git status --short | tee /tmp/weather3-lampoff-red-status.txt
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Home-Weather-3-Visual-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Home-Weather-3-LampOff-RED-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Unity-Library-${{ runner.os }}-
 
-      - name: Capture seven real Weather 3 runtime QA states
+      - name: Run lamp-off regression expecting RED
         id: unity-tests
+        continue-on-error: true
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -63,36 +62,27 @@ jobs:
           projectPath: .
           unityVersion: auto
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests
+          customParameters: -testFilter Rokas.Tests.HomeWeather3LampOffRegressionPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Home Weather 3 Visual QA Capture
+          checkName: Home Weather 3 Lamp-Off RED
 
-      - name: Prove all required captures exist
-        if: always()
+      - name: Prove failure is the intended missing localized dimmer
         shell: bash
         run: |
           set -euo pipefail
-          for file in \
-            01-weather3-light-on.png \
-            02-weather3-light-off.png \
-            03-weather3-normal-rain.png \
-            04-weather3-wet-glass.png \
-            05-weather3-lightning-on.png \
-            06-weather3-lightning-off.png \
-            07-weather3-idle-depth.png; do
-              test -s "TestResults/HomeWeather3VisualQa/$file"
-              file "TestResults/HomeWeather3VisualQa/$file"
-          done | tee /tmp/weather3-visual-captures.txt
+          test -f artifacts/playmode-results.xml
+          grep -q 'HomeWarmPracticalDim' artifacts/playmode-results.xml
+          grep -q 'result="Failed"' artifacts/playmode-results.xml
+          cp artifacts/playmode-results.xml /tmp/weather3-lampoff-red-results.xml
 
-      - name: Upload visual QA evidence
+      - name: Upload lamp-off RED evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: home-weather-3-visual-qa
+          name: home-weather-3-lampoff-red
           path: |
             ${{ steps.unity-tests.outputs.artifactsPath }}
-            TestResults/HomeWeather3VisualQa
-            /tmp/weather3-visual-tree.txt
-            /tmp/weather3-visual-overlay-status.txt
-            /tmp/weather3-visual-captures.txt
+            /tmp/weather3-lampoff-red-tree.txt
+            /tmp/weather3-lampoff-red-status.txt
+            /tmp/weather3-lampoff-red-results.xml
           if-no-files-found: warn
