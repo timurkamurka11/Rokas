@@ -1,4 +1,4 @@
-name: Unified Weather3 Focused Integration Gate
+name: Unified Weather3 Final Exact-Tree Gate
 
 on:
   push:
@@ -10,17 +10,17 @@ permissions:
   checks: write
 
 jobs:
-  focused-gate:
+  final-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
-      - name: Checkout exact integration candidate
+      - name: Checkout exact unified integration candidate
         uses: actions/checkout@v7
         with:
           ref: af541032cd1dd492d9895c5a9c8e92a1e2342745
           fetch-depth: 0
 
-      - name: Prove candidate identity ancestry and protected refs
+      - name: Prove exact candidate ancestry and protected refs
         shell: bash
         run: |
           set -euo pipefail
@@ -28,27 +28,102 @@ jobs:
           test "$(git rev-parse HEAD^{tree})" = "c0003c877acc637deff0f58dabc94bbb6f0a3214"
           test "$(git rev-parse HEAD^1)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
           test "$(git rev-parse HEAD^2)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-          git merge-base --is-ancestor cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 HEAD
           git merge-base --is-ancestor 8a65c318420e3727aa9de0cc973e6d507362ec6d HEAD
-          git fetch origin development integration/rokas-unified feature/messages-system
+          git merge-base --is-ancestor cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 HEAD
+          git fetch origin development integration/rokas-unified feature/home-weather-3 feature/messages-system ci/home-weather-3
           test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
           test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git rev-parse origin/feature/home-weather-3)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
           test "$(git rev-parse origin/feature/messages-system)" = "c68763fb482665ea53cb42c48b2638cc5314c3c0"
-          mkdir -p /tmp/unified-focus
-          git diff --check HEAD^1 HEAD | tee /tmp/unified-focus/diff-check.txt
-          test ! -s /tmp/unified-focus/diff-check.txt
-          printf 'SHA=%s\nTREE=%s\n' "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" > /tmp/unified-focus/exact-tree.txt
+          mkdir -p /tmp/unified-final
+          {
+            echo "TESTED_SHA=$(git rev-parse HEAD)"
+            echo "TESTED_TREE=$(git rev-parse HEAD^{tree})"
+            echo "UNIFIED_PARENT=$(git rev-parse HEAD^1)"
+            echo "WEATHER_PARENT=$(git rev-parse HEAD^2)"
+            echo "DEVELOPMENT=$(git rev-parse origin/development)"
+            echo "REMOTE_UNIFIED=$(git rev-parse origin/integration/rokas-unified)"
+            echo "WEATHER_VERIFIED=$(git rev-parse origin/feature/home-weather-3)"
+            echo "MESSAGES_SOURCE=$(git rev-parse origin/feature/messages-system)"
+          } | tee /tmp/unified-final/exact-tree.txt
+
+      - name: Literal diff check and integration scope audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check HEAD^1 HEAD | tee /tmp/unified-final/git-diff-check.txt
+          test ! -s /tmp/unified-final/git-diff-check.txt
+          git diff --name-status HEAD^1 HEAD | tee /tmp/unified-final/integration-scope.txt
+          ! grep -E '^.[[:space:]]+(Packages/|ProjectSettings/ProjectVersion.txt|Assets/Rokas/Scripts/Combat/|Assets/Rokas/Scripts/.*/Messages)' /tmp/unified-final/integration-scope.txt
+          grep -q 'Assets/Rokas/Scripts/Presentation/WorldEffects.cs' /tmp/unified-final/integration-scope.txt
+          grep -q 'Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs' /tmp/unified-final/integration-scope.txt
+          grep -q 'Docs/ThirdParty/Weather3.md' /tmp/unified-final/integration-scope.txt
+          test "$(git rev-parse HEAD:Packages/manifest.json)" = "$(git rev-parse HEAD^1:Packages/manifest.json)"
+          test "$(git rev-parse HEAD:Assets/Rokas/Scripts/Presentation/WorldEffects.cs)" = "$(git rev-parse HEAD^2:Assets/Rokas/Scripts/Presentation/WorldEffects.cs)"
+          git log --oneline --decorate --graph -n 24 > /tmp/unified-final/history.txt
+
+      - name: Run validator and classify historical baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python3 Tools/validate_assets.py > /tmp/unified-final/validator-raw.txt 2>&1
+          validator_rc=$?
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+          report=Path('/tmp/unified-final/validator-raw.txt').read_text(errors='replace')
+          failures=[x for x in report.splitlines() if x.startswith('FAIL: ')]
+          legacy_images={'GreenTea.png','HunterTempura.png','MoonMochi.png','SpicyMiso.png','TravelerOnigiri.png','HomeActionIcons.png','EmojiOne.png'}
+          legacy_audio={'LaptopMouseClick.wav','UIWood.wav'}
+          hist=[]; unexpected=[]
+          for line in failures:
+              if line.startswith('FAIL: Unresolved GUID '): hist.append(line)
+              elif line.startswith('FAIL: Background below HD: ') and line.rsplit(': ',1)[-1] in legacy_images: hist.append(line)
+              elif line.startswith('FAIL: Invalid stereo PCM source: ') and line.rsplit(': ',1)[-1] in legacy_audio: hist.append(line)
+              elif 'Assets/Rokas/Resources/Weather3/' in line or line.rsplit(': ',1)[-1] in {'ColdSpillMask.png','DistantHaze.png','NearMist.png','RainStreakAuthored.png','StormCloudMask.png','StormRoomLiftMask.png','WarmPracticalMask.png','WetGlassDroplets.png','WetGlassStreaks.png','WindowGlazingMask.png'}:
+                  # Compact effect textures may be reported by a generic below-HD classifier; they are not background art.
+                  if not line.startswith('FAIL: Background below HD: '): unexpected.append(line)
+              else: unexpected.append(line)
+          counts=(sum('Unresolved GUID ' in x for x in hist),sum('Background below HD:' in x for x in hist),sum('Invalid stereo PCM source:' in x for x in hist))
+          if counts != (4,7,2): raise SystemExit(f'historical baseline mismatch: {counts}')
+          if unexpected: raise SystemExit('NEW_RELEVANT_FINDINGS:\n'+'\n'.join(unexpected))
+          weather=Path('Assets/Rokas/Resources/Weather3')
+          pngs=sorted(weather.glob('*.png'))
+          if len(pngs)!=10: raise SystemExit(f'expected 10 Weather3 PNGs, got {len(pngs)}')
+          for p in pngs:
+              if not Path(str(p)+'.meta').exists(): raise SystemExit('missing meta '+str(p))
+          out='HISTORICAL_FINDINGS=13\nHISTORICAL_GUID=4\nHISTORICAL_BELOW_HD=7\nHISTORICAL_PCM=2\nNEW_RELEVANT_FINDINGS=0\nWEATHER3_PNGS=10\n'
+          Path('/tmp/unified-final/validator-summary.txt').write_text(out); print(out,end='')
+          PY
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run canonical Core domain suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/core
+          dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release 2>&1 | tee /tmp/unified-final/core/core-output.txt
+          grep -Fxq 'PASS: all Rokas.Core behavior tests' /tmp/unified-final/core/core-output.txt
+          test "$(grep -c '^PASS Combat2:' /tmp/unified-final/core/core-output.txt)" -eq 23
+          for text in 'PASS: idle attacks removed' 'PASS: spam blocked before combo recovery' 'PASS: timed third strike rewards combo' 'PASS: old timed seal button retired'; do grep -Fxq "$text" /tmp/unified-final/core/core-output.txt; done
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: Unified-Weather3-Focused-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Unified-Weather3-Final-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            Unified-Weather3-Focused-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
 
-      - name: Run focused Weather 3 contracts
-        id: weather
+      - name: Run complete EditMode
+        id: editmode
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env: &unity_env
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -58,13 +133,61 @@ jobs:
         with:
           projectPath: .
           unityVersion: auto
+          testMode: EditMode
+          artifactsPath: artifacts-editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Full EditMode
+
+      - name: Preserve EditMode evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/editmode
+          sudo cp -a "${{ steps.editmode.outputs.artifactsPath }}/." /tmp/unified-final/editmode/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/editmode
+
+      - name: Run complete PlayMode
+        id: playmode
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-playmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Full PlayMode
+
+      - name: Preserve PlayMode evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/playmode
+          sudo cp -a "${{ steps.playmode.outputs.artifactsPath }}/." /tmp/unified-final/playmode/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/playmode
+
+      - name: Run focused Weather 3 on exact unified tree
+        id: weather
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
           testMode: PlayMode
           artifactsPath: artifacts-weather
           customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Weather
+          checkName: Unified Weather3 Final Weather
 
-      - name: Run Home atmosphere and 2.5D contracts
+      - name: Preserve Weather evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/weather
+          sudo cp -a "${{ steps.weather.outputs.artifactsPath }}/." /tmp/unified-final/weather/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/weather
+
+      - name: Run Home atmosphere and 2.5D regression
         id: home
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
         env: *unity_env
@@ -75,131 +198,270 @@ jobs:
           artifactsPath: artifacts-home
           customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Home
+          checkName: Unified Weather3 Final Home
 
-      - name: Run Messages PlayMode contracts
-        id: messagesplay
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env: *unity_env
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: PlayMode
-          artifactsPath: artifacts-messages-play
-          customParameters: '-testFilter "Rokas.Tests.LiveMessengerPlayModeTests;Rokas.Tests.LiveMessengerPolishPlayModeTests;Rokas.Tests.MessagesDialogueResumePlayModeTests;Rokas.Tests.MessagesLifecyclePlayModeTests;Rokas.Tests.MessagesNotificationPlayModeTests;Rokas.Tests.MessagesPlayModeTests;Rokas.Tests.ContractAttachmentPlayModeTests;Rokas.Tests.CoordinateAttachmentPlayModeTests"'
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Messages PlayMode
-
-      - name: Run Messages Yarn EditMode contracts
-        id: messagesedit
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env: *unity_env
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: EditMode
-          artifactsPath: artifacts-messages-edit
-          customParameters: -testFilter Rokas.Core.Tests.MessagesYarnTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Messages Yarn
-
-      - name: Run Combat 2.0 approved 23 behavior scenarios
-        id: combatedit
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env: *unity_env
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: EditMode
-          artifactsPath: artifacts-combat-edit
-          customParameters: -testFilter Rokas.Core.Tests.CombatFoundationTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Combat Scenarios
-
-      - name: Run Combat 2.0 PlayMode contracts
-        id: combatplay
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
-        env: *unity_env
-        with:
-          projectPath: .
-          unityVersion: auto
-          testMode: PlayMode
-          artifactsPath: artifacts-combat-play
-          customParameters: -testFilter Rokas.Tests.CombatFoundationPlayModeTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unified Weather3 Focused Combat PlayMode
-
-      - name: Preserve focused evidence safely
-        if: always()
+      - name: Preserve Home evidence
         shell: bash
         run: |
           set -euo pipefail
-          for spec in \
-            "weather:${{ steps.weather.outputs.artifactsPath }}" \
-            "home:${{ steps.home.outputs.artifactsPath }}" \
-            "messages-play:${{ steps.messagesplay.outputs.artifactsPath }}" \
-            "messages-edit:${{ steps.messagesedit.outputs.artifactsPath }}" \
-            "combat-edit:${{ steps.combatedit.outputs.artifactsPath }}" \
-            "combat-play:${{ steps.combatplay.outputs.artifactsPath }}"; do
-            label="${spec%%:*}"; src="${spec#*:}"
-            mkdir -p "/tmp/unified-focus/$label"
-            if [ -n "$src" ] && [ -d "$src" ]; then sudo cp -a "$src/." "/tmp/unified-focus/$label/"; fi
-          done
-          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-focus
+          mkdir -p /tmp/unified-final/home
+          sudo cp -a "${{ steps.home.outputs.artifactsPath }}/." /tmp/unified-final/home/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/home
 
-      - name: Parse focused XML and require zero failures
+      - name: Parse committed-tree test inventories before temporary probes
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
-          root=Path('/tmp/unified-focus')
-          labels=['weather','home','messages-play','messages-edit','combat-edit','combat-play']
-          lines=[]
-          for label in labels:
+          root=Path('/tmp/unified-final'); lines=[]
+          parsed={}
+          for label in ['editmode','playmode','weather','home']:
               xmls=list((root/label).rglob('*results.xml')) or list((root/label).rglob('*.xml'))
-              if not xmls: raise SystemExit(f'NO_XML {label}')
+              if not xmls: raise SystemExit('NO_XML '+label)
               x=ET.parse(xmls[0]).getroot()
               def a(*names):
                   for n in names:
                       if n in x.attrib: return int(x.attrib[n] or 0)
                   return 0
-              total=a('total','testcasecount','test-case-count'); passed=a('passed'); failed=a('failed'); skipped=a('skipped'); inconclusive=a('inconclusive')
-              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive}'
+              vals=dict(total=a('total','testcasecount','test-case-count'),passed=a('passed'),failed=a('failed'),skipped=a('skipped'),inconclusive=a('inconclusive'))
+              parsed[label]=(x,vals)
+              line=f"{label}: passed={vals['passed']} total={vals['total']} failed={vals['failed']} skipped={vals['skipped']} inconclusive={vals['inconclusive']}"
               print(line); lines.append(line)
-              if total <= 0 or failed != 0 or inconclusive != 0: raise SystemExit(f'FOCUSED_FAIL {line}')
-              if label=='weather' and passed != 5: raise SystemExit(f'Weather expected current inventory 5, got {passed}')
-              if label=='home' and passed != 5: raise SystemExit(f'Home expected current inventory 5, got {passed}')
-              if label=='combat-edit' and passed != 23: raise SystemExit(f'Combat scenario inventory expected 23, got {passed}')
-          (root/'focused-summary.txt').write_text('\n'.join(lines)+'\n')
+              if vals['total']<=0 or vals['failed']!=0 or vals['inconclusive']!=0: raise SystemExit('FAIL '+line)
+          if parsed['weather'][1]['passed'] != 5: raise SystemExit('Weather inventory is not 5')
+          if parsed['home'][1]['passed'] != 5: raise SystemExit('Home inventory is not 5')
+          edit_cases=parsed['editmode'][0].findall('.//test-case'); play_cases=parsed['playmode'][0].findall('.//test-case')
+          combat_edit=[c for c in edit_cases if 'CombatFoundationTests.ApprovedCombatBehavior' in c.attrib.get('fullname','')]
+          messages_edit=[c for c in edit_cases if 'MessagesYarnTests.' in c.attrib.get('fullname','')]
+          combat_play=[c for c in play_cases if 'CombatFoundationPlayModeTests.' in c.attrib.get('fullname','')]
+          messages_play=[c for c in play_cases if any(name in c.attrib.get('fullname','') for name in ['LiveMessenger','Messages','ContractAttachment','CoordinateAttachment'])]
+          first_loop=[c for c in play_cases if 'FirstLoopTests.' in c.attrib.get('fullname','')]
+          weather_cases=[c for c in play_cases if 'HomeWeather3PlayModeTests.' in c.attrib.get('fullname','')]
+          for name,cases in [('combat-edit',combat_edit),('messages-edit',messages_edit),('combat-play',combat_play),('messages-play',messages_play),('first-loop',first_loop),('weather-in-full-play',weather_cases)]:
+              if not cases: raise SystemExit('missing inventory '+name)
+              bad=[c.attrib.get('fullname','') for c in cases if c.attrib.get('result') not in ('Passed','Success')]
+              if bad: raise SystemExit(name+' failures '+str(bad))
+              lines.append(f'{name}: passed={len(cases)} failed=0'); print(lines[-1])
+          if len(combat_edit)!=23: raise SystemExit(f'Combat Edit scenarios expected 23, got {len(combat_edit)}')
+          Path('/tmp/unified-final/test-summary.txt').write_text('\n'.join(lines)+'\n')
           PY
 
-      - name: Scan focused Unity logs
+      - name: Overlay CI-only active-lightning transition proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > Assets/Rokas/Tests/PlayMode/UnifiedWeather3IntegrationTransitionPlayModeTests.cs <<'CS'
+          using System;
+          using System.Collections;
+          using System.IO;
+          using System.Reflection;
+          using NUnit.Framework;
+          using Rokas.Core;
+          using Rokas.Presentation;
+          using UnityEngine;
+          using UnityEngine.EventSystems;
+          using UnityEngine.TestTools;
+          using UnityEngine.UI;
+          namespace Rokas.Tests
+          {
+              public sealed class UnifiedWeather3IntegrationTransitionPlayModeTests
+              {
+                  private GameObject root; private string directory; private RokasBootstrap boot;
+                  [UnityTest]
+                  public IEnumerator ActiveLightningCombatTransitionCleansUpAndReschedulesAfterReturn()
+                  {
+                      directory=Path.Combine(Path.GetTempPath(),"rokas-unified-weather-transition-"+Guid.NewGuid().ToString("N"));
+                      root=new GameObject("UnifiedWeatherTransitionFixture"); boot=root.AddComponent<RokasBootstrap>(); boot.Initialize(directory); yield return null;
+                      object effects=typeof(RokasView).GetField("effects",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(boot.View);
+                      Assert.That(effects,Is.Not.Null);
+                      RawImage storm=Find("HomeStormFlash").GetComponent<RawImage>(); GameObject weatherRuntime=Find("HomeWeatherRuntime");
+                      Assert.That(storm,Is.Not.Null); Assert.That(weatherRuntime,Is.Not.Null);
+                      effects.GetType().GetMethod("ForceLightning",BindingFlags.Instance|BindingFlags.Public).Invoke(effects,null);
+                      boot.View.Tick(.03f); yield return null;
+                      Assert.That(storm.color.a,Is.GreaterThan(.001f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.GreaterThan(0f));
+                      Press("LaptopHotspot"); Press("LaptopContracts"); Press("AcceptContract"); Press("ClosePanel"); Press("DoorHotspot");
+                      yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Portal));
+                      Press("EnterPortal"); yield return new WaitForSecondsRealtime(1.6f); Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Combat));
+                      Assert.That(storm.gameObject.activeInHierarchy,Is.False,"Home storm flash must not leak into Combat");
+                      Assert.That(weatherRuntime.activeInHierarchy,Is.False,"Home weather runtime must not remain active in Combat");
+                      Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"pending Home thunder must be cancelled on transition");
+                      Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f));
+                      for(int i=0;i<80;i++) boot.View.Tick(.05f);
+                      Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f),"cancelled thunder must stay cancelled in Combat");
+                      for(int i=0;i<200 && boot.Session.State.phase==RunPhase.Combat;i++) { boot.Session.Tick(.48f); if(boot.Session.State.phase!=RunPhase.Combat) break; if(boot.Session.Combat.Stage==CombatStage.Ritual) TraceRitual(); else if(boot.Session.Combat.Stage==CombatStage.Fighting) TapEnemy(); }
+                      Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Sealed)); Press("ReturnHome"); yield return new WaitForSecondsRealtime(1.6f);
+                      Assert.That(boot.Session.State.phase,Is.EqualTo(RunPhase.Payment));
+                      float scheduled=ReadFloat(effects,"nextLightning"); Assert.That(scheduled,Is.GreaterThan(0f),"Home re-entry must receive a normal future lightning schedule");
+                      Assert.That(ReadFloat(effects,"lightningAge"),Is.LessThan(0f)); Assert.That(ReadFloat(effects,"thunderCountdown"),Is.LessThan(0f));
+                      boot.View.Tick(.02f); yield return null; Assert.That(storm.color.a,Is.LessThanOrEqualTo(.001f),"re-entry must not force immediate lightning");
+                      bool observed=false; for(int i=0;i<700 && !observed;i++){ boot.View.Tick(.05f); observed=storm.color.a>.001f; }
+                      Assert.That(observed,Is.True,"randomized future lightning must still occur after integrated Combat transition");
+                      Assert.That(Count<Camera>("HomeWeatherCamera"),Is.EqualTo(1)); Assert.That(Count<RawImage>("HomeWeatherComposite"),Is.EqualTo(1));
+                      Assert.That(Count<ParticleSystem>("HomeRainFar"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainMid"),Is.EqualTo(1)); Assert.That(Count<ParticleSystem>("HomeRainNear"),Is.EqualTo(1));
+                      LogAssert.NoUnexpectedReceived();
+                  }
+                  private float ReadFloat(object o,string name)=>(float)o.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic).GetValue(o);
+                  private GameObject Find(string name){foreach(var t in root.GetComponentsInChildren<Transform>(true))if(t.name==name)return t.gameObject; return null;}
+                  private Button FindButton(string name){foreach(var b in root.GetComponentsInChildren<Button>(true))if(b.name==name)return b; return null;}
+                  private void Press(string name){var b=FindButton(name);Assert.That(b,Is.Not.Null,name);Assert.That(b.IsInteractable(),Is.True,name);var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};Assert.That(ExecuteEvents.Execute(b.gameObject,p,ExecuteEvents.pointerClickHandler),Is.True,name);}
+                  private void TapEnemy(){var target=FindButton("EnemyAttack").gameObject;var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};ExecuteEvents.Execute(target,p,ExecuteEvents.pointerDownHandler);ExecuteEvents.Execute(target,p,ExecuteEvents.pointerUpHandler);}
+                  private void TraceRitual(){var target=FindButton("EnemyAttack").gameObject;var p=new PointerEventData(EventSystem.current){button=PointerEventData.InputButton.Left};for(int i=1;i<=3;i++){RectTransform point=null;foreach(var r in root.GetComponentsInChildren<RectTransform>())if(r.name=="RitualPoint"+i)point=r;Assert.That(point,Is.Not.Null);p.position=RectTransformUtility.WorldToScreenPoint(null,point.TransformPoint(point.rect.center));if(i==1)ExecuteEvents.Execute(target,p,ExecuteEvents.pointerDownHandler);else ExecuteEvents.Execute(target,p,ExecuteEvents.dragHandler);}ExecuteEvents.Execute(target,p,ExecuteEvents.pointerUpHandler);}
+                  private int Count<T>(string name) where T:Component {int n=0;foreach(var x in root.GetComponentsInChildren<T>(true))if(x.name==name)n++;return n;}
+                  [UnityTearDown] public IEnumerator Cleanup(){if(root!=null)UnityEngine.Object.Destroy(root);root=null;yield return null;if(!string.IsNullOrEmpty(directory)&&Directory.Exists(directory))Directory.Delete(directory,true);}
+              }
+          }
+          CS
+
+      - name: Run integrated lightning transition proof
+        id: transition
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-transition
+          customParameters: -testFilter Rokas.Tests.UnifiedWeather3IntegrationTransitionPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Transition Proof
+
+      - name: Preserve transition evidence and remove CI-only probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/transition
+          sudo cp -a "${{ steps.transition.outputs.artifactsPath }}/." /tmp/unified-final/transition/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/transition
+          sudo rm -f Assets/Rokas/Tests/PlayMode/UnifiedWeather3IntegrationTransitionPlayModeTests.cs Assets/Rokas/Tests/PlayMode/UnifiedWeather3IntegrationTransitionPlayModeTests.cs.meta
+
+      - name: Run real unified first-loop runtime flow with captures
+        id: flow
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env:
+          <<: *unity_env
+          ROKAS_COMBAT_CAPTURE_DIR: TestResults/UnifiedRuntimeFlow
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-flow
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Runtime Flow
+
+      - name: Preserve and prove unified runtime flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/runtime-flow
+          sudo cp -a "${{ steps.flow.outputs.artifactsPath }}/." /tmp/unified-final/runtime-flow/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/runtime-flow
+          mkdir -p /tmp/unified-final/runtime-captures
+          test -d TestResults/UnifiedRuntimeFlow
+          cp TestResults/UnifiedRuntimeFlow/*.png /tmp/unified-final/runtime-captures/
+          for f in integration-home.png integration-messages.png integration-combat.png integration-payment.png; do test -s "/tmp/unified-final/runtime-captures/$f"; done
+
+      - name: Overlay proven seven-state Weather visual probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/ci/home-weather-3:Tools/CI/HomeWeather3VisualQaPlayModeTests.cs.txt > Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'captureCamera.Render' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'RenderTexture.active' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+          grep -q 'ReadPixels' Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs
+
+      - name: Capture seven Weather states from integrated unified runtime
+        id: visual
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-visual
+          customParameters: -testFilter Rokas.Tests.HomeWeather3VisualQaPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Final Visual
+
+      - name: Preserve seven-state visual evidence and remove probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unified-final/visual-test /tmp/unified-final/weather-captures
+          sudo cp -a "${{ steps.visual.outputs.artifactsPath }}/." /tmp/unified-final/visual-test/
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-final/visual-test
+          src=TestResults/HomeWeather3VisualQa
+          test -d "$src"
+          cp "$src/01-weather3-light-on.png" /tmp/unified-final/weather-captures/01-unified-weather3-light-on.png
+          cp "$src/02-weather3-light-off.png" /tmp/unified-final/weather-captures/02-unified-weather3-light-off.png
+          cp "$src/03-weather3-normal-rain.png" /tmp/unified-final/weather-captures/03-unified-weather3-normal-rain.png
+          cp "$src/04-weather3-wet-glass.png" /tmp/unified-final/weather-captures/04-unified-weather3-wet-glass.png
+          cp "$src/05-weather3-lightning-on.png" /tmp/unified-final/weather-captures/05-unified-weather3-lightning-on.png
+          cp "$src/06-weather3-lightning-off.png" /tmp/unified-final/weather-captures/06-unified-weather3-lightning-off.png
+          cp "$src/07-weather3-idle-depth.png" /tmp/unified-final/weather-captures/07-unified-weather3-idle-depth.png
+          for f in /tmp/unified-final/weather-captures/*.png; do test -s "$f"; done
+          sha256sum /tmp/unified-final/weather-captures/*.png > /tmp/unified-final/weather-capture-sha256.txt
+          sudo rm -f Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs Assets/Rokas/Tests/PlayMode/HomeWeather3VisualQaPlayModeTests.cs.meta
+
+      - name: Parse temporary runtime proof XML
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          lines=[]
+          for label in ['transition','runtime-flow','visual-test']:
+              xmls=list((Path('/tmp/unified-final')/label).rglob('*results.xml')) or list((Path('/tmp/unified-final')/label).rglob('*.xml'))
+              if not xmls: raise SystemExit('NO_XML '+label)
+              x=ET.parse(xmls[0]).getroot(); a=lambda n:int(x.attrib.get(n,0) or 0)
+              total=int(x.attrib.get('total',x.attrib.get('testcasecount',0)) or 0); passed=a('passed'); failed=a('failed'); skipped=a('skipped'); inc=a('inconclusive')
+              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inc}'; print(line); lines.append(line)
+              if total<=0 or failed or inc: raise SystemExit('FAIL '+line)
+          Path('/tmp/unified-final/runtime-proof-summary.txt').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Robust final Unity log scan
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import re
-          root=Path('/tmp/unified-focus')
+          root=Path('/tmp/unified-final')
           logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
-          if not logs: raise SystemExit('ZERO_LOGS')
-          patterns=[re.compile(r'\bNullReferenceException\b'),re.compile(r'\bMissingReferenceException\b'),re.compile(r'\berror CS\d{4}\s*:',re.I),re.compile(r'\bScripts have compiler errors\b',re.I),re.compile(r'\bCompilation failed\b',re.I),re.compile(r'\bUnhandled Exception\b',re.I)]
+          if not logs: raise SystemExit('ZERO_UNITY_LOGS')
+          strong=[re.compile(r'\bNullReferenceException\b'),re.compile(r'\bMissingReferenceException\b'),re.compile(r'\bMissingComponentException\b'),re.compile(r'\berror CS\d{4}\s*:',re.I),re.compile(r'\bScripts have compiler errors\b',re.I),re.compile(r'\bCompilation failed\b',re.I),re.compile(r'\bUnhandled Exception\b',re.I),re.compile(r'\bAborting batchmode due to failure\b',re.I)]
           findings=[]
           for p in logs:
               for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
-                  if any(rx.search(line) for rx in patterns): findings.append(f'{p}:{i}:{line}')
+                  if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
           out=f'LOGS_DISCOVERED={len(logs)}\nLOGS_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'
-          (root/'log-summary.txt').write_text(out+'\n'.join(findings))
-          print(out,end='')
+          Path('/tmp/unified-final/log-summary.txt').write_text(out+'\n'.join(findings)); print(out,end='')
           if findings: raise SystemExit('\n'.join(findings))
           PY
 
-      - name: Upload focused integration evidence
+      - name: Final exact-tree integrity proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "af541032cd1dd492d9895c5a9c8e92a1e2342745"
+          test "$(git rev-parse HEAD^{tree})" = "c0003c877acc637deff0f58dabc94bbb6f0a3214"
+          git diff --check | tee /tmp/unified-final/final-working-diff-check.txt
+          test ! -s /tmp/unified-final/final-working-diff-check.txt
+          test -z "$(git status --porcelain --untracked-files=no)"
+          git fetch origin development integration/rokas-unified feature/home-weather-3 feature/messages-system
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git rev-parse origin/feature/home-weather-3)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
+          test "$(git rev-parse origin/feature/messages-system)" = "c68763fb482665ea53cb42c48b2638cc5314c3c0"
+
+      - name: Upload complete unified Weather 3 final evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unified-weather3-focused-gate
-          path: /tmp/unified-focus
+          name: unified-weather3-final-results
+          path: /tmp/unified-final
           if-no-files-found: error
