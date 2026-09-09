@@ -1,4 +1,4 @@
-name: Unified Weather3 Integration Dry Merge
+name: Unified Weather3 Integration Candidate
 
 on:
   push:
@@ -6,10 +6,10 @@ on:
       - ci/unified-weather3-integration
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  dry-merge:
+  create-candidate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout CI harness
@@ -17,18 +17,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch exact source refs
+      - name: Fetch and prove exact source refs
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin integration/rokas-unified feature/home-weather-3
-          git rev-parse origin/integration/rokas-unified | tee /tmp/unified-sha.txt
-          git rev-parse origin/feature/home-weather-3 | tee /tmp/weather-sha.txt
-          test "$(cat /tmp/unified-sha.txt)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
-          test "$(cat /tmp/weather-sha.txt)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-          git merge-base origin/integration/rokas-unified origin/feature/home-weather-3 | tee /tmp/common-base.txt
+          git fetch origin integration/rokas-unified feature/home-weather-3 integration/weather3-candidate
+          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git rev-parse origin/feature/home-weather-3)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
+          test "$(git rev-parse origin/integration/weather3-candidate)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git merge-base origin/integration/rokas-unified origin/feature/home-weather-3)" = "c68763fb482665ea53cb42c48b2638cc5314c3c0"
 
-      - name: Create isolated unified worktree
+      - name: Create isolated integration worktree
         shell: bash
         run: |
           set -euo pipefail
@@ -37,54 +36,62 @@ jobs:
           git -C /tmp/rokas-unified-weather3 config user.name "github-actions[bot]"
           git -C /tmp/rokas-unified-weather3 config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Dry merge verified Weather 3 checkpoint
-        id: merge
+      - name: Merge verified Weather 3 production checkpoint
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
           cd /tmp/rokas-unified-weather3
-          git merge --no-ff --no-commit cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 > /tmp/merge-output.txt 2>&1
-          code=$?
-          echo "merge_exit=$code" >> "$GITHUB_OUTPUT"
-          git status --short > /tmp/status.txt
-          git diff --name-only --diff-filter=U > /tmp/conflicts.txt
-          git diff --cached --name-status > /tmp/staged.txt
-          git diff --check > /tmp/diff-check.txt 2>&1
-          exit 0
+          git merge --no-ff cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 \
+            -m "integration: merge verified Home Weather 3.0"
+          test "$(git rev-parse HEAD^1)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git rev-parse HEAD^2)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
+          git merge-base --is-ancestor 8a65c318420e3727aa9de0cc973e6d507362ec6d HEAD
+          git merge-base --is-ancestor cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 HEAD
 
-      - name: Record ancestry and changed-file overlap
+      - name: Literal diff check and candidate scope audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/rokas-unified-weather3
+          git diff --check HEAD^1 HEAD | tee /tmp/candidate-diff-check.txt
+          git diff --name-status HEAD^1 HEAD | tee /tmp/candidate-scope.txt
+          test ! -s /tmp/candidate-diff-check.txt
+          ! grep -E '^.[[:space:]]+(Packages/|ProjectSettings/ProjectVersion.txt|Assets/Rokas/Scripts/Combat/|Assets/Rokas/Scripts/.*/Messages|Assets/Rokas/Tests/.*/Messages|Assets/Rokas/Tests/.*/Combat)' /tmp/candidate-scope.txt
+          grep -q 'Assets/Rokas/Scripts/Presentation/WorldEffects.cs' /tmp/candidate-scope.txt
+          grep -q 'Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs' /tmp/candidate-scope.txt
+          grep -q 'Docs/ThirdParty/Weather3.md' /tmp/candidate-scope.txt
+          grep -q 'Assets/Rokas/Resources/Weather3/' /tmp/candidate-scope.txt
+
+      - name: Record candidate identity and ancestry
         shell: bash
         run: |
           set -euo pipefail
           cd /tmp/rokas-unified-weather3
           {
-            echo "UNIFIED=8a65c318420e3727aa9de0cc973e6d507362ec6d"
-            echo "WEATHER=cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-            echo "COMMON_BASE=$(cat /tmp/common-base.txt)"
-            echo "MERGE_EXIT=${{ steps.merge.outputs.merge_exit }}"
-            echo "CONFLICTS:"
-            cat /tmp/conflicts.txt
-            echo "STATUS:"
-            cat /tmp/status.txt
-          } > /tmp/integration-map.txt
+            echo "CANDIDATE_SHA=$(git rev-parse HEAD)"
+            echo "CANDIDATE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "PARENT_UNIFIED=$(git rev-parse HEAD^1)"
+            echo "PARENT_WEATHER=$(git rev-parse HEAD^2)"
+            echo "COMMON_BASE=$(git merge-base HEAD^1 HEAD^2)"
+          } | tee /tmp/candidate-identity.txt
+          git log --oneline --decorate -n 16 > /tmp/candidate-history.txt
 
-      - name: Upload dry merge evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: unified-weather3-dry-merge
-          path: |
-            /tmp/integration-map.txt
-            /tmp/merge-output.txt
-            /tmp/conflicts.txt
-            /tmp/status.txt
-            /tmp/staged.txt
-            /tmp/diff-check.txt
-          if-no-files-found: error
-
-      - name: Fail if merge is not clean
+      - name: Fast-forward push isolated candidate branch only
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ steps.merge.outputs.merge_exit }}" = "0"
-          test ! -s /tmp/conflicts.txt
-          test ! -s /tmp/diff-check.txt
+          cd /tmp/rokas-unified-weather3
+          git push origin HEAD:refs/heads/integration/weather3-candidate
+          git fetch origin integration/weather3-candidate
+          test "$(git rev-parse origin/integration/weather3-candidate)" = "$(git rev-parse HEAD)"
+
+      - name: Upload candidate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-weather3-integration-candidate
+          path: |
+            /tmp/candidate-identity.txt
+            /tmp/candidate-history.txt
+            /tmp/candidate-scope.txt
+            /tmp/candidate-diff-check.txt
+          if-no-files-found: error
