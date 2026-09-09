@@ -1,0 +1,198 @@
+name: Home Weather 3 Lightning Lifecycle GREEN
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3-lifecycle-green.yml
+
+permissions:
+  contents: write
+  checks: write
+
+jobs:
+  lifecycle-green:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout exact pre-fix production tree
+        uses: actions/checkout@v7
+        with:
+          ref: 510cdb2c3c93690e144a5a06842f69f4c6f9badf
+          fetch-depth: 0
+
+      - name: Apply proven RED contract and minimal lifecycle fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          git fetch origin ci/home-weather-3 feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          git show origin/ci/home-weather-3:Tools/CI/add_weather3_lightning_lifecycle_test.py > /tmp/add-weather3-lifecycle-test.py
+          git show origin/ci/home-weather-3:Tools/CI/apply_weather3_lightning_lifecycle_fix.py > /tmp/apply-weather3-lifecycle-fix.py
+          python3 /tmp/add-weather3-lifecycle-test.py
+          python3 /tmp/apply-weather3-lifecycle-fix.py
+          git diff --check
+          mapfile -t changed < <(git diff --name-only | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          test "${changed[1]}" = "Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
+          mkdir -p /tmp/weather3-lifecycle-green
+          git diff -- Assets/Rokas/Scripts/Presentation/WorldEffects.cs Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs > /tmp/weather3-lifecycle-green/candidate.patch
+          {
+            echo "PRE_FIX_SHA=$(git rev-parse HEAD)"
+            echo "PRE_FIX_TREE=$(git rev-parse HEAD^{tree})"
+          } > /tmp/weather3-lifecycle-green/pre-fix.txt
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Home-Weather-3-Lifecycle-Green-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused Weather 3 suite with lifecycle regression
+        id: focused
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: &unity_env
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-lifecycle-focused
+          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Lifecycle Focused GREEN
+
+      - name: Preserve focused GREEN evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-lifecycle-green/focused
+          cp -a "${{ steps.focused.outputs.artifactsPath }}/." /tmp/weather3-lifecycle-green/focused/
+          test -n "$(find /tmp/weather3-lifecycle-green/focused -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-lifecycle-green/focused -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
+
+      - name: Run Home atmosphere and 2.5D regression
+        id: home
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-lifecycle-home
+          customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Lifecycle Home GREEN
+
+      - name: Preserve Home regression evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-lifecycle-green/home
+          cp -a "${{ steps.home.outputs.artifactsPath }}/." /tmp/weather3-lifecycle-green/home/
+          test -n "$(find /tmp/weather3-lifecycle-green/home -type f -name '*results.xml' -print -quit)"
+          test -n "$(find /tmp/weather3-lifecycle-green/home -type f \( -name '*.log' -o -name '*_RuntimeTestLog.txt' \) -print -quit)"
+
+      - name: Prove focused and Home GREEN
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          lifecycle = 'AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash'
+          lines=[]
+          for label in ['focused','home']:
+              xmls=list((Path('/tmp/weather3-lifecycle-green')/label).rglob('*results.xml'))
+              if not xmls:
+                  xmls=list((Path('/tmp/weather3-lifecycle-green')/label).rglob('*.xml'))
+              if not xmls:
+                  raise SystemExit(f'no XML result for {label}')
+              root=ET.parse(xmls[0]).getroot()
+              total=int(root.attrib.get('total', root.attrib.get('testcasecount','0')) or 0)
+              passed=int(root.attrib.get('passed','0') or 0)
+              failed=int(root.attrib.get('failed','0') or 0)
+              skipped=int(root.attrib.get('skipped','0') or 0)
+              inconclusive=int(root.attrib.get('inconclusive','0') or 0)
+              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive}'
+              print(line); lines.append(line)
+              if failed or skipped or inconclusive or passed != total:
+                  raise SystemExit(f'{label} is not fully green')
+              if label == 'focused':
+                  cases=[case for case in root.iter('test-case') if lifecycle in case.attrib.get('fullname','') or lifecycle in case.attrib.get('name','')]
+                  if len(cases)!=1 or cases[0].attrib.get('result','').lower()!='passed':
+                      raise SystemExit('lifecycle regression is not PASS in focused suite')
+          Path('/tmp/weather3-lifecycle-green/test-summary.txt').write_text('\n'.join(lines)+'\n')
+          PY
+
+      - name: Scan preserved Unity runtime logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          root=Path('/tmp/weather3-lifecycle-green')
+          logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
+          strong=[
+              re.compile(r'\bNullReferenceException\b'),
+              re.compile(r'\bMissingReferenceException\b'),
+              re.compile(r'\bMissingComponentException\b'),
+              re.compile(r'\bUnhandled Exception\b',re.I),
+              re.compile(r'\bUnityException\s*:'),
+              re.compile(r'\berror CS\d{4}\s*:',re.I),
+              re.compile(r'\bScripts have compiler errors\b',re.I),
+              re.compile(r'\bCompilation failed\b',re.I),
+              re.compile(r'\bAborting batchmode due to failure\b',re.I),
+          ]
+          findings=[]
+          for p in logs:
+              for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+                  if any(rx.search(line) for rx in strong): findings.append(f'{p}:{i}:{line}')
+          out=[f'UNITY LOG FILES DISCOVERED: {len(logs)}',f'UNITY LOG FILES SCANNED: {len(logs)}',f'UNITY ERROR LINES FOUND: {len(findings)}']+findings
+          print('\n'.join(out))
+          Path('/tmp/weather3-lifecycle-green/log-scan.txt').write_text('\n'.join(out)+'\n')
+          if not logs: sys.exit(12)
+          if findings: sys.exit(11)
+          PY
+
+      - name: Commit and fast-forward production only after GREEN
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git fetch origin feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          mapfile -t changed < <(git diff --name-only | sort)
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "Assets/Rokas/Scripts/Presentation/WorldEffects.cs"
+          test "${changed[1]}" = "Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/Scripts/Presentation/WorldEffects.cs Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs
+          git commit -m "fix: reschedule lightning after Home re-entry"
+          {
+            echo "PRODUCTION_FIX_SHA=$(git rev-parse HEAD)"
+            echo "PRODUCTION_FIX_TREE=$(git rev-parse HEAD^{tree})"
+          } | tee /tmp/weather3-lifecycle-green/production-fix.txt
+          git push origin HEAD:refs/heads/feature/home-weather-3
+          git fetch origin feature/home-weather-3
+          test "$(git rev-parse origin/feature/home-weather-3)" = "$(git rev-parse HEAD)"
+          git diff --check HEAD^..HEAD
+
+      - name: Upload lifecycle GREEN evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-lightning-lifecycle-green
+          path: /tmp/weather3-lifecycle-green
+          if-no-files-found: error
