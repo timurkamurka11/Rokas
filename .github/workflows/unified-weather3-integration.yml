@@ -1,4 +1,4 @@
-name: Unified Weather3 Integration Candidate
+name: Unified Weather3 Focused Integration Gate
 
 on:
   push:
@@ -6,92 +6,200 @@ on:
       - ci/unified-weather3-integration
 
 permissions:
-  contents: write
+  contents: read
+  checks: write
 
 jobs:
-  create-candidate:
+  focused-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
-      - name: Checkout CI harness
-        uses: actions/checkout@v4
+      - name: Checkout exact integration candidate
+        uses: actions/checkout@v7
         with:
+          ref: af541032cd1dd492d9895c5a9c8e92a1e2342745
           fetch-depth: 0
 
-      - name: Fetch and prove exact source refs
+      - name: Prove candidate identity ancestry and protected refs
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin integration/rokas-unified feature/home-weather-3 integration/weather3-candidate
-          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
-          test "$(git rev-parse origin/feature/home-weather-3)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-          test "$(git rev-parse origin/integration/weather3-candidate)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
-          test "$(git merge-base origin/integration/rokas-unified origin/feature/home-weather-3)" = "c68763fb482665ea53cb42c48b2638cc5314c3c0"
-
-      - name: Create isolated integration worktree
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf /tmp/rokas-unified-weather3
-          git worktree add --detach /tmp/rokas-unified-weather3 origin/integration/rokas-unified
-          git -C /tmp/rokas-unified-weather3 config user.name "github-actions[bot]"
-          git -C /tmp/rokas-unified-weather3 config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge verified Weather 3 production checkpoint
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd /tmp/rokas-unified-weather3
-          git merge --no-ff cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 \
-            -m "integration: merge verified Home Weather 3.0"
+          test "$(git rev-parse HEAD)" = "af541032cd1dd492d9895c5a9c8e92a1e2342745"
+          test "$(git rev-parse HEAD^{tree})" = "c0003c877acc637deff0f58dabc94bbb6f0a3214"
           test "$(git rev-parse HEAD^1)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
           test "$(git rev-parse HEAD^2)" = "cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62"
-          git merge-base --is-ancestor 8a65c318420e3727aa9de0cc973e6d507362ec6d HEAD
           git merge-base --is-ancestor cf97f4ebcb68e6a3a9cf5bf73bab2270654e1c62 HEAD
+          git merge-base --is-ancestor 8a65c318420e3727aa9de0cc973e6d507362ec6d HEAD
+          git fetch origin development integration/rokas-unified feature/messages-system
+          test "$(git rev-parse origin/development)" = "5e494f188b90bdb6916e8e78e35ac38509bd0bce"
+          test "$(git rev-parse origin/integration/rokas-unified)" = "8a65c318420e3727aa9de0cc973e6d507362ec6d"
+          test "$(git rev-parse origin/feature/messages-system)" = "c68763fb482665ea53cb42c48b2638cc5314c3c0"
+          mkdir -p /tmp/unified-focus
+          git diff --check HEAD^1 HEAD | tee /tmp/unified-focus/diff-check.txt
+          test ! -s /tmp/unified-focus/diff-check.txt
+          printf 'SHA=%s\nTREE=%s\n' "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" > /tmp/unified-focus/exact-tree.txt
 
-      - name: Literal diff check and candidate scope audit
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Unified-Weather3-Focused-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused Weather 3 contracts
+        id: weather
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: &unity_env
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-weather
+          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Weather
+
+      - name: Run Home atmosphere and 2.5D contracts
+        id: home
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-home
+          customParameters: -testFilter Rokas.Tests.HomeAtmospherePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Home
+
+      - name: Run Messages PlayMode contracts
+        id: messagesplay
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-messages-play
+          customParameters: '-testFilter "Rokas.Tests.LiveMessengerPlayModeTests;Rokas.Tests.LiveMessengerPolishPlayModeTests;Rokas.Tests.MessagesDialogueResumePlayModeTests;Rokas.Tests.MessagesLifecyclePlayModeTests;Rokas.Tests.MessagesNotificationPlayModeTests;Rokas.Tests.MessagesPlayModeTests;Rokas.Tests.ContractAttachmentPlayModeTests;Rokas.Tests.CoordinateAttachmentPlayModeTests"'
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Messages PlayMode
+
+      - name: Run Messages Yarn EditMode contracts
+        id: messagesedit
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: EditMode
+          artifactsPath: artifacts-messages-edit
+          customParameters: -testFilter Rokas.Core.Tests.MessagesYarnTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Messages Yarn
+
+      - name: Run Combat 2.0 approved 23 behavior scenarios
+        id: combatedit
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: EditMode
+          artifactsPath: artifacts-combat-edit
+          customParameters: -testFilter Rokas.Core.Tests.CombatFoundationTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Combat Scenarios
+
+      - name: Run Combat 2.0 PlayMode contracts
+        id: combatplay
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env: *unity_env
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-combat-play
+          customParameters: -testFilter Rokas.Tests.CombatFoundationPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Unified Weather3 Focused Combat PlayMode
+
+      - name: Preserve focused evidence safely
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/rokas-unified-weather3
-          git diff --check HEAD^1 HEAD | tee /tmp/candidate-diff-check.txt
-          git diff --name-status HEAD^1 HEAD | tee /tmp/candidate-scope.txt
-          test ! -s /tmp/candidate-diff-check.txt
-          ! grep -E '^.[[:space:]]+(Packages/|ProjectSettings/ProjectVersion.txt|Assets/Rokas/Scripts/Combat/|Assets/Rokas/Scripts/.*/Messages|Assets/Rokas/Tests/.*/Messages|Assets/Rokas/Tests/.*/Combat)' /tmp/candidate-scope.txt
-          grep -q 'Assets/Rokas/Scripts/Presentation/WorldEffects.cs' /tmp/candidate-scope.txt
-          grep -q 'Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs' /tmp/candidate-scope.txt
-          grep -q 'Docs/ThirdParty/Weather3.md' /tmp/candidate-scope.txt
-          grep -q 'Assets/Rokas/Resources/Weather3/' /tmp/candidate-scope.txt
+          for spec in \
+            "weather:${{ steps.weather.outputs.artifactsPath }}" \
+            "home:${{ steps.home.outputs.artifactsPath }}" \
+            "messages-play:${{ steps.messagesplay.outputs.artifactsPath }}" \
+            "messages-edit:${{ steps.messagesedit.outputs.artifactsPath }}" \
+            "combat-edit:${{ steps.combatedit.outputs.artifactsPath }}" \
+            "combat-play:${{ steps.combatplay.outputs.artifactsPath }}"; do
+            label="${spec%%:*}"; src="${spec#*:}"
+            mkdir -p "/tmp/unified-focus/$label"
+            if [ -n "$src" ] && [ -d "$src" ]; then sudo cp -a "$src/." "/tmp/unified-focus/$label/"; fi
+          done
+          sudo chown -R "$(id -u):$(id -g)" /tmp/unified-focus
 
-      - name: Record candidate identity and ancestry
+      - name: Parse focused XML and require zero failures
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/rokas-unified-weather3
-          {
-            echo "CANDIDATE_SHA=$(git rev-parse HEAD)"
-            echo "CANDIDATE_TREE=$(git rev-parse HEAD^{tree})"
-            echo "PARENT_UNIFIED=$(git rev-parse HEAD^1)"
-            echo "PARENT_WEATHER=$(git rev-parse HEAD^2)"
-            echo "COMMON_BASE=$(git merge-base HEAD^1 HEAD^2)"
-          } | tee /tmp/candidate-identity.txt
-          git log --oneline --decorate -n 16 > /tmp/candidate-history.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root=Path('/tmp/unified-focus')
+          labels=['weather','home','messages-play','messages-edit','combat-edit','combat-play']
+          lines=[]
+          for label in labels:
+              xmls=list((root/label).rglob('*results.xml')) or list((root/label).rglob('*.xml'))
+              if not xmls: raise SystemExit(f'NO_XML {label}')
+              x=ET.parse(xmls[0]).getroot()
+              def a(*names):
+                  for n in names:
+                      if n in x.attrib: return int(x.attrib[n] or 0)
+                  return 0
+              total=a('total','testcasecount','test-case-count'); passed=a('passed'); failed=a('failed'); skipped=a('skipped'); inconclusive=a('inconclusive')
+              line=f'{label}: passed={passed} total={total} failed={failed} skipped={skipped} inconclusive={inconclusive}'
+              print(line); lines.append(line)
+              if total <= 0 or failed != 0 or inconclusive != 0: raise SystemExit(f'FOCUSED_FAIL {line}')
+              if label=='weather' and passed != 5: raise SystemExit(f'Weather expected current inventory 5, got {passed}')
+              if label=='home' and passed != 5: raise SystemExit(f'Home expected current inventory 5, got {passed}')
+              if label=='combat-edit' and passed != 23: raise SystemExit(f'Combat scenario inventory expected 23, got {passed}')
+          (root/'focused-summary.txt').write_text('\n'.join(lines)+'\n')
+          PY
 
-      - name: Fast-forward push isolated candidate branch only
+      - name: Scan focused Unity logs
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/rokas-unified-weather3
-          git push origin HEAD:refs/heads/integration/weather3-candidate
-          git fetch origin integration/weather3-candidate
-          test "$(git rev-parse origin/integration/weather3-candidate)" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/unified-focus')
+          logs=sorted(set(root.rglob('*.log')) | set(root.rglob('*_RuntimeTestLog.txt')))
+          if not logs: raise SystemExit('ZERO_LOGS')
+          patterns=[re.compile(r'\bNullReferenceException\b'),re.compile(r'\bMissingReferenceException\b'),re.compile(r'\berror CS\d{4}\s*:',re.I),re.compile(r'\bScripts have compiler errors\b',re.I),re.compile(r'\bCompilation failed\b',re.I),re.compile(r'\bUnhandled Exception\b',re.I)]
+          findings=[]
+          for p in logs:
+              for i,line in enumerate(p.read_text(errors='replace').splitlines(),1):
+                  if any(rx.search(line) for rx in patterns): findings.append(f'{p}:{i}:{line}')
+          out=f'LOGS_DISCOVERED={len(logs)}\nLOGS_SCANNED={len(logs)}\nRELEVANT_ERRORS={len(findings)}\n'
+          (root/'log-summary.txt').write_text(out+'\n'.join(findings))
+          print(out,end='')
+          if findings: raise SystemExit('\n'.join(findings))
+          PY
 
-      - name: Upload candidate evidence
+      - name: Upload focused integration evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unified-weather3-integration-candidate
-          path: |
-            /tmp/candidate-identity.txt
-            /tmp/candidate-history.txt
-            /tmp/candidate-scope.txt
-            /tmp/candidate-diff-check.txt
+          name: unified-weather3-focused-gate
+          path: /tmp/unified-focus
           if-no-files-found: error
