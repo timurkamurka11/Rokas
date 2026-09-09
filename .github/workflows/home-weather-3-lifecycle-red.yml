@@ -1,0 +1,122 @@
+name: Home Weather 3 Lightning Lifecycle RED
+
+on:
+  push:
+    branches: [ci/home-weather-3]
+    paths:
+      - .github/workflows/home-weather-3-lifecycle-red.yml
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  lifecycle-red:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact pre-fix production tree
+        uses: actions/checkout@v7
+        with:
+          ref: 510cdb2c3c93690e144a5a06842f69f4c6f9badf
+          fetch-depth: 0
+
+      - name: Prove exact RED base and overlay only regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "510cdb2c3c93690e144a5a06842f69f4c6f9badf"
+          test "$(git rev-parse HEAD^{tree})" = "7976b497cca51db776a8d7645cf4afa58ddb0992"
+          git fetch origin ci/home-weather-3
+          git show origin/ci/home-weather-3:Tools/CI/add_weather3_lightning_lifecycle_test.py > /tmp/add-weather3-lifecycle-test.py
+          python3 /tmp/add-weather3-lifecycle-test.py
+          git diff --check
+          test "$(git diff --name-only)" = "Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
+          mkdir -p /tmp/weather3-red
+          {
+            echo "RED_BASE_SHA=$(git rev-parse HEAD)"
+            echo "RED_BASE_TREE=$(git rev-parse HEAD^{tree})"
+            echo "OVERLAY_FILE=Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs"
+          } | tee /tmp/weather3-red/exact-base.txt
+          git diff -- Assets/Rokas/Tests/PlayMode/HomeWeather3PlayModeTests.cs > /tmp/weather3-red/red-test.patch
+
+      - name: Run single expected lifecycle RED
+        id: red
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: PlayMode
+          artifactsPath: artifacts-lifecycle-red
+          customParameters: -testFilter Rokas.Tests.HomeWeather3PlayModeTests.AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Weather 3 Lightning Lifecycle RED
+
+      - name: Prove RED failed for the intended behavior
+        if: always()
+        shell: bash
+        env:
+          RED_STEP_OUTCOME: ${{ steps.red.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather3-red/results
+          cp -a artifacts-lifecycle-red/. /tmp/weather3-red/results/
+          echo "RED_STEP_OUTCOME=$RED_STEP_OUTCOME" | tee /tmp/weather3-red/red-step-outcome.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          expected_name = 'AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash'
+          expected_message = 'automatic lightning must be scheduled again after Home re-entry when an active flash was interrupted'
+          xmls = list(Path('/tmp/weather3-red/results').rglob('*results.xml'))
+          if not xmls:
+              xmls = list(Path('/tmp/weather3-red/results').rglob('*.xml'))
+          if not xmls:
+              raise SystemExit('RED evidence missing NUnit XML')
+          found = None
+          for xml in xmls:
+              root = ET.parse(xml).getroot()
+              for case in root.iter('test-case'):
+                  fullname = case.attrib.get('fullname', '')
+                  name = case.attrib.get('name', '')
+                  if expected_name in fullname or expected_name in name:
+                      found = (xml, case)
+                      break
+              if found:
+                  break
+          if not found:
+              raise SystemExit(f'expected RED test {expected_name} not found')
+          xml, case = found
+          result = case.attrib.get('result', '')
+          failure = case.find('failure')
+          message = '' if failure is None else ''.join(failure.findtext('message', default=''))
+          stack = '' if failure is None else ''.join(failure.findtext('stack-trace', default=''))
+          evidence = [
+              f'TEST={case.attrib.get("fullname", case.attrib.get("name", ""))}',
+              f'RESULT={result}',
+              f'ASSERTION={message}',
+              f'XML={xml}',
+              'EXPECTED_CAUSE=automatic lightning remains unscheduled after active-flash Home exit/re-entry',
+          ]
+          Path('/tmp/weather3-red/red-evidence.txt').write_text('\n'.join(evidence) + '\n')
+          print('\n'.join(evidence))
+          if result.lower() != 'failed':
+              raise SystemExit(f'expected RED failure, got {result}')
+          if expected_message not in message:
+              print(stack)
+              raise SystemExit('RED failed, but not on the intended scheduling assertion')
+          PY
+
+      - name: Upload durable RED evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-weather-3-lightning-lifecycle-red
+          path: /tmp/weather3-red
+          if-no-files-found: error
