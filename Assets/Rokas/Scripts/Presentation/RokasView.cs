@@ -64,7 +64,7 @@ namespace Rokas.Presentation
             stage.anchorMin = stage.anchorMax = new Vector2(.5f, .5f);
             stage.pivot = new Vector2(.5f, .5f);
             background = ui.Art(stage, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
-            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings);
+            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings, audio, owner.transform);
             scene = ui.Rect(stage, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
@@ -372,6 +372,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            effects.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
             session.LiveMessages.Signal -= HandleLiveMessengerSignal;

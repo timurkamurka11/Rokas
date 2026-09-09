@@ -147,6 +147,7 @@ namespace Rokas.Presentation
             if (dirty) SaveNow();
             if (Session != null) Session.Changed -= OnChanged;
             if (View != null) View.Dispose();
+            if (sound != null) sound.Dispose();
         }
     }
 }

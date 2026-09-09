@@ -13,6 +13,8 @@ namespace Rokas.Presentation
         private readonly AudioSource[] effects = new AudioSource[4];
         private readonly AudioClip messageArrive;
         private readonly AudioClip reactionCue;
+        private AudioClip[] thunderBank;
+        private float homeWeatherMix = 1f;
         private int voice;
         private bool mission;
         private bool hasLocation;
@@ -64,12 +66,18 @@ namespace Rokas.Presentation
             if (music.clip) music.Play();
         }
 
+        public void SetHomeWeatherMix(float value)
+        {
+            homeWeatherMix = Mathf.Clamp(value, .15f, 1f);
+        }
+
         public void SetLaptopMode(bool active) { laptopMode = active; }
 
         public void Tick(float dt, bool focused)
         {
             float master = focused ? Mathf.Clamp01(settings.masterVolume) : 0;
-            ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f, dt);
+            float weather = mission ? 1f : homeWeatherMix;
+            ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
             music.volume = Mathf.MoveTowards(music.volume, master * settings.musicVolume * .6f, dt);
 
             if (bootstrap && bootstrap.Session != null)
@@ -119,6 +127,51 @@ namespace Rokas.Presentation
             PlayScaled(clip, scale);
         }
 
+        public void PlayThunder(int variant, float volume)
+        {
+            EnsureThunderBank();
+            int index = Mathf.Abs(variant) % thunderBank.Length;
+            PlayScaled(thunderBank[index], Mathf.Clamp01(volume) * .72f);
+        }
+
+        private void EnsureThunderBank()
+        {
+            if (thunderBank != null) return;
+            thunderBank = new AudioClip[3];
+            for (int i = 0; i < thunderBank.Length; i++) thunderBank[i] = BuildThunder(i);
+        }
+
+        private static AudioClip BuildThunder(int variant)
+        {
+            const int rate = 22050;
+            float duration = 2.7f + variant * .42f;
+            int count = Mathf.CeilToInt(rate * duration);
+            var samples = new float[count];
+            uint state = (uint)(0xA341316Cu + variant * 0x9E3779B9u);
+            float low = 0f;
+            float low2 = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)rate;
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                float noise = ((state & 0xFFFFu) / 32767.5f) - 1f;
+                low += (noise - low) * (.018f + variant * .002f);
+                low2 += (low - low2) * .055f;
+                float attack = Mathf.Clamp01(t / (.055f + variant * .018f));
+                float decay = Mathf.Exp(-t / (1.15f + variant * .30f));
+                float body = Mathf.Sin(2f * Mathf.PI * (31f + variant * 3f) * t) * .17f +
+                             Mathf.Sin(2f * Mathf.PI * (47f + variant * 2f) * t) * .08f;
+                float distantCrack = variant == 1 ? Mathf.Exp(-Mathf.Pow((t - .17f) / .10f, 2f)) * .08f : 0f;
+                samples[i] = Mathf.Clamp((low2 * 1.85f + body + distantCrack) * attack * decay, -.72f, .72f);
+            }
+            AudioClip clip = AudioClip.Create("HomeThunderDistant0" + (variant + 1), count, 1, rate, false);
+            clip.hideFlags = HideFlags.HideAndDontSave;
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
         private void PlayScaled(AudioClip clip, float scale)
         {
             if (!clip) return;
@@ -135,5 +188,13 @@ namespace Rokas.Presentation
         }
 
         public void LaptopMouseClick() { Play(assets.laptopMouseClick); }
+
+        public void Dispose()
+        {
+            if (thunderBank == null) return;
+            for (int i = 0; i < thunderBank.Length; i++)
+                if (thunderBank[i]) Object.Destroy(thunderBank[i]);
+            thunderBank = null;
+        }
     }
 }
