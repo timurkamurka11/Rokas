@@ -15,6 +15,9 @@ namespace Rokas.Tests
         private GameObject root;
         private string saveDirectory;
         private string captureDirectory;
+        private Camera captureCamera;
+        private Canvas captureCanvas;
+        private RenderTexture captureTarget;
 
         [UnityTest]
         public IEnumerator CaptureCurrentHomeWeatherLightingMatrix()
@@ -29,7 +32,7 @@ namespace Rokas.Tests
             Assert.That(bootstrap.View, Is.Not.Null);
             Assert.That(bootstrap.Session, Is.Not.Null);
 
-            Screen.SetResolution(1280, 720, false);
+            ConfigureRenderTextureCapture();
             yield return null;
             yield return null;
 
@@ -86,15 +89,40 @@ namespace Rokas.Tests
             LogAssert.NoUnexpectedReceived();
         }
 
+        private void ConfigureRenderTextureCapture()
+        {
+            captureCamera = root.GetComponentInChildren<Camera>(true);
+            captureCanvas = root.GetComponentInChildren<Canvas>(true);
+            Assert.That(captureCamera, Is.Not.Null, "Diagnostic capture needs the real RokasCamera");
+            Assert.That(captureCanvas, Is.Not.Null, "Diagnostic capture needs the real RokasCanvas");
+
+            captureTarget = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+            captureTarget.name = "HomeWeather3DiagnosticCapture";
+            captureTarget.Create();
+
+            captureCamera.targetTexture = captureTarget;
+            captureCamera.cullingMask = ~0;
+            captureCamera.clearFlags = CameraClearFlags.SolidColor;
+            captureCamera.backgroundColor = Color.black;
+
+            captureCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            captureCanvas.worldCamera = captureCamera;
+            captureCanvas.planeDistance = 1f;
+            Canvas.ForceUpdateCanvases();
+        }
+
         private IEnumerator Capture(string fileName)
         {
             yield return null;
+            Canvas.ForceUpdateCanvases();
+            captureCamera.Render();
 
-            int width = Mathf.Max(1, Screen.width);
-            int height = Mathf.Max(1, Screen.height);
-            Texture2D capture = new Texture2D(width, height, TextureFormat.RGB24, false);
-            capture.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = captureTarget;
+            Texture2D capture = new Texture2D(captureTarget.width, captureTarget.height, TextureFormat.RGB24, false);
+            capture.ReadPixels(new Rect(0, 0, captureTarget.width, captureTarget.height), 0, 0, false);
             capture.Apply(false, false);
+            RenderTexture.active = previous;
 
             byte[] png = capture.EncodeToPNG();
             UnityEngine.Object.Destroy(capture);
@@ -122,6 +150,16 @@ namespace Rokas.Tests
         [UnityTearDown]
         public IEnumerator Cleanup()
         {
+            if (captureCamera != null) captureCamera.targetTexture = null;
+            if (captureTarget != null)
+            {
+                captureTarget.Release();
+                UnityEngine.Object.Destroy(captureTarget);
+            }
+            captureTarget = null;
+            captureCamera = null;
+            captureCanvas = null;
+
             if (root != null) UnityEngine.Object.Destroy(root);
             root = null;
             yield return null;
