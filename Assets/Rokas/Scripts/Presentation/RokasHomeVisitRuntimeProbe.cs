@@ -216,12 +216,14 @@ namespace Rokas.Presentation
             RequireWait();
 
             Press("DoorHotspot");
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return WaitFor(() => boot.Session.State.phase == RunPhase.Portal && IsButtonReady("EnterPortal"), DefaultWaitSeconds,
                 "real Home -> Portal transition");
             RequireWait();
             evidence.actualLeaveReachedPortal = true;
 
             Press("EnterPortal");
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return WaitFor(() => boot.Session.State.phase == RunPhase.Combat && FindButton("EnemyAttack") != null, DefaultWaitSeconds,
                 "real Portal -> Combat transition");
             RequireWait();
@@ -241,6 +243,7 @@ namespace Rokas.Presentation
             yield return WaitFor(() => IsButtonReady("ReturnHome"), DefaultWaitSeconds, "ReturnHome interaction");
             RequireWait();
             Press("ReturnHome");
+            yield return new WaitForSecondsRealtime(1.6f);
             yield return WaitFor(() => boot.Session.State.phase == RunPhase.Payment && IsButtonReady("LaptopHotspot"), DefaultWaitSeconds,
                 "real result -> Payment/Home return");
             RequireWait();
