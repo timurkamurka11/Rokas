@@ -1,0 +1,230 @@
+name: ROKAS Startup Laptop Integrity Visual Rerun
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-integrity-visual-rerun.yml
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  CANDIDATE_SHA: 60e15f67a0d05a2cdd7b1440a83e6103d8e82950
+  CANDIDATE_TREE: 39d578603568b8f94398400e559f8bc7ae9a1de2
+  BASE_SHA: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+
+jobs:
+  integrity:
+    name: Corrected integrity hashes validator
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Prove exact candidate and clean checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git show -s --format=%T HEAD)" = "$CANDIDATE_TREE"
+          status="$(git status --short --untracked-files=all)"
+          test -z "$status"
+          printf '%s\n' "$status" > final-status.txt
+          git diff --check "$BASE_SHA"...HEAD
+          git diff --name-status "$BASE_SHA"...HEAD > final-diff-name-status.txt
+          git diff --stat "$BASE_SHA"...HEAD > final-diff-stat.txt
+          git diff "$BASE_SHA"...HEAD > final-diff.patch
+          git rev-parse HEAD > final-head.txt
+          git show -s --format=%T HEAD > final-tree.txt
+      - name: Verify exact hashes and PNG structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum Assets/Rokas/Resources/StartupSkipHint.png | tee startup-hint-sha256.txt
+          sha256sum Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 | tee startup-preview-sha256.txt
+          sha256sum Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 | tee laptop-boot-sha256.txt
+          test "$(cut -d' ' -f1 startup-hint-sha256.txt)" = "3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df"
+          test "$(cut -d' ' -f1 startup-preview-sha256.txt)" = "28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240"
+          test "$(cut -d' ' -f1 laptop-boot-sha256.txt)" = "111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a"
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          b=Path('Assets/Rokas/Resources/StartupSkipHint.png').read_bytes()[:33]
+          assert b[:8] == b'\x89PNG\r\n\x1a\n'
+          w,h,bd,ct,c,f,i=struct.unpack('>IIBBBBB', b[16:29])
+          print(f'PNG width={w} height={h} bit_depth={bd} color_type={ct}')
+          assert (w,h)==(2048,682)
+          assert ct==6
+          PY
+      - name: Verify source contract and temporary diagnostic absence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text()
+          required=[
+            '!active || !firstFramePresented || player == null || !player.isPlaying',
+            'Input.anyKeyDown',
+            'skipHintOverlay.SetActive(false)',
+            'skipHintOverlay.SetActive(true)',
+            'if (!active) return;',
+            'temporaryRenderTexture.Release()',
+            'Destroy(temporaryRenderTexture)'
+          ]
+          missing=[x for x in required if x not in text]
+          assert not missing, missing
+          print('STARTUP_SOURCE_CONTRACT=PASS')
+          PY
+          test ! -e .github/workflows/home-visit-real-player-diagnostic.yml
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta
+          if git grep -n -- '-rokasHomeVisitSmoke'; then exit 1; fi
+          echo TEMP_DIAGNOSTIC=ABSENT
+      - name: Compare validator baseline and candidate
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 Tools/validate_assets.py > candidate-validator.txt 2>&1
+          candidate_rc=$?
+          base_dir="$RUNNER_TEMP/rokas-validator-base"
+          rm -rf "$base_dir"
+          git worktree add --detach "$base_dir" "$BASE_SHA" >/dev/null
+          (cd "$base_dir" && python3 Tools/validate_assets.py > "$GITHUB_WORKSPACE/base-validator.txt" 2>&1)
+          base_rc=$?
+          python3 - <<'PY'
+          from pathlib import Path
+          def findings(path): return [x.strip() for x in Path(path).read_text(errors='replace').splitlines() if x.startswith('FAIL: ')]
+          base=findings('base-validator.txt'); cand=findings('candidate-validator.txt')
+          existing=sorted(set(cand)&set(base)); new=sorted(set(cand)-set(base)); resolved=sorted(set(base)-set(cand))
+          with open('validator-summary.txt','w') as f:
+              f.write(f'TOTAL_CURRENT_FINDINGS={len(cand)}\n')
+              f.write(f'HISTORICAL_EXISTING_FINDINGS={len(existing)}\n')
+              f.write(f'NEW_RELEVANT_FINDINGS={len(new)}\n')
+              f.write(f'RESOLVED_BASELINE_FINDINGS={len(resolved)}\n')
+              if new: f.write('NEW:\n'+'\n'.join(new)+'\n')
+          print(Path('validator-summary.txt').read_text(),end='')
+          if new: raise SystemExit('Candidate introduced new validator findings')
+          PY
+          summary_rc=$?
+          git worktree remove --force "$base_dir" >/dev/null 2>&1 || true
+          echo "CANDIDATE_VALIDATOR_EXIT=$candidate_rc" >> validator-summary.txt
+          echo "BASE_VALIDATOR_EXIT=$base_rc" >> validator-summary.txt
+          exit $summary_rc
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-corrected-integrity
+          path: |
+            final-status.txt
+            final-diff-name-status.txt
+            final-diff-stat.txt
+            final-diff.patch
+            final-head.txt
+            final-tree.txt
+            startup-hint-sha256.txt
+            startup-preview-sha256.txt
+            laptop-boot-sha256.txt
+            candidate-validator.txt
+            base-validator.txt
+            validator-summary.txt
+          if-no-files-found: warn
+
+  visual:
+    name: Corrected minimal Windows startup visual
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Prove real-player build presentation-code identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ((git rev-parse HEAD).Trim() -ne $env:CANDIDATE_SHA) { throw 'Candidate SHA mismatch.' }
+          if ((git show -s --format=%T HEAD).Trim() -ne $env:CANDIDATE_TREE) { throw 'Candidate tree mismatch.' }
+          $files=@(git diff --name-only 2d8c4ba9f931e6cfab466f98ecdd94d1c5d62549..$env:CANDIDATE_SHA)
+          $allowed=@(
+            '.github/workflows/home-visit-real-player-diagnostic.yml',
+            'Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs',
+            'Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta',
+            'Assets/Rokas/Tests/PlayMode/StartupLaptopVideoPlayModeTests.cs',
+            'Assets/Rokas/Tests/PlayMode/LaptopFullContractLifecyclePlayModeTests.cs.meta',
+            'Assets/Rokas/Tests/PlayMode/StartupSkipHintLaptopHomeVisitPlayModeTests.cs.meta'
+          )
+          $unexpected=@($files | Where-Object { $_ -and ($_ -notin $allowed) })
+          if ($unexpected.Count -gt 0) { throw ('Unexpected production delta: '+($unexpected -join ', ')) }
+          'WINDOWS_BUILD_PRESENTATION_CODE_IDENTICAL=YES' | Set-Content windows-code-identity.txt
+          $files | Set-Content windows-code-diff.txt
+      - name: Download proven Windows Player build
+        uses: actions/download-artifact@v8
+        with:
+          name: rokas-home-visit-diagnostic-player
+          path: player
+          repository: timurkamurka11/Rokas
+          run-id: 34523564351
+          github-token: ${{ github.token }}
+      - name: Launch normal startup and capture 15s sequence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Force visual | Out-Null
+          $exe=Get-ChildItem -Path player -Filter Rokas.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe not found.' }
+          Add-Type -AssemblyName System.Drawing
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class WinCap {
+            [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+          }
+          '@
+          $log=Join-Path (Resolve-Path visual) 'Player.log'
+          $args=@('-screen-fullscreen','0','-screen-width','1280','-screen-height','720','-logFile',('"'+$log+'"'))
+          $p=Start-Process -FilePath $exe.FullName -ArgumentList $args -WorkingDirectory $exe.Directory.FullName -PassThru
+          try {
+            $deadline=(Get-Date).AddSeconds(12)
+            while ($p.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100; $p.Refresh() }
+            if ($p.MainWindowHandle -eq 0) { throw 'Rokas window did not appear.' }
+            [WinCap]::ShowWindow($p.MainWindowHandle,5) | Out-Null
+            [WinCap]::SetForegroundWindow($p.MainWindowHandle) | Out-Null
+            Start-Sleep -Milliseconds 150
+            for ($i=0; $i -lt 60; $i++) {
+              $p.Refresh(); if ($p.HasExited) { break }
+              $rect=New-Object WinCap+RECT
+              if (-not [WinCap]::GetWindowRect($p.MainWindowHandle,[ref]$rect)) { throw 'GetWindowRect failed.' }
+              $w=$rect.Right-$rect.Left; $h=$rect.Bottom-$rect.Top
+              if ($w -lt 200 -or $h -lt 200) { throw "Invalid bounds ${w}x${h}." }
+              $bmp=New-Object System.Drawing.Bitmap $w,$h
+              $g=[System.Drawing.Graphics]::FromImage($bmp)
+              try { $g.CopyFromScreen($rect.Left,$rect.Top,0,0,(New-Object System.Drawing.Size($w,$h))) } finally { $g.Dispose() }
+              $path=Join-Path (Resolve-Path visual) ('startup-{0:D2}.png' -f $i)
+              $bmp.Save($path,[System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+              Start-Sleep -Milliseconds 250
+            }
+          } finally { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
+          $shots=@(Get-ChildItem visual -Filter 'startup-*.png')
+          if ($shots.Count -lt 10) { throw "Only $($shots.Count) screenshots captured." }
+          if (($shots | Measure-Object Length -Minimum).Minimum -lt 10000) { throw 'A capture is unexpectedly tiny.' }
+          "CAPTURE_COUNT=$($shots.Count)" | Set-Content visual/capture-summary.txt
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-corrected-windows-visual
+          path: |
+            visual
+            windows-code-identity.txt
+            windows-code-diff.txt
+            Assets/Rokas/Resources/StartupSkipHint.png
+          if-no-files-found: error
