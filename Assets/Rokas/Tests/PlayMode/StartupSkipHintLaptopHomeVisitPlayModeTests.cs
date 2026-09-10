@@ -14,13 +14,15 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
+        private string hiddenLaptopMediaPath;
+        private string hiddenLaptopBackupPath;
 
         [UnityTest]
         public IEnumerator StartupPreviewBuildsSkipHintOverlayBeforeHome()
         {
             root = new GameObject("StartupSkipHintFixture");
             var presenter = root.AddComponent<VideoSequencePresenter>();
-            presenter.PlayStartup("StartupPreview.mp4", 0f, () => { });
+            presenter.PlayStartup("__missing_startup_hint_test__.mp4", 0f, () => { });
 
             GameObject startupCanvas = Find("StartupVideoCanvas");
             GameObject hint = Find("StartupSkipHintOverlay");
@@ -45,6 +47,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator ClosingFirstLaptopBootConsumesCurrentHomeVisitAndReopenIsReady()
         {
+            HideLaptopMedia();
             RokasBootstrap boot = CreateSynchronousBoot(true);
             yield return null;
             Press("LaptopHotspot");
@@ -56,7 +59,6 @@ namespace Rokas.Tests
             Assert.That(boot.View.LaptopOpen, Is.False);
 
             Press("LaptopHotspot");
-            yield return null;
             Assert.That(Find("LaptopBootSurface"), Is.Null,
                 "Closing during the first boot still consumes that Home visit's one boot.");
             Assert.That(Find("LaptopContracts"), Is.Not.Null,
@@ -66,6 +68,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator HomeInternalPhaseChangeDoesNotResetLaptopBootEligibility()
         {
+            HideLaptopMedia();
             RokasBootstrap boot = CreateSynchronousBoot(true);
             yield return null;
             Press("LaptopHotspot");
@@ -76,7 +79,6 @@ namespace Rokas.Tests
             Assert.That(boot.Session.State.phase, Is.EqualTo(Rokas.Core.RunPhase.Accepted));
 
             Press("LaptopHotspot");
-            yield return null;
             Assert.That(Find("LaptopBootSurface"), Is.Null,
                 "Accepting a contract while still physically at Home must not start a new Home visit.");
             Assert.That(Find("LaptopContracts"), Is.Not.Null);
@@ -85,6 +87,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator LeavingAndReturningHomeRestoresOneLaptopBoot()
         {
+            HideLaptopMedia();
             RokasBootstrap boot = CreateSynchronousBoot(true);
             yield return null;
             Press("LaptopHotspot");
@@ -92,7 +95,6 @@ namespace Rokas.Tests
             yield return new WaitForSecondsRealtime(.3f);
 
             Press("LaptopHotspot");
-            yield return null;
             Assert.That(Find("LaptopBootSurface"), Is.Null,
                 "The current Home visit must already be consumed before testing the reset boundary.");
             Assert.That(Find("LaptopContracts"), Is.Not.Null);
@@ -107,10 +109,27 @@ namespace Rokas.Tests
             yield return null;
 
             Press("LaptopHotspot");
-            yield return null;
             Assert.That(Find("LaptopBootSurface"), Is.Not.Null,
                 "Returning from a non-Home runtime phase must start a new Home visit with one fresh boot.");
             Assert.That(Find("LaptopContracts"), Is.Null);
+        }
+
+        private void HideLaptopMedia()
+        {
+            hiddenLaptopMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "LaptopBoot.mp4");
+            hiddenLaptopBackupPath = hiddenLaptopMediaPath + ".home-visit-test-hidden";
+            Assert.That(File.Exists(hiddenLaptopMediaPath), Is.True, "Committed LaptopBoot.mp4 is required by the fixture.");
+            Assert.That(File.Exists(hiddenLaptopBackupPath), Is.False, "Unexpected stale laptop media test backup.");
+            File.Move(hiddenLaptopMediaPath, hiddenLaptopBackupPath);
+        }
+
+        private void RestoreLaptopMedia()
+        {
+            if (string.IsNullOrEmpty(hiddenLaptopBackupPath) || !File.Exists(hiddenLaptopBackupPath)) return;
+            if (!File.Exists(hiddenLaptopMediaPath)) File.Move(hiddenLaptopBackupPath, hiddenLaptopMediaPath);
+            else File.Delete(hiddenLaptopBackupPath);
+            hiddenLaptopMediaPath = null;
+            hiddenLaptopBackupPath = null;
         }
 
         private RokasBootstrap CreateSynchronousBoot(bool enableVideoTransitions)
@@ -152,6 +171,7 @@ namespace Rokas.Tests
         {
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
+            RestoreLaptopMedia();
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
         }
     }
