@@ -24,6 +24,13 @@ namespace Rokas.Presentation
 
         private void Start()
         {
+            if (!Application.isEditor && Debug.isDebugBuild &&
+                RokasVideoSmokeRunner.IsRequested(Environment.GetCommandLineArgs()))
+            {
+                if (!GetComponent<RokasVideoSmokeRunner>()) gameObject.AddComponent<RokasVideoSmokeRunner>();
+                return;
+            }
+
             if (Session != null || View != null || startupPending) return;
             VideoTransitionsEnabled = true;
             string saveDirectory = Path.Combine(Application.persistentDataPath, "Profile");
