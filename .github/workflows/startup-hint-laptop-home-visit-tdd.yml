@@ -1,4 +1,4 @@
-# GREEN evidence trigger for exact feature behavior; production semantics live under Assets/Rokas.
+# GREEN evidence trigger after exact startup-hint alpha root-cause fix; production semantics live under Assets/Rokas.
 name: ROKAS Startup Hint + Laptop Home Visit TDD
 
 on:
