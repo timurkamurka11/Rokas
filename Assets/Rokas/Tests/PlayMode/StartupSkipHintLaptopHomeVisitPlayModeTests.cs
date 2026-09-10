@@ -66,7 +66,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator HomeInternalPhaseChangeDoesNotResetLaptopBootEligibility()
+        public IEnumerator HomeInternalPanelRoundTripDoesNotResetLaptopBootEligibility()
         {
             HideLaptopMedia();
             RokasBootstrap boot = CreateSynchronousBoot(true);
@@ -75,12 +75,14 @@ namespace Rokas.Tests
             boot.View.Escape();
             yield return new WaitForSecondsRealtime(.3f);
 
-            Assert.That(boot.Session.AcceptContract(), Is.True);
-            Assert.That(boot.Session.State.phase, Is.EqualTo(Rokas.Core.RunPhase.Accepted));
+            Press("TeaHotspot");
+            Assert.That(boot.View.LaptopOpen, Is.False);
+            boot.View.Escape();
+            yield return null;
 
             Press("LaptopHotspot");
             Assert.That(Find("LaptopBootSurface"), Is.Null,
-                "Accepting a contract while still physically at Home must not start a new Home visit.");
+                "Opening and closing an internal Home panel must not start a new Home visit.");
             Assert.That(Find("LaptopContracts"), Is.Not.Null);
         }
 
