@@ -1,0 +1,196 @@
+name: ROKAS Startup Laptop Exact Final Candidate
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-exact-final-candidate.yml
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  SHA: 0c84a0aed4b6281cb48f99244ef248eb37873747
+  TREE: bee806a35c1e5094363456414f8f8991439f8a59
+  BASE: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}', fetch-depth: 0 }
+      - name: Exact tree, diff, hashes, source, validator classification
+        shell: bash
+        run: |
+          set -uo pipefail
+          test "$(git rev-parse HEAD)" = "$SHA"
+          test "$(git show -s --format=%T HEAD)" = "$TREE"
+          test -z "$(git status --short --untracked-files=all)"
+          git diff --check "$BASE"...HEAD
+          git diff --name-status "$BASE"...HEAD | tee final-diff-name-status.txt
+          test -z "$(git diff --name-only "$BASE"...HEAD -- .ci/startup-laptop-video-patch .ci/startup-laptop-video-run)"
+          test "$(sha256sum Assets/Rokas/Resources/StartupSkipHint.png | cut -d' ' -f1)" = 3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 | cut -d' ' -f1)" = 28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 | cut -d' ' -f1)" = 111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,struct
+          b=Path('Assets/Rokas/Resources/StartupSkipHint.png').read_bytes()
+          assert struct.unpack('>II',b[16:24])==(2048,682) and b[25]==6
+          p=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text()
+          for s in ['Input.anyKeyDown','firstFramePresented && player && player.isPlaying','startupHintGroup.alpha = 0f;','startupHintGroup.alpha = 1f;','target.Release();','Destroy(target);','DetachHandlers();']:
+              assert s in p,s
+          assert p.index('active = false;',p.index('private void Finish')) < p.index('callback?.Invoke();',p.index('private void Finish'))
+          print('SOURCE_AND_ASSET_CONTRACT=PASS')
+          PY
+          test ! -e .github/workflows/home-visit-real-player-diagnostic.yml
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta
+          if git grep -n -- '-rokasHomeVisitSmoke'; then exit 1; fi
+          set +e
+          python3 Tools/validate_assets.py > candidate-validator.txt 2>&1; crc=$?
+          bd="$RUNNER_TEMP/base"; rm -rf "$bd"; git worktree add --detach "$bd" "$BASE" >/dev/null; wrc=$?
+          if [ "$wrc" -ne 0 ]; then exit "$wrc"; fi
+          (cd "$bd" && python3 Tools/validate_assets.py > "$GITHUB_WORKSPACE/base-validator.txt" 2>&1); brc=$?
+          set -e
+          CRC="$crc" BRC="$brc" python3 - <<'PY'
+          from pathlib import Path
+          import os,hashlib,struct
+          def f(p): return [x.strip() for x in Path(p).read_text(errors='replace').splitlines() if x.startswith('FAIL: ')]
+          b=f('base-validator.txt'); c=f('candidate-validator.txt'); raw=sorted(set(c)-set(b)); hist=sorted(set(c)&set(b))
+          fp='FAIL: Background below HD: StartupSkipHint.png'
+          assert raw==[fp],raw
+          av=Path('Tools/asset_validation.py').read_text(); pr=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text(); png=Path('Assets/Rokas/Resources/StartupSkipHint.png').read_bytes()
+          assert "if width < 1600 or height < 900:" in av and "errors.append('Background below HD: ' + path.name)" in av
+          assert 'Resources.Load<Texture2D>("StartupSkipHint")' in pr and 'StartupSkipHintOverlay' in pr
+          assert hashlib.sha256(png).hexdigest()=='3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df'
+          relevant=[x for x in raw if x!=fp]
+          print(f'BASE_VALIDATOR_EXIT={os.environ["BRC"]}')
+          print(f'CANDIDATE_VALIDATOR_EXIT={os.environ["CRC"]}')
+          print(f'TOTAL_CURRENT_FINDINGS={len(c)} HISTORICAL={len(hist)} RAW_NEW={len(raw)} CATEGORY_FALSE_POSITIVE=1 NEW_RELEVANT={len(relevant)}')
+          assert not relevant
+          PY
+          git worktree remove --force "$bd" >/dev/null 2>&1 || true
+
+  semantic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}' }
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: exact-final-semantic-${{ runner.os }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            StartupLaptopHardSemantic-${{ runner.os }}-
+            StartupHintLaptopVisit-${{ runner.os }}-
+      - id: test
+        uses: game-ci/unity-test-runner@v4
+        env: { UNITY_LICENSE: '${{ secrets.UNITY_LICENSE }}', UNITY_EMAIL: '${{ secrets.UNITY_EMAIL }}', UNITY_PASSWORD: '${{ secrets.UNITY_PASSWORD }}', UNITY_SERIAL: '${{ secrets.UNITY_SERIAL }}' }
+        with: { projectPath: '.', unityVersion: '6000.3.19f1', testMode: PlayMode, cliVersion: v0.1.60, customParameters: '-testFilter Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests', githubToken: '${{ secrets.GITHUB_TOKEN }}', checkName: Exact Final Semantic }
+      - name: Require 8/8
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          r=E.parse('artifacts/playmode-results.xml').getroot(); v=tuple(int(r.attrib.get(k,-1)) for k in ('total','passed','failed','skipped')); print(v); assert v==(8,8,0,0)
+          PY
+
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}' }
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: exact-final-lifecycle-${{ runner.os }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            LaptopFullLifecycle-${{ runner.os }}-
+      - uses: game-ci/unity-test-runner@v4
+        env: { UNITY_LICENSE: '${{ secrets.UNITY_LICENSE }}', UNITY_EMAIL: '${{ secrets.UNITY_EMAIL }}', UNITY_PASSWORD: '${{ secrets.UNITY_PASSWORD }}', UNITY_SERIAL: '${{ secrets.UNITY_SERIAL }}' }
+        with: { projectPath: '.', unityVersion: '6000.3.19f1', testMode: PlayMode, cliVersion: v0.1.60, customParameters: '-testFilter Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment', githubToken: '${{ secrets.GITHUB_TOKEN }}', checkName: Exact Final Lifecycle }
+      - name: Require 1/1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          r=E.parse('artifacts/playmode-results.xml').getroot(); v=tuple(int(r.attrib.get(k,-1)) for k in ('total','passed','failed','skipped')); print(v); assert v==(1,1,0,0)
+          PY
+
+  domain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}' }
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: exact-final-domain-${{ runner.os }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - uses: game-ci/unity-test-runner@v4
+        env: { UNITY_LICENSE: '${{ secrets.UNITY_LICENSE }}', UNITY_EMAIL: '${{ secrets.UNITY_EMAIL }}', UNITY_PASSWORD: '${{ secrets.UNITY_PASSWORD }}', UNITY_SERIAL: '${{ secrets.UNITY_SERIAL }}' }
+        with: { projectPath: '.', unityVersion: '6000.3.19f1', testMode: EditMode, cliVersion: v0.1.60, customParameters: '-testFilter Rokas.Core.Tests.FirstLoopDomainTests', githubToken: '${{ secrets.GITHUB_TOKEN }}', checkName: Exact Final FirstLoopDomain }
+      - name: Require 3/3
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          r=E.parse('artifacts/editmode-results.xml').getroot(); v=tuple(int(r.attrib.get(k,-1)) for k in ('total','passed','failed','skipped')); print(v); assert v==(3,3,0,0)
+          PY
+
+  legacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}' }
+      - name: Isolate Linux H264
+        shell: bash
+        run: mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.ci-hidden
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: exact-final-legacy-${{ runner.os }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - uses: game-ci/unity-test-runner@v4
+        env: { UNITY_LICENSE: '${{ secrets.UNITY_LICENSE }}', UNITY_EMAIL: '${{ secrets.UNITY_EMAIL }}', UNITY_PASSWORD: '${{ secrets.UNITY_PASSWORD }}', UNITY_SERIAL: '${{ secrets.UNITY_SERIAL }}' }
+        with: { projectPath: '.', unityVersion: '6000.3.19f1', testMode: PlayMode, cliVersion: v0.1.60, customParameters: '-testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady', githubToken: '${{ secrets.GITHUB_TOKEN }}', checkName: Exact Final Migrated Cancellation }
+      - name: Require 1/1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          r=E.parse('artifacts/playmode-results.xml').getroot(); v=tuple(int(r.attrib.get(k,-1)) for k in ('total','passed','failed','skipped')); print(v); assert v==(1,1,0,0)
+          PY
+
+  firstloop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: '${{ env.SHA }}' }
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: exact-final-firstloop-${{ runner.os }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            FirstLoopRCA-Candidate-${{ runner.os }}-
+      - uses: game-ci/unity-test-runner@v4
+        env: { UNITY_LICENSE: '${{ secrets.UNITY_LICENSE }}', UNITY_EMAIL: '${{ secrets.UNITY_EMAIL }}', UNITY_PASSWORD: '${{ secrets.UNITY_PASSWORD }}', UNITY_SERIAL: '${{ secrets.UNITY_SERIAL }}' }
+        with: { projectPath: '.', unityVersion: '6000.3.19f1', testMode: PlayMode, cliVersion: v0.1.60, customParameters: '-testFilter Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce', githubToken: '${{ secrets.GITHUB_TOKEN }}', checkName: Exact Final FirstLoop }
+      - name: Require 1/1
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          r=E.parse('artifacts/playmode-results.xml').getroot(); v=tuple(int(r.attrib.get(k,-1)) for k in ('total','passed','failed','skipped')); print(v); assert v==(1,1,0,0)
+          PY
