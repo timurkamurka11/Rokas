@@ -11,43 +11,73 @@ permissions:
   contents: write
 
 jobs:
-  probe-transfer:
+  ingest-media:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Probe temporary shares and all client chunks
+        with:
+          ref: feature/startup-laptop-video-integration
+          fetch-depth: 0
+
+      - name: Download exact original media bytes
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p transfer/chunks
-          curl -fsSL -D transfer/startup.headers -o transfer/startup.html 'https://firestorage.ai/ja/f/LJmh1mYMVX94'
-          curl -fsSL -D transfer/laptop.headers -o transfer/laptop.html 'https://firestorage.ai/ja/f/eGtjpdmquW_u'
-          grep -Eo 'src="/[^"]+\.js"' transfer/startup.html | sed 's/^src="//;s/"$//' | sort -u > transfer/chunk-paths.txt
-          while IFS= read -r chunk; do
-            name=$(printf '%s' "$chunk" | sha256sum | cut -c1-16)
-            curl -fsSL "https://firestorage.ai${chunk}" -o "transfer/chunks/${name}.js"
-          done < transfer/chunk-paths.txt
-          cat transfer/chunks/*.js > transfer/all.js
-          grep -Eo '/api/[A-Za-z0-9_./?=&${}:%+-]+' transfer/all.js | sort -u > transfer/api-paths.txt || true
-          grep -Eo 'https?[^"'"'"'<> ]+' transfer/all.js | sort -u | head -400 > transfer/js-urls.txt || true
+          mkdir -p Assets/StreamingAssets/RokasVideo verification-media
           python3 - <<'PY'
-          from pathlib import Path
-          text = Path('transfer/all.js').read_text(errors='ignore')
-          needles = ['download', 'shareId', 'publicId', 'fileId', 'signed', 'presign', 'fetch(', '/api/']
-          out=[]
-          for needle in needles:
-              start=0
-              while True:
-                  i=text.find(needle,start)
-                  if i<0: break
-                  out.append(f'--- {needle} @ {i} ---\n{text[max(0,i-500):i+1200]}')
-                  start=i+len(needle)
-                  if len(out)>=200: break
-          Path('transfer/context.txt').write_text('\n'.join(out), errors='ignore')
+          import json, pathlib, subprocess, urllib.request
+
+          API = 'https://api.firestorage.ai/dev/file'
+          jobs = [
+              ('LJmh1mYMVX94', 'Preview(1).MP4', pathlib.Path('Assets/StreamingAssets/RokasVideo/StartupPreview.mp4')),
+              ('eGtjpdmquW_u', 'Laptop load(1).mp4', pathlib.Path('Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4')),
+          ]
+          for share, expected_name, destination in jobs:
+              with urllib.request.urlopen(f'{API}/shares/{share}/files?maxResults=1000') as response:
+                  payload = json.load(response)
+              matches = [f for f in payload.get('files', []) if f.get('fileName') == expected_name]
+              if len(matches) != 1:
+                  raise SystemExit(f'{share}: expected exactly one {expected_name}, found {len(matches)}')
+              file_id = matches[0]['fileId']
+              request = urllib.request.Request(f'{API}/shares/{share}/files/{file_id}/download', method='POST')
+              with urllib.request.urlopen(request) as response:
+                  download = json.load(response)
+              url = download['downloadUrl']
+              with urllib.request.urlopen(url) as response, destination.open('wb') as output:
+                  while True:
+                      chunk = response.read(1024 * 1024)
+                      if not chunk:
+                          break
+                      output.write(chunk)
           PY
-      - name: Upload transfer probe
+
+      - name: Verify immutable media hashes and sizes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/StartupPreview.mp4)" = '2457855'
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4)" = '6383263'
+          echo '28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240  Assets/StreamingAssets/RokasVideo/StartupPreview.mp4' | sha256sum -c -
+          echo '111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a  Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4' | sha256sum -c -
+          sha256sum Assets/StreamingAssets/RokasVideo/*.mp4 > verification-media/source-sha256.txt
+          stat -c '%n %s' Assets/StreamingAssets/RokasVideo/*.mp4 > verification-media/source-sizes.txt
+
+      - name: Commit original media bytes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          git diff --cached --stat
+          git commit -m 'feat: add original startup and laptop video media'
+          git push origin HEAD:feature/startup-laptop-video-integration
+
+      - name: Upload media proof
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: startup-laptop-video-media-probe
-          path: transfer
+          name: startup-laptop-video-media-proof
+          path: verification-media
+          if-no-files-found: warn
