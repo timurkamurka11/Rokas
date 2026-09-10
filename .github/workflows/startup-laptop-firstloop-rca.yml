@@ -1,0 +1,153 @@
+name: ROKAS Startup Laptop FirstLoop RCA
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-firstloop-rca.yml
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: startup-laptop-firstloop-rca
+  cancel-in-progress: true
+
+env:
+  BASE_SHA: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+  CANDIDATE_SHA: 60e15f67a0d05a2cdd7b1440a83e6103d8e82950
+  FIRSTLOOP_FILTER: Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce
+
+jobs:
+  baseline-firstloop:
+    name: Baseline FirstLoop exact
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+      - name: Prove baseline identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_SHA"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: FirstLoopRCA-Base-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Run exact baseline FirstLoop
+        id: test
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter ${{ env.FIRSTLOOP_FILTER }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: FirstLoop RCA Baseline
+      - name: Summarize baseline XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r=ET.parse('artifacts/playmode-results.xml').getroot()
+          got=tuple(int(r.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('BASE_FIRSTLOOP total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got[0] == 1 and got[3] == 0, got
+          for tc in r.iter('test-case'):
+              if tc.attrib.get('result') == 'Failed':
+                  f=tc.find('failure')
+                  print('BASE_FAILURE=' + (' '.join((f.findtext('message') or '').split()) if f is not None else ''))
+                  print('BASE_STACK=' + (' '.join((f.findtext('stack-trace') or '').split()) if f is not None else ''))
+          PY
+      - name: Upload baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: firstloop-rca-baseline
+          path: artifacts/playmode-results.xml
+          if-no-files-found: error
+
+  candidate-firstloop:
+    name: Candidate FirstLoop exact
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Prove candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "39d578603568b8f94398400e559f8bc7ae9a1de2"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: FirstLoopRCA-Candidate-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Run exact candidate FirstLoop
+        id: test
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter ${{ env.FIRSTLOOP_FILTER }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: FirstLoop RCA Candidate
+      - name: Summarize candidate XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r=ET.parse('artifacts/playmode-results.xml').getroot()
+          got=tuple(int(r.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('CANDIDATE_FIRSTLOOP total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got[0] == 1 and got[3] == 0, got
+          for tc in r.iter('test-case'):
+              if tc.attrib.get('result') == 'Failed':
+                  f=tc.find('failure')
+                  print('CANDIDATE_FAILURE=' + (' '.join((f.findtext('message') or '').split()) if f is not None else ''))
+                  print('CANDIDATE_STACK=' + (' '.join((f.findtext('stack-trace') or '').split()) if f is not None else ''))
+          PY
+      - name: Upload candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: firstloop-rca-candidate
+          path: artifacts/playmode-results.xml
+          if-no-files-found: error
