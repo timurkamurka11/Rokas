@@ -1,0 +1,34 @@
+name: ROKAS Startup Laptop Video Media Transfer
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - .ci/startup-laptop-video-media
+
+permissions:
+  contents: write
+
+jobs:
+  probe-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Probe temporary shares
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p transfer
+          curl -fsSL -D transfer/startup.headers -o transfer/startup.html 'https://firestorage.ai/ja/f/LJmh1mYMVX94'
+          curl -fsSL -D transfer/laptop.headers -o transfer/laptop.html 'https://firestorage.ai/ja/f/eGtjpdmquW_u'
+          grep -Eo 'https?[^"'"'"'<> ]+' transfer/startup.html | head -100 > transfer/startup.urls || true
+          grep -Eo 'https?[^"'"'"'<> ]+' transfer/laptop.html | head -100 > transfer/laptop.urls || true
+          grep -Ein 'download|file|api|public|share|Preview|Laptop' transfer/startup.html | head -120 > transfer/startup.matches || true
+          grep -Ein 'download|file|api|public|share|Preview|Laptop' transfer/laptop.html | head -120 > transfer/laptop.matches || true
+      - name: Upload transfer probe
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-media-probe
+          path: transfer
