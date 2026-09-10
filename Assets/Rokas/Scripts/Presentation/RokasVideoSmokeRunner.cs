@@ -15,6 +15,7 @@ namespace Rokas.Presentation
     {
         private const string SmokeArgument = "-rokasVideoSmoke";
         private const float MediaTimeoutSeconds = 25f;
+        private const float CleanupSettleTimeoutSeconds = 2f;
 
         [Serializable]
         private sealed class MediaEvidence
@@ -30,6 +31,15 @@ namespace Rokas.Presentation
             public bool earlyRuntimeCapture;
             public bool middleRuntimeCapture;
             public bool cleanup;
+            public bool cleanupImmediatePresenterIdle;
+            public bool cleanupImmediateRenderTextureReleased;
+            public bool cleanupImmediateTargetDetached;
+            public bool cleanupImmediateAudioStopped;
+            public bool cleanupFinalPresenterIdle;
+            public bool cleanupFinalRenderTextureReleased;
+            public bool cleanupFinalTargetDetached;
+            public bool cleanupFinalAudioStopped;
+            public int cleanupFramesWaited;
             public string error;
             public double firstFrameTime;
             public double maximumPlaybackTime;
@@ -193,9 +203,16 @@ namespace Rokas.Presentation
             }
 
             media.elapsedSeconds = Time.realtimeSinceStartup - startedAt;
-            yield return null;
-            media.cleanup = !presenter.IsPlaying && presenter.TemporaryRenderTexture == null &&
-                            player.targetTexture == null && !videoAudio.isPlaying;
+            media.cleanup = CaptureCleanupState(media, true);
+            float cleanupDeadline = Time.realtimeSinceStartup + CleanupSettleTimeoutSeconds;
+            while (!media.cleanup && Time.realtimeSinceStartup < cleanupDeadline)
+            {
+                media.cleanupFramesWaited++;
+                yield return null;
+                media.cleanup = CaptureCleanupState(media, false);
+            }
+            if (media.cleanupFramesWaited == 0)
+                CaptureCleanupState(media, false);
 
             if (laptopHost)
             {
@@ -216,6 +233,31 @@ namespace Rokas.Presentation
             }
 
             activeEvidence = null;
+        }
+
+        private bool CaptureCleanupState(MediaEvidence media, bool immediate)
+        {
+            bool presenterIdle = !presenter.IsPlaying;
+            bool renderTextureReleased = presenter.TemporaryRenderTexture == null;
+            bool targetDetached = player.targetTexture == null;
+            bool audioStopped = !videoAudio.isPlaying;
+
+            if (immediate)
+            {
+                media.cleanupImmediatePresenterIdle = presenterIdle;
+                media.cleanupImmediateRenderTextureReleased = renderTextureReleased;
+                media.cleanupImmediateTargetDetached = targetDetached;
+                media.cleanupImmediateAudioStopped = audioStopped;
+            }
+            else
+            {
+                media.cleanupFinalPresenterIdle = presenterIdle;
+                media.cleanupFinalRenderTextureReleased = renderTextureReleased;
+                media.cleanupFinalTargetDetached = targetDetached;
+                media.cleanupFinalAudioStopped = audioStopped;
+            }
+
+            return presenterIdle && renderTextureReleased && targetDetached && audioStopped;
         }
 
         private void OnPrepared(VideoPlayer source)
