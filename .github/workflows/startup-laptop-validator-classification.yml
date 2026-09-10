@@ -1,0 +1,96 @@
+name: ROKAS Startup Laptop Validator Classification
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-validator-classification.yml
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: 60e15f67a0d05a2cdd7b1440a83e6103d8e82950
+  CANDIDATE_TREE: 39d578603568b8f94398400e559f8bc7ae9a1de2
+  BASE_SHA: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Capture validators and classify only proven category mismatch
+        shell: bash
+        run: |
+          set -uo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git show -s --format=%T HEAD)" = "$CANDIDATE_TREE"
+          set +e
+          python3 Tools/validate_assets.py > candidate-validator.txt 2>&1
+          candidate_rc=$?
+          base_dir="$RUNNER_TEMP/rokas-validator-base"
+          rm -rf "$base_dir"
+          git worktree add --detach "$base_dir" "$BASE_SHA" >/dev/null
+          test $? -eq 0 || exit 1
+          (cd "$base_dir" && python3 Tools/validate_assets.py > "$GITHUB_WORKSPACE/base-validator.txt" 2>&1)
+          base_rc=$?
+          set -e
+          CANDIDATE_RC="$candidate_rc" BASE_RC="$base_rc" python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os, struct
+          def findings(path):
+              return [x.strip() for x in Path(path).read_text(errors='replace').splitlines() if x.startswith('FAIL: ')]
+          base=findings('base-validator.txt'); cand=findings('candidate-validator.txt')
+          raw_new=sorted(set(cand)-set(base))
+          historical=sorted(set(cand)&set(base))
+          expected='FAIL: Background below HD: StartupSkipHint.png'
+          assert raw_new == [expected], raw_new
+
+          asset=Path('Assets/Rokas/Resources/StartupSkipHint.png')
+          data=asset.read_bytes()
+          assert hashlib.sha256(data).hexdigest() == '3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df'
+          assert data[:8] == b'\x89PNG\r\n\x1a\n'
+          w,h=struct.unpack('>II',data[16:24]); color_type=data[25]
+          assert (w,h,color_type)==(2048,682,6), (w,h,color_type)
+
+          presenter=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text()
+          assert 'Resources.Load<Texture2D>("StartupSkipHint")' in presenter
+          assert 'new GameObject("StartupSkipHintOverlay"' in presenter
+          assert 'hint.sizeDelta = new Vector2(hintWidth, hintWidth * hintTexture.height / hintTexture.width);' in presenter
+
+          validation=Path('Tools/asset_validation.py').read_text()
+          assert "if width < 1600 or height < 900:" in validation
+          assert "errors.append('Background below HD: ' + path.name)" in validation
+          assert "_MESSAGES_PREFIX" in validation and "'Yokai' in path.parts or 'Familiars' in path.parts" in validation
+
+          false_positive=[expected]
+          relevant=[x for x in raw_new if x not in false_positive]
+          out=[
+              f'BASE_VALIDATOR_EXIT={os.environ["BASE_RC"]}',
+              f'CANDIDATE_VALIDATOR_EXIT={os.environ["CANDIDATE_RC"]}',
+              f'TOTAL_CURRENT_FINDINGS={len(cand)}',
+              f'HISTORICAL_EXISTING_FINDINGS={len(historical)}',
+              f'RAW_NEW_FINDINGS={len(raw_new)}',
+              f'PROVEN_CATEGORY_FALSE_POSITIVES={len(false_positive)}',
+              f'NEW_RELEVANT_FINDINGS={len(relevant)}',
+              'FALSE_POSITIVE_REASON=StartupSkipHint is a Resources runtime overlay; generic validator catch-all labels every non-Messages/non-character PNG as Background.',
+          ]
+          Path('validator-classification.txt').write_text('\n'.join(out)+'\n')
+          print(Path('validator-classification.txt').read_text(),end='')
+          assert not relevant
+          PY
+          git worktree remove --force "$base_dir" >/dev/null 2>&1 || true
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-validator-classification
+          path: |
+            candidate-validator.txt
+            base-validator.txt
+            validator-classification.txt
+          if-no-files-found: error
