@@ -1,4 +1,4 @@
-name: ROKAS Startup Laptop Video Fresh Candidate Verification
+name: ROKAS Startup Laptop Video Final Candidate Verification
 
 on:
   push:
@@ -9,14 +9,19 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 concurrency:
-  group: startup-laptop-video-fresh-candidate
+  group: startup-laptop-video-final-candidate
   cancel-in-progress: true
 
 env:
-  TARGET_SHA: 5f1362dd7bdd8860711b4402707f5ba259cbf5ec
+  TARGET_SHA: 6bcfd4b1366e3cc5fcb8e11786773ed1d8cfb18f
+  TARGET_TREE: 25f22e4274d3611ad4c8a37afef76045175c3f5e
   BASE_SHA: 5eb5d994c141757274f8702e7864caded0e2179d
+  DEVELOPMENT_SHA: 5e494f188b90bdb6916e8e78e35ac38509bd0bce
+  STARTUP_SHA256: 28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240
+  LAPTOP_SHA256: 111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a
 
 jobs:
   fresh-tree-validator-scope:
@@ -35,16 +40,29 @@ jobs:
         run: |
           set -euo pipefail
           EV="$RUNNER_TEMP/final-verification"
+          rm -rf "$EV"
           mkdir -p "$EV"
           ACTUAL_SHA="$(git rev-parse HEAD)"
           ACTUAL_TREE="$(git rev-parse HEAD^{tree})"
           test "$ACTUAL_SHA" = "$TARGET_SHA"
+          test "$ACTUAL_TREE" = "$TARGET_TREE"
           git status --short > "$EV/initial-status.txt"
           git diff > "$EV/initial-diff.txt"
           git diff --check > "$EV/initial-diff-check.txt"
           test ! -s "$EV/initial-status.txt"
           test ! -s "$EV/initial-diff.txt"
           printf 'TARGET_SHA=%s\nTARGET_TREE=%s\nBASE_SHA=%s\nINITIAL_STATUS_CLEAN=YES\nINITIAL_DIFF_CLEAN=YES\nINITIAL_DIFF_CHECK=PASS\n' "$ACTUAL_SHA" "$ACTUAL_TREE" "$BASE_SHA" > "$EV/exact-tree.txt"
+
+      - name: Verify source media hashes remain exact
+        shell: bash
+        run: |
+          set -euo pipefail
+          EV="$RUNNER_TEMP/final-verification"
+          STARTUP_ACTUAL="$(sha256sum Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 | awk '{print $1}')"
+          LAPTOP_ACTUAL="$(sha256sum Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 | awk '{print $1}')"
+          test "$STARTUP_ACTUAL" = "$STARTUP_SHA256"
+          test "$LAPTOP_ACTUAL" = "$LAPTOP_SHA256"
+          printf 'STARTUP_SOURCE_SHA256=%s\nLAPTOP_SOURCE_SHA256=%s\nSOURCE_MEDIA_HASHES=EXACT\n' "$STARTUP_ACTUAL" "$LAPTOP_ACTUAL" > "$EV/media-hashes.txt"
 
       - name: Run baseline and candidate validators factually
         id: validator
@@ -55,6 +73,7 @@ jobs:
           V="$EV/validator"
           BASE_WORKTREE="$RUNNER_TEMP/validator-base"
           mkdir -p "$V"
+          rm -rf "$BASE_WORKTREE"
           git worktree add --detach "$BASE_WORKTREE" "$BASE_SHA" > "$V/worktree-add.log" 2>&1
           WORKTREE_RC=$?
           if [ "$WORKTREE_RC" -eq 0 ]; then
@@ -68,11 +87,13 @@ jobs:
           CANDIDATE_RC=$?
           grep '^FAIL:' "$V/base.log" | sort -u > "$V/base-findings.txt" || true
           grep '^FAIL:' "$V/candidate.log" | sort -u > "$V/candidate-findings.txt" || true
+          comm -12 "$V/base-findings.txt" "$V/candidate-findings.txt" > "$V/existing-findings.txt"
           comm -13 "$V/base-findings.txt" "$V/candidate-findings.txt" > "$V/new-findings.txt"
           BASE_COUNT=$(wc -l < "$V/base-findings.txt")
           CANDIDATE_COUNT=$(wc -l < "$V/candidate-findings.txt")
+          EXISTING_COUNT=$(wc -l < "$V/existing-findings.txt")
           NEW_COUNT=$(wc -l < "$V/new-findings.txt")
-          printf 'BASE_VALIDATOR_EXIT=%s\nCANDIDATE_VALIDATOR_EXIT=%s\nBASE_FINDINGS=%s\nCANDIDATE_FINDINGS=%s\nNEW_RELEVANT_FINDINGS=%s\n' "$BASE_RC" "$CANDIDATE_RC" "$BASE_COUNT" "$CANDIDATE_COUNT" "$NEW_COUNT" > "$V/summary.txt"
+          printf 'BASE_VALIDATOR_EXIT=%s\nCANDIDATE_VALIDATOR_EXIT=%s\nBASE_FINDINGS=%s\nTOTAL_CURRENT_FINDINGS=%s\nHISTORICAL_EXISTING_FINDINGS=%s\nNEW_RELEVANT_FINDINGS=%s\n' "$BASE_RC" "$CANDIDATE_RC" "$BASE_COUNT" "$CANDIDATE_COUNT" "$EXISTING_COUNT" "$NEW_COUNT" > "$V/summary.txt"
           echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -88,6 +109,7 @@ jobs:
           git diff --check "$BASE_SHA" "$TARGET_SHA" > "$S/diff-check.txt"
           git diff "$BASE_SHA" "$TARGET_SHA" -- Packages/manifest.json > "$S/packages.diff"
           git diff "$BASE_SHA" "$TARGET_SHA" -- ProjectSettings > "$S/project-settings.diff"
+          git diff "$BASE_SHA" "$TARGET_SHA" -- Tools/asset_validation.py Tools/validate_assets.py > "$S/validator-tools.diff"
           test ! -s "$S/project-settings.diff"
           python3 - "$S/name-status.txt" "$S/forbidden-boundary-changes.txt" <<'PY'
           import sys
@@ -136,9 +158,9 @@ jobs:
             Assets/Rokas/Scripts/Presentation/RokasVideoSmokeRunner.cs \
             > "$S/absolute-path-hits.txt" || true
           test ! -s "$S/absolute-path-hits.txt"
-          printf 'FORBIDDEN_BOUNDARY_CHANGES=0\nPROJECTSETTINGS_SOURCE_CHANGES=0\nPACKAGE_CHANGE=com.unity.modules.video@1.0.0_ONLY\nABSOLUTE_RUNTIME_PATHS=0\nDIFF_CHECK=PASS\n' > "$S/summary.txt"
+          printf 'FORBIDDEN_BOUNDARY_CHANGES=0\nPROJECTSETTINGS_SOURCE_CHANGES=0\nPACKAGE_CHANGE=com.unity.modules.video@1.0.0_ONLY\nABSOLUTE_RUNTIME_PATHS=0\nRANGE_DIFF_CHECK=PASS\n' > "$S/summary.txt"
 
-      - name: Final fresh checkout cleanliness
+      - name: Final fresh checkout cleanliness and pre-integration refs
         shell: bash
         run: |
           set -euo pipefail
@@ -148,7 +170,13 @@ jobs:
           git diff --check > "$EV/final-diff-check.txt"
           test ! -s "$EV/final-status.txt"
           test ! -s "$EV/final-diff.txt"
-          printf 'FINAL_STATUS_CLEAN=YES\nFINAL_DIFF_CLEAN=YES\nFINAL_DIFF_CHECK=PASS\n' > "$EV/fresh-tree-summary.txt"
+          FEATURE_REMOTE="$(git ls-remote origin refs/heads/feature/startup-laptop-video-integration | awk '{print $1}')"
+          UNIFIED_REMOTE="$(git ls-remote origin refs/heads/integration/rokas-unified | awk '{print $1}')"
+          DEVELOPMENT_REMOTE="$(git ls-remote origin refs/heads/development | awk '{print $1}')"
+          test "$FEATURE_REMOTE" = "$TARGET_SHA"
+          test "$UNIFIED_REMOTE" = "$BASE_SHA"
+          test "$DEVELOPMENT_REMOTE" = "$DEVELOPMENT_SHA"
+          printf 'FINAL_STATUS_CLEAN=YES\nFINAL_DIFF_CLEAN=YES\nFINAL_DIFF_CHECK=PASS\nFEATURE_REMOTE=%s\nUNIFIED_REMOTE_BEFORE=%s\nDEVELOPMENT_REMOTE_BEFORE=%s\nPROTECTED_REFS_UNCHANGED=YES\n' "$FEATURE_REMOTE" "$UNIFIED_REMOTE" "$DEVELOPMENT_REMOTE" > "$EV/fresh-tree-summary.txt"
 
       - name: Upload fresh tree validator scope evidence
         if: always()
@@ -164,3 +192,99 @@ jobs:
         run: |
           cat "$RUNNER_TEMP/final-verification/validator/summary.txt"
           test "${{ steps.validator.outputs.new_count }}" = "0"
+
+  smoke-opt-in-editmode:
+    name: Smoke Opt-In Isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run smoke opt-in EditMode test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.StartupLaptopVideoSmokeModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final Video Smoke Opt-In Isolation
+      - name: Upload smoke opt-in evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-smoke-opt-in
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  explicit-init-playmode:
+    name: Explicit Initialize Video-Free
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run explicit Initialize PlayMode test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ExplicitFixtureInitializeStaysSynchronousAndVideoFree
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final Explicit Initialize Video-Free
+      - name: Upload explicit Initialize evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-explicit-init
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  firstloop-laptop-seam:
+    name: FirstLoop Laptop Video-Free Seam
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run focused FirstLoop Laptop seam
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests.LaptopFoodPreservesConsumeGuardAndReturnsFocus
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final FirstLoop Laptop Video-Free Seam
+      - name: Upload FirstLoop seam evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-firstloop-laptop
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
