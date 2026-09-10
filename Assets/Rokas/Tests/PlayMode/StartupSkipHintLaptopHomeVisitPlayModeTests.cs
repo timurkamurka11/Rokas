@@ -150,6 +150,7 @@ namespace Rokas.Tests
 
             Assert.That(boot.Session.AcceptContract(), Is.True);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
+            yield return null;
             Press("LaptopHotspot");
             Assert.That(Find("LaptopBootSurface"), Is.Null);
             Press("LaptopContracts");
