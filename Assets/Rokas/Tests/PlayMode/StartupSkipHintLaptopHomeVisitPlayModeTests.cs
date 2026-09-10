@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -105,15 +106,129 @@ namespace Rokas.Tests
 
             Assert.That(boot.Session.AcceptContract(), Is.True);
             Assert.That(boot.Session.LeaveHome(), Is.True);
-            Assert.That(boot.Session.State.phase, Is.EqualTo(Rokas.Core.RunPhase.Portal));
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Portal));
             Assert.That(boot.Session.ReturnHome(), Is.True);
-            Assert.That(boot.Session.State.phase, Is.EqualTo(Rokas.Core.RunPhase.Home));
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Home));
             yield return null;
 
             Press("LaptopHotspot");
             Assert.That(Find("LaptopBootSurface"), Is.Not.Null,
                 "Returning from a non-Home runtime phase must start a new Home visit with one fresh boot.");
             Assert.That(Find("LaptopContracts"), Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator AcceptingContractInsideConsumedHomeVisitKeepsLaptopReady()
+        {
+            HideLaptopMedia();
+            RokasBootstrap boot = CreateSynchronousBoot(true);
+            yield return null;
+            yield return ConsumeInitialLaptopBoot(boot);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null);
+            Press("LaptopContracts");
+            Press("AcceptContract");
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
+            CloseLaptopFromSection(boot);
+            yield return new WaitForSecondsRealtime(.3f);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null,
+                "Accepting a contract while physically at Home must not create a new Home visit.");
+            Assert.That(Find("LaptopContracts"), Is.Not.Null,
+                "Laptop must reopen directly READY after Home -> Accepted.");
+        }
+
+        [UnityTest]
+        public IEnumerator AcceptedToHomeContractStateChangeInsideVisitKeepsLaptopReady()
+        {
+            HideLaptopMedia();
+            RokasBootstrap boot = CreateSynchronousBoot(true);
+            yield return null;
+            yield return ConsumeInitialLaptopBoot(boot);
+
+            Assert.That(boot.Session.AcceptContract(), Is.True);
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null);
+            Press("LaptopContracts");
+            Press("CancelContract");
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Home));
+            CloseLaptopFromSection(boot);
+            yield return new WaitForSecondsRealtime(.3f);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null,
+                "Accepted -> Home contract state change at the same physical location must preserve consumed boot.");
+            Assert.That(Find("LaptopContracts"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator PhysicalLeaveAndReturnCreatesExactlyOneFreshLaptopBoot()
+        {
+            HideLaptopMedia();
+            RokasBootstrap boot = CreateSynchronousBoot(true);
+            yield return null;
+            yield return ConsumeInitialLaptopBoot(boot);
+
+            Assert.That(boot.Session.AcceptContract(), Is.True);
+            Assert.That(boot.Session.LeaveHome(), Is.True);
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Portal));
+            Assert.That(boot.Session.ReturnHome(), Is.True);
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Home));
+            yield return null;
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Not.Null,
+                "A real outside -> Home return must restore exactly one Laptop boot.");
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.3f);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null,
+                "After consuming the return visit boot, the second open must be READY.");
+            Assert.That(Find("LaptopContracts"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator ClaimingPaymentInsideConsumedHomeVisitDoesNotCreateThirdVisit()
+        {
+            HideLaptopMedia();
+            RokasBootstrap boot = CreatePaymentHomeVisitBoot(true);
+            yield return null;
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Payment));
+            yield return ConsumeInitialLaptopBoot(boot);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null);
+            Press("LaptopContracts");
+            Press("ClaimPayment");
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Home));
+            CloseLaptopFromSection(boot);
+            yield return new WaitForSecondsRealtime(.3f);
+
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Null,
+                "Payment -> Home reward claim must not manufacture another physical Home visit.");
+            Assert.That(Find("LaptopContracts"), Is.Not.Null,
+                "Laptop must remain READY after payment within the same physical Home visit.");
+        }
+
+        private IEnumerator ConsumeInitialLaptopBoot(RokasBootstrap boot)
+        {
+            Press("LaptopHotspot");
+            Assert.That(Find("LaptopBootSurface"), Is.Not.Null,
+                "The first Laptop open in this physical Home visit must consume the one boot.");
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.3f);
+            Assert.That(boot.View.LaptopOpen, Is.False);
+        }
+
+        private void CloseLaptopFromSection(RokasBootstrap boot)
+        {
+            boot.View.Escape();
+            boot.View.Escape();
         }
 
         private void HideLaptopMedia()
@@ -138,6 +253,26 @@ namespace Rokas.Tests
         {
             directory = Path.Combine(Path.GetTempPath(), "rokas-home-visit-video-" + Guid.NewGuid().ToString("N"));
             root = new GameObject("HomeVisitVideoFixture");
+            var boot = root.AddComponent<RokasBootstrap>();
+            boot.Initialize(directory, enableVideoTransitions);
+            return boot;
+        }
+
+        private RokasBootstrap CreatePaymentHomeVisitBoot(bool enableVideoTransitions)
+        {
+            directory = Path.Combine(Path.GetTempPath(), "rokas-payment-home-visit-" + Guid.NewGuid().ToString("N"));
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            ContractDefinition contract = JsonUtility.FromJson<ContractDefinition>(assets.contract.text);
+            var state = new SaveData
+            {
+                phase = RunPhase.Payment,
+                activeContractId = contract.id,
+                contractRunSequence = 1
+            };
+            SaveWriteResult saved = new SaveStore(directory, new UnitySaveCodec()).Save(state);
+            Assert.That(saved.Succeeded, Is.True, saved.Message);
+
+            root = new GameObject("PaymentHomeVisitFixture");
             var boot = root.AddComponent<RokasBootstrap>();
             boot.Initialize(directory, enableVideoTransitions);
             return boot;
