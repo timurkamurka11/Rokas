@@ -1,0 +1,109 @@
+name: ROKAS Startup Laptop Final Verification
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-final-verification.yml
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: startup-laptop-final-verification
+  cancel-in-progress: true
+
+jobs:
+  legacy-red:
+    name: Confirm obsolete laptop replay expectation RED
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact cleaned feature tree
+        uses: actions/checkout@v7
+        with:
+          ref: 2043eb6b74c8e8ffb20d238ff85c6fd28dd7944d
+          fetch-depth: 0
+
+      - name: Assert exact target identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "2043eb6b74c8e8ffb20d238ff85c6fd28dd7944d"
+          test "$(git rev-parse HEAD^{tree})" = "ea5e80f1cef951a2c409c965e2f36bb1dafdc5bd"
+          test -z "$(git status --short --untracked-files=all)"
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopLegacyRed-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupHintLaptopVisit-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run legacy startup laptop class
+        id: legacy
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Laptop Legacy RED
+
+      - name: Prove only obsolete expectation is red
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          p='artifacts/playmode-results.xml'
+          root=ET.parse(p).getroot()
+          total=int(root.attrib.get('total','-1'))
+          passed=int(root.attrib.get('passed','-1'))
+          failed=int(root.attrib.get('failed','-1'))
+          skipped=int(root.attrib.get('skipped','-1'))
+          failures=[]
+          for t in root.iter('test-case'):
+              if t.attrib.get('result') == 'Failed':
+                  failures.append(t.attrib.get('fullname') or t.attrib.get('name') or '')
+          print(f'LEGACY_RED_XML total={total} passed={passed} failed={failed} skipped={skipped}')
+          print('FAILED_TESTS=' + repr(failures))
+          expected='ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain'
+          if (total,passed,failed,skipped)!=(6,5,1,0):
+              raise SystemExit('Expected exactly 6 total / 5 pass / 1 fail / 0 skip')
+          if len(failures)!=1 or expected not in failures[0]:
+              raise SystemExit('Unexpected RED: obsolete close/reopen expectation was not the sole failure')
+          print('EXPECTED_LEGACY_BEHAVIORAL_RED=YES')
+          PY
+
+      - name: Preserve RED evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/status.txt
+          cp artifacts/playmode-results.xml verification/playmode-results.xml
+
+      - name: Upload RED evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-legacy-red-evidence
+          path: verification
+          if-no-files-found: error
