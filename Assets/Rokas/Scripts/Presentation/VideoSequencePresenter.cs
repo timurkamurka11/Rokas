@@ -181,7 +181,7 @@ namespace Rokas.Presentation
 
             var hintImage = hintObject.GetComponent<RawImage>();
             hintImage.texture = hintTexture;
-            hintImage.color = Color.white;
+            hintImage.color = new Color(1f, 1f, 1f, 0f);
             hintImage.raycastTarget = false;
             startupHintGroup = hintObject.GetComponent<CanvasGroup>();
             startupHintGroup.alpha = 0f;
@@ -242,7 +242,12 @@ namespace Rokas.Presentation
             if (firstFramePresented) return;
             firstFramePresented = true;
             if (image) image.color = Color.white;
-            if (startupHintGroup) startupHintGroup.alpha = 1f;
+            if (startupHintGroup)
+            {
+                var hintImage = startupHintGroup.GetComponent<RawImage>();
+                if (hintImage) hintImage.color = Color.white;
+                startupHintGroup.alpha = 1f;
+            }
         }
 
         private void OnLoopPointReached(VideoPlayer source)
