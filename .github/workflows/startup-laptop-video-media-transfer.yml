@@ -16,19 +16,36 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Probe temporary shares and client API
+      - name: Probe temporary shares and all client chunks
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p transfer
+          mkdir -p transfer/chunks
           curl -fsSL -D transfer/startup.headers -o transfer/startup.html 'https://firestorage.ai/ja/f/LJmh1mYMVX94'
           curl -fsSL -D transfer/laptop.headers -o transfer/laptop.html 'https://firestorage.ai/ja/f/eGtjpdmquW_u'
-          CHUNK=$(grep -Eo '/_next/static/chunks/app/[^" ]*page-[A-Za-z0-9]+\.js' transfer/startup.html | head -1)
-          echo "$CHUNK" > transfer/chunk-path.txt
-          curl -fsSL "https://firestorage.ai${CHUNK}" -o transfer/page.js
-          grep -Eo '/api/[A-Za-z0-9_./?=&${}:-]+' transfer/page.js | sort -u > transfer/api-paths.txt || true
-          grep -Eo 'https?[^"'"'"'<> ]+' transfer/page.js | sort -u | head -200 > transfer/js-urls.txt || true
-          grep -Ein 'download|fetch\(|/api/|shareId|publicId|fileId|presign|signed' transfer/page.js | head -200 > transfer/js-matches.txt || true
+          grep -Eo 'src="/[^"]+\.js"' transfer/startup.html | sed 's/^src="//;s/"$//' | sort -u > transfer/chunk-paths.txt
+          while IFS= read -r chunk; do
+            name=$(printf '%s' "$chunk" | sha256sum | cut -c1-16)
+            curl -fsSL "https://firestorage.ai${chunk}" -o "transfer/chunks/${name}.js"
+          done < transfer/chunk-paths.txt
+          cat transfer/chunks/*.js > transfer/all.js
+          grep -Eo '/api/[A-Za-z0-9_./?=&${}:%+-]+' transfer/all.js | sort -u > transfer/api-paths.txt || true
+          grep -Eo 'https?[^"'"'"'<> ]+' transfer/all.js | sort -u | head -400 > transfer/js-urls.txt || true
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('transfer/all.js').read_text(errors='ignore')
+          needles = ['download', 'shareId', 'publicId', 'fileId', 'signed', 'presign', 'fetch(', '/api/']
+          out=[]
+          for needle in needles:
+              start=0
+              while True:
+                  i=text.find(needle,start)
+                  if i<0: break
+                  out.append(f'--- {needle} @ {i} ---\n{text[max(0,i-500):i+1200]}')
+                  start=i+len(needle)
+                  if len(out)>=200: break
+          Path('transfer/context.txt').write_text('\n'.join(out), errors='ignore')
+          PY
       - name: Upload transfer probe
         uses: actions/upload-artifact@v7
         with:
