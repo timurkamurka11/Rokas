@@ -45,6 +45,7 @@ namespace Rokas.Presentation
         private float openTime;
         private float pageTime;
         private Action closed;
+        private bool bootConsumedThisHomeVisit;
         public bool IsClosing { get; private set; }
         public bool Booting { get; private set; }
         public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
@@ -84,6 +85,11 @@ namespace Rokas.Presentation
             date = null;
         }
 
+        public void BeginHomeVisit()
+        {
+            bootConsumedThisHomeVisit = false;
+        }
+
         public void Build(RectTransform parent)
         {
             Surface(parent, "LaptopShadow", 66, 50, 1792, 1008, 22, new Color(0, 0, 0, .5f));
@@ -97,12 +103,13 @@ namespace Rokas.Presentation
             clock = null;
             date = null;
             clockMinute = -1;
-            if (!videoTransitions())
+            if (!videoTransitions() || bootConsumedThisHomeVisit)
             {
                 Booting = false;
                 BuildReadyFrame();
                 return;
             }
+            bootConsumedThisHomeVisit = true;
             Booting = true;
             video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
         }

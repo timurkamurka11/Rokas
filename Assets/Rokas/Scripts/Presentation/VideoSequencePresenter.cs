@@ -19,6 +19,7 @@ namespace Rokas.Presentation
         private VideoPlayer player;
         private AudioSource videoAudio;
         private RawImage image;
+        private CanvasGroup startupHintGroup;
         private RectTransform surface;
         private GameObject ownedRoot;
         private RenderTexture target;
@@ -134,6 +135,7 @@ namespace Rokas.Presentation
             image.texture = target;
             image.color = Color.black;
             image.raycastTarget = false;
+            if (canSkip) CreateStartupHint(host);
 
             player.Stop();
             videoAudio.Stop();
@@ -156,6 +158,36 @@ namespace Rokas.Presentation
             }
 
             player.Prepare();
+        }
+
+        private void CreateStartupHint(RectTransform host)
+        {
+            Texture2D hintTexture = Resources.Load<Texture2D>("StartupSkipHint");
+            if (!hintTexture)
+            {
+                Debug.LogWarning("ROKAS approved StartupSkipHint texture is missing; startup video remains usable without the hint.");
+                return;
+            }
+
+            var hintObject = new GameObject("StartupSkipHintOverlay", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(RawImage), typeof(CanvasGroup));
+            var hint = (RectTransform)hintObject.transform;
+            hint.SetParent(host, false);
+            hint.anchorMin = hint.anchorMax = new Vector2(1f, 0f);
+            hint.pivot = new Vector2(1f, 0f);
+            const float hintWidth = 520f;
+            hint.sizeDelta = new Vector2(hintWidth, hintWidth * hintTexture.height / hintTexture.width);
+            hint.anchoredPosition = new Vector2(-48f, 40f);
+
+            var hintImage = hintObject.GetComponent<RawImage>();
+            hintImage.texture = hintTexture;
+            hintImage.color = Color.white;
+            hintImage.raycastTarget = false;
+            startupHintGroup = hintObject.GetComponent<CanvasGroup>();
+            startupHintGroup.alpha = 0f;
+            startupHintGroup.interactable = false;
+            startupHintGroup.blocksRaycasts = false;
+            hint.SetAsLastSibling();
         }
 
         private RectTransform CreateStartupHost()
@@ -210,6 +242,7 @@ namespace Rokas.Presentation
             if (firstFramePresented) return;
             firstFramePresented = true;
             if (image) image.color = Color.white;
+            if (startupHintGroup) startupHintGroup.alpha = 1f;
         }
 
         private void OnLoopPointReached(VideoPlayer source)
@@ -245,8 +278,7 @@ namespace Rokas.Presentation
                 return;
             }
 
-            if (allowSkip && firstFramePresented && player && player.isPlaying &&
-                (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))
+            if (allowSkip && firstFramePresented && player && player.isPlaying && Input.anyKeyDown)
                 Finish(true);
         }
 
@@ -275,6 +307,7 @@ namespace Rokas.Presentation
             }
 
             if (image) image.texture = null;
+            startupHintGroup = null;
             if (ownedRoot)
             {
                 Destroy(ownedRoot);

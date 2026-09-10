@@ -219,14 +219,23 @@ namespace Rokas.Presentation
 
         private void Refresh()
         {
-            if (phase != session.State.phase)
+            RunPhase nextPhase = session.State.phase;
+            if (phase != nextPhase)
             {
-                phase = session.State.phase;
+                bool wasHomeLocation = IsHomeLocation(phase);
+                bool isHomeLocation = IsHomeLocation(nextPhase);
+                phase = nextPhase;
+                if (!wasHomeLocation && isHomeLocation) laptop.BeginHomeVisit();
                 RebuildScene();
             }
             wallet.text = "¥ " + session.State.yen.ToString("N0") + "     /     РЕП " + session.State.reputation + "     /     ПЕПЕЛ " + session.State.spiritAsh;
             home.Refresh();
             mission.Refresh();
+        }
+
+        private static bool IsHomeLocation(RunPhase value)
+        {
+            return value == RunPhase.Home || value == RunPhase.Accepted || value == RunPhase.Payment;
         }
 
         private void RebuildScene()
