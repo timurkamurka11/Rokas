@@ -1,0 +1,92 @@
+name: ROKAS Startup Hint + Laptop Home Visit TDD
+
+on:
+  push:
+    branches:
+      - feature/startup-skip-hint-laptop-boot-per-home-visit
+    paths:
+      - .github/workflows/startup-hint-laptop-home-visit-tdd.yml
+      - Assets/Rokas/Tests/PlayMode/StartupSkipHintLaptopHomeVisitPlayModeTests.cs
+      - Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopView.cs
+      - Assets/Rokas/Scripts/Presentation/RokasView.cs
+      - Assets/Rokas/Resources/StartupSkipHint.png
+      - Assets/Rokas/Resources/StartupSkipHint.png.meta
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: startup-hint-laptop-home-visit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playmode:
+    name: Focused Startup Hint + Laptop Home Visit PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupHintLaptopVisit-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupHintLaptopVisit-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused PlayMode tests
+        id: focused
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Hint Laptop Home Visit Focused Tests
+
+      - name: Preserve exact test evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/git-status.txt
+          git diff --check > verification/git-diff-check.txt || true
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+
+      - name: Require four focused tests green
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          print('FOCUSED_XML total=%d passed=%d failed=%d skipped=%d' % values)
+          if values != (4,4,0,0):
+              raise SystemExit('Expected exactly 4/4 focused tests')
+          PY
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-hint-laptop-home-visit-focused-evidence
+          path: |
+            ${{ steps.focused.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
