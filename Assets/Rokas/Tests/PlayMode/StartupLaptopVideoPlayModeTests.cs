@@ -62,7 +62,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain()
+        public IEnumerator ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady()
         {
             RokasBootstrap boot = CreateSynchronousBoot(true);
             yield return null;
@@ -83,9 +83,10 @@ namespace Rokas.Tests
 
             Press("LaptopHotspot");
             yield return null;
-            Assert.That(Find("LaptopBootSurface"), Is.Not.Null,
-                "A later explicit Home to Laptop opening must start a fresh transient boot.");
-            Assert.That(Find("LaptopContracts"), Is.Null);
+            Assert.That(Find("LaptopBootSurface"), Is.Null,
+                "Reopening in the same physical Home visit must not start a second boot.");
+            Assert.That(Find("LaptopContracts"), Is.Not.Null,
+                "Reopening in the same physical Home visit must enter READY immediately.");
             Assert.That(root.GetComponents<VideoPlayer>().Length, Is.EqualTo(1));
             Assert.That(root.GetComponents<AudioSource>().Length, Is.EqualTo(1));
         }
