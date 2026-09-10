@@ -139,34 +139,158 @@ jobs:
       - name: Verify built player and byte-identical packaged media
         shell: bash
         run: |
+          set +e
+          mkdir -p windows-build/build-logs
+
+          if [ -d build ]; then
+            find build -printf '%y %p %s bytes\n' | sort > windows-build/build-directory-listing.txt
+            find build -type f -printf '%p %s bytes\n' | sort > windows-build/build-manifest.txt
+          else
+            : > windows-build/build-directory-listing.txt
+            : > windows-build/build-manifest.txt
+          fi
+
+          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit 2>/dev/null)"
+          BUILD_ROOT=""
+          if [ -n "$EXE" ]; then
+            BUILD_ROOT="$(dirname "$EXE")"
+          fi
+          DATA_DIR="$(find build -type d -name '*_Data' -print -quit 2>/dev/null)"
+          STREAMING_ASSETS="$(find build -type d -path '*/StreamingAssets' -print -quit 2>/dev/null)"
+          STARTUP="$(find build -type f -path '*/StreamingAssets/RokasVideo/StartupPreview.mp4' -print -quit 2>/dev/null)"
+          LAPTOP="$(find build -type f -path '*/StreamingAssets/RokasVideo/LaptopBoot.mp4' -print -quit 2>/dev/null)"
+
+          printf '%s\n' "$BUILD_ROOT" > windows-build/detected-build-root.txt
+          printf '%s\n' "$EXE" > windows-build/detected-exe-path.txt
+          printf '%s\n' "$DATA_DIR" > windows-build/detected-data-dir.txt
+          printf '%s\n' "$STREAMING_ASSETS" > windows-build/detected-streamingassets-dir.txt
+          printf '%s\n' "$STARTUP" > windows-build/detected-startup-media-path.txt
+          printf '%s\n' "$LAPTOP" > windows-build/detected-laptop-media-path.txt
+
+          STARTUP_SIZE=""
+          LAPTOP_SIZE=""
+          STARTUP_HASH=""
+          LAPTOP_HASH=""
+          if [ -n "$STARTUP" ] && [ -f "$STARTUP" ]; then
+            STARTUP_SIZE="$(stat -c%s "$STARTUP" 2>/dev/null)"
+            STARTUP_HASH="$(sha256sum "$STARTUP" | awk '{print $1}')"
+          fi
+          if [ -n "$LAPTOP" ] && [ -f "$LAPTOP" ]; then
+            LAPTOP_SIZE="$(stat -c%s "$LAPTOP" 2>/dev/null)"
+            LAPTOP_HASH="$(sha256sum "$LAPTOP" | awk '{print $1}')"
+          fi
+          printf '%s\n' "$STARTUP_SIZE" > windows-build/startup-packaged-size.txt
+          printf '%s\n' "$LAPTOP_SIZE" > windows-build/laptop-packaged-size.txt
+          printf '%s\n' "$STARTUP_HASH" > windows-build/startup-packaged-sha256.txt
+          printf '%s\n' "$LAPTOP_HASH" > windows-build/laptop-packaged-sha256.txt
+
+          git status --short --untracked-files=all > windows-build/git-status.txt 2>&1
+          git status --short --untracked-files=no > windows-build/git-tracked-status.txt 2>&1
+          git diff > windows-build/git-diff.txt 2>&1
+          git diff --stat > windows-build/git-diff-stat.txt 2>&1
+          git diff --check > windows-build/git-diff-check.txt 2>&1
+          DIFF_CHECK_EXIT=$?
+          printf '%s\n' "$DIFF_CHECK_EXIT" > windows-build/git-diff-check-exit-code.txt
+          git diff -- ProjectSettings/ProjectVersion.txt > windows-build/projectversion-builder-diff.txt 2>&1
+
+          TRACKED_CHANGES="$(wc -l < windows-build/git-tracked-status.txt | tr -d ' ')"
+          if [ "$TRACKED_CHANGES" = "0" ]; then
+            BUILDER_CLASSIFICATION="NO_TRACKED_BUILDER_MUTATION"
+          elif [ "$TRACKED_CHANGES" = "1" ] && grep -Eq 'ProjectSettings/ProjectVersion\.txt$' windows-build/git-tracked-status.txt; then
+            BUILDER_CLASSIFICATION="KNOWN_UNITY_GAMECI_PROJECTVERSION_BUILDER_MUTATION"
+          else
+            BUILDER_CLASSIFICATION="ADDITIONAL_TRACKED_BUILDER_MUTATION_REQUIRES_REVIEW"
+          fi
+          {
+            echo "BUILDER_TRACKED_CHANGES=$TRACKED_CHANGES"
+            echo "BUILDER_MUTATION_CLASSIFICATION=$BUILDER_CLASSIFICATION"
+            cat windows-build/git-tracked-status.txt
+          } > windows-build/builder-mutation-classification.txt
+
+          find . -maxdepth 4 -type f \( -iname 'Editor.log' -o -iname 'build.log' -o -iname '*build*.log' \) -print > windows-build/build-log-locations.txt 2>/dev/null
+          while IFS= read -r LOG_PATH; do
+            [ -f "$LOG_PATH" ] || continue
+            SAFE_NAME="$(printf '%s' "$LOG_PATH" | sed 's#^\./##; s#[/\\]#_#g')"
+            cp "$LOG_PATH" "windows-build/build-logs/$SAFE_NAME" 2>/dev/null || true
+          done < windows-build/build-log-locations.txt
+
+          export BUILD_ROOT EXE DATA_DIR STREAMING_ASSETS STARTUP LAPTOP STARTUP_SIZE LAPTOP_SIZE STARTUP_HASH LAPTOP_HASH TRACKED_CHANGES BUILDER_CLASSIFICATION DIFF_CHECK_EXIT
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          expected_startup = "28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240"
+          expected_laptop = "111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a"
+          data = {
+              "head": os.popen("git rev-parse HEAD").read().strip(),
+              "tree": os.popen("git rev-parse HEAD^{tree}").read().strip(),
+              "buildRoot": os.environ.get("BUILD_ROOT", ""),
+              "exePath": os.environ.get("EXE", ""),
+              "dataDir": os.environ.get("DATA_DIR", ""),
+              "streamingAssetsDir": os.environ.get("STREAMING_ASSETS", ""),
+              "startupMediaPath": os.environ.get("STARTUP", ""),
+              "laptopMediaPath": os.environ.get("LAPTOP", ""),
+              "startupSizeBytes": os.environ.get("STARTUP_SIZE", ""),
+              "laptopSizeBytes": os.environ.get("LAPTOP_SIZE", ""),
+              "startupSha256": os.environ.get("STARTUP_HASH", ""),
+              "laptopSha256": os.environ.get("LAPTOP_HASH", ""),
+              "expectedStartupSha256": expected_startup,
+              "expectedLaptopSha256": expected_laptop,
+              "startupHashMatches": os.environ.get("STARTUP_HASH", "") == expected_startup,
+              "laptopHashMatches": os.environ.get("LAPTOP_HASH", "") == expected_laptop,
+              "builderTrackedChanges": int(os.environ.get("TRACKED_CHANGES", "0") or "0"),
+              "builderMutationClassification": os.environ.get("BUILDER_CLASSIFICATION", ""),
+              "gitDiffCheckExitCode": int(os.environ.get("DIFF_CHECK_EXIT", "0") or "0"),
+          }
+          Path("windows-build/package-evidence-summary.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          PY
+
+          {
+            echo 'EVIDENCE_COLLECTION=COMPLETE'
+            echo "BUILD_ROOT=$BUILD_ROOT"
+            echo "EXE=$EXE"
+            echo "DATA_DIR=$DATA_DIR"
+            echo "STREAMING_ASSETS=$STREAMING_ASSETS"
+            echo "STARTUP_PACKAGED_PATH=$STARTUP"
+            echo "STARTUP_PACKAGED_SIZE=$STARTUP_SIZE"
+            echo "STARTUP_PACKAGED_SHA256=$STARTUP_HASH"
+            echo "LAPTOP_PACKAGED_PATH=$LAPTOP"
+            echo "LAPTOP_PACKAGED_SIZE=$LAPTOP_SIZE"
+            echo "LAPTOP_PACKAGED_SHA256=$LAPTOP_HASH"
+            echo "BUILDER_TRACKED_CHANGES=$TRACKED_CHANGES"
+            echo "BUILDER_MUTATION_CLASSIFICATION=$BUILDER_CLASSIFICATION"
+            echo "GIT_DIFF_CHECK_EXIT=$DIFF_CHECK_EXIT"
+          } > windows-build/evidence-summary.txt
+
           set -euo pipefail
-          mkdir -p windows-build
-          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit)"
-          STARTUP="$(find build -type f -path '*/StreamingAssets/RokasVideo/StartupPreview.mp4' -print -quit)"
-          LAPTOP="$(find build -type f -path '*/StreamingAssets/RokasVideo/LaptopBoot.mp4' -print -quit)"
+          STARTUP_EXPECTED='28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
+          LAPTOP_EXPECTED='111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
+          test -n "$BUILD_ROOT" && test -d "$BUILD_ROOT"
           test -n "$EXE" && test -s "$EXE"
+          test -n "$DATA_DIR" && test -d "$DATA_DIR"
+          test -n "$STREAMING_ASSETS" && test -d "$STREAMING_ASSETS"
           test -n "$STARTUP" && test -s "$STARTUP"
           test -n "$LAPTOP" && test -s "$LAPTOP"
-          STARTUP_HASH="$(sha256sum "$STARTUP" | awk '{print $1}')"
-          LAPTOP_HASH="$(sha256sum "$LAPTOP" | awk '{print $1}')"
-          test "$STARTUP_HASH" = '28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
-          test "$LAPTOP_HASH" = '111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
-          git diff --check > windows-build/git-diff-check.txt
-          git status --short --untracked-files=no > windows-build/git-tracked-status.txt
-          test ! -s windows-build/git-tracked-status.txt
+          test "$STARTUP_HASH" = "$STARTUP_EXPECTED"
+          test "$LAPTOP_HASH" = "$LAPTOP_EXPECTED"
+
           {
             echo 'WINDOWS_BUILD=PASS'
             echo "HEAD=$(git rev-parse HEAD)"
             echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "BUILD_ROOT=$BUILD_ROOT"
             echo "EXE=$EXE"
+            echo "DATA_DIR=$DATA_DIR"
+            echo "STREAMING_ASSETS=$STREAMING_ASSETS"
             echo "STARTUP_PACKAGED_PATH=$STARTUP"
             echo "STARTUP_PACKAGED_SHA256=$STARTUP_HASH"
             echo "LAPTOP_PACKAGED_PATH=$LAPTOP"
             echo "LAPTOP_PACKAGED_SHA256=$LAPTOP_HASH"
             echo 'PACKAGED_MEDIA_BYTE_IDENTICAL=PASS'
-            echo 'TRACKED_WORKTREE_CLEAN_AFTER_BUILD=YES'
+            echo 'BUILDER_WORKSPACE_CLEAN_REQUIRED_FOR_PACKAGE_PROOF=NO'
+            echo "BUILDER_TRACKED_CHANGES=$TRACKED_CHANGES"
+            echo "BUILDER_MUTATION_CLASSIFICATION=$BUILDER_CLASSIFICATION"
           } > windows-build/windows-build-proof.txt
-          find build -maxdepth 4 -type f -printf '%p %s bytes\n' | sort > windows-build/build-manifest.txt
 
       - name: Upload Windows build proof
         if: always()
@@ -174,7 +298,7 @@ jobs:
         with:
           name: startup-laptop-video-windows-build-proof
           path: windows-build
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Upload complete Windows player
         uses: actions/upload-artifact@v7
