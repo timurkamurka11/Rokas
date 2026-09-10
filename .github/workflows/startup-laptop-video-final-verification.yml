@@ -1,0 +1,261 @@
+name: ROKAS Startup Laptop Video Final Candidate Verification
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-video-final-verification
+    paths:
+      - .github/workflows/startup-laptop-video-final-verification.yml
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: startup-laptop-video-final-candidate
+  cancel-in-progress: true
+
+env:
+  TARGET_SHA: 5f1362dd7bdd8860711b4402707f5ba259cbf5ec
+  BASE_SHA: 5eb5d994c141757274f8702e7864caded0e2179d
+
+jobs:
+  fresh-tree-validator-scope:
+    name: Fresh Tree + Validator + Scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact candidate and collect fresh-tree evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final-verification
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          ACTUAL_TREE="$(git rev-parse HEAD^{tree})"
+          test "$ACTUAL_SHA" = "$TARGET_SHA"
+          git status --short > final-verification/initial-status.txt
+          git diff > final-verification/initial-diff.txt
+          git diff --check > final-verification/initial-diff-check.txt
+          test ! -s final-verification/initial-status.txt
+          test ! -s final-verification/initial-diff.txt
+          printf 'TARGET_SHA=%s\nTARGET_TREE=%s\nBASE_SHA=%s\nINITIAL_STATUS_CLEAN=YES\nINITIAL_DIFF_CLEAN=YES\nINITIAL_DIFF_CHECK=PASS\n' "$ACTUAL_SHA" "$ACTUAL_TREE" "$BASE_SHA" > final-verification/exact-tree.txt
+
+      - name: Run baseline and candidate validators factually
+        id: validator
+        shell: bash
+        run: |
+          set +e
+          mkdir -p final-verification/validator
+          git worktree add --detach /tmp/rokas-validator-base "$BASE_SHA" > final-verification/validator/worktree-add.log 2>&1
+          WORKTREE_RC=$?
+          if [ "$WORKTREE_RC" -eq 0 ]; then
+            (cd /tmp/rokas-validator-base && python3 Tools/validate_assets.py) > final-verification/validator/base.log 2>&1
+            BASE_RC=$?
+          else
+            BASE_RC=125
+            printf 'Unable to create baseline worktree\n' > final-verification/validator/base.log
+          fi
+          python3 Tools/validate_assets.py > final-verification/validator/candidate.log 2>&1
+          CANDIDATE_RC=$?
+          grep '^FAIL:' final-verification/validator/base.log | sort -u > final-verification/validator/base-findings.txt || true
+          grep '^FAIL:' final-verification/validator/candidate.log | sort -u > final-verification/validator/candidate-findings.txt || true
+          comm -13 final-verification/validator/base-findings.txt final-verification/validator/candidate-findings.txt > final-verification/validator/new-findings.txt
+          BASE_COUNT=$(wc -l < final-verification/validator/base-findings.txt)
+          CANDIDATE_COUNT=$(wc -l < final-verification/validator/candidate-findings.txt)
+          NEW_COUNT=$(wc -l < final-verification/validator/new-findings.txt)
+          printf 'BASE_VALIDATOR_EXIT=%s\nCANDIDATE_VALIDATOR_EXIT=%s\nBASE_FINDINGS=%s\nCANDIDATE_FINDINGS=%s\nNEW_RELEVANT_FINDINGS=%s\n' "$BASE_RC" "$CANDIDATE_RC" "$BASE_COUNT" "$CANDIDATE_COUNT" "$NEW_COUNT" > final-verification/validator/summary.txt
+          echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
+          echo "candidate_rc=$CANDIDATE_RC" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Check exact feature scope and forbidden boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final-verification/scope
+          git diff --name-status "$BASE_SHA" "$TARGET_SHA" > final-verification/scope/name-status.txt
+          git diff --stat "$BASE_SHA" "$TARGET_SHA" > final-verification/scope/diff-stat.txt
+          git diff --check "$BASE_SHA" "$TARGET_SHA" > final-verification/scope/diff-check.txt
+          git diff "$BASE_SHA" "$TARGET_SHA" -- Packages/manifest.json > final-verification/scope/packages.diff
+          git diff "$BASE_SHA" "$TARGET_SHA" -- ProjectSettings > final-verification/scope/project-settings.diff
+          test ! -s final-verification/scope/project-settings.diff
+          python3 - <<'PY'
+          from pathlib import Path
+          lines = Path('final-verification/scope/name-status.txt').read_text().splitlines()
+          paths = [line.split('\t')[-1] for line in lines if line.strip()]
+          forbidden = []
+          exact = {
+              'Assets/Rokas/Scripts/Presentation/WorldEffects.cs',
+              'Assets/Rokas/Scripts/Presentation/HomeView.cs',
+              'Assets/Rokas/Resources/Home/ApartmentNightLightOff.png',
+              'Assets/Rokas/Scripts/Core/CombatService.cs',
+              'Assets/Rokas/Scripts/Core/CombatTuning.cs',
+              'Assets/Rokas/Scripts/Core/SaveStore.cs',
+              'Assets/Rokas/Scripts/Core/SaveJsonShape.cs',
+              'ProjectSettings/ProjectVersion.txt',
+          }
+          prefixes = (
+              'Assets/Rokas/Resources/Weather3/',
+              'Assets/Rokas/Resources/Messages/',
+          )
+          for p in paths:
+              if p in exact or p.startswith(prefixes):
+                  forbidden.append(p)
+              if 'Combat' in p and p.startswith('Assets/Rokas/Scripts/'):
+                  forbidden.append(p)
+              if ('Messages' in p or 'Yarn' in p) and p.startswith('Assets/Rokas/Scripts/'):
+                  forbidden.append(p)
+          forbidden = sorted(set(forbidden))
+          Path('final-verification/scope/forbidden-boundary-changes.txt').write_text('\n'.join(forbidden) + ('\n' if forbidden else ''))
+          if forbidden:
+              raise SystemExit('Forbidden scope changes: ' + ', '.join(forbidden))
+          PY
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          base = json.loads(__import__('subprocess').check_output(['git','show',__import__('os').environ['BASE_SHA'] + ':Packages/manifest.json'], text=True))['dependencies']
+          cur = json.loads(Path('Packages/manifest.json').read_text())['dependencies']
+          added = {k:v for k,v in cur.items() if k not in base}
+          removed = {k:v for k,v in base.items() if k not in cur}
+          changed = {k:(base[k],cur[k]) for k in base.keys() & cur.keys() if base[k] != cur[k]}
+          report = {'added':added,'removed':removed,'changed':changed}
+          Path('final-verification/scope/package-change.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
+          if report != {'added': {'com.unity.modules.video': '1.0.0'}, 'removed': {}, 'changed': {}}:
+              raise SystemExit('Unexpected package graph change: ' + repr(report))
+          PY
+          grep -R -nE '([A-Za-z]:\\\\|/mnt/|/home/)' \
+            Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs \
+            Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs \
+            Assets/Rokas/Scripts/Presentation/LaptopView.cs \
+            Assets/Rokas/Scripts/Presentation/RokasVideoSmokeRunner.cs \
+            > final-verification/scope/absolute-path-hits.txt || true
+          test ! -s final-verification/scope/absolute-path-hits.txt
+          printf 'FORBIDDEN_BOUNDARY_CHANGES=0\nPROJECTSETTINGS_SOURCE_CHANGES=0\nPACKAGE_CHANGE=com.unity.modules.video@1.0.0_ONLY\nABSOLUTE_RUNTIME_PATHS=0\nDIFF_CHECK=PASS\n' > final-verification/scope/summary.txt
+
+      - name: Final fresh checkout cleanliness
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short > final-verification/final-status.txt
+          git diff > final-verification/final-diff.txt
+          git diff --check > final-verification/final-diff-check.txt
+          test ! -s final-verification/final-status.txt
+          test ! -s final-verification/final-diff.txt
+          printf 'FINAL_STATUS_CLEAN=YES\nFINAL_DIFF_CLEAN=YES\nFINAL_DIFF_CHECK=PASS\n' > final-verification/fresh-tree-summary.txt
+
+      - name: Upload fresh tree validator scope evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-fresh-tree-validator-scope
+          path: final-verification
+          if-no-files-found: error
+
+      - name: Require zero new validator findings
+        if: always()
+        shell: bash
+        run: |
+          cat final-verification/validator/summary.txt
+          test "${{ steps.validator.outputs.new_count }}" = "0"
+
+  smoke-opt-in-editmode:
+    name: Smoke Opt-In Isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run smoke opt-in EditMode test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.StartupLaptopVideoSmokeModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final Video Smoke Opt-In Isolation
+      - name: Upload smoke opt-in evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-smoke-opt-in
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  explicit-init-playmode:
+    name: Explicit Initialize Video-Free
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run explicit Initialize PlayMode test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ExplicitFixtureInitializeStaysSynchronousAndVideoFree
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final Explicit Initialize Video-Free
+      - name: Upload explicit Initialize evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-explicit-init
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  firstloop-laptop-seam:
+    name: FirstLoop Laptop Video-Free Seam
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Run focused FirstLoop Laptop seam
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests.LaptopFoodPreservesConsumeGuardAndReturnsFocus
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Final FirstLoop Laptop Video-Free Seam
+      - name: Upload FirstLoop seam evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-final-firstloop-laptop
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
