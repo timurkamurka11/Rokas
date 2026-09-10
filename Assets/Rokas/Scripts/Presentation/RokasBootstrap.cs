@@ -11,6 +11,7 @@ namespace Rokas.Presentation
         public GameSession Session { get; private set; }
         public RokasView View { get; private set; }
         public VideoSequencePresenter VideoPresenter { get; private set; }
+        public bool VideoTransitionsEnabled { get; private set; }
         private SaveStore store;
         private RokasAudio sound;
         private SaveLoadResult initialLoad;
@@ -24,6 +25,7 @@ namespace Rokas.Presentation
         private void Start()
         {
             if (Session != null || View != null || startupPending) return;
+            VideoTransitionsEnabled = true;
             string saveDirectory = Path.Combine(Application.persistentDataPath, "Profile");
             PrepareRuntime(saveDirectory);
             startupPending = true;
@@ -31,10 +33,16 @@ namespace Rokas.Presentation
         }
 
         // An explicit directory keeps profile ownership separate from the game and permits isolated fixtures.
-        // Explicit Initialize intentionally remains synchronous; only the real Unity Start path owns startup video.
+        // Existing fixtures stay synchronous and video-free unless a focused video test opts in explicitly.
         public void Initialize(string saveDirectory)
         {
+            Initialize(saveDirectory, false);
+        }
+
+        public void Initialize(string saveDirectory, bool enableVideoTransitions)
+        {
             if (Session != null) return;
+            VideoTransitionsEnabled = enableVideoTransitions;
             PrepareRuntime(saveDirectory);
             BuildPresentation();
         }
