@@ -32,6 +32,7 @@ namespace Rokas.Presentation
         private readonly Action close;
         private readonly VideoSequencePresenter video;
         private readonly Func<float> videoVolume;
+        private readonly Func<bool> videoTransitions;
         private RectTransform frame;
         private RectTransform content;
         private CanvasGroup windowGroup;
@@ -51,7 +52,7 @@ namespace Rokas.Presentation
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
             Action<Func<bool>, string> act, Action click, Action<string> notify, Action close,
-            VideoSequencePresenter video, Func<float> videoVolume)
+            VideoSequencePresenter video, Func<float> videoVolume, Func<bool> videoTransitions)
         {
             this.ui = ui;
             this.assets = assets;
@@ -61,6 +62,7 @@ namespace Rokas.Presentation
             this.close = close;
             this.video = video ?? throw new ArgumentNullException(nameof(video));
             this.videoVolume = videoVolume ?? throw new ArgumentNullException(nameof(videoVolume));
+            this.videoTransitions = videoTransitions ?? throw new ArgumentNullException(nameof(videoTransitions));
             food = new LaptopFoodView(ui, session, act, click, notify);
             messages = new LaptopMessagesView(ui, assets, session);
         }
@@ -95,6 +97,12 @@ namespace Rokas.Presentation
             clock = null;
             date = null;
             clockMinute = -1;
+            if (!videoTransitions())
+            {
+                Booting = false;
+                BuildReadyFrame();
+                return;
+            }
             Booting = true;
             video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
         }

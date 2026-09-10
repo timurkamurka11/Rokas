@@ -91,7 +91,7 @@ namespace Rokas.Presentation
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel,
-                owner.VideoPresenter, () => audio.VideoVolume);
+                owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
