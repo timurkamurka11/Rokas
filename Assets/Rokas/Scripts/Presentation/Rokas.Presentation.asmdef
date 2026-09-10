@@ -4,6 +4,7 @@
   "references": [
     "Rokas.Core",
     "UnityEngine.UI",
+    "UnityEngine.VideoModule",
     "Unity.TextMeshPro",
     "YarnSpinner.Unity"
   ],
