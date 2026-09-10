@@ -10,30 +10,46 @@ namespace Rokas.Presentation
     {
         public GameSession Session { get; private set; }
         public RokasView View { get; private set; }
+        public VideoSequencePresenter VideoPresenter { get; private set; }
         private SaveStore store;
         private RokasAudio sound;
+        private SaveLoadResult initialLoad;
         private bool dirty;
         private bool saveBlocked;
         private bool focused = true;
+        private bool startupPending;
         private float autosave;
         private RunPhase previousPhase;
 
         private void Start()
         {
-            if (Session == null) Initialize(Path.Combine(Application.persistentDataPath, "Profile"));
+            if (Session != null || View != null || startupPending) return;
+            string saveDirectory = Path.Combine(Application.persistentDataPath, "Profile");
+            PrepareRuntime(saveDirectory);
+            startupPending = true;
+            VideoPresenter.PlayStartup("StartupPreview.mp4", sound.VideoVolume, CompleteStartup);
         }
 
         // An explicit directory keeps profile ownership separate from the game and permits isolated fixtures.
+        // Explicit Initialize intentionally remains synchronous; only the real Unity Start path owns startup video.
         public void Initialize(string saveDirectory)
         {
             if (Session != null) return;
+            PrepareRuntime(saveDirectory);
+            BuildPresentation();
+        }
+
+        private void PrepareRuntime(string saveDirectory)
+        {
+            if (Session != null) return;
+            EnsureVideoPresenter();
             var assets = Resources.Load<RokasAssets>("RokasAssets");
             if (!assets || !assets.IsComplete())
                 throw new InvalidOperationException("ROKAS presentation assets are missing. Reimport the project and run Rokas/Validate Project.");
             store = new SaveStore(saveDirectory, new UnitySaveCodec());
-            var loaded = store.Load();
-            saveBlocked = loaded.Status == SaveLoadStatus.FutureVersion || loaded.Status == SaveLoadStatus.Corrupt;
-            var state = loaded.Succeeded ? loaded.Data : new SaveData();
+            initialLoad = store.Load();
+            saveBlocked = initialLoad.Status == SaveLoadStatus.FutureVersion || initialLoad.Status == SaveLoadStatus.Corrupt;
+            var state = initialLoad.Succeeded ? initialLoad.Data : new SaveData();
             var contract = JsonUtility.FromJson<ContractDefinition>(assets.contract.text);
             if (contract == null || string.IsNullOrEmpty(contract.id) || contract.enemyHealth <= 0)
                 throw new InvalidOperationException("ROKAS contract data is invalid.");
@@ -56,25 +72,44 @@ namespace Rokas.Presentation
                 events.transform.SetParent(transform, false);
             }
             sound = new RokasAudio(gameObject, assets, state.settings);
-            View = new RokasView(this, assets, Session, sound, SaveNow);
-            Session.Changed += OnChanged;
             QualitySettings.vSyncCount = 1;
             Application.targetFrameRate = 60;
             focused = Application.isFocused;
+        }
+
+        private void CompleteStartup()
+        {
+            if (!startupPending || View != null) return;
+            startupPending = false;
+            BuildPresentation();
+        }
+
+        private void BuildPresentation()
+        {
+            if (View != null || Session == null || sound == null) return;
+            var assets = Resources.Load<RokasAssets>("RokasAssets");
+            View = new RokasView(this, assets, Session, sound, SaveNow);
+            Session.Changed += OnChanged;
             ApplyDisplaySettings();
 
             if (saveBlocked)
             {
-                View.ShowStorageBlock(loaded.Status == SaveLoadStatus.FutureVersion
+                View.ShowStorageBlock(initialLoad != null && initialLoad.Status == SaveLoadStatus.FutureVersion
                     ? "Это сохранение создано более новой версией ROKAS. Откройте проект актуальной версией игры. Файл сохранён без изменений."
                     : "Не удалось безопасно загрузить профиль. Основной файл и резервная копия сохранены без изменений. Проверьте папку профиля перед продолжением.");
             }
             else
             {
-                if (loaded.Status == SaveLoadStatus.RecoveredBackup)
+                if (initialLoad != null && initialLoad.Status == SaveLoadStatus.RecoveredBackup)
                     View.Toast("Профиль восстановлен из резервной копии.");
-                if (loaded.Status == SaveLoadStatus.NotFound) SaveNow();
+                if (initialLoad != null && initialLoad.Status == SaveLoadStatus.NotFound) SaveNow();
             }
+        }
+
+        private void EnsureVideoPresenter()
+        {
+            if (!VideoPresenter) VideoPresenter = gameObject.GetComponent<VideoSequencePresenter>();
+            if (!VideoPresenter) VideoPresenter = gameObject.AddComponent<VideoSequencePresenter>();
         }
 
         private void OnChanged()
