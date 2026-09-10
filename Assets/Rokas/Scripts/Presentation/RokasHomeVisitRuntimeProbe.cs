@@ -168,11 +168,7 @@ namespace Rokas.Presentation
             yield return WaitFor(() => StartupHintVisible(), VideoWaitSeconds, "visible StartupSkipHintOverlay after first frame");
             RequireWait();
             evidence.startupHintVisible = true;
-            string hintCapture = Path.Combine(outputDirectory, "startup-hint-runtime.png");
-            ScreenCapture.CaptureScreenshot(hintCapture);
-            yield return null;
-            yield return null;
-            evidence.startupHintCapture = File.Exists(hintCapture) && new FileInfo(hintCapture).Length > 0;
+            evidence.startupHintCapture = false;
 
             yield return WaitFor(() => boot.View != null, VideoWaitSeconds, "natural Startup Preview completion and RokasView creation");
             RequireWait();
