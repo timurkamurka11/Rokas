@@ -1,0 +1,95 @@
+name: ROKAS Laptop Full Contract Lifecycle TDD
+
+on:
+  push:
+    branches:
+      - feature/startup-skip-hint-laptop-boot-per-home-visit
+    paths:
+      - .github/workflows/laptop-full-contract-lifecycle-tdd.yml
+      - Assets/Rokas/Tests/PlayMode/LaptopFullContractLifecyclePlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/LaptopFullContractLifecyclePlayModeTests.cs.meta
+      - Assets/Rokas/Scripts/Presentation/LaptopView.cs
+      - Assets/Rokas/Scripts/Presentation/RokasView.cs
+      - Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs
+      - Assets/Rokas/Scripts/Presentation/ContractPanels.cs
+      - Assets/Rokas/Scripts/Core/GameSession.cs
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: laptop-full-contract-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-lifecycle:
+    name: Full Contract Lifecycle Laptop PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: LaptopFullLifecycle-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            LaptopFullLifecycle-${{ runner.os }}-
+            StartupHintLaptopVisit-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run one full lifecycle regression
+        id: lifecycle
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Full Contract Lifecycle Regression
+
+      - name: Preserve exact lifecycle evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/git-status.txt
+          git diff --check > verification/git-diff-check.txt || true
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+
+      - name: Require exactly one behavioral lifecycle result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          print('FULL_LIFECYCLE_XML total=%d passed=%d failed=%d skipped=%d' % values)
+          if values[0] != 1 or values[3] != 0:
+              raise SystemExit('Expected exactly one executed full lifecycle regression')
+          PY
+
+      - name: Upload full lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: laptop-full-contract-lifecycle-evidence
+          path: |
+            ${{ steps.lifecycle.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
