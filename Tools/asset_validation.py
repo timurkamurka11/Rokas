@@ -23,6 +23,8 @@ def declared_external_assemblies(dependencies):
     assemblies = set()
     if 'com.unity.ugui' in dependencies:
         assemblies.update(('UnityEngine.UI', 'Unity.TextMeshPro'))
+    if 'com.unity.modules.video' in dependencies:
+        assemblies.add('UnityEngine.VideoModule')
     if 'dev.yarnspinner.unity' in dependencies:
         assemblies.add('YarnSpinner.Unity')
     return assemblies
