@@ -44,7 +44,14 @@ jobs:
             StartupHintLaptopVisit-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
 
-      - name: Run legacy startup laptop class
+      - name: Hide laptop media for deterministic semantic seam
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden
+
+      - name: Run exact legacy cancellation regression
         id: legacy
         continue-on-error: true
         uses: game-ci/unity-test-runner@v4
@@ -58,11 +65,11 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Startup Laptop Legacy RED
 
-      - name: Prove only obsolete expectation is red
+      - name: Prove obsolete expectation is the behavioral RED
         if: always()
         shell: bash
         run: |
@@ -76,19 +83,39 @@ jobs:
           passed=int(root.attrib.get('passed','-1'))
           failed=int(root.attrib.get('failed','-1'))
           skipped=int(root.attrib.get('skipped','-1'))
-          failures=[]
-          for t in root.iter('test-case'):
-              if t.attrib.get('result') == 'Failed':
-                  failures.append(t.attrib.get('fullname') or t.attrib.get('name') or '')
+          cases=list(root.iter('test-case'))
           print(f'LEGACY_RED_XML total={total} passed={passed} failed={failed} skipped={skipped}')
-          print('FAILED_TESTS=' + repr(failures))
-          expected='ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain'
-          if (total,passed,failed,skipped)!=(6,5,1,0):
-              raise SystemExit('Expected exactly 6 total / 5 pass / 1 fail / 0 skip')
-          if len(failures)!=1 or expected not in failures[0]:
-              raise SystemExit('Unexpected RED: obsolete close/reopen expectation was not the sole failure')
+          if (total,passed,failed,skipped)!=(1,0,1,0):
+              raise SystemExit('Expected exactly 1 total / 0 pass / 1 fail / 0 skip')
+          if len(cases)!=1:
+              raise SystemExit(f'Expected exactly one test case, got {len(cases)}')
+          t=cases[0]
+          expected='Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain'
+          actual=t.attrib.get('fullname') or ''
+          if actual != expected:
+              raise SystemExit(f'Unexpected test selected: {actual!r}')
+          failure=t.find('failure')
+          message=''
+          if failure is not None and failure.find('message') is not None:
+              message=failure.find('message').text or ''
+          print('LEGACY_FAILURE=' + repr(message))
+          if 'VideoPlayer cannot play url' in message:
+              raise SystemExit('Infrastructure RED: Linux VideoPlayer failure still intercepted the semantic assertion')
+          semantic_marker='A later explicit Home to Laptop opening must start a fresh transient boot.'
+          if semantic_marker not in message:
+              raise SystemExit('Failure was not the exact obsolete reopen-boots-again assertion')
           print('EXPECTED_LEGACY_BEHAVIORAL_RED=YES')
           PY
+
+      - name: Restore laptop media
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden ]; then
+            mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          fi
+          test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
 
       - name: Preserve RED evidence
         if: always()
