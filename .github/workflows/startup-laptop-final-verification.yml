@@ -9,50 +9,175 @@ on:
 
 permissions:
   contents: read
+  actions: read
   checks: write
 
 concurrency:
   group: startup-laptop-final-verification
   cancel-in-progress: true
 
+env:
+  CANDIDATE_SHA: a2f3cccfe7f2f6c33f42570e6d0392982f816ff2
+  CANDIDATE_TREE: 4dbc13e8f8b00df9a525173bc089b9f1df1a9786
+  BASE_SHA: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+
 jobs:
-  legacy-green:
-    name: Verify migrated laptop cancellation regression GREEN
+  integrity:
+    name: Exact tree, media, validator and scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Prove identity and clean checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$CANDIDATE_TREE"
+          test -z "$(git status --short --untracked-files=all)"
+          git diff --check "$BASE_SHA"...HEAD
+          git diff --name-status "$BASE_SHA"...HEAD > final-diff-name-status.txt
+          git diff --stat "$BASE_SHA"...HEAD > final-diff-stat.txt
+          git status --short --untracked-files=all > final-status.txt
+          git rev-parse HEAD > final-head.txt
+          git rev-parse HEAD^{tree} > final-tree.txt
+
+      - name: Verify exact approved media integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum Assets/Rokas/Resources/StartupSkipHint.png | awk '{print $1}')" = "3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df"
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 | awk '{print $1}')" = "28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240"
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 | awk '{print $1}')" = "111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a"
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          p=Path('Assets/Rokas/Resources/StartupSkipHint.png')
+          b=p.read_bytes()[:33]
+          assert b[:8] == b'\x89PNG\r\n\x1a\n'
+          width,height,bit_depth,color_type,compression,filter_method,interlace = struct.unpack('>IIBBBBB', b[16:29])
+          print(f'PNG width={width} height={height} bit_depth={bit_depth} color_type={color_type}')
+          assert (width,height)==(2048,682)
+          assert color_type==6, 'PNG must be RGBA (color type 6)'
+          PY
+
+      - name: Prove startup any-key and cleanup source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text()
+          required={
+            'guard':'!active || !firstFramePresented || player == null || !player.isPlaying',
+            'anykey':'Input.anyKeyDown',
+            'initial_hidden':'skipHintOverlay.SetActive(false)',
+            'frame_visible':'skipHintOverlay.SetActive(true)',
+            'finish_guard':'if (!active) return;',
+            'release_rt':'temporaryRenderTexture.Release()',
+            'destroy_rt':'Destroy(temporaryRenderTexture)',
+          }
+          missing=[name for name,needle in required.items() if needle not in text]
+          if missing:
+              raise SystemExit('Missing source contracts: ' + ', '.join(missing))
+          print('STARTUP_SOURCE_CONTRACT=PASS')
+          for name in required: print(name + '=YES')
+          PY
+
+      - name: Prove temporary real-player diagnostics are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .github/workflows/home-visit-real-player-diagnostic.yml
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta
+          if git grep -n -- '-rokasHomeVisitSmoke'; then
+            echo 'Temporary -rokasHomeVisitSmoke plumbing still exists.' >&2
+            exit 1
+          fi
+          echo 'TEMP_DIAGNOSTIC=ABSENT'
+
+      - name: Compare validator baseline and candidate factually
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 Tools/validate_assets.py > candidate-validator.txt 2>&1
+          candidate_rc=$?
+          base_dir="$RUNNER_TEMP/rokas-validator-base"
+          rm -rf "$base_dir"
+          git worktree add --detach "$base_dir" "$BASE_SHA" >/dev/null
+          (cd "$base_dir" && python3 Tools/validate_assets.py > "$GITHUB_WORKSPACE/base-validator.txt" 2>&1)
+          base_rc=$?
+          python3 - <<'PY'
+          from pathlib import Path
+          def findings(path):
+              return [x.strip() for x in Path(path).read_text(errors='replace').splitlines() if x.startswith('FAIL: ')]
+          base=findings('base-validator.txt')
+          cand=findings('candidate-validator.txt')
+          existing=sorted(set(cand)&set(base))
+          new=sorted(set(cand)-set(base))
+          resolved=sorted(set(base)-set(cand))
+          with open('validator-summary.txt','w') as f:
+              f.write(f'TOTAL_CURRENT_FINDINGS={len(cand)}\n')
+              f.write(f'HISTORICAL_EXISTING_FINDINGS={len(existing)}\n')
+              f.write(f'NEW_RELEVANT_FINDINGS={len(new)}\n')
+              f.write(f'RESOLVED_BASELINE_FINDINGS={len(resolved)}\n')
+              if new:
+                  f.write('NEW:\n'+'\n'.join(new)+'\n')
+          print(Path('validator-summary.txt').read_text(), end='')
+          if new:
+              raise SystemExit('Candidate introduced new validator findings.')
+          PY
+          summary_rc=$?
+          git worktree remove --force "$base_dir" >/dev/null 2>&1 || true
+          echo "candidate_validator_exit=$candidate_rc" >> validator-summary.txt
+          echo "base_validator_exit=$base_rc" >> validator-summary.txt
+          exit $summary_rc
+
+      - name: Preserve integrity evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-final-integrity
+          path: |
+            final-diff-name-status.txt
+            final-diff-stat.txt
+            final-status.txt
+            final-head.txt
+            final-tree.txt
+            candidate-validator.txt
+            base-validator.txt
+            validator-summary.txt
+          if-no-files-found: error
+
+  semantic-home-visit:
+    name: Home visit semantic suite 8/8
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout exact migrated feature tree
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
-          ref: a2f3cccfe7f2f6c33f42570e6d0392982f816ff2
+          ref: ${{ env.CANDIDATE_SHA }}
           fetch-depth: 0
-
-      - name: Assert exact target identity
+      - name: Assert exact candidate
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "a2f3cccfe7f2f6c33f42570e6d0392982f816ff2"
-          test "$(git rev-parse HEAD^{tree})" = "4dbc13e8f8b00df9a525173bc089b9f1df1a9786"
-          test -z "$(git status --short --untracked-files=all)"
-
-      - name: Cache Unity Library
-        uses: actions/cache@v6
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$CANDIDATE_TREE"
+      - uses: actions/cache@v6
         with:
           path: Library
-          key: StartupLaptopLegacyGreen-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: StartupLaptopFinalSemantic-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            StartupLaptopLegacyRed-${{ runner.os }}-
             StartupHintLaptopVisit-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
-
-      - name: Hide laptop media for deterministic semantic seam
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
-          mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden
-
-      - name: Run exact migrated cancellation regression
+      - name: Run exact 8-test semantic suite
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -64,63 +189,294 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady
+          customParameters: -testFilter Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Startup Laptop Legacy GREEN
-
-      - name: Prove migrated regression is GREEN
+          checkName: Startup Laptop Final Semantic
+      - name: Require 8/8
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          test -f artifacts/playmode-results.xml
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
-          p='artifacts/playmode-results.xml'
-          root=ET.parse(p).getroot()
-          total=int(root.attrib.get('total','-1'))
-          passed=int(root.attrib.get('passed','-1'))
-          failed=int(root.attrib.get('failed','-1'))
-          skipped=int(root.attrib.get('skipped','-1'))
-          cases=list(root.iter('test-case'))
-          print(f'LEGACY_GREEN_XML total={total} passed={passed} failed={failed} skipped={skipped}')
-          if (total,passed,failed,skipped)!=(1,1,0,0):
-              raise SystemExit('Expected exactly 1 total / 1 pass / 0 fail / 0 skip')
-          if len(cases)!=1:
-              raise SystemExit(f'Expected exactly one test case, got {len(cases)}')
-          expected='Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady'
-          actual=cases[0].attrib.get('fullname') or ''
-          if actual != expected:
-              raise SystemExit(f'Unexpected test selected: {actual!r}')
-          if cases[0].attrib.get('result') != 'Passed':
-              raise SystemExit(f'Unexpected result: {cases[0].attrib.get("result")!r}')
-          print('MIGRATED_LEGACY_GREEN=YES')
+          root=ET.parse('artifacts/playmode-results.xml').getroot()
+          got=tuple(int(root.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('SEMANTIC_XML total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got==(8,8,0,0), got
           PY
-
-      - name: Restore laptop media
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden ]; then
-            mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
-          fi
-          test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
-
-      - name: Preserve GREEN evidence
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p verification
-          git rev-parse HEAD > verification/head.txt
-          git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/status.txt
-          cp artifacts/playmode-results.xml verification/playmode-results.xml
-
-      - name: Upload GREEN evidence
+      - name: Upload semantic evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: startup-laptop-legacy-green-evidence
-          path: verification
+          name: startup-laptop-final-semantic
+          path: artifacts/playmode-results.xml
+          if-no-files-found: error
+
+  full-lifecycle:
+    name: Full contract lifecycle 1/1
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Assert exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$CANDIDATE_TREE"
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopFinalLifecycle-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupHintLaptopVisit-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run exact full lifecycle
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleBootsLaptopExactlyOncePerPhysicalHomeVisit
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Laptop Final Lifecycle
+      - name: Require 1/1
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root=ET.parse('artifacts/playmode-results.xml').getroot()
+          got=tuple(int(root.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('LIFECYCLE_XML total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got==(1,1,0,0), got
+          PY
+      - name: Upload lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-final-lifecycle
+          path: artifacts/playmode-results.xml
+          if-no-files-found: error
+
+  first-loop:
+    name: Relevant FirstLoop 1/1
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Assert exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$CANDIDATE_TREE"
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopFinalFirstLoop-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Run relevant end-to-end FirstLoop test
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Laptop Final FirstLoop
+      - name: Require 1/1
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root=ET.parse('artifacts/playmode-results.xml').getroot()
+          got=tuple(int(root.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('FIRSTLOOP_XML total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got==(1,1,0,0), got
+          PY
+      - name: Upload FirstLoop evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-final-firstloop
+          path: artifacts/playmode-results.xml
+          if-no-files-found: error
+
+  first-loop-domain:
+    name: Relevant FirstLoopDomain 3/3
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Assert exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$CANDIDATE_TREE"
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopFinalFirstLoopDomain-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Run exact FirstLoopDomain class
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.FirstLoopDomainTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Laptop Final FirstLoopDomain
+      - name: Require 3/3
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root=ET.parse('artifacts/editmode-results.xml').getroot()
+          got=tuple(int(root.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('FIRSTLOOP_DOMAIN_XML total=%d passed=%d failed=%d skipped=%d' % got)
+          assert got==(3,3,0,0), got
+          PY
+      - name: Upload FirstLoopDomain evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-final-firstloop-domain
+          path: artifacts/editmode-results.xml
+          if-no-files-found: error
+
+  startup-visual:
+    name: Minimal Windows startup hint visual capture
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Checkout current candidate for visual reference asset
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Prove old Windows build is production-code-identical for presentation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ((git rev-parse HEAD).Trim() -ne $env:CANDIDATE_SHA) { throw 'Candidate checkout mismatch.' }
+          $files = git diff --name-only 2d8c4ba9f931e6cfab466f98ecdd94d1c5d62549..$env:CANDIDATE_SHA
+          $allowed = @(
+            '.github/workflows/home-visit-real-player-diagnostic.yml',
+            'Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs',
+            'Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta',
+            'Assets/Rokas/Tests/PlayMode/StartupLaptopVideoPlayModeTests.cs'
+          )
+          $unexpected = @($files | Where-Object { $_ -and ($_ -notin $allowed) })
+          if ($unexpected.Count -gt 0) { throw ('Unexpected production delta from Windows-tested build: ' + ($unexpected -join ', ')) }
+          'WINDOWS_BUILD_PRESENTATION_CODE_IDENTICAL=YES' | Set-Content windows-code-identity.txt
+
+      - name: Download previously proven real Windows Player build
+        uses: actions/download-artifact@v8
+        with:
+          name: rokas-home-visit-diagnostic-player
+          path: player
+          repository: timurkamurka11/Rokas
+          run-id: 34523564351
+          github-token: ${{ github.token }}
+
+      - name: Launch normal startup and capture actual window frames
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Force visual | Out-Null
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe not found.' }
+          Add-Type -AssemblyName System.Drawing
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class WinCap {
+            [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+          }
+          '@
+          $log = Join-Path (Resolve-Path visual) 'Player.log'
+          $args = @('-screen-fullscreen','0','-screen-width','1280','-screen-height','720','-logFile',('"'+$log+'"'))
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList $args -WorkingDirectory $exe.Directory.FullName -PassThru
+          try {
+            $deadline=(Get-Date).AddSeconds(12)
+            while ($p.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100; $p.Refresh() }
+            if ($p.MainWindowHandle -eq 0) { throw 'Rokas window did not appear.' }
+            [WinCap]::ShowWindow($p.MainWindowHandle,5) | Out-Null
+            [WinCap]::SetForegroundWindow($p.MainWindowHandle) | Out-Null
+            Start-Sleep -Milliseconds 150
+            for ($i=0; $i -lt 24; $i++) {
+              $p.Refresh()
+              if ($p.HasExited) { break }
+              $rect = New-Object WinCap+RECT
+              if (-not [WinCap]::GetWindowRect($p.MainWindowHandle,[ref]$rect)) { throw 'GetWindowRect failed.' }
+              $w=$rect.Right-$rect.Left; $h=$rect.Bottom-$rect.Top
+              if ($w -lt 200 -or $h -lt 200) { throw "Invalid window bounds ${w}x${h}." }
+              $bmp=New-Object System.Drawing.Bitmap $w,$h
+              $g=[System.Drawing.Graphics]::FromImage($bmp)
+              try { $g.CopyFromScreen($rect.Left,$rect.Top,0,0,(New-Object System.Drawing.Size($w,$h))) }
+              finally { $g.Dispose() }
+              $path=Join-Path (Resolve-Path visual) ('startup-{0:D2}.png' -f $i)
+              $bmp.Save($path,[System.Drawing.Imaging.ImageFormat]::Png)
+              $bmp.Dispose()
+              Start-Sleep -Milliseconds 200
+            }
+          }
+          finally {
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          }
+          $shots=@(Get-ChildItem visual -Filter 'startup-*.png')
+          if ($shots.Count -lt 3) { throw "Only $($shots.Count) startup screenshots were captured." }
+          if (($shots | Measure-Object Length -Minimum).Minimum -lt 10000) { throw 'A startup capture is unexpectedly tiny.' }
+          "CAPTURE_COUNT=$($shots.Count)" | Set-Content visual/capture-summary.txt
+
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-hint-windows-visual
+          path: |
+            visual
+            windows-code-identity.txt
+            Assets/Rokas/Resources/StartupSkipHint.png
           if-no-files-found: error
