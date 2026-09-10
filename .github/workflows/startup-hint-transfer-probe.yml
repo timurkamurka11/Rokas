@@ -19,16 +19,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 2 --max-time 30 'https://firestorage.ai/ja/f/U8JCQZu3Zwgs' -o page.html
-          echo '=== content type / size ==='
-          file page.html
-          wc -c page.html
-          echo '=== candidate links ==='
-          grep -Eo 'https?://[^"<> ]+|href="[^"]+"|src="[^"]+"' page.html | head -200 || true
+          SHARE='https://firestorage.ai/ja/f/U8JCQZu3Zwgs'
+          curl -fL --retry 2 --max-time 30 "$SHARE" -o page.html
+          JS_PATH=$(python3 - <<'PY'
+          import re
+          html=open('page.html',encoding='utf-8').read()
+          m=re.search(r'src="([^"]*app/\(files\)/ja/f/page-[^"]+\.js)"', html)
+          if not m: raise SystemExit('page chunk not found')
+          print(m.group(1))
+          PY
+          )
+          echo "JS_PATH=$JS_PATH"
+          curl -fL --retry 2 --max-time 30 "https://firestorage.ai${JS_PATH}" -o page.js
+          echo '=== candidate API/download strings ==='
+          python3 - <<'PY'
+          import re
+          text=open('page.js',encoding='utf-8').read()
+          needles=['/api/','download','share','signed','object','file']
+          for n in needles:
+              print('\n##',n)
+              for m in list(re.finditer(re.escape(n), text, re.I))[:30]:
+                  print(text[max(0,m.start()-180):min(len(text),m.end()+260)])
+          PY
       - name: Upload probe evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: startup-hint-transfer-probe
-          path: page.html
+          name: startup-hint-transfer-probe-js
+          path: |
+            page.html
+            page.js
           if-no-files-found: warn
