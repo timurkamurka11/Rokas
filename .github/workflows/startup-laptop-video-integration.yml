@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - feature/startup-laptop-video-integration
+    paths:
+      - .ci/startup-laptop-video-run
 
 permissions:
   contents: read
