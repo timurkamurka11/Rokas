@@ -16,17 +16,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Probe temporary shares
+      - name: Probe temporary shares and client API
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p transfer
           curl -fsSL -D transfer/startup.headers -o transfer/startup.html 'https://firestorage.ai/ja/f/LJmh1mYMVX94'
           curl -fsSL -D transfer/laptop.headers -o transfer/laptop.html 'https://firestorage.ai/ja/f/eGtjpdmquW_u'
-          grep -Eo 'https?[^"'"'"'<> ]+' transfer/startup.html | head -100 > transfer/startup.urls || true
-          grep -Eo 'https?[^"'"'"'<> ]+' transfer/laptop.html | head -100 > transfer/laptop.urls || true
-          grep -Ein 'download|file|api|public|share|Preview|Laptop' transfer/startup.html | head -120 > transfer/startup.matches || true
-          grep -Ein 'download|file|api|public|share|Preview|Laptop' transfer/laptop.html | head -120 > transfer/laptop.matches || true
+          CHUNK=$(grep -Eo '/_next/static/chunks/app/[^" ]*page-[A-Za-z0-9]+\.js' transfer/startup.html | head -1)
+          echo "$CHUNK" > transfer/chunk-path.txt
+          curl -fsSL "https://firestorage.ai${CHUNK}" -o transfer/page.js
+          grep -Eo '/api/[A-Za-z0-9_./?=&${}:-]+' transfer/page.js | sort -u > transfer/api-paths.txt || true
+          grep -Eo 'https?[^"'"'"'<> ]+' transfer/page.js | sort -u | head -200 > transfer/js-urls.txt || true
+          grep -Ein 'download|fetch\(|/api/|shareId|publicId|fileId|presign|signed' transfer/page.js | head -200 > transfer/js-matches.txt || true
       - name: Upload transfer probe
         uses: actions/upload-artifact@v7
         with:
