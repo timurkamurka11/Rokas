@@ -1,0 +1,304 @@
+name: ROKAS Startup Laptop Video GitHub Proof
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - .github/workflows/startup-laptop-video-github-proof.yml
+      - .ci/startup-laptop-video-github-proof
+
+permissions:
+  contents: read
+
+concurrency:
+  group: startup-laptop-video-github-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-media-final:
+    name: Final Source Media Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Validate exact source media
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          mkdir -p source-media-validation/reference-frames
+          STARTUP='Assets/StreamingAssets/RokasVideo/StartupPreview.mp4'
+          LAPTOP='Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4'
+          STARTUP_SHA='28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
+          LAPTOP_SHA='111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
+          echo "$STARTUP_SHA  $STARTUP" | sha256sum -c -
+          echo "$LAPTOP_SHA  $LAPTOP" | sha256sum -c -
+          sha256sum "$STARTUP" "$LAPTOP" > source-media-validation/sha256.txt
+          ffprobe -v error -show_streams -show_format -of json "$STARTUP" > source-media-validation/startup-ffprobe.json
+          ffprobe -v error -show_streams -show_format -of json "$LAPTOP" > source-media-validation/laptop-ffprobe.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          cases = [
+              ('startup', 'source-media-validation/startup-ffprobe.json', 1280, 720, 9.900023),
+              ('laptop', 'source-media-validation/laptop-ffprobe.json', 3840, 2160, 3.668005),
+          ]
+          report = []
+          for label, path, width, height, expected_duration in cases:
+              data = json.loads(Path(path).read_text())
+              streams = data.get('streams', [])
+              video = next((s for s in streams if s.get('codec_type') == 'video'), None)
+              audio = next((s for s in streams if s.get('codec_type') == 'audio'), None)
+              if video is None or audio is None:
+                  raise SystemExit(f'{label}: missing video/audio stream')
+              if video.get('codec_name') != 'h264':
+                  raise SystemExit(f'{label}: expected h264, got {video.get("codec_name")}')
+              if (int(video.get('width', -1)), int(video.get('height', -1))) != (width, height):
+                  raise SystemExit(f'{label}: dimensions mismatch')
+              if audio.get('codec_name') != 'aac':
+                  raise SystemExit(f'{label}: expected aac, got {audio.get("codec_name")}')
+              duration = float(data.get('format', {}).get('duration', '0'))
+              if abs(duration - expected_duration) > 0.15:
+                  raise SystemExit(f'{label}: duration mismatch {duration}')
+              report += [
+                  f'{label.upper()}_VIDEO_CODEC=h264',
+                  f'{label.upper()}_DIMENSIONS={width}x{height}',
+                  f'{label.upper()}_AUDIO_CODEC=aac',
+                  f'{label.upper()}_DURATION={duration:.6f}',
+              ]
+          Path('source-media-validation/metadata-proof.txt').write_text('\n'.join(report) + '\n')
+          PY
+          ffmpeg -hide_banner -stats -i "$STARTUP" -map 0:v:0 -map 0:a:0 -f null - > /dev/null 2> source-media-validation/startup-full-decode.log
+          ffmpeg -hide_banner -stats -i "$LAPTOP" -map 0:v:0 -map 0:a:0 -f null - > /dev/null 2> source-media-validation/laptop-full-decode.log
+          ffmpeg -v error -ss 0.50 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-early.png
+          ffmpeg -v error -ss 4.95 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-middle.png
+          ffmpeg -v error -ss 9.40 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-late.png
+          ffmpeg -v error -ss 0.30 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-early.png
+          ffmpeg -v error -ss 1.83 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-middle.png
+          ffmpeg -v error -ss 3.30 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-late.png
+          test "$(find source-media-validation/reference-frames -type f -name '*.png' -size +0c | wc -l)" = 6
+          {
+            echo 'SOURCE_MEDIA_VALIDATION=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "STARTUP_SHA256=$STARTUP_SHA"
+            echo "LAPTOP_SHA256=$LAPTOP_SHA"
+            echo 'FFPROBE=PASS'
+            echo 'FULL_DECODE=PASS'
+            echo 'REFERENCE_FRAMES=6/6'
+          } > source-media-validation/summary.txt
+
+      - name: Upload source media validation
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-source-media-final
+          path: source-media-validation
+          if-no-files-found: error
+
+  build-windows-player:
+    name: StandaloneWindows64 Development Build + Packaging Proof
+    needs: source-media-final
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopVideo-WindowsBuild-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupLaptopVideo-WindowsBuild-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Build exact Windows Development Player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          targetPlatform: StandaloneWindows64
+          buildsPath: build
+          buildName: Rokas
+          buildMethod: Rokas.Editor.RokasVideoSmokeBuild.Build
+
+      - name: Verify built player and byte-identical packaged media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p windows-build
+          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit)"
+          STARTUP="$(find build -type f -path '*/StreamingAssets/RokasVideo/StartupPreview.mp4' -print -quit)"
+          LAPTOP="$(find build -type f -path '*/StreamingAssets/RokasVideo/LaptopBoot.mp4' -print -quit)"
+          test -n "$EXE" && test -s "$EXE"
+          test -n "$STARTUP" && test -s "$STARTUP"
+          test -n "$LAPTOP" && test -s "$LAPTOP"
+          STARTUP_HASH="$(sha256sum "$STARTUP" | awk '{print $1}')"
+          LAPTOP_HASH="$(sha256sum "$LAPTOP" | awk '{print $1}')"
+          test "$STARTUP_HASH" = '28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
+          test "$LAPTOP_HASH" = '111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
+          git diff --check > windows-build/git-diff-check.txt
+          git status --short --untracked-files=no > windows-build/git-tracked-status.txt
+          test ! -s windows-build/git-tracked-status.txt
+          {
+            echo 'WINDOWS_BUILD=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "EXE=$EXE"
+            echo "STARTUP_PACKAGED_PATH=$STARTUP"
+            echo "STARTUP_PACKAGED_SHA256=$STARTUP_HASH"
+            echo "LAPTOP_PACKAGED_PATH=$LAPTOP"
+            echo "LAPTOP_PACKAGED_SHA256=$LAPTOP_HASH"
+            echo 'PACKAGED_MEDIA_BYTE_IDENTICAL=PASS'
+            echo 'TRACKED_WORKTREE_CLEAN_AFTER_BUILD=YES'
+          } > windows-build/windows-build-proof.txt
+          find build -maxdepth 4 -type f -printf '%p %s bytes\n' | sort > windows-build/build-manifest.txt
+
+      - name: Upload Windows build proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-windows-build-proof
+          path: windows-build
+          if-no-files-found: warn
+
+      - name: Upload complete Windows player
+        uses: actions/upload-artifact@v7
+        with:
+          name: rokas-startup-laptop-video-windows-player
+          path: build
+          if-no-files-found: error
+
+  windows-host-player-smoke:
+    name: Built Windows Player H264 Runtime Smoke
+    needs: build-windows-player
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download complete Windows player
+        uses: actions/download-artifact@v8
+        with:
+          name: rokas-startup-laptop-video-windows-player
+          path: player
+
+      - name: Run actual Rokas.exe on host Windows VM
+        id: run-player
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path windows-player-smoke | Out-Null
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe not found in downloaded player artifact' }
+          $workDir = $exe.Directory.FullName
+          $log = Join-Path $workDir 'Player.log'
+          $arguments = @(
+            '-rokasVideoSmoke',
+            '-screen-fullscreen', '0',
+            '-screen-width', '1280',
+            '-screen-height', '720',
+            '-logFile', $log
+          )
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList $arguments -WorkingDirectory $workDir -PassThru
+          $exited = $process.WaitForExit(90000)
+          if (-not $exited) {
+            try { $process.Kill($true) } catch {}
+            $exitCode = 124
+            $timedOut = $true
+          } else {
+            $process.WaitForExit()
+            $exitCode = $process.ExitCode
+            $timedOut = $false
+          }
+          @(
+            "EXE=$($exe.FullName)",
+            "WORKING_DIRECTORY=$workDir",
+            "CONTAINER=NO",
+            "RUNNER_OS=$env:RUNNER_OS",
+            "TIMED_OUT=$timedOut",
+            "EXIT_CODE=$exitCode"
+          ) | Set-Content -Path windows-player-smoke/host-run.txt
+          if (Test-Path $log) { Copy-Item $log windows-player-smoke/Player.log -Force }
+          $smokeDir = Join-Path $workDir 'rokas-video-smoke'
+          if (Test-Path $smokeDir) { Copy-Item $smokeDir windows-player-smoke/runtime -Recurse -Force }
+          "exit_code=$exitCode" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "timed_out=$timedOut" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Classify actual host-player evidence
+        id: classify
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $resultPath = 'windows-player-smoke/runtime/rokas-video-smoke-result.json'
+          $logPath = 'windows-player-smoke/Player.log'
+          $classification = 'UNKNOWN_RUNTIME_FAILURE'
+          $runtimePass = $false
+          $resultPresent = Test-Path $resultPath
+          $logPresent = Test-Path $logPath
+          if ($resultPresent) {
+            $result = Get-Content $resultPath -Raw | ConvertFrom-Json
+            if ($result.finalPass -eq $true -and '${{ steps.run-player.outputs.exit_code }}' -eq '0') {
+              $runtimePass = $true
+              $classification = 'ACTUAL_WINDOWS_UNITY_PLAYER_VIDEO_RUNTIME_PASS'
+            } elseif ($result.startup.fileFound -eq $false -or $result.laptop.fileFound -eq $false) {
+              $classification = 'PACKAGED_MEDIA_RUNTIME_PATH_DEFECT'
+            } elseif ($result.videoPlayerErrorReceived -eq $true) {
+              $classification = 'VIDEO_PLAYER_RUNTIME_FAILURE_REQUIRES_DEBUGGING'
+            } else {
+              $classification = 'UNITY_PLAYER_SMOKE_LOGIC_OR_LIFECYCLE_FAILURE'
+            }
+          } elseif ($logPresent) {
+            $logText = Get-Content $logPath -Raw
+            if ($logText -match '(?i)(failed to initialize.*graphics|failed to create.*device|D3D.*fail|GfxDevice.*fail|graphics device.*fail)') {
+              $classification = 'HOSTED_WINDOWS_GRAPHICS_LIMITATION'
+            } elseif ($logText -match '(?i)(Media Foundation|MF_E_|codec.*not.*available|audio device.*fail|no audio device)') {
+              $classification = 'HOSTED_WINDOWS_MEDIA_OR_AUDIO_FOUNDATION_LIMITATION'
+            } elseif ($logText -match '(?i)(NullReferenceException|MissingReferenceException)') {
+              $classification = 'PRODUCTION_EXCEPTION'
+            } elseif ('${{ steps.run-player.outputs.timed_out }}' -eq 'True') {
+              $classification = 'HOSTED_WINDOWS_PLAYER_TIMEOUT_UNCLASSIFIED'
+            }
+          } elseif ('${{ steps.run-player.outputs.timed_out }}' -eq 'True') {
+            $classification = 'HOSTED_WINDOWS_PLAYER_TIMEOUT_NO_LOG'
+          }
+          @(
+            "RUNTIME_PASS=$runtimePass",
+            "CLASSIFICATION=$classification",
+            "RESULT_JSON_PRESENT=$resultPresent",
+            "PLAYER_LOG_PRESENT=$logPresent",
+            "PROCESS_EXIT_CODE=${{ steps.run-player.outputs.exit_code }}",
+            "PROCESS_TIMED_OUT=${{ steps.run-player.outputs.timed_out }}"
+          ) | Set-Content windows-player-smoke/classification.txt
+          "runtime_pass=$($runtimePass.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "classification=$classification" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload host-player smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-windows-player-smoke
+          path: windows-player-smoke
+          if-no-files-found: error
+
+      - name: Require actual host-player runtime PASS
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Content windows-player-smoke/classification.txt
+          if ('${{ steps.classify.outputs.runtime_pass }}' -ne 'true') {
+            throw "Built Windows player runtime proof did not pass: ${{ steps.classify.outputs.classification }}"
+          }
