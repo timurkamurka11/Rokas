@@ -1,4 +1,4 @@
-name: ROKAS Apply Startup Hint Visibility Root-Cause Fix
+name: ROKAS Startup Hint Affected Lifecycle Evidence
 
 on:
   push:
@@ -8,45 +8,146 @@ on:
       - .github/workflows/startup-hint-transfer-probe.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-fix:
+  affected-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 35
     steps:
-      - name: Checkout exact failed GREEN candidate
+      - name: Checkout exact GREEN feature
         uses: actions/checkout@v7
         with:
-          ref: feature/startup-skip-hint-laptop-boot-per-home-visit
+          ref: d110e0981e4d6f361ac655274c49389c26d7ad5b
           fetch-depth: 0
-      - name: Require exact candidate and apply one root-cause fix
+
+      - name: Require exact GREEN SHA and tree
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "489ceda2c5155b47be4bba35ce64593b4a1848de"
+          test "$(git rev-parse HEAD)" = "d110e0981e4d6f361ac655274c49389c26d7ad5b"
+          test "$(git rev-parse HEAD^{tree})" = "8ddcc9ce3fda567ce7f5e8d8cd618851e9026808"
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupHintAffected-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupHintAffected-${{ runner.os }}-
+            StartupHintLaptopVisit-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run non-media startup lifecycle tests including legacy reopen assertion
+        id: startup
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: >-
+            -testFilter
+            Rokas.Tests.StartupLaptopVideoPlayModeTests.RealStartDoesNotBuildHomeBeforeStartupVideoGate;Rokas.Tests.StartupLaptopVideoPlayModeTests.ExplicitFixtureInitializeStaysSynchronousAndVideoFree;Rokas.Tests.StartupLaptopVideoPlayModeTests.LaptopOpeningShowsBootGateBeforeDesktop;Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Lifecycle Affected Tests
+
+      - name: Preserve startup lifecycle XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          cp artifacts/playmode-results.xml verification/startup-lifecycle.xml
           python3 - <<'PY'
-          from pathlib import Path
-          p=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs')
-          text=p.read_text(encoding='utf-8')
-          changes=[
-              ('            hintImage.color = Color.white;\n',
-               '            hintImage.color = new Color(1f, 1f, 1f, 0f);\n'),
-              ('            if (startupHintGroup) startupHintGroup.alpha = 1f;\n',
-               '            if (startupHintGroup)\n            {\n                var hintImage = startupHintGroup.GetComponent<RawImage>();\n                if (hintImage) hintImage.color = Color.white;\n                startupHintGroup.alpha = 1f;\n            }\n')
-          ]
-          for old,new in changes:
-              if text.count(old) != 1:
-                  raise SystemExit(f'expected exactly one match for {old!r}, got {text.count(old)}')
-              text=text.replace(old,new)
-          p.write_text(text, encoding='utf-8', newline='\n')
+          import xml.etree.ElementTree as ET
+          r=ET.parse('verification/startup-lifecycle.xml').getroot()
+          vals=tuple(int(r.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('STARTUP_LIFECYCLE total=%d passed=%d failed=%d skipped=%d' % vals)
+          for tc in r.iter('test-case'):
+              print(tc.attrib.get('fullname'), tc.attrib.get('result'))
+          if vals != (4,3,1,0):
+              raise SystemExit('Expected 3 pass + exact legacy semantic contradiction before test migration')
+          failed=[tc.attrib.get('fullname','') for tc in r.iter('test-case') if tc.attrib.get('result')=='Failed']
+          expected='Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain'
+          if failed != [expected]:
+              raise SystemExit('Unexpected startup lifecycle failure set: '+repr(failed))
           PY
-          git diff --check
-          git diff -- Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = "Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs"
-          git config user.name 'rokas-ci'
-          git config user.email 'actions@users.noreply.github.com'
-          git add -- Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
-          git commit -m 'fix: hide startup hint image until first frame'
-          git push origin HEAD:feature/startup-skip-hint-laptop-boot-per-home-visit
+
+      - name: Run affected FirstLoop PlayMode tests
+        id: firstloopplay
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: FirstLoop Affected PlayMode Tests
+
+      - name: Preserve FirstLoop PlayMode XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          cp artifacts/playmode-results.xml verification/firstloop-playmode.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r=ET.parse('verification/firstloop-playmode.xml').getroot()
+          vals=tuple(int(r.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('FIRSTLOOP_PLAYMODE total=%d passed=%d failed=%d skipped=%d' % vals)
+          if vals != (2,2,0,0): raise SystemExit('Expected 2/2 FirstLoop PlayMode')
+          PY
+
+      - name: Run affected FirstLoop EditMode tests
+        id: firstloopedit
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.FirstLoopDomainTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: FirstLoop Affected EditMode Tests
+
+      - name: Preserve FirstLoop EditMode XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/editmode-results.xml
+          cp artifacts/editmode-results.xml verification/firstloop-editmode.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r=ET.parse('verification/firstloop-editmode.xml').getroot()
+          vals=tuple(int(r.attrib.get(k,'-1')) for k in ('total','passed','failed','skipped'))
+          print('FIRSTLOOP_EDITMODE total=%d passed=%d failed=%d skipped=%d' % vals)
+          if vals != (3,3,0,0): raise SystemExit('Expected 3/3 FirstLoop EditMode')
+          PY
+
+      - name: Upload affected evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-hint-affected-lifecycle-evidence
+          path: verification
+          if-no-files-found: error
