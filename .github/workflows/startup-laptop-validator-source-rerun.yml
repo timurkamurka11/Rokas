@@ -1,0 +1,96 @@
+name: ROKAS Startup Laptop Validator Source Rerun
+
+on:
+  push:
+    branches:
+      - ci/startup-laptop-final-verification
+    paths:
+      - .github/workflows/startup-laptop-validator-source-rerun.yml
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: 60e15f67a0d05a2cdd7b1440a83e6103d8e82950
+  CANDIDATE_TREE: 39d578603568b8f94398400e559f8bc7ae9a1de2
+  BASE_SHA: 3d7b6db8adb551acd64f89694759e5d8a16c0ff1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+      - name: Candidate identity and factual source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git show -s --format=%T HEAD)" = "$CANDIDATE_TREE"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs').read_text()
+          required=[
+            'if (allowSkip && firstFramePresented && player && player.isPlaying && Input.anyKeyDown)',
+            'startupHintGroup.alpha = 0f;',
+            'startupHintGroup.alpha = 1f;',
+            'if (!active && !surface && !ownedRoot && !target) return;',
+            'active = false;',
+            'target.Release();',
+            'Destroy(target);',
+            'DetachHandlers();',
+            'callback?.Invoke();'
+          ]
+          missing=[x for x in required if x not in p]
+          assert not missing, missing
+          assert p.index('active = false;', p.index('private void Finish')) < p.index('callback?.Invoke();', p.index('private void Finish'))
+          assert p.index('firstFramePresented = true;', p.index('private void OnFrameReady')) < p.index('startupHintGroup.alpha = 1f;', p.index('private void OnFrameReady'))
+          print('FACTUAL_STARTUP_SOURCE_CONTRACT=PASS')
+          PY
+          test ! -e .github/workflows/home-visit-real-player-diagnostic.yml
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs
+          test ! -e Assets/Rokas/Scripts/Presentation/RokasHomeVisitRuntimeProbe.cs.meta
+          if git grep -n -- '-rokasHomeVisitSmoke'; then exit 1; fi
+          echo TEMP_DIAGNOSTIC=ABSENT
+      - name: Compare validator baseline and candidate
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 Tools/validate_assets.py > candidate-validator.txt 2>&1
+          candidate_rc=$?
+          base_dir="$RUNNER_TEMP/rokas-validator-base"
+          rm -rf "$base_dir"
+          git worktree add --detach "$base_dir" "$BASE_SHA" >/dev/null
+          (cd "$base_dir" && python3 Tools/validate_assets.py > "$GITHUB_WORKSPACE/base-validator.txt" 2>&1)
+          base_rc=$?
+          python3 - <<'PY'
+          from pathlib import Path
+          def findings(path): return [x.strip() for x in Path(path).read_text(errors='replace').splitlines() if x.startswith('FAIL: ')]
+          base=findings('base-validator.txt'); cand=findings('candidate-validator.txt')
+          existing=sorted(set(cand)&set(base)); new=sorted(set(cand)-set(base)); resolved=sorted(set(base)-set(cand))
+          with open('validator-summary.txt','w') as f:
+              f.write(f'TOTAL_CURRENT_FINDINGS={len(cand)}\n')
+              f.write(f'HISTORICAL_EXISTING_FINDINGS={len(existing)}\n')
+              f.write(f'NEW_RELEVANT_FINDINGS={len(new)}\n')
+              f.write(f'RESOLVED_BASELINE_FINDINGS={len(resolved)}\n')
+              if new: f.write('NEW:\n'+'\n'.join(new)+'\n')
+          print(Path('validator-summary.txt').read_text(),end='')
+          if new: raise SystemExit('Candidate introduced new validator findings')
+          PY
+          summary_rc=$?
+          git worktree remove --force "$base_dir" >/dev/null 2>&1 || true
+          echo "CANDIDATE_VALIDATOR_EXIT=$candidate_rc" >> validator-summary.txt
+          echo "BASE_VALIDATOR_EXIT=$base_rc" >> validator-summary.txt
+          exit $summary_rc
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-validator-source-evidence
+          path: |
+            candidate-validator.txt
+            base-validator.txt
+            validator-summary.txt
+          if-no-files-found: warn
