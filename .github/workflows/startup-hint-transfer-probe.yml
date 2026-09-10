@@ -1,0 +1,34 @@
+name: ROKAS Startup Hint Transfer Probe
+
+on:
+  push:
+    branches:
+      - ci/startup-hint-transfer
+    paths:
+      - .github/workflows/startup-hint-transfer-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe temporary approved-asset share
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 2 --max-time 30 'https://firestorage.ai/ja/f/U8JCQZu3Zwgs' -o page.html
+          echo '=== content type / size ==='
+          file page.html
+          wc -c page.html
+          echo '=== candidate links ==='
+          grep -Eo 'https?://[^"<> ]+|href="[^"]+"|src="[^"]+"' page.html | head -200 || true
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-hint-transfer-probe
+          path: page.html
+          if-no-files-found: warn
