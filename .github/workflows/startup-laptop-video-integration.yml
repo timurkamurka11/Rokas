@@ -45,9 +45,28 @@ jobs:
           projectPath: .
           unityVersion: 6000.3.19f1
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests -force-d3d11 -force-driver-type-warp
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Startup Laptop Video Focused Tests
+
+      - name: Require durable 6-test XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          path = 'artifacts/playmode-results.xml'
+          root = ET.parse(path).getroot()
+          total = int(root.attrib.get('total', '-1'))
+          passed = int(root.attrib.get('passed', '-1'))
+          failed = int(root.attrib.get('failed', '-1'))
+          skipped = int(root.attrib.get('skipped', '-1'))
+          print(f'FOCUSED_XML total={total} passed={passed} failed={failed} skipped={skipped}')
+          if (total, passed, failed, skipped) != (6, 6, 0, 0):
+              raise SystemExit('Focused gate must contain exactly 6/6 passing tests')
+          PY
 
       - name: Preserve post-test git state
         if: always()
