@@ -30,6 +30,8 @@ namespace Rokas.Presentation
         private readonly LaptopMessagesView messages;
         private readonly Action click;
         private readonly Action close;
+        private readonly VideoSequencePresenter video;
+        private readonly Func<float> videoVolume;
         private RectTransform frame;
         private RectTransform content;
         private CanvasGroup windowGroup;
@@ -43,11 +45,13 @@ namespace Rokas.Presentation
         private float pageTime;
         private Action closed;
         public bool IsClosing { get; private set; }
-        public bool MessagesOpen { get { return section == 6 && !IsClosing; } }
+        public bool Booting { get; private set; }
+        public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
         public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
         public LaptopView(UiKit ui, RokasAssets assets, GameSession session, ContractPanels contracts,
-            Action<Func<bool>, string> act, Action click, Action<string> notify, Action close)
+            Action<Func<bool>, string> act, Action click, Action<string> notify, Action close,
+            VideoSequencePresenter video, Func<float> videoVolume)
         {
             this.ui = ui;
             this.assets = assets;
@@ -55,17 +59,27 @@ namespace Rokas.Presentation
             this.contracts = contracts;
             this.click = click;
             this.close = close;
+            this.video = video ?? throw new ArgumentNullException(nameof(video));
+            this.videoVolume = videoVolume ?? throw new ArgumentNullException(nameof(videoVolume));
             food = new LaptopFoodView(ui, session, act, click, notify);
             messages = new LaptopMessagesView(ui, assets, session);
         }
 
         public void Reset()
         {
+            video.Cancel();
             messages.Hide();
             section = -1;
             lastTile = 0;
             IsClosing = false;
+            Booting = false;
             closed = null;
+            frame = null;
+            content = null;
+            windowGroup = null;
+            contentGroup = null;
+            clock = null;
+            date = null;
         }
 
         public void Build(RectTransform parent)
@@ -75,6 +89,25 @@ namespace Rokas.Presentation
             windowGroup = frame.gameObject.AddComponent<CanvasGroup>();
             windowGroup.alpha = 0;
             openTime = 0;
+            pageTime = 0;
+            content = null;
+            contentGroup = null;
+            clock = null;
+            date = null;
+            clockMinute = -1;
+            Booting = true;
+            video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
+        }
+
+        private void FinishBoot()
+        {
+            if (!Booting || IsClosing || !frame) return;
+            Booting = false;
+            BuildReadyFrame();
+        }
+
+        private void BuildReadyFrame()
+        {
             Surface(frame, "Camera", 892, 12, 8, 8, 4, new Color(.08f, .10f, .11f));
             ui.Box(frame, "ScreenEdge", 22, 30, 1748, 940, new Color(.12f, .16f, .18f));
             var screen = ui.Rect(frame, "LaptopScreen", 24, 32, 1744, 936);
@@ -218,14 +251,14 @@ namespace Rokas.Presentation
 
         private void OpenSection(int index)
         {
-            if (IsClosing) return;
+            if (IsClosing || Booting) return;
             section = lastTile = index;
             BuildContent();
         }
 
         public bool BackToDesktop()
         {
-            if (section < 0 || IsClosing) return false;
+            if (Booting || section < 0 || IsClosing) return false;
             Back();
             return true;
         }
@@ -240,6 +273,11 @@ namespace Rokas.Presentation
         public void BeginClose(Action complete)
         {
             if (IsClosing) return;
+            if (Booting)
+            {
+                video.Cancel();
+                Booting = false;
+            }
             messages.Hide();
             IsClosing = true;
             closed = complete;
