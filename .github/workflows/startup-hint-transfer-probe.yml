@@ -20,33 +20,41 @@ jobs:
         run: |
           set -euo pipefail
           SHARE='https://firestorage.ai/ja/f/U8JCQZu3Zwgs'
+          mkdir -p probe-js
           curl -fL --retry 2 --max-time 30 "$SHARE" -o page.html
-          JS_PATH=$(python3 - <<'PY'
+          python3 - <<'PY' > js-paths.txt
           import re
           html=open('page.html',encoding='utf-8').read()
-          m=re.search(r'src="([^"]*app/\(files\)/ja/f/page-[^"]+\.js)"', html)
-          if not m: raise SystemExit('page chunk not found')
-          print(m.group(1))
+          for p in sorted(set(re.findall(r'src="([^"]+\.js)"', html))): print(p)
           PY
-          )
-          echo "JS_PATH=$JS_PATH"
-          curl -fL --retry 2 --max-time 30 "https://firestorage.ai${JS_PATH}" -o page.js
-          echo '=== candidate API/download strings ==='
-          python3 - <<'PY'
+          n=0
+          while IFS= read -r path; do
+            n=$((n+1))
+            curl -fL --retry 2 --max-time 30 "https://firestorage.ai${path}" -o "probe-js/${n}.js"
+          done < js-paths.txt
+          python3 - <<'PY' > endpoint-evidence.txt
+          from pathlib import Path
           import re
-          text=open('page.js',encoding='utf-8').read()
-          needles=['/api/','download','share','signed','object','file']
-          for n in needles:
-              print('\n##',n)
-              for m in list(re.finditer(re.escape(n), text, re.I))[:30]:
-                  print(text[max(0,m.start()-180):min(len(text),m.end()+260)])
+          for p in sorted(Path('probe-js').glob('*.js')):
+              text=p.read_text(encoding='utf-8',errors='replace')
+              hits=[]
+              for needle in ['/api/','download','shareId','share_id','presign','signedUrl','signed_url','publicId','public_id']:
+                  for m in list(re.finditer(re.escape(needle), text, re.I))[:40]:
+                      hits.append((m.start(),needle,text[max(0,m.start()-250):min(len(text),m.end()+500)]))
+              if hits:
+                  print('\n===== '+str(p)+' =====')
+                  for _,needle,s in sorted(hits)[:120]:
+                      print('\n## '+needle+'\n'+s)
           PY
+          cat endpoint-evidence.txt
       - name: Upload probe evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: startup-hint-transfer-probe-js
+          name: startup-hint-transfer-probe-all-js
           path: |
             page.html
-            page.js
+            js-paths.txt
+            probe-js
+            endpoint-evidence.txt
           if-no-files-found: warn
