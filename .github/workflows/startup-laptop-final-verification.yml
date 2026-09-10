@@ -16,31 +16,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  legacy-red:
-    name: Confirm obsolete laptop replay expectation RED
+  legacy-green:
+    name: Verify migrated laptop cancellation regression GREEN
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout exact cleaned feature tree
+      - name: Checkout exact migrated feature tree
         uses: actions/checkout@v7
         with:
-          ref: 2043eb6b74c8e8ffb20d238ff85c6fd28dd7944d
+          ref: a2f3cccfe7f2f6c33f42570e6d0392982f816ff2
           fetch-depth: 0
 
       - name: Assert exact target identity
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "2043eb6b74c8e8ffb20d238ff85c6fd28dd7944d"
-          test "$(git rev-parse HEAD^{tree})" = "ea5e80f1cef951a2c409c965e2f36bb1dafdc5bd"
+          test "$(git rev-parse HEAD)" = "a2f3cccfe7f2f6c33f42570e6d0392982f816ff2"
+          test "$(git rev-parse HEAD^{tree})" = "4dbc13e8f8b00df9a525173bc089b9f1df1a9786"
           test -z "$(git status --short --untracked-files=all)"
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: StartupLaptopLegacyRed-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: StartupLaptopLegacyGreen-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            StartupLaptopLegacyRed-${{ runner.os }}-
             StartupHintLaptopVisit-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
 
@@ -49,11 +50,9 @@ jobs:
         run: |
           set -euo pipefail
           test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
-          mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden
+          mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden
 
-      - name: Run exact legacy cancellation regression
-        id: legacy
-        continue-on-error: true
+      - name: Run exact migrated cancellation regression
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -65,11 +64,11 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Startup Laptop Legacy RED
+          checkName: Startup Laptop Legacy GREEN
 
-      - name: Prove obsolete expectation is the behavioral RED
+      - name: Prove migrated regression is GREEN
         if: always()
         shell: bash
         run: |
@@ -84,27 +83,18 @@ jobs:
           failed=int(root.attrib.get('failed','-1'))
           skipped=int(root.attrib.get('skipped','-1'))
           cases=list(root.iter('test-case'))
-          print(f'LEGACY_RED_XML total={total} passed={passed} failed={failed} skipped={skipped}')
-          if (total,passed,failed,skipped)!=(1,0,1,0):
-              raise SystemExit('Expected exactly 1 total / 0 pass / 1 fail / 0 skip')
+          print(f'LEGACY_GREEN_XML total={total} passed={passed} failed={failed} skipped={skipped}')
+          if (total,passed,failed,skipped)!=(1,1,0,0):
+              raise SystemExit('Expected exactly 1 total / 1 pass / 0 fail / 0 skip')
           if len(cases)!=1:
               raise SystemExit(f'Expected exactly one test case, got {len(cases)}')
-          t=cases[0]
-          expected='Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenBootsAgain'
-          actual=t.attrib.get('fullname') or ''
+          expected='Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady'
+          actual=cases[0].attrib.get('fullname') or ''
           if actual != expected:
               raise SystemExit(f'Unexpected test selected: {actual!r}')
-          failure=t.find('failure')
-          message=''
-          if failure is not None and failure.find('message') is not None:
-              message=failure.find('message').text or ''
-          print('LEGACY_FAILURE=' + repr(message))
-          if 'VideoPlayer cannot play url' in message:
-              raise SystemExit('Infrastructure RED: Linux VideoPlayer failure still intercepted the semantic assertion')
-          semantic_marker='A later explicit Home to Laptop opening must start a fresh transient boot.'
-          if semantic_marker not in message:
-              raise SystemExit('Failure was not the exact obsolete reopen-boots-again assertion')
-          print('EXPECTED_LEGACY_BEHAVIORAL_RED=YES')
+          if cases[0].attrib.get('result') != 'Passed':
+              raise SystemExit(f'Unexpected result: {cases[0].attrib.get("result")!r}')
+          print('MIGRATED_LEGACY_GREEN=YES')
           PY
 
       - name: Restore laptop media
@@ -112,12 +102,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden ]; then
-            mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-red-hidden Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          if [ -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden ]; then
+            mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.legacy-green-hidden Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
           fi
           test -f Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
 
-      - name: Preserve RED evidence
+      - name: Preserve GREEN evidence
         if: always()
         shell: bash
         run: |
@@ -127,10 +117,10 @@ jobs:
           git status --short --untracked-files=all > verification/status.txt
           cp artifacts/playmode-results.xml verification/playmode-results.xml
 
-      - name: Upload RED evidence
+      - name: Upload GREEN evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: startup-laptop-legacy-red-evidence
+          name: startup-laptop-legacy-green-evidence
           path: verification
           if-no-files-found: error
