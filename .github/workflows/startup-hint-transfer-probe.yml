@@ -1,4 +1,4 @@
-name: ROKAS Startup Hint Transfer Probe
+name: ROKAS Apply Startup Hint + Home Visit GREEN
 
 on:
   push:
@@ -8,53 +8,237 @@ on:
       - .github/workflows/startup-hint-transfer-probe.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  apply-green:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Probe temporary approved-asset share
+      - name: Checkout exact RED feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feature/startup-skip-hint-laptop-boot-per-home-visit
+          fetch-depth: 0
+
+      - name: Require exact valid RED starting point
         shell: bash
         run: |
           set -euo pipefail
-          SHARE='https://firestorage.ai/ja/f/U8JCQZu3Zwgs'
-          mkdir -p probe-js
-          curl -fL --retry 2 --max-time 30 "$SHARE" -o page.html
-          python3 - <<'PY' > js-paths.txt
-          import re
-          html=open('page.html',encoding='utf-8').read()
-          for p in sorted(set(re.findall(r'src="([^"]+\.js)"', html))): print(p)
+          test "$(git rev-parse HEAD)" = "3f9951e07f1c76472ee956b094f38761fdb16d1a"
+          test "$(git rev-parse HEAD^{tree})" = "e920b928c3e5c0d2336b830bbd03cd2c00a5b5d3"
+          test -z "$(git status --porcelain)"
+
+      - name: Import exact approved StartupSkipHint PNG
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.firestorage.ai/dev/file'
+          SHARE='l7eWeQu0ujKG'
+          EXPECTED='3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df'
+          curl -fsSL --retry 2 --max-time 30 "$API/shares/$SHARE/files?maxResults=1000" -o /tmp/files.json
+          FILE_ID=$(python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/files.json', encoding='utf-8'))
+          files=d.get('files') or []
+          if len(files) != 1:
+              raise SystemExit(f'Expected exactly one transferred file, got {len(files)}')
+          print(files[0]['fileId'])
           PY
-          n=0
-          while IFS= read -r path; do
-            n=$((n+1))
-            curl -fL --retry 2 --max-time 30 "https://firestorage.ai${path}" -o "probe-js/${n}.js"
-          done < js-paths.txt
-          python3 - <<'PY' > endpoint-evidence.txt
+          )
+          curl -fsSL --retry 2 --max-time 30 -X POST "$API/shares/$SHARE/files/$FILE_ID/download" -o /tmp/download.json
+          DOWNLOAD_URL=$(python3 - <<'PY'
+          import json
+          print(json.load(open('/tmp/download.json', encoding='utf-8'))['downloadUrl'])
+          PY
+          )
+          curl -fsSL --retry 2 --max-time 60 "$DOWNLOAD_URL" -o Assets/Rokas/Resources/StartupSkipHint.png
+          echo "$EXPECTED  Assets/Rokas/Resources/StartupSkipHint.png" | sha256sum -c -
+          python3 - <<'PY'
+          import struct
+          p='Assets/Rokas/Resources/StartupSkipHint.png'
+          b=open(p,'rb').read(32)
+          if b[:8] != b'\x89PNG\r\n\x1a\n': raise SystemExit('Not PNG')
+          w,h=struct.unpack('>II', b[16:24])
+          if (w,h)!=(2048,682): raise SystemExit(f'Unexpected PNG dimensions {(w,h)}')
+          print('EXACT_APPROVED_PNG=YES dimensions=2048x682')
+          PY
+          cat > Assets/Rokas/Resources/StartupSkipHint.png.meta <<'META'
+          fileFormatVersion: 2
+          guid: 6cf1d34d68f247d4bb235ab6a12b63a1
+          TextureImporter:
+            internalIDToNameTable: []
+            externalObjects: {}
+            serializedVersion: 13
+            mipmaps:
+              mipMapMode: 0
+              enableMipMap: 0
+              sRGBTexture: 1
+              linearTexture: 0
+              fadeOut: 0
+              borderMipMap: 0
+              mipMapsPreserveCoverage: 0
+              alphaTestReferenceValue: 0.5
+              mipMapFadeDistanceStart: 1
+              mipMapFadeDistanceEnd: 3
+            isReadable: 0
+            streamingMipmaps: 0
+            grayScaleToAlpha: 0
+            generateCubemap: 6
+            cubemapConvolution: 0
+            seamlessCubemap: 0
+            textureFormat: 1
+            maxTextureSize: 2048
+            textureSettings:
+              serializedVersion: 2
+              filterMode: 1
+              aniso: 1
+              mipBias: 0
+              wrapU: 1
+              wrapV: 1
+              wrapW: 1
+            nPOTScale: 0
+            lightmap: 0
+            compressionQuality: 80
+            spriteMode: 0
+            spriteExtrude: 1
+            spriteMeshType: 1
+            alignment: 0
+            spritePivot: {x: 0.5, y: 0.5}
+            spritePixelsToUnits: 100
+            spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+            alphaUsage: 1
+            alphaIsTransparency: 1
+            spriteTessellationDetail: -1
+            textureType: 0
+            textureShape: 1
+            singleChannelComponent: 0
+            flipbookRows: 1
+            flipbookColumns: 1
+            platformSettings:
+            - serializedVersion: 3
+              buildTarget: DefaultTexturePlatform
+              maxTextureSize: 2048
+              resizeAlgorithm: 0
+              textureFormat: -1
+              textureCompression: 0
+              compressionQuality: 80
+              crunchedCompression: 0
+              allowsAlphaSplitting: 0
+              overridden: 0
+              ignorePlatformSupport: 0
+              androidETC2FallbackOverride: 0
+              forceMaximumCompressionQuality_BC6H_BC7: 0
+            spriteSheet:
+              serializedVersion: 2
+              sprites: []
+              outline: []
+              physicsShape: []
+              bones: []
+              spriteID:
+              internalID: 0
+              vertices: []
+              indices:
+              edges: []
+              weights: []
+              secondaryTextures: []
+              nameFileIdTable: {}
+            mipmapLimitGroupName:
+            pSDRemoveMatte: 0
+            userData: ROKAS approved StartupSkipHint sha256=3f08890f80449509af26a1482a388452f5aa6590c88840f1cb55e993b7a466df
+            assetBundleName:
+            assetBundleVariant:
+          META
+          sed -i 's/^          //' Assets/Rokas/Resources/StartupSkipHint.png.meta
+          git add -- Assets/Rokas/Resources/StartupSkipHint.png Assets/Rokas/Resources/StartupSkipHint.png.meta
+          git diff --cached --check
+          git config user.name 'rokas-ci'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'feat: import approved startup skip hint asset'
+
+      - name: Apply minimal production GREEN behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
           from pathlib import Path
-          import re
-          for p in sorted(Path('probe-js').glob('*.js')):
-              text=p.read_text(encoding='utf-8',errors='replace')
-              hits=[]
-              for needle in ['/api/','download','shareId','share_id','presign','signedUrl','signed_url','publicId','public_id']:
-                  for m in list(re.finditer(re.escape(needle), text, re.I))[:40]:
-                      hits.append((m.start(),needle,text[max(0,m.start()-250):min(len(text),m.end()+500)]))
-              if hits:
-                  print('\n===== '+str(p)+' =====')
-                  for _,needle,s in sorted(hits)[:120]:
-                      print('\n## '+needle+'\n'+s)
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}')
+              p.write_text(text.replace(old,new), encoding='utf-8', newline='\n')
+
+          presenter='Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs'
+          replace_once(presenter,
+          '''        private RawImage image;\n        private RectTransform surface;''',
+          '''        private RawImage image;\n        private CanvasGroup startupHintGroup;\n        private RectTransform surface;''')
+          replace_once(presenter,
+          '''            image.texture = target;\n            image.color = Color.black;\n            image.raycastTarget = false;\n\n            player.Stop();''',
+          '''            image.texture = target;\n            image.color = Color.black;\n            image.raycastTarget = false;\n            if (canSkip) CreateStartupHint(host);\n\n            player.Stop();''')
+          replace_once(presenter,
+          '''        private RectTransform CreateStartupHost()\n        {''',
+          '''        private void CreateStartupHint(RectTransform host)\n        {\n            Texture2D hintTexture = Resources.Load<Texture2D>("StartupSkipHint");\n            if (!hintTexture)\n            {\n                Debug.LogWarning("ROKAS approved StartupSkipHint texture is missing; startup video remains usable without the hint.");\n                return;\n            }\n\n            var hintObject = new GameObject("StartupSkipHintOverlay", typeof(RectTransform), typeof(CanvasRenderer),\n                typeof(RawImage), typeof(CanvasGroup));\n            var hint = (RectTransform)hintObject.transform;\n            hint.SetParent(host, false);\n            hint.anchorMin = hint.anchorMax = new Vector2(1f, 0f);\n            hint.pivot = new Vector2(1f, 0f);\n            const float hintWidth = 520f;\n            hint.sizeDelta = new Vector2(hintWidth, hintWidth * hintTexture.height / hintTexture.width);\n            hint.anchoredPosition = new Vector2(-48f, 40f);\n\n            var hintImage = hintObject.GetComponent<RawImage>();\n            hintImage.texture = hintTexture;\n            hintImage.color = Color.white;\n            hintImage.raycastTarget = false;\n            startupHintGroup = hintObject.GetComponent<CanvasGroup>();\n            startupHintGroup.alpha = 0f;\n            startupHintGroup.interactable = false;\n            startupHintGroup.blocksRaycasts = false;\n            hint.SetAsLastSibling();\n        }\n\n        private RectTransform CreateStartupHost()\n        {''')
+          replace_once(presenter,
+          '''            firstFramePresented = true;\n            if (image) image.color = Color.white;''',
+          '''            firstFramePresented = true;\n            if (image) image.color = Color.white;\n            if (startupHintGroup) startupHintGroup.alpha = 1f;''')
+          replace_once(presenter,
+          '''            if (allowSkip && firstFramePresented && player && player.isPlaying &&\n                (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))\n                Finish(true);''',
+          '''            if (allowSkip && firstFramePresented && player && player.isPlaying && Input.anyKeyDown)\n                Finish(true);''')
+          replace_once(presenter,
+          '''            if (image) image.texture = null;\n            if (ownedRoot)''',
+          '''            if (image) image.texture = null;\n            startupHintGroup = null;\n            if (ownedRoot)''')
+
+          laptop='Assets/Rokas/Scripts/Presentation/LaptopView.cs'
+          replace_once(laptop,
+          '''        private float pageTime;\n        private Action closed;''',
+          '''        private float pageTime;\n        private Action closed;\n        private bool bootConsumedThisHomeVisit;''')
+          replace_once(laptop,
+          '''        public void Build(RectTransform parent)\n        {''',
+          '''        public void BeginHomeVisit()\n        {\n            bootConsumedThisHomeVisit = false;\n        }\n\n        public void Build(RectTransform parent)\n        {''')
+          replace_once(laptop,
+          '''            if (!videoTransitions())\n            {\n                Booting = false;\n                BuildReadyFrame();\n                return;\n            }\n            Booting = true;\n            video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);''',
+          '''            if (!videoTransitions() || bootConsumedThisHomeVisit)\n            {\n                Booting = false;\n                BuildReadyFrame();\n                return;\n            }\n            bootConsumedThisHomeVisit = true;\n            Booting = true;\n            video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);''')
+
+          view='Assets/Rokas/Scripts/Presentation/RokasView.cs'
+          replace_once(view,
+          '''        private void Refresh()\n        {\n            if (phase != session.State.phase)\n            {\n                phase = session.State.phase;\n                RebuildScene();\n            }''',
+          '''        private void Refresh()\n        {\n            RunPhase nextPhase = session.State.phase;\n            if (phase != nextPhase)\n            {\n                bool wasHomeLocation = IsHomeLocation(phase);\n                bool isHomeLocation = IsHomeLocation(nextPhase);\n                phase = nextPhase;\n                if (!wasHomeLocation && isHomeLocation) laptop.BeginHomeVisit();\n                RebuildScene();\n            }''')
+          replace_once(view,
+          '''        private void RebuildScene()\n        {''',
+          '''        private static bool IsHomeLocation(RunPhase value)\n        {\n            return value == RunPhase.Home || value == RunPhase.Accepted || value == RunPhase.Payment;\n        }\n\n        private void RebuildScene()\n        {''')
           PY
-          cat endpoint-evidence.txt
-      - name: Upload probe evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: startup-hint-transfer-probe-all-js
-          path: |
-            page.html
-            js-paths.txt
-            probe-js
-            endpoint-evidence.txt
-          if-no-files-found: warn
+          git diff --check
+          git diff --stat
+          git diff -- Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs Assets/Rokas/Scripts/Presentation/LaptopView.cs Assets/Rokas/Scripts/Presentation/RokasView.cs
+          git add -- Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs Assets/Rokas/Scripts/Presentation/LaptopView.cs Assets/Rokas/Scripts/Presentation/RokasView.cs
+          git diff --cached --check
+          git commit -m 'feat: add startup any-key hint and per-Home-visit laptop boot'
+
+      - name: Verify exact scope and push feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=3f9951e07f1c76472ee956b094f38761fdb16d1a
+          echo '=== commits ==='
+          git log --oneline "$BASE"..HEAD
+          echo '=== changed files ==='
+          git diff --name-only "$BASE"..HEAD | tee /tmp/changed.txt
+          cat > /tmp/expected.txt <<'EOF'
+          Assets/Rokas/Resources/StartupSkipHint.png
+          Assets/Rokas/Resources/StartupSkipHint.png.meta
+          Assets/Rokas/Scripts/Presentation/LaptopView.cs
+          Assets/Rokas/Scripts/Presentation/RokasView.cs
+          Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
+          EOF
+          sort -o /tmp/expected.txt /tmp/expected.txt
+          sort -o /tmp/changed.txt /tmp/changed.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+          git diff --check "$BASE"..HEAD
+          test -z "$(git status --porcelain)"
+          sha256sum Assets/Rokas/Resources/StartupSkipHint.png
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+          git push origin HEAD:feature/startup-skip-hint-laptop-boot-per-home-visit
