@@ -52,7 +52,7 @@ jobs:
           projectPath: .
           unityVersion: 6000.3.19f1
           testMode: PlayMode
-          cliVersion: 0.1.60
+          cliVersion: v0.1.60
           customParameters: -testFilter Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Startup Hint Laptop Home Visit Focused Tests
