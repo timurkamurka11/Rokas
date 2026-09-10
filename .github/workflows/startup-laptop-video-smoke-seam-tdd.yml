@@ -1,0 +1,46 @@
+name: ROKAS Startup Laptop Video Smoke Seam TDD
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - Assets/Rokas/Tests/EditMode/StartupLaptopVideoSmokeModeTests.cs
+      - Assets/Rokas/Scripts/Presentation/RokasVideoSmokeRunner.cs
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  smoke-seam-editmode:
+    name: Video Smoke Opt-In Seam EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Run focused EditMode test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.StartupLaptopVideoSmokeModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Video Smoke Seam EditMode
+
+      - name: Upload focused TDD evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-smoke-seam-tdd
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
