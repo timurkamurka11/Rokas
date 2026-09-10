@@ -22,6 +22,8 @@ namespace Rokas.Presentation
         private bool lampStateKnown;
         private bool lampOn;
 
+        public float VideoVolume { get { return Mathf.Clamp01(settings.masterVolume * settings.sfxVolume); } }
+
         public RokasAudio(GameObject parent, RokasAssets assets, SettingsData settings)
         {
             this.assets = assets;
