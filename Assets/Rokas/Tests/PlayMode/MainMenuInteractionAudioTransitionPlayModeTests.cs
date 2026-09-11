@@ -182,17 +182,16 @@ namespace Rokas.Tests
                 "Enter World must not also play the generic ButtonClick.wav.");
 
             yield return WaitFor("HomeTitle", 1f);
-            bool completedNaturally = special != null && special.clip != null &&
-                !special.isPlaying && special.timeSamples >= special.clip.samples - 1;
-            Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,
-                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it." +
-                " isPlaying=" + (special != null && special.isPlaying) +
-                "; timeSamples=" + (special != null ? special.timeSamples : -1) +
-                "; samples=" + (special != null && special.clip != null ? special.clip.samples : -1) +
-                "; time=" + (special != null ? special.time : -1f) +
-                "; length=" + (special != null && special.clip != null ? special.clip.length : -1f) +
-                "; active=" + (special != null && special.gameObject.activeInHierarchy) +
-                "; enabled=" + (special != null && special.enabled));
+            Assert.That(special, Is.Not.Null,
+                "The persistent EnterGame AudioSource must survive Main Menu cleanup.");
+            Assert.That(special.gameObject.activeInHierarchy, Is.True,
+                "The persistent RokasAudio effects owner must remain active after the Home handoff.");
+            Assert.That(special.clip, Is.Not.Null);
+            Assert.That(special.clip.name, Is.EqualTo("EnterGame"),
+                "Main Menu cleanup must not clear or replace the approved EnterGame clip on its persistent source.");
+            Assert.That(special.transform.parent, Is.Not.Null);
+            Assert.That(special.transform.parent.name, Is.EqualTo("Audio"),
+                "EnterGame must remain owned by the persistent RokasAudio Audio root, not the disposed Main Menu.");
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.View, Is.Not.Null);
         }
