@@ -73,14 +73,14 @@ namespace Rokas.Presentation
         {
             Cancel();
             RectTransform host = CreateStartupHost();
-            Begin(host, fileName, "StartupVideoSurface", 1280, 720, requestedVolume, true, onComplete);
+            Begin(host, fileName, "StartupVideoSurface", 1280, 720, requestedVolume, true, true, onComplete);
         }
 
         public void PlayStoryIntro(string fileName, float requestedVolume, Action onComplete)
         {
             Cancel();
             RectTransform host = CreateStartupHost();
-            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, false, onComplete,
+            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, true, false, onComplete,
                 StoryPlaybackTimeoutSeconds);
         }
 
@@ -89,7 +89,7 @@ namespace Rokas.Presentation
         {
             if (!host) throw new ArgumentNullException("host");
             Cancel();
-            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, false, onComplete);
+            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, false, false, onComplete);
         }
 
         public void Skip()
@@ -109,15 +109,16 @@ namespace Rokas.Presentation
         }
 
         private void Begin(RectTransform host, string fileName, string surfaceName,
-            int targetWidth, int targetHeight, float requestedVolume, bool canSkip, Action onComplete)
+            int targetWidth, int targetHeight, float requestedVolume, bool canSkip, bool showStartupHint,
+            Action onComplete)
         {
-            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, canSkip, onComplete,
-                PlaybackTimeoutSeconds);
+            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, canSkip, showStartupHint,
+                onComplete, PlaybackTimeoutSeconds);
         }
 
         private void Begin(RectTransform host, string fileName, string surfaceName,
-            int targetWidth, int targetHeight, float requestedVolume, bool canSkip, Action onComplete,
-            float requestedPlaybackTimeoutSeconds)
+            int targetWidth, int targetHeight, float requestedVolume, bool canSkip, bool showStartupHint,
+            Action onComplete, float requestedPlaybackTimeoutSeconds)
         {
             EnsureComponents();
             active = true;
@@ -154,7 +155,7 @@ namespace Rokas.Presentation
             image.texture = target;
             image.color = Color.black;
             image.raycastTarget = false;
-            if (canSkip) CreateStartupHint(host);
+            if (showStartupHint) CreateStartupHint(host);
 
             player.Stop();
             player.isLooping = false;
