@@ -1,4 +1,4 @@
-name: TEMP EnterGame Playback Diagnostic
+name: TEMP EnterGame Direct Replay Diagnostic
 
 on:
   push:
@@ -20,40 +20,31 @@ jobs:
         with:
           ref: feature/main-menu-interaction-ui-audio-home-transition
           fetch-depth: 1
-      - name: Add narrow playback diagnostic and dispatch focused suite
+      - name: Probe direct replay on assigned EnterGame source
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          expected='3cc953d7e4563cca588270936773d802c20ceade'
+          expected='03240a40fb13af6760bb4eedd61c6ee675b21d50'
           test "$(git rev-parse HEAD)" = "$expected"
           file='Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs'
           python3 - <<'PY'
           from pathlib import Path
           p=Path('Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs')
           s=p.read_text()
-          old='AudioSource special = FindAudioSourceByClipName("EnterGame");'
-          new='AudioSource special = FindAssignedAudioSourceByClipName("EnterGame");'
+          old='''            Assert.That(special.isPlaying, Is.True,\n                "EnterGame source is assigned and loaded but playback did not start or already stopped.");'''
+          new='''            if (!special.isPlaying)\n            {\n                special.Play();\n                yield return null;\n                Assert.Fail("EnterGame production playback was false; directReplay=" + special.isPlaying +\n                    "; length=" + special.clip.length + "; samples=" + special.clip.samples +\n                    "; frequency=" + special.clip.frequency + "; timeSamples=" + special.timeSamples);\n            }'''
           assert s.count(old)==1
           s=s.replace(old,new)
-          marker='''        private int CountAudioSourcesByClipName(string clipName)\n        {'''
-          helper='''        private AudioSource FindAssignedAudioSourceByClipName(string clipName)\n        {\n            if (root == null) return null;\n            foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))\n                if (source.clip != null && source.clip.name == clipName) return source;\n            return null;\n        }\n\n'''
-          assert s.count(marker)==1
-          s=s.replace(marker,helper+marker)
-          needle='''            Assert.That(special, Is.Not.Null,\n                "Enter World must play the approved EnterGame.wav through the persistent RokasAudio owner.");\n            Assert.That(special.isPlaying, Is.True);'''
-          repl='''            Assert.That(special, Is.Not.Null,\n                "Enter World must assign the approved EnterGame.wav to the persistent RokasAudio owner.");\n            Assert.That(special.clip.loadState, Is.EqualTo(AudioDataLoadState.Loaded),\n                "EnterGame clip must be loaded before playback.");\n            Assert.That(special.isPlaying, Is.True,\n                "EnterGame source is assigned and loaded but playback did not start or already stopped.");'''
-          assert s.count(needle)==1
-          s=s.replace(needle,repl)
           p.write_text(s)
           PY
           git diff --check
           test "$(git diff --name-only | wc -l)" -eq 1
           test "$(git diff --name-only)" = "$file"
-          git diff -- "$file"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "$file"
-          git commit -m 'test: diagnose EnterGame playback state'
+          git commit -m 'test: isolate EnterGame direct replay'
           git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
           gh workflow run main-menu-interaction-audio-transition-tdd.yml --ref feature/main-menu-interaction-ui-audio-home-transition
