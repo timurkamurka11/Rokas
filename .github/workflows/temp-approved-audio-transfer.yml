@@ -1,4 +1,4 @@
-name: TEMP Dispatch Main Menu Regressions
+name: TEMP Align Story Regression With Full-Black Handoff
 
 on:
   push:
@@ -8,22 +8,45 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
-  dispatch:
+  patch:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify exact feature head and dispatch existing regressions
+      - name: Checkout exact current feature
+        uses: actions/checkout@v4
+        with:
+          ref: feature/main-menu-interaction-ui-audio-home-transition
+          fetch-depth: 1
+      - name: Align only stale StoryIntro menu handoff assertion
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          expected='510efc00846cf9c2b5b0261f88c3d6bf489691c9'
+          test "$(git rev-parse HEAD)" = "$expected"
+          file='Assets/Rokas/Tests/PlayMode/StoryIntroMainMenuPlayModeTests.cs'
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('Assets/Rokas/Tests/PlayMode/StoryIntroMainMenuPlayModeTests.cs')
+          s=p.read_text()
+          old='''            Press("EnterWorldButton");\n            yield return null;\n\n            Assert.That(Find("RokasMainMenu"), Is.Null);\n            Assert.That(Find("MainMenuVideoSurface"), Is.Null);\n            Assert.That(Find("HomeTitle"), Is.Not.Null,\n                "Entering the world must reuse the existing Home presentation rather than construct a replacement Home.");'''
+          new='''            Press("EnterWorldButton");\n            yield return null;\n\n            Assert.That(Find("RokasMainMenu"), Is.Not.Null,\n                "Enter World must keep the launch menu beneath the fade until the full-black handoff.");\n            Assert.That(Find("HomeTitle"), Is.Null,\n                "Home must not be constructed during the initial partial fade-to-black frames.");\n\n            float deadline = Time.realtimeSinceStartup + 1f;\n            while (Find("HomeTitle") == null && Time.realtimeSinceStartup < deadline) yield return null;\n\n            Assert.That(Find("RokasMainMenu"), Is.Null);\n            Assert.That(Find("MainMenuVideoSurface"), Is.Null);\n            Assert.That(Find("HomeTitle"), Is.Not.Null,\n                "Entering the world must reuse the existing Home presentation rather than construct a replacement Home.");'''
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new))
+          PY
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "$file"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$file"
+          git commit -m 'test: align story regression with full-black handoff'
+          git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
           repo='${{ github.repository }}'
-          actual="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
-          test "$actual" = '510efc00846cf9c2b5b0261f88c3d6bf489691c9'
           gh workflow run story-intro-main-menu-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
+          gh workflow run main-menu-interaction-audio-transition-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
           gh workflow run unity-ci.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
-          echo "DISPATCH_FEATURE_HEAD=$actual"
