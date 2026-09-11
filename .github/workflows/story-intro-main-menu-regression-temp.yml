@@ -1,0 +1,101 @@
+name: ROKAS Story Menu Regression Verification TEMP
+
+on:
+  push:
+    branches:
+      - feature/story-intro-main-menu
+    paths:
+      - .github/workflows/story-intro-main-menu-regression-temp.yml
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: story-menu-regression-temp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  startup-laptop-regressions:
+    name: Regression ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: StartupLaptopVideo
+            filter: Rokas.Tests.StartupLaptopVideoPlayModeTests
+          - name: StartupSkipHintLaptopHomeVisit
+            filter: Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
+          - name: LaptopFullContractLifecycle
+            filter: Rokas.Tests.LaptopFullContractLifecyclePlayModeTests
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StoryMenuRegression-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StoryMenuRegression-${{ runner.os }}-${{ matrix.name }}-
+            StoryIntroMainMenu-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run PlayMode regression
+        id: regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter ${{ matrix.filter }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Story Menu Regression ${{ matrix.name }}
+
+      - name: Require non-empty zero-failure regression result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          total = int(r.attrib.get('total', '-1'))
+          passed = int(r.attrib.get('passed', '-1'))
+          failed = int(r.attrib.get('failed', '-1'))
+          skipped = int(r.attrib.get('skipped', '-1'))
+          print(f'REGRESSION_XML total={total} passed={passed} failed={failed} skipped={skipped}')
+          if total <= 0 or failed != 0 or passed + skipped != total:
+              raise SystemExit('Regression result is not clean')
+          PY
+
+      - name: Preserve regression evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/git-status.txt
+          git diff --check > verification/git-diff-check.txt || true
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/${{ matrix.name }}-results.xml; fi
+
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-regression-${{ matrix.name }}
+          path: |
+            artifacts
+            verification
+          if-no-files-found: error
