@@ -7,13 +7,14 @@ using UnityEngine.Video;
 namespace Rokas.Presentation
 {
     /// <summary>
-    /// Owns the single transient video playback path used by application startup and laptop boot.
+    /// Owns the single transient video playback path used by application startup, story intro and laptop boot.
     /// Source media stays in StreamingAssets and is played by URL so the original MP4 bytes ship unchanged.
     /// </summary>
     public sealed class VideoSequencePresenter : MonoBehaviour
     {
         private const float PrepareTimeoutSeconds = 8f;
         private const float PlaybackTimeoutSeconds = 30f;
+        private const float StoryPlaybackTimeoutSeconds = 70f;
         private const float MissingMediaFallbackDelay = .05f;
 
         private VideoPlayer player;
@@ -31,6 +32,7 @@ namespace Rokas.Presentation
         private float volume;
         private float prepareDeadline;
         private float playbackDeadline;
+        private float playbackTimeoutSeconds = PlaybackTimeoutSeconds;
 
         public bool IsPlaying { get { return active; } }
         public bool FirstFramePresented { get { return firstFramePresented; } }
@@ -74,6 +76,14 @@ namespace Rokas.Presentation
             Begin(host, fileName, "StartupVideoSurface", 1280, 720, requestedVolume, true, onComplete);
         }
 
+        public void PlayStoryIntro(string fileName, float requestedVolume, Action onComplete)
+        {
+            Cancel();
+            RectTransform host = CreateStartupHost();
+            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, false, onComplete,
+                StoryPlaybackTimeoutSeconds);
+        }
+
         public void PlayInHost(RectTransform host, string fileName, string surfaceName,
             int targetWidth, int targetHeight, float requestedVolume, Action onComplete)
         {
@@ -101,6 +111,14 @@ namespace Rokas.Presentation
         private void Begin(RectTransform host, string fileName, string surfaceName,
             int targetWidth, int targetHeight, float requestedVolume, bool canSkip, Action onComplete)
         {
+            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, canSkip, onComplete,
+                PlaybackTimeoutSeconds);
+        }
+
+        private void Begin(RectTransform host, string fileName, string surfaceName,
+            int targetWidth, int targetHeight, float requestedVolume, bool canSkip, Action onComplete,
+            float requestedPlaybackTimeoutSeconds)
+        {
             EnsureComponents();
             active = true;
             firstFramePresented = false;
@@ -108,6 +126,7 @@ namespace Rokas.Presentation
             fallbackPending = false;
             completed = onComplete;
             volume = Mathf.Clamp01(requestedVolume);
+            playbackTimeoutSeconds = Mathf.Max(PlaybackTimeoutSeconds, requestedPlaybackTimeoutSeconds);
             prepareDeadline = Time.realtimeSinceStartup + PrepareTimeoutSeconds;
             playbackDeadline = float.PositiveInfinity;
 
@@ -138,6 +157,7 @@ namespace Rokas.Presentation
             if (canSkip) CreateStartupHint(host);
 
             player.Stop();
+            player.isLooping = false;
             videoAudio.Stop();
             player.targetTexture = target;
             player.source = VideoSource.Url;
@@ -200,7 +220,7 @@ namespace Rokas.Presentation
             var scaler = ownedRoot.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.screenMatchMode = CanvasScaler.ScaleMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = .5f;
 
             var host = (RectTransform)ownedRoot.transform;
@@ -232,7 +252,7 @@ namespace Rokas.Presentation
         {
             if (!active || preparedPlayer != player) return;
             fallbackPending = false;
-            playbackDeadline = Time.realtimeSinceStartup + PlaybackTimeoutSeconds;
+            playbackDeadline = Time.realtimeSinceStartup + playbackTimeoutSeconds;
             player.Play();
         }
 
@@ -296,11 +316,13 @@ namespace Rokas.Presentation
             allowSkip = false;
             fallbackPending = false;
             firstFramePresented = false;
+            playbackTimeoutSeconds = PlaybackTimeoutSeconds;
             DetachHandlers();
 
             if (player)
             {
                 player.Stop();
+                player.isLooping = false;
                 player.targetTexture = null;
                 player.url = string.Empty;
             }
