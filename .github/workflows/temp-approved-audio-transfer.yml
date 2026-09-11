@@ -15,33 +15,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve firestorage API origin
+      - name: Transfer exact approved WAVs
         shell: bash
         run: |
           set -euo pipefail
+          api='https://api.firestorage.ai/dev/file'
           share='2A7x61dQsx57'
-          curl --fail --location --silent --show-error "https://firestorage.ai/ja/f/${share}" -o /tmp/share.html
-          grep -Eo 'src="[^"]+\.js"' /tmp/share.html | sed 's/^src="//;s/"$//' | sort -u > /tmp/scripts.txt
-          : > /tmp/all.js
-          while IFS= read -r src; do
-            case "$src" in
-              http*) url="$src" ;;
-              *) url="https://firestorage.ai$src" ;;
-            esac
-            curl --fail --location --silent --show-error "$url" >> /tmp/all.js
-            printf '\n' >> /tmp/all.js
-          done < /tmp/scripts.txt
-          echo '--- absolute HTTPS strings near API/download/share code ---'
-          python3 - <<'PY'
-          import re
-          s=open('/tmp/all.js',encoding='utf-8',errors='ignore').read()
-          for pat in [r'https://[^"\'`\\ ]+', r'.{0,220}/files\?maxResults.{0,220}', r'.{0,300}/download.{0,300}']:
-              seen=set()
-              for m in re.finditer(pat,s):
-                  v=m.group(0)
-                  if v not in seen:
-                      seen.add(v); print(v[:900])
-          PY
-          echo '--- candidate f assignments / API constants ---'
-          grep -Eo '.{0,180}([A-Za-z_$][A-Za-z0-9_$]*=["'"'"']https?://[^"'"'"']+|api[^,;]{0,160}|downloadUrl.{0,220}).{0,180}' /tmp/all.js | head -200 || true
-          exit 1
+          button_file='01a0923b7ae072b49403fc85ac8f1d05'
+          enter_file='01a0923bb29c70e28dc1eb618b701693'
+
+          resolve_and_download() {
+            local file_id="$1"
+            local out="$2"
+            local json url
+            json=$(curl --fail --silent --show-error --request POST \
+              "${api}/shares/${share}/files/${file_id}/download")
+            url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["downloadUrl"])' <<<"$json")
+            curl --fail --location --silent --show-error "$url" --output "$out"
+          }
+
+          resolve_and_download "$button_file" /tmp/ButtonClick.wav
+          resolve_and_download "$enter_file" /tmp/EnterGame.wav
+
+          button_sha=$(sha256sum /tmp/ButtonClick.wav | awk '{print $1}')
+          enter_sha=$(sha256sum /tmp/EnterGame.wav | awk '{print $1}')
+          echo "BUTTON_CLICK_SHA256: $button_sha"
+          echo "ENTER_GAME_SHA256: $enter_sha"
+          test "$button_sha" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
+          test "$enter_sha" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
+
+          cp /tmp/ButtonClick.wav 'Assets/Rokas/Audio/ButtonClick.wav'
+          cp /tmp/EnterGame.wav 'Assets/Rokas/Audio/EnterGame.wav'
+          git mv 'Assets/Rokas/Audio/Button click.wav.meta' 'Assets/Rokas/Audio/ButtonClick.wav.meta'
+          git mv 'Assets/Rokas/Audio/Enter game.wav.meta' 'Assets/Rokas/Audio/EnterGame.wav.meta'
+
+          echo '--- TREE SHA256 GATE ---'
+          sha256sum 'Assets/Rokas/Audio/ButtonClick.wav' 'Assets/Rokas/Audio/EnterGame.wav'
+          test "$(sha256sum 'Assets/Rokas/Audio/ButtonClick.wav' | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
+          test "$(sha256sum 'Assets/Rokas/Audio/EnterGame.wav' | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'Assets/Rokas/Audio/ButtonClick.wav' 'Assets/Rokas/Audio/EnterGame.wav' \
+                  'Assets/Rokas/Audio/ButtonClick.wav.meta' 'Assets/Rokas/Audio/EnterGame.wav.meta'
+          git commit -m 'build: import exact approved menu audio binaries'
+          git push origin HEAD:wip/main-menu-interaction-ui-audio-home-transition
