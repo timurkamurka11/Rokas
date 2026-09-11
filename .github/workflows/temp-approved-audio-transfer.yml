@@ -17,21 +17,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Download exact approved WAVs
+      - name: Resolve firestorage download endpoints
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p Assets/Rokas/Audio
-          curl --fail --location --retry 2 --output 'Assets/Rokas/Audio/Button click.wav' 'https://firestorage.ai/ja/f/ANH070mKY3-B'
-          curl --fail --location --retry 2 --output 'Assets/Rokas/Audio/Enter game.wav' 'https://firestorage.ai/ja/f/ecH9f8hC8xUl'
-          echo '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96  Assets/Rokas/Audio/Button click.wav' | sha256sum -c -
-          echo '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809  Assets/Rokas/Audio/Enter game.wav' | sha256sum -c -
-      - name: Commit exact approved WAVs
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add 'Assets/Rokas/Audio/Button click.wav' 'Assets/Rokas/Audio/Enter game.wav'
-          git commit -m 'chore: import approved main menu audio'
-          git push origin HEAD:wip/main-menu-interaction-ui-audio-home-transition
+          curl --fail --location --retry 2 --output /tmp/button.html 'https://firestorage.ai/ja/f/ANH070mKY3-B'
+          curl --fail --location --retry 2 --output /tmp/enter.html 'https://firestorage.ai/ja/f/ecH9f8hC8xUl'
+          echo '--- button download candidates ---'
+          grep -Eoi '.{0,140}(download|file_url|download_url|href=).{0,220}' /tmp/button.html | head -80 || true
+          echo '--- enter download candidates ---'
+          grep -Eoi '.{0,140}(download|file_url|download_url|href=).{0,220}' /tmp/enter.html | head -80 || true
+          exit 1
