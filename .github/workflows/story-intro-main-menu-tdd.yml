@@ -1,0 +1,95 @@
+name: ROKAS Story Intro Main Menu TDD
+
+on:
+  push:
+    branches:
+      - feature/story-intro-main-menu
+    paths:
+      - .github/workflows/story-intro-main-menu-tdd.yml
+      - Assets/Rokas/Tests/PlayMode/StoryIntroMainMenuPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/StoryIntroMainMenuPlayModeTests.cs.meta
+      - Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs
+      - Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
+      - Assets/Rokas/Scripts/Presentation/MainMenuView.cs
+      - Assets/Rokas/Scripts/Presentation/MainMenuView.cs.meta
+      - Assets/StreamingAssets/RokasVideo/StoryIntro.mp4
+      - Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: story-intro-main-menu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playmode:
+    name: Focused Story Intro + Main Menu PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StoryIntroMainMenu-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StoryIntroMainMenu-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused PlayMode tests
+        id: focused
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.StoryIntroMainMenuPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Story Intro Main Menu Focused Tests
+
+      - name: Preserve exact test evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/git-status.txt
+          git diff --check > verification/git-diff-check.txt || true
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+
+      - name: Require four focused tests green
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          print('FOCUSED_XML total=%d passed=%d failed=%d skipped=%d' % values)
+          if values != (4,4,0,0):
+              raise SystemExit('Expected exactly 4/4 focused tests')
+          PY
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-intro-main-menu-focused-evidence
+          path: |
+            ${{ steps.focused.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
