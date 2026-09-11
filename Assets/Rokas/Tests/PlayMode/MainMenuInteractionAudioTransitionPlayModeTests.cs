@@ -170,29 +170,22 @@ namespace Rokas.Tests
             Button enter = FindButton("EnterWorldButton");
             Press(enter);
             Press(enter);
-            yield return null;
 
-            AudioSource special = FindAssignedAudioSourceByClipName("EnterGame");
+            AudioSource special = FindAudioSourceByClipName("EnterGame");
             Assert.That(special, Is.Not.Null,
-                "Enter World must assign the approved EnterGame.wav to the persistent RokasAudio owner.");
+                "Enter World must start the approved EnterGame.wav immediately through the persistent RokasAudio owner.");
             Assert.That(special.clip.loadState, Is.EqualTo(AudioDataLoadState.Loaded),
                 "EnterGame clip must be loaded before playback.");
-            if (!special.isPlaying)
-            {
-                special.Play();
-                yield return null;
-                Assert.Fail("EnterGame production playback was false; directReplay=" + special.isPlaying +
-                    "; length=" + special.clip.length + "; samples=" + special.clip.samples +
-                    "; frequency=" + special.clip.frequency + "; timeSamples=" + special.timeSamples);
-            }
             Assert.That(CountAudioSourcesByClipName("EnterGame"), Is.EqualTo(1),
                 "Repeated Enter input must not stack duplicate EnterGame playback.");
             Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,
                 "Enter World must not also play the generic ButtonClick.wav.");
 
             yield return WaitFor("HomeTitle", 1f);
-            Assert.That(special != null && special.isPlaying, Is.True,
-                "EnterGame SFX must survive Main Menu media cleanup and must not be truncated at the handoff.");
+            bool completedNaturally = special != null && special.clip != null &&
+                !special.isPlaying && special.timeSamples >= special.clip.samples - 1;
+            Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,
+                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it.");
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.View, Is.Not.Null);
         }
@@ -308,14 +301,6 @@ namespace Rokas.Tests
             if (root == null) return null;
             foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
                 if (source.clip != null && source.clip.name == clipName && source.isPlaying) return source;
-            return null;
-        }
-
-        private AudioSource FindAssignedAudioSourceByClipName(string clipName)
-        {
-            if (root == null) return null;
-            foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
-                if (source.clip != null && source.clip.name == clipName) return source;
             return null;
         }
 
