@@ -1,0 +1,119 @@
+name: ROKAS Main Menu Interaction Audio Transition TDD
+
+on:
+  push:
+    branches:
+      - feature/main-menu-interaction-ui-audio-home-transition
+    paths:
+      - .github/workflows/main-menu-interaction-audio-transition-tdd.yml
+      - Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs.meta
+      - Assets/Rokas/Scripts/Presentation/MainMenuView.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopTileFeedback.cs
+      - Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs
+      - Assets/Rokas/Scripts/Presentation/RokasAudio.cs
+      - Assets/Rokas/Scripts/Presentation/RokasAssets.cs
+      - Assets/Rokas/Resources/RokasAssets.asset
+      - Assets/Rokas/Audio/Button click.wav
+      - Assets/Rokas/Audio/Button click.wav.meta
+      - Assets/Rokas/Audio/Enter game.wav
+      - Assets/Rokas/Audio/Enter game.wav.meta
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: main-menu-interaction-audio-transition-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playmode:
+    name: Focused Main Menu Interaction + UI Audio + Home Transition
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: MainMenuInteractionAudioTransition-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            MainMenuInteractionAudioTransition-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused PlayMode tests
+        id: focused
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Main Menu Interaction Audio Transition Focused Tests
+
+      - name: Preserve exact RED/GREEN evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/post-unity-git-status.txt
+          git diff --check > verification/git-diff-check.txt
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+
+      - name: Report focused result counts
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          print('FOCUSED_XML total=%d passed=%d failed=%d skipped=%d' % values)
+          if values[0] != 8:
+              raise SystemExit('Expected exactly 8 focused tests')
+          if values[2] == 0:
+              print('FOCUSED_STATE=GREEN')
+          else:
+              print('FOCUSED_STATE=RED')
+          PY
+
+      - name: Require eight focused tests green
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          r = ET.parse('artifacts/playmode-results.xml').getroot()
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          if values != (8,8,0,0):
+              raise SystemExit('Expected exactly 8/8 focused tests')
+          PY
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-menu-interaction-audio-transition-focused-evidence
+          path: |
+            ${{ steps.focused.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
