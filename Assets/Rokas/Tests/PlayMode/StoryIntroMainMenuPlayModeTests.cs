@@ -97,6 +97,35 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator SecondaryButtonsAreRealRaycastableNoOps()
+        {
+            root = new GameObject("MainMenuInteractionFixture");
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            int entered = 0;
+            MainMenuView.Create(root.transform, assets, 0f, null, () => entered++);
+            yield return null;
+
+            foreach (string name in new[] { "EnterWorldButton", "DevelopersButton", "SupportDevelopmentButton" })
+            {
+                Button button = FindButton(name);
+                Assert.That(button, Is.Not.Null, "Missing real Unity Button: " + name);
+                Assert.That(button.targetGraphic, Is.Not.Null, name + " needs a Graphic for actual UI raycasting.");
+                Assert.That(button.targetGraphic.raycastTarget, Is.True,
+                    name + " must expose a live raycast target; direct ExecuteEvents-only buttons are not acceptable.");
+            }
+
+            Press("DevelopersButton");
+            Press("SupportDevelopmentButton");
+            yield return null;
+
+            Assert.That(entered, Is.EqualTo(0), "Secondary actions must remain safe no-ops for this milestone.");
+            Assert.That(Find("RokasMainMenu"), Is.Not.Null,
+                "About and Support must leave the user on the same menu.");
+            Assert.That(Find("HomeTitle"), Is.Null);
+        }
+
+        [UnityTest]
         public IEnumerator EnterWorldBuildsExistingHomeExactlyOnce()
         {
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
