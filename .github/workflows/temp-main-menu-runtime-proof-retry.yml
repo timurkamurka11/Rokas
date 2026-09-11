@@ -55,46 +55,50 @@ jobs:
           for line in lines:
               out.append(line[10:] if line.startswith('          ') else line)
           probe='\n'.join(out)+'\n'
-          old='''    private IEnumerator Capture(string fileName)
-    {
-        captureSucceeded = false;
-        string path = Path.Combine(outputDirectory, fileName);
-        if (File.Exists(path)) File.Delete(path);
-        ScreenCapture.CaptureScreenshot(path);
-        float deadline = Time.realtimeSinceStartup + 3f;
-        while (Time.realtimeSinceStartup < deadline)
-        {
-            yield return new WaitForEndOfFrame();
-            if (File.Exists(path) && new FileInfo(path).Length > 1000)
-            {
-                captureSucceeded = true;
-                yield break;
-            }
-        }
-    }
-'''
-          new='''    private IEnumerator Capture(string fileName)
-    {
-        captureSucceeded = false;
-        string path = Path.Combine(outputDirectory, fileName);
-        if (File.Exists(path)) File.Delete(path);
-        yield return new WaitForEndOfFrame();
-        Texture2D shot = null;
-        try
-        {
-            shot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
-            shot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0, false);
-            shot.Apply(false, false);
-            byte[] bytes = shot.EncodeToPNG();
-            File.WriteAllBytes(path, bytes);
-            captureSucceeded = bytes != null && bytes.Length > 1000 && File.Exists(path);
-        }
-        finally
-        {
-            if (shot) Destroy(shot);
-        }
-    }
-'''
+          old='\n'.join([
+              '    private IEnumerator Capture(string fileName)',
+              '    {',
+              '        captureSucceeded = false;',
+              '        string path = Path.Combine(outputDirectory, fileName);',
+              '        if (File.Exists(path)) File.Delete(path);',
+              '        ScreenCapture.CaptureScreenshot(path);',
+              '        float deadline = Time.realtimeSinceStartup + 3f;',
+              '        while (Time.realtimeSinceStartup < deadline)',
+              '        {',
+              '            yield return new WaitForEndOfFrame();',
+              '            if (File.Exists(path) && new FileInfo(path).Length > 1000)',
+              '            {',
+              '                captureSucceeded = true;',
+              '                yield break;',
+              '            }',
+              '        }',
+              '    }',
+              ''
+          ])
+          new='\n'.join([
+              '    private IEnumerator Capture(string fileName)',
+              '    {',
+              '        captureSucceeded = false;',
+              '        string path = Path.Combine(outputDirectory, fileName);',
+              '        if (File.Exists(path)) File.Delete(path);',
+              '        yield return new WaitForEndOfFrame();',
+              '        Texture2D shot = null;',
+              '        try',
+              '        {',
+              '            shot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);',
+              '            shot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0, false);',
+              '            shot.Apply(false, false);',
+              '            byte[] bytes = shot.EncodeToPNG();',
+              '            File.WriteAllBytes(path, bytes);',
+              '            captureSucceeded = bytes != null && bytes.Length > 1000 && File.Exists(path);',
+              '        }',
+              '        finally',
+              '        {',
+              '            if (shot) Destroy(shot);',
+              '        }',
+              '    }',
+              ''
+          ])
           assert probe.count(old) == 1, 'Expected exactly one ScreenCapture QA seam.'
           probe=probe.replace(old,new)
           p=Path('feature/Assets/RokasMainMenuRuntimeProbe.cs')
