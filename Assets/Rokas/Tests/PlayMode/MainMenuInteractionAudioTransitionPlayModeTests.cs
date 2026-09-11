@@ -212,6 +212,17 @@ namespace Rokas.Tests
             Assert.That(generic.isPlaying, Is.True);
             Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Null,
                 "Outside-Laptop Home UI must not route through the Laptop mouse click asset.");
+
+            yield return new WaitForSecondsRealtime(1.5f);
+            Press(FindButton("LaptopHotspot"));
+            yield return new WaitForSecondsRealtime(1.5f);
+            Button laptopContracts = FindButton("LaptopContracts");
+            Assert.That(laptopContracts, Is.Not.Null, "Laptop must reach its real internal desktop UI.");
+            Press(laptopContracts);
+            Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Not.Null,
+                "Real Laptop internal UI must preserve the pre-existing LaptopMouseClick path.");
+            Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,
+                "Laptop internal UI must continue suppressing the generic outside-Laptop ButtonClick path.");
         }
 
         [UnityTest]
