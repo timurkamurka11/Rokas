@@ -6,6 +6,7 @@ on:
       - wip/main-menu-interaction-ui-audio-home-transition
     paths:
       - .github/workflows/temp-main-menu-runtime-proof-retry.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout WIP QA source
+      - name: Checkout pinned proven QA probe source
         uses: actions/checkout@v4
         with:
-          ref: wip/main-menu-interaction-ui-audio-home-transition
+          ref: 2f32e1762c438ce7fb21ae14ff1ec82b9e5ab72d
           path: qa
           fetch-depth: 1
 
@@ -36,8 +37,8 @@ jobs:
           set -euo pipefail
           mkdir -p runtime-build-evidence
           cd feature
-          test "$(git rev-parse HEAD)" = '9514a0895a2b555bbcdbf365e8a05f838a4c9f14'
-          test "$(git rev-parse HEAD^{tree})" = 'f7c73cb3408bd99b6c9afad1b699822d0b3f6b05'
+          test "$(git rev-parse HEAD)" = '6193ad82f059aca60a57fefea4a8d8e0baae6026'
+          test "$(git rev-parse HEAD^{tree})" = 'a05ec6ff5e515f09407687c55bb948e4c9f0a946'
           test "$(sha256sum Assets/Rokas/Audio/ButtonClick.wav | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
           test "$(sha256sum Assets/Rokas/Audio/EnterGame.wav | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
           git rev-parse HEAD > ../runtime-build-evidence/feature-head.txt
@@ -142,7 +143,7 @@ jobs:
           set -euo pipefail
           EXE="$(find feature/build -type f -iname 'Rokas.exe' -print -quit)"
           test -n "$EXE" && test -s "$EXE"
-          printf 'FEATURE_HEAD=9514a0895a2b555bbcdbf365e8a05f838a4c9f14\nFEATURE_TREE=f7c73cb3408bd99b6c9afad1b699822d0b3f6b05\nEXE=%s\n' "$EXE" > runtime-build-evidence/identity.txt
+          printf 'FEATURE_HEAD=6193ad82f059aca60a57fefea4a8d8e0baae6026\nFEATURE_TREE=a05ec6ff5e515f09407687c55bb948e4c9f0a946\nEXE=%s\n' "$EXE" > runtime-build-evidence/identity.txt
           find feature/build -type f -printf '%p %s bytes\n' | sort > runtime-build-evidence/build-manifest.txt
 
       - name: Upload exact QA player
