@@ -15,19 +15,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect firestorage client endpoints
+      - name: Transfer exact approved WAVs
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --output /tmp/share.html 'https://firestorage.ai/ja/f/ANH070mKY3-B'
-          grep -Eo 'src="[^"]+\.js"' /tmp/share.html | sed 's/^src="//;s/"$//' | sort -u > /tmp/scripts.txt
-          echo '--- scripts ---'
-          cat /tmp/scripts.txt
-          n=0
-          while IFS= read -r src; do
-            n=$((n+1))
-            curl --fail --location --silent --show-error --output "/tmp/script-$n.js" "https://firestorage.ai$src"
-            echo "--- $src ---"
-            grep -Eo '.{0,180}(fetch\(|/api/|download|signed|public_id|publicId|shareId|share).{0,300}' "/tmp/script-$n.js" | head -80 || true
-          done < /tmp/scripts.txt
-          exit 1
+          share='gA0X8LIxhyxt'
+          button_file='01a091bda4ee73f79e16ff0b2d93a955'
+          enter_file='01a091caef5972b49b978e3b07cf8183'
+
+          resolve_and_download() {
+            local file_id="$1"
+            local out="$2"
+            local json
+            json=$(curl --fail --silent --show-error --request POST \
+              "https://firestorage.ai/shares/${share}/files/${file_id}/download")
+            local url
+            url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["downloadUrl"])' <<<"$json")
+            curl --fail --location --silent --show-error "$url" --output "$out"
+          }
+
+          resolve_and_download "$button_file" /tmp/ButtonClick.wav
+          resolve_and_download "$enter_file" /tmp/EnterGame.wav
+
+          echo '--- SHA256 ---'
+          sha256sum /tmp/ButtonClick.wav /tmp/EnterGame.wav
+          test "$(sha256sum /tmp/ButtonClick.wav | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
+          test "$(sha256sum /tmp/EnterGame.wav | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
+
+          cp /tmp/ButtonClick.wav 'Assets/Rokas/Audio/ButtonClick.wav'
+          cp /tmp/EnterGame.wav 'Assets/Rokas/Audio/EnterGame.wav'
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'Assets/Rokas/Audio/ButtonClick.wav' 'Assets/Rokas/Audio/EnterGame.wav'
+          git commit -m 'build: import exact approved menu audio binaries'
+          git push origin HEAD:wip/main-menu-interaction-ui-audio-home-transition
