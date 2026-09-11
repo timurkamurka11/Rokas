@@ -140,6 +140,14 @@ namespace Rokas.Tests
             Press("EnterWorldButton");
             yield return null;
 
+            Assert.That(Find("RokasMainMenu"), Is.Not.Null,
+                "Enter World must keep the launch menu beneath the fade until the full-black handoff.");
+            Assert.That(Find("HomeTitle"), Is.Null,
+                "Home must not be constructed during the initial partial fade-to-black frames.");
+
+            float deadline = Time.realtimeSinceStartup + 1f;
+            while (Find("HomeTitle") == null && Time.realtimeSinceStartup < deadline) yield return null;
+
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(Find("MainMenuVideoSurface"), Is.Null);
             Assert.That(Find("HomeTitle"), Is.Not.Null,
