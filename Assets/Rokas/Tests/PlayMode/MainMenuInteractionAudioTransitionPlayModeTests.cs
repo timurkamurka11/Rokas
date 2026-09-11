@@ -189,9 +189,8 @@ namespace Rokas.Tests
             Assert.That(special.clip, Is.Not.Null);
             Assert.That(special.clip.name, Is.EqualTo("EnterGame"),
                 "Main Menu cleanup must not clear or replace the approved EnterGame clip on its persistent source.");
-            Assert.That(special.transform.parent, Is.Not.Null);
-            Assert.That(special.transform.parent.name, Is.EqualTo("Audio"),
-                "EnterGame must remain owned by the persistent RokasAudio Audio root, not the disposed Main Menu.");
+            Assert.That(special.gameObject.name, Is.EqualTo("Audio"),
+                "EnterGame must remain on the persistent RokasAudio Audio root, not the disposed Main Menu.");
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.View, Is.Not.Null);
         }
