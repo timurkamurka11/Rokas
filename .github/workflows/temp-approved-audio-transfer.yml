@@ -15,16 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Resolve firestorage download endpoints
+      - name: Inspect firestorage client endpoint
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 2 --output /tmp/button.html 'https://firestorage.ai/ja/f/ANH070mKY3-B'
-          curl --fail --location --retry 2 --output /tmp/enter.html 'https://firestorage.ai/ja/f/ecH9f8hC8xUl'
-          echo '--- button download candidates ---'
-          grep -Eoi '.{0,140}(download|file_url|download_url|href=).{0,220}' /tmp/button.html | head -80 || true
-          echo '--- enter download candidates ---'
-          grep -Eoi '.{0,140}(download|file_url|download_url|href=).{0,220}' /tmp/enter.html | head -80 || true
+          curl --fail --location --output /tmp/page.js 'https://firestorage.ai/_next/static/chunks/app/%28files%29/ja/f/page-4d19ae0a4ce39d79.js'
+          echo '--- endpoint candidates ---'
+          grep -Eo '.{0,180}(fetch\(|/api/|download|signed|public_id|publicId|share).{0,260}' /tmp/page.js | head -120 || true
           exit 1
