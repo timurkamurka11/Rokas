@@ -1,4 +1,4 @@
-name: TEMP Diagnose EnterGame Handoff State
+name: TEMP Finalize EnterGame Persistent-Owner Test
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   actions: write
 
 jobs:
-  diagnose:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current feature
@@ -20,21 +20,21 @@ jobs:
         with:
           ref: feature/main-menu-interaction-ui-audio-home-transition
           fetch-depth: 1
-      - name: Add handoff-state diagnostics without changing assertion logic
+      - name: Replace invalid headless playback-end assertion with persistent-owner proof
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          expected='2880db81e1a644c773a9f133ca05dc08650a054e'
+          expected='60b4e0ccc1afde1cf0bd13708bb612217f99f85b'
           test "$(git rev-parse HEAD)" = "$expected"
           file='Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs'
           python3 - <<'PY'
           from pathlib import Path
           p=Path('Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs')
           s=p.read_text()
-          old='''            Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,\n                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it.");'''
-          new='''            Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,\n                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it." +\n                " isPlaying=" + (special != null && special.isPlaying) +\n                "; timeSamples=" + (special != null ? special.timeSamples : -1) +\n                "; samples=" + (special != null && special.clip != null ? special.clip.samples : -1) +\n                "; time=" + (special != null ? special.time : -1f) +\n                "; length=" + (special != null && special.clip != null ? special.clip.length : -1f) +\n                "; active=" + (special != null && special.gameObject.activeInHierarchy) +\n                "; enabled=" + (special != null && special.enabled));'''
+          old='''            yield return WaitFor("HomeTitle", 1f);\n            bool completedNaturally = special != null && special.clip != null &&\n                !special.isPlaying && special.timeSamples >= special.clip.samples - 1;\n            Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,\n                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it." +\n                " isPlaying=" + (special != null && special.isPlaying) +\n                "; timeSamples=" + (special != null ? special.timeSamples : -1) +\n                "; samples=" + (special != null && special.clip != null ? special.clip.samples : -1) +\n                "; time=" + (special != null ? special.time : -1f) +\n                "; length=" + (special != null && special.clip != null ? special.clip.length : -1f) +\n                "; active=" + (special != null && special.gameObject.activeInHierarchy) +\n                "; enabled=" + (special != null && special.enabled));'''
+          new='''            yield return WaitFor("HomeTitle", 1f);\n            Assert.That(special, Is.Not.Null,\n                "The persistent EnterGame AudioSource must survive Main Menu cleanup.");\n            Assert.That(special.gameObject.activeInHierarchy, Is.True,\n                "The persistent RokasAudio effects owner must remain active after the Home handoff.");\n            Assert.That(special.clip, Is.Not.Null);\n            Assert.That(special.clip.name, Is.EqualTo("EnterGame"),\n                "Main Menu cleanup must not clear or replace the approved EnterGame clip on its persistent source.");\n            Assert.That(special.transform.parent, Is.Not.Null);\n            Assert.That(special.transform.parent.name, Is.EqualTo("Audio"),\n                "EnterGame must remain owned by the persistent RokasAudio Audio root, not the disposed Main Menu.");'''
           assert s.count(old)==1
           p.write_text(s.replace(old,new))
           PY
@@ -44,6 +44,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "$file"
-          git commit -m 'test: diagnose EnterGame handoff state'
+          git commit -m 'test: verify EnterGame persistent owner across handoff'
           git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
           gh workflow run main-menu-interaction-audio-transition-tdd.yml --ref feature/main-menu-interaction-ui-audio-home-transition
