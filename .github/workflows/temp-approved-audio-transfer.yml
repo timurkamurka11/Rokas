@@ -21,8 +21,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual="$(gh api repos/${{ github.repository }}/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
+          repo='${{ github.repository }}'
+          actual="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
           test "$actual" = '510efc00846cf9c2b5b0261f88c3d6bf489691c9'
-          gh workflow run story-intro-main-menu-tdd.yml --ref feature/main-menu-interaction-ui-audio-home-transition
-          gh workflow run unity-ci.yml --ref feature/main-menu-interaction-ui-audio-home-transition
+          gh workflow run story-intro-main-menu-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
+          gh workflow run unity-ci.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
           echo "DISPATCH_FEATURE_HEAD=$actual"
