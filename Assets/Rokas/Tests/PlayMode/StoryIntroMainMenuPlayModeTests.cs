@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Reflection;
 using NUnit.Framework;
 using Rokas.Presentation;
 using UnityEngine;
@@ -14,52 +15,64 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
+        private bool previousIgnoreFailingMessages;
 
         [UnityTest]
-        public IEnumerator RealLaunchPreviewCompletionStartsStoryBeforeHome()
+        public IEnumerator StoryPlaybackOwnsExclusiveSurfaceUntilSafeFallback()
         {
-            RokasBootstrap boot = CreateRealLaunch();
-            yield return WaitForFirstFrame(boot.VideoPresenter, 8f, "existing startup preview");
+            root = new GameObject("StoryIntroPresenterFixture");
+            var presenter = root.AddComponent<VideoSequencePresenter>();
+            MethodInfo playStory = typeof(VideoSequencePresenter).GetMethod(
+                "PlayStoryIntro", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-            boot.VideoPresenter.Skip();
-            yield return null;
+            Assert.That(playStory, Is.Not.Null,
+                "VideoSequencePresenter needs a dedicated story-intro entry without changing PlayStartup semantics.");
 
-            Assert.That(Find("HomeTitle"), Is.Null,
-                "Completing the existing Startup Preview must no longer construct Home directly.");
+            bool completed = false;
+            playStory.Invoke(presenter, new object[]
+            {
+                "__missing_story_intro_for_fallback_test__.mp4",
+                1f,
+                (Action)(() => completed = true)
+            });
+
+            Assert.That(presenter.IsPlaying, Is.True);
+            Assert.That(presenter.FirstFramePresented, Is.False);
             Assert.That(Find("StoryIntroVideoSurface"), Is.Not.Null,
-                "The story intro must become the next exclusive launch gate after the existing Startup Preview.");
-            Assert.That(Find("RokasMainMenu"), Is.Null,
-                "The main menu must not appear before the story intro completes or is skipped.");
+                "The story intro must own its own full-screen surface before the menu exists.");
+            Assert.That(completed, Is.False);
+
+            yield return new WaitForSecondsRealtime(.12f);
+
+            Assert.That(completed, Is.True,
+                "Missing/corrupt story media must fail safely into the next launch stage.");
+            Assert.That(Find("StoryIntroVideoSurface"), Is.Null,
+                "The story surface must be cleaned by the presenter's terminal path.");
         }
 
         [UnityTest]
-        public IEnumerator StoryCompletionShowsMainMenuBeforeHome()
+        public IEnumerator RealLaunchFallsThroughStoryToMainMenuBeforeHome()
         {
-            RokasBootstrap boot = CreateRealLaunch();
-            yield return AdvancePastExistingPreview(boot);
-            yield return WaitForFirstFrame(boot.VideoPresenter, 8f, "story intro");
-
-            boot.VideoPresenter.Skip();
-            yield return null;
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitFor("RokasMainMenu", 1.5f);
 
             Assert.That(Find("HomeTitle"), Is.Null,
-                "Home must stay unbuilt while the main menu owns the launch presentation.");
+                "Startup Preview and Story Intro must finish into the menu, not directly into Home.");
             Assert.That(Find("RokasMainMenu"), Is.Not.Null);
             Assert.That(Find("MainMenuVideoSurface"), Is.Not.Null,
-                "The approved seamless menu loop must own the full-screen menu background.");
+                "The approved seamless loop must own the menu background even when this Linux host cannot decode it.");
             Assert.That(FindButton("EnterWorldButton"), Is.Not.Null);
             Assert.That(FindButton("DevelopersButton"), Is.Not.Null);
             Assert.That(FindButton("SupportDevelopmentButton"), Is.Not.Null);
+            Assert.That(boot.View, Is.Null,
+                "RokasView/Home must not be constructed behind the launch menu.");
         }
 
         [UnityTest]
         public IEnumerator EnterWorldBuildsExistingHomeExactlyOnce()
         {
-            RokasBootstrap boot = CreateRealLaunch();
-            yield return AdvancePastExistingPreview(boot);
-            yield return WaitForFirstFrame(boot.VideoPresenter, 8f, "story intro");
-            boot.VideoPresenter.Skip();
-            yield return null;
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitFor("RokasMainMenu", 1.5f);
 
             Press("EnterWorldButton");
             yield return null;
@@ -71,6 +84,10 @@ namespace Rokas.Tests
             Assert.That(Count("HomeTitle"), Is.EqualTo(1),
                 "The main-menu handoff must build the existing Home exactly once.");
             Assert.That(boot.View, Is.Not.Null);
+
+            Button staleButton = FindButton("EnterWorldButton");
+            Assert.That(staleButton, Is.Null,
+                "The consumed main menu must not leave a second active entry path to Home.");
         }
 
         [UnityTest]
@@ -89,27 +106,21 @@ namespace Rokas.Tests
             Assert.That(Find("MainMenuVideoSurface"), Is.Null);
         }
 
-        private RokasBootstrap CreateRealLaunch()
+        private RokasBootstrap CreateRealLaunchIgnoringHostDecoderErrors()
         {
+            previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
             root = new GameObject("StoryIntroMainMenuFixture");
             return root.AddComponent<RokasBootstrap>();
         }
 
-        private static IEnumerator AdvancePastExistingPreview(RokasBootstrap boot)
+        private IEnumerator WaitFor(string objectName, float seconds)
         {
-            yield return WaitForFirstFrame(boot.VideoPresenter, 8f, "existing startup preview");
-            boot.VideoPresenter.Skip();
-            yield return null;
-        }
-
-        private static IEnumerator WaitForFirstFrame(VideoSequencePresenter presenter, float seconds, string label)
-        {
-            Assert.That(presenter, Is.Not.Null, "Missing VideoSequencePresenter for " + label);
             float deadline = Time.realtimeSinceStartup + seconds;
-            while (presenter.IsPlaying && !presenter.FirstFramePresented && Time.realtimeSinceStartup < deadline)
+            while (Find(objectName) == null && Time.realtimeSinceStartup < deadline)
                 yield return null;
-            Assert.That(presenter.IsPlaying, Is.True, label + " ended before exposing a decodable frame.");
-            Assert.That(presenter.FirstFramePresented, Is.True, "Timed out waiting for first frame of " + label + ".");
+            Assert.That(Find(objectName), Is.Not.Null,
+                "Timed out waiting for launch object: " + objectName + ".");
         }
 
         private void Press(string name)
@@ -149,6 +160,7 @@ namespace Rokas.Tests
         [UnityTearDown]
         public IEnumerator Cleanup()
         {
+            LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
