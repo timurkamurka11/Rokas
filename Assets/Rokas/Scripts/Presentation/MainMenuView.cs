@@ -152,6 +152,7 @@ namespace Rokas.Presentation
 
             var button = buttonObject.GetComponent<Button>();
             button.targetGraphic = face;
+            face.raycastTarget = true;
             var colors = button.colors;
             colors.normalColor = Color.white;
             colors.highlightedColor = primary ? new Color(1.12f, 1.06f, .92f, 1f) : new Color(1.08f, 1.08f, 1.12f, 1f);
