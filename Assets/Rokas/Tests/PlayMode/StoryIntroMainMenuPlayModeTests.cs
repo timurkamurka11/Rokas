@@ -51,6 +51,34 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator StorySkipIsBlockedUntilFirstFrameThenUsesSameCompletionPath()
+        {
+            root = new GameObject("StoryIntroSkipFixture");
+            var presenter = root.AddComponent<VideoSequencePresenter>();
+            bool completed = false;
+            presenter.PlayStoryIntro("__missing_story_skip_gate_test__.mp4", 1f, () => completed = true);
+
+            Assert.That(presenter.IsPlaying, Is.True);
+            presenter.Skip();
+            Assert.That(completed, Is.False,
+                "Story skip must be ignored before the first decoded frame is safely presented.");
+            Assert.That(presenter.IsPlaying, Is.True);
+
+            FieldInfo firstFrame = typeof(VideoSequencePresenter).GetField(
+                "firstFramePresented", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(firstFrame, Is.Not.Null);
+            firstFrame.SetValue(presenter, true);
+
+            presenter.Skip();
+
+            Assert.That(completed, Is.True,
+                "After first-frame gating, story skip must use the exact same completion callback as natural completion.");
+            Assert.That(presenter.IsPlaying, Is.False);
+            yield return null;
+            Assert.That(Find("StoryIntroVideoSurface"), Is.Null);
+        }
+
+        [UnityTest]
         public IEnumerator RealLaunchFallsThroughStoryToMainMenuBeforeHome()
         {
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
