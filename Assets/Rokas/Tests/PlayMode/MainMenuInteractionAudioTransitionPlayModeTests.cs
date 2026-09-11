@@ -90,8 +90,8 @@ namespace Rokas.Tests
             Assert.That(assets, Is.Not.Null);
             Assert.That(assets.click, Is.Not.Null);
             Assert.That(assets.laptopMouseClick, Is.Not.Null);
-            Assert.That(assets.click.name, Is.EqualTo("Button click"),
-                "The existing generic outside-Laptop click path must be wired to the approved Button click.wav.");
+            Assert.That(assets.click.name, Is.EqualTo("ButtonClick"),
+                "The existing generic outside-Laptop click path must be wired to the approved ButtonClick.wav.");
             Assert.That(assets.laptopMouseClick.name, Is.EqualTo("LaptopMouseClick"),
                 "Laptop must retain its pre-existing mouse click asset.");
             Assert.That(assets.laptopMouseClick, Is.Not.SameAs(assets.click),
@@ -115,7 +115,7 @@ namespace Rokas.Tests
             Press(enter);
 
             Assert.That(genericClicks, Is.EqualTo(0),
-                "Enter World is a special override and must not stack the generic Button click with Enter game.");
+                "Enter World is a special override and must not stack the generic ButtonClick with EnterGame.");
             Assert.That(enterRequests, Is.EqualTo(1),
                 "The transition guard must consume repeated clicks immediately.");
         }
@@ -172,18 +172,18 @@ namespace Rokas.Tests
             Press(enter);
             yield return null;
 
-            AudioSource special = FindAudioSourceByClipName("Enter game");
+            AudioSource special = FindAudioSourceByClipName("EnterGame");
             Assert.That(special, Is.Not.Null,
-                "Enter World must play the approved Enter game.wav through the persistent RokasAudio owner.");
+                "Enter World must play the approved EnterGame.wav through the persistent RokasAudio owner.");
             Assert.That(special.isPlaying, Is.True);
-            Assert.That(CountAudioSourcesByClipName("Enter game"), Is.EqualTo(1),
-                "Repeated Enter input must not stack duplicate Enter game playback.");
-            Assert.That(FindAudioSourceByClipName("Button click"), Is.Null,
-                "Enter World must not also play the generic Button click.wav.");
+            Assert.That(CountAudioSourcesByClipName("EnterGame"), Is.EqualTo(1),
+                "Repeated Enter input must not stack duplicate EnterGame playback.");
+            Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,
+                "Enter World must not also play the generic ButtonClick.wav.");
 
             yield return WaitFor("HomeTitle", 1f);
             Assert.That(special != null && special.isPlaying, Is.True,
-                "Enter game SFX must survive Main Menu media cleanup and must not be truncated at the handoff.");
+                "EnterGame SFX must survive Main Menu media cleanup and must not be truncated at the handoff.");
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.View, Is.Not.Null);
         }
@@ -199,9 +199,9 @@ namespace Rokas.Tests
             yield return null;
 
             Press(FindButton("LampHotspot"));
-            AudioSource generic = FindAudioSourceByClipName("Button click");
+            AudioSource generic = FindAudioSourceByClipName("ButtonClick");
             Assert.That(generic, Is.Not.Null,
-                "Ordinary Home UI outside Laptop must use the approved Button click.wav through the existing generic path.");
+                "Ordinary Home UI outside Laptop must use the approved ButtonClick.wav through the existing generic path.");
             Assert.That(generic.isPlaying, Is.True);
             Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Null,
                 "Outside-Laptop Home UI must not route through the Laptop mouse click asset.");
@@ -215,12 +215,12 @@ namespace Rokas.Tests
             yield return WaitFor("RokasMainMenu", 2f);
 
             Press(FindButton("DevelopersButton"));
-            Assert.That(FindAudioSourceByClipName("Button click"), Is.Not.Null,
-                "About must use the approved generic outside-Laptop Button click.");
+            Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Not.Null,
+                "About must use the approved generic outside-Laptop ButtonClick.");
 
             Press(FindButton("SupportDevelopmentButton"));
-            Assert.That(FindAudioSourceByClipName("Button click"), Is.Not.Null,
-                "Support must use the approved generic outside-Laptop Button click.");
+            Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Not.Null,
+                "Support must use the approved generic outside-Laptop ButtonClick.");
             Assert.That(Find("RokasMainMenu"), Is.Not.Null);
             Assert.That(Find("HomeTitle"), Is.Null);
         }
