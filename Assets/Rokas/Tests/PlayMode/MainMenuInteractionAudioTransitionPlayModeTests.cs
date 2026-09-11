@@ -177,8 +177,14 @@ namespace Rokas.Tests
                 "Enter World must assign the approved EnterGame.wav to the persistent RokasAudio owner.");
             Assert.That(special.clip.loadState, Is.EqualTo(AudioDataLoadState.Loaded),
                 "EnterGame clip must be loaded before playback.");
-            Assert.That(special.isPlaying, Is.True,
-                "EnterGame source is assigned and loaded but playback did not start or already stopped.");
+            if (!special.isPlaying)
+            {
+                special.Play();
+                yield return null;
+                Assert.Fail("EnterGame production playback was false; directReplay=" + special.isPlaying +
+                    "; length=" + special.clip.length + "; samples=" + special.clip.samples +
+                    "; frequency=" + special.clip.frequency + "; timeSamples=" + special.timeSamples);
+            }
             Assert.That(CountAudioSourcesByClipName("EnterGame"), Is.EqualTo(1),
                 "Repeated Enter input must not stack duplicate EnterGame playback.");
             Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,
