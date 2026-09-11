@@ -1,0 +1,196 @@
+name: TEMP Real Windows Main Menu Runtime Proof Retry
+
+on:
+  push:
+    branches:
+      - wip/main-menu-interaction-ui-audio-home-transition
+    paths:
+      - .github/workflows/temp-main-menu-runtime-proof-retry.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-player:
+    name: Build clean local QA commit over exact feature
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout WIP QA source
+        uses: actions/checkout@v4
+        with:
+          ref: wip/main-menu-interaction-ui-audio-home-transition
+          path: qa
+          fetch-depth: 1
+
+      - name: Checkout exact feature candidate
+        uses: actions/checkout@v4
+        with:
+          ref: feature/main-menu-interaction-ui-audio-home-transition
+          path: feature
+          fetch-depth: 1
+
+      - name: Verify feature, extract existing temporary probe, create clean local QA commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-build-evidence
+          cd feature
+          test "$(git rev-parse HEAD)" = '9514a0895a2b555bbcdbf365e8a05f838a4c9f14'
+          test "$(git rev-parse HEAD^{tree})" = 'f7c73cb3408bd99b6c9afad1b699822d0b3f6b05'
+          test "$(sha256sum Assets/Rokas/Audio/ButtonClick.wav | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
+          test "$(sha256sum Assets/Rokas/Audio/EnterGame.wav | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
+          git rev-parse HEAD > ../runtime-build-evidence/feature-head.txt
+          git rev-parse HEAD^{tree} > ../runtime-build-evidence/feature-tree.txt
+          sha256sum Assets/Rokas/Audio/ButtonClick.wav Assets/Rokas/Audio/EnterGame.wav > ../runtime-build-evidence/source-audio-sha256.txt
+          cd ..
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('qa/.github/workflows/temp-approved-audio-transfer.yml').read_text()
+          start="cat > Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs <<'CS'\n"
+          i=src.index(start)+len(start)
+          j=src.index('\n          CS\n', i)
+          lines=src[i:j].splitlines()
+          out=[]
+          for line in lines:
+              out.append(line[10:] if line.startswith('          ') else line)
+          p=Path('feature/Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs')
+          p.write_text('\n'.join(out)+'\n')
+          PY
+          cat > feature/Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs.meta <<'META'
+          fileFormatVersion: 2
+          guid: 9fe69b45e8f84d33b48be7661f346bc0
+          MonoImporter:
+            externalObjects: {}
+            serializedVersion: 2
+            defaultReferences: []
+            executionOrder: 0
+            icon: {instanceID: 0}
+            userData:
+            assetBundleName:
+            assetBundleVariant:
+          META
+          cd feature
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs.meta
+          git commit -m 'test: inject temporary main menu Windows proof probe'
+          test -z "$(git status --porcelain --untracked-files=all)"
+          git rev-parse HEAD > ../runtime-build-evidence/local-qa-head.txt
+          git rev-parse HEAD^{tree} > ../runtime-build-evidence/local-qa-tree.txt
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: feature/Library
+          key: MainMenuRuntimeProofRetry-${{ runner.os }}-${{ hashFiles('feature/Assets/**', 'feature/Packages/**', 'feature/ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Build StandaloneWindows64 Development Player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: feature
+          unityVersion: 6000.3.19f1
+          targetPlatform: StandaloneWindows64
+          buildsPath: feature/build
+          buildName: Rokas
+          buildMethod: Rokas.Editor.RokasVideoSmokeBuild.Build
+
+      - name: Preserve built-player identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXE="$(find feature/build -type f -iname 'Rokas.exe' -print -quit)"
+          test -n "$EXE" && test -s "$EXE"
+          printf 'FEATURE_HEAD=9514a0895a2b555bbcdbf365e8a05f838a4c9f14\nFEATURE_TREE=f7c73cb3408bd99b6c9afad1b699822d0b3f6b05\nEXE=%s\n' "$EXE" > runtime-build-evidence/identity.txt
+          find feature/build -type f -printf '%p %s bytes\n' | sort > runtime-build-evidence/build-manifest.txt
+
+      - name: Upload exact QA player
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-main-menu-runtime-proof-player-retry
+          path: feature/build/StandaloneWindows64
+          if-no-files-found: error
+
+      - name: Upload build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-main-menu-runtime-build-evidence-retry
+          path: runtime-build-evidence
+          if-no-files-found: warn
+
+  run-player:
+    name: Run real Windows Main Menu proof
+    needs: build-player
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - name: Download exact QA player
+        uses: actions/download-artifact@v4
+        with:
+          name: rokas-main-menu-runtime-proof-player-retry
+          path: player
+
+      - name: Run actual Rokas.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe not found.' }
+          $work = $exe.Directory.FullName
+          $proof = Join-Path $work 'rokas-main-menu-proof'
+          New-Item -ItemType Directory -Force -Path $proof | Out-Null
+          $log = Join-Path $proof 'Player.log'
+          $stdout = Join-Path $proof 'host-stdout.txt'
+          $stderr = Join-Path $proof 'host-stderr.txt'
+          $exitFile = Join-Path $proof 'host-exit.txt'
+          $timeoutFile = Join-Path $proof 'host-timeout.txt'
+          $args = @('-rokasMainMenuProof','-screen-width','1280','-screen-height','720','-screen-fullscreen','0','-logFile',$log)
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList $args -WorkingDirectory $work -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          $completed = $process.WaitForExit(150000)
+          if (-not $completed) {
+            try { $process.Kill($true) } catch { }
+            'YES' | Set-Content $timeoutFile
+            '124' | Set-Content $exitFile
+          } else {
+            'NO' | Set-Content $timeoutFile
+            [string]$process.ExitCode | Set-Content $exitFile
+          }
+          Get-ChildItem -Path $proof -Recurse | Select-Object FullName,Length | Format-Table -AutoSize | Out-String | Set-Content (Join-Path $proof 'evidence-listing.txt')
+          exit 0
+
+      - name: Require factual runtime result
+        if: always()
+        shell: pwsh
+        run: |
+          $result = Get-ChildItem -Path player -Filter rokas-main-menu-proof-result.json -Recurse | Select-Object -First 1
+          $exitFile = Get-ChildItem -Path player -Filter host-exit.txt -Recurse | Select-Object -First 1
+          $timeoutFile = Get-ChildItem -Path player -Filter host-timeout.txt -Recurse | Select-Object -First 1
+          if (-not $result -or -not $exitFile -or -not $timeoutFile) { throw 'Runtime evidence incomplete.' }
+          $exitCode = (Get-Content $exitFile.FullName -Raw).Trim()
+          $timedOut = (Get-Content $timeoutFile.FullName -Raw).Trim()
+          $data = Get-Content $result.FullName -Raw | ConvertFrom-Json
+          Write-Host "HOST_EXIT=$exitCode TIMEOUT=$timedOut FINAL_PASS=$($data.finalPass) FAILURE=$($data.failure)"
+          Write-Host "FADE partial=$($data.partialAlpha) deeper=$($data.deeperAlpha) black=$($data.fullBlackAlpha) homeBlack=$($data.homeUnderBlackAlpha) fadeIn=$($data.fadeInAlpha)"
+          Write-Host "AUDIO about=$($data.aboutButtonClick) support=$($data.supportButtonClick) enterOnly=$($data.enterGameOnly) repeat=$($data.repeatedEnterSingleSource) persistent=$($data.enterPersistentOwner) handoffPlaying=$($data.enterStillPlayingAtHomeHandoff) home=$($data.ordinaryHomeButtonClick) laptop=$($data.laptopOldClick) laptopGenericSuppressed=$($data.laptopGenericSuppressed)"
+          if ($timedOut -ne 'NO') { throw 'Real Windows Player proof timed out.' }
+          if ($exitCode -ne '0') { throw "Real Windows Player exited with $exitCode." }
+          if (-not $data.finalPass) { throw "Runtime proof failed: $($data.failure)" }
+          $screens = Get-ChildItem -Path $result.Directory.FullName -Filter '*.png'
+          if ($screens.Count -lt 11) { throw "Expected at least 11 proof screenshots, found $($screens.Count)." }
+
+      - name: Upload real-player runtime/visual/audio evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-main-menu-real-windows-proof-retry
+          path: player/**/rokas-main-menu-proof
+          if-no-files-found: error
