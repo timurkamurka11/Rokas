@@ -76,6 +76,7 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         if (mode == "skip") boot.VideoPresenter.Skip();
         yield return WaitObject("RokasMainMenu", mode == "skip" ? 8f : 70f);
         if (failed) yield break;
+        yield return null;
         if (Find("HomeTitle") != null) { Fail("Home exists before Enter World"); yield break; }
         if (Find("StoryIntroVideoSurface") != null) { Fail("story surface leaked into menu"); yield break; }
         if (FindObjectsByType<Canvas>(FindObjectsSortMode.None).Length != 1) { Fail("duplicate/missing Canvas in menu"); yield break; }
