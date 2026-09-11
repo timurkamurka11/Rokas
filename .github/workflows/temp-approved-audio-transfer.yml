@@ -1,4 +1,4 @@
-name: TEMP Dispatch Post-Fix Regressions
+name: TEMP Patch And Dispatch Fixed Windows Proof
 
 on:
   push:
@@ -8,22 +8,51 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
-  dispatch:
+  patch-runtime-workflow:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch existing regressions on exact fixed feature
+      - name: Checkout WIP orchestration
+        uses: actions/checkout@v4
+        with:
+          ref: wip/main-menu-interaction-ui-audio-home-transition
+          fetch-depth: 1
+
+      - name: Pin probe source, update exact fixed feature identity, dispatch Windows proof
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          file='.github/workflows/temp-main-menu-runtime-proof-retry.yml'
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/temp-main-menu-runtime-proof-retry.yml')
+          s=p.read_text()
+          old_probe='''      - name: Checkout WIP QA source\n        uses: actions/checkout@v4\n        with:\n          ref: wip/main-menu-interaction-ui-audio-home-transition\n          path: qa\n          fetch-depth: 1\n'''
+          new_probe='''      - name: Checkout pinned proven QA probe source\n        uses: actions/checkout@v4\n        with:\n          ref: 2f32e1762c438ce7fb21ae14ff1ec82b9e5ab72d\n          path: qa\n          fetch-depth: 1\n'''
+          assert s.count(old_probe)==1
+          s=s.replace(old_probe,new_probe)
+          assert s.count('9514a0895a2b555bbcdbf365e8a05f838a4c9f14')==2
+          assert s.count('f7c73cb3408bd99b6c9afad1b699822d0b3f6b05')==2
+          s=s.replace('9514a0895a2b555bbcdbf365e8a05f838a4c9f14','6193ad82f059aca60a57fefea4a8d8e0baae6026')
+          s=s.replace('f7c73cb3408bd99b6c9afad1b699822d0b3f6b05','a05ec6ff5e515f09407687c55bb948e4c9f0a946')
+          marker='''    paths:\n      - .github/workflows/temp-main-menu-runtime-proof-retry.yml\n'''
+          assert s.count(marker)==1
+          s=s.replace(marker, marker+'  workflow_dispatch:\n')
+          p.write_text(s)
+          PY
+          git diff --check
+          grep -q '6193ad82f059aca60a57fefea4a8d8e0baae6026' "$file"
+          grep -q 'a05ec6ff5e515f09407687c55bb948e4c9f0a946' "$file"
+          grep -q '2f32e1762c438ce7fb21ae14ff1ec82b9e5ab72d' "$file"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$file"
+          git commit -m 'ci: run Windows proof on Laptop click fix'
+          git push origin HEAD:wip/main-menu-interaction-ui-audio-home-transition
           repo='${{ github.repository }}'
-          actual="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
-          test "$actual" = '6193ad82f059aca60a57fefea4a8d8e0baae6026'
-          gh workflow run story-intro-main-menu-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
-          gh workflow run unity-ci.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
-          echo "DISPATCH_FEATURE_HEAD=$actual"
+          gh workflow run temp-main-menu-runtime-proof-retry.yml --repo "$repo" --ref wip/main-menu-interaction-ui-audio-home-transition
