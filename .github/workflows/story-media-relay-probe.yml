@@ -16,29 +16,31 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Inspect temporary relay page for download endpoints
+      - name: Inspect temporary relay client for download endpoint
         shell: bash
         env:
           SHARE_URL: https://firestorage.ai/ja/f/YZDbPHr6uTja
         run: |
           set -euo pipefail
           curl -fsSL --retry 3 -A 'Mozilla/5.0' "$SHARE_URL" -o relay.html
-          echo "RELAY_HTML_BYTES=$(wc -c < relay.html)"
           python3 - <<'PY'
-          import re
+          import re, subprocess
           from pathlib import Path
-          text=Path('relay.html').read_text(errors='replace')
-          needles=('ROKAS_seamless_loop','ROKAS_intro_51s','download','file_id','fileId','public_id','api/','signed','presign')
-          lines=text.replace('><','>\n<').splitlines()
-          hits=[]
-          for line in lines:
-              if any(n.lower() in line.lower() for n in needles):
-                  hits.append(line[:1500])
-          print('CANDIDATE_LINES', len(hits))
-          for line in hits[:120]: print(line)
-          urls=sorted(set(re.findall(r'https?[^"\'<> ]+', text)))
-          print('CANDIDATE_URLS')
-          for u in urls:
-              if any(n in u.lower() for n in ('download','file','storage','api')):
-                  print(u[:1500])
+          html=Path('relay.html').read_text(errors='replace')
+          scripts=sorted(set(re.findall(r'<script[^>]+src="([^"]+\.js)"', html)))
+          print('SCRIPTS', len(scripts))
+          for i,src in enumerate(scripts):
+              url='https://firestorage.ai'+src if src.startswith('/') else src
+              out=f'chunk-{i}.js'
+              subprocess.run(['curl','-fsSL','--retry','3','-A','Mozilla/5.0',url,'-o',out],check=True)
+          corpus='\n'.join(Path(f'chunk-{i}.js').read_text(errors='replace') for i in range(len(scripts)))
+          patterns=(r'/api/[^"\'` )}]+', r'https://[^"\'` )}]+', r'fetch\([^)]{0,500}\)', r'axios[^;]{0,500}', r'download[^;]{0,800}', r'public[_A-Za-z-]*id[^;]{0,600}', r'share[^;]{0,600}')
+          seen=[]
+          for pat in patterns:
+              for m in re.finditer(pat, corpus, flags=re.I):
+                  s=m.group(0)
+                  if s not in seen:
+                      seen.append(s)
+          print('CANDIDATES', len(seen))
+          for s in seen[:180]: print(s[:1600])
           PY
