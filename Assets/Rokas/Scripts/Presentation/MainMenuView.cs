@@ -162,6 +162,7 @@ namespace Rokas.Presentation
             colors.colorMultiplier = 1f;
             colors.fadeDuration = .08f;
             button.colors = colors;
+            AttachHoverFeedback(rect);
             button.onClick.AddListener(() => action?.Invoke());
 
             if (name == "DevelopersButton")
@@ -193,6 +194,18 @@ namespace Rokas.Presentation
             chevronRect.pivot = new Vector2(.5f, .5f);
             chevronRect.sizeDelta = new Vector2(64f, 0f);
             chevronRect.anchoredPosition = new Vector2(-48f, 0f);
+        }
+
+        private static void AttachHoverFeedback(RectTransform rect)
+        {
+            var focus = new GameObject(rect.name + "HoverFeedback", typeof(RectTransform), typeof(CanvasGroup));
+            var focusRect = (RectTransform)focus.transform;
+            focusRect.SetParent(rect, false);
+            Fill(focusRect);
+            var ring = focus.GetComponent<CanvasGroup>();
+            ring.interactable = false;
+            ring.blocksRaycasts = false;
+            rect.gameObject.AddComponent<LaptopTileFeedback>().Initialize(rect, ring);
         }
 
         private void CreatePeopleIcon(RectTransform parent)
@@ -260,15 +273,12 @@ namespace Rokas.Presentation
         {
             if (consumed || disposed) return;
             consumed = true;
-            click?.Invoke();
-            Action callback = enterWorld;
-            Dispose();
-            callback?.Invoke();
+            enterWorld?.Invoke();
         }
 
         private void SecondaryAction()
         {
-            if (disposed) return;
+            if (disposed || consumed) return;
             click?.Invoke();
         }
 
