@@ -1,7 +1,11 @@
-name: TEMP Approved Audio Transfer
+name: TEMP Approved Audio Tree Verify
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - wip/main-menu-interaction-ui-audio-home-transition
+    paths:
+      - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
   contents: read
