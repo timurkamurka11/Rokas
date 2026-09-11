@@ -54,10 +54,10 @@ jobs:
           out=[]
           for line in lines:
               out.append(line[10:] if line.startswith('          ') else line)
-          p=Path('feature/Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs')
+          p=Path('feature/Assets/RokasMainMenuRuntimeProbe.cs')
           p.write_text('\n'.join(out)+'\n')
           PY
-          cat > feature/Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs.meta <<'META'
+          cat > feature/Assets/RokasMainMenuRuntimeProbe.cs.meta <<'META'
           fileFormatVersion: 2
           guid: 9fe69b45e8f84d33b48be7661f346bc0
           MonoImporter:
@@ -74,7 +74,7 @@ jobs:
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs Assets/Rokas/Scripts/Presentation/RokasMainMenuRuntimeProbe.cs.meta
+          git add Assets/RokasMainMenuRuntimeProbe.cs Assets/RokasMainMenuRuntimeProbe.cs.meta
           git commit -m 'test: inject temporary main menu Windows proof probe'
           test -z "$(git status --porcelain --untracked-files=all)"
           git rev-parse HEAD > ../runtime-build-evidence/local-qa-head.txt
