@@ -172,10 +172,13 @@ namespace Rokas.Tests
             Press(enter);
             yield return null;
 
-            AudioSource special = FindAudioSourceByClipName("EnterGame");
+            AudioSource special = FindAssignedAudioSourceByClipName("EnterGame");
             Assert.That(special, Is.Not.Null,
-                "Enter World must play the approved EnterGame.wav through the persistent RokasAudio owner.");
-            Assert.That(special.isPlaying, Is.True);
+                "Enter World must assign the approved EnterGame.wav to the persistent RokasAudio owner.");
+            Assert.That(special.clip.loadState, Is.EqualTo(AudioDataLoadState.Loaded),
+                "EnterGame clip must be loaded before playback.");
+            Assert.That(special.isPlaying, Is.True,
+                "EnterGame source is assigned and loaded but playback did not start or already stopped.");
             Assert.That(CountAudioSourcesByClipName("EnterGame"), Is.EqualTo(1),
                 "Repeated Enter input must not stack duplicate EnterGame playback.");
             Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,
@@ -299,6 +302,14 @@ namespace Rokas.Tests
             if (root == null) return null;
             foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
                 if (source.clip != null && source.clip.name == clipName && source.isPlaying) return source;
+            return null;
+        }
+
+        private AudioSource FindAssignedAudioSourceByClipName(string clipName)
+        {
+            if (root == null) return null;
+            foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
+                if (source.clip != null && source.clip.name == clipName) return source;
             return null;
         }
 
