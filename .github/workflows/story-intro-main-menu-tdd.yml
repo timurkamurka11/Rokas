@@ -78,7 +78,7 @@ jobs:
           git diff --check > verification/git-diff-check.txt || true
           if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
 
-      - name: Require five focused tests green
+      - name: Require six focused tests green
         if: always()
         shell: bash
         run: |
@@ -89,8 +89,8 @@ jobs:
           r = ET.parse('artifacts/playmode-results.xml').getroot()
           values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
           print('FOCUSED_XML total=%d passed=%d failed=%d skipped=%d' % values)
-          if values != (5,5,0,0):
-              raise SystemExit('Expected exactly 5/5 focused tests')
+          if values != (6,6,0,0):
+              raise SystemExit('Expected exactly 6/6 focused tests')
           PY
 
       - name: Upload focused evidence
