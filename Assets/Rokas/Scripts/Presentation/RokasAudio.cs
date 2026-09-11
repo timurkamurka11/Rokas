@@ -189,6 +189,8 @@ namespace Rokas.Presentation
             if (!laptopMode) Play(assets.click);
         }
 
+        public void EnterGame() { Play(assets.enterGame); }
+
         public void LaptopMouseClick() { Play(assets.laptopMouseClick); }
 
         public void Dispose()
