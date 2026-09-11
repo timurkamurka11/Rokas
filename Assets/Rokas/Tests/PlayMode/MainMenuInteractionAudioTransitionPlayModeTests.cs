@@ -185,7 +185,14 @@ namespace Rokas.Tests
             bool completedNaturally = special != null && special.clip != null &&
                 !special.isPlaying && special.timeSamples >= special.clip.samples - 1;
             Assert.That(special != null && (special.isPlaying || completedNaturally), Is.True,
-                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it.");
+                "EnterGame SFX must survive Main Menu cleanup; headless CI may naturally consume the full clip in one frame, but truncation/Stop must not reset it." +
+                " isPlaying=" + (special != null && special.isPlaying) +
+                "; timeSamples=" + (special != null ? special.timeSamples : -1) +
+                "; samples=" + (special != null && special.clip != null ? special.clip.samples : -1) +
+                "; time=" + (special != null ? special.time : -1f) +
+                "; length=" + (special != null && special.clip != null ? special.clip.length : -1f) +
+                "; active=" + (special != null && special.gameObject.activeInHierarchy) +
+                "; enabled=" + (special != null && special.enabled));
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.View, Is.Not.Null);
         }
