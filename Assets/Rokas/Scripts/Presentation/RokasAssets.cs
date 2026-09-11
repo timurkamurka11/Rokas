@@ -20,6 +20,7 @@ namespace Rokas.Presentation
         public AudioClip missionMusic;
         public AudioClip click;
         public AudioClip laptopMouseClick;
+        public AudioClip enterGame;
         public AudioClip lampOn;
         public AudioClip lampOff;
         public AudioClip hit;
@@ -32,7 +33,7 @@ namespace Rokas.Presentation
         {
             return home && laptopWallpaper && portal && subway && enemy && familiar && sans && serif && contract
                 && homeAmbience && subwayAmbience && homeMusic && missionMusic
-                && click && laptopMouseClick && lampOn && lampOff
+                && click && laptopMouseClick && enterGame && lampOn && lampOff
                 && hit && critical && portalSound && seal && mame;
         }
     }
