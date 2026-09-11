@@ -1,5 +1,6 @@
 name: ROKAS Story Menu Windows Player Proof V3 TEMP
 
+# Rerun after isolated QA observer fix: allow one frame for Unity deferred Destroy before leak assertions.
 on:
   push:
     branches:
