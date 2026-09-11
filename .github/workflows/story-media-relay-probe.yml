@@ -1,0 +1,44 @@
+name: ROKAS Story Media Relay Probe
+
+on:
+  push:
+    branches:
+      - feature/story-intro-main-menu
+    paths:
+      - .github/workflows/story-media-relay-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect temporary relay page for download endpoints
+        shell: bash
+        env:
+          SHARE_URL: https://firestorage.ai/ja/f/YZDbPHr6uTja
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -A 'Mozilla/5.0' "$SHARE_URL" -o relay.html
+          echo "RELAY_HTML_BYTES=$(wc -c < relay.html)"
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text=Path('relay.html').read_text(errors='replace')
+          needles=('ROKAS_seamless_loop','ROKAS_intro_51s','download','file_id','fileId','public_id','api/','signed','presign')
+          lines=text.replace('><','>\n<').splitlines()
+          hits=[]
+          for line in lines:
+              if any(n.lower() in line.lower() for n in needles):
+                  hits.append(line[:1500])
+          print('CANDIDATE_LINES', len(hits))
+          for line in hits[:120]: print(line)
+          urls=sorted(set(re.findall(r'https?[^"\'<> ]+', text)))
+          print('CANDIDATE_URLS')
+          for u in urls:
+              if any(n in u.lower() for n in ('download','file','storage','api')):
+                  print(u[:1500])
+          PY
