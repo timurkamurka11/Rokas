@@ -251,6 +251,15 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
     private static GameObject Find(string name) { return GameObject.Find(name); }
     private static bool Same(Vector2 a, Vector2 b) { return Vector2.SqrMagnitude(a - b) < .0001f; }
     private static string Vec(Vector2 v) { return v.x.ToString("F2", CultureInfo.InvariantCulture) + "," + v.y.ToString("F2", CultureInfo.InvariantCulture); }
-    private void Capture(string name) { ScreenCapture.CaptureScreenshot(Path.Combine(evidenceDir, name)); }
+
+    private void Capture(string name)
+    {
+        Texture2D tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0f, 0f, Screen.width, Screen.height), 0, 0);
+        tex.Apply();
+        File.WriteAllBytes(Path.Combine(evidenceDir, name), tex.EncodeToPNG());
+        Destroy(tex);
+    }
+
     private void Fail(string message) { if (!failed) { failed = true; failure = message; proof.Add("FAIL=" + message); } }
 }
