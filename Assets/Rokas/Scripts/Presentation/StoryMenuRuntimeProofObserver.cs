@@ -51,6 +51,7 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         yield return WaitUntil(() => (boot = FindFirstObjectByType<RokasBootstrap>()) != null, 8f, "bootstrap missing");
         if (failed) yield break;
         proof.Add("BOOTSTRAP=PASS");
+        bool fastToMenu = mode == "skip" || mode == "visual";
 
         yield return WaitObject("StartupVideoSurface", 8f);
         if (failed) yield break;
@@ -62,10 +63,10 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         if (failed) yield break;
         proof.Add("STARTUP_EMBEDDED_AUDIO_PLAYING=PASS");
 
-        if (mode == "skip") boot.VideoPresenter.Skip();
-        yield return WaitObject("StoryIntroVideoSurface", mode == "skip" ? 8f : 20f);
+        if (fastToMenu) boot.VideoPresenter.Skip();
+        yield return WaitObject("StoryIntroVideoSurface", fastToMenu ? 8f : 20f);
         if (failed) yield break;
-        proof.Add(mode == "skip" ? "STARTUP_SKIP_TO_STORY=PASS" : "STARTUP_NATURAL_TO_STORY=PASS");
+        proof.Add(fastToMenu ? "STARTUP_SKIP_TO_STORY=PASS" : "STARTUP_NATURAL_TO_STORY=PASS");
         yield return WaitUntil(() => boot.VideoPresenter.FirstFramePresented, 12f, "story first frame missing");
         if (failed) yield break;
         proof.Add("STORY_FIRST_FRAME=PASS");
@@ -73,8 +74,8 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         if (failed) yield break;
         proof.Add("STORY_EMBEDDED_AUDIO_PLAYING=PASS");
 
-        if (mode == "skip") boot.VideoPresenter.Skip();
-        yield return WaitObject("RokasMainMenu", mode == "skip" ? 8f : 70f);
+        if (fastToMenu) boot.VideoPresenter.Skip();
+        yield return WaitObject("RokasMainMenu", fastToMenu ? 8f : 70f);
         if (failed) yield break;
 
         // Unity Destroy is deferred until the end of the frame. Allow the finished story host to flush before leak checks.
@@ -91,7 +92,7 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         if (CountObjectsNamed("RokasMainMenu") != 1) { Fail("story completion created duplicate/missing Main Menu"); yield break; }
         if (FindObjectsByType<Canvas>(FindObjectsSortMode.None).Length != 1) { Fail("duplicate/missing Canvas in menu"); yield break; }
         if (FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length != 1) { Fail("duplicate/missing EventSystem in menu"); yield break; }
-        proof.Add(mode == "skip" ? "STORY_SKIP_TO_MENU=PASS" : "STORY_NATURAL_TO_MENU=PASS");
+        proof.Add(fastToMenu ? "STORY_SKIP_TO_MENU=PASS" : "STORY_NATURAL_TO_MENU=PASS");
         proof.Add("STORY_TERMINAL_SINGLE_MENU=PASS");
         proof.Add("STORY_VIDEO_AUDIO_RT_CLEANUP=PASS");
         proof.Add("SKIP_HINT_CLEANUP=PASS");
