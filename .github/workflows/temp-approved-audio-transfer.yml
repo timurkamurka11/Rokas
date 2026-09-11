@@ -1,4 +1,4 @@
-name: TEMP Dispatch Laptop Click TDD RED
+name: TEMP Apply Laptop Click Production Fix
 
 on:
   push:
@@ -8,21 +8,49 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
-  dispatch:
+  patch-and-dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch focused RED on exact feature test head
+      - name: Checkout exact RED feature head
+        uses: actions/checkout@v4
+        with:
+          ref: feature/main-menu-interaction-ui-audio-home-transition
+          fetch-depth: 1
+
+      - name: Apply one-line LaptopMouseClick wiring fix and dispatch focused GREEN
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          expected='a88de288cada42a92da3626a8ada4569caab86f3'
+          test "$(git rev-parse HEAD)" = "$expected"
+          file='Assets/Rokas/Scripts/Presentation/RokasView.cs'
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('Assets/Rokas/Scripts/Presentation/RokasView.cs')
+          s=p.read_text()
+          old='''            laptop = new LaptopView(ui, assets, session, contracts, Act, audio.Click, ToastShort, ClosePanel,\n                owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);'''
+          new='''            laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,\n                owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);'''
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new))
+          PY
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "$file"
+          git diff -- "$file"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$file"
+          git commit -m 'fix: preserve LaptopMouseClick inside laptop'
+          git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
+          new_head="$(git rev-parse HEAD)"
           repo='${{ github.repository }}'
-          actual="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
-          test "$actual" = 'a88de288cada42a92da3626a8ada4569caab86f3'
+          remote="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
+          test "$remote" = "$new_head"
           gh workflow run main-menu-interaction-audio-transition-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
-          echo "DISPATCH_FEATURE_HEAD=$actual"
+          echo "FIX_HEAD=$new_head"
