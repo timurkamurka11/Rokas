@@ -1,62 +1,20 @@
 name: TEMP Approved Audio Transfer
 
 on:
-  push:
-    branches:
-      - wip/main-menu-interaction-ui-audio-home-transition
-    paths:
-      - .github/workflows/temp-approved-audio-transfer.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  transfer:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Transfer exact approved WAVs
+      - name: Verify exact approved WAV hashes
         shell: bash
         run: |
           set -euo pipefail
-          api='https://api.firestorage.ai/dev/file'
-          share='2A7x61dQsx57'
-          button_file='01a0923b7ae072b49403fc85ac8f1d05'
-          enter_file='01a0923bb29c70e28dc1eb618b701693'
-
-          resolve_and_download() {
-            local file_id="$1"
-            local out="$2"
-            local json url
-            json=$(curl --fail --silent --show-error --request POST \
-              "${api}/shares/${share}/files/${file_id}/download")
-            url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["downloadUrl"])' <<<"$json")
-            curl --fail --location --silent --show-error "$url" --output "$out"
-          }
-
-          resolve_and_download "$button_file" /tmp/ButtonClick.wav
-          resolve_and_download "$enter_file" /tmp/EnterGame.wav
-
-          button_sha=$(sha256sum /tmp/ButtonClick.wav | awk '{print $1}')
-          enter_sha=$(sha256sum /tmp/EnterGame.wav | awk '{print $1}')
-          echo "BUTTON_CLICK_SHA256: $button_sha"
-          echo "ENTER_GAME_SHA256: $enter_sha"
-          test "$button_sha" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
-          test "$enter_sha" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
-
-          cp /tmp/ButtonClick.wav 'Assets/Rokas/Audio/ButtonClick.wav'
-          cp /tmp/EnterGame.wav 'Assets/Rokas/Audio/EnterGame.wav'
-          git mv 'Assets/Rokas/Audio/Button click.wav.meta' 'Assets/Rokas/Audio/ButtonClick.wav.meta'
-          git mv 'Assets/Rokas/Audio/Enter game.wav.meta' 'Assets/Rokas/Audio/EnterGame.wav.meta'
-
-          echo '--- TREE SHA256 GATE ---'
-          sha256sum 'Assets/Rokas/Audio/ButtonClick.wav' 'Assets/Rokas/Audio/EnterGame.wav'
-          test "$(sha256sum 'Assets/Rokas/Audio/ButtonClick.wav' | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
-          test "$(sha256sum 'Assets/Rokas/Audio/EnterGame.wav' | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add 'Assets/Rokas/Audio/ButtonClick.wav' 'Assets/Rokas/Audio/EnterGame.wav' \
-                  'Assets/Rokas/Audio/ButtonClick.wav.meta' 'Assets/Rokas/Audio/EnterGame.wav.meta'
-          git commit -m 'build: import exact approved menu audio binaries'
-          git push origin HEAD:wip/main-menu-interaction-ui-audio-home-transition
+          sha256sum Assets/Rokas/Audio/ButtonClick.wav Assets/Rokas/Audio/EnterGame.wav
+          test "$(sha256sum Assets/Rokas/Audio/ButtonClick.wav | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
+          test "$(sha256sum Assets/Rokas/Audio/EnterGame.wav | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
