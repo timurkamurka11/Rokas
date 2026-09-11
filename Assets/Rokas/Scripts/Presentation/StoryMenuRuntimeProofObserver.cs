@@ -76,12 +76,25 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         if (mode == "skip") boot.VideoPresenter.Skip();
         yield return WaitObject("RokasMainMenu", mode == "skip" ? 8f : 70f);
         if (failed) yield break;
+
+        // Unity Destroy is deferred until the end of the frame. Allow the finished story host to flush before leak checks.
         yield return null;
         if (Find("HomeTitle") != null) { Fail("Home exists before Enter World"); yield break; }
         if (Find("StoryIntroVideoSurface") != null) { Fail("story surface leaked into menu"); yield break; }
+        if (Find("StartupVideoCanvas") != null) { Fail("story/startup canvas leaked into menu"); yield break; }
+        if (Find("StartupSkipHintOverlay") != null) { Fail("startup skip hint leaked into menu"); yield break; }
+        if (boot.VideoPresenter.IsPlaying || boot.VideoPresenter.TemporaryRenderTexture != null || PresenterAudioPlaying(boot.VideoPresenter))
+        {
+            Fail("story presenter playback/audio/RT survived terminal transition");
+            yield break;
+        }
+        if (CountObjectsNamed("RokasMainMenu") != 1) { Fail("story completion created duplicate/missing Main Menu"); yield break; }
         if (FindObjectsByType<Canvas>(FindObjectsSortMode.None).Length != 1) { Fail("duplicate/missing Canvas in menu"); yield break; }
         if (FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length != 1) { Fail("duplicate/missing EventSystem in menu"); yield break; }
         proof.Add(mode == "skip" ? "STORY_SKIP_TO_MENU=PASS" : "STORY_NATURAL_TO_MENU=PASS");
+        proof.Add("STORY_TERMINAL_SINGLE_MENU=PASS");
+        proof.Add("STORY_VIDEO_AUDIO_RT_CLEANUP=PASS");
+        proof.Add("SKIP_HINT_CLEANUP=PASS");
         proof.Add("MENU_SINGLE_CANVAS_EVENTSYSTEM=PASS");
 
         if (mode == "skip")
@@ -121,19 +134,45 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         proof.Add("MENU_LAYOUT_ABOUT=" + Vec(aboutPos));
         proof.Add("MENU_LAYOUT_SUPPORT=" + Vec(supportPos));
         proof.Add("MENU_LAYOUT_SIZE=" + Vec(buttonSize));
-        Capture("menu-start.png");
-        yield return new WaitForEndOfFrame();
+        proof.Add("SCREEN_SIZE=" + Screen.width + "x" + Screen.height);
+        float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0f;
+        proof.Add("SCREEN_ASPECT=" + aspect.ToString("F6", CultureInfo.InvariantCulture));
+        if (Mathf.Abs(aspect - (16f / 9f)) > .01f) { Fail("visual proof screen is not 16:9"); yield break; }
+
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null) { Fail("EventSystem.current missing"); yield break; }
+        eventSystem.SetSelectedGameObject(null);
+        yield return CaptureAfterFrame("menu-stable.png");
+        enter.Select();
+        yield return CaptureAfterFrame("menu-enter-selected.png");
+        about.Select();
+        yield return CaptureAfterFrame("menu-about-selected.png");
+        support.Select();
+        yield return CaptureAfterFrame("menu-support-selected.png");
+        eventSystem.SetSelectedGameObject(null);
+        proof.Add("MENU_VISUAL_STATES_CAPTURED=PASS");
+
+        VideoPlayer originalPlayer = menuPlayer;
+        AudioSource originalAudio = menuAudio;
+        RenderTexture originalTarget = menuPlayer.targetTexture;
+        float originalVolume = menuAudio.volume;
+        int originalVideoPlayerCount = FindObjectsByType<VideoPlayer>(FindObjectsSortMode.None).Length;
+        int originalAudioSourceCount = FindObjectsByType<AudioSource>(FindObjectsSortMode.None).Length;
 
         loopCount = 0;
         menuPlayer.loopPointReached += OnMenuLoop;
-        yield return WaitUntil(() => loopCount >= 1, 15f, "menu first loop not observed");
+        yield return WaitUntil(() => menuPlayer.length > .5 && menuPlayer.time >= menuPlayer.length - .25, 15f,
+            "menu pre-loop boundary not observed");
+        if (failed) yield break;
+        yield return CaptureAfterFrame("menu-loop-before.png");
+
+        yield return WaitUntil(() => loopCount >= 1, 4f, "menu first loop not observed");
         if (failed) yield break;
         yield return null;
         float blackRatio1 = SampleBlackRatio(menuPlayer.targetTexture);
         proof.Add("MENU_LOOP_1_BLACK_RATIO=" + blackRatio1.ToString("F6", CultureInfo.InvariantCulture));
         if (blackRatio1 > .98f) { Fail("black flash/near-black frame at first loop boundary"); yield break; }
-        Capture("menu-loop-1.png");
-        yield return new WaitForEndOfFrame();
+        yield return CaptureAfterFrame("menu-loop-after.png");
 
         yield return WaitUntil(() => loopCount >= 2, 15f, "menu second loop not observed");
         if (failed) yield break;
@@ -141,10 +180,28 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         float blackRatio2 = SampleBlackRatio(menuPlayer.targetTexture);
         proof.Add("MENU_LOOP_2_BLACK_RATIO=" + blackRatio2.ToString("F6", CultureInfo.InvariantCulture));
         if (blackRatio2 > .98f) { Fail("black flash/near-black frame at second loop boundary"); yield break; }
-        Capture("menu-loop-2.png");
-        yield return new WaitForEndOfFrame();
         menuPlayer.loopPointReached -= OnMenuLoop;
         proof.Add("MENU_TWO_FULL_LOOPS=PASS");
+
+        if (menu.GetComponent<VideoPlayer>() != originalPlayer || menu.GetComponent<AudioSource>() != originalAudio ||
+            menuPlayer.targetTexture != originalTarget)
+        {
+            Fail("menu player/audio/RT instance changed across loops");
+            yield break;
+        }
+        if (FindObjectsByType<VideoPlayer>(FindObjectsSortMode.None).Length != originalVideoPlayerCount ||
+            FindObjectsByType<AudioSource>(FindObjectsSortMode.None).Length != originalAudioSourceCount)
+        {
+            Fail("menu loop created duplicate VideoPlayer/AudioSource");
+            yield break;
+        }
+        if (!menuPlayer.isPlaying || !menuAudio.isPlaying || Mathf.Abs(menuAudio.volume - originalVolume) > .001f)
+        {
+            Fail("menu playback/audio state or volume changed across loops");
+            yield break;
+        }
+        proof.Add("MENU_LOOP_REUSES_PLAYER_AUDIO_RT=PASS");
+        proof.Add("MENU_AUDIO_NO_VOLUME_STACKING=PASS");
 
         if (!Same(enterPos, ((RectTransform)enter.transform).anchoredPosition) ||
             !Same(aboutPos, ((RectTransform)about.transform).anchoredPosition) ||
@@ -153,7 +210,13 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
             Fail("menu UI moved while video looped");
             yield break;
         }
+        if (!enter.IsInteractable() || !about.IsInteractable() || !support.IsInteractable())
+        {
+            Fail("menu buttons not interactable after two loops");
+            yield break;
+        }
         proof.Add("MENU_UI_STATIONARY_OVER_VIDEO=PASS");
+        proof.Add("MENU_BUTTONS_INTERACTABLE_AFTER_TWO_LOOPS=PASS");
 
         Press("DevelopersButton");
         yield return null;
@@ -223,6 +286,12 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         return (float)black / pixels.Length;
     }
 
+    private IEnumerator CaptureAfterFrame(string name)
+    {
+        yield return new WaitForEndOfFrame();
+        Capture(name);
+    }
+
     private IEnumerator WaitObject(string name, float seconds)
     {
         yield return WaitUntil(() => Find(name) != null, seconds, "timed out waiting for " + name);
@@ -247,6 +316,14 @@ public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
         Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < buttons.Length; i++) if (buttons[i].name == name) return buttons[i];
         return null;
+    }
+
+    private static int CountObjectsNamed(string name)
+    {
+        Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int count = 0;
+        for (int i = 0; i < transforms.Length; i++) if (transforms[i].name == name) count++;
+        return count;
     }
 
     private static GameObject Find(string name) { return GameObject.Find(name); }
