@@ -1,0 +1,182 @@
+name: ROKAS Story Menu Windows Player Proof V2 TEMP
+
+on:
+  push:
+    branches:
+      - feature/story-intro-main-menu
+    paths:
+      - .github/workflows/story-intro-main-menu-player-proof-v2-temp.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-menu-player-proof-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-player:
+    name: Build Exact Windows Development Player
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Require exact source media before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/StoryIntro.mp4 | cut -d' ' -f1)" = '4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4'
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4 | cut -d' ' -f1)" = 'bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5'
+          test -s Assets/StreamingAssets/RokasVideo/StartupPreview.mp4
+          test -s Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          test -s Assets/Rokas/Scripts/Presentation/StoryMenuRuntimeProofObserver.cs
+          test -s Assets/Rokas/Scripts/Presentation/StoryMenuRuntimeProofObserver.cs.meta
+          git status --short --untracked-files=all
+          test -z "$(git status --short --untracked-files=all)"
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StoryMenu-WindowsBuildV2-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StoryMenu-WindowsBuildV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Build Windows Development Player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          targetPlatform: StandaloneWindows64
+          buildsPath: build
+          buildName: Rokas
+          buildMethod: Rokas.Editor.RokasVideoSmokeBuild.Build
+          versioning: None
+
+      - name: Require exact packaged media and executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build-proof
+          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit)"
+          STORY="$(find build -type f -path '*/StreamingAssets/RokasVideo/StoryIntro.mp4' -print -quit)"
+          MENU="$(find build -type f -path '*/StreamingAssets/RokasVideo/MainMenuLoop.mp4' -print -quit)"
+          STARTUP="$(find build -type f -path '*/StreamingAssets/RokasVideo/StartupPreview.mp4' -print -quit)"
+          LAPTOP="$(find build -type f -path '*/StreamingAssets/RokasVideo/LaptopBoot.mp4' -print -quit)"
+          test -n "$EXE" && test -s "$EXE"
+          test "$(sha256sum "$STORY" | cut -d' ' -f1)" = '4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4'
+          test "$(sha256sum "$MENU" | cut -d' ' -f1)" = 'bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5'
+          test -s "$STARTUP"
+          test -s "$LAPTOP"
+          {
+            echo 'WINDOWS_BUILD=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "EXE=$EXE"
+            echo 'STORY_PACKAGED_BYTE_IDENTICAL=PASS'
+            echo 'MENU_PACKAGED_BYTE_IDENTICAL=PASS'
+            echo 'STARTUP_PACKAGED=PASS'
+            echo 'LAPTOP_PACKAGED=PASS'
+          } > build-proof/summary.txt
+          find build -type f -printf '%p %s bytes\n' | sort > build-proof/manifest.txt
+
+      - name: Upload complete Windows player
+        uses: actions/upload-artifact@v7
+        with:
+          name: rokas-story-menu-windows-player-v2
+          path: build
+          if-no-files-found: error
+
+      - name: Upload build proof
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-windows-build-proof-v2
+          path: build-proof
+          if-no-files-found: error
+
+  windows-runtime:
+    name: Actual Windows Player Launch Flow Proof
+    needs: build-player
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download complete Windows player
+        uses: actions/download-artifact@v8
+        with:
+          name: rokas-story-menu-windows-player-v2
+          path: player
+
+      - name: Run pre-existing Startup + Laptop real decode smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe missing' }
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-old-video-smoke.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasVideoSmoke','-screen-fullscreen','0','-screen-width','1280','-screen-height','720','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(90000)) { try { $p.Kill($true) } catch {}; throw 'old video smoke timeout' }
+          $p.WaitForExit()
+          if ($p.ExitCode -ne 0) { throw "old video smoke failed: $($p.ExitCode)" }
+          $result = Join-Path $work 'rokas-video-smoke/rokas-video-smoke-result.json'
+          if (-not (Test-Path $result)) { throw 'old video smoke result missing' }
+          $json = Get-Content $result -Raw | ConvertFrom-Json
+          if ($json.finalPass -ne $true) { throw 'old Startup/Laptop actual media smoke did not pass' }
+          New-Item -ItemType Directory -Force -Path windows-proof/old-video-smoke | Out-Null
+          Copy-Item (Join-Path $work 'rokas-video-smoke/*') windows-proof/old-video-smoke -Recurse -Force
+          Copy-Item $log windows-proof/old-video-smoke/Player.log -Force
+
+      - name: Run natural cold-start + two-loop proof
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-story-menu-natural.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','natural','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(150000)) { try { $p.Kill($true) } catch {}; throw 'natural proof timeout' }
+          $p.WaitForExit()
+          $dir = Join-Path $work 'rokas-story-menu-proof-natural'
+          New-Item -ItemType Directory -Force -Path windows-proof/natural | Out-Null
+          if (Test-Path $dir) { Copy-Item "$dir/*" windows-proof/natural -Recurse -Force }
+          if (Test-Path $log) { Copy-Item $log windows-proof/natural/Player.log -Force }
+          if ($p.ExitCode -ne 0) { throw "natural proof failed: $($p.ExitCode)" }
+          $proof = Get-Content windows-proof/natural/proof.txt -Raw
+          foreach ($required in @('STARTUP_NATURAL_TO_STORY=PASS','STORY_NATURAL_TO_MENU=PASS','MENU_TWO_FULL_LOOPS=PASS','ABOUT_CLICK_NOOP=PASS','SUPPORT_CLICK_NOOP=PASS','MENU_UI_STATIONARY_OVER_VIDEO=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','MENU_AUDIO_STOP_NO_GHOST=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing natural proof: $required" } }
+          foreach ($shot in @('menu-start.png','menu-loop-1.png','menu-loop-2.png')) { if (-not (Test-Path "windows-proof/natural/$shot")) { throw "missing screenshot $shot" } }
+
+      - name: Run skip cold-start proof
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-story-menu-skip.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','skip','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(60000)) { try { $p.Kill($true) } catch {}; throw 'skip proof timeout' }
+          $p.WaitForExit()
+          $dir = Join-Path $work 'rokas-story-menu-proof-skip'
+          New-Item -ItemType Directory -Force -Path windows-proof/skip | Out-Null
+          if (Test-Path $dir) { Copy-Item "$dir/*" windows-proof/skip -Recurse -Force }
+          if (Test-Path $log) { Copy-Item $log windows-proof/skip/Player.log -Force }
+          if ($p.ExitCode -ne 0) { throw "skip proof failed: $($p.ExitCode)" }
+          $proof = Get-Content windows-proof/skip/proof.txt -Raw
+          foreach ($required in @('STARTUP_SKIP_TO_STORY=PASS','STORY_SKIP_TO_MENU=PASS','SKIP_DOES_NOT_AUTO_ENTER_WORLD=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing skip proof: $required" } }
+
+      - name: Upload Windows runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-windows-runtime-proof-v2
+          path: windows-proof
+          if-no-files-found: error
