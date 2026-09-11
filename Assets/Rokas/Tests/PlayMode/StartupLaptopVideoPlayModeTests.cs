@@ -92,7 +92,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator CommittedStartupMediaProducesAFrameAndSkipBuildsHomeOnce()
+        public IEnumerator CommittedStartupAndStoryMediaProduceFramesThenMenuAndHomeOnce()
         {
             root = new GameObject("StartupActualMediaFixture");
             var boot = root.AddComponent<RokasBootstrap>();
@@ -105,10 +105,31 @@ namespace Rokas.Tests
             boot.VideoPresenter.Skip();
             yield return null;
 
+            Assert.That(boot.View, Is.Null,
+                "Startup skip must enter the approved story intro instead of bypassing the new launch flow to Home.");
+            Assert.That(Find("StoryIntroVideoSurface"), Is.Not.Null);
+            Assert.That(Find("RokasMainMenu"), Is.Null);
+
+            yield return WaitForFirstFrame(boot.VideoPresenter, 8f, "story intro");
+            Assert.That(boot.VideoPresenter.FirstFramePresented, Is.True,
+                "The committed StoryIntro.mp4 must decode to a real first frame with its embedded audio track available.");
+
+            boot.VideoPresenter.Skip();
+            yield return null;
+
+            Assert.That(boot.View, Is.Null,
+                "Story skip must stop at the main menu and must not carry the skip input into Enter World.");
+            Assert.That(Find("StoryIntroVideoSurface"), Is.Null);
+            Assert.That(Find("RokasMainMenu"), Is.Not.Null);
+            Assert.That(Find("HomeTitle"), Is.Null);
+
+            Press("EnterWorldButton");
+            yield return null;
+
             Assert.That(boot.View, Is.Not.Null);
             Assert.That(Find("HomeTitle"), Is.Not.Null);
             Assert.That(Count("HomeTitle"), Is.EqualTo(1));
-            Assert.That(Find("StartupVideoSurface"), Is.Null);
+            Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(boot.VideoPresenter.IsPlaying, Is.False);
             Assert.That(boot.VideoPresenter.TemporaryRenderTexture, Is.Null);
         }
