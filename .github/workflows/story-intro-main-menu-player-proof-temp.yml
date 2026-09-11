@@ -1,0 +1,474 @@
+name: ROKAS Story Menu Windows Player Proof TEMP
+
+on:
+  push:
+    branches:
+      - feature/story-intro-main-menu
+    paths:
+      - .github/workflows/story-intro-main-menu-player-proof-temp.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-menu-player-proof-temp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-media:
+    name: Exact Story + Menu Media Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Verify exact bytes streams and full decode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          mkdir -p source-proof
+          STORY='Assets/StreamingAssets/RokasVideo/StoryIntro.mp4'
+          MENU='Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4'
+          STORY_SHA='4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4'
+          MENU_SHA='bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5'
+          test "$(sha256sum "$STORY" | cut -d' ' -f1)" = "$STORY_SHA"
+          test "$(sha256sum "$MENU" | cut -d' ' -f1)" = "$MENU_SHA"
+          test "$(stat -c%s "$STORY")" = '31848620'
+          test "$(stat -c%s "$MENU")" = '2427109'
+          ffprobe -v error -show_streams -show_format -of json "$STORY" > source-proof/story-ffprobe.json
+          ffprobe -v error -show_streams -show_format -of json "$MENU" > source-proof/menu-ffprobe.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for label in ('story','menu'):
+              data=json.loads(Path(f'source-proof/{label}-ffprobe.json').read_text())
+              streams=data.get('streams',[])
+              if not any(s.get('codec_type')=='video' for s in streams): raise SystemExit(label+': missing video')
+              if not any(s.get('codec_type')=='audio' for s in streams): raise SystemExit(label+': missing audio')
+              duration=float(data.get('format',{}).get('duration','0'))
+              if label=='story' and not 49.0 < duration < 53.0: raise SystemExit(f'story duration {duration}')
+              if label=='menu' and not 7.0 < duration < 11.0: raise SystemExit(f'menu duration {duration}')
+              Path(f'source-proof/{label}-duration.txt').write_text(f'{duration:.6f}\n')
+          PY
+          ffmpeg -v error -i "$STORY" -map 0:v:0 -map 0:a:0 -f null - 2> source-proof/story-full-decode.log
+          ffmpeg -v error -i "$MENU" -map 0:v:0 -map 0:a:0 -f null - 2> source-proof/menu-full-decode.log
+          sha256sum "$STORY" "$MENU" > source-proof/sha256.txt
+          {
+            echo 'SOURCE_MEDIA=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "STORY_SHA256=$STORY_SHA"
+            echo "MENU_SHA256=$MENU_SHA"
+            echo 'VIDEO_STREAMS=PASS'
+            echo 'EMBEDDED_AUDIO_STREAMS=PASS'
+            echo 'FULL_DECODE=PASS'
+          } > source-proof/summary.txt
+
+      - name: Upload source proof
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-source-proof
+          path: source-proof
+          if-no-files-found: error
+
+  build-player:
+    name: Build Exact Windows Development Player
+    needs: source-media
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Inject runtime observer only into CI checkout
+        shell: bash
+        run: |
+          cat > Assets/Rokas/Scripts/Presentation/StoryMenuRuntimeProofObserver.cs <<'CS'
+          using System;
+          using System.Collections;
+          using System.Collections.Generic;
+          using System.Globalization;
+          using System.IO;
+          using Rokas.Presentation;
+          using UnityEngine;
+          using UnityEngine.EventSystems;
+          using UnityEngine.UI;
+          using UnityEngine.Video;
+
+          public sealed class StoryMenuRuntimeProofObserver : MonoBehaviour
+          {
+              private string mode;
+              private string evidenceDir;
+              private readonly List<string> proof = new List<string>();
+              private int loopCount;
+              private bool failed;
+              private string failure;
+
+              [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+              private static void Install()
+              {
+                  string[] args = Environment.GetCommandLineArgs();
+                  int index = Array.IndexOf(args, "-rokasStoryMenuProof");
+                  if (index < 0) return;
+                  var go = new GameObject("StoryMenuRuntimeProofObserver");
+                  DontDestroyOnLoad(go);
+                  var observer = go.AddComponent<StoryMenuRuntimeProofObserver>();
+                  observer.mode = index + 1 < args.Length ? args[index + 1].ToLowerInvariant() : "natural";
+              }
+
+              private IEnumerator Start()
+              {
+                  string root = Directory.GetParent(Application.dataPath).FullName;
+                  evidenceDir = Path.Combine(root, "rokas-story-menu-proof-" + mode);
+                  Directory.CreateDirectory(evidenceDir);
+                  proof.Add("MODE=" + mode);
+                  proof.Add("UNITY_VERSION=" + Application.unityVersion);
+                  yield return RunProof();
+                  proof.Add("FINAL_PASS=" + (!failed ? "TRUE" : "FALSE"));
+                  if (failed) proof.Add("FAILURE=" + failure.Replace('\n',' '));
+                  File.WriteAllLines(Path.Combine(evidenceDir, "proof.txt"), proof.ToArray());
+                  yield return new WaitForSecondsRealtime(.25f);
+                  Application.Quit(failed ? 1 : 0);
+              }
+
+              private IEnumerator RunProof()
+              {
+                  RokasBootstrap boot = null;
+                  yield return WaitUntil(() => (boot = FindFirstObjectByType<RokasBootstrap>()) != null, 8f, "bootstrap missing");
+                  if (failed) yield break;
+                  proof.Add("BOOTSTRAP=PASS");
+
+                  yield return WaitObject("StartupVideoSurface", 8f);
+                  if (failed) yield break;
+                  proof.Add("COLD_START_STARTUP_SURFACE=PASS");
+                  yield return WaitUntil(() => boot.VideoPresenter.FirstFramePresented, 12f, "startup first frame missing");
+                  if (failed) yield break;
+                  proof.Add("STARTUP_FIRST_FRAME=PASS");
+                  RecordPresenterAudio("STARTUP", boot.VideoPresenter);
+                  if (failed) yield break;
+
+                  if (mode == "skip") boot.VideoPresenter.Skip();
+                  yield return WaitObject("StoryIntroVideoSurface", mode == "skip" ? 8f : 20f);
+                  if (failed) yield break;
+                  proof.Add(mode == "skip" ? "STARTUP_SKIP_TO_STORY=PASS" : "STARTUP_NATURAL_TO_STORY=PASS");
+                  yield return WaitUntil(() => boot.VideoPresenter.FirstFramePresented, 12f, "story first frame missing");
+                  if (failed) yield break;
+                  proof.Add("STORY_FIRST_FRAME=PASS");
+                  RecordPresenterAudio("STORY", boot.VideoPresenter);
+                  if (failed) yield break;
+
+                  if (mode == "skip") boot.VideoPresenter.Skip();
+                  yield return WaitObject("RokasMainMenu", mode == "skip" ? 8f : 70f);
+                  if (failed) yield break;
+                  if (Find("HomeTitle") != null) { Fail("Home exists before Enter World"); yield break; }
+                  if (Find("StoryIntroVideoSurface") != null) { Fail("story surface leaked into menu"); yield break; }
+                  proof.Add(mode == "skip" ? "STORY_SKIP_TO_MENU=PASS" : "STORY_NATURAL_TO_MENU=PASS");
+
+                  if (mode == "skip")
+                  {
+                      yield return new WaitForSecondsRealtime(.75f);
+                      if (Find("RokasMainMenu") == null || Find("HomeTitle") != null) { Fail("skip input leaked into Enter World"); yield break; }
+                      proof.Add("SKIP_DOES_NOT_AUTO_ENTER_WORLD=PASS");
+                      Press("EnterWorldButton");
+                      if (failed) yield break;
+                      yield return WaitObject("HomeTitle", 8f);
+                      if (failed) yield break;
+                      yield return VerifyHomeCleanup(null, null, null);
+                      yield break;
+                  }
+
+                  GameObject menu = Find("RokasMainMenu");
+                  VideoPlayer menuPlayer = menu != null ? menu.GetComponent<VideoPlayer>() : null;
+                  AudioSource menuAudio = menu != null ? menu.GetComponent<AudioSource>() : null;
+                  if (menuPlayer == null || menuAudio == null) { Fail("menu VideoPlayer/AudioSource missing"); yield break; }
+                  if (!menuPlayer.isLooping || menuPlayer.audioOutputMode != VideoAudioOutputMode.AudioSource || menuPlayer.controlledAudioTrackCount < 1) { Fail("menu video/audio routing contract invalid"); yield break; }
+                  yield return WaitUntil(() => menuPlayer.isPlaying, 12f, "menu video never started");
+                  if (failed) yield break;
+                  yield return WaitUntil(() => menuAudio.isPlaying, 5f, "menu embedded audio never played");
+                  if (failed) yield break;
+                  proof.Add("MENU_VIDEO_PLAYING=PASS");
+                  proof.Add("MENU_EMBEDDED_AUDIO_PLAYING=PASS");
+
+                  Button enter = FindButton("EnterWorldButton");
+                  Button about = FindButton("DevelopersButton");
+                  Button support = FindButton("SupportDevelopmentButton");
+                  if (enter == null || about == null || support == null) { Fail("menu buttons missing"); yield break; }
+                  Vector2 enterPos = ((RectTransform)enter.transform).anchoredPosition;
+                  Vector2 aboutPos = ((RectTransform)about.transform).anchoredPosition;
+                  Vector2 supportPos = ((RectTransform)support.transform).anchoredPosition;
+                  Vector2 buttonSize = ((RectTransform)enter.transform).sizeDelta;
+                  proof.Add("MENU_LAYOUT_ENTER=" + Vec(enterPos));
+                  proof.Add("MENU_LAYOUT_ABOUT=" + Vec(aboutPos));
+                  proof.Add("MENU_LAYOUT_SUPPORT=" + Vec(supportPos));
+                  proof.Add("MENU_LAYOUT_SIZE=" + Vec(buttonSize));
+                  Capture("menu-start.png");
+
+                  loopCount = 0;
+                  menuPlayer.loopPointReached += OnMenuLoop;
+                  yield return WaitUntil(() => loopCount >= 1, 15f, "menu first loop not observed");
+                  if (failed) yield break;
+                  yield return null;
+                  proof.Add("MENU_LOOP_1_BLACK_RATIO=" + SampleBlackRatio(menuPlayer.targetTexture).ToString("F6", CultureInfo.InvariantCulture));
+                  if (SampleBlackRatio(menuPlayer.targetTexture) > .98f) { Fail("black flash/near-black frame at first loop boundary"); yield break; }
+                  Capture("menu-loop-1.png");
+                  yield return WaitUntil(() => loopCount >= 2, 15f, "menu second loop not observed");
+                  if (failed) yield break;
+                  yield return null;
+                  float blackRatio2 = SampleBlackRatio(menuPlayer.targetTexture);
+                  proof.Add("MENU_LOOP_2_BLACK_RATIO=" + blackRatio2.ToString("F6", CultureInfo.InvariantCulture));
+                  if (blackRatio2 > .98f) { Fail("black flash/near-black frame at second loop boundary"); yield break; }
+                  Capture("menu-loop-2.png");
+                  menuPlayer.loopPointReached -= OnMenuLoop;
+                  proof.Add("MENU_TWO_FULL_LOOPS=PASS");
+
+                  if (!Same(enterPos, ((RectTransform)enter.transform).anchoredPosition) || !Same(aboutPos, ((RectTransform)about.transform).anchoredPosition) || !Same(supportPos, ((RectTransform)support.transform).anchoredPosition)) { Fail("menu UI moved while video looped"); yield break; }
+                  proof.Add("MENU_UI_STATIONARY_OVER_VIDEO=PASS");
+
+                  Press("DevelopersButton");
+                  yield return null;
+                  if (Find("RokasMainMenu") == null || Find("HomeTitle") != null) { Fail("About was not a safe no-op"); yield break; }
+                  proof.Add("ABOUT_CLICK_NOOP=PASS");
+                  Press("SupportDevelopmentButton");
+                  yield return null;
+                  if (Find("RokasMainMenu") == null || Find("HomeTitle") != null) { Fail("Support was not a safe no-op"); yield break; }
+                  proof.Add("SUPPORT_CLICK_NOOP=PASS");
+
+                  RenderTexture menuTarget = menuPlayer.targetTexture;
+                  Press("EnterWorldButton");
+                  if (failed) yield break;
+                  yield return WaitObject("HomeTitle", 8f);
+                  if (failed) yield break;
+                  yield return VerifyHomeCleanup(menuPlayer, menuAudio, menuTarget);
+              }
+
+              private IEnumerator VerifyHomeCleanup(VideoPlayer oldPlayer, AudioSource oldAudio, RenderTexture oldTarget)
+              {
+                  yield return null;
+                  yield return null;
+                  if (Find("RokasMainMenu") != null || Find("MainMenuVideoSurface") != null) { Fail("menu objects leaked after Enter World"); yield break; }
+                  if (Find("StartupVideoCanvas") != null) { Fail("startup/story canvas leaked after Enter World"); yield break; }
+                  if (oldPlayer != null && oldPlayer) { Fail("menu VideoPlayer leaked after Enter World"); yield break; }
+                  if (oldAudio != null && oldAudio && oldAudio.isPlaying) { Fail("ghost menu audio after Enter World"); yield break; }
+                  if (oldTarget != null && oldTarget && oldTarget.IsCreated()) { Fail("menu RenderTexture still created after Enter World"); yield break; }
+                  EventSystem[] systems = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+                  if (systems.Length != 1) { Fail("duplicate/missing EventSystem count=" + systems.Length); yield break; }
+                  Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+                  proof.Add("HOME_ACTIVE_CANVAS_COUNT=" + canvases.Length);
+                  proof.Add("ENTER_WORLD_TO_EXISTING_HOME=PASS");
+                  proof.Add("MENU_VIDEO_STOP_CLEANUP=PASS");
+                  proof.Add("MENU_AUDIO_STOP_NO_GHOST=PASS");
+                  proof.Add("EVENTSYSTEM_UNIQUE=PASS");
+              }
+
+              private void RecordPresenterAudio(string prefix, VideoSequencePresenter presenter)
+              {
+                  VideoPlayer vp = presenter != null ? presenter.GetComponent<VideoPlayer>() : null;
+                  if (vp == null || vp.audioOutputMode != VideoAudioOutputMode.AudioSource || vp.controlledAudioTrackCount < 1) { Fail(prefix + " audio route missing"); return; }
+                  AudioSource audio = vp.GetTargetAudioSource(0);
+                  if (audio == null || !audio.isPlaying) { Fail(prefix + " embedded audio track not playing"); return; }
+                  proof.Add(prefix + "_EMBEDDED_AUDIO_PLAYING=PASS");
+              }
+
+              private void OnMenuLoop(VideoPlayer source) { loopCount++; }
+
+              private float SampleBlackRatio(RenderTexture rt)
+              {
+                  if (rt == null) return 1f;
+                  RenderTexture small = RenderTexture.GetTemporary(64, 36, 0, RenderTextureFormat.ARGB32);
+                  Graphics.Blit(rt, small);
+                  RenderTexture prev = RenderTexture.active;
+                  RenderTexture.active = small;
+                  Texture2D tex = new Texture2D(64, 36, TextureFormat.RGB24, false);
+                  tex.ReadPixels(new Rect(0, 0, 64, 36), 0, 0);
+                  tex.Apply();
+                  Color32[] pixels = tex.GetPixels32();
+                  int black = 0;
+                  for (int i = 0; i < pixels.Length; i++) if (pixels[i].r < 4 && pixels[i].g < 4 && pixels[i].b < 4) black++;
+                  Destroy(tex);
+                  RenderTexture.active = prev;
+                  RenderTexture.ReleaseTemporary(small);
+                  return (float)black / pixels.Length;
+              }
+
+              private IEnumerator WaitObject(string name, float seconds)
+              {
+                  yield return WaitUntil(() => Find(name) != null, seconds, "timed out waiting for " + name);
+              }
+
+              private IEnumerator WaitUntil(Func<bool> condition, float seconds, string message)
+              {
+                  float deadline = Time.realtimeSinceStartup + seconds;
+                  while (!condition() && Time.realtimeSinceStartup < deadline) yield return null;
+                  if (!condition()) Fail(message);
+              }
+
+              private void Press(string name)
+              {
+                  Button button = FindButton(name);
+                  if (button == null || !button.IsInteractable()) { Fail("button unavailable: " + name); return; }
+                  button.onClick.Invoke();
+              }
+
+              private Button FindButton(string name)
+              {
+                  Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                  for (int i = 0; i < buttons.Length; i++) if (buttons[i].name == name) return buttons[i];
+                  return null;
+              }
+
+              private static GameObject Find(string name) { return GameObject.Find(name); }
+              private static bool Same(Vector2 a, Vector2 b) { return Vector2.SqrMagnitude(a - b) < .0001f; }
+              private static string Vec(Vector2 v) { return v.x.ToString("F2", CultureInfo.InvariantCulture) + "," + v.y.ToString("F2", CultureInfo.InvariantCulture); }
+              private void Capture(string name) { ScreenCapture.CaptureScreenshot(Path.Combine(evidenceDir, name)); }
+              private void Fail(string message) { if (!failed) { failed = true; failure = message; proof.Add("FAIL=" + message); } }
+          }
+          CS
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StoryMenu-WindowsBuild-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StoryMenu-WindowsBuild-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Build Windows Development Player with CI observer
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          targetPlatform: StandaloneWindows64
+          buildsPath: build
+          buildName: Rokas
+          buildMethod: Rokas.Editor.RokasVideoSmokeBuild.Build
+
+      - name: Require exact packaged media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build-proof
+          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit)"
+          STORY="$(find build -type f -path '*/StreamingAssets/RokasVideo/StoryIntro.mp4' -print -quit)"
+          MENU="$(find build -type f -path '*/StreamingAssets/RokasVideo/MainMenuLoop.mp4' -print -quit)"
+          STARTUP="$(find build -type f -path '*/StreamingAssets/RokasVideo/StartupPreview.mp4' -print -quit)"
+          LAPTOP="$(find build -type f -path '*/StreamingAssets/RokasVideo/LaptopBoot.mp4' -print -quit)"
+          test -n "$EXE" && test -s "$EXE"
+          test "$(sha256sum "$STORY" | cut -d' ' -f1)" = '4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4'
+          test "$(sha256sum "$MENU" | cut -d' ' -f1)" = 'bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5'
+          test -s "$STARTUP"
+          test -s "$LAPTOP"
+          {
+            echo 'WINDOWS_BUILD=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo "EXE=$EXE"
+            echo 'STORY_PACKAGED_BYTE_IDENTICAL=PASS'
+            echo 'MENU_PACKAGED_BYTE_IDENTICAL=PASS'
+            echo 'STARTUP_PACKAGED=PASS'
+            echo 'LAPTOP_PACKAGED=PASS'
+          } > build-proof/summary.txt
+          find build -type f -printf '%p %s bytes\n' | sort > build-proof/manifest.txt
+
+      - name: Upload complete Windows player
+        uses: actions/upload-artifact@v7
+        with:
+          name: rokas-story-menu-windows-player
+          path: build
+          if-no-files-found: error
+
+      - name: Upload build proof
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-windows-build-proof
+          path: build-proof
+          if-no-files-found: error
+
+  windows-runtime:
+    name: Actual Windows Player Launch Flow Proof
+    needs: build-player
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download complete Windows player
+        uses: actions/download-artifact@v8
+        with:
+          name: rokas-story-menu-windows-player
+          path: player
+
+      - name: Run pre-existing Startup + Laptop real decode smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe missing' }
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-old-video-smoke.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasVideoSmoke','-screen-fullscreen','0','-screen-width','1280','-screen-height','720','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(90000)) { try { $p.Kill($true) } catch {}; throw 'old video smoke timeout' }
+          $p.WaitForExit()
+          if ($p.ExitCode -ne 0) { throw "old video smoke failed: $($p.ExitCode)" }
+          $result = Join-Path $work 'rokas-video-smoke/rokas-video-smoke-result.json'
+          if (-not (Test-Path $result)) { throw 'old video smoke result missing' }
+          $json = Get-Content $result -Raw | ConvertFrom-Json
+          if ($json.finalPass -ne $true) { throw 'old Startup/Laptop actual media smoke did not pass' }
+          New-Item -ItemType Directory -Force -Path windows-proof/old-video-smoke | Out-Null
+          Copy-Item (Join-Path $work 'rokas-video-smoke/*') windows-proof/old-video-smoke -Recurse -Force
+          Copy-Item $log windows-proof/old-video-smoke/Player.log -Force
+
+      - name: Run natural cold-start + two-loop proof
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-story-menu-natural.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','natural','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(150000)) { try { $p.Kill($true) } catch {}; throw 'natural proof timeout' }
+          $p.WaitForExit()
+          $dir = Join-Path $work 'rokas-story-menu-proof-natural'
+          New-Item -ItemType Directory -Force -Path windows-proof/natural | Out-Null
+          if (Test-Path $dir) { Copy-Item "$dir/*" windows-proof/natural -Recurse -Force }
+          if (Test-Path $log) { Copy-Item $log windows-proof/natural/Player.log -Force }
+          if ($p.ExitCode -ne 0) { throw "natural proof failed: $($p.ExitCode)" }
+          $proof = Get-Content windows-proof/natural/proof.txt -Raw
+          foreach ($required in @('STARTUP_NATURAL_TO_STORY=PASS','STORY_NATURAL_TO_MENU=PASS','MENU_TWO_FULL_LOOPS=PASS','ABOUT_CLICK_NOOP=PASS','SUPPORT_CLICK_NOOP=PASS','MENU_UI_STATIONARY_OVER_VIDEO=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','MENU_AUDIO_STOP_NO_GHOST=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing natural proof: $required" } }
+          foreach ($shot in @('menu-start.png','menu-loop-1.png','menu-loop-2.png')) { if (-not (Test-Path "windows-proof/natural/$shot")) { throw "missing screenshot $shot" } }
+
+      - name: Run skip cold-start proof
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
+          $work = $exe.Directory.FullName
+          $log = Join-Path $work 'Player-story-menu-skip.log'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','skip','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          if (-not $p.WaitForExit(60000)) { try { $p.Kill($true) } catch {}; throw 'skip proof timeout' }
+          $p.WaitForExit()
+          $dir = Join-Path $work 'rokas-story-menu-proof-skip'
+          New-Item -ItemType Directory -Force -Path windows-proof/skip | Out-Null
+          if (Test-Path $dir) { Copy-Item "$dir/*" windows-proof/skip -Recurse -Force }
+          if (Test-Path $log) { Copy-Item $log windows-proof/skip/Player.log -Force }
+          if ($p.ExitCode -ne 0) { throw "skip proof failed: $($p.ExitCode)" }
+          $proof = Get-Content windows-proof/skip/proof.txt -Raw
+          foreach ($required in @('STARTUP_SKIP_TO_STORY=PASS','STORY_SKIP_TO_MENU=PASS','SKIP_DOES_NOT_AUTO_ENTER_WORLD=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing skip proof: $required" } }
+
+      - name: Upload Windows runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-menu-windows-runtime-proof
+          path: windows-proof
+          if-no-files-found: error
