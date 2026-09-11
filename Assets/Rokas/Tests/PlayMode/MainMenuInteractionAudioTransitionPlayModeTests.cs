@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using Rokas.Presentation;
@@ -14,8 +15,7 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
-        private string storyMediaPath;
-        private string hiddenStoryMediaPath;
+        private readonly List<KeyValuePair<string, string>> hiddenMedia = new List<KeyValuePair<string, string>>();
         private bool previousIgnoreFailingMessages;
 
         [UnitySetUp]
@@ -23,6 +23,8 @@ namespace Rokas.Tests
         {
             previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
             LogAssert.ignoreFailingMessages = true;
+            HideMediaForDeterministicLinuxFallback("StartupPreview.mp4");
+            HideMediaForDeterministicLinuxFallback("MainMenuLoop.mp4");
             yield return null;
         }
 
@@ -225,10 +227,20 @@ namespace Rokas.Tests
 
         private void HideStoryMediaForDeterministicLinuxFallback()
         {
-            storyMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "StoryIntro.mp4");
-            Assert.That(File.Exists(storyMediaPath), Is.True);
-            hiddenStoryMediaPath = Path.Combine(Path.GetTempPath(), "rokas-hidden-story-audio-transition-" + Guid.NewGuid().ToString("N") + ".mp4");
-            File.Move(storyMediaPath, hiddenStoryMediaPath);
+            HideMediaForDeterministicLinuxFallback("StoryIntro.mp4");
+        }
+
+        private void HideMediaForDeterministicLinuxFallback(string fileName)
+        {
+            string path = Path.Combine(Application.streamingAssetsPath, "RokasVideo", fileName);
+            foreach (KeyValuePair<string, string> pair in hiddenMedia)
+                if (pair.Key == path) return;
+
+            Assert.That(File.Exists(path), Is.True, "Expected committed test media before deterministic hide: " + path);
+            string hidden = Path.Combine(Path.GetTempPath(),
+                "rokas-hidden-" + Path.GetFileNameWithoutExtension(fileName) + "-" + Guid.NewGuid().ToString("N") + Path.GetExtension(fileName));
+            File.Move(path, hidden);
+            hiddenMedia.Add(new KeyValuePair<string, string>(path, hidden));
         }
 
         private RokasBootstrap CreateRealLaunchIgnoringHostDecoderErrors()
@@ -305,11 +317,15 @@ namespace Rokas.Tests
             LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
-            if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
-                !string.IsNullOrEmpty(storyMediaPath) && !File.Exists(storyMediaPath))
-                File.Move(hiddenStoryMediaPath, storyMediaPath);
-            hiddenStoryMediaPath = null;
-            storyMediaPath = null;
+
+            for (int i = hiddenMedia.Count - 1; i >= 0; i--)
+            {
+                string original = hiddenMedia[i].Key;
+                string hidden = hiddenMedia[i].Value;
+                if (File.Exists(hidden) && !File.Exists(original)) File.Move(hidden, original);
+            }
+            hiddenMedia.Clear();
+
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
             directory = null;
         }
