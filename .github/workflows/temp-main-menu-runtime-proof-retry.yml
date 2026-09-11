@@ -54,8 +54,51 @@ jobs:
           out=[]
           for line in lines:
               out.append(line[10:] if line.startswith('          ') else line)
+          probe='\n'.join(out)+'\n'
+          old='''    private IEnumerator Capture(string fileName)
+    {
+        captureSucceeded = false;
+        string path = Path.Combine(outputDirectory, fileName);
+        if (File.Exists(path)) File.Delete(path);
+        ScreenCapture.CaptureScreenshot(path);
+        float deadline = Time.realtimeSinceStartup + 3f;
+        while (Time.realtimeSinceStartup < deadline)
+        {
+            yield return new WaitForEndOfFrame();
+            if (File.Exists(path) && new FileInfo(path).Length > 1000)
+            {
+                captureSucceeded = true;
+                yield break;
+            }
+        }
+    }
+'''
+          new='''    private IEnumerator Capture(string fileName)
+    {
+        captureSucceeded = false;
+        string path = Path.Combine(outputDirectory, fileName);
+        if (File.Exists(path)) File.Delete(path);
+        yield return new WaitForEndOfFrame();
+        Texture2D shot = null;
+        try
+        {
+            shot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+            shot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0, false);
+            shot.Apply(false, false);
+            byte[] bytes = shot.EncodeToPNG();
+            File.WriteAllBytes(path, bytes);
+            captureSucceeded = bytes != null && bytes.Length > 1000 && File.Exists(path);
+        }
+        finally
+        {
+            if (shot) Destroy(shot);
+        }
+    }
+'''
+          assert probe.count(old) == 1, 'Expected exactly one ScreenCapture QA seam.'
+          probe=probe.replace(old,new)
           p=Path('feature/Assets/RokasMainMenuRuntimeProbe.cs')
-          p.write_text('\n'.join(out)+'\n')
+          p.write_text(probe)
           PY
           cat > feature/Assets/RokasMainMenuRuntimeProbe.cs.meta <<'META'
           fileFormatVersion: 2
@@ -71,6 +114,8 @@ jobs:
             assetBundleVariant:
           META
           cd feature
+          grep -q 'shot.ReadPixels' Assets/RokasMainMenuRuntimeProbe.cs
+          ! grep -q 'ScreenCapture.CaptureScreenshot' Assets/RokasMainMenuRuntimeProbe.cs
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
