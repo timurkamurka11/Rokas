@@ -1,4 +1,4 @@
-name: TEMP Correct EnterGame Persistent-Owner Assertion
+name: TEMP Dispatch Main Menu Regressions
 
 on:
   push:
@@ -8,42 +8,21 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: write
+  contents: read
   actions: write
 
 jobs:
-  patch:
+  dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current feature
-        uses: actions/checkout@v4
-        with:
-          ref: feature/main-menu-interaction-ui-audio-home-transition
-          fetch-depth: 1
-      - name: Correct AudioSource owner assertion and dispatch focused suite
+      - name: Verify exact feature head and dispatch existing regressions
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          expected='3fe4598d5756b749df5b1347273005df65eddc81'
-          test "$(git rev-parse HEAD)" = "$expected"
-          file='Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs'
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs')
-          s=p.read_text()
-          old='''            Assert.That(special.transform.parent, Is.Not.Null);\n            Assert.That(special.transform.parent.name, Is.EqualTo("Audio"),\n                "EnterGame must remain owned by the persistent RokasAudio Audio root, not the disposed Main Menu.");'''
-          new='''            Assert.That(special.gameObject.name, Is.EqualTo("Audio"),\n                "EnterGame must remain on the persistent RokasAudio Audio root, not the disposed Main Menu.");'''
-          assert s.count(old)==1
-          p.write_text(s.replace(old,new))
-          PY
-          git diff --check
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = "$file"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$file"
-          git commit -m 'test: correct EnterGame persistent owner assertion'
-          git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
-          gh workflow run main-menu-interaction-audio-transition-tdd.yml --ref feature/main-menu-interaction-ui-audio-home-transition
+          actual="$(gh api repos/${{ github.repository }}/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
+          test "$actual" = '510efc00846cf9c2b5b0261f88c3d6bf489691c9'
+          gh workflow run story-intro-main-menu-tdd.yml --ref feature/main-menu-interaction-ui-audio-home-transition
+          gh workflow run unity-ci.yml --ref feature/main-menu-interaction-ui-audio-home-transition
+          echo "DISPATCH_FEATURE_HEAD=$actual"
