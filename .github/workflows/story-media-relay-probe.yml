@@ -1,4 +1,4 @@
-name: ROKAS Story Media Relay Probe
+name: ROKAS Story Media Relay Import
 
 on:
   push:
@@ -7,38 +7,49 @@ on:
     paths:
       - .github/workflows/story-media-relay-probe.yml
 
-permissions:
-  contents: read
-
 jobs:
-  probe:
+  import-media:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Inspect temporary relay client context
+        with:
+          fetch-depth: 0
+      - name: Fetch and verify approved media
         shell: bash
-        env:
-          SHARE_URL: https://firestorage.ai/ja/f/YZDbPHr6uTja
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 -A 'Mozilla/5.0' "$SHARE_URL" -o relay.html
           python3 - <<'PY'
-          import re, subprocess
-          from pathlib import Path
-          html=Path('relay.html').read_text(errors='replace')
-          scripts=sorted(set(re.findall(r'<script[^>]+src="([^"]+\.js)"', html)))
-          for i,src in enumerate(scripts):
-              url='https://firestorage.ai'+src if src.startswith('/') else src
-              subprocess.run(['curl','-fsSL','--retry','3','-A','Mozilla/5.0',url,'-o',f'chunk-{i}.js'],check=True)
-          corpus='\n'.join(Path(f'chunk-{i}.js').read_text(errors='replace') for i in range(len(scripts)))
-          needles=('https://api.firestorage.ai/prod/file','files?maxResults=1000','/download','shareEndpoint','shares/${e[1]}')
-          for needle in needles:
-              print('\n===',needle,'===')
-              start=0
-              for _ in range(8):
-                  pos=corpus.find(needle,start)
-                  if pos < 0: break
-                  print(corpus[max(0,pos-1200):pos+2200])
-                  start=pos+len(needle)
+          import hashlib, json, pathlib, urllib.request
+          token='YZDbPHr6uTja'
+          base='https://api.firestorage.ai/prod/file'
+          with urllib.request.urlopen(f'{base}/shares/{token}/files?maxResults=1000', timeout=30) as r:
+              items={x['fileName']:x for x in json.load(r)['files']}
+          wanted={
+            'ROKAS_intro_51s_original_SFX_plus_full_voice(1).mp4':('Assets/StreamingAssets/RokasVideo/StoryIntro.mp4','4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4',31848620),
+            'ROKAS_seamless_loop(1).mp4':('Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4','bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5',2427109),
+          }
+          for name,(dest,expected,size) in wanted.items():
+              item=items[name]
+              req=urllib.request.Request(f"{base}/shares/{token}/files/{item['fileId']}/download",data=b'',method='POST')
+              with urllib.request.urlopen(req,timeout=30) as r: url=json.load(r)['downloadUrl']
+              p=pathlib.Path(dest); p.parent.mkdir(parents=True,exist_ok=True)
+              with urllib.request.urlopen(url,timeout=180) as src,p.open('wb') as out:
+                  while True:
+                      chunk=src.read(1024*1024)
+                      if not chunk: break
+                      out.write(chunk)
+              data=p.read_bytes(); actual=hashlib.sha256(data).hexdigest()
+              print(dest,len(data),actual)
+              assert len(data)==size and actual==expected
           PY
+      - name: Commit media
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/StreamingAssets/RokasVideo/StoryIntro.mp4 Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4
+          git diff --cached --check
+          git commit -m "chore: add story intro and main menu media"
+          git push origin HEAD:feature/story-intro-main-menu
