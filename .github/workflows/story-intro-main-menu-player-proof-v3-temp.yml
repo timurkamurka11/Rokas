@@ -1,6 +1,6 @@
 name: ROKAS Story Menu Windows Player Proof V3 TEMP
 
-# Rerun after isolated QA observer fix: allow one frame for Unity deferred Destroy before leak assertions.
+# Exact 16:9 visual-evidence rerun after end-of-frame capture timing RCA.
 on:
   push:
     branches:
@@ -137,14 +137,14 @@ jobs:
           Copy-Item (Join-Path $work 'rokas-video-smoke/*') windows-proof/old-video-smoke -Recurse -Force
           Copy-Item $log windows-proof/old-video-smoke/Player.log -Force
 
-      - name: Run natural cold-start + two-loop proof
+      - name: Run natural cold-start + two-loop + visual proof
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
           $work = $exe.Directory.FullName
           $log = Join-Path $work 'Player-story-menu-natural.log'
-          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','natural','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','natural','-screen-fullscreen','0','-screen-width','960','-screen-height','540','-logFile',$log) -WorkingDirectory $work -PassThru
           if (-not $p.WaitForExit(150000)) { try { $p.Kill($true) } catch {}; throw 'natural proof timeout' }
           $p.WaitForExit()
           $dir = Join-Path $work 'rokas-story-menu-proof-natural'
@@ -153,8 +153,8 @@ jobs:
           if (Test-Path $log) { Copy-Item $log windows-proof/natural/Player.log -Force }
           if ($p.ExitCode -ne 0) { throw "natural proof failed: $($p.ExitCode)" }
           $proof = Get-Content windows-proof/natural/proof.txt -Raw
-          foreach ($required in @('STARTUP_NATURAL_TO_STORY=PASS','STORY_NATURAL_TO_MENU=PASS','MENU_TWO_FULL_LOOPS=PASS','ABOUT_CLICK_NOOP=PASS','SUPPORT_CLICK_NOOP=PASS','MENU_UI_STATIONARY_OVER_VIDEO=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','MENU_AUDIO_STOP_NO_GHOST=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing natural proof: $required" } }
-          foreach ($shot in @('menu-start.png','menu-loop-1.png','menu-loop-2.png')) { if (-not (Test-Path "windows-proof/natural/$shot")) { throw "missing screenshot $shot" } }
+          foreach ($required in @('STARTUP_NATURAL_TO_STORY=PASS','STORY_NATURAL_TO_MENU=PASS','STORY_VIDEO_AUDIO_RT_CLEANUP=PASS','MENU_TWO_FULL_LOOPS=PASS','MENU_LOOP_REUSES_PLAYER_AUDIO_RT=PASS','MENU_AUDIO_NO_VOLUME_STACKING=PASS','MENU_BUTTONS_INTERACTABLE_AFTER_TWO_LOOPS=PASS','ABOUT_CLICK_NOOP=PASS','SUPPORT_CLICK_NOOP=PASS','MENU_UI_STATIONARY_OVER_VIDEO=PASS','MENU_VISUAL_STATES_CAPTURED=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','MENU_AUDIO_STOP_NO_GHOST=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing natural proof: $required" } }
+          foreach ($shot in @('menu-stable.png','menu-enter-selected.png','menu-about-selected.png','menu-support-selected.png','menu-loop-before.png','menu-loop-after.png')) { if (-not (Test-Path "windows-proof/natural/$shot")) { throw "missing screenshot $shot" } }
 
       - name: Run skip cold-start proof
         shell: pwsh
@@ -163,7 +163,7 @@ jobs:
           $exe = Get-ChildItem -Path player -Filter Rokas.exe -File -Recurse | Select-Object -First 1
           $work = $exe.Directory.FullName
           $log = Join-Path $work 'Player-story-menu-skip.log'
-          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','skip','-screen-fullscreen','0','-screen-width','1920','-screen-height','1080','-logFile',$log) -WorkingDirectory $work -PassThru
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @('-rokasStoryMenuProof','skip','-screen-fullscreen','0','-screen-width','960','-screen-height','540','-logFile',$log) -WorkingDirectory $work -PassThru
           if (-not $p.WaitForExit(60000)) { try { $p.Kill($true) } catch {}; throw 'skip proof timeout' }
           $p.WaitForExit()
           $dir = Join-Path $work 'rokas-story-menu-proof-skip'
@@ -172,7 +172,7 @@ jobs:
           if (Test-Path $log) { Copy-Item $log windows-proof/skip/Player.log -Force }
           if ($p.ExitCode -ne 0) { throw "skip proof failed: $($p.ExitCode)" }
           $proof = Get-Content windows-proof/skip/proof.txt -Raw
-          foreach ($required in @('STARTUP_SKIP_TO_STORY=PASS','STORY_SKIP_TO_MENU=PASS','SKIP_DOES_NOT_AUTO_ENTER_WORLD=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing skip proof: $required" } }
+          foreach ($required in @('STARTUP_SKIP_TO_STORY=PASS','STORY_SKIP_TO_MENU=PASS','STORY_TERMINAL_SINGLE_MENU=PASS','STORY_VIDEO_AUDIO_RT_CLEANUP=PASS','SKIP_HINT_CLEANUP=PASS','SKIP_DOES_NOT_AUTO_ENTER_WORLD=PASS','ENTER_WORLD_TO_EXISTING_HOME=PASS','FINAL_PASS=TRUE')) { if ($proof -notmatch [regex]::Escape($required)) { throw "missing skip proof: $required" } }
 
       - name: Upload Windows runtime evidence
         if: always()
