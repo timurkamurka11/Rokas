@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Inspect temporary relay client for download endpoint
+      - name: Inspect temporary relay client context
         shell: bash
         env:
           SHARE_URL: https://firestorage.ai/ja/f/YZDbPHr6uTja
@@ -28,19 +28,17 @@ jobs:
           from pathlib import Path
           html=Path('relay.html').read_text(errors='replace')
           scripts=sorted(set(re.findall(r'<script[^>]+src="([^"]+\.js)"', html)))
-          print('SCRIPTS', len(scripts))
           for i,src in enumerate(scripts):
               url='https://firestorage.ai'+src if src.startswith('/') else src
-              out=f'chunk-{i}.js'
-              subprocess.run(['curl','-fsSL','--retry','3','-A','Mozilla/5.0',url,'-o',out],check=True)
+              subprocess.run(['curl','-fsSL','--retry','3','-A','Mozilla/5.0',url,'-o',f'chunk-{i}.js'],check=True)
           corpus='\n'.join(Path(f'chunk-{i}.js').read_text(errors='replace') for i in range(len(scripts)))
-          patterns=(r'/api/[^"\'` )}]+', r'https://[^"\'` )}]+', r'fetch\([^)]{0,500}\)', r'axios[^;]{0,500}', r'download[^;]{0,800}', r'public[_A-Za-z-]*id[^;]{0,600}', r'share[^;]{0,600}')
-          seen=[]
-          for pat in patterns:
-              for m in re.finditer(pat, corpus, flags=re.I):
-                  s=m.group(0)
-                  if s not in seen:
-                      seen.append(s)
-          print('CANDIDATES', len(seen))
-          for s in seen[:180]: print(s[:1600])
+          needles=('https://api.firestorage.ai/prod/file','files?maxResults=1000','/download','shareEndpoint','shares/${e[1]}')
+          for needle in needles:
+              print('\n===',needle,'===')
+              start=0
+              for _ in range(8):
+                  pos=corpus.find(needle,start)
+                  if pos < 0: break
+                  print(corpus[max(0,pos-1200):pos+2200])
+                  start=pos+len(needle)
           PY
