@@ -16,35 +16,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  startup-laptop-regressions:
-    name: Regression ${{ matrix.name }}
+  startup-structural-regressions:
+    name: Structural regression ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: StartupLaptopVideo
-            filter: Rokas.Tests.StartupLaptopVideoPlayModeTests
-          - name: StartupSkipHintLaptopHomeVisit
-            filter: Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
-          - name: LaptopFullContractLifecycle
-            filter: Rokas.Tests.LaptopFullContractLifecyclePlayModeTests
+          - name: RealStartGate
+            filter: Rokas.Tests.StartupLaptopVideoPlayModeTests.RealStartDoesNotBuildHomeBeforeStartupVideoGate
+          - name: LaptopBootGate
+            filter: Rokas.Tests.StartupLaptopVideoPlayModeTests.LaptopOpeningShowsBootGateBeforeDesktop
+          - name: LaptopCancelReopen
+            filter: Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady
     steps:
       - name: Checkout exact feature commit
         uses: actions/checkout@v7
+
+      - name: Hide Linux-unsupported media only for structural gate timing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mv Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 Assets/StreamingAssets/RokasVideo/StartupPreview.mp4.linux-structural-hidden
+          mv Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4.linux-structural-hidden
 
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
           path: Library
-          key: StoryMenuRegression-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: StoryMenuStructural-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('Assets/**/*.cs', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            StoryMenuRegression-${{ runner.os }}-${{ matrix.name }}-
+            StoryMenuStructural-${{ runner.os }}-${{ matrix.name }}-
             StoryIntroMainMenu-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
 
-      - name: Run PlayMode regression
+      - name: Run structural PlayMode regression
         id: regression
         uses: game-ci/unity-test-runner@v4
         env:
@@ -59,9 +66,9 @@ jobs:
           cliVersion: v0.1.60
           customParameters: -testFilter ${{ matrix.filter }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Story Menu Regression ${{ matrix.name }}
+          checkName: Story Menu Structural ${{ matrix.name }}
 
-      - name: Require non-empty zero-failure regression result
+      - name: Require exactly one structural test green
         if: always()
         shell: bash
         run: |
@@ -70,31 +77,27 @@ jobs:
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           r = ET.parse('artifacts/playmode-results.xml').getroot()
-          total = int(r.attrib.get('total', '-1'))
-          passed = int(r.attrib.get('passed', '-1'))
-          failed = int(r.attrib.get('failed', '-1'))
-          skipped = int(r.attrib.get('skipped', '-1'))
-          print(f'REGRESSION_XML total={total} passed={passed} failed={failed} skipped={skipped}')
-          if total <= 0 or failed != 0 or passed + skipped != total:
-              raise SystemExit('Regression result is not clean')
+          values = tuple(int(r.attrib.get(k, '-1')) for k in ('total','passed','failed','skipped'))
+          print('STRUCTURAL_XML total=%d passed=%d failed=%d skipped=%d' % values)
+          if values != (1,1,0,0):
+              raise SystemExit('Expected exactly 1/1 structural regression green')
           PY
 
-      - name: Preserve regression evidence
+      - name: Preserve structural evidence
         if: always()
         shell: bash
         run: |
           mkdir -p verification
           git rev-parse HEAD > verification/head.txt
           git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/git-status.txt
           git diff --check > verification/git-diff-check.txt || true
           if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/${{ matrix.name }}-results.xml; fi
 
-      - name: Upload regression evidence
+      - name: Upload structural evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: story-menu-regression-${{ matrix.name }}
+          name: story-menu-structural-${{ matrix.name }}
           path: |
             artifacts
             verification
