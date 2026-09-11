@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.IO;
 using Rokas.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace Rokas.Presentation
 {
@@ -20,6 +22,7 @@ namespace Rokas.Presentation
         private bool saveBlocked;
         private bool focused = true;
         private bool startupPending;
+        private bool enterWorldTransition;
         private float autosave;
         private RunPhase previousPhase;
 
@@ -108,12 +111,80 @@ namespace Rokas.Presentation
 
         private void EnterWorld()
         {
-            if (!startupPending || View != null) return;
-            startupPending = false;
+            if (!startupPending || View != null || enterWorldTransition) return;
+            enterWorldTransition = true;
+            sound.EnterGame();
+            StartCoroutine(EnterWorldRoutine());
+        }
+
+        private IEnumerator EnterWorldRoutine()
+        {
+            CanvasGroup curtain = CreateEnterWorldCurtain();
+            yield return FadeCurtain(curtain, 0f, 1f, .24f);
+
             MainMenuView menu = mainMenu;
             mainMenu = null;
             if (menu != null) menu.Dispose();
+            yield return null;
+
+            startupPending = false;
             BuildPresentation();
+            yield return null;
+
+            yield return FadeCurtain(curtain, 1f, 0f, .28f);
+            if (curtain) Destroy(curtain.gameObject);
+            enterWorldTransition = false;
+        }
+
+        private CanvasGroup CreateEnterWorldCurtain()
+        {
+            var curtainObject = new GameObject("EnterWorldCurtain", typeof(RectTransform), typeof(Canvas),
+                typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(CanvasGroup));
+            curtainObject.transform.SetParent(transform, false);
+            var rect = (RectTransform)curtainObject.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var canvas = curtainObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = short.MaxValue;
+            var scaler = curtainObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = .5f;
+
+            var black = new GameObject("Black", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var blackRect = (RectTransform)black.transform;
+            blackRect.SetParent(rect, false);
+            blackRect.anchorMin = Vector2.zero;
+            blackRect.anchorMax = Vector2.one;
+            blackRect.offsetMin = Vector2.zero;
+            blackRect.offsetMax = Vector2.zero;
+            var image = black.GetComponent<Image>();
+            image.color = Color.black;
+            image.raycastTarget = true;
+
+            CanvasGroup curtain = curtainObject.GetComponent<CanvasGroup>();
+            curtain.alpha = 0f;
+            curtain.interactable = false;
+            curtain.blocksRaycasts = true;
+            return curtain;
+        }
+
+        private static IEnumerator FadeCurtain(CanvasGroup curtain, float from, float to, float duration)
+        {
+            float elapsed = 0f;
+            curtain.alpha = from;
+            while (elapsed < duration)
+            {
+                elapsed += Mathf.Min(Time.unscaledDeltaTime, .05f);
+                curtain.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+            curtain.alpha = to;
         }
 
         private void BuildPresentation()
