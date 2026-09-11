@@ -14,10 +14,10 @@ on:
       - Assets/Rokas/Scripts/Presentation/RokasAudio.cs
       - Assets/Rokas/Scripts/Presentation/RokasAssets.cs
       - Assets/Rokas/Resources/RokasAssets.asset
-      - Assets/Rokas/Audio/Button click.wav
-      - Assets/Rokas/Audio/Button click.wav.meta
-      - Assets/Rokas/Audio/Enter game.wav
-      - Assets/Rokas/Audio/Enter game.wav.meta
+      - Assets/Rokas/Audio/ButtonClick.wav
+      - Assets/Rokas/Audio/ButtonClick.wav.meta
+      - Assets/Rokas/Audio/EnterGame.wav
+      - Assets/Rokas/Audio/EnterGame.wav.meta
   workflow_dispatch:
 
 permissions:
