@@ -14,6 +14,7 @@ on:
       - Assets/Rokas/Scripts/Presentation/MainMenuView.cs.meta
       - Assets/StreamingAssets/RokasVideo/StoryIntro.mp4
       - Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -71,11 +72,12 @@ jobs:
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p verification
           git rev-parse HEAD > verification/head.txt
           git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/git-status.txt
-          git diff --check > verification/git-diff-check.txt || true
+          git status --short --untracked-files=all > verification/post-unity-git-status.txt
+          git diff --check > verification/git-diff-check.txt
           if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
 
       - name: Require six focused tests green
@@ -102,3 +104,23 @@ jobs:
             ${{ steps.focused.outputs.artifactsPath }}
             verification
           if-no-files-found: warn
+
+  final-tree-check:
+    name: Exact Final Candidate Tree Check
+    needs: focused-playmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact verified commit into fresh workspace
+        uses: actions/checkout@v7
+
+      - name: Require clean tree, diff check and exact approved media
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --short --untracked-files=all)"
+          git diff --check
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/StoryIntro.mp4 | cut -d' ' -f1)" = "4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4"
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4 | cut -d' ' -f1)" = "bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5"
+          printf 'HEAD=%s\nTREE=%s\nGIT_STATUS=CLEAN\nGIT_DIFF_CHECK=PASS\nEXACT_MEDIA=PASS\n' \
+            "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})"
