@@ -32,6 +32,15 @@ jobs:
       - name: Checkout exact feature commit
         uses: actions/checkout@v7
 
+      - name: Verify exact approved media bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/StoryIntro.mp4 | cut -d' ' -f1)" = "4f1cf02df5e52f8dd75645ceb1c6b0d5b55b0eb952eee1371d742ca54395c6d4"
+          test "$(sha256sum Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4 | cut -d' ' -f1)" = "bb2eb60336c4b1e63a5b2a177c0db904b6d32bee5f59c48568def81cfa8beef5"
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/StoryIntro.mp4)" = "31848620"
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4)" = "2427109"
+
       - name: Cache Unity Library
         uses: actions/cache@v6
         with:
