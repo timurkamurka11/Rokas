@@ -25,8 +25,9 @@ MonoBehaviour:
   subwayAmbience: {fileID: 8300000, guid: 5b2376309bb75edc850f3ce3300f0edf, type: 3}
   homeMusic: {fileID: 8300000, guid: 7540bd61684b4a768cad4691dbc54972, type: 3}
   missionMusic: {fileID: 8300000, guid: 55cc3167e2835dc88a8a80c1aea8b443, type: 3}
-  click: {fileID: 8300000, guid: 69dd62c2bd5f50eca5fa82bdae188a99, type: 3}
+  click: {fileID: 8300000, guid: 7b9241694898461687026bd621c45457, type: 3}
   laptopMouseClick: {fileID: 8300000, guid: f9bf67e49e7347e5b4bb66182adb3ad9, type: 3}
+  enterGame: {fileID: 8300000, guid: f7c7679182f944819d6950a566f81d65, type: 3}
   lampOn: {fileID: 8300000, guid: b67a929e3f4b4bdd9e19c489b2763bb5, type: 3}
   lampOff: {fileID: 8300000, guid: ae0881c89fe14dfa859e1705b752765f, type: 3}
   hit: {fileID: 8300000, guid: ec04e3691e8551528445d9e055b54542, type: 3}
