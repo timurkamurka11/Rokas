@@ -15,11 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect firestorage client endpoint
+      - name: Inspect firestorage client endpoints
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --output /tmp/page.js 'https://firestorage.ai/_next/static/chunks/app/%28files%29/ja/f/page-4d19ae0a4ce39d79.js'
-          echo '--- endpoint candidates ---'
-          grep -Eo '.{0,180}(fetch\(|/api/|download|signed|public_id|publicId|share).{0,260}' /tmp/page.js | head -120 || true
+          curl --fail --location --output /tmp/share.html 'https://firestorage.ai/ja/f/ANH070mKY3-B'
+          grep -Eo 'src="[^"]+\.js"' /tmp/share.html | sed 's/^src="//;s/"$//' | sort -u > /tmp/scripts.txt
+          echo '--- scripts ---'
+          cat /tmp/scripts.txt
+          n=0
+          while IFS= read -r src; do
+            n=$((n+1))
+            curl --fail --location --silent --show-error --output "/tmp/script-$n.js" "https://firestorage.ai$src"
+            echo "--- $src ---"
+            grep -Eo '.{0,180}(fetch\(|/api/|download|signed|public_id|publicId|shareId|share).{0,300}' "/tmp/script-$n.js" | head -80 || true
+          done < /tmp/scripts.txt
           exit 1
