@@ -14,10 +14,10 @@ namespace Rokas.Presentation
         private const int ReferenceWidth = 1920;
         private const int ReferenceHeight = 1080;
         private static readonly Color White = new Color(.96f, .96f, .94f, 1f);
-        private static readonly Color Gold = new Color(1f, .63f, .20f, 1f);
-        private static readonly Color GoldFace = new Color(.21f, .12f, .08f, .92f);
+        private static readonly Color Gold = new Color(.95f, .72f, .42f, 1f);
+        private static readonly Color GoldFace = new Color(.14f, .105f, .085f, .82f);
         private static readonly Color DarkFace = new Color(.055f, .065f, .095f, .90f);
-        private static readonly Color CoolEdge = new Color(.55f, .60f, .70f, .82f);
+        private static readonly Color CoolEdge = new Color(.38f, .42f, .50f, .70f);
 
         private RokasAssets assets;
         private Action click;
@@ -70,7 +70,7 @@ namespace Rokas.Presentation
 
             CreateVideoSurface(root);
             CreateButton(root, "EnterWorldButton", "▶", "ВОЙТИ В МИР", 48f, true, EnterWorld);
-            CreateButton(root, "DevelopersButton", "●●●", "О РАЗРАБОТЧИКАХ", -54f, false, SecondaryAction);
+            CreateButton(root, "DevelopersButton", string.Empty, "О РАЗРАБОТЧИКАХ", -54f, false, SecondaryAction);
             CreateButton(root, "SupportDevelopmentButton", "♥", "ПОДДЕРЖАТЬ РАЗРАБОТКУ", -156f, false, SecondaryAction);
         }
 
@@ -147,7 +147,8 @@ namespace Rokas.Presentation
 
             if (primary)
                 Surface(rect, name + "Glow", new Vector2(606f, 108f), Gold * new Color(1f, 1f, 1f, .16f), 31f);
-            Surface(rect, name + "Edge", new Vector2(590f, 92f), primary ? Gold : CoolEdge, 27f);
+            Surface(rect, name + "Edge", primary ? new Vector2(590f, 92f) : new Vector2(586f, 88f),
+                primary ? Gold : CoolEdge, 27f);
             LaptopSurface face = Surface(rect, name + "Face", new Vector2(580f, 82f), primary ? GoldFace : DarkFace, 24f);
 
             var button = buttonObject.GetComponent<Button>();
@@ -163,13 +164,20 @@ namespace Rokas.Presentation
             button.colors = colors;
             button.onClick.AddListener(() => action?.Invoke());
 
-            Text iconText = Label(rect, name + "Icon", icon, 26f, TextAnchor.MiddleCenter);
-            var iconRect = (RectTransform)iconText.transform;
-            iconRect.anchorMin = new Vector2(0f, 0f);
-            iconRect.anchorMax = new Vector2(0f, 1f);
-            iconRect.pivot = new Vector2(.5f, .5f);
-            iconRect.sizeDelta = new Vector2(92f, 0f);
-            iconRect.anchoredPosition = new Vector2(66f, 0f);
+            if (name == "DevelopersButton")
+            {
+                CreatePeopleIcon(rect);
+            }
+            else
+            {
+                Text iconText = Label(rect, name + "Icon", icon, 26f, TextAnchor.MiddleCenter);
+                var iconRect = (RectTransform)iconText.transform;
+                iconRect.anchorMin = new Vector2(0f, 0f);
+                iconRect.anchorMax = new Vector2(0f, 1f);
+                iconRect.pivot = new Vector2(.5f, .5f);
+                iconRect.sizeDelta = new Vector2(92f, 0f);
+                iconRect.anchoredPosition = new Vector2(66f, 0f);
+            }
 
             Text title = Label(rect, name + "Label", label, 25f, TextAnchor.MiddleCenter);
             var titleRect = (RectTransform)title.transform;
@@ -185,6 +193,30 @@ namespace Rokas.Presentation
             chevronRect.pivot = new Vector2(.5f, .5f);
             chevronRect.sizeDelta = new Vector2(64f, 0f);
             chevronRect.anchoredPosition = new Vector2(-48f, 0f);
+        }
+
+        private void CreatePeopleIcon(RectTransform parent)
+        {
+            var group = new GameObject("DevelopersButtonIcon", typeof(RectTransform));
+            var groupRect = (RectTransform)group.transform;
+            groupRect.SetParent(parent, false);
+            groupRect.anchorMin = groupRect.anchorMax = new Vector2(0f, .5f);
+            groupRect.pivot = new Vector2(.5f, .5f);
+            groupRect.sizeDelta = new Vector2(42f, 30f);
+            groupRect.anchoredPosition = new Vector2(66f, 0f);
+
+            LaptopSurface leftBody = Surface(groupRect, "LeftBody", new Vector2(13f, 9f), White, 4.5f);
+            ((RectTransform)leftBody.transform).anchoredPosition = new Vector2(-10f, -6f);
+            LaptopSurface rightBody = Surface(groupRect, "RightBody", new Vector2(13f, 9f), White, 4.5f);
+            ((RectTransform)rightBody.transform).anchoredPosition = new Vector2(10f, -6f);
+            LaptopSurface leftHead = Surface(groupRect, "LeftHead", new Vector2(8f, 8f), White, 4f);
+            ((RectTransform)leftHead.transform).anchoredPosition = new Vector2(-10f, 5f);
+            LaptopSurface rightHead = Surface(groupRect, "RightHead", new Vector2(8f, 8f), White, 4f);
+            ((RectTransform)rightHead.transform).anchoredPosition = new Vector2(10f, 5f);
+            LaptopSurface centerBody = Surface(groupRect, "CenterBody", new Vector2(18f, 11f), White, 5.5f);
+            ((RectTransform)centerBody.transform).anchoredPosition = new Vector2(0f, -5f);
+            LaptopSurface centerHead = Surface(groupRect, "CenterHead", new Vector2(10f, 10f), White, 5f);
+            ((RectTransform)centerHead.transform).anchoredPosition = new Vector2(0f, 7f);
         }
 
         private LaptopSurface Surface(RectTransform parent, string name, Vector2 size, Color color, float radius)
