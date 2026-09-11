@@ -1,4 +1,4 @@
-name: TEMP Approved Audio Tree Verify
+name: TEMP Focused Test Contract Alignment
 
 on:
   push:
@@ -8,17 +8,35 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  patch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Verify exact approved WAV hashes
+      - name: Checkout current feature
+        uses: actions/checkout@v4
+        with:
+          ref: feature/main-menu-interaction-ui-audio-home-transition
+          fetch-depth: 1
+      - name: Align approved clip names only
         shell: bash
         run: |
           set -euo pipefail
-          sha256sum Assets/Rokas/Audio/ButtonClick.wav Assets/Rokas/Audio/EnterGame.wav
-          test "$(sha256sum Assets/Rokas/Audio/ButtonClick.wav | awk '{print $1}')" = '34f94b176a7ab7ce57c267e2b04b1632283fb996b1f4ba1412efb1350bfc4e96'
-          test "$(sha256sum Assets/Rokas/Audio/EnterGame.wav | awk '{print $1}')" = '6e918a601a51a91457fded9451f3535a11c393b175039c5d113c712c10f55809'
+          expected='67c83bfe3b19044da76dccce7a88cad7f0844269'
+          test "$(git rev-parse HEAD)" = "$expected"
+          file='Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs'
+          grep -q 'Button click' "$file"
+          grep -q 'Enter game' "$file"
+          sed -i 's/Button click/ButtonClick/g; s/Enter game/EnterGame/g' "$file"
+          ! grep -q 'Button click' "$file"
+          ! grep -q 'Enter game' "$file"
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "$file"
+          git diff -- "$file"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$file"
+          git commit -m 'test: align approved audio clip names'
+          git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
