@@ -55,52 +55,36 @@ jobs:
           for line in lines:
               out.append(line[10:] if line.startswith('          ') else line)
           probe='\n'.join(out)+'\n'
-          old='\n'.join([
-              '    private IEnumerator Capture(string fileName)',
-              '    {',
-              '        captureSucceeded = false;',
-              '        string path = Path.Combine(outputDirectory, fileName);',
-              '        if (File.Exists(path)) File.Delete(path);',
-              '        ScreenCapture.CaptureScreenshot(path);',
-              '        float deadline = Time.realtimeSinceStartup + 3f;',
-              '        while (Time.realtimeSinceStartup < deadline)',
+          capture_start=probe.index('        private IEnumerator Capture(string fileName)')
+          capture_end=probe.index('        private void RequireCapture', capture_start)
+          new='\n'.join([
+              '        private IEnumerator Capture(string fileName)',
               '        {',
+              '            captureSucceeded = false;',
+              '            string path = Path.Combine(outputDirectory, fileName);',
+              '            if (File.Exists(path)) File.Delete(path);',
               '            yield return new WaitForEndOfFrame();',
-              '            if (File.Exists(path) && new FileInfo(path).Length > 1000)',
+              '            Texture2D shot = null;',
+              '            try',
               '            {',
-              '                captureSucceeded = true;',
-              '                yield break;',
+              '                shot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);',
+              '                shot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0, false);',
+              '                shot.Apply(false, false);',
+              '                byte[] bytes = shot.EncodeToPNG();',
+              '                File.WriteAllBytes(path, bytes);',
+              '                captureSucceeded = bytes != null && bytes.Length > 1000 && File.Exists(path);',
+              '            }',
+              '            finally',
+              '            {',
+              '                if (shot) Destroy(shot);',
               '            }',
               '        }',
-              '    }',
+              '',
               ''
           ])
-          new='\n'.join([
-              '    private IEnumerator Capture(string fileName)',
-              '    {',
-              '        captureSucceeded = false;',
-              '        string path = Path.Combine(outputDirectory, fileName);',
-              '        if (File.Exists(path)) File.Delete(path);',
-              '        yield return new WaitForEndOfFrame();',
-              '        Texture2D shot = null;',
-              '        try',
-              '        {',
-              '            shot = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);',
-              '            shot.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0, false);',
-              '            shot.Apply(false, false);',
-              '            byte[] bytes = shot.EncodeToPNG();',
-              '            File.WriteAllBytes(path, bytes);',
-              '            captureSucceeded = bytes != null && bytes.Length > 1000 && File.Exists(path);',
-              '        }',
-              '        finally',
-              '        {',
-              '            if (shot) Destroy(shot);',
-              '        }',
-              '    }',
-              ''
-          ])
-          assert probe.count(old) == 1, 'Expected exactly one ScreenCapture QA seam.'
-          probe=probe.replace(old,new)
+          probe=probe[:capture_start]+new+probe[capture_end:]
+          assert probe.count('shot.ReadPixels') == 1
+          assert 'ScreenCapture.CaptureScreenshot' not in probe
           p=Path('feature/Assets/RokasMainMenuRuntimeProbe.cs')
           p.write_text(probe)
           PY
