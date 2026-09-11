@@ -1,4 +1,4 @@
-name: TEMP Patch Real Laptop Click TDD RED
+name: TEMP Dispatch Laptop Click TDD RED
 
 on:
   push:
@@ -8,39 +8,21 @@ on:
       - .github/workflows/temp-approved-audio-transfer.yml
 
 permissions:
-  contents: write
+  contents: read
+  actions: write
 
 jobs:
-  patch-test:
+  dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact feature candidate
-        uses: actions/checkout@v4
-        with:
-          ref: feature/main-menu-interaction-ui-audio-home-transition
-          fetch-depth: 1
-
-      - name: Add real Laptop internal-click assertion only
+      - name: Dispatch focused RED on exact feature test head
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          expected='9514a0895a2b555bbcdbf365e8a05f838a4c9f14'
-          test "$(git rev-parse HEAD)" = "$expected"
-          file='Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs'
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs')
-          s=p.read_text()
-          old='''            Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Null,\n                "Outside-Laptop Home UI must not route through the Laptop mouse click asset.");\n'''
-          new='''            Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Null,\n                "Outside-Laptop Home UI must not route through the Laptop mouse click asset.");\n\n            yield return new WaitForSecondsRealtime(1.5f);\n            Press(FindButton("LaptopHotspot"));\n            yield return new WaitForSecondsRealtime(1.5f);\n            Button laptopContracts = FindButton("LaptopContracts");\n            Assert.That(laptopContracts, Is.Not.Null, "Laptop must reach its real internal desktop UI.");\n            Press(laptopContracts);\n            Assert.That(FindAudioSourceByClipName("LaptopMouseClick"), Is.Not.Null,\n                "Real Laptop internal UI must preserve the pre-existing LaptopMouseClick path.");\n            Assert.That(FindAudioSourceByClipName("ButtonClick"), Is.Null,\n                "Laptop internal UI must continue suppressing the generic outside-Laptop ButtonClick path.");\n'''
-          assert s.count(old)==1
-          p.write_text(s.replace(old,new))
-          PY
-          git diff --check
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = "$file"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$file"
-          git commit -m 'test: require real laptop internal click audio'
-          git push origin HEAD:feature/main-menu-interaction-ui-audio-home-transition
+          repo='${{ github.repository }}'
+          actual="$(gh api repos/$repo/branches/feature/main-menu-interaction-ui-audio-home-transition --jq .commit.sha)"
+          test "$actual" = 'a88de288cada42a92da3626a8ada4569caab86f3'
+          gh workflow run main-menu-interaction-audio-transition-tdd.yml --repo "$repo" --ref feature/main-menu-interaction-ui-audio-home-transition
+          echo "DISPATCH_FEATURE_HEAD=$actual"
