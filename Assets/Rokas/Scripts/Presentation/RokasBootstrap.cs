@@ -15,6 +15,7 @@ namespace Rokas.Presentation
         private SaveStore store;
         private RokasAudio sound;
         private SaveLoadResult initialLoad;
+        private MainMenuView mainMenu;
         private bool dirty;
         private bool saveBlocked;
         private bool focused = true;
@@ -95,7 +96,23 @@ namespace Rokas.Presentation
         private void CompleteStartup()
         {
             if (!startupPending || View != null) return;
+            VideoPresenter.PlayStoryIntro("StoryIntro.mp4", sound.VideoVolume, CompleteStoryIntro);
+        }
+
+        private void CompleteStoryIntro()
+        {
+            if (!startupPending || View != null || mainMenu != null) return;
+            var assets = Resources.Load<RokasAssets>("RokasAssets");
+            mainMenu = MainMenuView.Create(transform, assets, sound.VideoVolume, PlayUiClick, EnterWorld);
+        }
+
+        private void EnterWorld()
+        {
+            if (!startupPending || View != null) return;
             startupPending = false;
+            MainMenuView menu = mainMenu;
+            mainMenu = null;
+            if (menu != null) menu.Dispose();
             BuildPresentation();
         }
 
@@ -199,6 +216,7 @@ namespace Rokas.Presentation
         {
             if (dirty) SaveNow();
             if (Session != null) Session.Changed -= OnChanged;
+            if (mainMenu != null) mainMenu.Dispose();
             if (View != null) View.Dispose();
             if (sound != null) sound.Dispose();
         }
