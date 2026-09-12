@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -133,6 +134,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator EnterWorldBuildsExistingHomeExactlyOnce()
         {
+            MarkIntroCompleted();
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
             yield return WaitFor("RokasMainMenu", 1.5f);
@@ -175,6 +177,12 @@ namespace Rokas.Tests
             Assert.That(Find("StoryIntroVideoSurface"), Is.Null);
             Assert.That(Find("RokasMainMenu"), Is.Null);
             Assert.That(Find("MainMenuVideoSurface"), Is.Null);
+        }
+
+        private static void MarkIntroCompleted()
+        {
+            PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
+            PlayerPrefs.Save();
         }
 
         private void HideStoryMediaForDeterministicLinuxFallback()
@@ -241,6 +249,8 @@ namespace Rokas.Tests
         public IEnumerator Cleanup()
         {
             LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.Save();
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
             if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
