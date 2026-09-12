@@ -231,6 +231,65 @@ namespace Rokas.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator FullBodyIdleBreathingUsesUnscaledLocalTimeAndFreezesWhenPaused()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            VnIntroArt art = CreateArt(assets);
+            var host = new GameObject("VnIdleBreathingFixture");
+            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
+                () => { }, () => { }, () => { }, () => { });
+
+            try
+            {
+                VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
+                yield return null;
+
+                GameObject bodyObject = GameObject.Find("CharacterPrimary");
+                Assert.That(bodyObject, Is.Not.Null,
+                    "The polished VN needs a full-body authored character surface behind the dialogue panel.");
+                RawImage body = bodyObject.GetComponent<RawImage>();
+                RectTransform bodyRect = bodyObject.GetComponent<RectTransform>();
+                Assert.That(body.texture, Is.SameAs(art.KeikoCharacterSheet));
+                Assert.That(body.uvRect, Is.EqualTo(keiko.BodyUv),
+                    "Full-body staging must reuse the inspected authored body crop from the catalog.");
+
+                Vector2 initialPosition = bodyRect.anchoredPosition;
+                Vector3 initialScale = bodyRect.localScale;
+                float globalTimeScale = Time.timeScale;
+                yield return new WaitForSecondsRealtime(.35f);
+
+                bool moved = Vector2.Distance(initialPosition, bodyRect.anchoredPosition) > .1f ||
+                             Vector3.Distance(initialScale, bodyRect.localScale) > .001f;
+                Assert.That(moved, Is.True,
+                    "Idle breathing should be subtle but measurably presentation-driven on unscaled time.");
+                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale));
+
+                view.SetPausedVisual(true);
+                Vector2 pausedPosition = bodyRect.anchoredPosition;
+                Vector3 pausedScale = bodyRect.localScale;
+                yield return new WaitForSecondsRealtime(.35f);
+
+                Assert.That(Vector2.Distance(pausedPosition, bodyRect.anchoredPosition), Is.LessThan(.01f));
+                Assert.That(Vector3.Distance(pausedScale, bodyRect.localScale), Is.LessThan(.0001f));
+                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale),
+                    "VN Pause must freeze only local presentation animation and never global time.");
+
+                view.SetPausedVisual(false);
+                yield return new WaitForSecondsRealtime(.35f);
+                bool resumed = Vector2.Distance(pausedPosition, bodyRect.anchoredPosition) > .1f ||
+                               Vector3.Distance(pausedScale, bodyRect.localScale) > .001f;
+                Assert.That(resumed, Is.True, "Idle breathing should resume from the frozen local phase.");
+            }
+            finally
+            {
+                view.Dispose();
+                Object.Destroy(host);
+            }
+        }
+
         [Test]
         public void VisualCatalogContainsOnlyInspectedAuthoredStatesAndNoInventedBlink()
         {
