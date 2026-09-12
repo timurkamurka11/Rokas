@@ -202,7 +202,7 @@ namespace Rokas.Presentation
                 new Vector2(.155f, 1f), new Vector2(.56f, 1f), new Vector2(0f, -80f), new Vector2(0f, -24f),
                 31, FontStyle.Bold, TextAnchor.MiddleLeft);
             dialogueText = Label(panelRect, "DialogueText", font, string.Empty,
-                new Vector2(.155f, 0f), new Vector2(.70f, 1f), new Vector2(0f, 30f), new Vector2(0f, -94f),
+                new Vector2(.155f, 0f), new Vector2(.67f, 1f), new Vector2(0f, 30f), new Vector2(0f, -94f),
                 28, FontStyle.Normal, TextAnchor.UpperLeft);
 
             RectTransform controls = Rect(panelRect, "ControlsRow",
