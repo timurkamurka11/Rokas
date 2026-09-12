@@ -151,6 +151,28 @@ namespace Rokas.Tests
             }
         }
 
+        [Test]
+        public void RokasAssetsExposeExactlyTheTenRequiredVnTextures()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            var art = new VnIntroArt(
+                assets.vnKeikoCharacterSheet,
+                assets.vnMinaCharacterSheet,
+                assets.vnBusStopRainNight,
+                assets.vnNightSkyRain,
+                assets.vnBusStopPhoneMessageMina,
+                assets.vnDialoguePanelKeikoDark,
+                assets.vnDialoguePanelMinaLight,
+                assets.vnIconMute,
+                assets.vnIconPause,
+                assets.vnIconSkip);
+
+            Assert.That(art.AllTextures.Length, Is.EqualTo(10));
+            Assert.That(art.AllTextures.All(texture => texture != null), Is.True);
+            Assert.That(assets.IsComplete(), Is.True);
+        }
+
         private static VnIntroArt CreateArt()
         {
             return new VnIntroArt(
