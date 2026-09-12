@@ -48,8 +48,24 @@ namespace Rokas.Presentation
         }
     }
 
+    internal sealed class VnIntroPresentationTicker : MonoBehaviour
+    {
+        private VnIntroView owner;
+
+        public void Bind(VnIntroView view)
+        {
+            owner = view;
+        }
+
+        private void Update()
+        {
+            owner?.TickPresentation(Time.unscaledDeltaTime);
+        }
+    }
+
     public sealed class VnIntroView : IDisposable
     {
+        private const float ExpressionCrossfadeDuration = .18f;
         private static readonly Rect KeikoNeutralCrop = new Rect(.49f, .47f, .235f, .43f);
         private static readonly Rect MinaNeutralCrop = new Rect(.47f, .47f, .25f, .43f);
         private static readonly Rect PanelBodyCrop = new Rect(.225f, .10f, .775f, .80f);
@@ -60,12 +76,17 @@ namespace Rokas.Presentation
         private readonly VnIntroArt art;
         private readonly GameObject root;
         private readonly RawImage background;
+        private readonly RawImage portraitPrevious;
         private readonly RawImage portrait;
         private readonly RawImage portraitFrame;
         private readonly RawImage dialoguePanel;
         private readonly Text speakerName;
         private readonly Text dialogueText;
         private readonly Image pauseButtonBackground;
+        private bool portraitInitialized;
+        private bool expressionTransitionActive;
+        private bool presentationPaused;
+        private float expressionTransitionElapsed;
         private bool disposed;
 
         private VnIntroView(Transform parent, Font font, VnIntroArt art,
@@ -80,6 +101,7 @@ namespace Rokas.Presentation
             root.transform.SetParent(parent, false);
             RectTransform rootRect = (RectTransform)root.transform;
             Stretch(rootRect);
+            root.AddComponent<VnIntroPresentationTicker>().Bind(this);
 
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -116,6 +138,11 @@ namespace Rokas.Presentation
             maskGraphic.raycastTarget = false;
             Mask mask = maskRect.gameObject.AddComponent<Mask>();
             mask.showMaskGraphic = false;
+
+            portraitPrevious = Raw(maskRect, "PortraitPrevious", null,
+                Vector2.zero, Vector2.one, new Vector2(-20f, -20f), new Vector2(20f, 20f));
+            portraitPrevious.raycastTarget = false;
+            SetAlpha(portraitPrevious, 0f);
 
             portrait = Raw(maskRect, "Portrait", null,
                 Vector2.zero, Vector2.one, new Vector2(-20f, -20f), new Vector2(20f, 20f));
@@ -186,11 +213,7 @@ namespace Rokas.Presentation
             }
 
             VnCharacterVisualState visualState = VnCharacterVisualCatalog.ResolveOrNeutral(state.PortraitId, state.Speaker);
-            portrait.texture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
-                ? art.MinaCharacterSheet
-                : art.KeikoCharacterSheet;
-            portrait.uvRect = visualState.PortraitUv;
-
+            ApplyPortraitVisual(visualState);
             speakerName.text = state.Speaker ?? string.Empty;
         }
 
@@ -204,6 +227,7 @@ namespace Rokas.Presentation
         public void SetPausedVisual(bool paused)
         {
             ThrowIfDisposed();
+            presentationPaused = paused;
             pauseButtonBackground.color = paused
                 ? new Color(.72f, .50f, .24f, .88f)
                 : new Color(.035f, .055f, .06f, .06f);
@@ -214,6 +238,67 @@ namespace Rokas.Presentation
             if (disposed) return;
             disposed = true;
             if (root) UnityEngine.Object.Destroy(root);
+        }
+
+        internal void TickPresentation(float unscaledDeltaTime)
+        {
+            if (disposed || presentationPaused || !expressionTransitionActive) return;
+
+            expressionTransitionElapsed += Mathf.Max(0f, unscaledDeltaTime);
+            float progress = ExpressionCrossfadeDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(expressionTransitionElapsed / ExpressionCrossfadeDuration);
+            SetAlpha(portrait, progress);
+            SetAlpha(portraitPrevious, 1f - progress);
+
+            if (progress < 1f) return;
+            expressionTransitionActive = false;
+            SetAlpha(portrait, 1f);
+            SetAlpha(portraitPrevious, 0f);
+        }
+
+        private void ApplyPortraitVisual(VnCharacterVisualState visualState)
+        {
+            Texture targetTexture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
+                ? art.MinaCharacterSheet
+                : art.KeikoCharacterSheet;
+            Rect targetUv = visualState.PortraitUv;
+
+            if (!portraitInitialized)
+            {
+                portrait.texture = targetTexture;
+                portrait.uvRect = targetUv;
+                SetAlpha(portrait, 1f);
+                SetAlpha(portraitPrevious, 0f);
+                portraitInitialized = true;
+                expressionTransitionActive = false;
+                return;
+            }
+
+            if (portrait.texture == targetTexture && portrait.uvRect == targetUv)
+            {
+                SetAlpha(portrait, 1f);
+                SetAlpha(portraitPrevious, 0f);
+                expressionTransitionActive = false;
+                return;
+            }
+
+            portraitPrevious.texture = portrait.texture;
+            portraitPrevious.uvRect = portrait.uvRect;
+            SetAlpha(portraitPrevious, 1f);
+
+            portrait.texture = targetTexture;
+            portrait.uvRect = targetUv;
+            SetAlpha(portrait, 0f);
+            expressionTransitionElapsed = 0f;
+            expressionTransitionActive = true;
+        }
+
+        private static void SetAlpha(Graphic graphic, float alpha)
+        {
+            Color color = graphic.color;
+            color.a = Mathf.Clamp01(alpha);
+            graphic.color = color;
         }
 
         private static void CreateIconButton(RectTransform parent, string name, Texture2D icon,
