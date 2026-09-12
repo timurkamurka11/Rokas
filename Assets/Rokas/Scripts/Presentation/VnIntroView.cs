@@ -262,7 +262,8 @@ namespace Rokas.Presentation
             button.interactable = interactable;
             if (interactable) button.onClick.AddListener(() => action?.Invoke());
 
-            Text arrow = rect.gameObject.AddComponent<Text>();
+            RectTransform glyphRect = Rect(rect, "Glyph", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Text arrow = glyphRect.gameObject.AddComponent<Text>();
             arrow.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             arrow.text = glyph;
             arrow.fontSize = 54;
