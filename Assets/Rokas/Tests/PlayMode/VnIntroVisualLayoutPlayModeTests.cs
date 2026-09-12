@@ -167,6 +167,70 @@ namespace Rokas.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator ExpressionSwapCrossfadesOnUnscaledTimeAndPauseFreezesPresentationOnly()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            VnIntroArt art = CreateArt(assets);
+            var host = new GameObject("VnExpressionCrossfadeFixture");
+            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
+                () => { }, () => { }, () => { }, () => { });
+
+            try
+            {
+                VnCharacterVisualState neutral = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
+                VnCharacterVisualState serious = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_serious", "Keiko");
+                VnCharacterVisualState thoughtful = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_thoughtful", "Keiko");
+
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
+                yield return null;
+                RawImage current = GameObject.Find("Portrait").GetComponent<RawImage>();
+                GameObject previousObject = GameObject.Find("PortraitPrevious");
+                Assert.That(previousObject, Is.Not.Null,
+                    "Expression switching needs a reusable previous-portrait layer for a short authored-state crossfade.");
+                RawImage previous = previousObject.GetComponent<RawImage>();
+
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_serious"));
+                Assert.That(current.uvRect, Is.EqualTo(serious.PortraitUv));
+                Assert.That(previous.uvRect, Is.EqualTo(neutral.PortraitUv));
+                Assert.That(previous.color.a, Is.GreaterThan(.05f));
+
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(current.color.a, Is.EqualTo(1f).Within(.02f));
+                Assert.That(previous.color.a, Is.LessThan(.02f));
+
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_thoughtful"));
+                view.SetPausedVisual(true);
+                float pausedCurrentAlpha = current.color.a;
+                float pausedPreviousAlpha = previous.color.a;
+                Rect pausedUv = current.uvRect;
+                float globalTimeScale = Time.timeScale;
+
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(current.color.a, Is.EqualTo(pausedCurrentAlpha).Within(.001f));
+                Assert.That(previous.color.a, Is.EqualTo(pausedPreviousAlpha).Within(.001f));
+                Assert.That(current.uvRect, Is.EqualTo(pausedUv));
+                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale),
+                    "VN presentation pause must remain local and must not touch global Time.timeScale.");
+
+                view.SetPausedVisual(false);
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(current.color.a, Is.EqualTo(1f).Within(.02f));
+                Assert.That(previous.color.a, Is.LessThan(.02f));
+
+                view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_neutral"));
+                Rect minaNeutralUv = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina").PortraitUv;
+                yield return new WaitForSecondsRealtime(.35f);
+                Assert.That(current.uvRect, Is.EqualTo(minaNeutralUv),
+                    "With no authored neutral blink, Mina must retain neutral rather than borrowing happy/closed-eyes art.");
+            }
+            finally
+            {
+                view.Dispose();
+                Object.Destroy(host);
+            }
+        }
+
         [Test]
         public void VisualCatalogContainsOnlyInspectedAuthoredStatesAndNoInventedBlink()
         {
