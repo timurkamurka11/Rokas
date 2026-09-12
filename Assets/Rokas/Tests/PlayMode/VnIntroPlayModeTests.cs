@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Rokas.Core;
@@ -12,6 +13,45 @@ namespace Rokas.Tests
 {
     public sealed class VnIntroPlayModeTests
     {
+        private GameObject launchRoot;
+        private string storyMediaPath;
+        private string hiddenStoryMediaPath;
+        private bool previousIgnoreFailingMessages;
+
+        [UnityTest]
+        public IEnumerator FirstEnterWorldBuildsVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete()
+        {
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            HideStoryMediaForDeterministicLinuxFallback();
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+
+            Button enter = FindLaunchButton("EnterWorldButton");
+            Assert.That(enter, Is.Not.Null);
+            enter.onClick.Invoke();
+            yield return null;
+
+            Assert.That(FindLaunchObject("RokasMainMenu"), Is.Not.Null,
+                "Enter World must preserve the menu during the partial fade-to-black.");
+            Assert.That(FindLaunchObject("HomeTitle"), Is.Null,
+                "Home must not be constructed during the initial partial fade.");
+
+            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+
+            Assert.That(FindLaunchObject("RokasMainMenu"), Is.Null,
+                "The menu must be disposed at the full-black handoff.");
+            Assert.That(FindLaunchObject("HomeTitle"), Is.Null,
+                "First-time Enter World must not build Home behind the VN intro.");
+            Assert.That(boot.View, Is.Null);
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero,
+                "The intro completion flag must remain unset while the VN is still active.");
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            RawImage background = FindLaunchObject("Background").GetComponent<RawImage>();
+            Assert.That(background.texture, Is.SameAs(assets.vnBusStopRainNight),
+                "The first revealed VN beat must be the approved rainy bus-stop art.");
+        }
+
         [UnityTest]
         public IEnumerator TransientMuteDoesNotMutateSavedVolumeSettings()
         {
@@ -171,6 +211,64 @@ namespace Rokas.Tests
             Assert.That(art.AllTextures.Length, Is.EqualTo(10));
             Assert.That(art.AllTextures.All(texture => texture != null), Is.True);
             Assert.That(assets.IsComplete(), Is.True);
+        }
+
+        private RokasBootstrap CreateRealLaunchIgnoringHostDecoderErrors()
+        {
+            previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            launchRoot = new GameObject("VnIntroLaunchFixture");
+            return launchRoot.AddComponent<RokasBootstrap>();
+        }
+
+        private void HideStoryMediaForDeterministicLinuxFallback()
+        {
+            storyMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "StoryIntro.mp4");
+            Assert.That(File.Exists(storyMediaPath), Is.True,
+                "Focused CI must contain the real StoryIntro.mp4; this helper only hides it from Linux VideoPlayer.");
+            hiddenStoryMediaPath = Path.Combine(Path.GetTempPath(), "rokas-vn-hidden-story-" + Guid.NewGuid().ToString("N") + ".mp4");
+            File.Move(storyMediaPath, hiddenStoryMediaPath);
+        }
+
+        private IEnumerator WaitForLaunchObject(string objectName, float seconds)
+        {
+            float deadline = Time.realtimeSinceStartup + seconds;
+            while (FindLaunchObject(objectName) == null && Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(FindLaunchObject(objectName), Is.Not.Null,
+                "Timed out waiting for launch object: " + objectName + ".");
+        }
+
+        private Button FindLaunchButton(string name)
+        {
+            if (launchRoot == null) return null;
+            foreach (Button button in launchRoot.GetComponentsInChildren<Button>(true))
+                if (button.name == name) return button;
+            return null;
+        }
+
+        private GameObject FindLaunchObject(string name)
+        {
+            if (launchRoot == null) return null;
+            foreach (Transform item in launchRoot.GetComponentsInChildren<Transform>(true))
+                if (item.name == name) return item.gameObject;
+            return null;
+        }
+
+        [UnityTearDown]
+        public IEnumerator CleanupLaunchFixture()
+        {
+            LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.Save();
+            if (launchRoot != null) UnityEngine.Object.Destroy(launchRoot);
+            yield return null;
+            if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
+                !string.IsNullOrEmpty(storyMediaPath) && !File.Exists(storyMediaPath))
+                File.Move(hiddenStoryMediaPath, storyMediaPath);
+            launchRoot = null;
+            storyMediaPath = null;
+            hiddenStoryMediaPath = null;
         }
 
         private static VnIntroArt CreateArt()
