@@ -53,6 +53,42 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator NaturalCompletionAdvancesOneBeatPerClickThenBuildsHomeBeforeMarkingComplete()
+        {
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            HideStoryMediaForDeterministicLinuxFallback();
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+
+            FindLaunchButton("EnterWorldButton").onClick.Invoke();
+            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Button story = FindLaunchButton("StoryClickSurface");
+            Assert.That(story, Is.Not.Null);
+
+            story.onClick.Invoke();
+            yield return WaitForLaunchBackground(assets.vnNightSkyRain, .75f);
+            Assert.That(FindLaunchObject("HomeTitle"), Is.Null);
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero);
+
+            story.onClick.Invoke();
+            yield return WaitForLaunchBackground(assets.vnBusStopPhoneMessageMina, .75f);
+            Assert.That(FindLaunchObject("HomeTitle"), Is.Null);
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero);
+
+            story.onClick.Invoke();
+            yield return WaitForLaunchObject("HomeTitle", 1.5f);
+
+            Assert.That(boot.View, Is.Not.Null,
+                "The existing Home/RokasView must be constructed before intro completion is persisted.");
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.EqualTo(1),
+                "Completion may be persisted only after Home exists.");
+            Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null,
+                "The VN must be disposed during the shared Home handoff.");
+        }
+
+        [UnityTest]
         public IEnumerator TransientMuteDoesNotMutateSavedVolumeSettings()
         {
             var settings = new SettingsData { masterVolume = .73f, musicVolume = .41f, sfxVolume = .62f };
@@ -237,6 +273,27 @@ namespace Rokas.Tests
                 yield return null;
             Assert.That(FindLaunchObject(objectName), Is.Not.Null,
                 "Timed out waiting for launch object: " + objectName + ".");
+        }
+
+        private IEnumerator WaitForLaunchBackground(Texture expected, float seconds)
+        {
+            float deadline = Time.realtimeSinceStartup + seconds;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                GameObject backgroundObject = FindLaunchObject("Background");
+                if (backgroundObject != null)
+                {
+                    RawImage image = backgroundObject.GetComponent<RawImage>();
+                    if (image != null && image.texture == expected)
+                        yield break;
+                }
+                yield return null;
+            }
+
+            GameObject finalBackgroundObject = FindLaunchObject("Background");
+            RawImage finalImage = finalBackgroundObject != null ? finalBackgroundObject.GetComponent<RawImage>() : null;
+            Assert.That(finalImage, Is.Not.Null, "Timed out waiting for the VN Background object.");
+            Assert.That(finalImage.texture, Is.SameAs(expected), "Timed out waiting for the expected VN background beat.");
         }
 
         private Button FindLaunchButton(string name)
