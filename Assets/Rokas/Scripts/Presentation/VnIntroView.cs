@@ -186,7 +186,7 @@ namespace Rokas.Presentation
             }
 
             VnCharacterVisualState visualState = VnCharacterVisualCatalog.ResolveOrNeutral(state.PortraitId, state.Speaker);
-            portrait.texture = visualState.CharacterId.Equals("Mina", StringComparison.OrdinalIgnoreCase)
+            portrait.texture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
                 ? art.MinaCharacterSheet
                 : art.KeikoCharacterSheet;
             portrait.uvRect = visualState.PortraitUv;
