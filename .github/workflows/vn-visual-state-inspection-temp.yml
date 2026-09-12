@@ -1,0 +1,61 @@
+name: TEMP VN Character Sheet Inspection
+
+on:
+  push:
+    branches:
+      - feature/vn-visual-polish-refs
+    paths:
+      - '.github/workflows/vn-visual-state-inspection-temp.yml'
+      - 'Assets/Rokas/Art/VN/Characters/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-character-sheets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Generate exact copies and coordinate overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+
+          source = Path('Assets/Rokas/Art/VN/Characters')
+          out = Path('character-sheet-inspection')
+          out.mkdir(parents=True, exist_ok=True)
+          for name in ('Keiko_CharacterSheet.png', 'Mina_CharacterSheet.png'):
+              path = source / name
+              image = Image.open(path).convert('RGBA')
+              image.save(out / name)
+              overlay = image.copy()
+              draw = ImageDraw.Draw(overlay)
+              w, h = image.size
+              # Normalized 0.05 grid only for coordinate reading; no state/cell assumptions.
+              for i in range(21):
+                  x = round(w * i / 20)
+                  y = round(h * i / 20)
+                  width = 4 if i % 5 == 0 else 2
+                  draw.line((x, 0, x, h), fill=(255, 40, 40, 220), width=width)
+                  draw.line((0, y, w, y), fill=(40, 255, 120, 220), width=width)
+                  if i < 20:
+                      draw.text((x + 4, 4), f'x={i/20:.2f}', fill=(255,255,255,255))
+                      draw.text((4, y + 4), f'yTop={i/20:.2f}', fill=(255,255,255,255))
+              overlay.save(out / name.replace('.png', '_grid.png'))
+              (out / name.replace('.png', '.txt')).write_text(
+                  f'{name}\nwidth={w}\nheight={h}\nmode={image.mode}\n', encoding='utf-8')
+              print(name, image.size, image.mode)
+          PY
+      - name: Upload inspection artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-character-sheet-inspection-${{ github.sha }}
+          path: character-sheet-inspection
+          if-no-files-found: error
+          retention-days: 3
