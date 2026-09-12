@@ -24,6 +24,7 @@ namespace Rokas.Presentation
         private VnIntroView vnIntroView;
         private VnIntroController vnIntroController;
         private bool vnIntroPaused;
+        private bool vnIntroHomeTransition;
         private bool dirty;
         private bool saveBlocked;
         private bool focused = true;
@@ -193,6 +194,7 @@ namespace Rokas.Presentation
                 () => { vnIntroController?.Skip(); });
             vnIntroController.BeatChanged += HandleVnBeatChanged;
             vnIntroController.LinePresented += HandleVnLinePresented;
+            vnIntroController.DialogueCompleted += CompleteIntroAndGoHome;
             vnIntroPaused = false;
             _ = vnIntroController.StartIntro();
         }
@@ -223,12 +225,55 @@ namespace Rokas.Presentation
             vnIntroView?.SetPausedVisual(vnIntroPaused);
         }
 
+        private void CompleteIntroAndGoHome()
+        {
+            if (vnIntroHomeTransition || View != null)
+            {
+                return;
+            }
+            vnIntroHomeTransition = true;
+            StartCoroutine(CompleteIntroAndGoHomeRoutine());
+        }
+
+        private IEnumerator CompleteIntroAndGoHomeRoutine()
+        {
+            while (enterWorldTransition)
+            {
+                yield return null;
+            }
+
+            CanvasGroup curtain = CreateEnterWorldCurtain();
+            yield return FadeCurtain(curtain, 0f, 1f, .24f);
+
+            DisposeVnIntroRuntime();
+            startupPending = false;
+            BuildPresentation();
+            yield return null;
+
+            if (View == null)
+            {
+                vnIntroHomeTransition = false;
+                throw new InvalidOperationException("ROKAS could not create Home after the VN intro. Intro completion was not persisted.");
+            }
+
+            vnIntroProgress?.MarkCompleted();
+
+            yield return FadeCurtain(curtain, 1f, 0f, .28f);
+            if (curtain) Destroy(curtain.gameObject);
+            vnIntroHomeTransition = false;
+        }
+
         private void DisposeVnIntroRuntime()
         {
+            if (sound != null && sound.VnMuted)
+            {
+                sound.SetVnMuted(false);
+            }
             if (vnIntroController != null)
             {
                 vnIntroController.BeatChanged -= HandleVnBeatChanged;
                 vnIntroController.LinePresented -= HandleVnLinePresented;
+                vnIntroController.DialogueCompleted -= CompleteIntroAndGoHome;
             }
             if (vnIntroView != null)
             {
@@ -242,10 +287,6 @@ namespace Rokas.Presentation
             }
             vnIntroController = null;
             vnIntroPaused = false;
-            if (sound != null && sound.VnMuted)
-            {
-                sound.SetVnMuted(false);
-            }
         }
 
         private CanvasGroup CreateEnterWorldCurtain()
