@@ -15,8 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Verify ffmpeg
+      - name: Install ffmpeg
+        shell: bash
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
           ffmpeg -version | head -n 2
 
       - name: Download Mixkit source effects
@@ -29,7 +32,9 @@ jobs:
             "https://assets.mixkit.co/active_storage/sfx/361/361-preview.mp3"
           curl -L --fail --retry 3 --retry-delay 2 -o horn.mp3 \
             "https://assets.mixkit.co/active_storage/sfx/719/719-preview.mp3"
-          ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 city.mp3 crowd.mp3 horn.mp3 || true
+          ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 city.mp3 || true
+          ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 crowd.mp3 || true
+          ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 horn.mp3 || true
 
       - name: Mix 2 minute ROKAS night ambience
         shell: bash
