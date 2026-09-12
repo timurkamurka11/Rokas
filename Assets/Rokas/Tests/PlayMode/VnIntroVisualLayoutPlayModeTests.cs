@@ -131,6 +131,42 @@ namespace Rokas.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator ViewUsesAuthoredExpressionAndUnknownStateFallsBackToSpeakerNeutral()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            VnIntroArt art = CreateArt(assets);
+            var host = new GameObject("VnAuthoredExpressionFixture");
+            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
+                () => { }, () => { }, () => { }, () => { });
+
+            try
+            {
+                VnCharacterVisualState keikoSerious = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_serious", "Keiko");
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_serious"));
+                yield return null;
+
+                RawImage portrait = GameObject.Find("Portrait").GetComponent<RawImage>();
+                Assert.That(portrait.texture, Is.SameAs(art.KeikoCharacterSheet));
+                Assert.That(portrait.uvRect, Is.EqualTo(keikoSerious.PortraitUv),
+                    "The view must use the inspected authored expression UV instead of hard-coding neutral.");
+
+                VnCharacterVisualState minaNeutral = VnCharacterVisualCatalog.ResolveOrNeutral("mina_not_authored", "Mina");
+                view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_not_authored"));
+                yield return null;
+
+                Assert.That(portrait.texture, Is.SameAs(art.MinaCharacterSheet));
+                Assert.That(portrait.uvRect, Is.EqualTo(minaNeutral.PortraitUv),
+                    "Unknown visual tokens must gracefully keep that speaker on authored neutral.");
+            }
+            finally
+            {
+                view.Dispose();
+                Object.Destroy(host);
+            }
+        }
+
         [Test]
         public void VisualCatalogContainsOnlyInspectedAuthoredStatesAndNoInventedBlink()
         {
