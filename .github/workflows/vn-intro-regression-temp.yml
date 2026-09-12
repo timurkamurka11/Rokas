@@ -1,4 +1,4 @@
-# Temporary Task 9 diagnostic harness. Delete after permanent CI is proven.
+# Temporary Task 9 visual TDD harness. Delete after permanent CI is proven.
 name: ROKAS VN Intro Regression Temp
 
 on:
@@ -7,6 +7,8 @@ on:
       - feature/vn-intro-yarn-flow
     paths:
       - .github/workflows/vn-intro-regression-temp.yml
+      - Assets/Rokas/Tests/PlayMode/VnIntroVisualLayoutPlayModeTests.cs
+      - Assets/Rokas/Scripts/Presentation/VnIntroView.cs
   workflow_dispatch:
 
 permissions:
@@ -14,17 +16,13 @@ permissions:
   checks: write
 
 jobs:
-  isolated-first-loop:
-    name: Isolated FirstLoop attempt ${{ matrix.attempt }}
+  visual-vn:
+    name: VN visual layout focused PlayMode
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        attempt: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
-      - name: Run isolated FirstLoop regression
+      - name: Run focused VN visual tests
         id: tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -37,14 +35,14 @@ jobs:
           unityVersion: 6000.3.19f1
           cliVersion: v0.1.60
           testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce
+          customParameters: -testFilter Rokas.Tests.VnIntroVisualLayoutPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: FirstLoop Isolated ${{ matrix.attempt }}
-          artifactsPath: artifacts-first-loop-${{ matrix.attempt }}
+          checkName: VN Visual Layout Focused
+          artifactsPath: artifacts-vn-visual
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: vn-first-loop-isolated-${{ matrix.attempt }}-${{ github.sha }}
+          name: vn-visual-focused-${{ github.sha }}
           path: ${{ steps.tests.outputs.artifactsPath }}
           retention-days: 2
           if-no-files-found: warn
