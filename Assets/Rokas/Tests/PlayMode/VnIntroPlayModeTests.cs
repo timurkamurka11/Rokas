@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using Rokas.Core;
 using Rokas.Presentation;
@@ -85,6 +86,90 @@ namespace Rokas.Tests
             yield return WaitForCompletionFlag(.5f);
             Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null,
                 "The VN must be disposed during the shared Home handoff.");
+        }
+
+        [UnityTest]
+        public IEnumerator CompletedIntroPreservesTheOldDirectHomePath()
+        {
+            PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
+            PlayerPrefs.Save();
+            HideStoryMediaForDeterministicLinuxFallback();
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+
+            FindLaunchButton("EnterWorldButton").onClick.Invoke();
+            yield return WaitForLaunchObject("HomeTitle", 1.5f);
+
+            Assert.That(boot.View, Is.Not.Null);
+            Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null,
+                "A completed intro must bypass VN creation and preserve the established direct Home path.");
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator SkipUsesSharedSafeHandoffAndRestoresTransientMute()
+        {
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            HideStoryMediaForDeterministicLinuxFallback();
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+
+            FindLaunchButton("EnterWorldButton").onClick.Invoke();
+            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+
+            RokasAudio audio = GetBootstrapAudio(boot);
+            Assert.That(audio, Is.Not.Null);
+            Button mute = FindLaunchButton("MuteButton");
+            Button skip = FindLaunchButton("SkipButton");
+            Assert.That(mute, Is.Not.Null);
+            Assert.That(skip, Is.Not.Null);
+
+            mute.onClick.Invoke();
+            Assert.That(audio.VnMuted, Is.True,
+                "Mute must be transient VN state before the shared handoff starts.");
+
+            skip.onClick.Invoke();
+            yield return WaitForLaunchObject("HomeTitle", 1.5f);
+            Assert.That(boot.View, Is.Not.Null);
+            yield return WaitForCompletionFlag(.5f);
+
+            Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null);
+            Assert.That(audio.VnMuted, Is.False,
+                "The shared Home handoff must restore transient VN mute before leaving the intro.");
+        }
+
+        [UnityTest]
+        public IEnumerator PauseBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale()
+        {
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            HideStoryMediaForDeterministicLinuxFallback();
+            CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+
+            FindLaunchButton("EnterWorldButton").onClick.Invoke();
+            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Button story = FindLaunchButton("StoryClickSurface");
+            Button pause = FindLaunchButton("PauseButton");
+            Assert.That(story, Is.Not.Null);
+            Assert.That(pause, Is.Not.Null);
+            float originalTimeScale = Time.timeScale;
+
+            pause.onClick.Invoke();
+            Assert.That(Time.timeScale, Is.EqualTo(originalTimeScale),
+                "VN pause must not pause the entire game through Time.timeScale.");
+            story.onClick.Invoke();
+            yield return null;
+            yield return null;
+            RawImage background = FindLaunchObject("Background").GetComponent<RawImage>();
+            Assert.That(background.texture, Is.SameAs(assets.vnBusStopRainNight),
+                "A paused VN must reject story advance.");
+
+            pause.onClick.Invoke();
+            Assert.That(Time.timeScale, Is.EqualTo(originalTimeScale));
+            story.onClick.Invoke();
+            yield return WaitForLaunchBackground(assets.vnNightSkyRain, .75f);
         }
 
         [UnityTest]
@@ -254,6 +339,13 @@ namespace Rokas.Tests
             LogAssert.ignoreFailingMessages = true;
             launchRoot = new GameObject("VnIntroLaunchFixture");
             return launchRoot.AddComponent<RokasBootstrap>();
+        }
+
+        private static RokasAudio GetBootstrapAudio(RokasBootstrap boot)
+        {
+            FieldInfo field = typeof(RokasBootstrap).GetField("sound", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            return field.GetValue(boot) as RokasAudio;
         }
 
         private void HideStoryMediaForDeterministicLinuxFallback()
