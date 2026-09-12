@@ -307,8 +307,8 @@ namespace Rokas.Tests
 
                 view.SetCharacterStage(null, null);
                 yield return null;
-                GameObject primaryObject = GameObject.Find("CharacterPrimary");
-                GameObject secondaryObject = GameObject.Find("CharacterSecondary");
+                GameObject primaryObject = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                GameObject secondaryObject = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
                 Assert.That(primaryObject, Is.Not.Null);
                 Assert.That(secondaryObject, Is.Not.Null,
                     "The presentation layer needs a reusable secondary slot without adding a new Yarn beat.");
@@ -423,6 +423,20 @@ namespace Rokas.Tests
             VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_blink_not_authored", "Mina");
             Assert.That(keiko.Id, Is.EqualTo("keiko_neutral"));
             Assert.That(mina.Id, Is.EqualTo("mina_neutral"));
+        }
+
+        private static GameObject FindDescendantIncludingInactive(Transform root, string name)
+        {
+            Transform[] descendants = root.GetComponentsInChildren<Transform>(true);
+            foreach (Transform descendant in descendants)
+            {
+                if (descendant.name == name)
+                {
+                    return descendant.gameObject;
+                }
+            }
+
+            return null;
         }
 
         private static float Luminance(Color color)
