@@ -8,6 +8,7 @@ on:
       - .github/workflows/vn-intro-mute-tdd-temp.yml
       - Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs
       - Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs.meta
+      - Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs
       - Assets/Rokas/Scripts/Presentation/RokasAudio.cs
   workflow_dispatch:
 
@@ -18,7 +19,7 @@ permissions:
 jobs:
   focused-mute-playmode:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - name: Run focused VN mute PlayMode tests
@@ -37,6 +38,24 @@ jobs:
           customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: VN Intro Mute TDD
+          artifactsPath: artifacts-focused
+      - name: Run existing Main Menu audio regression tests
+        id: regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Main Menu Audio Regression
+          artifactsPath: artifacts-regression
       - name: Preserve focused evidence
         if: always()
         shell: bash
@@ -46,7 +65,8 @@ jobs:
           git rev-parse HEAD > verification/head.txt
           git rev-parse HEAD^{tree} > verification/tree.txt
           git status --short --untracked-files=all > verification/status.txt
-          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+          if [ -f artifacts-focused/playmode-results.xml ]; then cp artifacts-focused/playmode-results.xml verification/vn-mute-playmode-results.xml; fi
+          if [ -f artifacts-regression/playmode-results.xml ]; then cp artifacts-regression/playmode-results.xml verification/main-menu-audio-regression-results.xml; fi
       - name: Upload focused evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -54,5 +74,6 @@ jobs:
           name: vn-intro-mute-tdd-${{ github.sha }}
           path: |
             ${{ steps.focused.outputs.artifactsPath }}
+            ${{ steps.regression.outputs.artifactsPath }}
             verification
           if-no-files-found: warn
