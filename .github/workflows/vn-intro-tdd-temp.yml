@@ -63,3 +63,45 @@ jobs:
             ${{ steps.editmode.outputs.artifactsPath }}
             verification
           if-no-files-found: warn
+
+  focused-playmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run focused VN PlayMode tests
+        id: playmode
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Focused PlayMode
+          artifactsPath: artifacts-playmode
+      - name: Preserve PlayMode evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/status.txt
+          if [ -f artifacts-playmode/playmode-results.xml ]; then cp artifacts-playmode/playmode-results.xml verification/playmode-results.xml; fi
+      - name: Upload PlayMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-intro-playmode-${{ github.sha }}
+          path: |
+            ${{ steps.playmode.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
