@@ -21,8 +21,10 @@ namespace Rokas.Presentation
         private bool laptopMode;
         private bool lampStateKnown;
         private bool lampOn;
+        private bool vnMuted;
 
         public float VideoVolume { get { return Mathf.Clamp01(settings.masterVolume * settings.sfxVolume); } }
+        public bool VnMuted { get { return vnMuted; } }
 
         public RokasAudio(GameObject parent, RokasAssets assets, SettingsData settings)
         {
@@ -75,9 +77,20 @@ namespace Rokas.Presentation
 
         public void SetLaptopMode(bool active) { laptopMode = active; }
 
+        public void SetVnMuted(bool muted)
+        {
+            if (vnMuted == muted) return;
+            vnMuted = muted;
+            if (!vnMuted) return;
+
+            ambience.volume = 0f;
+            music.volume = 0f;
+            for (int i = 0; i < effects.Length; i++) effects[i].volume = 0f;
+        }
+
         public void Tick(float dt, bool focused)
         {
-            float master = focused ? Mathf.Clamp01(settings.masterVolume) : 0;
+            float master = focused && !vnMuted ? Mathf.Clamp01(settings.masterVolume) : 0;
             float weather = mission ? 1f : homeWeatherMix;
             ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
             music.volume = Mathf.MoveTowards(music.volume, master * settings.musicVolume * .6f, dt);
@@ -104,7 +117,7 @@ namespace Rokas.Presentation
             var source = effects[voice++ % effects.Length];
             source.Stop();
             source.clip = clip;
-            source.volume = Mathf.Clamp01(settings.masterVolume * settings.sfxVolume);
+            source.volume = vnMuted ? 0f : Mathf.Clamp01(settings.masterVolume * settings.sfxVolume);
             source.Play();
         }
 
@@ -180,7 +193,7 @@ namespace Rokas.Presentation
             var source = effects[voice++ % effects.Length];
             source.Stop();
             source.clip = clip;
-            source.volume = Mathf.Clamp01(settings.masterVolume * settings.sfxVolume * Mathf.Clamp01(scale));
+            source.volume = vnMuted ? 0f : Mathf.Clamp01(settings.masterVolume * settings.sfxVolume * Mathf.Clamp01(scale));
             source.Play();
         }
 
