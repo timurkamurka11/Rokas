@@ -66,6 +66,10 @@ namespace Rokas.Presentation
     public sealed class VnIntroView : IDisposable
     {
         private const float ExpressionCrossfadeDuration = .18f;
+        private const float CharacterBodyHeight = 980f;
+        private const float IdlePeriodSeconds = 2.8f;
+        private const float IdleBobPixels = 3f;
+        private const float IdleScaleAmount = .0045f;
         private static readonly Rect KeikoNeutralCrop = new Rect(.49f, .47f, .235f, .43f);
         private static readonly Rect MinaNeutralCrop = new Rect(.47f, .47f, .25f, .43f);
         private static readonly Rect PanelBodyCrop = new Rect(.225f, .10f, .775f, .80f);
@@ -76,6 +80,8 @@ namespace Rokas.Presentation
         private readonly VnIntroArt art;
         private readonly GameObject root;
         private readonly RawImage background;
+        private readonly RawImage characterPrimary;
+        private readonly RectTransform characterPrimaryRect;
         private readonly RawImage portraitPrevious;
         private readonly RawImage portrait;
         private readonly RawImage portraitFrame;
@@ -83,10 +89,13 @@ namespace Rokas.Presentation
         private readonly Text speakerName;
         private readonly Text dialogueText;
         private readonly Image pauseButtonBackground;
+        private Vector2 characterPrimaryBasePosition;
+        private Vector3 characterPrimaryBaseScale;
         private bool portraitInitialized;
         private bool expressionTransitionActive;
         private bool presentationPaused;
         private float expressionTransitionElapsed;
+        private float presentationElapsed;
         private bool disposed;
 
         private VnIntroView(Transform parent, Font font, VnIntroArt art,
@@ -113,6 +122,14 @@ namespace Rokas.Presentation
             scaler.matchWidthOrHeight = .5f;
 
             background = Raw(rootRect, "Background", null, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            characterPrimary = Raw(rootRect, "CharacterPrimary", null,
+                new Vector2(.5f, 0f), new Vector2(.5f, 0f),
+                new Vector2(-180f, 0f), new Vector2(180f, CharacterBodyHeight));
+            characterPrimaryRect = (RectTransform)characterPrimary.transform;
+            characterPrimaryBasePosition = characterPrimaryRect.anchoredPosition;
+            characterPrimaryBaseScale = characterPrimaryRect.localScale;
+            characterPrimary.gameObject.SetActive(false);
 
             Image clickSurface = Image(rootRect, "StoryClickSurface", new Color(0f, 0f, 0f, 0f),
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, true);
@@ -213,6 +230,7 @@ namespace Rokas.Presentation
             }
 
             VnCharacterVisualState visualState = VnCharacterVisualCatalog.ResolveOrNeutral(state.PortraitId, state.Speaker);
+            ApplyCharacterBodyVisual(visualState);
             ApplyPortraitVisual(visualState);
             speakerName.text = state.Speaker ?? string.Empty;
         }
@@ -242,9 +260,15 @@ namespace Rokas.Presentation
 
         internal void TickPresentation(float unscaledDeltaTime)
         {
-            if (disposed || presentationPaused || !expressionTransitionActive) return;
+            if (disposed || presentationPaused) return;
 
-            expressionTransitionElapsed += Mathf.Max(0f, unscaledDeltaTime);
+            float delta = Mathf.Max(0f, unscaledDeltaTime);
+            presentationElapsed += delta;
+            UpdateCharacterIdle();
+
+            if (!expressionTransitionActive) return;
+
+            expressionTransitionElapsed += delta;
             float progress = ExpressionCrossfadeDuration <= 0f
                 ? 1f
                 : Mathf.Clamp01(expressionTransitionElapsed / ExpressionCrossfadeDuration);
@@ -255,6 +279,36 @@ namespace Rokas.Presentation
             expressionTransitionActive = false;
             SetAlpha(portrait, 1f);
             SetAlpha(portraitPrevious, 0f);
+        }
+
+        private void ApplyCharacterBodyVisual(VnCharacterVisualState visualState)
+        {
+            Texture2D targetTexture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
+                ? art.MinaCharacterSheet
+                : art.KeikoCharacterSheet;
+
+            characterPrimary.texture = targetTexture;
+            characterPrimary.uvRect = visualState.BodyUv;
+
+            float sourceWidth = visualState.BodyUv.width * targetTexture.width;
+            float sourceHeight = visualState.BodyUv.height * targetTexture.height;
+            float aspect = sourceHeight > 0f ? sourceWidth / sourceHeight : .4f;
+            characterPrimaryRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, CharacterBodyHeight * aspect);
+            characterPrimaryRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, CharacterBodyHeight);
+            characterPrimaryBasePosition = new Vector2(0f, CharacterBodyHeight * .5f);
+            characterPrimaryBaseScale = Vector3.one;
+            characterPrimaryRect.anchoredPosition = characterPrimaryBasePosition;
+            characterPrimaryRect.localScale = characterPrimaryBaseScale;
+            characterPrimary.gameObject.SetActive(true);
+        }
+
+        private void UpdateCharacterIdle()
+        {
+            if (!characterPrimary.gameObject.activeSelf) return;
+
+            float wave = Mathf.Sin(presentationElapsed * Mathf.PI * 2f / IdlePeriodSeconds);
+            characterPrimaryRect.anchoredPosition = characterPrimaryBasePosition + Vector2.up * (wave * IdleBobPixels);
+            characterPrimaryRect.localScale = characterPrimaryBaseScale * (1f + wave * IdleScaleAmount);
         }
 
         private void ApplyPortraitVisual(VnCharacterVisualState visualState)
