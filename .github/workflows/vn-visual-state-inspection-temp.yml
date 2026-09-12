@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/vn-visual-state-inspection-temp.yml'
       - 'Assets/Rokas/Art/VN/Characters/**'
+      - 'Assets/Rokas/Art/VN/UI/**'
   workflow_dispatch:
 
 permissions:
@@ -25,13 +26,13 @@ jobs:
           python -m pip install --disable-pip-version-check pillow
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw, ImageFont
+          from PIL import Image, ImageDraw
 
-          source = Path('Assets/Rokas/Art/VN/Characters')
           out = Path('character-sheet-inspection')
           out.mkdir(parents=True, exist_ok=True)
+          character_dir = Path('Assets/Rokas/Art/VN/Characters')
           for name in ('Keiko_CharacterSheet.png', 'Mina_CharacterSheet.png'):
-              path = source / name
+              path = character_dir / name
               image = Image.open(path).convert('RGBA')
               image.save(out / name)
               overlay = image.copy()
@@ -51,6 +52,20 @@ jobs:
               (out / name.replace('.png', '.txt')).write_text(
                   f'{name}\nwidth={w}\nheight={h}\nmode={image.mode}\n', encoding='utf-8')
               print(name, image.size, image.mode)
+
+          ui_files = [
+              Path('Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png'),
+              Path('Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png'),
+              Path('Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png'),
+              Path('Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Pause.png'),
+              Path('Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Skip.png'),
+          ]
+          for path in ui_files:
+              image = Image.open(path).convert('RGBA')
+              image.save(out / path.name)
+              (out / (path.stem + '.txt')).write_text(
+                  f'{path.name}\nwidth={image.width}\nheight={image.height}\nmode={image.mode}\n', encoding='utf-8')
+              print(path.name, image.size, image.mode)
           PY
       - name: Upload inspection artifact
         uses: actions/upload-artifact@v7
