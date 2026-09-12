@@ -72,5 +72,30 @@ namespace Rokas.Core.Tests
             Assert.That(gate.TryContinue(), Is.True);
             Assert.That(gate.TryContinue(), Is.False);
         }
+
+        [Test]
+        public void RuntimeProofRequiresExactSwitchAndSupportedScenario()
+        {
+            Assert.That(RokasVnIntroRuntimeProofRunner.IsRequested(null), Is.False);
+            Assert.That(RokasVnIntroRuntimeProofRunner.IsRequested(new[] { "Rokas.exe", "-rokasVnIntroProof" }), Is.True);
+            Assert.That(RokasVnIntroRuntimeProofRunner.IsRequested(new[] { "Rokas.exe", "-other" }), Is.False);
+
+            Assert.That(RokasVnIntroRuntimeProofRunner.GetScenario(new[]
+            {
+                "Rokas.exe", "-rokasVnIntroProof", "-rokasVnIntroScenario", "natural"
+            }), Is.EqualTo("natural"));
+            Assert.That(RokasVnIntroRuntimeProofRunner.GetScenario(new[]
+            {
+                "Rokas.exe", "-rokasVnIntroProof", "-rokasVnIntroScenario", "skip"
+            }), Is.EqualTo("skip"));
+            Assert.That(RokasVnIntroRuntimeProofRunner.GetScenario(new[]
+            {
+                "Rokas.exe", "-rokasVnIntroProof", "-rokasVnIntroScenario", "bypass"
+            }), Is.EqualTo("bypass"));
+            Assert.That(RokasVnIntroRuntimeProofRunner.GetScenario(new[]
+            {
+                "Rokas.exe", "-rokasVnIntroProof", "-rokasVnIntroScenario", "unknown"
+            }), Is.Empty);
+        }
     }
 }
