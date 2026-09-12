@@ -290,6 +290,87 @@ namespace Rokas.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator ActiveSpeakerFocusSupportsZeroOneTwoCharactersAndPausesLocally()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            VnIntroArt art = CreateArt(assets);
+            var host = new GameObject("VnSpeakerFocusFixture");
+            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
+                () => { }, () => { }, () => { }, () => { });
+
+            try
+            {
+                VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
+                VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
+
+                view.SetCharacterStage(null, null);
+                yield return null;
+                GameObject primaryObject = GameObject.Find("CharacterPrimary");
+                GameObject secondaryObject = GameObject.Find("CharacterSecondary");
+                Assert.That(primaryObject, Is.Not.Null);
+                Assert.That(secondaryObject, Is.Not.Null,
+                    "The presentation layer needs a reusable secondary slot without adding a new Yarn beat.");
+                Assert.That(primaryObject.activeSelf, Is.False);
+                Assert.That(secondaryObject.activeSelf, Is.False);
+
+                view.SetCharacterStage(keiko, null);
+                view.PresentLine("Keiko", "Single speaker");
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(primaryObject.activeSelf, Is.True);
+                Assert.That(secondaryObject.activeSelf, Is.False);
+                Assert.That(primaryObject.GetComponent<RawImage>().uvRect, Is.EqualTo(keiko.BodyUv));
+                Assert.That(primaryObject.transform.localScale.x, Is.GreaterThan(1.02f),
+                    "A single speaking character should settle into the active focus scale.");
+
+                view.SetCharacterStage(keiko, mina);
+                view.PresentLine("Keiko", "Keiko active");
+                yield return new WaitForSecondsRealtime(.25f);
+
+                RawImage primary = primaryObject.GetComponent<RawImage>();
+                RawImage secondary = secondaryObject.GetComponent<RawImage>();
+                Assert.That(primaryObject.activeSelf, Is.True);
+                Assert.That(secondaryObject.activeSelf, Is.True);
+                Assert.That(primaryObject.GetComponent<RectTransform>().anchoredPosition.x,
+                    Is.LessThan(secondaryObject.GetComponent<RectTransform>().anchoredPosition.x));
+                Assert.That(primaryObject.transform.localScale.x, Is.GreaterThan(1.02f));
+                Assert.That(secondaryObject.transform.localScale.x, Is.LessThan(.98f));
+                Assert.That(Luminance(primary.color), Is.GreaterThan(Luminance(secondary.color)));
+                Assert.That(primary.color.a, Is.GreaterThan(secondary.color.a));
+                Assert.That(primaryObject.transform.GetSiblingIndex(), Is.GreaterThan(secondaryObject.transform.GetSiblingIndex()),
+                    "The active speaker should be visually in front while remaining behind the VN overlay.");
+
+                view.PresentLine("Mina", "Mina active");
+                view.SetPausedVisual(true);
+                Vector3 pausedPrimaryScale = primaryObject.transform.localScale;
+                Vector3 pausedSecondaryScale = secondaryObject.transform.localScale;
+                Color pausedPrimaryColor = primary.color;
+                Color pausedSecondaryColor = secondary.color;
+                float globalTimeScale = Time.timeScale;
+                yield return new WaitForSecondsRealtime(.25f);
+
+                Assert.That(primaryObject.transform.localScale, Is.EqualTo(pausedPrimaryScale));
+                Assert.That(secondaryObject.transform.localScale, Is.EqualTo(pausedSecondaryScale));
+                Assert.That(primary.color, Is.EqualTo(pausedPrimaryColor));
+                Assert.That(secondary.color, Is.EqualTo(pausedSecondaryColor));
+                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale));
+
+                view.SetPausedVisual(false);
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(secondaryObject.transform.localScale.x, Is.GreaterThan(1.02f));
+                Assert.That(primaryObject.transform.localScale.x, Is.LessThan(.98f));
+                Assert.That(Luminance(secondary.color), Is.GreaterThan(Luminance(primary.color)));
+                Assert.That(secondary.color.a, Is.GreaterThan(primary.color.a));
+                Assert.That(secondaryObject.transform.GetSiblingIndex(), Is.GreaterThan(primaryObject.transform.GetSiblingIndex()));
+            }
+            finally
+            {
+                view.Dispose();
+                Object.Destroy(host);
+            }
+        }
+
         [Test]
         public void VisualCatalogContainsOnlyInspectedAuthoredStatesAndNoInventedBlink()
         {
