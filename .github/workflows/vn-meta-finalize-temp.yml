@@ -1,0 +1,112 @@
+name: ROKAS VN Meta Finalize Temp
+
+on:
+  push:
+    branches:
+      - feature/vn-intro-yarn-flow
+    paths:
+      - .github/workflows/vn-meta-finalize-temp.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feature/vn-intro-yarn-flow
+          fetch-depth: 0
+
+      - name: Generate deterministic Unity metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          folders={
+              'Assets/Rokas/Art/VN.meta':'ac48c857d14443c29a1b2fbee4217af5',
+              'Assets/Rokas/Art/VN/Characters.meta':'a32f3a4307e24316aa132860196fbf84',
+              'Assets/Rokas/Art/VN/Backgrounds.meta':'c2e82c01db174b398b5f47965c096fee',
+              'Assets/Rokas/Art/VN/Scenes.meta':'5dde9bec45e244989180f9c5483a61cd',
+              'Assets/Rokas/Art/VN/UI.meta':'68a22a50e9444b09b2b62c144f6aa7a0',
+              'Assets/Rokas/Art/VN/UI/Dialogue.meta':'9e2f126a5b434ef5a58bbea42c0ee5e7',
+              'Assets/Rokas/Art/VN/UI/Controls.meta':'347d75f184a04c749538532aa3825877',
+          }
+          for path,guid in folders.items():
+              Path(path).write_text(
+                  'fileFormatVersion: 2\n'
+                  f'guid: {guid}\n'
+                  'folderAsset: yes\n'
+                  'DefaultImporter:\n'
+                  '  externalObjects: {}\n'
+                  '  userData:\n'
+                  '  assetBundleName:\n'
+                  '  assetBundleVariant:\n',
+                  encoding='utf-8')
+
+          image_guids={
+              'Assets/Rokas/Art/VN/Characters/Keiko_CharacterSheet.png.meta':'3b12ebbf615043e08930b9c5a8ea0729',
+              'Assets/Rokas/Art/VN/Characters/Mina_CharacterSheet.png.meta':'e52662476ff8453398af0fdc67cd826b',
+              'Assets/Rokas/Art/VN/Backgrounds/VN_BusStop_Rain_Night.png.meta':'88761c34d7af479ea57efce7073ff8d4',
+              'Assets/Rokas/Art/VN/Backgrounds/VN_NightSky_Rain.png.meta':'f1d5938f848445e4ad08dd5bae267331',
+              'Assets/Rokas/Art/VN/Scenes/VN_BusStop_PhoneMessage_Mina.png.meta':'9c2f79c3cced4cf8a053f688b23ef550',
+              'Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png.meta':'66e03e45e4f849e4a8471bc16d6aa83d',
+              'Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png.meta':'db6ce06f7a32417097fc2b2b6376c2d3',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png.meta':'2f5e850b083e492b98543042d08f4183',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Pause.png.meta':'822d84e02e9c4e6d852c326be3fa59af',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Skip.png.meta':'1ad7baf7a6854af8877153bf25dee46a',
+          }
+          template=Path('Assets/Rokas/Art/UI/LaptopWallpaper.png.meta').read_text(encoding='utf-8')
+          for path,guid in image_guids.items():
+              content=re.sub(r'^guid: [0-9a-f]+$', f'guid: {guid}', template, count=1, flags=re.M)
+              content=re.sub(r'^  userData:.*$', '  userData: ROKAS VN intro exact imported user asset', content, count=1, flags=re.M)
+              Path(path).write_text(content, encoding='utf-8')
+          PY
+
+      - name: Verify exact Unity metadata set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find Assets/Rokas/Art/VN -type f -name '*.png' | wc -l)" -eq 10
+          test "$(find Assets/Rokas/Art/VN -type f -name '*.png.meta' | wc -l)" -eq 10
+          test -f Assets/Rokas/Art/VN.meta
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          metas=[Path('Assets/Rokas/Art/VN.meta'), *Path('Assets/Rokas/Art/VN').rglob('*.meta')]
+          guids=[]
+          for p in metas:
+              text=p.read_text(encoding='utf-8')
+              m=re.search(r'^guid: ([0-9a-f]{32})$', text, re.M)
+              assert m, p
+              guids.append(m.group(1))
+          assert len(guids)==17, len(guids)
+          assert len(set(guids))==17, 'duplicate VN meta GUID'
+          for p in Path('Assets/Rokas/Art/VN').rglob('*.png.meta'):
+              t=p.read_text(encoding='utf-8')
+              assert 'textureType: 0' in t, p
+              assert 'spriteMode: 0' in t, p
+              assert 'alphaIsTransparency: 1' in t, p
+          print('VN_META_GATE=17/17 PASS')
+          PY
+
+      - name: Remove temporary transport workflows and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'rokas-checkpoint-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/vn-asset-transport-temp.yml .github/workflows/vn-meta-finalize-temp.yml
+          git add Assets/Rokas/Art/VN.meta Assets/Rokas/Art/VN
+          git diff --cached --check
+          test "$(git diff --cached --name-only | grep -c '\.png\.meta$')" -eq 10
+          test "$(git diff --cached --name-only | grep -c '\.png$' || true)" -eq 0
+          git commit -m 'assets: finalize VN intro Unity metadata'
+          git push origin HEAD:feature/vn-intro-yarn-flow
