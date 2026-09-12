@@ -10,7 +10,7 @@ namespace Rokas.Tests
     public sealed class VnIntroVisualLayoutPlayModeTests
     {
         [UnityTest]
-        public IEnumerator ControlsUseTopRightResponsiveAnchors()
+        public IEnumerator DialogueCompositionUsesResponsiveBottomPanelCircularPortraitAndFiveControls()
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
@@ -22,20 +22,68 @@ namespace Rokas.Tests
             try
             {
                 yield return null;
-                foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton" })
+                Canvas.ForceUpdateCanvases();
+
+                RectTransform panel = GameObject.Find("DialoguePanel").GetComponent<RectTransform>();
+                Assert.That(panel.anchorMin.x, Is.LessThanOrEqualTo(.10f),
+                    "The polished panel must use the available width instead of a fixed top-left rectangle.");
+                Assert.That(panel.anchorMax.x, Is.GreaterThanOrEqualTo(.90f));
+                Assert.That(panel.anchorMin.y, Is.LessThanOrEqualTo(.10f),
+                    "The dialogue composition must remain bottom anchored at 16:9 and 4:3 runtimes.");
+                Assert.That(panel.anchorMax.y, Is.LessThanOrEqualTo(.20f));
+
+                GameObject portraitMaskObject = GameObject.Find("PortraitMask");
+                Assert.That(portraitMaskObject, Is.Not.Null,
+                    "Target PNGs require a dedicated circular portrait mask on the lower-left panel edge.");
+                Assert.That(portraitMaskObject.GetComponent<Mask>(), Is.Not.Null,
+                    "Portrait framing must actually clip the sheet art rather than only place it in a square.");
+                GameObject portrait = GameObject.Find("Portrait");
+                Assert.That(portrait, Is.Not.Null);
+                Assert.That(portrait.transform.IsChildOf(portraitMaskObject.transform), Is.True);
+
+                foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton", "BackButton", "NextButton" })
                 {
                     GameObject buttonObject = GameObject.Find(name);
                     Assert.That(buttonObject, Is.Not.Null, name + " must exist.");
-                    RectTransform rect = buttonObject.GetComponent<RectTransform>();
-                    Assert.That(rect.anchorMin, Is.EqualTo(Vector2.one),
-                        name + " must anchor to the top-right corner so narrow 4:3 runtime windows cannot clip it.");
-                    Assert.That(rect.anchorMax, Is.EqualTo(Vector2.one));
-                    Assert.That(rect.pivot, Is.EqualTo(Vector2.one),
-                        name + " pivot must match its top-right anchor.");
-                    Assert.That(rect.offsetMax.x, Is.LessThanOrEqualTo(0f),
-                        name + " right edge must stay inside the canvas.");
-                    Assert.That(rect.offsetMin.x, Is.LessThan(rect.offsetMax.x));
+                    Assert.That(buttonObject.transform.IsChildOf(panel.transform), Is.True,
+                        name + " must live inside the bottom-panel composition so it cannot clip off narrow 4:3 windows.");
                 }
+
+                Button back = GameObject.Find("BackButton").GetComponent<Button>();
+                Assert.That(back.interactable, Is.False,
+                    "Back is intentionally visible but disabled until a real Yarn rewind design exists.");
+            }
+            finally
+            {
+                view.Dispose();
+                Object.Destroy(host);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator NextUsesTheExistingOneBeatContinueCallbackExactlyOnce()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            VnIntroArt art = CreateArt(assets);
+            int continueCount = 0;
+            var host = new GameObject("VnNextButtonFixture");
+            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
+                () => continueCount++, () => { }, () => { }, () => { });
+
+            try
+            {
+                yield return null;
+                Button next = GameObject.Find("NextButton").GetComponent<Button>();
+                Assert.That(next.interactable, Is.True);
+                next.onClick.Invoke();
+                Assert.That(continueCount, Is.EqualTo(1),
+                    "One Next press must invoke exactly the same single continuation callback as the story surface.");
+
+                Button storySurface = GameObject.Find("StoryClickSurface").GetComponent<Button>();
+                storySurface.onClick.Invoke();
+                Assert.That(continueCount, Is.EqualTo(2),
+                    "Next must not add a second progression path or autoplay behaviour.");
             }
             finally
             {
