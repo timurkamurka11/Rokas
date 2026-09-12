@@ -52,6 +52,7 @@ namespace Rokas.Presentation
     {
         private static readonly Rect KeikoNeutralCrop = new Rect(.49f, .47f, .235f, .43f);
         private static readonly Rect MinaNeutralCrop = new Rect(.47f, .47f, .25f, .43f);
+        private static readonly Color LightPanelTextColor = new Color(.10f, .12f, .14f, 1f);
 
         private readonly VnIntroArt art;
         private readonly GameObject root;
@@ -109,9 +110,9 @@ namespace Rokas.Presentation
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(472f, -1018f), new Vector2(1604f, -842f),
                 28, FontStyle.Normal, TextAnchor.UpperLeft);
 
-            CreateIconButton(rootRect, "MuteButton", art.IconMute, 1518f, 38f, toggleMute, out _);
-            CreateIconButton(rootRect, "PauseButton", art.IconPause, 1624f, 38f, togglePause, out pauseButtonBackground);
-            CreateIconButton(rootRect, "SkipButton", art.IconSkip, 1730f, 38f, skip, out _);
+            CreateIconButton(rootRect, "MuteButton", art.IconMute, 320f, 38f, toggleMute, out _);
+            CreateIconButton(rootRect, "PauseButton", art.IconPause, 214f, 38f, togglePause, out pauseButtonBackground);
+            CreateIconButton(rootRect, "SkipButton", art.IconSkip, 108f, 38f, skip, out _);
         }
 
         public static VnIntroView Create(Transform parent, Font font, VnIntroArt art,
@@ -141,10 +142,14 @@ namespace Rokas.Presentation
             if (state.PanelStyle == "dark")
             {
                 dialoguePanel.texture = art.DialoguePanelKeikoDark;
+                speakerName.color = Color.white;
+                dialogueText.color = Color.white;
             }
             else if (state.PanelStyle == "light")
             {
                 dialoguePanel.texture = art.DialoguePanelMinaLight;
+                speakerName.color = LightPanelTextColor;
+                dialogueText.color = LightPanelTextColor;
             }
             else
             {
@@ -192,11 +197,12 @@ namespace Rokas.Presentation
         }
 
         private static void CreateIconButton(RectTransform parent, string name, Texture2D icon,
-            float x, float y, Action action, out Image backgroundImage)
+            float right, float top, Action action, out Image backgroundImage)
         {
             RectTransform rect = Rect(parent, name,
-                new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(x, -(y + 82f)), new Vector2(x + 82f, -y));
+                Vector2.one, Vector2.one,
+                new Vector2(-(right + 82f), -(top + 82f)), new Vector2(-right, -top));
+            rect.pivot = Vector2.one;
             backgroundImage = rect.gameObject.AddComponent<Image>();
             backgroundImage.color = new Color(.035f, .055f, .06f, .78f);
             backgroundImage.raycastTarget = true;
