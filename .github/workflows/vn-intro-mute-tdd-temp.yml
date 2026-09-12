@@ -1,0 +1,58 @@
+name: ROKAS VN Mute TDD Temp
+
+on:
+  push:
+    branches:
+      - feature/vn-intro-yarn-flow
+    paths:
+      - .github/workflows/vn-intro-mute-tdd-temp.yml
+      - Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs.meta
+      - Assets/Rokas/Scripts/Presentation/RokasAudio.cs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  focused-mute-playmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run focused VN mute PlayMode tests
+        id: focused
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Mute TDD
+      - name: Preserve focused evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/status.txt
+          if [ -f artifacts/playmode-results.xml ]; then cp artifacts/playmode-results.xml verification/playmode-results.xml; fi
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-intro-mute-tdd-${{ github.sha }}
+          path: |
+            ${{ steps.focused.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
