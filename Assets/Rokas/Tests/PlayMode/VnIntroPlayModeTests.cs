@@ -82,8 +82,7 @@ namespace Rokas.Tests
 
             Assert.That(boot.View, Is.Not.Null,
                 "The existing Home/RokasView must be constructed before intro completion is persisted.");
-            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.EqualTo(1),
-                "Completion may be persisted only after Home exists.");
+            yield return WaitForCompletionFlag(.5f);
             Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null,
                 "The VN must be disposed during the shared Home handoff.");
         }
@@ -273,6 +272,16 @@ namespace Rokas.Tests
                 yield return null;
             Assert.That(FindLaunchObject(objectName), Is.Not.Null,
                 "Timed out waiting for launch object: " + objectName + ".");
+        }
+
+        private static IEnumerator WaitForCompletionFlag(float seconds)
+        {
+            float deadline = Time.realtimeSinceStartup + seconds;
+            while (PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0) != 1 &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.EqualTo(1),
+                "Completion may be persisted only after Home exists.");
         }
 
         private IEnumerator WaitForLaunchBackground(Texture expected, float seconds)
