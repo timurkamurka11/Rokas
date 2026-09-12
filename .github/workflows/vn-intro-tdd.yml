@@ -1,0 +1,227 @@
+name: ROKAS VN Intro Permanent CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/vn-intro-yarn-flow
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: vn-intro-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  preflight:
+    name: VN asset/meta preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify exact VN asset manifest and metas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('Assets/Rokas/Art/VN')
+          expected = {
+              'Assets/Rokas/Art/VN/Characters/Keiko_CharacterSheet.png',
+              'Assets/Rokas/Art/VN/Characters/Mina_CharacterSheet.png',
+              'Assets/Rokas/Art/VN/Backgrounds/VN_BusStop_Rain_Night.png',
+              'Assets/Rokas/Art/VN/Backgrounds/VN_NightSky_Rain.png',
+              'Assets/Rokas/Art/VN/Scenes/VN_BusStop_PhoneMessage_Mina.png',
+              'Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png',
+              'Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Pause.png',
+              'Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Skip.png',
+          }
+          actual = {p.as_posix() for p in root.rglob('*.png')}
+          missing = sorted(expected - actual)
+          extra = sorted(actual - expected)
+          if missing or extra:
+              raise SystemExit(f'VN manifest mismatch. missing={missing} extra={extra}')
+          missing_meta = sorted(path for path in expected if not Path(path + '.meta').is_file())
+          if missing_meta:
+              raise SystemExit(f'Missing Unity meta files: {missing_meta}')
+          print('Verified exactly 10 approved VN PNGs and their .meta files.')
+          PY
+      - name: Verify repository diff hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test -z "$(git status --porcelain --untracked-files=all)"
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
+
+  focused-editmode:
+    name: VN focused EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run VN progress EditMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.VnIntroProgressTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Focused EditMode
+          artifactsPath: artifacts-focused-editmode
+      - name: Upload focused EditMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-focused-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  focused-playmode:
+    name: VN focused PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run VN PlayMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Focused PlayMode
+          artifactsPath: artifacts-focused-playmode
+      - name: Upload focused PlayMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-focused-playmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  legacy-playmode:
+    name: Legacy ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Main Menu interaction/audio
+            filter: Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests
+            artifact: main-menu-interaction
+          - label: Story/Main Menu
+            filter: Rokas.Tests.StoryIntroMainMenuPlayModeTests
+            artifact: story-main-menu
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run legacy PlayMode regression
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter ${{ matrix.filter }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Legacy ${{ matrix.label }}
+          artifactsPath: artifacts-${{ matrix.artifact }}
+      - name: Upload legacy evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-legacy-${{ matrix.artifact }}-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  full-editmode:
+    name: Full Unity EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run complete EditMode suite
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Full EditMode
+          artifactsPath: artifacts-full-editmode
+      - name: Upload full EditMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-full-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  full-playmode:
+    name: Full Unity PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run complete PlayMode suite
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Full PlayMode
+          artifactsPath: artifacts-full-playmode
+      - name: Upload full PlayMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-full-playmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
