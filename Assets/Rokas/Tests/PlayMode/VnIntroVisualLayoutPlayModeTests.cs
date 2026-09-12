@@ -256,6 +256,27 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void BlinkHookUsesOnlyExplicitAuthoredBlinkUvAndNeverBorrowsAnotherExpression()
+        {
+            VnCharacterVisualState minaNeutral = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
+            VnCharacterVisualState minaHappy = VnCharacterVisualCatalog.ResolveOrNeutral("mina_happy", "Mina");
+
+            Rect requestedMinaBlink = VnCharacterVisualCatalog.ResolvePortraitUv(minaNeutral, true);
+            Assert.That(requestedMinaBlink, Is.EqualTo(minaNeutral.PortraitUv),
+                "Mina neutral has no authored blink; requesting blink must keep neutral rather than borrow happy closed-eyes art.");
+            Assert.That(requestedMinaBlink, Is.Not.EqualTo(minaHappy.PortraitUv));
+
+            Rect authoredNeutral = new Rect(.10f, .20f, .30f, .40f);
+            Rect authoredBlink = new Rect(.50f, .20f, .30f, .40f);
+            var futureAuthoredState = new VnCharacterVisualState(
+                "future_neutral", "Future", authoredNeutral, authoredNeutral, true, authoredBlink);
+
+            Assert.That(VnCharacterVisualCatalog.ResolvePortraitUv(futureAuthoredState, false), Is.EqualTo(authoredNeutral));
+            Assert.That(VnCharacterVisualCatalog.ResolvePortraitUv(futureAuthoredState, true), Is.EqualTo(authoredBlink),
+                "The reusable hook should select a blink UV only when the state explicitly declares authored blink art.");
+        }
+
+        [Test]
         public void UnknownExpressionFallsBackToTheInspectedNeutralForThatSpeaker()
         {
             VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_blink_not_authored", "Keiko");
