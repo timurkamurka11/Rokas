@@ -1,0 +1,79 @@
+name: Temporary ROKAS Night Ambience Mix
+
+on:
+  push:
+    branches:
+      - temp/audio-mix-night-ambience
+    paths:
+      - .github/workflows/temp-night-ambience-mix.yml
+
+permissions:
+  contents: read
+
+jobs:
+  mix-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify ffmpeg
+        run: |
+          ffmpeg -version | head -n 2
+
+      - name: Download Mixkit source effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --retry-delay 2 -o city.mp3 \
+            "https://assets.mixkit.co/active_storage/sfx/2678/2678-preview.mp3"
+          curl -L --fail --retry 3 --retry-delay 2 -o crowd.mp3 \
+            "https://assets.mixkit.co/active_storage/sfx/361/361-preview.mp3"
+          curl -L --fail --retry 3 --retry-delay 2 -o horn.mp3 \
+            "https://assets.mixkit.co/active_storage/sfx/719/719-preview.mp3"
+          ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 city.mp3 crowd.mp3 horn.mp3 || true
+
+      - name: Mix 2 minute ROKAS night ambience
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          ffmpeg -hide_banner -y \
+            -i city.mp3 \
+            -i crowd.mp3 \
+            -i horn.mp3 \
+            -filter_complex "[0:a]atrim=0:120,asetpts=PTS-STARTPTS,volume=0.95[city];[1:a]atrim=0:120,asetpts=PTS-STARTPTS,highpass=f=180,lowpass=f=3800,volume=0.13[crowd];[2:a]asetpts=PTS-STARTPTS,volume=0.28,asplit=3[h1][h2][h3];[h1]adelay=24000:all=1[dh1];[h2]adelay=69000:all=1[dh2];[h3]adelay=107000:all=1[dh3];[city][crowd][dh1][dh2][dh3]amix=inputs=5:duration=longest:dropout_transition=0:normalize=0,alimiter=limit=0.93,atrim=0:120[out]" \
+            -map "[out]" -ar 48000 -ac 2 -c:a pcm_s16le \
+            output/ROKAS_Night_City_Ambience_2min.wav
+
+          ffmpeg -hide_banner -y \
+            -i output/ROKAS_Night_City_Ambience_2min.wav \
+            -c:a libmp3lame -b:a 192k \
+            -metadata title="ROKAS Night City Ambience" \
+            output/ROKAS_Night_City_Ambience_2min.mp3
+
+          cat > output/SOURCES_AND_MIX.txt <<'EOF'
+          ROKAS Night City Ambience — 2:00
+
+          Source effects (Mixkit):
+          - Urban city ambience at night — Mixkit #2678
+          - City downtown crowd ambience — Mixkit #361
+          - Car double horn — Mixkit #719
+
+          Mix:
+          - Urban night/rain/city ambience = primary bed
+          - Downtown crowd = quiet, distant layer with reduced level and bandwidth
+          - Car double horn = subtle one-shot at approximately 00:24, 01:09, and 01:47
+          - Output = 48 kHz stereo WAV + 192 kbps MP3, exactly 2:00
+
+          Check Mixkit licensing before distribution of the final game build.
+          EOF
+
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min.wav
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min.mp3
+
+      - name: Upload finished ambience
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Night-City-Ambience-2min
+          path: output/
+          if-no-files-found: error
+          retention-days: 7
