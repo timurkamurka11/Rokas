@@ -52,12 +52,16 @@ namespace Rokas.Presentation
     {
         private static readonly Rect KeikoNeutralCrop = new Rect(.49f, .47f, .235f, .43f);
         private static readonly Rect MinaNeutralCrop = new Rect(.47f, .47f, .25f, .43f);
+        private static readonly Rect PanelBodyCrop = new Rect(.225f, .10f, .775f, .80f);
+        private static readonly Rect PanelFrameCrop = new Rect(0f, 0f, .31f, 1f);
         private static readonly Color LightPanelTextColor = new Color(.10f, .12f, .14f, 1f);
+        private static Sprite circleSprite;
 
         private readonly VnIntroArt art;
         private readonly GameObject root;
         private readonly RawImage background;
         private readonly RawImage portrait;
+        private readonly RawImage portraitFrame;
         private readonly RawImage dialoguePanel;
         private readonly Text speakerName;
         private readonly Text dialogueText;
@@ -95,24 +99,47 @@ namespace Rokas.Presentation
             storyButton.transition = Selectable.Transition.None;
             storyButton.onClick.AddListener(() => continueStory?.Invoke());
 
-            portrait = Raw(rootRect, "Portrait", null,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(174f, -1010f), new Vector2(436f, -748f));
+            // The approved source panel already contains the premium trim. Use its body and circular
+            // frame as two independently-scaled slices so the long dialogue box can be wide without
+            // flattening the portrait ring.
+            dialoguePanel = Raw(rootRect, "DialoguePanel", art.DialoguePanelKeikoDark,
+                new Vector2(.045f, 0f), new Vector2(.965f, 0f), new Vector2(0f, 44f), new Vector2(0f, 338f));
+            dialoguePanel.uvRect = PanelBodyCrop;
+            dialoguePanel.raycastTarget = false;
+            RectTransform panelRect = (RectTransform)dialoguePanel.transform;
+
+            RectTransform maskRect = Rect(panelRect, "PortraitMask",
+                new Vector2(0f, .5f), new Vector2(0f, .5f), new Vector2(-18f, -114f), new Vector2(210f, 114f));
+            Image maskGraphic = maskRect.gameObject.AddComponent<Image>();
+            maskGraphic.sprite = GetCircleSprite();
+            maskGraphic.color = Color.white;
+            maskGraphic.raycastTarget = false;
+            Mask mask = maskRect.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            portrait = Raw(maskRect, "Portrait", null,
+                Vector2.zero, Vector2.one, new Vector2(-20f, -20f), new Vector2(20f, 20f));
             portrait.raycastTarget = false;
 
-            dialoguePanel = Raw(rootRect, "DialoguePanel", art.DialoguePanelKeikoDark,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(120f, -1050f), new Vector2(1800f, -730f));
-            dialoguePanel.raycastTarget = false;
+            portraitFrame = Raw(panelRect, "PortraitFrame", art.DialoguePanelKeikoDark,
+                new Vector2(0f, .5f), new Vector2(0f, .5f), new Vector2(-70f, -158f), new Vector2(246f, 158f));
+            portraitFrame.uvRect = PanelFrameCrop;
+            portraitFrame.raycastTarget = false;
 
-            speakerName = Label(rootRect, "SpeakerName", font, string.Empty,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(472f, -834f), new Vector2(820f, -770f),
+            speakerName = Label(panelRect, "SpeakerName", font, string.Empty,
+                new Vector2(.155f, 1f), new Vector2(.56f, 1f), new Vector2(0f, -80f), new Vector2(0f, -24f),
                 31, FontStyle.Bold, TextAnchor.MiddleLeft);
-            dialogueText = Label(rootRect, "DialogueText", font, string.Empty,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(472f, -1018f), new Vector2(1604f, -842f),
+            dialogueText = Label(panelRect, "DialogueText", font, string.Empty,
+                new Vector2(.155f, 0f), new Vector2(.70f, 1f), new Vector2(0f, 30f), new Vector2(0f, -94f),
                 28, FontStyle.Normal, TextAnchor.UpperLeft);
 
-            CreateIconButton(rootRect, "MuteButton", art.IconMute, 320f, 38f, toggleMute, out _);
-            CreateIconButton(rootRect, "PauseButton", art.IconPause, 214f, 38f, togglePause, out pauseButtonBackground);
-            CreateIconButton(rootRect, "SkipButton", art.IconSkip, 108f, 38f, skip, out _);
+            RectTransform controls = Rect(panelRect, "ControlsRow",
+                new Vector2(1f, .5f), new Vector2(1f, .5f), new Vector2(-475f, -48f), new Vector2(-20f, 48f));
+            CreateIconButton(controls, "MuteButton", art.IconMute, 0f, toggleMute, out _);
+            CreateIconButton(controls, "PauseButton", art.IconPause, 91f, togglePause, out pauseButtonBackground);
+            CreateIconButton(controls, "SkipButton", art.IconSkip, 182f, skip, out _);
+            CreateArrowButton(controls, "BackButton", 273f, "‹", false, null);
+            CreateArrowButton(controls, "NextButton", 364f, "›", true, continueStory);
         }
 
         public static VnIntroView Create(Transform parent, Font font, VnIntroArt art,
@@ -142,12 +169,14 @@ namespace Rokas.Presentation
             if (state.PanelStyle == "dark")
             {
                 dialoguePanel.texture = art.DialoguePanelKeikoDark;
+                portraitFrame.texture = art.DialoguePanelKeikoDark;
                 speakerName.color = Color.white;
                 dialogueText.color = Color.white;
             }
             else if (state.PanelStyle == "light")
             {
                 dialoguePanel.texture = art.DialoguePanelMinaLight;
+                portraitFrame.texture = art.DialoguePanelMinaLight;
                 speakerName.color = LightPanelTextColor;
                 dialogueText.color = LightPanelTextColor;
             }
@@ -185,8 +214,8 @@ namespace Rokas.Presentation
         {
             ThrowIfDisposed();
             pauseButtonBackground.color = paused
-                ? new Color(.52f, .38f, .18f, .94f)
-                : new Color(.035f, .055f, .06f, .78f);
+                ? new Color(.72f, .50f, .24f, .88f)
+                : new Color(.035f, .055f, .06f, .06f);
         }
 
         public void Dispose()
@@ -197,22 +226,80 @@ namespace Rokas.Presentation
         }
 
         private static void CreateIconButton(RectTransform parent, string name, Texture2D icon,
-            float right, float top, Action action, out Image backgroundImage)
+            float left, Action action, out Image backgroundImage)
         {
             RectTransform rect = Rect(parent, name,
-                Vector2.one, Vector2.one,
-                new Vector2(-(right + 82f), -(top + 82f)), new Vector2(-right, -top));
-            rect.pivot = Vector2.one;
+                new Vector2(0f, .5f), new Vector2(0f, .5f),
+                new Vector2(left, -39f), new Vector2(left + 78f, 39f));
             backgroundImage = rect.gameObject.AddComponent<Image>();
-            backgroundImage.color = new Color(.035f, .055f, .06f, .78f);
+            backgroundImage.color = new Color(.035f, .055f, .06f, .06f);
             backgroundImage.raycastTarget = true;
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = backgroundImage;
+            button.transition = Selectable.Transition.ColorTint;
             button.onClick.AddListener(() => action?.Invoke());
 
             RawImage iconImage = Raw(rect, "Icon", icon,
-                new Vector2(.16f, .16f), new Vector2(.84f, .84f), Vector2.zero, Vector2.zero);
+                new Vector2(.02f, .02f), new Vector2(.98f, .98f), Vector2.zero, Vector2.zero);
             iconImage.raycastTarget = false;
+        }
+
+        private static void CreateArrowButton(RectTransform parent, string name, float left,
+            string glyph, bool interactable, Action action)
+        {
+            RectTransform rect = Rect(parent, name,
+                new Vector2(0f, .5f), new Vector2(0f, .5f),
+                new Vector2(left, -39f), new Vector2(left + 78f, 39f));
+            Image backgroundImage = rect.gameObject.AddComponent<Image>();
+            backgroundImage.sprite = GetCircleSprite();
+            backgroundImage.color = interactable
+                ? new Color(.10f, .12f, .14f, .90f)
+                : new Color(.10f, .12f, .14f, .34f);
+            backgroundImage.raycastTarget = interactable;
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = backgroundImage;
+            button.transition = Selectable.Transition.ColorTint;
+            button.interactable = interactable;
+            if (interactable) button.onClick.AddListener(() => action?.Invoke());
+
+            Text arrow = rect.gameObject.AddComponent<Text>();
+            arrow.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            arrow.text = glyph;
+            arrow.fontSize = 54;
+            arrow.alignment = TextAnchor.MiddleCenter;
+            arrow.color = interactable ? new Color(1f, .92f, .80f, 1f) : new Color(1f, .92f, .80f, .42f);
+            arrow.raycastTarget = false;
+        }
+
+        private static Sprite GetCircleSprite()
+        {
+            if (circleSprite) return circleSprite;
+            const int size = 128;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "VnRuntimeCircleMask",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color32[size * size];
+            float center = (size - 1) * .5f;
+            float radius = center - 1f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                    float alpha = Mathf.Clamp01(radius + 1f - distance);
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            circleSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(.5f, .5f), 100f);
+            circleSprite.name = "VnRuntimeCircleMaskSprite";
+            circleSprite.hideFlags = HideFlags.HideAndDontSave;
+            return circleSprite;
         }
 
         private static RawImage Raw(Transform parent, string name, Texture texture,
