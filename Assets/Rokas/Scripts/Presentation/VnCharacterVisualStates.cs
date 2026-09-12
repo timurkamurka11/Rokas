@@ -76,6 +76,16 @@ namespace Rokas.Presentation
             return States[neutralId];
         }
 
+        public static Rect ResolvePortraitUv(VnCharacterVisualState state, bool requestBlink)
+        {
+            if (requestBlink && state.HasBlinkState && state.BlinkUv.width > 0f && state.BlinkUv.height > 0f)
+            {
+                return state.BlinkUv;
+            }
+
+            return state.PortraitUv;
+        }
+
         private static bool IsCharacter(string id, string speaker, string character, string prefix)
         {
             return string.Equals(speaker, character, StringComparison.OrdinalIgnoreCase) ||
