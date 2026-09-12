@@ -131,6 +131,39 @@ namespace Rokas.Tests
             }
         }
 
+        [Test]
+        public void VisualCatalogContainsOnlyInspectedAuthoredStatesAndNoInventedBlink()
+        {
+            string[] expected =
+            {
+                "keiko_neutral", "keiko_surprised", "keiko_serious", "keiko_thoughtful", "keiko_uneasy",
+                "mina_neutral", "mina_happy", "mina_serious", "mina_surprised", "mina_reaching"
+            };
+
+            foreach (string id in expected)
+            {
+                Assert.That(VnCharacterVisualCatalog.TryResolve(id, out VnCharacterVisualState state), Is.True, id);
+                Assert.That(state.PortraitUv.width, Is.GreaterThan(0f), id);
+                Assert.That(state.PortraitUv.height, Is.GreaterThan(0f), id);
+                Assert.That(state.BodyUv.width, Is.GreaterThan(0f), id);
+                Assert.That(state.BodyUv.height, Is.GreaterThan(0f), id);
+            }
+
+            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko").HasBlinkState, Is.False,
+                "Keiko sheet inspection found no dedicated neutral blink cell; do not fake one.");
+            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina").HasBlinkState, Is.False,
+                "Mina's happy closed-eye portrait is a distinct expression, not a neutral blink frame.");
+        }
+
+        [Test]
+        public void UnknownExpressionFallsBackToTheInspectedNeutralForThatSpeaker()
+        {
+            VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_blink_not_authored", "Keiko");
+            VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_blink_not_authored", "Mina");
+            Assert.That(keiko.Id, Is.EqualTo("keiko_neutral"));
+            Assert.That(mina.Id, Is.EqualTo("mina_neutral"));
+        }
+
         private static float Luminance(Color color)
         {
             return color.r * .2126f + color.g * .7152f + color.b * .0722f;
