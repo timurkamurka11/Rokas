@@ -1,4 +1,4 @@
-# Task 8 rerun trigger after legacy direct-Home test setup adaptation.
+# Temporary Task 9 diagnostic harness. Delete after permanent CI is proven.
 name: ROKAS VN Intro Regression Temp
 
 on:
@@ -14,52 +14,17 @@ permissions:
   checks: write
 
 jobs:
-  full-editmode:
+  isolated-first-loop:
+    name: Isolated FirstLoop attempt ${{ matrix.attempt }}
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
-      - name: Run all EditMode tests
-        id: tests
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: 6000.3.19f1
-          cliVersion: v0.1.60
-          testMode: EditMode
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Regression Full EditMode
-          artifactsPath: artifacts-editmode
-      - name: Preserve evidence
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p verification
-          git rev-parse HEAD > verification/head.txt
-          git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/status.txt
-          git diff --check > verification/diff-check.txt
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: vn-regression-full-editmode-${{ github.sha }}
-          path: |
-            ${{ steps.tests.outputs.artifactsPath }}
-            verification
-          retention-days: 2
-          if-no-files-found: warn
-
-  full-playmode:
-    runs-on: ubuntu-latest
-    timeout-minutes: 55
-    steps:
-      - uses: actions/checkout@v7
-      - name: Run all PlayMode tests
+      - name: Run isolated FirstLoop regression
         id: tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -72,129 +37,14 @@ jobs:
           unityVersion: 6000.3.19f1
           cliVersion: v0.1.60
           testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Regression Full PlayMode
-          artifactsPath: artifacts-playmode
-      - name: Preserve evidence
-        if: always()
-        shell: bash
-        run: |
-          mkdir -p verification
-          git rev-parse HEAD > verification/head.txt
-          git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/status.txt
-          git diff --check > verification/diff-check.txt
+          checkName: FirstLoop Isolated ${{ matrix.attempt }}
+          artifactsPath: artifacts-first-loop-${{ matrix.attempt }}
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: vn-regression-full-playmode-${{ github.sha }}
-          path: |
-            ${{ steps.tests.outputs.artifactsPath }}
-            verification
-          retention-days: 2
-          if-no-files-found: warn
-
-  story-main-menu:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v7
-      - name: Run Story/Main Menu regressions
-        id: tests
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: 6000.3.19f1
-          cliVersion: v0.1.60
-          testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.StoryIntroMainMenuPlayModeTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Regression Story Main Menu
-          artifactsPath: artifacts-story
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: vn-regression-story-${{ github.sha }}
+          name: vn-first-loop-isolated-${{ matrix.attempt }}-${{ github.sha }}
           path: ${{ steps.tests.outputs.artifactsPath }}
           retention-days: 2
           if-no-files-found: warn
-
-  main-menu-transition:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v7
-      - name: Run Main Menu transition regressions
-        id: tests
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: 6000.3.19f1
-          cliVersion: v0.1.60
-          testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Regression Main Menu Transition
-          artifactsPath: artifacts-main-menu
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: vn-regression-main-menu-${{ github.sha }}
-          path: ${{ steps.tests.outputs.artifactsPath }}
-          retention-days: 2
-          if-no-files-found: warn
-
-  focused-vn:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v7
-      - name: Run focused VN PlayMode regressions
-        id: tests
-        uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-        with:
-          projectPath: .
-          unityVersion: 6000.3.19f1
-          cliVersion: v0.1.60
-          testMode: PlayMode
-          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Regression Focused VN
-          artifactsPath: artifacts-vn
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: vn-regression-focused-${{ github.sha }}
-          path: ${{ steps.tests.outputs.artifactsPath }}
-          retention-days: 2
-          if-no-files-found: warn
-
-  core:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-      - name: Diff check
-        run: git diff --check
-      - name: Core domain tests
-        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
-      - name: Validate assets and metas
-        run: python3 Tools/validate_assets.py
