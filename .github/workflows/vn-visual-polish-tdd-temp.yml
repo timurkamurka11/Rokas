@@ -1,0 +1,51 @@
+name: TEMP VN Visual Polish TDD
+
+on:
+  push:
+    branches:
+      - feature/vn-visual-polish-refs
+    paths:
+      - '.github/workflows/vn-visual-polish-tdd-temp.yml'
+      - 'Assets/Rokas/Scripts/Presentation/**'
+      - 'Assets/Rokas/Tests/PlayMode/VnIntroVisualLayoutPlayModeTests.cs'
+      - 'Assets/Rokas/Resources/VN/Intro/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  visual-layout-playmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run focused VN visual layout PlayMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroVisualLayoutPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: TEMP VN Visual Polish TDD
+          artifactsPath: artifacts-vn-visual-tdd
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-visual-tdd-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 3
