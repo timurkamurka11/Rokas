@@ -204,7 +204,7 @@ namespace Rokas.Presentation
 
         private void HandleVnLinePresented(string speaker, string text)
         {
-            vnIntroView?.ShowLine(speaker, text);
+            vnIntroView?.PresentLine(speaker, text);
         }
 
         private void ToggleVnMute()
@@ -214,14 +214,13 @@ namespace Rokas.Presentation
                 return;
             }
             sound.SetVnMuted(!sound.VnMuted);
-            vnIntroView?.SetMuted(sound.VnMuted);
         }
 
         private void ToggleVnPause()
         {
             vnIntroPaused = !vnIntroPaused;
             vnIntroController?.SetPaused(vnIntroPaused);
-            vnIntroView?.SetPaused(vnIntroPaused);
+            vnIntroView?.SetPausedVisual(vnIntroPaused);
         }
 
         private void DisposeVnIntroRuntime()
