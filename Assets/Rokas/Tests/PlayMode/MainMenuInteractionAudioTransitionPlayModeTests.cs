@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -123,6 +124,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn()
         {
+            MarkIntroCompleted();
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
             yield return WaitFor("RokasMainMenu", 2f);
@@ -163,6 +165,7 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator RealEnterWorldUsesApprovedPersistentSpecialAudioOnlyOnce()
         {
+            MarkIntroCompleted();
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
             yield return WaitFor("RokasMainMenu", 2f);
@@ -241,6 +244,12 @@ namespace Rokas.Tests
                 "Support must use the approved generic outside-Laptop ButtonClick.");
             Assert.That(Find("RokasMainMenu"), Is.Not.Null);
             Assert.That(Find("HomeTitle"), Is.Null);
+        }
+
+        private static void MarkIntroCompleted()
+        {
+            PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
+            PlayerPrefs.Save();
         }
 
         private void HideStoryMediaForDeterministicLinuxFallback()
@@ -333,6 +342,8 @@ namespace Rokas.Tests
         public IEnumerator Cleanup()
         {
             LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.Save();
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
 
