@@ -185,20 +185,11 @@ namespace Rokas.Presentation
                 throw new ArgumentException("Unknown VN intro panel style: " + state.PanelStyle, nameof(state));
             }
 
-            if (state.PortraitId == "keiko_neutral")
-            {
-                portrait.texture = art.KeikoCharacterSheet;
-                portrait.uvRect = KeikoNeutralCrop;
-            }
-            else if (state.PortraitId == "mina_neutral")
-            {
-                portrait.texture = art.MinaCharacterSheet;
-                portrait.uvRect = MinaNeutralCrop;
-            }
-            else
-            {
-                throw new ArgumentException("Unknown VN intro portrait id: " + state.PortraitId, nameof(state));
-            }
+            VnCharacterVisualState visualState = VnCharacterVisualCatalog.ResolveOrNeutral(state.PortraitId, state.Speaker);
+            portrait.texture = visualState.CharacterId.Equals("Mina", StringComparison.OrdinalIgnoreCase)
+                ? art.MinaCharacterSheet
+                : art.KeikoCharacterSheet;
+            portrait.uvRect = visualState.PortraitUv;
 
             speakerName.text = state.Speaker ?? string.Empty;
         }
