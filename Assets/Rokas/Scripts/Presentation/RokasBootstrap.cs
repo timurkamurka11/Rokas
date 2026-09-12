@@ -5,6 +5,7 @@ using Rokas.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Yarn.Unity;
 
 namespace Rokas.Presentation
 {
@@ -18,6 +19,11 @@ namespace Rokas.Presentation
         private RokasAudio sound;
         private SaveLoadResult initialLoad;
         private MainMenuView mainMenu;
+        private IVnIntroProgress vnIntroProgress;
+        private GameObject vnIntroRuntime;
+        private VnIntroView vnIntroView;
+        private VnIntroController vnIntroController;
+        private bool vnIntroPaused;
         private bool dirty;
         private bool saveBlocked;
         private bool focused = true;
@@ -78,6 +84,7 @@ namespace Rokas.Presentation
 
             Session = new GameSession(state, contract);
             previousPhase = state.phase;
+            vnIntroProgress = new PlayerPrefsVnIntroProgress();
             var cameraRoot = new GameObject("RokasCamera", typeof(Camera), typeof(AudioListener));
             cameraRoot.transform.SetParent(transform, false);
             var camera = cameraRoot.GetComponent<Camera>();
@@ -127,6 +134,16 @@ namespace Rokas.Presentation
             if (menu != null) menu.Dispose();
             yield return null;
 
+            if (vnIntroProgress != null && !vnIntroProgress.IsCompleted)
+            {
+                BuildVnIntro();
+                yield return null;
+                yield return FadeCurtain(curtain, 1f, 0f, .28f);
+                if (curtain) Destroy(curtain.gameObject);
+                enterWorldTransition = false;
+                yield break;
+            }
+
             startupPending = false;
             BuildPresentation();
             yield return null;
@@ -134,6 +151,102 @@ namespace Rokas.Presentation
             yield return FadeCurtain(curtain, 1f, 0f, .28f);
             if (curtain) Destroy(curtain.gameObject);
             enterWorldTransition = false;
+        }
+
+        private void BuildVnIntro()
+        {
+            if (vnIntroRuntime != null || vnIntroView != null)
+            {
+                return;
+            }
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            YarnProject project = Resources.Load<YarnProject>("VN/Intro/VnIntro");
+            if (!project)
+            {
+                throw new InvalidOperationException("ROKAS VN intro Yarn project is missing.");
+            }
+
+            vnIntroRuntime = new GameObject("VnIntroDialogueRuntime");
+            vnIntroRuntime.transform.SetParent(transform, false);
+            DialogueRunner runner = vnIntroRuntime.AddComponent<DialogueRunner>();
+            VnIntroDialoguePresenter presenter = vnIntroRuntime.AddComponent<VnIntroDialoguePresenter>();
+            vnIntroController = vnIntroRuntime.AddComponent<VnIntroController>();
+            vnIntroController.Configure(project, runner, presenter);
+
+            var art = new VnIntroArt(
+                assets.vnKeikoCharacterSheet,
+                assets.vnMinaCharacterSheet,
+                assets.vnBusStopRainNight,
+                assets.vnNightSkyRain,
+                assets.vnBusStopPhoneMessageMina,
+                assets.vnDialoguePanelKeikoDark,
+                assets.vnDialoguePanelMinaLight,
+                assets.vnIconMute,
+                assets.vnIconPause,
+                assets.vnIconSkip);
+
+            vnIntroView = VnIntroView.Create(transform, assets.sans, art,
+                () => { vnIntroController?.Continue(); },
+                ToggleVnMute,
+                ToggleVnPause,
+                () => { vnIntroController?.Skip(); });
+            vnIntroController.BeatChanged += HandleVnBeatChanged;
+            vnIntroController.LinePresented += HandleVnLinePresented;
+            vnIntroPaused = false;
+            _ = vnIntroController.StartIntro();
+        }
+
+        private void HandleVnBeatChanged(VnIntroBeatState beat)
+        {
+            vnIntroView?.ApplyBeat(beat);
+        }
+
+        private void HandleVnLinePresented(string speaker, string text)
+        {
+            vnIntroView?.ShowLine(speaker, text);
+        }
+
+        private void ToggleVnMute()
+        {
+            if (sound == null)
+            {
+                return;
+            }
+            sound.SetVnMuted(!sound.VnMuted);
+            vnIntroView?.SetMuted(sound.VnMuted);
+        }
+
+        private void ToggleVnPause()
+        {
+            vnIntroPaused = !vnIntroPaused;
+            vnIntroController?.SetPaused(vnIntroPaused);
+            vnIntroView?.SetPaused(vnIntroPaused);
+        }
+
+        private void DisposeVnIntroRuntime()
+        {
+            if (vnIntroController != null)
+            {
+                vnIntroController.BeatChanged -= HandleVnBeatChanged;
+                vnIntroController.LinePresented -= HandleVnLinePresented;
+            }
+            if (vnIntroView != null)
+            {
+                vnIntroView.Dispose();
+                vnIntroView = null;
+            }
+            if (vnIntroRuntime != null)
+            {
+                Destroy(vnIntroRuntime);
+                vnIntroRuntime = null;
+            }
+            vnIntroController = null;
+            vnIntroPaused = false;
+            if (sound != null && sound.VnMuted)
+            {
+                sound.SetVnMuted(false);
+            }
         }
 
         private CanvasGroup CreateEnterWorldCurtain()
@@ -288,6 +401,7 @@ namespace Rokas.Presentation
             if (dirty) SaveNow();
             if (Session != null) Session.Changed -= OnChanged;
             if (mainMenu != null) mainMenu.Dispose();
+            DisposeVnIntroRuntime();
             if (View != null) View.Dispose();
             if (sound != null) sound.Dispose();
         }
