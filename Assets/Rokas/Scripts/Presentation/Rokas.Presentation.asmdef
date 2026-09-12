@@ -5,6 +5,7 @@
     "Rokas.Core",
     "UnityEngine.UI",
     "UnityEngine.VideoModule",
+    "UnityEngine.ScreenCaptureModule",
     "Unity.TextMeshPro",
     "YarnSpinner.Unity"
   ],
