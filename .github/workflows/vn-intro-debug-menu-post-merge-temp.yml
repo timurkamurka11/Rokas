@@ -1,0 +1,74 @@
+name: ROKAS VN Intro Debug Menu Post-Merge Verification Temp
+
+on:
+  push:
+    branches:
+      - feature/vn-intro-debug-menu
+    paths:
+      - .github/workflows/vn-intro-debug-menu-post-merge-temp.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  debug-menu-editmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: integration/rokas-unified
+      - name: Verify merged integration SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "65f0943bc0fdccfa06808f9a882be8bfa8930781"
+          git status --porcelain --untracked-files=all
+      - name: Run VN debug menu EditMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.VnIntroDebugMenuTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Debug Menu Post-Merge EditMode
+          artifactsPath: artifacts-debug-menu-post-merge
+
+  vn-progress-editmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: integration/rokas-unified
+      - name: Verify merged integration SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "65f0943bc0fdccfa06808f9a882be8bfa8930781"
+          git status --porcelain --untracked-files=all
+      - name: Run existing VN progress EditMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Core.Tests.VnIntroProgressTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Progress Post-Merge EditMode
+          artifactsPath: artifacts-vn-progress-post-merge
