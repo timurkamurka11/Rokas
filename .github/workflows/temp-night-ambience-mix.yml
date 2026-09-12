@@ -36,7 +36,7 @@ jobs:
           ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 crowd.mp3 || true
           ffprobe -v error -show_entries format=filename,duration -of default=noprint_wrappers=1 horn.mp3 || true
 
-      - name: Mix 2 minute ROKAS night ambience
+      - name: Mix 2 minute ROKAS night ambience V2
         shell: bash
         run: |
           set -euo pipefail
@@ -45,40 +45,40 @@ jobs:
             -i city.mp3 \
             -i crowd.mp3 \
             -i horn.mp3 \
-            -filter_complex "[0:a]atrim=0:120,asetpts=PTS-STARTPTS,volume=0.95[city];[1:a]atrim=0:120,asetpts=PTS-STARTPTS,highpass=f=180,lowpass=f=3800,volume=0.13[crowd];[2:a]asetpts=PTS-STARTPTS,volume=0.28,asplit=3[h1][h2][h3];[h1]adelay=24000:all=1[dh1];[h2]adelay=69000:all=1[dh2];[h3]adelay=107000:all=1[dh3];[city][crowd][dh1][dh2][dh3]amix=inputs=5:duration=longest:dropout_transition=0:normalize=0,alimiter=limit=0.93,atrim=0:120[out]" \
+            -filter_complex "[0:a]atrim=0:120,asetpts=PTS-STARTPTS,volume=0.86[city];[1:a]atrim=0:120,asetpts=PTS-STARTPTS,highpass=f=120,lowpass=f=5600,volume=0.32[crowd];[2:a]asetpts=PTS-STARTPTS,volume=0.34,asplit=7[h1][h2][h3][h4][h5][h6][h7];[h1]adelay=13000:all=1[dh1];[h2]adelay=29000:all=1[dh2];[h3]adelay=45000:all=1[dh3];[h4]adelay=61000:all=1[dh4];[h5]adelay=79000:all=1[dh5];[h6]adelay=98000:all=1[dh6];[h7]adelay=114000:all=1[dh7];[city][crowd][dh1][dh2][dh3][dh4][dh5][dh6][dh7]amix=inputs=9:duration=longest:dropout_transition=0:normalize=0,alimiter=limit=0.93,atrim=0:120[out]" \
             -map "[out]" -ar 48000 -ac 2 -c:a pcm_s16le \
-            output/ROKAS_Night_City_Ambience_2min.wav
+            output/ROKAS_Night_City_Ambience_2min_V2.wav
 
           ffmpeg -hide_banner -y \
-            -i output/ROKAS_Night_City_Ambience_2min.wav \
+            -i output/ROKAS_Night_City_Ambience_2min_V2.wav \
             -c:a libmp3lame -b:a 192k \
-            -metadata title="ROKAS Night City Ambience" \
-            output/ROKAS_Night_City_Ambience_2min.mp3
+            -metadata title="ROKAS Night City Ambience V2" \
+            output/ROKAS_Night_City_Ambience_2min_V2.mp3
 
           cat > output/SOURCES_AND_MIX.txt <<'EOF'
-          ROKAS Night City Ambience — 2:00
+          ROKAS Night City Ambience V2 — 2:00
 
           Source effects (Mixkit):
           - Urban city ambience at night — Mixkit #2678
           - City downtown crowd ambience — Mixkit #361
           - Car double horn — Mixkit #719
 
-          Mix:
-          - Urban night/rain/city ambience = primary bed
-          - Downtown crowd = quiet, distant layer with reduced level and bandwidth
-          - Car double horn = subtle one-shot at approximately 00:24, 01:09, and 01:47
-          - Output = 48 kHz stereo WAV + 192 kbps MP3, exactly 2:00
+          V2 mix changes:
+          - Crowd voices raised substantially and given wider speech bandwidth so they are clearly audible but remain background ambience.
+          - City bed reduced slightly to make room for chatter.
+          - Car double horn increased from 3 to 7 appearances at ~00:13, 00:29, 00:45, 01:01, 01:19, 01:38, 01:54.
+          - Output = 48 kHz stereo WAV + 192 kbps MP3, 2:00.
 
           Check Mixkit licensing before distribution of the final game build.
           EOF
 
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min.wav
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min.mp3
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min_V2.wav
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output/ROKAS_Night_City_Ambience_2min_V2.mp3
 
       - name: Upload finished ambience
         uses: actions/upload-artifact@v4
         with:
-          name: ROKAS-Night-City-Ambience-2min
+          name: ROKAS-Night-City-Ambience-2min-V2
           path: output/
           if-no-files-found: error
           retention-days: 7
