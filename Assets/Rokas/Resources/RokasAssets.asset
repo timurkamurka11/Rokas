@@ -18,6 +18,16 @@ MonoBehaviour:
   subway: {fileID: 2800000, guid: 4b55f238fbc552188f3df7d5233f2991, type: 3}
   enemy: {fileID: 2800000, guid: 07ba00304df358ec8c2515ec4f2d3168, type: 3}
   familiar: {fileID: 2800000, guid: c2051ffeb7545b53b815fa043210af00, type: 3}
+  vnKeikoCharacterSheet: {fileID: 2800000, guid: 3b12ebbf615043e08930b9c5a8ea0729, type: 3}
+  vnMinaCharacterSheet: {fileID: 2800000, guid: e52662476ff8453398af0fdc67cd826b, type: 3}
+  vnBusStopRainNight: {fileID: 2800000, guid: 88761c34d7af479ea57efce7073ff8d4, type: 3}
+  vnNightSkyRain: {fileID: 2800000, guid: f1d5938f848445e4ad08dd5bae267331, type: 3}
+  vnBusStopPhoneMessageMina: {fileID: 2800000, guid: 9c2f79c3cced4cf8a053f688b23ef550, type: 3}
+  vnDialoguePanelKeikoDark: {fileID: 2800000, guid: 66e03e45e4f849e4a8471bc16d6aa83d, type: 3}
+  vnDialoguePanelMinaLight: {fileID: 2800000, guid: db6ce06f7a32417097fc2b2b6376c2d3, type: 3}
+  vnIconMute: {fileID: 2800000, guid: 2f5e850b083e492b98543042d08f4183, type: 3}
+  vnIconPause: {fileID: 2800000, guid: 822d84e02e9c4e6d852c326be3fa59af, type: 3}
+  vnIconSkip: {fileID: 2800000, guid: 1ad7baf7a6854af8877153bf25dee46a, type: 3}
   sans: {fileID: 12800000, guid: 0dc0bc9cd4cc5ac79bc0b3872399cda9, type: 3}
   serif: {fileID: 12800000, guid: 892cd5852cfe5641acf1657b28d04c33, type: 3}
   contract: {fileID: 4900000, guid: 0e3e4ead6ff256d79358e239c8c0cac4, type: 3}
