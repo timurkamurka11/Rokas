@@ -1,0 +1,65 @@
+name: ROKAS VN Intro TDD Temp
+
+on:
+  push:
+    branches:
+      - feature/vn-intro-yarn-flow
+    paths:
+      - .github/workflows/vn-intro-tdd-temp.yml
+      - Assets/Rokas/Resources/VN/**
+      - Assets/Rokas/Scripts/Presentation/VnIntro*.cs
+      - Assets/Rokas/Tests/EditMode/VnIntroProgressTests.cs
+      - Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs
+      - Assets/Rokas/Scripts/Presentation/RokasAssets.cs
+      - Assets/Rokas/Resources/RokasAssets.asset
+      - Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs
+      - Assets/Rokas/Tests/PlayMode/StoryIntroMainMenuPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/MainMenuInteractionAudioTransitionPlayModeTests.cs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  focused-editmode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run focused VN EditMode tests
+        id: editmode
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.VnIntroProgressTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Intro Focused EditMode
+          artifactsPath: artifacts-editmode
+      - name: Preserve EditMode evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/status.txt
+          if [ -f artifacts-editmode/editmode-results.xml ]; then cp artifacts-editmode/editmode-results.xml verification/editmode-results.xml; fi
+      - name: Upload EditMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-intro-editmode-${{ github.sha }}
+          path: |
+            ${{ steps.editmode.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
