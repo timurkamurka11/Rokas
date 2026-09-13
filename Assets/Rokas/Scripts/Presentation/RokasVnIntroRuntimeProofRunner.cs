@@ -180,13 +180,7 @@ namespace Rokas.Presentation
             GameObject vnRoot = GameObject.Find("VnIntroRoot");
             yield return WaitFor(() => HasBackground(vnRoot, "VN_BusStop_Rain_Night") && HasNonEmptyLine(vnRoot), UiTimeoutSeconds);
             evidence.busFrame = waitSucceeded;
-            evidence.vnUiPresent = HasDirectChild(vnRoot, "DialoguePanel") &&
-                                   HasDirectChild(vnRoot, "Portrait") &&
-                                   HasDirectChild(vnRoot, "SpeakerName") &&
-                                   HasDirectChild(vnRoot, "DialogueText") &&
-                                   HasDirectChild(vnRoot, "MuteButton") &&
-                                   HasDirectChild(vnRoot, "PauseButton") &&
-                                   HasDirectChild(vnRoot, "SkipButton");
+            evidence.vnUiPresent = HasRequiredVnUi(vnRoot);
             if (!evidence.busFrame || !evidence.vnUiPresent)
             {
                 evidence.error = "Initial VN bus-stop beat or required VN UI was missing.";
@@ -350,8 +344,7 @@ namespace Rokas.Presentation
 
         private static bool ClickNamedButton(GameObject? root, string childName)
         {
-            if (!root) return false;
-            Transform? child = root.transform.Find(childName);
+            Transform? child = FindDescendant(root, childName);
             Button? button = child ? child.GetComponent<Button>() : null;
             if (!button) return false;
             button.onClick.Invoke();
@@ -363,9 +356,30 @@ namespace Rokas.Presentation
             return ClickNamedButton(root, childName);
         }
 
-        private static bool HasDirectChild(GameObject root, string name)
+        public static bool HasRequiredVnUi(GameObject root)
         {
-            return root && root.transform.Find(name) != null;
+            if (!root) return false;
+            return FindDescendant(root, "DialoguePanel") != null &&
+                   FindDescendant(root, "Portrait") != null &&
+                   FindDescendant(root, "SpeakerName") != null &&
+                   FindDescendant(root, "DialogueText") != null &&
+                   FindDescendant(root, "MuteButton") != null &&
+                   FindDescendant(root, "PauseButton") != null &&
+                   FindDescendant(root, "SkipButton") != null &&
+                   FindDescendant(root, "BackButton") != null &&
+                   FindDescendant(root, "NextButton") != null;
+        }
+
+        private static Transform? FindDescendant(GameObject? root, string name)
+        {
+            if (!root) return null;
+            Transform[] descendants = root.GetComponentsInChildren<Transform>(true);
+            foreach (Transform descendant in descendants)
+            {
+                if (string.Equals(descendant.name, name, StringComparison.Ordinal))
+                    return descendant;
+            }
+            return null;
         }
 
         private static bool HasBackground(GameObject root, string expectedTextureName)
@@ -388,8 +402,7 @@ namespace Rokas.Presentation
 
         private static string DirectText(GameObject root, string childName)
         {
-            if (!root) return string.Empty;
-            Transform? child = root.transform.Find(childName);
+            Transform? child = FindDescendant(root, childName);
             Text? text = child ? child.GetComponent<Text>() : null;
             return text ? text.text : string.Empty;
         }
