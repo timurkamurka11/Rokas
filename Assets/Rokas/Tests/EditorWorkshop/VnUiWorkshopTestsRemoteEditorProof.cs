@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
+using Rokas.Presentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,6 +21,9 @@ namespace Rokas.EditorTools.Tests
             Assert.That(window.PreviewResolution, Is.EqualTo(VnWorkshopResolution.Reference1920x1080));
             Assert.That(window.ComparisonView, Is.EqualTo(VnWorkshopComparisonView.Current));
 
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+
             string variantName = "CI_RemoteProof_" + Guid.NewGuid().ToString("N");
             VnPresentationWorkshopWindow reloaded = null;
 
@@ -27,19 +31,26 @@ namespace Rokas.EditorTools.Tests
             {
                 window.PreviewScene = VnWorkshopPreviewScene.PhoneMessage;
                 window.PreviewResolution = VnWorkshopResolution.Wide1280x720;
-                VnWorkshopPreviewFrame wide = window.BuildPreviewFrame();
-                Assert.That(wide.ScreenSize, Is.EqualTo(new Vector2(1280f, 720f)));
-                Assert.That(wide.BackgroundTexture, Is.Not.Null);
-                Assert.That(wide.DialoguePanelTexture, Is.Not.Null);
-                Assert.That(wide.Font, Is.Not.Null);
-                Assert.That(wide.MinaTexture, Is.Not.Null);
-                Assert.That(wide.ShowMina, Is.True);
+                VnWorkshopPreviewFrame widePhone = window.BuildPreviewFrame();
+                Assert.That(widePhone.ScreenSize, Is.EqualTo(new Vector2(1280f, 720f)));
+                Assert.That(widePhone.BackgroundTexture, Is.SameAs(assets.vnBusStopPhoneMessageMina));
+                Assert.That(widePhone.DialoguePanelTexture, Is.SameAs(assets.vnDialoguePanelMinaLight));
+                Assert.That(widePhone.Font, Is.SameAs(assets.sans));
+                Assert.That(widePhone.MinaTexture, Is.SameAs(assets.vnMinaCharacterSheet));
+                Assert.That(widePhone.ShowMina, Is.False,
+                    "PhoneMessage is an authored full-frame Mina scene and must not double-draw the character layer.");
+
+                window.PreviewScene = VnWorkshopPreviewScene.MinaBody;
+                VnWorkshopPreviewFrame wideMina = window.BuildPreviewFrame();
+                Assert.That(wideMina.ShowMina, Is.True);
+                Assert.That(wideMina.MinaTexture, Is.SameAs(assets.vnMinaCharacterSheet));
 
                 window.PreviewResolution = VnWorkshopResolution.FourThree1024x768;
                 VnWorkshopPreviewFrame fourThree = window.BuildPreviewFrame();
                 Assert.That(fourThree.ScreenSize, Is.EqualTo(new Vector2(1024f, 768f)));
-                Assert.That(fourThree.BackgroundTexture, Is.SameAs(wide.BackgroundTexture));
-                Assert.That(fourThree.DialoguePanelTexture, Is.SameAs(wide.DialoguePanelTexture));
+                Assert.That(fourThree.BackgroundTexture, Is.SameAs(assets.vnBusStopRainNight));
+                Assert.That(fourThree.DialoguePanelTexture, Is.SameAs(assets.vnDialoguePanelMinaLight));
+                Assert.That(fourThree.ShowMina, Is.True);
 
                 VnPresentationWorkshopEditing.SetPositionDelta(
                     window.CurrentPreset, VnWorkshopElement.MinaBody, new Vector2(14f, -6f));
