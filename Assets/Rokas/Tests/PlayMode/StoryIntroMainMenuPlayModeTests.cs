@@ -85,6 +85,7 @@ namespace Rokas.Tests
         {
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return FinishStartupOnDecoderHost(boot);
             yield return WaitFor("RokasMainMenu", 1.5f);
 
             Assert.That(Find("HomeTitle"), Is.Null,
@@ -135,6 +136,7 @@ namespace Rokas.Tests
         {
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return FinishStartupOnDecoderHost(boot);
             yield return WaitFor("RokasMainMenu", 1.5f);
 
             Press("EnterWorldButton");
@@ -192,6 +194,22 @@ namespace Rokas.Tests
             LogAssert.ignoreFailingMessages = true;
             root = new GameObject("StoryIntroMainMenuFixture");
             return root.AddComponent<RokasBootstrap>();
+        }
+
+        private IEnumerator FinishStartupOnDecoderHost(RokasBootstrap boot)
+        {
+            // A working Windows decoder plays the real preview instead of taking Linux's fallback.
+            // Finish through the public skip gate once a frame exists; retain fallback coverage.
+            float deadline = Time.realtimeSinceStartup + 8f;
+            while (Find("RokasMainMenu") == null && Time.realtimeSinceStartup < deadline)
+            {
+                if (boot.VideoPresenter != null && boot.VideoPresenter.FirstFramePresented)
+                {
+                    boot.VideoPresenter.Skip();
+                    break;
+                }
+                yield return null;
+            }
         }
 
         private IEnumerator WaitFor(string objectName, float seconds)

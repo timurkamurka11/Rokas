@@ -124,7 +124,8 @@ namespace Rokas.Tests
             Assert.That(Find("HomeTitle"), Is.Null);
 
             Press("EnterWorldButton");
-            yield return null;
+            float homeDeadline = Time.realtimeSinceStartup + 2f;
+            while (boot.View == null && Time.realtimeSinceStartup < homeDeadline) yield return null;
 
             Assert.That(boot.View, Is.Not.Null);
             Assert.That(Find("HomeTitle"), Is.Not.Null);
