@@ -10,7 +10,11 @@ namespace Rokas.Core.Tests
             "SeparateEntry", "ExclusiveOwner", "LaneTransition", "HeldRepeatBounds", "QueueOne", "SimultaneousNeutral",
             "HeavyLocksLane", "AvoidHeavy", "StepHasNoImmunity", "OneContact", "RecoveryWindow", "FreshCounterOnly",
             "WindowEdges", "WeaponCounter", "SealNextCounter", "ReserveSpend", "ReserveCancel", "PauseFocus",
-            "Backlog", "AccumulatedBacklog", "FixedClock", "ReloadKnownState", "VictoryPayment", "DeathRetry"
+            "Backlog", "AccumulatedBacklog", "FixedClock", "ReloadKnownState", "VictoryPayment", "DeathRetry",
+            "DodgeStationary", "PracticeGate", "MixedPatterns", "WaveAllLanes", "WaveStepCannotEvade",
+            "DodgeDirectional", "DodgeBounds", "DodgeCooldown", "EmptyDodge", "PerfectContact",
+            "PerfectBoundary", "DodgeImmunityBoundary", "DodgeOncePerAttack", "DodgeHeavyContact",
+            "DodgeHeavyEmptyLane", "DodgeCancellation", "PerfectSealToken", "WaveFreshCounter"
         };
         public static void Run(string name) { typeof(Combat3Phase0Cases).GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null); }
         private static void Need(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
@@ -19,10 +23,11 @@ namespace Rokas.Core.Tests
         private static object Call(object o, string name, params object[] args) { var m = o.GetType().GetMethod(name); Need(m != null, "Missing C3 behavior: " + name); return m.Invoke(o, args); }
         private static T Read<T>(object o, string name) { var p = o.GetType().GetProperty(name); Need(p != null, "Missing C3 state: " + name); return (T)p.GetValue(o, null); }
         private static object Arena(GameSession s) { return Read<object>(s.Combat, "Combat3"); }
-        private static GameSession Fight(float enemyHealth = 10000, int weapon = 1, float damage = 8)
+        private static GameSession Fight(float enemyHealth = 10000, int weapon = 1, float damage = 8, bool mixed = false)
         {
             var s = new GameSession(new SaveData { weaponLevel = weapon }, new ContractDefinition { enemyHealth = enemyHealth, enemyDamage = damage });
-            s.AcceptContract(); s.LeaveHome(); Need((bool)Call(s, "EnterCombat3Review"), "Review portal starts encounter"); return s;
+            s.AcceptContract(); s.LeaveHome();
+            Need(mixed ? s.EnterCombat3Review() : s.EnterCombat3Practice(Combat3Practice.Heavy), "Selected review practice starts encounter"); return s;
         }
         private static void Input(GameSession s, bool left = false, bool right = false, bool attack = false) { Call(s, "SetCombat3Input", left, right, attack); }
         private static void Frames(GameSession s, int count) { for (int i = 0; i < count; i++) s.Tick(1f / 60); }
@@ -44,7 +49,7 @@ namespace Rokas.Core.Tests
         }
         private static void ExclusiveOwner()
         {
-            var s = Fight(); Need(!s.ClickAttack(false) && !s.BeginAttack() && !s.Dodge() && !s.Deflect() && !s.TraceRitualPoint(0), "C2 actions cannot bypass C3");
+            var s = Fight(); Need(!s.ClickAttack(false) && !s.BeginAttack() && !s.Deflect() && !s.TraceRitualPoint(0), "C2 actions cannot bypass C3");
             float enemy = s.State.enemyHp; Frames(s, 600); Near(enemy, s.State.enemyHp, "Idle has no enemy damage");
         }
         private static void LaneTransition()
@@ -151,6 +156,154 @@ namespace Rokas.Core.Tests
         {
             var s = Fight(damage: 100); Until(s, "Active"); Frames(s, 1); Need(s.State.phase == RunPhase.Failed, "Shared player HP death"); Need(s.ReturnHome() && !s.ClaimPayment(), "Death never pays");
             s.AcceptContract(); s.LeaveHome(); s.EnterPortal(); Need(Arena(s) == null && s.ClickAttack(false), "Normal retry restores C2 driver");
+        }
+
+        private static GameSession Practice(string kind)
+        {
+            var s = new GameSession(new SaveData(), new ContractDefinition { enemyHealth = 10000, enemyDamage = 8 });
+            s.AcceptContract(); s.LeaveHome();
+            var method = typeof(GameSession).GetMethod("EnterCombat3Practice");
+            Need(method != null, "Missing C3 practice entry");
+            var selection = Enum.Parse(method.GetParameters()[0].ParameterType, kind);
+            Need((bool)method.Invoke(s, new[] { selection }), "Practice enters same combat owner");
+            return s;
+        }
+        private static void DodgeStationary()
+        {
+            var s = Fight(); Need(s.Dodge(), "Fresh RMB starts C3 stationary dodge"); Frames(s, 8);
+            Near(2, Read<float>(Arena(s), "LanePosition"), "No direction leaves player in lane");
+            Near(10000, s.State.enemyHp, "Dodge never causes enemy damage");
+        }
+        private static void PracticeGate()
+        {
+            var s = new GameSession(new SaveData(), new ContractDefinition());
+            var method = typeof(GameSession).GetMethod("EnterCombat3Practice"); Need(method != null, "Missing C3 practice entry");
+            var wave = Enum.Parse(method.GetParameters()[0].ParameterType, "LowWave");
+            Need(!(bool)method.Invoke(s, new[] { wave }), "Practice cannot bypass contract from Home");
+            s.AcceptContract(); s.LeaveHome();
+            var invalid = Enum.ToObject(method.GetParameters()[0].ParameterType, 99);
+            Need(!(bool)method.Invoke(s, new[] { invalid }), "Unknown practice rejected before starting combat");
+            Need(s.State.phase == RunPhase.Portal, "Rejected selection preserves portal");
+        }
+        private static void MixedPatterns()
+        {
+            var s = Fight(mixed: true); int first = Read<int>(Arena(s), "AttackId");
+            Need(Read<string>(Arena(s), "AttackKindName") == "Heavy", "Review starts readable heavy");
+            Evade(s); Until(s, "CounterWindow"); Until(s, "Telegraph");
+            Need(Read<string>(Arena(s), "AttackKindName") == "LowWave", "Review includes second family");
+            Need(Read<int>(Arena(s), "AttackId") > first, "Mixed attack IDs remain unique");
+            Until(s, "CounterWindow"); Until(s, "Telegraph");
+            Need(Read<string>(Arena(s), "AttackKindName") == "Heavy", "Mixed pattern returns to heavy");
+        }
+        private static void WaveAllLanes()
+        {
+            for (int lane = 0; lane < 5; lane++)
+            {
+                var s = Practice("LowWave");
+                while (Read<int>(Arena(s), "Lane") != lane) { Input(s, left: lane < 2, right: lane > 2); Frames(s, 8); Input(s); }
+                Until(s, "Recovery"); Near(92, s.State.playerHp, "Wave contacts lane " + lane);
+            }
+        }
+        private static void WaveStepCannotEvade()
+        {
+            var s = Practice("LowWave"); Until(s, "Active"); Input(s, right: true); Frames(s, 1);
+            Near(92, s.State.playerHp, "Ordinary movement offers no immunity from all-lane wave");
+        }
+        private static void DodgeDirectional()
+        {
+            foreach (bool left in new[] { true, false })
+            {
+                var s = Fight(); Input(s, left: left, right: !left); Need(s.Dodge(), "Directional dodge accepted"); Input(s); Frames(s, 20);
+                Near(left ? 1 : 3, Read<float>(Arena(s), "LanePosition"), "Dodge consumes sampled direction once without queued extra step");
+            }
+            var neutral = Fight(); Input(neutral, left: true, right: true); Need(neutral.Dodge(), "Opposed direction dodge accepted"); Frames(neutral, 8);
+            Near(2, Read<float>(Arena(neutral), "LanePosition"), "Opposed directions dodge stationary");
+        }
+        private static void DodgeBounds()
+        {
+            foreach (bool left in new[] { true, false })
+            {
+                var s = Fight(); Input(s, left: left, right: !left); Frames(s, 32); Need(s.Dodge(), "Outward dodge at boundary still grants defense"); Input(s); Frames(s, 8);
+                Near(left ? 0 : 4, Read<float>(Arena(s), "LanePosition"), "Dodge clamps arena boundary");
+            }
+        }
+        private static void DodgeCooldown()
+        {
+            var s = Fight(); Need(s.Dodge(), "First dodge accepted"); Near(.55f, s.Combat.DefenseCooldownRemaining, "Shared cooldown starts on down");
+            Need(!s.Dodge() && !s.Deflect(), "No repeat or C2 defense bypass during cooldown"); Frames(s, 32);
+            Need(!s.Dodge(), "Cooldown rejects at0.5333"); Frames(s, 1); Need(s.Dodge(), "Cooldown rearms at0.55");
+        }
+        private static void EmptyDodge()
+        {
+            var s = Fight(); Need(s.Dodge(), "Empty dodge starts"); Frames(s, 12);
+            Near(0, Read<float>(Arena(s), "DodgeRemaining"), "Dodge has expired");
+            Near(100, s.Combat.Seal, "Empty dodge never reduces Seal"); Near(0, s.Combat.Resonance, "Empty dodge never grants resonance");
+            Need(!Read<bool>(Arena(s), "LastPerfect"), "Empty dodge is not Perfect");
+        }
+        private static void PerfectContact()
+        {
+            var s = Practice("LowWave"); int hits = 0; s.Combat.Hit += h => { if (!h.targetIsEnemy) hits++; };
+            Until(s, "Active"); Need(s.Dodge(), "Same-step fresh dodge accepted before contact"); Frames(s, 1);
+            Near(100, s.State.playerHp, "Dodge prevents actual wave contact"); Need(hits == 0, "Prevented contact emits no damage event");
+            Near(92, s.Combat.Seal, "Perfect uses shared Seal minus8"); Near(8, s.Combat.Resonance, "Perfect uses shared Resonance plus8");
+            Need(Read<bool>(Arena(s), "LastPerfect") && Read<float>(Arena(s), "PerfectFeedbackRemaining") > 0, "Actual Perfect has feedback");
+        }
+        private static void PerfectBoundary()
+        {
+            var early = Practice("LowWave"); Frames(early, 50); Need(early.Dodge(), "Dodge before contact"); Until(early, "Recovery");
+            Near(100, early.State.playerHp, "Contact at0.0667 is prevented"); Near(8, early.Combat.Resonance, "First0.08 yields Perfect");
+            var normal = Practice("LowWave"); Frames(normal, 49); Need(normal.Dodge(), "Earlier dodge starts"); Until(normal, "Recovery");
+            Near(100, normal.State.playerHp, "Contact at0.0833 still dodged"); Near(0, normal.Combat.Resonance, "After0.08 grants no Perfect"); Near(100, normal.Combat.Seal, "Normal dodge grants no Seal reward");
+        }
+        private static void DodgeImmunityBoundary()
+        {
+            var inside = Practice("LowWave"); Frames(inside, 44); Need(inside.Dodge(), "Dodge before wave"); Until(inside, "Recovery"); Near(100, inside.State.playerHp, "Contact at0.1667 is inside0.18");
+            var outside = Practice("LowWave"); Frames(outside, 43); Need(outside.Dodge(), "Early dodge before wave"); Until(outside, "Recovery"); Near(92, outside.State.playerHp, "Contact at0.1833 is outside0.18");
+        }
+        private static void DodgeOncePerAttack()
+        {
+            var s = Practice("LowWave"); Until(s, "Active"); s.Dodge(); Until(s, "CounterWindow");
+            Near(8, s.Combat.Resonance, "Repeated overlap rewards once per attack/dodge"); Near(92, s.Combat.Seal, "One Seal reward");
+            Until(s, "Telegraph"); Until(s, "Active"); s.Dodge(); Until(s, "CounterWindow");
+            Near(16, s.Combat.Resonance, "New attack and fresh dodge can reward again"); Near(84, s.Combat.Seal, "Next instance has independent reward");
+        }
+        private static void DodgeHeavyContact()
+        {
+            var s = Fight(); Until(s, "Active"); Need(s.Dodge(), "Heavy can be dodged"); Until(s, "CounterWindow");
+            Near(100, s.State.playerHp, "Heavy collision prevented"); Near(8, s.Combat.Resonance, "Actual heavy contact can be Perfect");
+        }
+        private static void DodgeHeavyEmptyLane()
+        {
+            var s = Fight(); Evade(s); Until(s, "Active"); Need(s.Dodge(), "Dodge outside heavy lane"); Until(s, "CounterWindow");
+            Near(100, s.State.playerHp, "Heavy avoided by positioning"); Near(0, s.Combat.Resonance, "No contact means no Perfect even during active heavy");
+        }
+        private static void DodgeCancellation()
+        {
+            for (int mode = 0; mode < 4; mode++)
+            {
+                var s = Practice("LowWave"); Until(s, "Active"); Need(s.Dodge(), "Dodge accepted before interruption");
+                if (mode == 0) { Call(s, "SetCombat3Paused", true); Need(!s.Dodge(), "Paused dodge rejected"); Call(s, "SetCombat3Paused", false); }
+                if (mode == 1) { Call(s, "SetCombat3Focused", false); Need(!s.Dodge(), "Unfocused dodge rejected"); Call(s, "SetCombat3Focused", true); }
+                if (mode == 2) s.Tick(.101f);
+                if (mode == 3) s.CancelCombatInput();
+                Near(0, Read<float>(Arena(s), "DodgeRemaining"), "Interruption clears active/queued defense");
+                if (mode != 3) { Need(!s.Dodge(), "Read delay rejects dodge"); Frames(s, 36); }
+                Frames(s, 1); Near(92, s.State.playerHp, "No stale dodge prevents resumed contact"); Near(0, s.Combat.Resonance, "No cancelled Perfect reward");
+            }
+        }
+        private static void PerfectSealToken()
+        {
+            var s = Practice("LowWave");
+            for (int i = 0; i < 13; i++) { Until(s, "Active"); Need(s.Dodge(), "Each wave can be dodged"); Until(s, "CounterWindow"); if (i < 12) Until(s, "Telegraph"); }
+            Near(0, s.Combat.Seal, "Perfect clamps shared Seal at zero"); Near(100, s.Combat.Resonance, "Perfect clamps shared resonance at100");
+            Need(s.Combat.SealBonusPending, "Perfect break creates same next-counter token");
+            Input(s, attack: true); Frames(s, 1); Near(9985.6f, s.State.enemyHp, "Counter consumes Perfect-earned60percent token"); Near(100, s.Combat.Seal, "Token consumed once and Seal reset");
+        }
+        private static void WaveFreshCounter()
+        {
+            var s = Practice("LowWave"); Input(s, attack: true); Until(s, "Active"); s.Dodge(); Until(s, "CounterWindow"); Frames(s, 1);
+            Near(10000, s.State.enemyHp, "Dodge cannot rearm held LMB"); Input(s); Input(s, attack: true); Frames(s, 1);
+            Near(9991, s.State.enemyHp, "Fresh wave counter uses shared damage"); Near(67, s.Combat.Seal, "Perfect and counter share Seal"); Near(18, s.Combat.Resonance, "Perfect and counter share resonance");
         }
     }
 }

@@ -1,11 +1,11 @@
 # Combat 3 Phase 0 continuation
 
-Updated: 2026-09-13 01:58 UTC. 0A is verified; full Phase 0 is NOT complete.
+Updated: 2026-09-13 10:43 UTC. 0A and 0B verified; full Phase 0 is NOT complete.
 
 ## Identity and safety
 
 - Feature: `codex/combat3-phase0`, worktree `D:/Rokas/Rokas/.worktrees/combat3-phase0`.
-- Selected baseline: `09994586c3004473706e15a900ebd54ad67c1f2e` (VERIFIED MAIN MENU INTERACTION + AUDIO + HOME TRANSITION CHECKPOINT). Startup fixture correction committed as `aa1fe6d`; 0A feature checkpoint follows. Recover actual HEAD using git log, never reset to the baseline.
+- Selected baseline: `09994586c3004473706e15a900ebd54ad67c1f2e` (VERIFIED MAIN MENU INTERACTION + AUDIO + HOME TRANSITION CHECKPOINT). Startup fixture correction `aa1fe6d`; verified 0A checkpoint `db5e4d7fa9e18ec2e21e1c4b16bc0a186e3ec560`. Recover actual HEAD using git log, never reset to the baseline.
 - Baseline tree: `a05ec6ff5e515f09407687c55bb948e4c9f0a946`.
 - Canonical local/remote integration at recovery: `6881911867302dd2308d01d6eaca1369428ed739`, tree `545e5e6b8a79b0a39a68ecd1acfc40f0d181b7aa`. Later VN work deliberately excluded from the explicitly verified source; preserved in canonical and preview trees.
 - No existing Combat 3 branch, worktree, commits, handoff, or verification jobs were found. Created this isolated worktree only after checking refs/worktrees.
@@ -17,14 +17,14 @@ Updated: 2026-09-13 01:58 UTC. 0A is verified; full Phase 0 is NOT complete.
 
 - Accepted source: `C:/Users/tim/.codex/visualizations/2026/09/10/01a08ac0-162d-7e12-afb6-f01b5747ef5d/combat3-study/ROKAS-Combat-3-Design-Study.md`.
 - Exact Phase 0 request: `C:/Users/tim/.codex/attachments/eb918f30-cf5d-4523-99e7-825d5ac221d0/pasted-text.txt`.
-- Latest continuation: `C:/Users/tim/.codex/attachments/bf54d68b-bf73-4873-b420-542bd4ac1d36/pasted-text.txt`. Confirms the chosen baseline, existing work, no repeat baseline RCA and no integration.
+- Latest continuation: `C:/Users/tim/.codex/attachments/bf8e00e7-226f-40eb-ba80-58ae10068594/pasted-text.txt`. Confirms the chosen baseline, existing work, no repeat baseline RCA and no integration.
 - These materials were read. Do not reread the full study/video or create a new design.
 - Only 0A heavy/lane/counter → verified runtime gate → 0B low wave/dodge → verified gate → 0C projectile/deflect → verified gate → 0D locked ink/residual → complete verification.
 - Shared CombatService/GameSession remains sole HP/result/economy owner. Separate gated Combat 3 review entry; Combat 2 preserved. No production art or second combat framework.
 
 ## Progress / evidence
 
-- Recovery and 0A complete. 0B is next; 0C–0D wait for earlier gates. Implementation checklist: `Docs/Superpowers/plans/2026-09-12-combat3-phase0.md`.
+- Recovery, 0A and 0B implementation complete. Save verified 0B checkpoint, then 0C; 0D waits for 0C gate. Implementation checklist: `Docs/Superpowers/plans/2026-09-12-combat3-phase0.md`.
 - Evidence/tooling directory: `D:/Rokas/combat3-phase0-evidence`.
 - Portable test runner adapted from existing `D:/Rokas/combat2-tools/run-tests.mjs`; commands use `node D:/Rokas/combat3-phase0-evidence/run-baseline.mjs core|editmode|playmode`.
 - Core baseline: exit 0, all existing domain suites, 23 Combat 2 scenarios and four original requirements pass. `baseline-core-runner.log`.
@@ -38,14 +38,20 @@ Updated: 2026-09-13 01:58 UTC. 0A is verified; full Phase 0 is NOT complete.
 - Runtime visuals inspected in `visuals-0a` and captured fresh in `visuals-0a-final`: visible five lanes, locked heavy telegraph, lane move avoids hit, staying reduces HP100→92 while window still opens, fresh pointer counter enemyHP180→171/Seal100→75/Resonance0→10. No final art; fixed proxy pool, existing uGUI/MissionView/Bootstrap and shared economy remain.
 - Literal `git diff --check`: exit0, empty stdout/stderr after normalizing only owned text files to repository CRLF. `0a-diff-check.log`. Unity .meta GUIDs preserved; only new C3 metadata included in feature commit; generated project settings/package lock/video metadata left untracked.
 - Initial Core launch did not execute .NET because copied runner accidentally changed the tools directory. Confirmed missing executable, corrected only that path, rerun passed. No production fix or test change.
-- No0B wave/dodge, no0C projectile/deflect, no0D ink/full6–10second composition yet. Do not claim full Phase0 complete.
+- 0B domain RED18 then GREEN42 C3, preserving all23 C2 and other Core suites: `0b-red-01.log`, `0b-green-01.log`, `0b-domain-report.md`.
+- 0B runtime fixes were sequential, each focused RED then GREEN: RMB route/Perfect HUD (`0b-dash-red2`/`0b-dash-green2`); wave proxy/cue (`0b-wave-red2`/`0b-wave-green2`); arena-only LMB (`0b-pointer-red2`/`0b-pointer-green2`); practice portal (`0b-practice-red2`/`0b-practice-green2`).
+- Review found pointer/raw direction order and active wave warning jump. Added actual regression tests: `0b-order-red` then `0b-order-green5`; `0b-wave-position-red` then `0b-wave-position-green`. Initial attempt to resample domain queued direction broke existing DodgeDirectional; reverted. Final fix queues/merges RMB in presentation and flushes after direction sample before domain Tick; domain capture semantics preserved.
+- 0B final gate: `run-check.py core 0b-core-final5` exit0/all suites/42 C3+23 C2; `run-check.py editmode 0b-edit-final6` 76 passed; `run-check.py playmode 0b-play-final6 Rokas.Tests capture` 104 passed. Earlier gate76/101 also green before two review regressions were added. `0b-play-final3` selected an invalid filter and ran0 tests: NOT verification evidence.
+- Current presentation captures: `visuals-0b-play-final6`. Five-lane wave warning, dodge lift/HP preservation, empty dodge no reward and Perfect Seal92/R8 inspected. Validator25 vs tracked baseline27, no added findings; two Unity-generated video metas explain difference.
+- Final review also reproduced a rejected raw RMB replay by the pointer duplicate after cooldown expiry: `0b-duplicate-red` then `0b-duplicate-green`. Raw/pointer frame stamps deduplicate both event orders; cancellation preserves stamps.
+- No0C projectile/deflect or0D ink/full6–10second composition yet. Do not claim full Phase0 complete.
 
 ## Exact next operation
 
-Save the reviewed 0A feature checkpoint, then add 0B RED tests for low wave and RMB dodge/perfect timing using the same Combat3Encounter. Continue sequentially; do not merge newer VN work or integrate this branch.
+Record verified 0B checkpoint after final review/diff check, then implement 0C using the same encounter: projectile/Space0.14/shared0.55, resolve only actual colliding attack ID and preserve siblings. No integration, VN merge or push. Domain agent0B finished.
 
 ## Tool recovery
 
-Default PowerShell fails CET on this host. `exec_command` with `shell: cmd.exe`, `login: false`, `tty: true` works. Python 3.14 is `C:/Python314/python.exe`; use subprocess argument arrays and hidden processes for runners. Unity is `D:/BOT/6000.3.19f1/Editor/Unity.exe`; .NET is `D:/Rokas/combat2-tools/dotnet-8.0.424/dotnet.exe`.
+Default PowerShell fails CET on this host. `exec_command` with `shell: cmd.exe`, `login: false`, without `tty` works. Old Python REPL sessions are unusable; create external .py helpers and execute by path. Python 3.14 is `C:/Python314/python.exe`; use subprocess argument arrays and hidden processes for runners. Unity is `D:/BOT/6000.3.19f1/Editor/Unity.exe`; .NET is `D:/Rokas/combat2-tools/dotnet-8.0.424/dotnet.exe`.
 
 Preserve evidence; update this file after each verified gate and before stopping. Record exact commands/results, changed files, current problem, and one next step. No stale success claims.

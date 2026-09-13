@@ -30,6 +30,7 @@ namespace Rokas.Presentation
         private readonly Text attackCue;
         private readonly Text counterCue;
         private readonly Text bonusCue;
+        private readonly Text defenseCue;
         private readonly Combat3InputSurface input;
         private float playerHit;
         private float enemyHit;
@@ -44,9 +45,10 @@ namespace Rokas.Presentation
             enemyHealth = ui.Label(parent, "Combat3EnemyHp", "", 1625, 340, 250, 130, 25, UiKit.Paper, true);
             seal = ui.Label(parent, "Combat3Seal", "", 70, 500, 250, 100, 23, UiKit.Gold);
             resonance = ui.Label(parent, "Combat3Resonance", "", 1625, 500, 250, 130, 23, UiKit.Gold);
+            defenseCue = ui.Label(parent, "Combat3DefenseCue", "", 70, 650, 230, 130, 21, UiKit.Gold);
             counterCue = ui.Label(parent, "Combat3CounterCue", "", 300, 830, 1320, 55, 30, UiKit.Gold, true, TextAnchor.MiddleCenter);
             bonusCue = ui.Label(parent, "Combat3BonusCue", "", 300, 885, 1320, 45, 20, UiKit.Paper, false, TextAnchor.MiddleCenter);
-            ui.Label(parent, "Combat3Controls", "A / D  или  ← / → — шаг     ·     ЛКМ — контратака в открытое окно     ·     R — резонанс", 180, 947, 1560, 40, 21, UiKit.Muted, false, TextAnchor.MiddleCenter);
+            ui.Label(parent, "Combat3Controls", "A / D  или  ← / → — шаг     ·     ПКМ — рывок (с направлением или на месте)\nЛКМ — контратака в открытое окно     ·     R — резонанс", 180, 930, 1560, 65, 21, UiKit.Muted, false, TextAnchor.MiddleCenter);
 
             worldRoot = new GameObject("Combat3ProxyWorld");
             worldRoot.transform.SetParent(parent.root, false);
@@ -86,6 +88,8 @@ namespace Rokas.Presentation
         }
 
         public void HandleInput(bool left, bool right, bool attack) { input.Sample(left, right, attack); }
+        public void RequestDodge() { input.RequestDodge(); }
+        public void FlushCommands() { input.FlushCommands(); }
         public void CancelInput() { input.CancelInput(); }
         public void OnHit(CombatHit hit) { if (hit.targetIsEnemy) enemyHit = .12f; else playerHit = .12f; }
 
@@ -104,13 +108,17 @@ namespace Rokas.Presentation
         {
             Combat3Encounter encounter = session.Combat.Combat3;
             if (encounter == null) return;
-            player.transform.localPosition = new Vector3(X(encounter.LanePosition), .6f, -.7f);
-            player.sharedMaterial = playerHit > 0 ? dangerMaterial : playerMaterial;
+            player.transform.localPosition = new Vector3(X(encounter.LanePosition), encounter.DodgeRemaining > 0 ? 1.25f : .6f, -.7f);
+            player.sharedMaterial = playerHit > 0 ? dangerMaterial : encounter.DodgeRemaining > 0 ? hitMaterial : playerMaterial;
             enemy.sharedMaterial = enemyHit > 0 ? hitMaterial : enemyMaterial;
-            warning.transform.localPosition = new Vector3(X(encounter.AttackLane), -.025f, 2.1f);
+            bool wave = encounter.AttackKindName == "LowWave";
+            warning.transform.localPosition = wave ? new Vector3(0, .04f, encounter.StageName == "Telegraph" ? Mathf.Lerp(-.7f, 6, Mathf.Clamp01(encounter.StageRemaining / .9f)) : -.7f)
+                : new Vector3(X(encounter.AttackLane), -.025f, 2.1f);
+            warning.transform.localScale = wave ? new Vector3(11.7f, .08f, .3f) : new Vector3(2.05f, .045f, 9);
             warning.gameObject.SetActive(encounter.StageName == "Telegraph" || encounter.StageName == "Active");
             warning.sharedMaterial = encounter.StageName == "Active" ? dangerMaterial : warningMaterial;
-            strike.transform.localPosition = new Vector3(X(encounter.AttackLane), .7f, -.7f);
+            strike.transform.localPosition = new Vector3(wave ? 0 : X(encounter.AttackLane), wave ? .15f : .7f, -.7f);
+            strike.transform.localScale = wave ? new Vector3(11.7f, .3f, .45f) : new Vector3(1.45f, 1.4f, .45f);
             strike.gameObject.SetActive(encounter.StageName == "Active");
             health.text = "ОХОТНИК\n" + Mathf.CeilToInt(session.State.playerHp) + " / 100";
             enemyHealth.text = "ПРОТИВНИК\n" + Mathf.CeilToInt(session.State.enemyHp) + " / " + Mathf.CeilToInt(session.Contract.enemyHealth);
@@ -118,11 +126,15 @@ namespace Rokas.Presentation
             resonance.text = "РЕЗОНАНС\n" + Mathf.CeilToInt(session.Combat.Resonance) + " / 100" + (session.Combat.ResonanceReserved ? "\nЗаряжен" : "");
             bool window = encounter.StageName == "CounterWindow";
             attackCue.text = encounter.ReadDelayRemaining > 0 ? "ПРОЧИТАЙТЕ ПОЛЕ  ·  " + encounter.ReadDelayRemaining.ToString("0.0")
-                : encounter.StageName == "Telegraph" ? "ТЯЖЁЛЫЙ УДАР  ·  ПОЛОСА " + (encounter.AttackLane + 1) + "  ·  " + encounter.StageRemaining.ToString("0.00")
-                : encounter.StageName == "Active" ? "УДАР" : "";
+                : encounter.StageName == "Telegraph" ? (wave ? "НИЗКАЯ ВОЛНА  ·  ПКМ" : "ТЯЖЁЛЫЙ УДАР  ·  ПОЛОСА " + (encounter.AttackLane + 1)) + "  ·  " + encounter.StageRemaining.ToString("0.00")
+                : encounter.StageName == "Active" ? wave ? "НИЗКАЯ ВОЛНА" : "УДАР" : "";
             counterCue.text = window ? encounter.CounterAvailable ? "ЛКМ — КОНТРАТАКА   " + encounter.CounterWindowRemaining.ToString("0.00") : "КОНТРАТАКА ВЫПОЛНЕНА"
-                : encounter.StageName == "Recovery" ? "ПРОТИВНИК ОТКРЫВАЕТСЯ…" : "УЙДИТЕ С ОТМЕЧЕННОЙ ПОЛОСЫ";
+                : encounter.StageName == "Recovery" ? "ПРОТИВНИК ОТКРЫВАЕТСЯ…" : wave ? "ПКМ — ПЕРЕПРЫГНИТЕ ВОЛНУ" : "УЙДИТЕ С ОТМЕЧЕННОЙ ПОЛОСЫ";
             bonusCue.text = session.Combat.SealBonusPending ? "Печать сломана: следующая контратака +60%" : "";
+            defenseCue.text = encounter.PerfectFeedbackRemaining > 0 && encounter.LastPerfect ? "ИДЕАЛЬНО\nПечать −8\nРезонанс +8"
+                : encounter.DodgeRemaining > 0 ? "РЫВОК"
+                : session.Combat.DefenseCooldownRemaining > 0 ? "ЗАЩИТА\n" + session.Combat.DefenseCooldownRemaining.ToString("0.00")
+                : "ПКМ — РЫВОК\nГотов";
         }
 
         private void Render()

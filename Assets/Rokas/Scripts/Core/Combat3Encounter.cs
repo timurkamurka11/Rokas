@@ -2,11 +2,14 @@ using System;
 
 namespace Rokas.Core
 {
+    public enum Combat3Practice { Heavy, LowWave }
+
     // Owns lane, attack lifetime and input timing only. HP, gauges and results remain in CombatService.
     public sealed class Combat3Encounter
     {
         private const double StepSeconds = 1.0 / 60.0;
         private readonly CombatService combat;
+        private readonly Combat3Practice? practice;
         private double accumulator;
         private double stageRemaining;
         private double moveElapsed;
@@ -19,6 +22,11 @@ namespace Rokas.Core
         private bool attackArmed = true;
         private bool counterCommand;
         private bool counterUsed;
+        private bool dodgeCommand;
+        private int dodgeDirection;
+        private double dodgeElapsed = .18;
+        private bool perfectUsed;
+        private double perfectFeedback;
 
         public int Lane { get; private set; }
         public float LanePosition { get; private set; }
@@ -27,7 +35,11 @@ namespace Rokas.Core
         public string StageName { get; private set; }
         public int AttackId { get; private set; }
         public int AttackLane { get; private set; }
+        public string AttackKindName { get; private set; }
         public string AttackStateName { get; private set; }
+        public float DodgeRemaining { get { return dodgeCommand ? .18f : (float)Math.Max(0, .18 - dodgeElapsed); } }
+        public bool LastPerfect { get; private set; }
+        public float PerfectFeedbackRemaining { get { return (float)Math.Max(0, perfectFeedback); } }
         public float StageRemaining { get { return (float)Math.Max(0, stageRemaining); } }
         public float CounterWindowRemaining { get { return StageName == "CounterWindow" ? StageRemaining : 0; } }
         public bool CounterAvailable { get { return StageName == "CounterWindow" && !counterUsed; } }
@@ -36,12 +48,27 @@ namespace Rokas.Core
         public float ReadDelayRemaining { get { return (float)Math.Max(0, readDelay); } }
         public bool SuspendedForBacklog { get; private set; }
 
-        internal Combat3Encounter(CombatService combat)
+        internal Combat3Encounter(CombatService combat, Combat3Practice? practice = null)
         {
             this.combat = combat;
+            this.practice = practice;
             Lane = 2;
             LanePosition = 2;
-            BeginHeavy();
+            BeginAttack();
+        }
+
+        internal bool Dodge()
+        {
+            if (!Running || readDelay > 0 || dodgeCommand || combat.DefenseCooldownRemaining > CombatTuning.Epsilon) return false;
+            dodgeCommand = true;
+            dodgeDirection = heldDirection;
+            // The direction sampled on this down belongs to the dodge, not a second ordinary step.
+            pendingDirection = QueuedDirection = 0;
+            repeatElapsed = 0;
+            LastPerfect = false;
+            perfectFeedback = 0;
+            combat.Combat3BeginDodge();
+            return true;
         }
 
         internal bool SetInput(bool left, bool right, bool attack)
@@ -84,6 +111,11 @@ namespace Rokas.Core
             heldDirection = pendingDirection = QueuedDirection = 0;
             repeatElapsed = 0;
             counterCommand = false;
+            dodgeCommand = false;
+            dodgeDirection = 0;
+            dodgeElapsed = .18;
+            perfectUsed = LastPerfect = false;
+            perfectFeedback = 0;
             // Require a sampled release after cancellation, including focus loss with no input samples.
             attackArmed = false;
             combat.CancelCombat3Reservation();
@@ -133,6 +165,19 @@ namespace Rokas.Core
         private void AdvanceStep()
         {
             combat.AdvanceCombat3Timers((float)StepSeconds);
+            perfectFeedback = Math.Max(0, perfectFeedback - StepSeconds);
+            if (dodgeCommand)
+            {
+                dodgeCommand = false;
+                dodgeElapsed = 0;
+                perfectUsed = false;
+                if (dodgeDirection != 0)
+                {
+                    int target = Math.Max(0, Math.Min(4, Lane + dodgeDirection));
+                    if (target != Lane) BeginMove(target);
+                }
+                dodgeDirection = 0;
+            }
             if (counterCommand)
             {
                 counterCommand = false;
@@ -144,7 +189,7 @@ namespace Rokas.Core
                 }
             }
             if (pendingDirection != 0) { RequestMove(pendingDirection); pendingDirection = 0; }
-            if (heldDirection != 0)
+            if (heldDirection != 0 && DodgeRemaining <= 0)
             {
                 repeatElapsed += StepSeconds;
                 if (repeatElapsed + .00000001 >= .18)
@@ -156,13 +201,30 @@ namespace Rokas.Core
             float previousPosition = LanePosition;
             AdvanceMovement();
             // Swept lane contact includes the segment's origin: an ordinary step is not a dodge.
-            if (StageName == "Active" && AttackStateName == "Active" &&
-                Math.Min(previousPosition, LanePosition) <= AttackLane + .25f &&
-                Math.Max(previousPosition, LanePosition) >= AttackLane - .25f)
+            bool overlaps = AttackKindName == "LowWave" ||
+                (Math.Min(previousPosition, LanePosition) <= AttackLane + .25f &&
+                 Math.Max(previousPosition, LanePosition) >= AttackLane - .25f);
+            if (StageName == "Active" && AttackStateName == "Active" && overlaps &&
+                combat.DamageImmunityRemaining <= CombatTuning.Epsilon)
             {
-                if (combat.Combat3DamagePlayer()) AttackStateName = "Hit";
+                if (dodgeElapsed < .18)
+                {
+                    AttackStateName = "Dodged";
+                    if (!perfectUsed && dodgeElapsed < .08)
+                    {
+                        perfectUsed = LastPerfect = true;
+                        perfectFeedback = .6;
+                        combat.Combat3PerfectDodge();
+                    }
+                }
+                else
+                {
+                    LastPerfect = false;
+                    if (combat.Combat3DamagePlayer()) AttackStateName = "Hit";
+                }
                 if (!combat.Combat3Fighting) { Complete(); return; }
             }
+            dodgeElapsed += StepSeconds;
             stageRemaining -= StepSeconds;
             if (stageRemaining > .00000001) return;
             switch (StageName)
@@ -172,7 +234,7 @@ namespace Rokas.Core
                     if (AttackStateName == "Active") AttackStateName = "Resolved";
                     StageName = "Recovery"; stageRemaining = .25; break;
                 case "Recovery": StageName = "CounterWindow"; AttackStateName = "Cleanup"; stageRemaining = 1.1; break;
-                case "CounterWindow": BeginHeavy(); break;
+                case "CounterWindow": BeginAttack(); break;
             }
         }
 
@@ -181,6 +243,11 @@ namespace Rokas.Core
             if (IsMoving) { if (QueuedDirection == 0) QueuedDirection = direction; return; }
             int target = Math.Max(0, Math.Min(4, Lane + direction));
             if (target == Lane) return;
+            BeginMove(target);
+        }
+
+        private void BeginMove(int target)
+        {
             moveOrigin = LanePosition;
             Lane = target;
             moveElapsed = 0;
@@ -200,9 +267,10 @@ namespace Rokas.Core
             if (queued != 0) RequestMove(queued);
         }
 
-        private void BeginHeavy()
+        private void BeginAttack()
         {
             AttackId++;
+            AttackKindName = (practice ?? (AttackId % 2 == 1 ? Combat3Practice.Heavy : Combat3Practice.LowWave)).ToString();
             AttackLane = Lane;
             StageName = AttackStateName = "Telegraph";
             stageRemaining = .9;

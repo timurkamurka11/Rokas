@@ -15,9 +15,9 @@ Architecture: extend existing `CombatService` with a composed, exclusive lane en
 
 ## Gate 0B — low wave and dodge
 
-- [ ] RED: all-lane collision; RMB stationary/directional adjacent dodge; 0.18 immunity, shared cooldown 0.55; first 0.08 actual prevented contact only grants Perfect (once/dodge and attack), empty dodge grants nothing.
-- [ ] GREEN: add low wave family and dodge to existing driver, proxy/HUD feedback. Perfect Seal −8, Resonance +8. No damage evasion on ordinary lane steps.
-- [ ] Verify domain boundary tests, C2 regressions and PlayMode proof. Record checkpoint before 0C.
+- [x] RED: all-lane collision; RMB stationary/directional adjacent dodge; 0.18 immunity, shared cooldown 0.55; first 0.08 actual prevented contact only grants Perfect (once/dodge and attack), empty dodge grants nothing.
+- [x] GREEN: add low wave family and dodge to existing driver, proxy/HUD feedback. Perfect Seal −8, Resonance +8. No damage evasion on ordinary lane steps.
+- [x] Verify domain boundary tests, C2 regressions and PlayMode proof. Record checkpoint before 0C.
 
 ## Gate 0C — deflectable projectile
 

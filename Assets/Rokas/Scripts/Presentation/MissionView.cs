@@ -36,6 +36,7 @@ namespace Rokas.Presentation
         { this.ui = ui; this.assets = assets; this.session = session; this.audio = audio; this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused; }
 
         public void CancelInput() { combatHud?.CancelInput(); combat3Arena?.CancelInput(); }
+        public void FlushCombat3Input() { combat3Arena?.FlushCommands(); }
         public void HandleCombat3Input(bool left, bool right, bool attack)
         {
             combat3Arena?.HandleInput(left, right, attack);
@@ -45,6 +46,7 @@ namespace Rokas.Presentation
             if (paused() || session.State.phase != RunPhase.Combat) return;
             if (session.Combat.Combat3 != null)
             {
+                if (dodge) combat3Arena?.RequestDodge();
                 if (resonance) session.ActivateResonance();
                 return;
             }
@@ -64,8 +66,14 @@ namespace Rokas.Presentation
                 ui.Button(parent, "EnterPortal", "Войти в искажение", 1240, 866, 600, 76,
                     () => travel(session.EnterPortal, "ПЛАТФОРМА КИСАРАГИ\nСледующая остановка не объявлена."), true);
                 if (Application.isEditor || Debug.isDebugBuild)
+                {
                     ui.Button(parent, "EnterCombat3Review", "Пробная арена Combat 3", 1240, 764, 600, 70,
                         () => travel(session.EnterCombat3Review, "ПРОБНАЯ АРЕНА\nПять полос. Читайте атаку."));
+                    ui.Button(parent, "Combat3PracticeHeavy", "Тяжёлый удар", 1240, 670, 288, 64,
+                        () => travel(() => session.EnterCombat3Practice(Combat3Practice.Heavy), "ТРЕНИРОВКА\nУйдите с отмеченной полосы."));
+                    ui.Button(parent, "Combat3PracticeLowWave", "Низкая волна", 1552, 670, 288, 64,
+                        () => travel(() => session.EnterCombat3Practice(Combat3Practice.LowWave), "ТРЕНИРОВКА\nПКМ — перепрыгните волну."));
+                }
                 ui.Button(parent, "ReturnFromPortal", "Вернуться домой", 67, 881, 450, 60,
                     () => travel(session.ReturnHome, "Вы возвращаетесь по мокрым улицам."));
                 return;

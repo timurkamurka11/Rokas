@@ -17,10 +17,12 @@ namespace Rokas.Tests
         private GameObject root;
         private RokasBootstrap boot;
         private string directory;
+        private bool pointerHeld;
 
         [UnitySetUp] public IEnumerator SetUp()
         {
             directory = Path.Combine(Path.GetTempPath(), "rokas-combat3-" + Guid.NewGuid().ToString("N"));
+            pointerHeld = false;
             root = new GameObject("Combat3Fixture");
             boot = root.AddComponent<RokasBootstrap>();
             boot.Initialize(directory);
@@ -136,6 +138,153 @@ namespace Rokas.Tests
             yield return null;
         }
 
+        [UnityTest] public IEnumerator LowWaveHitsAcrossLanesDespiteAnOrdinaryStep()
+        {
+            EnterPractice("LowWave");
+            yield return null;
+            Assert.That(Find("Combat3AttackCue").GetComponent<Text>().text, Does.Contain("ВОЛНА"));
+            Capture("0b-wave-telegraph");
+            InputSample(true, false, false);
+            Advance(.13f);
+            InputSample(false, false, false);
+            Until("CounterWindow");
+            Assert.That(Get<int>(Encounter, "Lane"), Is.EqualTo(1));
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(92));
+            Capture("0b-wave-hit");
+        }
+
+        [UnityTest] public IEnumerator EmptyDodgeGrantsNothingButActualPerfectPreventionRewardsOnce()
+        {
+            EnterPractice("LowWave");
+            yield return null;
+            var surface = Find("Combat3ArenaSurface");
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Right };
+            ExecuteEvents.Execute(surface, pointer, ExecuteEvents.pointerDownHandler);
+            Advance(1f / 60f);
+            Assert.That(Get<float>(Encounter, "DodgeRemaining"), Is.GreaterThan(0), "Real RMB on arena starts dodge.");
+            Advance(.2f);
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(0));
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(100));
+            Capture("0b-empty-dodge");
+            Until("Active");
+            ExecuteEvents.Execute(surface, pointer, ExecuteEvents.pointerDownHandler);
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(8));
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(92));
+            Assert.That(Find("Combat3DefenseCue").GetComponent<Text>().text, Does.Contain("ИДЕАЛЬНО"));
+            Capture("0b-perfect-dodge");
+            Until("CounterWindow");
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(8), "Same wave must not reward again after the initial prevented contact.");
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+        }
+
+        [UnityTest] public IEnumerator NormalTimedDodgeAvoidsWaveWithoutPerfectAndDirectionalDodgeMovesOneLane()
+        {
+            EnterPractice("LowWave");
+            yield return null;
+            Advance(.8f);
+            InputSample(true, false, false);
+            boot.View.HandleCombatInput(true, false, false);
+            Advance(.13f);
+            InputSample(false, false, false);
+            Assert.That(Get<int>(Encounter, "Lane"), Is.EqualTo(1));
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(0));
+            Capture("0b-normal-dodge");
+            Until("CounterWindow");
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+        }
+
+        [UnityTest] public IEnumerator PortalPracticeButtonEntersLowWaveThroughExistingTravel()
+        {
+            var button = Find("Combat3PracticeLowWave");
+            Assert.That(button, Is.Not.Null, "Wave practice must be reachable from the review entry.");
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            ExecuteEvents.Execute(button, pointer, ExecuteEvents.pointerClickHandler);
+            float deadline = Time.realtimeSinceStartup + 2;
+            while (boot.Session.State.phase != RunPhase.Combat && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
+            Assert.That(Get<string>(Encounter, "AttackKindName"), Is.EqualTo("LowWave"));
+            Assert.That(Find("Combat3ArenaSurface"), Is.Not.Null);
+        }
+
+        [UnityTest] public IEnumerator RawMouseHoldWithoutArenaPressCannotCounter()
+        {
+            EnterReview();
+            Until("CounterWindow");
+            float enemyHp = boot.Session.State.enemyHp;
+            // A physical button may be held over Settings; only the arena captures counter intent.
+            Call(boot.View, "HandleCombat3Input", false, false, true);
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(enemyHp));
+            Call(boot.View, "HandleCombat3Input", false, false, false);
+            InputSample(false, false, true);
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.enemyHp, Is.LessThan(enemyHp));
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator PointerBeforeDirectionSampleUsesCurrentFrameDodgeDirection()
+        {
+            EnterPractice("LowWave");
+            yield return null;
+            InputSample(true, false, false);
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Right };
+            ExecuteEvents.Execute(Find("Combat3ArenaSurface"), pointer, ExecuteEvents.pointerDownHandler);
+            InputSample(false, false, false);
+            boot.View.HandleCombatInput(true, false, false);
+            Advance(.2f);
+            Assert.That(Get<int>(Encounter, "Lane"), Is.EqualTo(2), "Releasing A with RMB must dodge stationary even if EventSystem ran first.");
+            Advance(.4f);
+            yield return null;
+            InputSample(true, false, false);
+            ExecuteEvents.Execute(Find("Combat3ArenaSurface"), pointer, ExecuteEvents.pointerDownHandler);
+            InputSample(false, true, false);
+            boot.View.HandleCombatInput(true, false, false);
+            Advance(.13f);
+            InputSample(false, false, false);
+            Assert.That(Get<int>(Encounter, "Lane"), Is.EqualTo(3), "Reversing to D with RMB must move exactly one lane right.");
+            Advance(.13f);
+            Assert.That(Get<int>(Encounter, "Lane"), Is.EqualTo(3), "Duplicate pointer/raw delivery must not queue another ordinary step.");
+        }
+
+        [UnityTest] public IEnumerator WaveWarningStaysAtContactLineDuringActivePhase()
+        {
+            EnterPractice("LowWave");
+            Until("Active");
+            Assert.That(Find("Combat3HeavyTelegraph").transform.localPosition.z,
+                Is.EqualTo(Find("Combat3HeavyStrike").transform.localPosition.z).Within(.001f));
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator PointerDuplicateCannotReplayRejectedRawDodgeAfterCooldownExpires()
+        {
+            EnterPractice("LowWave");
+            Assert.That(boot.Session.Dodge(), Is.True);
+            Advance(32f / 60f);
+            boot.View.HandleCombatInput(true, false, false);
+            boot.View.FlushCombat3Input();
+            Advance(1f / 60f);
+            Assert.That(Get<float>(Encounter, "DodgeRemaining"), Is.EqualTo(0));
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Right };
+            ExecuteEvents.Execute(Find("Combat3ArenaSurface"), pointer, ExecuteEvents.pointerDownHandler);
+            yield return null;
+            Advance(1f / 60f);
+            Assert.That(Get<float>(Encounter, "DodgeRemaining"), Is.EqualTo(0), "Same physical down cannot retry after the cooldown boundary.");
+        }
+
+        private void EnterPractice(string family)
+        {
+            MethodInfo method = boot.Session.GetType().GetMethod("EnterCombat3Practice");
+            Assert.That(method, Is.Not.Null, "The separate review path must offer focused attack practice.");
+            object choice = Enum.Parse(method.GetParameters()[0].ParameterType, family);
+            Assert.That(method.Invoke(boot.Session, new[] { choice }), Is.EqualTo(true));
+            Call(boot.Session, "SetCombat3Focused", true);
+            Call(boot.Session, "SetCombat3Paused", false);
+            boot.View.Tick(0);
+        }
+
         private object Encounter { get { return Get<object>(boot.Session.Combat, "Combat3"); } }
         private void EnterReview()
         {
@@ -146,11 +295,19 @@ namespace Rokas.Tests
         }
         private void InputSample(bool left, bool right, bool attack)
         {
+            if (attack != pointerHeld)
+            {
+                var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+                if (attack) ExecuteEvents.Execute(Find("Combat3ArenaSurface"), pointer, ExecuteEvents.pointerDownHandler);
+                else ExecuteEvents.Execute(Find("Combat3ArenaSurface"), pointer, ExecuteEvents.pointerUpHandler);
+                pointerHeld = attack;
+            }
             Call(boot.View, "HandleCombat3Input", left, right, attack);
             boot.View.Tick(0);
         }
         private void Advance(float seconds)
         {
+            boot.View.FlushCombat3Input();
             for (int i = 0; i < Mathf.CeilToInt(seconds * 60); i++) boot.Session.Tick(1f / 60f);
             boot.View.Tick(0);
         }

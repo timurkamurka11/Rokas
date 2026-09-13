@@ -265,14 +265,18 @@ namespace Rokas.Presentation
             if (Session == null || View == null) return;
             float dt = Mathf.Min(Time.unscaledDeltaTime, .1f);
             if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
-            if (focused && !saveBlocked)
+            if (focused && !saveBlocked && Session.Combat.Combat3 == null)
                 View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
             if (Session.Combat.Combat3 != null)
             {
                 Session.SetCombat3Paused(applicationPaused || saveBlocked || View.Paused);
                 if (focused && !applicationPaused && !saveBlocked)
+                {
                     View.HandleCombat3Input(Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow),
                         Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow), Input.GetMouseButton(0));
+                    View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
+                    View.FlushCombat3Input();
+                }
                 // Preserve the original delta so the domain can suspend rather than hide a backlog.
                 if (focused && !applicationPaused && !saveBlocked && !View.Paused) Session.Tick(Time.unscaledDeltaTime);
             }

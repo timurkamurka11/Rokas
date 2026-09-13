@@ -137,7 +137,7 @@ namespace Rokas.Core
             return true;
         }
 
-        internal bool Dodge() { return Defend(false); }
+        internal bool Dodge() { return Combat3 != null ? Combat3.Dodge() : Defend(false); }
         internal bool Deflect() { return Defend(true); }
         private bool Defend(bool deflect)
         {
@@ -240,14 +240,14 @@ namespace Rokas.Core
             return true;
         }
 
-        internal void BeginCombat3()
+        internal void BeginCombat3(Combat3Practice? practice = null)
         {
             ResetEncounter();
             state.combat3Review = true;
             state.playerHp = 100;
             state.enemyHp = contract.enemyHealth;
             state.combatTime = state.clickTimer = state.enemyTimer = state.autoTimer = 0;
-            Combat3 = new Combat3Encounter(this);
+            Combat3 = new Combat3Encounter(this, practice);
         }
 
         internal void EndCombat3()
@@ -263,6 +263,20 @@ namespace Rokas.Core
         {
             state.combatTime += dt;
             combat3Immunity = Math.Max(0, combat3Immunity - dt);
+            DefenseCooldownRemaining = Math.Max(0, DefenseCooldownRemaining - dt);
+        }
+
+        internal void Combat3BeginDodge()
+        {
+            DefenseCooldownRemaining = .55f;
+            Resolve(CombatAction.Dodge);
+        }
+
+        internal void Combat3PerfectDodge()
+        {
+            Seal = Math.Max(0, Seal - 8);
+            if (Seal == 0) SealBonusPending = true;
+            Resonance = Math.Min(100, Resonance + 8);
         }
 
         internal void Combat3Counter()

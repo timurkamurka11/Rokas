@@ -49,6 +49,7 @@ namespace Rokas.Presentation
         public void CancelCombatInput() { mission.CancelInput(); }
         public void HandleCombatInput(bool dodge, bool deflect, bool resonance) { mission.HandleInput(dodge, deflect, resonance); }
         public void HandleCombat3Input(bool left, bool right, bool attack) { mission.HandleCombat3Input(left, right, attack); }
+        public void FlushCombat3Input() { mission.FlushCombat3Input(); }
         public bool LaptopOpen { get { return panel == "laptop"; } }
 
         public RokasView(RokasBootstrap owner, RokasAssets assets, GameSession session, RokasAudio audio, Action save)

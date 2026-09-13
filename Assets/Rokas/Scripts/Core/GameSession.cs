@@ -138,6 +138,15 @@ namespace Rokas.Core
             return true;
         }
 
+        public bool EnterCombat3Practice(Combat3Practice practice)
+        {
+            if (practice != Combat3Practice.Heavy && practice != Combat3Practice.LowWave) return false;
+            if (!contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract))) return false;
+            Combat.BeginCombat3(practice);
+            NotifyChanged();
+            return true;
+        }
+
         public bool SetCombat3Input(bool leftHeld, bool rightHeld, bool attackHeld)
         {
             return Combat.Combat3 != null && Combat.Combat3.SetInput(leftHeld, rightHeld, attackHeld);
