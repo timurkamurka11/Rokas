@@ -1,0 +1,120 @@
+name: TEMP VN Panel Byte Transfer
+
+on:
+  push:
+    branches:
+      - feature/vn-visual-polish-refs
+
+permissions:
+  contents: write
+
+jobs:
+  replace-panels:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Download exact authored panels and preserve metas
+        shell: bash
+        env:
+          SHARE_ID: I-ehbdfMUaNk
+          DARK_NAME: f3c38ffe-5c92-4d75-929c-935405e785ba.png
+          LIGHT_NAME: bf3dc850-4613-4f76-af9b-5660171bca9a.png
+          DARK_SHA: 2e2ee78b32ba1f9d8a1726800e64df18f354ffcb357092e919c43ebbc0386cb7
+          LIGHT_SHA: 76e0c057fb5cf125fcadbb8a2a11deab50accb6caa6b221c21f300a67ee5a987
+          DARK_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png
+          LIGHT_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png
+        run: |
+          set -euo pipefail
+          DARK_META="${DARK_PATH}.meta"
+          LIGHT_META="${LIGHT_PATH}.meta"
+          dark_meta_before=$(sha256sum "$DARK_META" | awk '{print $1}')
+          light_meta_before=$(sha256sum "$LIGHT_META" | awk '{print $1}')
+
+          API_BASE=''
+          for candidate in https://api.firestorage.ai/dev/file https://api.firestorage.ai/prod/file; do
+            if curl -fsS "$candidate/shares/$SHARE_ID/files?maxResults=1000" -o /tmp/files.json && \
+               python - "$DARK_NAME" "$LIGHT_NAME" </tmp/files.json <<'PY'
+import json,sys
+j=json.load(sys.stdin)
+names={x.get('fileName') or x.get('name') for x in j.get('files',[])}
+raise SystemExit(0 if sys.argv[1] in names and sys.argv[2] in names else 1)
+PY
+            then
+              API_BASE="$candidate"
+              break
+            fi
+          done
+          test -n "$API_BASE"
+          echo "Resolved temporary transfer API."
+
+          file_id() {
+            python - "$1" <<'PY'
+import json,sys
+j=json.load(open('/tmp/files.json'))
+name=sys.argv[1]
+for x in j.get('files',[]):
+    if (x.get('fileName') or x.get('name')) == name:
+        print(x['fileId'])
+        break
+else:
+    raise SystemExit('file not found: '+name)
+PY
+          }
+          download_exact() {
+            local name="$1" target="$2" expected="$3"
+            local id url
+            id=$(file_id "$name")
+            curl -fsS -X POST "$API_BASE/shares/$SHARE_ID/files/$id/download" -o /tmp/download.json
+            url=$(python - <<'PY'
+import json
+print(json.load(open('/tmp/download.json'))['downloadUrl'])
+PY
+)
+            curl -fsSL "$url" -o "$target"
+            echo "$expected  $target" | sha256sum -c -
+          }
+
+          download_exact "$DARK_NAME" "$DARK_PATH" "$DARK_SHA"
+          download_exact "$LIGHT_NAME" "$LIGHT_PATH" "$LIGHT_SHA"
+
+          python - "$DARK_PATH" "$LIGHT_PATH" <<'PY'
+import struct,sys
+for p in sys.argv[1:]:
+    data=open(p,'rb').read(33)
+    assert data[:8] == b'\x89PNG\r\n\x1a\n', p
+    w,h=struct.unpack('>II',data[16:24])
+    color_type=data[25]
+    assert (w,h)==(2048,682), (p,w,h)
+    assert color_type==6, (p,'expected RGBA PNG color type 6',color_type)
+    print(p, w, h, 'RGBA')
+PY
+
+          dark_meta_after=$(sha256sum "$DARK_META" | awk '{print $1}')
+          light_meta_after=$(sha256sum "$LIGHT_META" | awk '{print $1}')
+          test "$dark_meta_before" = "$dark_meta_after"
+          test "$light_meta_before" = "$light_meta_after"
+          test -z "$(git diff --name-only -- '*.meta')"
+          echo 'Meta/GUID carrier files unchanged.'
+
+          git diff --check
+          git status --short
+      - name: Commit exact panel replacements
+        shell: bash
+        env:
+          DARK_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png
+          LIGHT_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$DARK_PATH" "$LIGHT_PATH"
+          if git diff --cached --quiet; then
+            echo 'Panels already match exact authored bytes.'
+            exit 0
+          fi
+          git commit -m 'art: replace VN dialogue panels with authored full panels'
+          git push origin HEAD:feature/vn-visual-polish-refs
