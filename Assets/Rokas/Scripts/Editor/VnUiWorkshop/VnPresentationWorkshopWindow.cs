@@ -14,6 +14,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public sealed class VnPresentationWorkshopWindow : EditorWindow
     {
         public const string MenuPath = "ROKAS/VN UI Workshop";
+        public const string ExportFileName = "ROKAS_VN_WORKSHOP_PRESET.json";
 
         private const float NudgeStep = 1f;
         private const float LargeNudgeStep = 10f;
@@ -200,6 +201,62 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return deleted;
         }
 
+        public string ExportCurrentPresetJson(string name)
+        {
+            variantName = name ?? string.Empty;
+            return VnPresentationWorkshopSerialization.Serialize(CurrentPreset, variantName);
+        }
+
+        public void ExportCurrentPresetToFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Export path is required.", nameof(path));
+
+            string directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            File.WriteAllText(path, ExportCurrentPresetJson(variantName));
+            SetVariantStatus("Exported " + ExportFileName + ".", MessageType.Info);
+        }
+
+        public VnWorkshopImportResult ImportPresetJson(string json)
+        {
+            VnWorkshopImportResult result = VnPresentationWorkshopSerialization.Deserialize(json);
+            if (!result.Success || result.Document == null || result.Document.preset == null)
+            {
+                SetVariantStatus("Import failed: " + result.Error, MessageType.Error);
+                return result;
+            }
+
+            currentPreset = result.Document.preset;
+            variantName = result.Document.variantName ?? string.Empty;
+            comparisonView = VnWorkshopComparisonView.Current;
+
+            if (result.SourceHeadMismatch)
+            {
+                SetVariantStatus(
+                    "Imported with source HEAD mismatch. " + result.Error +
+                    " Production remains unchanged.",
+                    MessageType.Warning);
+            }
+            else
+            {
+                SetVariantStatus("Imported Workshop preset '" + variantName + "'.", MessageType.Info);
+            }
+
+            Repaint();
+            return result;
+        }
+
+        public VnWorkshopImportResult ImportPresetFromFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Import path is required.", nameof(path));
+
+            return ImportPresetJson(File.ReadAllText(path));
+        }
+
         private void OnGUI()
         {
             DrawComparisonToolbar();
@@ -332,6 +389,48 @@ namespace Rokas.EditorTools.VnUiWorkshop
                                 throw new IOException("Variant no longer exists: " + selectedName + ".");
                         },
                         "Deleted variant '" + selectedName + "'.");
+                }
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Portable Preset", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("Export JSON"))
+            {
+                string path = EditorUtility.SaveFilePanel(
+                    "Export VN UI Workshop Preset",
+                    string.Empty,
+                    ExportFileName,
+                    "json");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    try
+                    {
+                        ExportCurrentPresetToFile(path);
+                    }
+                    catch (Exception exception)
+                    {
+                        SetVariantStatus("Export failed: " + exception.Message, MessageType.Error);
+                    }
+                }
+            }
+
+            if (GUILayout.Button("Import JSON"))
+            {
+                string path = EditorUtility.OpenFilePanel(
+                    "Import VN UI Workshop Preset",
+                    string.Empty,
+                    "json");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    try
+                    {
+                        ImportPresetFromFile(path);
+                    }
+                    catch (Exception exception)
+                    {
+                        SetVariantStatus("Import failed: " + exception.Message, MessageType.Error);
+                    }
                 }
             }
 
