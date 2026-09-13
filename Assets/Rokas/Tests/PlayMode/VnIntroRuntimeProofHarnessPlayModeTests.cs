@@ -8,6 +8,32 @@ namespace Rokas.Tests
 {
     public sealed class VnIntroRuntimeProofHarnessPlayModeTests
     {
+        [Test]
+        public void RuntimeProofUsesRequestedResponsiveResolution()
+        {
+            Assert.That(
+                RokasVnIntroRuntimeProofRunner.GetRequestedResolution(new[]
+                {
+                    "Rokas.exe", "-screen-width", "1280", "-screen-height", "720"
+                }),
+                Is.EqualTo(new Vector2Int(1280, 720)));
+
+            Assert.That(
+                RokasVnIntroRuntimeProofRunner.GetRequestedResolution(new[]
+                {
+                    "Rokas.exe", "-screen-width", "1024", "-screen-height", "768"
+                }),
+                Is.EqualTo(new Vector2Int(1024, 768)));
+
+            Assert.That(
+                RokasVnIntroRuntimeProofRunner.GetRequestedResolution(new[]
+                {
+                    "Rokas.exe", "-screen-width", "0", "-screen-height", "broken"
+                }),
+                Is.EqualTo(new Vector2Int(1920, 1080)),
+                "Invalid proof dimensions must retain the known-safe default.");
+        }
+
         [UnityTest]
         public IEnumerator RuntimeProofRecognizesNestedPolishedVnHierarchy()
         {
