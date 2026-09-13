@@ -235,31 +235,54 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator VnViewUsesApprovedArtAndCropsCharacterSheets()
+        public IEnumerator VnViewUsesApprovedPanelsAndPortraitFreeCharacterStaging()
         {
             RokasAssets baseAssets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(baseAssets, Is.Not.Null);
             VnIntroArt art = CreateArt();
             var host = new GameObject("VnViewFixture");
-            VnIntroView view = VnIntroView.Create(host.transform, baseAssets.sans, art, () => { }, () => { }, () => { }, () => { });
+            VnIntroView view = VnIntroView.Create(host.transform, baseAssets.sans, art,
+                () => { }, () => { }, () => { }, () => { });
             try
             {
                 view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
+                view.PresentLine("Keiko", "Portrait-free protagonist line");
                 yield return null;
+
                 Assert.That(GameObject.Find("VnIntroRoot"), Is.Not.Null);
                 Assert.That(GameObject.Find("Background").GetComponent<RawImage>().texture, Is.SameAs(art.BusStopRainNight));
-                Assert.That(GameObject.Find("DialoguePanel").GetComponent<RawImage>().texture, Is.SameAs(art.DialoguePanelKeikoDark));
-                RawImage portrait = GameObject.Find("Portrait").GetComponent<RawImage>();
-                Assert.That(portrait.texture, Is.SameAs(art.KeikoCharacterSheet));
-                Assert.That(portrait.uvRect, Is.Not.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                RawImage panel = GameObject.Find("DialoguePanel").GetComponent<RawImage>();
+                Assert.That(panel.texture, Is.SameAs(art.DialoguePanelKeikoDark));
+                Assert.That(panel.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                Assert.That(FindDescendantIncludingInactive(host.transform, "Portrait"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitPrevious"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitMask"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitFrame"), Is.Null);
 
+                GameObject primary = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                GameObject secondary = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
+                Assert.That(primary, Is.Not.Null);
+                Assert.That(secondary, Is.Not.Null);
+                Assert.That(primary.activeSelf, Is.False,
+                    "Keiko protagonist presentation must remain text-only.");
+                Assert.That(secondary.activeSelf, Is.False);
+
+                VnCharacterVisualState minaNeutral = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
                 view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_neutral"));
-                yield return null;
+                view.PresentLine("Mina", "Я дома, приходи, нужно поговорить.");
+                yield return new WaitForSecondsRealtime(.25f);
+
                 Assert.That(GameObject.Find("Background").GetComponent<RawImage>().texture, Is.SameAs(art.BusStopPhoneMessageMina));
-                Assert.That(GameObject.Find("DialoguePanel").GetComponent<RawImage>().texture, Is.SameAs(art.DialoguePanelMinaLight));
-                portrait = GameObject.Find("Portrait").GetComponent<RawImage>();
-                Assert.That(portrait.texture, Is.SameAs(art.MinaCharacterSheet));
-                Assert.That(portrait.uvRect, Is.Not.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                Assert.That(panel.texture, Is.SameAs(art.DialoguePanelMinaLight));
+                Assert.That(panel.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                Assert.That(primary.activeSelf, Is.True);
+                Assert.That(secondary.activeSelf, Is.False);
+                RawImage minaBody = primary.GetComponent<RawImage>();
+                Assert.That(minaBody.texture, Is.SameAs(art.MinaCharacterSheet));
+                Assert.That(minaBody.uvRect, Is.EqualTo(minaNeutral.BodyUv));
+                Assert.That(primary.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(1180f),
+                    "Mina should use the approved closer body framing.");
+                Assert.That(primary.transform.localScale.x, Is.EqualTo(1f).Within(.01f));
             }
             finally
             {
@@ -270,7 +293,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator VnControlsUseProvidedIconsAndNeverAdvanceStory()
+        public IEnumerator VnControlsUseTransparentHitTargetsAndNeverCreateASecondAdvancePath()
         {
             RokasAssets baseAssets = Resources.Load<RokasAssets>("RokasAssets");
             VnIntroArt art = CreateArt();
@@ -285,10 +308,22 @@ namespace Rokas.Tests
                 Button mute = GameObject.Find("MuteButton").GetComponent<Button>();
                 Button pause = GameObject.Find("PauseButton").GetComponent<Button>();
                 Button skip = GameObject.Find("SkipButton").GetComponent<Button>();
+                Button back = GameObject.Find("BackButton").GetComponent<Button>();
+                Button next = GameObject.Find("NextButton").GetComponent<Button>();
                 Assert.That(story, Is.Not.Null);
-                Assert.That(mute.transform.Find("Icon").GetComponent<RawImage>().texture, Is.SameAs(art.IconMute));
-                Assert.That(pause.transform.Find("Icon").GetComponent<RawImage>().texture, Is.SameAs(art.IconPause));
-                Assert.That(skip.transform.Find("Icon").GetComponent<RawImage>().texture, Is.SameAs(art.IconSkip));
+
+                foreach (Button button in new[] { mute, pause, skip, back, next })
+                {
+                    Assert.That(button, Is.Not.Null);
+                    Assert.That(button.targetGraphic, Is.Not.Null);
+                    Assert.That(button.targetGraphic.color.a, Is.LessThanOrEqualTo(.001f),
+                        button.name + " must remain a transparent hit target without a rectangular backing artifact.");
+                }
+                Assert.That(mute.transform.Find("Icon"), Is.Null);
+                Assert.That(pause.transform.Find("Icon"), Is.Null);
+                Assert.That(skip.transform.Find("Icon"), Is.Null);
+                Assert.That(back.interactable, Is.False);
+                Assert.That(next.interactable, Is.True);
 
                 mute.onClick.Invoke();
                 pause.onClick.Invoke();
@@ -298,10 +333,12 @@ namespace Rokas.Tests
                 Assert.That(pauses, Is.EqualTo(1));
                 Assert.That(skips, Is.EqualTo(1));
 
+                next.onClick.Invoke();
+                Assert.That(advances, Is.EqualTo(1),
+                    "Next must reuse the existing continuation callback exactly once.");
                 story.onClick.Invoke();
-                Assert.That(advances, Is.EqualTo(1));
-                story.onClick.Invoke();
-                Assert.That(advances, Is.EqualTo(2));
+                Assert.That(advances, Is.EqualTo(2),
+                    "Story surface remains the same one-beat continuation path.");
             }
             finally
             {
@@ -409,6 +446,13 @@ namespace Rokas.Tests
         {
             if (launchRoot == null) return null;
             foreach (Transform item in launchRoot.GetComponentsInChildren<Transform>(true))
+                if (item.name == name) return item.gameObject;
+            return null;
+        }
+
+        private static GameObject FindDescendantIncludingInactive(Transform root, string name)
+        {
+            foreach (Transform item in root.GetComponentsInChildren<Transform>(true))
                 if (item.name == name) return item.gameObject;
             return null;
         }

@@ -10,13 +10,13 @@ namespace Rokas.Tests
     public sealed class VnIntroResponsiveLayoutPlayModeTests
     {
         [UnityTest]
-        public IEnumerator ResponsiveCompositionFits1280x720WithoutControlOrPortraitClipping()
+        public IEnumerator ResponsiveCompositionFits1280x720WithoutUiClipping()
         {
             yield return VerifyResponsiveComposition(1280, 720);
         }
 
         [UnityTest]
-        public IEnumerator ResponsiveCompositionFits1024x768WithoutControlOrPortraitClipping()
+        public IEnumerator ResponsiveCompositionFits1024x768WithoutUiClipping()
         {
             yield return VerifyResponsiveComposition(1024, 768);
         }
@@ -32,14 +32,11 @@ namespace Rokas.Tests
 
             try
             {
-                VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
-                VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
                 view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
-                view.SetCharacterStage(keiko, mina);
                 view.PresentLine("Keiko",
-                    "The responsive proof keeps dialogue wrapping inside the polished lower panel while every control remains usable.");
+                    "The responsive proof keeps authored dialogue text wrapped safely inside the full lower panel while every control remains usable.");
 
-                yield return new WaitForSecondsRealtime(.25f);
+                yield return null;
                 Canvas.ForceUpdateCanvases();
 
                 RectTransform root = GameObject.Find("VnIntroRoot").GetComponent<RectTransform>();
@@ -49,77 +46,140 @@ namespace Rokas.Tests
 
                 Rect canvasRect = new Rect(Vector2.zero,
                     CalculateVirtualCanvasSize(screenWidth, screenHeight, scaler.referenceResolution, scaler.matchWidthOrHeight));
-                RectTransform panelTransform = GameObject.Find("DialoguePanel").GetComponent<RectTransform>();
+
+                RawImage panel = GameObject.Find("DialoguePanel").GetComponent<RawImage>();
+                RectTransform panelTransform = panel.rectTransform;
                 Rect panelRect = ResolveChildRect(panelTransform, canvasRect);
-                AssertRectInside(panelRect, canvasRect, "DialoguePanel", screenWidth, screenHeight);
+                Assert.That(panel.texture, Is.SameAs(art.DialoguePanelKeikoDark));
+                Assert.That(panel.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                AspectRatioFitter panelAspect = panel.GetComponent<AspectRatioFitter>();
+                Assert.That(panelAspect, Is.Not.Null);
+                Assert.That(panelAspect.aspectRatio, Is.EqualTo(2048f / 682f).Within(.001f));
+                Assert.That(panelRect.xMin, Is.GreaterThanOrEqualTo(canvasRect.xMin - 1f));
+                Assert.That(panelRect.xMax, Is.LessThanOrEqualTo(canvasRect.xMax + 1f));
+                Assert.That(panelRect.yMax, Is.LessThanOrEqualTo(canvasRect.yMax + 1f));
+                float visiblePanelHeight = Mathf.Min(panelRect.yMax, canvasRect.yMax) -
+                                           Mathf.Max(panelRect.yMin, canvasRect.yMin);
+                Assert.That(visiblePanelHeight / panelRect.height, Is.GreaterThan(.76f),
+                    $"The authored panel must remain substantially visible at {screenWidth}x{screenHeight}; only the intentional lower-edge bleed may leave the canvas.");
 
-                RectTransform portraitMaskTransform = GameObject.Find("PortraitMask").GetComponent<RectTransform>();
-                Rect portraitMaskRect = ResolveChildRect(portraitMaskTransform, panelRect);
-                AssertRectInside(portraitMaskRect, canvasRect, "PortraitMask", screenWidth, screenHeight);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitMask"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "Portrait"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitPrevious"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitFrame"), Is.Null);
 
-                RectTransform portraitFrameTransform = GameObject.Find("PortraitFrame").GetComponent<RectTransform>();
-                Rect portraitFrameRect = ResolveChildRect(portraitFrameTransform, panelRect);
-                AssertRectInside(portraitFrameRect, canvasRect, "PortraitFrame", screenWidth, screenHeight);
-                Assert.That(portraitFrameRect.Overlaps(portraitMaskRect), Is.True,
-                    $"Portrait trim must stay integrated with the portrait at {screenWidth}x{screenHeight}.");
+                GameObject primaryObject = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                GameObject secondaryObject = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
+                Assert.That(primaryObject, Is.Not.Null);
+                Assert.That(secondaryObject, Is.Not.Null);
+                Assert.That(primaryObject.activeSelf, Is.False,
+                    $"Keiko protagonist presentation must remain text-only at {screenWidth}x{screenHeight}.");
+                Assert.That(secondaryObject.activeSelf, Is.False);
 
-                RectTransform controlsTransform = GameObject.Find("ControlsRow").GetComponent<RectTransform>();
-                Rect controlsRect = ResolveChildRect(controlsTransform, panelRect);
-                AssertRectInside(controlsRect, panelRect, "ControlsRow", screenWidth, screenHeight);
-
-                foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton", "BackButton", "NextButton" })
-                {
-                    RectTransform buttonTransform = GameObject.Find(name).GetComponent<RectTransform>();
-                    Rect buttonRect = ResolveChildRect(buttonTransform, controlsRect);
-                    AssertRectInside(buttonRect, controlsRect, name, screenWidth, screenHeight);
-                }
-
-                Button back = GameObject.Find("BackButton").GetComponent<Button>();
-                Button next = GameObject.Find("NextButton").GetComponent<Button>();
-                Assert.That(back.interactable, Is.False);
-                Assert.That(next.interactable, Is.True);
+                RectTransform speakerTransform = GameObject.Find("SpeakerName").GetComponent<RectTransform>();
+                Rect speakerRect = ResolveChildRect(speakerTransform, panelRect);
+                AssertRectInside(speakerRect, panelRect, "SpeakerName", screenWidth, screenHeight);
+                AssertRectInside(speakerRect, canvasRect, "SpeakerName", screenWidth, screenHeight);
 
                 RectTransform dialogueTransform = GameObject.Find("DialogueText").GetComponent<RectTransform>();
                 Rect dialogueRect = ResolveChildRect(dialogueTransform, panelRect);
                 AssertRectInside(dialogueRect, panelRect, "DialogueText", screenWidth, screenHeight);
-                Assert.That(dialogueRect.xMin, Is.GreaterThanOrEqualTo(portraitMaskRect.xMax + 16f),
-                    $"Dialogue text must clear the circular portrait at {screenWidth}x{screenHeight}.");
-                Assert.That(dialogueRect.xMax, Is.LessThanOrEqualTo(controlsRect.xMin - 24f),
-                    $"Dialogue text must keep a readable gap before controls at {screenWidth}x{screenHeight}.");
+                AssertRectInside(dialogueRect, canvasRect, "DialogueText", screenWidth, screenHeight);
+                Assert.That(speakerRect.yMin, Is.GreaterThanOrEqualTo(dialogueRect.yMax - 2f),
+                    $"The name/header region must remain above the body copy at {screenWidth}x{screenHeight}.");
 
                 Text dialogue = dialogueTransform.GetComponent<Text>();
                 Assert.That(dialogue.horizontalOverflow, Is.EqualTo(HorizontalWrapMode.Wrap));
                 Assert.That(dialogue.verticalOverflow, Is.EqualTo(VerticalWrapMode.Truncate));
 
-                RectTransform primaryTransform = GameObject.Find("CharacterPrimary").GetComponent<RectTransform>();
-                RectTransform secondaryTransform = GameObject.Find("CharacterSecondary").GetComponent<RectTransform>();
-                Rect primaryRect = ScaleRectAroundPivot(ResolveChildRect(primaryTransform, canvasRect),
-                    primaryTransform.pivot, primaryTransform.localScale);
-                Rect secondaryRect = ScaleRectAroundPivot(ResolveChildRect(secondaryTransform, canvasRect),
-                    secondaryTransform.pivot, secondaryTransform.localScale);
+                RectTransform controlsTransform = GameObject.Find("ControlsRow").GetComponent<RectTransform>();
+                Rect controlsRect = ResolveChildRect(controlsTransform, panelRect);
+                AssertRectInside(controlsRect, panelRect, "ControlsRow", screenWidth, screenHeight);
 
-                Assert.That(primaryRect.xMin, Is.GreaterThanOrEqualTo(canvasRect.xMin - 1f));
-                Assert.That(primaryRect.xMax, Is.LessThanOrEqualTo(canvasRect.xMax + 1f));
-                Assert.That(secondaryRect.xMin, Is.GreaterThanOrEqualTo(canvasRect.xMin - 1f));
-                Assert.That(secondaryRect.xMax, Is.LessThanOrEqualTo(canvasRect.xMax + 1f));
-                Assert.That(primaryRect.yMax, Is.LessThanOrEqualTo(canvasRect.yMax + 1f),
-                    $"Speaker focus must not clip the primary character at the top of {screenWidth}x{screenHeight}.");
-                Assert.That(secondaryRect.yMax, Is.LessThanOrEqualTo(canvasRect.yMax + 1f),
-                    $"Speaker focus must not clip the secondary character at the top of {screenWidth}x{screenHeight}.");
-                Assert.That(primaryRect.center.x, Is.LessThan(canvasRect.center.x));
-                Assert.That(secondaryRect.center.x, Is.GreaterThan(canvasRect.center.x));
-                Assert.That(Mathf.Abs((canvasRect.center.x - primaryRect.center.x) -
-                                      (secondaryRect.center.x - canvasRect.center.x)), Is.LessThan(2f),
-                    $"Two-character staging should remain visually balanced at {screenWidth}x{screenHeight}.");
+                Rect nextOrBackLeftMost = default;
+                bool capturedRightCluster = false;
+                foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton", "BackButton", "NextButton" })
+                {
+                    GameObject control = GameObject.Find(name);
+                    Assert.That(control, Is.Not.Null, name + " must exist.");
+                    RectTransform buttonTransform = control.GetComponent<RectTransform>();
+                    Rect buttonRect = ResolveChildRect(buttonTransform, controlsRect);
+                    AssertRectInside(buttonRect, panelRect, name, screenWidth, screenHeight);
+                    AssertRectInside(buttonRect, canvasRect, name, screenWidth, screenHeight);
 
-                Assert.That(primaryTransform.GetSiblingIndex(), Is.LessThan(panelTransform.GetSiblingIndex()));
-                Assert.That(secondaryTransform.GetSiblingIndex(), Is.LessThan(panelTransform.GetSiblingIndex()));
+                    Button button = control.GetComponent<Button>();
+                    Assert.That(button.targetGraphic, Is.Not.Null);
+                    Assert.That(button.targetGraphic.color.a, Is.LessThanOrEqualTo(.001f),
+                        name + " must remain a transparent hit target without a black backing artifact.");
+
+                    if (name == "BackButton" || name == "NextButton")
+                    {
+                        if (!capturedRightCluster || buttonRect.xMin < nextOrBackLeftMost.xMin)
+                            nextOrBackLeftMost = buttonRect;
+                        capturedRightCluster = true;
+                    }
+                }
+
+                Assert.That(GameObject.Find("BackButton").GetComponent<Button>().interactable, Is.False);
+                Assert.That(GameObject.Find("NextButton").GetComponent<Button>().interactable, Is.True);
+                Assert.That(capturedRightCluster, Is.True);
+                Assert.That(dialogueRect.xMax, Is.LessThanOrEqualTo(nextOrBackLeftMost.xMin - 16f),
+                    $"Dialogue copy must keep a safe readable gap before the right-side controls at {screenWidth}x{screenHeight}.");
+
+                view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_neutral"));
+                view.PresentLine("Mina", "Я дома, приходи, нужно поговорить.");
+                yield return new WaitForSecondsRealtime(.25f);
+                Canvas.ForceUpdateCanvases();
+
+                Assert.That(panel.texture, Is.SameAs(art.DialoguePanelMinaLight));
+                Assert.That(GameObject.Find("SpeakerName").GetComponent<Text>().text, Is.EqualTo("Mina"));
+                Assert.That(primaryObject.activeSelf, Is.True);
+                Assert.That(secondaryObject.activeSelf, Is.False);
+
+                RawImage minaBody = primaryObject.GetComponent<RawImage>();
+                RectTransform minaTransform = primaryObject.GetComponent<RectTransform>();
+                Assert.That(minaBody.texture, Is.SameAs(art.MinaCharacterSheet));
+                Assert.That(minaTransform.rect.height, Is.GreaterThanOrEqualTo(1180f),
+                    "Mina must retain the approved closer thigh-up staging rather than the old distant framing.");
+                Assert.That(minaTransform.localScale.x, Is.EqualTo(1f).Within(.01f),
+                    "A single staged Mina body must remain neutral rather than receiving active-speaker focus scale.");
+
+                Rect minaRect = ScaleRectAroundPivot(ResolveChildRect(minaTransform, canvasRect),
+                    minaTransform.pivot, minaTransform.localScale);
+                Assert.That(minaRect.xMin, Is.GreaterThanOrEqualTo(canvasRect.xMin - 1f));
+                Assert.That(minaRect.xMax, Is.LessThanOrEqualTo(canvasRect.xMax + 1f));
+                Assert.That(minaRect.yMax, Is.LessThanOrEqualTo(canvasRect.yMax + 1f),
+                    $"Closer Mina staging must not clip at the top of {screenWidth}x{screenHeight}.");
+                Assert.That(Mathf.Abs(minaRect.center.x - canvasRect.center.x), Is.LessThan(2f),
+                    $"Solo Mina should remain centered at {screenWidth}x{screenHeight}.");
+
+                Vector2 stablePosition = minaTransform.anchoredPosition;
+                Vector3 stableScale = minaTransform.localScale;
+                yield return new WaitForSecondsRealtime(.35f);
+                Assert.That(Vector2.Distance(stablePosition, minaTransform.anchoredPosition), Is.LessThan(.01f),
+                    $"Solo Mina must not bob at {screenWidth}x{screenHeight}.");
+                Assert.That(Vector3.Distance(stableScale, minaTransform.localScale), Is.LessThan(.0002f),
+                    $"Solo Mina must not pulse at {screenWidth}x{screenHeight}.");
+
+                Assert.That(minaTransform.GetSiblingIndex(), Is.LessThan(panelTransform.GetSiblingIndex()));
             }
             finally
             {
                 view.Dispose();
                 Object.Destroy(host);
             }
+        }
+
+        private static GameObject FindDescendantIncludingInactive(Transform root, string name)
+        {
+            Transform[] descendants = root.GetComponentsInChildren<Transform>(true);
+            foreach (Transform descendant in descendants)
+            {
+                if (descendant.name == name)
+                    return descendant.gameObject;
+            }
+
+            return null;
         }
 
         private static Vector2 CalculateVirtualCanvasSize(int screenWidth, int screenHeight,
@@ -185,3 +245,4 @@ namespace Rokas.Tests
         }
     }
 }
+

@@ -1,4 +1,4 @@
-name: TEMP VN Migration Ref Bridge
+name: TEMP VN Permanent Hash Migration
 
 on:
   push:
@@ -9,34 +9,55 @@ permissions:
   contents: write
 
 jobs:
-  fast-forward-migration-tree:
+  migrate-panel-hashes:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Create migration commit on actual HEAD and fast-forward ref
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Patch only authored panel SHA expectations
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DESIRED_TREE: 6496c53962fb34857cc7d7b3faac57146b94578b
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
-          auth=(-H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
+          python - <<'PY'
+          from pathlib import Path
 
-          payload=$(jq -n \
-            --arg message 'test: migrate VN presentation regressions to portrait-free panels' \
-            --arg tree "$DESIRED_TREE" \
-            --arg parent "$GITHUB_SHA" \
-            '{message:$message, tree:$tree, parents:[$parent]}')
-          curl -fsS "${auth[@]}" -X POST "$api/git/commits" -d "$payload" -o /tmp/migration-commit.json
-          new_sha=$(jq -r '.sha // empty' /tmp/migration-commit.json)
-          test -n "$new_sha"
-          echo "Created migration commit $new_sha from parent $GITHUB_SHA"
+          path = Path('.github/workflows/vn-intro-tdd.yml')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              '29b2b68b7129e3d0763edf7b251c13b866b6801906592f58899e8472acba9b26':
+                  '2e2ee78b32ba1f9d8a1726800e64df18f354ffcb357092e919c43ebbc0386cb7',
+              'e619af1b2218264aa387b01cdcbf4fc61c4cd98aedbe6a5b771a3a86e21242ea':
+                  '76e0c057fb5cf125fcadbb8a2a11deab50accb6caa6b221c21f300a67ee5a987',
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count == 0 and new in text:
+                  continue
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one old hash {old}, found {count}')
+              text = text.replace(old, new)
 
-          ref_payload=$(jq -n --arg sha "$new_sha" '{sha:$sha, force:false}')
-          curl -fsS "${auth[@]}" -X PATCH \
-            "$api/git/refs/heads/feature/vn-visual-polish-refs" \
-            -d "$ref_payload" -o /tmp/ref-update.json
-          test "$(jq -r '.object.sha' /tmp/ref-update.json)" = "$new_sha"
-          echo "Fast-forwarded feature/vn-visual-polish-refs to $new_sha with force=false"
+          for guid in ('66e03e45e4f849e4a8471bc16d6aa83d', 'db6ce06f7a32417097fc2b2b6376c2d3'):
+              if text.count(guid) != 1:
+                  raise SystemExit(f'Panel GUID identity changed or duplicated: {guid}')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git diff -- .github/workflows/vn-intro-tdd.yml
+      - name: Commit hash migration when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/workflows/vn-intro-tdd.yml; then
+            echo 'Permanent panel SHA expectations are already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/vn-intro-tdd.yml
+          git commit -m 'ci: update authored VN panel preflight hashes'
+          git push origin HEAD:feature/vn-visual-polish-refs
