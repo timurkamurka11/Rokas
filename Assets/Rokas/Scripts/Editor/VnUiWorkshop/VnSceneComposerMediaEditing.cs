@@ -27,7 +27,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
     }
 
-    public static class VnSceneComposerMediaEditing
+    public static partial class VnSceneComposerMediaEditing
     {
         public static void SetExistingRokasAsset(VnSceneComposerScene scene, UnityEngine.Object asset,
             VnSceneComposerMediaScaleMode scaleMode)

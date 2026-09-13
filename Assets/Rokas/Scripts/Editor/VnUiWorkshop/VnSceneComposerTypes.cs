@@ -40,6 +40,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string contentHash = string.Empty;
         public bool localPreviewDependency;
         public VnSceneComposerMediaScaleMode scaleMode = VnSceneComposerMediaScaleMode.Fit;
+        public bool loop;
     }
 
     [Serializable]
