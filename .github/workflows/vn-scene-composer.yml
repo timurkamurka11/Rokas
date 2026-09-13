@@ -1,0 +1,105 @@
+name: ROKAS VN Scene Composer
+
+on:
+  push:
+    branches:
+      - feature/vn-scene-composer
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+  SCENE_COMPOSER_BASE: f58f1db08fc225c2831ff59d50d42e8c07ea15ce
+
+jobs:
+  source-guard:
+    name: Scene Composer source / production guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify ancestry, diff hygiene and editor-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$SCENE_COMPOSER_BASE" HEAD
+          git diff --check "$SCENE_COMPOSER_BASE"..HEAD
+          python - <<'PY'
+          import os, subprocess
+          base = os.environ['SCENE_COMPOSER_BASE']
+          changed = subprocess.check_output(['git','diff','--name-only',f'{base}..HEAD'], text=True).splitlines()
+          allowed_exact = {
+              '.github/workflows/vn-scene-composer.yml',
+              'docs/superpowers/plans/2026-09-14-vn-scene-composer.md',
+          }
+          allowed_prefixes = (
+              'Assets/Rokas/Scripts/Editor/VnUiWorkshop/',
+              'Assets/Rokas/Tests/EditorWorkshop/',
+          )
+          forbidden = [p for p in changed if p not in allowed_exact and not p.startswith(allowed_prefixes)]
+          if forbidden:
+              raise SystemExit('Forbidden Scene Composer diff paths: ' + repr(forbidden))
+          protected = {
+              'Assets/Rokas/Scripts/Presentation/VnIntroView.cs',
+              'Assets/Rokas/Scripts/Presentation/VnIntroController.cs',
+              'Assets/Rokas/Scripts/Presentation/VnIntroDialoguePresenter.cs',
+              'Assets/Rokas/Scripts/Presentation/RokasAssets.cs',
+              'Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs',
+              'Packages/manifest.json',
+          }
+          bad = [p for p in changed if p in protected or p.endswith('.yarn') or '/Yarn/' in p]
+          if bad:
+              raise SystemExit('Production/runtime dependency files changed: ' + repr(sorted(set(bad))))
+          print('SCENE_COMPOSER_EDITOR_ONLY_SCOPE=PASS')
+          print('\n'.join(changed))
+          PY
+      - name: Verify no production apply or narrative write path
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -E 'Apply(ToProduction|SceneSequenceToProduction)|Generate.*Yarn|Write.*Yarn' -- 'Assets/Rokas/Scripts/Editor/VnUiWorkshop/*.cs'; then
+            echo 'Production apply or Yarn-write path found in Scene Composer/Workshop source.' >&2
+            exit 1
+          fi
+          if git grep -n -F 'previewSampleText' -- 'Assets/Rokas/Scripts/Presentation/*.cs' 'Assets/**/*.yarn'; then
+            echo 'Preview sample content leaked into production presentation/Yarn.' >&2
+            exit 1
+          fi
+          echo 'SCENE_COMPOSER_NO_PRODUCTION_APPLY=PASS'
+
+  composer-editmode:
+    name: Scene Composer focused EditMode TDD
+    needs: source-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Scene Composer focused tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer focused EditMode
+          artifactsPath: artifacts-vn-scene-composer-editmode
+      - name: Upload Scene Composer focused test evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-scene-composer-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
