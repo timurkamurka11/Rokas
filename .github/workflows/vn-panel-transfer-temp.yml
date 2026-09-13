@@ -1,4 +1,4 @@
-name: TEMP VN Panel Byte Transfer
+name: TEMP VN Migration Ref Bridge
 
 on:
   push:
@@ -9,81 +9,34 @@ permissions:
   contents: write
 
 jobs:
-  replace-panels:
+  fast-forward-migration-tree:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Download exact authored panels and preserve metas
+      - name: Create migration commit on actual HEAD and fast-forward ref
         shell: bash
         env:
-          SHARE_ID: I-ehbdfMUaNk
-          DARK_NAME: f3c38ffe-5c92-4d75-929c-935405e785ba.png
-          LIGHT_NAME: bf3dc850-4613-4f76-af9b-5660171bca9a.png
-          DARK_SHA: 2e2ee78b32ba1f9d8a1726800e64df18f354ffcb357092e919c43ebbc0386cb7
-          LIGHT_SHA: 76e0c057fb5cf125fcadbb8a2a11deab50accb6caa6b221c21f300a67ee5a987
-          DARK_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png
-          LIGHT_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESIRED_TREE: 6496c53962fb34857cc7d7b3faac57146b94578b
         run: |
           set -euo pipefail
-          DARK_META="${DARK_PATH}.meta"
-          LIGHT_META="${LIGHT_PATH}.meta"
-          dark_meta_before=$(sha256sum "$DARK_META" | awk '{print $1}')
-          light_meta_before=$(sha256sum "$LIGHT_META" | awk '{print $1}')
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth=(-H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
 
-          API_BASE=''
-          for candidate in https://api.firestorage.ai/dev/file https://api.firestorage.ai/prod/file; do
-            if curl -fsS "$candidate/shares/$SHARE_ID/files?maxResults=1000" -o /tmp/files.json && python -c 'import json,os; j=json.load(open("/tmp/files.json")); names={x.get("fileName") or x.get("name") for x in j.get("files",[])}; raise SystemExit(0 if os.environ["DARK_NAME"] in names and os.environ["LIGHT_NAME"] in names else 1)'; then
-              API_BASE="$candidate"
-              break
-            fi
-          done
-          test -n "$API_BASE"
-          echo 'Resolved temporary transfer API.'
+          payload=$(jq -n \
+            --arg message 'test: migrate VN presentation regressions to portrait-free panels' \
+            --arg tree "$DESIRED_TREE" \
+            --arg parent "$GITHUB_SHA" \
+            '{message:$message, tree:$tree, parents:[$parent]}')
+          curl -fsS "${auth[@]}" -X POST "$api/git/commits" -d "$payload" -o /tmp/migration-commit.json
+          new_sha=$(jq -r '.sha // empty' /tmp/migration-commit.json)
+          test -n "$new_sha"
+          echo "Created migration commit $new_sha from parent $GITHUB_SHA"
 
-          file_id() {
-            NAME="$1" python -c 'import json,os; j=json.load(open("/tmp/files.json")); name=os.environ["NAME"]; print(next(x["fileId"] for x in j.get("files",[]) if (x.get("fileName") or x.get("name")) == name))'
-          }
-          download_exact() {
-            local name="$1" target="$2" expected="$3"
-            local id url
-            id=$(file_id "$name")
-            curl -fsS -X POST "$API_BASE/shares/$SHARE_ID/files/$id/download" -o /tmp/download.json
-            url=$(python -c 'import json; print(json.load(open("/tmp/download.json"))["downloadUrl"])')
-            curl -fsSL "$url" -o "$target"
-            echo "$expected  $target" | sha256sum -c -
-          }
-
-          download_exact "$DARK_NAME" "$DARK_PATH" "$DARK_SHA"
-          download_exact "$LIGHT_NAME" "$LIGHT_PATH" "$LIGHT_SHA"
-
-          DARK_PATH="$DARK_PATH" LIGHT_PATH="$LIGHT_PATH" python -c 'import os,struct; paths=[os.environ["DARK_PATH"],os.environ["LIGHT_PATH"]]; [(lambda data,p: ( (_ for _ in ()).throw(AssertionError(p)) if data[:8] != b"\x89PNG\r\n\x1a\n" else None, (_ for _ in ()).throw(AssertionError((p,struct.unpack(">II",data[16:24])))) if struct.unpack(">II",data[16:24]) != (2048,682) else None, (_ for _ in ()).throw(AssertionError((p,data[25]))) if data[25] != 6 else None, print(p,2048,682,"RGBA") ))(open(p,"rb").read(33),p) for p in paths]'
-
-          dark_meta_after=$(sha256sum "$DARK_META" | awk '{print $1}')
-          light_meta_after=$(sha256sum "$LIGHT_META" | awk '{print $1}')
-          test "$dark_meta_before" = "$dark_meta_after"
-          test "$light_meta_before" = "$light_meta_after"
-          test -z "$(git diff --name-only -- '*.meta')"
-          echo 'Meta/GUID carrier files unchanged.'
-
-          git diff --check
-          git status --short
-      - name: Commit exact panel replacements
-        shell: bash
-        env:
-          DARK_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Keiko_Dark.png
-          LIGHT_PATH: Assets/Rokas/Art/VN/UI/Dialogue/VN_DialoguePanel_Mina_Light.png
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$DARK_PATH" "$LIGHT_PATH"
-          if git diff --cached --quiet; then
-            echo 'Panels already match exact authored bytes.'
-            exit 0
-          fi
-          git commit -m 'art: replace VN dialogue panels with authored full panels'
-          git push origin HEAD:feature/vn-visual-polish-refs
+          ref_payload=$(jq -n --arg sha "$new_sha" '{sha:$sha, force:false}')
+          curl -fsS "${auth[@]}" -X PATCH \
+            "$api/git/refs/heads/feature/vn-visual-polish-refs" \
+            -d "$ref_payload" -o /tmp/ref-update.json
+          test "$(jq -r '.object.sha' /tmp/ref-update.json)" = "$new_sha"
+          echo "Fast-forwarded feature/vn-visual-polish-refs to $new_sha with force=false"
