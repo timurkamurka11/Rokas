@@ -103,6 +103,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopTypographyOverride typography = new VnWorkshopTypographyOverride();
         public VnWorkshopTypewriterOverride typewriter = new VnWorkshopTypewriterOverride();
         public VnWorkshopTimingOverride timing = new VnWorkshopTimingOverride();
+        public VnWorkshopExpressionTransitionOverride expressionTransition = new VnWorkshopExpressionTransitionOverride();
+        public VnWorkshopCharacterTransitionOverride characterTransition = new VnWorkshopCharacterTransitionOverride();
 
         public bool HasAnyOverride
         {
@@ -115,7 +117,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                        skipHitRegion.HasAnyOverride || focus.HasAnyOverride ||
                        (typography != null && typography.HasAnyOverride) ||
                        (typewriter != null && typewriter.HasAnyOverride) ||
-                       (timing != null && timing.HasAnyOverride);
+                       (timing != null && timing.HasAnyOverride) ||
+                       (expressionTransition != null && expressionTransition.HasAnyOverride) ||
+                       (characterTransition != null && characterTransition.HasAnyOverride);
             }
         }
 
@@ -159,6 +163,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             typewriter.Clear();
             if (timing == null) timing = new VnWorkshopTimingOverride();
             timing.Clear();
+            if (expressionTransition == null) expressionTransition = new VnWorkshopExpressionTransitionOverride();
+            expressionTransition.Clear();
+            if (characterTransition == null) characterTransition = new VnWorkshopCharacterTransitionOverride();
+            characterTransition.Clear();
         }
     }
 

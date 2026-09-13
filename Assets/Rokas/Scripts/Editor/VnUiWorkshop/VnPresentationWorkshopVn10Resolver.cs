@@ -1,4 +1,5 @@
 using System;
+using Rokas.Presentation;
 using UnityEngine;
 
 namespace Rokas.EditorTools.VnUiWorkshop
@@ -37,6 +38,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
             PostTransitionBreathingRoom = .08f,
             AutoPreviewSequenceGap = .40f
         };
+
+        private static readonly VnWorkshopExpressionTransitionValues ExpressionTransitionBaseline =
+            new VnWorkshopExpressionTransitionValues
+            {
+                Duration = .24f,
+                Easing = VnWorkshopEasing.EaseInOut
+            };
+
+        private static readonly VnWorkshopCharacterTransitionValues CharacterTransitionBaseline =
+            new VnWorkshopCharacterTransitionValues
+            {
+                Mode = VnWorkshopCharacterTransitionMode.Fade,
+                Duration = .30f,
+                FadeDuration = .30f,
+                SlideDistance = 64f,
+                SlideDirection = VnWorkshopSlideDirection.Left,
+                Easing = VnWorkshopEasing.EaseInOut
+            };
 
         public static VnWorkshopTypographyValues ResolveTypography(VnPresentationWorkshopPreset preset)
         {
@@ -227,6 +246,199 @@ namespace Rokas.EditorTools.VnUiWorkshop
             target.autoPreviewSequenceGap = autoPreviewSequenceGap;
         }
 
+        public static VnWorkshopExpressionTransitionValues ResolveExpressionTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopExpressionTransitionOverride source = EnsureExpressionTransition(preset);
+            VnWorkshopExpressionTransitionValues values = ExpressionTransitionBaseline;
+            if (source.hasDuration) values.Duration = source.duration;
+            if (source.hasEasing) values.Easing = source.easing;
+            return values;
+        }
+
+        public static void SetExpressionTransitionPreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            float duration,
+            VnWorkshopEasing easing)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            RequireRange(duration, 0f, 10f, nameof(duration));
+            ValidateEnum(easing, nameof(easing));
+
+            VnWorkshopExpressionTransitionOverride target = EnsureExpressionTransition(preset);
+            target.hasDuration = !Mathf.Approximately(duration, ExpressionTransitionBaseline.Duration);
+            target.duration = duration;
+            target.hasEasing = easing != ExpressionTransitionBaseline.Easing;
+            target.easing = easing;
+        }
+
+        public static VnWorkshopExpressionTransitionSample SampleExpressionTransition(
+            string startStateId,
+            string endStateId,
+            float normalizedProgress,
+            VnWorkshopExpressionTransitionValues values)
+        {
+            VnCharacterVisualState start = ResolveAuthoredState(startStateId, nameof(startStateId));
+            VnCharacterVisualState end = ResolveAuthoredState(endStateId, nameof(endStateId));
+            if (!string.Equals(start.Character, end.Character, StringComparison.Ordinal))
+                throw new ArgumentException("Expression transition states must belong to the same authored character.");
+            ValidateEnum(values.Easing, nameof(values.Easing));
+
+            float raw = Mathf.Clamp01(normalizedProgress);
+            float eased = EvaluateEasing(raw, values.Easing);
+            return new VnWorkshopExpressionTransitionSample
+            {
+                StartStateId = start.Id,
+                EndStateId = end.Id,
+                StartAlpha = 1f - eased,
+                EndAlpha = eased,
+                Complete = raw >= 1f
+            };
+        }
+
+        public static VnWorkshopCharacterTransitionValues ResolveCharacterTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopCharacterTransitionOverride source = EnsureCharacterTransition(preset);
+            VnWorkshopCharacterTransitionValues values = CharacterTransitionBaseline;
+            if (source.hasMode) values.Mode = source.mode;
+            if (source.hasDuration) values.Duration = source.duration;
+            if (source.hasFadeDuration) values.FadeDuration = source.fadeDuration;
+            if (source.hasSlideDistance) values.SlideDistance = source.slideDistance;
+            if (source.hasSlideDirection) values.SlideDirection = source.slideDirection;
+            if (source.hasEasing) values.Easing = source.easing;
+            return values;
+        }
+
+        public static void SetCharacterTransitionPreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            VnWorkshopCharacterTransitionMode mode,
+            float duration,
+            float fadeDuration,
+            float slideDistance,
+            VnWorkshopSlideDirection slideDirection,
+            VnWorkshopEasing easing)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            ValidateEnum(mode, nameof(mode));
+            ValidateEnum(slideDirection, nameof(slideDirection));
+            ValidateEnum(easing, nameof(easing));
+            RequireRange(duration, 0f, 10f, nameof(duration));
+            RequireRange(fadeDuration, 0f, 10f, nameof(fadeDuration));
+            RequireRange(slideDistance, 0f, 2000f, nameof(slideDistance));
+
+            VnWorkshopCharacterTransitionOverride target = EnsureCharacterTransition(preset);
+            target.hasMode = mode != CharacterTransitionBaseline.Mode;
+            target.mode = mode;
+            target.hasDuration = !Mathf.Approximately(duration, CharacterTransitionBaseline.Duration);
+            target.duration = duration;
+            target.hasFadeDuration = !Mathf.Approximately(fadeDuration, CharacterTransitionBaseline.FadeDuration);
+            target.fadeDuration = fadeDuration;
+            target.hasSlideDistance = !Mathf.Approximately(slideDistance, CharacterTransitionBaseline.SlideDistance);
+            target.slideDistance = slideDistance;
+            target.hasSlideDirection = slideDirection != CharacterTransitionBaseline.SlideDirection;
+            target.slideDirection = slideDirection;
+            target.hasEasing = easing != CharacterTransitionBaseline.Easing;
+            target.easing = easing;
+        }
+
+        public static VnWorkshopCharacterTransitionSample SampleCharacterEnter(
+            float normalizedProgress,
+            VnWorkshopCharacterTransitionValues values)
+        {
+            return SampleCharacterTransition(normalizedProgress, values, true);
+        }
+
+        public static VnWorkshopCharacterTransitionSample SampleCharacterExit(
+            float normalizedProgress,
+            VnWorkshopCharacterTransitionValues values)
+        {
+            return SampleCharacterTransition(normalizedProgress, values, false);
+        }
+
+        private static VnWorkshopCharacterTransitionSample SampleCharacterTransition(
+            float normalizedProgress,
+            VnWorkshopCharacterTransitionValues values,
+            bool entering)
+        {
+            ValidateEnum(values.Mode, nameof(values.Mode));
+            ValidateEnum(values.SlideDirection, nameof(values.SlideDirection));
+            ValidateEnum(values.Easing, nameof(values.Easing));
+            float raw = Mathf.Clamp01(normalizedProgress);
+
+            if (values.Mode == VnWorkshopCharacterTransitionMode.Instant)
+            {
+                return new VnWorkshopCharacterTransitionSample
+                {
+                    PositionOffset = Vector2.zero,
+                    Alpha = entering ? 1f : 0f,
+                    Complete = true
+                };
+            }
+
+            float motion = EvaluateEasing(raw, values.Easing);
+            float fadeRaw;
+            if (raw >= 1f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (values.FadeDuration <= 0f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (values.Duration <= 0f)
+            {
+                fadeRaw = raw > 0f ? 1f : 0f;
+            }
+            else
+            {
+                fadeRaw = Mathf.Clamp01((raw * values.Duration) / values.FadeDuration);
+            }
+            float fade = EvaluateEasing(fadeRaw, values.Easing);
+
+            Vector2 offset = Vector2.zero;
+            if (values.Mode == VnWorkshopCharacterTransitionMode.SlideAndFade)
+            {
+                float sign = values.SlideDirection == VnWorkshopSlideDirection.Left ? -1f : 1f;
+                float distance = Mathf.Max(0f, values.SlideDistance);
+                float scalar = entering ? 1f - motion : motion;
+                offset = new Vector2(sign * distance * scalar, 0f);
+            }
+
+            return new VnWorkshopCharacterTransitionSample
+            {
+                PositionOffset = offset,
+                Alpha = entering ? fade : 1f - fade,
+                Complete = raw >= 1f
+            };
+        }
+
+        private static VnCharacterVisualState ResolveAuthoredState(string stateId, string argumentName)
+        {
+            VnCharacterVisualState state;
+            if (string.IsNullOrEmpty(stateId) || !VnCharacterVisualCatalog.TryResolve(stateId, out state))
+                throw new ArgumentException("Unknown authored VN character visual state: " + (stateId ?? string.Empty), argumentName);
+            return state;
+        }
+
+        private static float EvaluateEasing(float value, VnWorkshopEasing easing)
+        {
+            float t = Mathf.Clamp01(value);
+            switch (easing)
+            {
+                case VnWorkshopEasing.Linear:
+                    return t;
+                case VnWorkshopEasing.EaseIn:
+                    return t * t;
+                case VnWorkshopEasing.EaseOut:
+                    return 1f - ((1f - t) * (1f - t));
+                case VnWorkshopEasing.EaseInOut:
+                    return t * t * (3f - (2f * t));
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(easing), easing, "Unsupported Workshop easing.");
+            }
+        }
+
         private static float GetPunctuationPause(string text, int index, VnWorkshopTypewriterValues values)
         {
             char c = text[index];
@@ -262,6 +474,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (preset.timing == null)
                 preset.timing = new VnWorkshopTimingOverride();
             return preset.timing;
+        }
+
+        private static VnWorkshopExpressionTransitionOverride EnsureExpressionTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.expressionTransition == null)
+                preset.expressionTransition = new VnWorkshopExpressionTransitionOverride();
+            return preset.expressionTransition;
+        }
+
+        private static VnWorkshopCharacterTransitionOverride EnsureCharacterTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.characterTransition == null)
+                preset.characterTransition = new VnWorkshopCharacterTransitionOverride();
+            return preset.characterTransition;
         }
 
         private static void RequireRange(float value, float min, float max, string name)
