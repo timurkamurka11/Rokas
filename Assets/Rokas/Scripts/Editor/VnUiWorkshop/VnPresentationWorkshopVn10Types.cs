@@ -86,4 +86,109 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float SpeakerFontSize;
         public float SpeakerCharacterSpacing;
     }
+
+    [Serializable]
+    public sealed class VnWorkshopTypewriterOverride
+    {
+        public bool hasEnabled;
+        public bool enabled;
+        public bool hasCharactersPerSecond;
+        public float charactersPerSecond;
+        public bool hasBaseCharacterDelay;
+        public float baseCharacterDelay;
+        public bool hasCommaPause;
+        public float commaPause;
+        public bool hasPeriodPause;
+        public float periodPause;
+        public bool hasEllipsisPause;
+        public float ellipsisPause;
+        public bool hasQuestionPause;
+        public float questionPause;
+        public bool hasExclamationPause;
+        public float exclamationPause;
+        public bool hasLineStartDelay;
+        public float lineStartDelay;
+
+        public bool HasAnyOverride
+        {
+            get
+            {
+                return hasEnabled || hasCharactersPerSecond || hasBaseCharacterDelay ||
+                       hasCommaPause || hasPeriodPause || hasEllipsisPause ||
+                       hasQuestionPause || hasExclamationPause || hasLineStartDelay;
+            }
+        }
+
+        public void Clear()
+        {
+            hasEnabled = false;
+            enabled = false;
+            hasCharactersPerSecond = false;
+            charactersPerSecond = 0f;
+            hasBaseCharacterDelay = false;
+            baseCharacterDelay = 0f;
+            hasCommaPause = false;
+            commaPause = 0f;
+            hasPeriodPause = false;
+            periodPause = 0f;
+            hasEllipsisPause = false;
+            ellipsisPause = 0f;
+            hasQuestionPause = false;
+            questionPause = 0f;
+            hasExclamationPause = false;
+            exclamationPause = 0f;
+            hasLineStartDelay = false;
+            lineStartDelay = 0f;
+        }
+    }
+
+    public struct VnWorkshopTypewriterValues
+    {
+        public bool Enabled;
+        public float CharactersPerSecond;
+        public float BaseCharacterDelay;
+        public float CommaPause;
+        public float PeriodPause;
+        public float EllipsisPause;
+        public float QuestionPause;
+        public float ExclamationPause;
+        public float LineStartDelay;
+    }
+
+    [Serializable]
+    public sealed class VnWorkshopTimingOverride
+    {
+        public bool hasMinimumBeatSettleDuration;
+        public float minimumBeatSettleDuration;
+        public bool hasPostTransitionBreathingRoom;
+        public float postTransitionBreathingRoom;
+        public bool hasAutoPreviewSequenceGap;
+        public float autoPreviewSequenceGap;
+
+        public bool HasAnyOverride
+        {
+            get
+            {
+                return hasMinimumBeatSettleDuration || hasPostTransitionBreathingRoom ||
+                       hasAutoPreviewSequenceGap;
+            }
+        }
+
+        public void Clear()
+        {
+            hasMinimumBeatSettleDuration = false;
+            minimumBeatSettleDuration = 0f;
+            hasPostTransitionBreathingRoom = false;
+            postTransitionBreathingRoom = 0f;
+            hasAutoPreviewSequenceGap = false;
+            autoPreviewSequenceGap = 0f;
+        }
+    }
+
+    public struct VnWorkshopTimingValues
+    {
+        public float MinimumBeatSettleDuration;
+        public float PostTransitionBreathingRoom;
+        public float AutoPreviewSequenceGap;
+    }
 }

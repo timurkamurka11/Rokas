@@ -18,6 +18,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SpeakerCharacterSpacing = 0f
         };
 
+        private static readonly VnWorkshopTypewriterValues TypewriterBaseline = new VnWorkshopTypewriterValues
+        {
+            Enabled = true,
+            CharactersPerSecond = 36f,
+            BaseCharacterDelay = 0f,
+            CommaPause = .10f,
+            PeriodPause = .24f,
+            EllipsisPause = .36f,
+            QuestionPause = .20f,
+            ExclamationPause = .20f,
+            LineStartDelay = .04f
+        };
+
+        private static readonly VnWorkshopTimingValues TimingBaseline = new VnWorkshopTimingValues
+        {
+            MinimumBeatSettleDuration = .12f,
+            PostTransitionBreathingRoom = .08f,
+            AutoPreviewSequenceGap = .40f
+        };
+
         public static VnWorkshopTypographyValues ResolveTypography(VnPresentationWorkshopPreset preset)
         {
             if (preset == null) throw new ArgumentNullException(nameof(preset));
@@ -80,11 +100,168 @@ namespace Rokas.EditorTools.VnUiWorkshop
             target.speakerCharacterSpacing = speakerCharacterSpacing;
         }
 
+        public static VnWorkshopTypewriterValues ResolveTypewriter(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopTypewriterOverride source = EnsureTypewriter(preset);
+            VnWorkshopTypewriterValues values = TypewriterBaseline;
+            if (source.hasEnabled) values.Enabled = source.enabled;
+            if (source.hasCharactersPerSecond) values.CharactersPerSecond = source.charactersPerSecond;
+            if (source.hasBaseCharacterDelay) values.BaseCharacterDelay = source.baseCharacterDelay;
+            if (source.hasCommaPause) values.CommaPause = source.commaPause;
+            if (source.hasPeriodPause) values.PeriodPause = source.periodPause;
+            if (source.hasEllipsisPause) values.EllipsisPause = source.ellipsisPause;
+            if (source.hasQuestionPause) values.QuestionPause = source.questionPause;
+            if (source.hasExclamationPause) values.ExclamationPause = source.exclamationPause;
+            if (source.hasLineStartDelay) values.LineStartDelay = source.lineStartDelay;
+            return values;
+        }
+
+        public static void SetTypewriterPreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            bool enabled,
+            float charactersPerSecond,
+            float baseCharacterDelay,
+            float commaPause,
+            float periodPause,
+            float ellipsisPause,
+            float questionPause,
+            float exclamationPause,
+            float lineStartDelay)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            RequireRange(charactersPerSecond, 1f, 240f, nameof(charactersPerSecond));
+            RequireRange(baseCharacterDelay, 0f, 5f, nameof(baseCharacterDelay));
+            RequireRange(commaPause, 0f, 5f, nameof(commaPause));
+            RequireRange(periodPause, 0f, 5f, nameof(periodPause));
+            RequireRange(ellipsisPause, 0f, 5f, nameof(ellipsisPause));
+            RequireRange(questionPause, 0f, 5f, nameof(questionPause));
+            RequireRange(exclamationPause, 0f, 5f, nameof(exclamationPause));
+            RequireRange(lineStartDelay, 0f, 5f, nameof(lineStartDelay));
+
+            VnWorkshopTypewriterOverride target = EnsureTypewriter(preset);
+            target.hasEnabled = enabled != TypewriterBaseline.Enabled;
+            target.enabled = enabled;
+            target.hasCharactersPerSecond = !Mathf.Approximately(charactersPerSecond, TypewriterBaseline.CharactersPerSecond);
+            target.charactersPerSecond = charactersPerSecond;
+            target.hasBaseCharacterDelay = !Mathf.Approximately(baseCharacterDelay, TypewriterBaseline.BaseCharacterDelay);
+            target.baseCharacterDelay = baseCharacterDelay;
+            target.hasCommaPause = !Mathf.Approximately(commaPause, TypewriterBaseline.CommaPause);
+            target.commaPause = commaPause;
+            target.hasPeriodPause = !Mathf.Approximately(periodPause, TypewriterBaseline.PeriodPause);
+            target.periodPause = periodPause;
+            target.hasEllipsisPause = !Mathf.Approximately(ellipsisPause, TypewriterBaseline.EllipsisPause);
+            target.ellipsisPause = ellipsisPause;
+            target.hasQuestionPause = !Mathf.Approximately(questionPause, TypewriterBaseline.QuestionPause);
+            target.questionPause = questionPause;
+            target.hasExclamationPause = !Mathf.Approximately(exclamationPause, TypewriterBaseline.ExclamationPause);
+            target.exclamationPause = exclamationPause;
+            target.hasLineStartDelay = !Mathf.Approximately(lineStartDelay, TypewriterBaseline.LineStartDelay);
+            target.lineStartDelay = lineStartDelay;
+        }
+
+        public static int CalculateTypewriterVisibleCharacters(string text, float elapsedSeconds, VnWorkshopTypewriterValues values)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            if (!values.Enabled) return text.Length;
+            if (elapsedSeconds < 0f) return 0;
+
+            float time = values.LineStartDelay;
+            if (elapsedSeconds < time) return 0;
+            float characterDelay = 1f / Mathf.Max(.0001f, values.CharactersPerSecond) + values.BaseCharacterDelay;
+            int visible = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                time += characterDelay;
+                if (elapsedSeconds + .00001f < time) return visible;
+                visible = i + 1;
+                time += GetPunctuationPause(text, i, values);
+                if (elapsedSeconds + .00001f < time) return visible;
+            }
+            return visible;
+        }
+
+        public static float CalculateTypewriterDuration(string text, VnWorkshopTypewriterValues values)
+        {
+            if (string.IsNullOrEmpty(text) || !values.Enabled) return 0f;
+            float characterDelay = 1f / Mathf.Max(.0001f, values.CharactersPerSecond) + values.BaseCharacterDelay;
+            float duration = values.LineStartDelay;
+            for (int i = 0; i < text.Length; i++)
+                duration += characterDelay + GetPunctuationPause(text, i, values);
+            return duration;
+        }
+
+        public static int InstantCompleteVisibleCharacters(string text)
+        {
+            return string.IsNullOrEmpty(text) ? 0 : text.Length;
+        }
+
+        public static VnWorkshopTimingValues ResolveTiming(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopTimingOverride source = EnsureTiming(preset);
+            VnWorkshopTimingValues values = TimingBaseline;
+            if (source.hasMinimumBeatSettleDuration) values.MinimumBeatSettleDuration = source.minimumBeatSettleDuration;
+            if (source.hasPostTransitionBreathingRoom) values.PostTransitionBreathingRoom = source.postTransitionBreathingRoom;
+            if (source.hasAutoPreviewSequenceGap) values.AutoPreviewSequenceGap = source.autoPreviewSequenceGap;
+            return values;
+        }
+
+        public static void SetTimingPreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            float minimumBeatSettleDuration,
+            float postTransitionBreathingRoom,
+            float autoPreviewSequenceGap)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            RequireRange(minimumBeatSettleDuration, 0f, 10f, nameof(minimumBeatSettleDuration));
+            RequireRange(postTransitionBreathingRoom, 0f, 10f, nameof(postTransitionBreathingRoom));
+            RequireRange(autoPreviewSequenceGap, 0f, 10f, nameof(autoPreviewSequenceGap));
+
+            VnWorkshopTimingOverride target = EnsureTiming(preset);
+            target.hasMinimumBeatSettleDuration = !Mathf.Approximately(minimumBeatSettleDuration, TimingBaseline.MinimumBeatSettleDuration);
+            target.minimumBeatSettleDuration = minimumBeatSettleDuration;
+            target.hasPostTransitionBreathingRoom = !Mathf.Approximately(postTransitionBreathingRoom, TimingBaseline.PostTransitionBreathingRoom);
+            target.postTransitionBreathingRoom = postTransitionBreathingRoom;
+            target.hasAutoPreviewSequenceGap = !Mathf.Approximately(autoPreviewSequenceGap, TimingBaseline.AutoPreviewSequenceGap);
+            target.autoPreviewSequenceGap = autoPreviewSequenceGap;
+        }
+
+        private static float GetPunctuationPause(string text, int index, VnWorkshopTypewriterValues values)
+        {
+            char c = text[index];
+            if (c == ',') return values.CommaPause;
+            if (c == '…') return values.EllipsisPause;
+            if (c == '?') return values.QuestionPause;
+            if (c == '!') return values.ExclamationPause;
+            if (c != '.') return 0f;
+
+            bool inAsciiEllipsis = (index > 0 && text[index - 1] == '.') || (index + 1 < text.Length && text[index + 1] == '.');
+            if (!inAsciiEllipsis) return values.PeriodPause;
+            bool isTerminalEllipsisDot = index >= 2 && text[index - 1] == '.' && text[index - 2] == '.' &&
+                                         (index + 1 >= text.Length || text[index + 1] != '.');
+            return isTerminalEllipsisDot ? values.EllipsisPause : 0f;
+        }
+
         private static VnWorkshopTypographyOverride EnsureTypography(VnPresentationWorkshopPreset preset)
         {
             if (preset.typography == null)
                 preset.typography = new VnWorkshopTypographyOverride();
             return preset.typography;
+        }
+
+        private static VnWorkshopTypewriterOverride EnsureTypewriter(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.typewriter == null)
+                preset.typewriter = new VnWorkshopTypewriterOverride();
+            return preset.typewriter;
+        }
+
+        private static VnWorkshopTimingOverride EnsureTiming(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.timing == null)
+                preset.timing = new VnWorkshopTimingOverride();
+            return preset.timing;
         }
 
         private static void RequireRange(float value, float min, float max, string name)
