@@ -92,7 +92,7 @@ jobs:
           unityVersion: ${{ env.UNITY_VERSION }}
           testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerTests"
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-A core EditMode
           artifactsPath: artifacts-vn-scene-composer-core
@@ -109,7 +109,7 @@ jobs:
           unityVersion: ${{ env.UNITY_VERSION }}
           testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerCrudTests"
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerCrudTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-B CRUD EditMode
           artifactsPath: artifacts-vn-scene-composer-crud
