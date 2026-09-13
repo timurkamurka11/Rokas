@@ -17,6 +17,10 @@ namespace Rokas.Presentation
         private const string ProofArgument = "-rokasVnIntroProof";
         private const string ScenarioArgument = "-rokasVnIntroScenario";
         private const string OutputArgument = "-rokasVnIntroOutput";
+        private const string ScreenWidthArgument = "-screen-width";
+        private const string ScreenHeightArgument = "-screen-height";
+        private const int DefaultScreenWidth = 1920;
+        private const int DefaultScreenHeight = 1080;
         private const float StartupTimeoutSeconds = 90f;
         private const float UiTimeoutSeconds = 12f;
         private const string MinaLine = "Я дома, приходи, нужно поговорить.";
@@ -90,6 +94,13 @@ namespace Rokas.Presentation
             return string.Empty;
         }
 
+        public static Vector2Int GetRequestedResolution(string[]? args)
+        {
+            int width = ParsePositiveInt(GetArgumentValue(args, ScreenWidthArgument), DefaultScreenWidth);
+            int height = ParsePositiveInt(GetArgumentValue(args, ScreenHeightArgument), DefaultScreenHeight);
+            return new Vector2Int(width, height);
+        }
+
         private IEnumerator Start()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -110,7 +121,8 @@ namespace Rokas.Presentation
                 yield break;
             }
 
-            Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
+            Vector2Int requestedResolution = GetRequestedResolution(args);
+            Screen.SetResolution(requestedResolution.x, requestedResolution.y, FullScreenMode.Windowed);
 
             RokasBootstrap? bootstrap = null;
             yield return WaitFor(() =>
@@ -422,6 +434,11 @@ namespace Rokas.Presentation
                     return args[index + 1] ?? string.Empty;
             }
             return string.Empty;
+        }
+
+        private static int ParsePositiveInt(string value, int fallback)
+        {
+            return int.TryParse(value, out int parsed) && parsed > 0 ? parsed : fallback;
         }
 
         private void Finish(bool pass, string error)
