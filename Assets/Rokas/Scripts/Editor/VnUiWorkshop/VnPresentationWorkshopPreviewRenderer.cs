@@ -143,7 +143,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentNullException(nameof(preset));
 
             RokasAssets assets = LoadAssets();
-            Vector2 screenSize = VnPresentationWorkshopResolver.ResolveScreenResolution(resolution);
+            Vector2 screenSize = VnPresentationWorkshopResolver.GetScreenSize(resolution);
             Vector2 virtualCanvas = VnPresentationWorkshopResolver.CalculateVirtualCanvasSize(
                 Mathf.RoundToInt(screenSize.x), Mathf.RoundToInt(screenSize.y));
 
@@ -459,10 +459,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawOutline(rect, 1f);
             if (rect.width >= 48f)
             {
-                var style = new GUIStyle(GUI.skin.miniLabel)
+                var style = new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.LowerCenter,
                     wordWrap = true,
+                    fontSize = 9,
                     normal = { textColor = Color.white }
                 };
                 GUI.Label(new Rect(rect.x - 35f, rect.yMax + 2f, rect.width + 70f, 30f), label, style);
