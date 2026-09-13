@@ -21,9 +21,9 @@ Architecture: extend existing `CombatService` with a composed, exclusive lane en
 
 ## Gate 0C — deflectable projectile
 
-- [ ] RED: Space 0.14 active, shared cooldown 0.55, early/late/wrong family fail; resolves only colliding instance, siblings survive; lane avoidance always possible.
-- [ ] GREEN: add marked projectile family and deflect. Seal −12, Resonance +12; return visual never adds damage.
-- [ ] Verify tests and PlayMode avoidance/deflect proof. Record checkpoint before 0D.
+- [x] RED: Space 0.14 active, shared cooldown 0.55, early/late/wrong family fail; resolves only colliding instance, siblings survive; lane avoidance always possible.
+- [x] GREEN: add marked projectile family and deflect. Seal −12, Resonance +12; return visual never adds damage.
+- [x] Verify tests and PlayMode avoidance/deflect proof. Record checkpoint before 0D.
 
 ## Gate 0D — locked ink and full Phase 0 verification
 

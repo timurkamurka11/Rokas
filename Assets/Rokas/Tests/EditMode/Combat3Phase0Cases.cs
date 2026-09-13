@@ -14,7 +14,11 @@ namespace Rokas.Core.Tests
             "DodgeStationary", "PracticeGate", "MixedPatterns", "WaveAllLanes", "WaveStepCannotEvade",
             "DodgeDirectional", "DodgeBounds", "DodgeCooldown", "EmptyDodge", "PerfectContact",
             "PerfectBoundary", "DodgeImmunityBoundary", "DodgeOncePerAttack", "DodgeHeavyContact",
-            "DodgeHeavyEmptyLane", "DodgeCancellation", "PerfectSealToken", "WaveFreshCounter"
+            "DodgeHeavyEmptyLane", "DodgeCancellation", "PerfectSealToken", "WaveFreshCounter", "DeflectStarts",
+            "ProjectileMarked", "ProjectileAvoidance", "DeflectContact", "DeflectSibling", "DeflectBoundary",
+            "DeflectWrongFamily", "EmptyDeflect", "DeflectSharedCooldown", "DeflectLateImmunity", "DeflectCancellation",
+            "DeflectFeedbackCancellation", "DeflectSealToken", "ProjectileLifecycle", "ProjectileClock",
+            "ProjectileEdges", "ProjectileEdgeSibling", "DeflectSecondInstance", "ProjectileCleanup"
         };
         public static void Run(string name) { typeof(Combat3Phase0Cases).GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null); }
         private static void Need(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
@@ -49,7 +53,7 @@ namespace Rokas.Core.Tests
         }
         private static void ExclusiveOwner()
         {
-            var s = Fight(); Need(!s.ClickAttack(false) && !s.BeginAttack() && !s.Deflect() && !s.TraceRitualPoint(0), "C2 actions cannot bypass C3");
+            var s = Fight(); Need(!s.ClickAttack(false) && !s.BeginAttack() && !s.TraceRitualPoint(0), "C2 attacks cannot bypass C3");
             float enemy = s.State.enemyHp; Frames(s, 600); Near(enemy, s.State.enemyHp, "Idle has no enemy damage");
         }
         private static void LaneTransition()
@@ -168,6 +172,194 @@ namespace Rokas.Core.Tests
             Need((bool)method.Invoke(s, new[] { selection }), "Practice enters same combat owner");
             return s;
         }
+        private static void DeflectStarts()
+        {
+            var s = Fight(); Need(s.Deflect(), "Fresh Space starts C3 deflect through existing owner");
+            Near(.55f, s.Combat.DefenseCooldownRemaining, "Deflect starts shared cooldown");
+            Near(.14f, Read<float>(Arena(s), "DeflectRemaining"), "Deflect active duration");
+        }
+        private static object[] Attacks(GameSession s)
+        {
+            var values = new System.Collections.Generic.List<object>();
+            foreach (object attack in Read<System.Collections.IEnumerable>(Arena(s), "Attacks")) values.Add(attack);
+            return values.ToArray();
+        }
+        private static void ProjectileMarked()
+        {
+            Need(Enum.IsDefined(typeof(Combat3Practice), "Projectile"), "Projectile practice is an explicit gated family");
+            var s = Practice("Projectile"); var attacks = Attacks(s);
+            Need(attacks.Length == 2, "Projectile family contains two real overlapping attack lifetimes");
+            Need(Read<int>(attacks[0], "Id") != Read<int>(attacks[1], "Id"), "Sibling IDs unique");
+            Need(Read<bool>(attacks[0], "IsDeflectable") && Read<bool>(attacks[1], "IsDeflectable"), "Both projectiles marked");
+            Need(Read<int>(attacks[0], "Lane") == 2 && Read<int>(attacks[1], "Lane") == 3, "Locked adjacent projectile lanes");
+            Near(0, Read<float>(attacks[0], "ApproachProgress"), "Travel begins at origin");
+            Frames(s, 54); Near(1, Read<float>(attacks[0], "ApproachProgress"), "Primary reaches contact");
+            Near(.4f, Read<float>(attacks[1], "ContactDelayRemaining"), "Sibling arrival remains delayed");
+            Need(Read<string>(attacks[1], "StateName") == "Telegraph", "Sibling is still approaching");
+        }
+        private static void ProjectileAvoidance()
+        {
+            var s = Practice("Projectile"); Input(s, left: true); Frames(s, 8); Input(s); Until(s, "CounterWindow");
+            Near(100, s.State.playerHp, "Ordinary lane movement avoids both projectiles");
+            Near(100, s.Combat.Seal, "Avoidance has no deflect reward"); Near(0, s.Combat.Resonance, "Avoidance has no resonance");
+        }
+        private static void DeflectContact()
+        {
+            var s = Practice("Projectile"); int hits = 0; s.Combat.Hit += h => hits++;
+            Until(s, "Active"); int id = Read<int>(Arena(s), "AttackId"); Need(s.Deflect(), "Space accepted before contact"); Frames(s, 1);
+            Near(100, s.State.playerHp, "Deflect precedes player HP damage"); Near(10000, s.State.enemyHp, "Return has no enemy damage");
+            Near(88, s.Combat.Seal, "Deflect Seal minus12"); Near(12, s.Combat.Resonance, "Deflect resonance plus12");
+            Need(hits == 0 && Read<int>(Arena(s), "LastDeflectedAttackId") == id, "Feedback identifies actual instance without damage event");
+            Need(Read<string>(Arena(s), "AttackStateName") == "Deflected", "Primary resolves by ID");
+            Until(s, "CounterWindow"); Near(12, s.Combat.Resonance, "Repeated overlap cannot duplicate deflect reward"); Near(88, s.Combat.Seal, "One Seal reward per instance");
+        }
+        private static void DeflectSibling()
+        {
+            var s = Practice("Projectile"); Until(s, "Active"); var attacks = Attacks(s); int sibling = Read<int>(attacks[1], "Id");
+            s.Deflect(); Frames(s, 1);
+            Need(Attacks(s).Length == 2 && Read<int>(Attacks(s)[1], "Id") == sibling && Read<string>(attacks[1], "StateName") == "Telegraph", "Resolving one instance preserves approaching sibling");
+            Input(s, right: true); Frames(s, 8); Input(s); Frames(s, 15);
+            Need(Read<string>(Arena(s), "StageName") == "Active" && Read<string>(attacks[1], "StateName") == "Active", "Counter waits for sibling arrival");
+            Frames(s, 1); Near(92, s.State.playerHp, "Surviving sibling inflicts later real damage");
+            Near(88, s.Combat.Seal, "Sibling was not globally deflected"); Need(Read<string>(attacks[1], "StateName") == "Hit", "Sibling has independent resolution");
+        }
+        private static void DeflectBoundary()
+        {
+            var inside = Practice("Projectile"); Frames(inside, 46); inside.Deflect(); Until(inside, "Recovery");
+            Near(100, inside.State.playerHp, "Contact at0.1333 is inside0.14"); Near(12, inside.Combat.Resonance, "Inside boundary rewards");
+            var early = Practice("Projectile"); Frames(early, 45); early.Deflect(); Until(early, "Recovery");
+            Near(92, early.State.playerHp, "Contact at0.15 is outside0.14"); Near(100, early.Combat.Seal, "Early defense cannot reward");
+        }
+        private static void DeflectWrongFamily()
+        {
+            foreach (string kind in new[] { "Heavy", "LowWave" })
+            {
+                var s = Practice(kind); Until(s, "Active"); Need(s.Deflect(), "Space can start against wrong family"); Frames(s, 1);
+                Near(92, s.State.playerHp, "Deflect cannot protect against " + kind); Near(100, s.Combat.Seal, "Wrong family grants no Seal"); Near(0, s.Combat.Resonance, "Wrong family grants no resonance");
+            }
+        }
+        private static void EmptyDeflect()
+        {
+            var s = Practice("Projectile"); Need(s.Deflect(), "Empty deflect starts"); Frames(s, 8);
+            Need(Read<float>(Arena(s), "DeflectRemaining") > 0, "Deflect still live at0.1333"); Frames(s, 1);
+            Near(0, Read<float>(Arena(s), "DeflectRemaining"), "Deflect expired by0.15"); Near(100, s.Combat.Seal, "Empty deflect grants no Seal"); Near(0, s.Combat.Resonance, "Empty deflect grants no resonance");
+            var miss = Practice("Projectile"); Input(miss, left: true); Frames(miss, 8); Input(miss); Until(miss, "Active"); miss.Deflect(); Frames(miss, 1);
+            Near(0, miss.Combat.Resonance, "Deflect in empty lane grants nothing"); Near(0, Read<float>(Arena(miss), "DeflectFeedbackRemaining"), "No return for empty lane");
+        }
+        private static void DeflectSharedCooldown()
+        {
+            var s = Fight(); s.Deflect(); Need(!s.Dodge() && !s.Deflect(), "Deflect locks both defenses"); Frames(s, 32);
+            Need(!s.Dodge(), "Shared cooldown blocks before0.55"); Frames(s, 1); Need(s.Dodge(), "Dodge allowed after deflect cooldown");
+            Frames(s, 33); Need(s.Deflect(), "Deflect allowed after dodge cooldown");
+        }
+        private static void DeflectLateImmunity()
+        {
+            var s = Practice("Projectile"); Until(s, "Active"); Frames(s, 1); Near(92, s.State.playerHp, "Late defense follows real hit");
+            Need(s.Deflect(), "Late deflect may start but cannot undo hit"); Frames(s, 1); Near(100, s.Combat.Seal, "Already-hit instance grants no deflect");
+            Input(s, right: true); Frames(s, 8); Input(s); Frames(s, 24); Need(s.Combat.DamageImmunityRemaining > 0, "Sibling contact falls inside hit immunity");
+            Need(s.Deflect(), "Fresh deflect still allowed after cooldown during immunity"); Frames(s, 1);
+            Near(100, s.Combat.Seal, "Contact already harmless through hit immunity never rewards"); Near(0, s.Combat.Resonance, "No immunity farming"); Near(92, s.State.playerHp, "No duplicate damage");
+        }
+        private static void DeflectCancellation()
+        {
+            for (int mode = 0; mode < 4; mode++)
+            {
+                var s = Practice("Projectile"); Until(s, "Active"); s.Deflect();
+                if (mode == 0) { s.SetCombat3Paused(true); Need(!s.Deflect(), "Paused rejects Space"); s.SetCombat3Paused(false); }
+                if (mode == 1) { s.SetCombat3Focused(false); Need(!s.Deflect(), "Unfocused rejects Space"); s.SetCombat3Focused(true); }
+                if (mode == 2) s.Tick(.101f);
+                if (mode == 3) s.CancelCombatInput();
+                Near(0, Read<float>(Arena(s), "DeflectRemaining"), "Cancellation clears queued defense");
+                if (mode != 3) { Need(!s.Deflect(), "Read delay rejects Space"); Frames(s, 36); }
+                Frames(s, 1); Near(92, s.State.playerHp, "Cancelled deflect cannot protect resumed contact"); Near(100, s.Combat.Seal, "Cancelled deflect grants nothing");
+            }
+        }
+        private static void DeflectFeedbackCancellation()
+        {
+            for (int mode = 0; mode < 4; mode++)
+            {
+                var s = Practice("Projectile"); Until(s, "Active"); s.Deflect(); Frames(s, 1);
+                Need(Read<float>(Arena(s), "DeflectFeedbackRemaining") > 0, "Actual deflect produces feedback");
+                if (mode == 0) s.SetCombat3Paused(true);
+                if (mode == 1) s.SetCombat3Focused(false);
+                if (mode == 2) s.Tick(.101f);
+                if (mode == 3) s.CancelCombatInput();
+                Near(0, Read<float>(Arena(s), "DeflectRemaining"), "Cancellation clears active defense"); Near(0, Read<float>(Arena(s), "DeflectFeedbackRemaining"), "Cancellation clears return");
+                Need(Read<int>(Arena(s), "LastDeflectedAttackId") == 0, "Cancellation clears feedback identity");
+            }
+        }
+        private static void DeflectSealToken()
+        {
+            var s = Practice("Projectile");
+            for (int i = 0; i < 9; i++) { Until(s, "Active"); s.Deflect(); Until(s, "CounterWindow"); if (i < 8) Until(s, "Telegraph"); }
+            Near(0, s.Combat.Seal, "Deflect clamps Seal"); Near(100, s.Combat.Resonance, "Deflect caps resonance"); Need(s.Combat.SealBonusPending, "Deflect uses shared next-counter token");
+            Need(s.ActivateResonance(), "Deflect-earned gauge can reserve"); s.SetCombat3Paused(true); Need(!s.Combat.ResonanceReserved, "Deflect practice suspension clears reservation"); s.SetCombat3Paused(false); Frames(s, 36);
+            Input(s); Input(s, attack: true); Frames(s, 1); Near(9985.6f, s.State.enemyHp, "Counter consumes deflect-earned Seal bonus only once"); Near(100, s.Combat.Seal, "Counter resets shared Seal");
+        }
+        private static void ProjectileLifecycle()
+        {
+            var s = Practice("Projectile"); Until(s, "Active"); s.Deflect(); Frames(s, 1); var old = Arena(s);
+            int run = s.State.contractRunSequence; var reload = new GameSession(s.State, s.Contract);
+            Near(100, reload.State.playerHp, "Projectile reload uses known initial HP"); Need(reload.State.contractRunSequence == run && reload.State.completedRuns == 0, "Reload never creates payment");
+            // Finish through the real result path while feedback/commands exist in the encounter.
+            var win = new GameSession(new SaveData(), new ContractDefinition { enemyHealth = 9 }); win.AcceptContract(); win.LeaveHome(); win.EnterCombat3Practice((Combat3Practice)Enum.Parse(typeof(Combat3Practice), "Projectile"));
+            Until(win, "CounterWindow"); win.Deflect(); Input(win, attack: true); Frames(win, 1); var completed = Arena(win);
+            Need(win.State.phase == RunPhase.Sealed && Read<string>(completed, "StageName") == "Complete", "Projectile counter uses shared victory");
+            Near(0, Read<float>(completed, "DeflectRemaining"), "Completion clears pending deflect"); Near(0, Read<float>(completed, "DeflectFeedbackRemaining"), "Completion clears return");
+            foreach (var attack in Attacks(win)) Need(Read<string>(attack, "StateName") == "Cleanup", "Completion cleans every instance");
+            Need(win.ReturnHome() && win.ClaimPayment() && !win.ClaimPayment(), "Projectile result pays exactly once");
+        }
+        private static void ProjectileClock()
+        {
+            var a = Practice("Projectile"); var b = Practice("Projectile"); Frames(a, 54); for (int i = 0; i < 27; i++) b.Tick(1f / 30);
+            a.Deflect(); b.Deflect(); Frames(a, 36); for (int i = 0; i < 18; i++) b.Tick(1f / 30);
+            Near(a.State.playerHp, b.State.playerHp, "Projectile contact partition independent"); Near(a.Combat.Seal, b.Combat.Seal, "Deflect resolution partition independent");
+            Need(Read<string>(Attacks(a)[1], "StateName") == Read<string>(Attacks(b)[1], "StateName"), "Sibling lifetime partition independent");
+        }
+        private static void ProjectileCleanup()
+        {
+            var s = Practice("Projectile"); Until(s, "CounterWindow");
+            foreach (var attack in Attacks(s)) Need(Read<string>(attack, "StateName") == "Cleanup", "Every projectile releases its lifetime before counter window");
+        }
+        private static GameSession ProjectileAtEdge(int edge)
+        {
+            var s = Practice("Projectile"); Input(s, left: edge == 0, right: edge == 4); Frames(s, 32); Input(s);
+            Until(s, "CounterWindow"); int previousSibling = Read<int>(Attacks(s)[1], "Id"); Until(s, "Telegraph");
+            var attacks = Attacks(s);
+            Need(Read<int>(attacks[0], "Lane") == edge && Read<int>(attacks[1], "Lane") == (edge == 0 ? 1 : 3), "Both edge projectiles lock inside arena");
+            Need(Read<int>(attacks[0], "Id") > previousSibling, "Next pattern preserves globally unique IDs");
+            return s;
+        }
+        private static void ProjectileEdges()
+        {
+            foreach (int edge in new[] { 0, 4 })
+            {
+                var s = ProjectileAtEdge(edge); Input(s, left: edge == 0, right: edge == 4); Frames(s, 8); Input(s);
+                Near(edge, Read<float>(Arena(s), "LanePosition"), "Outward ordinary movement stays in boundary");
+                Input(s, left: edge == 4, right: edge == 0); Frames(s, 20); Input(s);
+                Need(Read<int>(Attacks(s)[0], "Lane") == edge, "Movement never retargets locked edge projectile");
+                Until(s, "CounterWindow"); Near(100, s.State.playerHp, "Ordinary inward movement avoids both edge projectiles");
+                Near(0, s.Combat.Resonance, "Edge avoidance grants no defense reward");
+            }
+        }
+        private static void ProjectileEdgeSibling()
+        {
+            foreach (int edge in new[] { 0, 4 })
+            {
+                var s = ProjectileAtEdge(edge); Until(s, "Active"); int siblingId = Read<int>(Attacks(s)[1], "Id");
+                Need(s.Deflect(), "Edge deflect accepted"); Frames(s, 1); Input(s, left: edge == 4, right: edge == 0); Frames(s, 8); Input(s); Frames(s, 16);
+                Near(92, s.State.playerHp, "Sibling survives primary deflect and contacts inward adjacent lane");
+                Need(Read<int>(Attacks(s)[1], "Id") == siblingId && Read<string>(Attacks(s)[1], "StateName") == "Hit", "Boundary sibling retains ownership and resolves independently");
+            }
+        }
+        private static void DeflectSecondInstance()
+        {
+            var s = Practice("Projectile"); Input(s, right: true); Frames(s, 8); Input(s); Until(s, "Active"); Frames(s, 24);
+            var attacks = Attacks(s); int siblingId = Read<int>(attacks[1], "Id"); Need(s.Deflect(), "Deflect approaching sibling after avoiding primary"); Frames(s, 1);
+            Need(Read<int>(Arena(s), "LastDeflectedAttackId") == siblingId && Read<int>(Arena(s), "LastDeflectedLane") == 3, "Return belongs to actual colliding sibling");
+            Need(Read<string>(attacks[0], "StateName") == "Resolved" && Read<string>(attacks[1], "StateName") == "Deflected", "Deflect changes only colliding second instance");
+            Near(100, s.State.playerHp, "Sibling deflect prevents contact"); Near(88, s.Combat.Seal, "Only actual sibling gives reward"); Near(12, s.Combat.Resonance, "One sibling reward");
+        }
         private static void DodgeStationary()
         {
             var s = Fight(); Need(s.Dodge(), "Fresh RMB starts C3 stationary dodge"); Frames(s, 8);
@@ -193,7 +385,7 @@ namespace Rokas.Core.Tests
             Need(Read<string>(Arena(s), "AttackKindName") == "LowWave", "Review includes second family");
             Need(Read<int>(Arena(s), "AttackId") > first, "Mixed attack IDs remain unique");
             Until(s, "CounterWindow"); Until(s, "Telegraph");
-            Need(Read<string>(Arena(s), "AttackKindName") == "Heavy", "Mixed pattern returns to heavy");
+            Need(Read<string>(Arena(s), "AttackKindName") == "Projectile", "Mixed pattern includes third projectile family after prior two");
         }
         private static void WaveAllLanes()
         {

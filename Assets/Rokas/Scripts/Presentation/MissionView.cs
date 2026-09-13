@@ -46,6 +46,7 @@ namespace Rokas.Presentation
             if (paused() || session.State.phase != RunPhase.Combat) return;
             if (session.Combat.Combat3 != null)
             {
+                if (deflect) session.Deflect();
                 if (dodge) combat3Arena?.RequestDodge();
                 if (resonance) session.ActivateResonance();
                 return;
@@ -73,6 +74,8 @@ namespace Rokas.Presentation
                         () => travel(() => session.EnterCombat3Practice(Combat3Practice.Heavy), "ТРЕНИРОВКА\nУйдите с отмеченной полосы."));
                     ui.Button(parent, "Combat3PracticeLowWave", "Низкая волна", 1552, 670, 288, 64,
                         () => travel(() => session.EnterCombat3Practice(Combat3Practice.LowWave), "ТРЕНИРОВКА\nПКМ — перепрыгните волну."));
+                    ui.Button(parent, "Combat3PracticeProjectile", "Отражение", 1240, 590, 288, 64,
+                        () => travel(() => session.EnterCombat3Practice(Combat3Practice.Projectile), "ТРЕНИРОВКА\nСмените полосу или отразите на SPACE."));
                 }
                 ui.Button(parent, "ReturnFromPortal", "Вернуться домой", 67, 881, 450, 60,
                     () => travel(session.ReturnHome, "Вы возвращаетесь по мокрым улицам."));

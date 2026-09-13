@@ -138,7 +138,7 @@ namespace Rokas.Core
         }
 
         internal bool Dodge() { return Combat3 != null ? Combat3.Dodge() : Defend(false); }
-        internal bool Deflect() { return Defend(true); }
+        internal bool Deflect() { return Combat3 != null ? Combat3.Deflect() : Defend(true); }
         private bool Defend(bool deflect)
         {
             if (!Fighting || DefenseCooldownRemaining > CombatTuning.Epsilon) return false;
@@ -270,6 +270,19 @@ namespace Rokas.Core
         {
             DefenseCooldownRemaining = .55f;
             Resolve(CombatAction.Dodge);
+        }
+
+        internal void Combat3BeginDeflect()
+        {
+            DefenseCooldownRemaining = .55f;
+        }
+
+        internal void Combat3DeflectContact()
+        {
+            Seal = Math.Max(0, Seal - 12);
+            if (Seal == 0) SealBonusPending = true;
+            Resonance = Math.Min(100, Resonance + 12);
+            Resolve(CombatAction.Deflect);
         }
 
         internal void Combat3PerfectDodge()

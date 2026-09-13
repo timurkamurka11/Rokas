@@ -1,6 +1,6 @@
 # Combat 3 Phase 0 continuation
 
-Updated: 2026-09-13 10:43 UTC. 0A and 0B verified; full Phase 0 is NOT complete.
+Updated: 2026-09-13 15:58 UTC. 0A–0C verified; 0D next; full Phase 0 is NOT complete.
 
 ## Identity and safety
 
@@ -24,7 +24,7 @@ Updated: 2026-09-13 10:43 UTC. 0A and 0B verified; full Phase 0 is NOT complete.
 
 ## Progress / evidence
 
-- Recovery, 0A and 0B implementation complete. Save verified 0B checkpoint, then 0C; 0D waits for 0C gate. Implementation checklist: `Docs/Superpowers/plans/2026-09-12-combat3-phase0.md`.
+- Recovery and 0A–0C implementation complete. Save verified0C checkpoint, then0D. Implementation checklist: `Docs/Superpowers/plans/2026-09-12-combat3-phase0.md`.
 - Evidence/tooling directory: `D:/Rokas/combat3-phase0-evidence`.
 - Portable test runner adapted from existing `D:/Rokas/combat2-tools/run-tests.mjs`; commands use `node D:/Rokas/combat3-phase0-evidence/run-baseline.mjs core|editmode|playmode`.
 - Core baseline: exit 0, all existing domain suites, 23 Combat 2 scenarios and four original requirements pass. `baseline-core-runner.log`.
@@ -46,9 +46,17 @@ Updated: 2026-09-13 10:43 UTC. 0A and 0B verified; full Phase 0 is NOT complete.
 - Final review also reproduced a rejected raw RMB replay by the pointer duplicate after cooldown expiry: `0b-duplicate-red` then `0b-duplicate-green`. Raw/pointer frame stamps deduplicate both event orders; cancellation preserves stamps.
 - No0C projectile/deflect or0D ink/full6–10second composition yet. Do not claim full Phase0 complete.
 
-## Exact next operation
+## Current 0C evidence / next operation
 
-Record verified 0B checkpoint after final review/diff check, then implement 0C using the same encounter: projectile/Space0.14/shared0.55, resolve only actual colliding attack ID and preserve siblings. No integration, VN merge or push. Domain agent0B finished.
+- Verified0B: `1a3441ee5ff52d5417f81d516366fe516541fa66`; current0C changes build on it.
+- Latest user continuation fully read: `C:/Users/tim/.codex/attachments/b314c378-b3e5-40e7-9f5b-e061cc4d92ae/pasted-text.txt`. Sequential focused RED/GREEN; no restarting0A/B/C, no integration.
+- 0C domain complete:61C3+23C2+all Core suites, `0c-domain-final-green-core.log`; detailed focused pairs/API in external `0c-domain-report.md`. Two marked instances, locked adjacent lanes, independent arrival.9/1.3 and.18 contact lifetimes. Deflect.14/sharedcooldown.55, actual colliding ID only, Seal−12/R+12, pure visual return. Edges, sibling damage, second-instance deflect, wrong/empty/early/late, immunity and cleanup tested.
+- Runtime sequential RED→GREEN: `0c-space-route-red/green` (Space/settings cancellation), `0c-projectile-view-red/green` (travel/normal lane avoidance), `0c-return-view-red/green` (actual deflect HUD/return/sibling stays), `0c-practice-red/green` (existing portal travel). Initial `0c-runtime-red1` was missing enum, expected before domain family implementation.
+- Final focused C3 PlayMode20/20: `combat3-0c-focused-gate-playmode.xml`. Actual current captures `visuals-0c-focused-gate` inspected: marked projectile, unchanged enemy HP, deflect Seal88/R12, surviving sibling and return.
+- Full Unity gates: EditMode95/95 `combat3-0c-edit-gate-editmode.xml`; graphical PlayMode111/111 `combat3-0c-play-gate-playmode.xml`. Includes all previous Home/Messages/startup/C2/save/payment suites.
+- Domain review and subsequent scoped presentation review by `phase0c_review` clean. No active domain writer.
+- Asset validator `0c-gate-final-validator.log`:25 baseline findings, no new findings versus tracked27. Earlier `0c-gate-validator.log` ran while a Home test temporarily renamed LaptopBoot media; those transient extra findings disappeared after test teardown. Do not treat the intermediate scan as final.
+- Record verified0C feature checkpoint after literal diff/log audit. Then0D only: delayed ink locks current lane before clear warning and never retargets; explicit residual lifetime; finish approved6–10second pattern tuning and full lifecycle/runtime proof. No later phases, merge, integration, push, or canonical QA handoff.
 
 ## Tool recovery
 

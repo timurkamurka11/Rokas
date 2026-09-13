@@ -274,6 +274,126 @@ namespace Rokas.Tests
             Assert.That(Get<float>(Encounter, "DodgeRemaining"), Is.EqualTo(0), "Same physical down cannot retry after the cooldown boundary.");
         }
 
+        [UnityTest] public IEnumerator ProjectileCanBeAvoidedByAnOrdinaryLaneStep()
+        {
+            EnterPractice("Projectile");
+            yield return null;
+            Assert.That(Find("Combat3AttackCue").GetComponent<Text>().text, Does.Contain("СНАРЯД"));
+            Capture("0c-projectile-warning");
+            InputSample(true, false, false);
+            Advance(.13f);
+            InputSample(false, false, false);
+            Until("CounterWindow");
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(180));
+            Capture("0c-projectile-avoided");
+        }
+
+        [UnityTest] public IEnumerator SpaceDeflectsActualProjectileWithoutDirectEnemyDamage()
+        {
+            EnterPractice("Projectile");
+            yield return null;
+            boot.View.HandleCombatInput(false, true, false);
+            Advance(.2f);
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(100), "Empty deflect grants nothing.");
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(0));
+            Until("Active");
+            boot.View.HandleCombatInput(false, true, false);
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(180), "Reflected visual is not an extra damage source.");
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(88));
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(12));
+            Assert.That(Find("Combat3DefenseCue").GetComponent<Text>().text, Does.Contain("ОТРАЖЕНО"));
+            var attacks = (IList)Get<object>(Encounter, "Attacks");
+            Assert.That(attacks.Count, Is.EqualTo(2));
+            Assert.That(Get<string>(attacks[0], "StateName"), Is.EqualTo("Deflected"));
+            Assert.That(Get<string>(attacks[1], "StateName"), Is.EqualTo("Telegraph"), "Sibling keeps travelling after primary reflection.");
+            Assert.That(Find("Combat3Projectile1").activeSelf, Is.True);
+            Assert.That(Find("Combat3ProjectileReturn").activeSelf, Is.True);
+            Capture("0c-deflected");
+            InputSample(true, false, false);
+            Advance(.13f);
+            InputSample(false, false, false);
+            Until("CounterWindow");
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(100));
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(180));
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(12));
+        }
+
+        [UnityTest] public IEnumerator SpaceCannotProtectAgainstHeavyStrike()
+        {
+            EnterPractice("Heavy");
+            Until("Active");
+            boot.View.HandleCombatInput(false, true, false);
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(92));
+            Assert.That(boot.Session.Combat.Resonance, Is.EqualTo(0));
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(100));
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator PortalPracticeButtonEntersProjectileThroughExistingTravel()
+        {
+            var button = Find("Combat3PracticeProjectile");
+            Assert.That(button, Is.Not.Null);
+            ExecuteEvents.Execute(button, new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
+            float deadline = Time.realtimeSinceStartup + 2;
+            while (boot.Session.State.phase != RunPhase.Combat && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(Get<string>(Encounter, "AttackKindName"), Is.EqualTo("Projectile"));
+        }
+
+        [UnityTest] public IEnumerator SpaceCommandStartsC3DefenseAndSettingsCancelsIt()
+        {
+            EnterPractice("Heavy");
+            boot.View.HandleCombatInput(false, true, false);
+            Assert.That(Get<float>(Encounter, "DeflectRemaining"), Is.GreaterThan(0), "Space route must reach C3 defense.");
+            boot.View.Escape();
+            Assert.That(Get<float>(Encounter, "DeflectRemaining"), Is.EqualTo(0));
+            boot.View.HandleCombatInput(false, true, false);
+            boot.View.Escape();
+            Advance(.6f);
+            Assert.That(Get<float>(Encounter, "DeflectRemaining"), Is.EqualTo(0), "Space from settings cannot replay after resume.");
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator ReflectedProjectileLeavesSiblingVisibleAndDangerous()
+        {
+            EnterPractice("Projectile");
+            Until("Active");
+            boot.View.HandleCombatInput(false, true, false);
+            Advance(1f / 60f);
+            InputSample(false, true, false);
+            Advance(8f / 60f);
+            InputSample(false, false, false);
+            Advance(15f / 60f);
+            Assert.That(Find("Combat3Projectile1").activeSelf, Is.True);
+            Assert.That(Get<string>(Encounter, "StageName"), Is.EqualTo("Active"));
+            Capture("0c-sibling-contact");
+            Advance(1f / 60f);
+            Assert.That(boot.Session.State.playerHp, Is.EqualTo(92));
+            Assert.That(boot.Session.Combat.Seal, Is.EqualTo(88));
+            Assert.That(boot.Session.State.enemyHp, Is.EqualTo(180));
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator FocusLossClearsDeflectReturnVisual()
+        {
+            EnterPractice("Projectile");
+            Until("Active");
+            boot.View.HandleCombatInput(false, true, false);
+            Advance(1f / 60f);
+            Assert.That(Find("Combat3ProjectileReturn").activeSelf, Is.True);
+            boot.SendMessage("OnApplicationFocus", false);
+            boot.View.Tick(0);
+            Assert.That(Find("Combat3ProjectileReturn").activeSelf, Is.False);
+            Assert.That(Get<float>(Encounter, "DeflectRemaining"), Is.EqualTo(0));
+            boot.SendMessage("OnApplicationFocus", true);
+            Advance(.6f);
+            Assert.That(Find("Combat3ProjectileReturn").activeSelf, Is.False);
+            yield return null;
+        }
+
         private void EnterPractice(string family)
         {
             MethodInfo method = boot.Session.GetType().GetMethod("EnterCombat3Practice");

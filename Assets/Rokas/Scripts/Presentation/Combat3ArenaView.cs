@@ -23,6 +23,8 @@ namespace Rokas.Presentation
         private readonly Renderer enemy;
         private readonly Renderer warning;
         private readonly Renderer strike;
+        private readonly Renderer[] projectiles = new Renderer[2];
+        private readonly Renderer returnedProjectile;
         private readonly Text health;
         private readonly Text enemyHealth;
         private readonly Text seal;
@@ -48,7 +50,7 @@ namespace Rokas.Presentation
             defenseCue = ui.Label(parent, "Combat3DefenseCue", "", 70, 650, 230, 130, 21, UiKit.Gold);
             counterCue = ui.Label(parent, "Combat3CounterCue", "", 300, 830, 1320, 55, 30, UiKit.Gold, true, TextAnchor.MiddleCenter);
             bonusCue = ui.Label(parent, "Combat3BonusCue", "", 300, 885, 1320, 45, 20, UiKit.Paper, false, TextAnchor.MiddleCenter);
-            ui.Label(parent, "Combat3Controls", "A / D  или  ← / → — шаг     ·     ПКМ — рывок (с направлением или на месте)\nЛКМ — контратака в открытое окно     ·     R — резонанс", 180, 930, 1560, 65, 21, UiKit.Muted, false, TextAnchor.MiddleCenter);
+            ui.Label(parent, "Combat3Controls", "A / D  или  ← / → — шаг     ·     ПКМ — рывок     ·     SPACE — отражение золотого снаряда\nЛКМ — контратака в открытое окно     ·     R — резонанс", 180, 930, 1560, 65, 21, UiKit.Muted, false, TextAnchor.MiddleCenter);
 
             worldRoot = new GameObject("Combat3ProxyWorld");
             worldRoot.transform.SetParent(parent.root, false);
@@ -66,6 +68,9 @@ namespace Rokas.Presentation
             enemy = Proxy("Combat3Enemy", PrimitiveType.Capsule, new Vector3(0, .95f, 5.3f), new Vector3(1.05f, .95f, 1.05f), enemyMaterial);
             warning = Proxy("Combat3HeavyTelegraph", PrimitiveType.Cube, new Vector3(0, -.025f, 2.1f), new Vector3(2.05f, .045f, 9), warningMaterial);
             strike = Proxy("Combat3HeavyStrike", PrimitiveType.Cube, new Vector3(0, .7f, -.7f), new Vector3(1.45f, 1.4f, .45f), dangerMaterial);
+            for (int i = 0; i < projectiles.Length; i++)
+                projectiles[i] = Proxy("Combat3Projectile" + i, PrimitiveType.Sphere, Vector3.zero, new Vector3(.55f, .55f, .55f), hitMaterial);
+            returnedProjectile = Proxy("Combat3ProjectileReturn", PrimitiveType.Cube, Vector3.zero, new Vector3(.35f, .35f, .6f), playerMaterial);
 
             var cameraRoot = new GameObject("Combat3ArenaCamera", typeof(Camera));
             cameraRoot.transform.SetParent(worldRoot.transform, false);
@@ -112,26 +117,45 @@ namespace Rokas.Presentation
             player.sharedMaterial = playerHit > 0 ? dangerMaterial : encounter.DodgeRemaining > 0 ? hitMaterial : playerMaterial;
             enemy.sharedMaterial = enemyHit > 0 ? hitMaterial : enemyMaterial;
             bool wave = encounter.AttackKindName == "LowWave";
+            bool projectile = encounter.AttackKindName == "Projectile";
             warning.transform.localPosition = wave ? new Vector3(0, .04f, encounter.StageName == "Telegraph" ? Mathf.Lerp(-.7f, 6, Mathf.Clamp01(encounter.StageRemaining / .9f)) : -.7f)
                 : new Vector3(X(encounter.AttackLane), -.025f, 2.1f);
             warning.transform.localScale = wave ? new Vector3(11.7f, .08f, .3f) : new Vector3(2.05f, .045f, 9);
-            warning.gameObject.SetActive(encounter.StageName == "Telegraph" || encounter.StageName == "Active");
+            warning.gameObject.SetActive(!projectile && (encounter.StageName == "Telegraph" || encounter.StageName == "Active"));
             warning.sharedMaterial = encounter.StageName == "Active" ? dangerMaterial : warningMaterial;
             strike.transform.localPosition = new Vector3(wave ? 0 : X(encounter.AttackLane), wave ? .15f : .7f, -.7f);
             strike.transform.localScale = wave ? new Vector3(11.7f, .3f, .45f) : new Vector3(1.45f, 1.4f, .45f);
-            strike.gameObject.SetActive(encounter.StageName == "Active");
+            strike.gameObject.SetActive(!projectile && encounter.StageName == "Active");
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                Combat3Attack attack = i < encounter.Attacks.Count ? encounter.Attacks[i] : null;
+                bool visible = attack != null && attack.IsDeflectable && (attack.StateName == "Telegraph" || attack.StateName == "Active");
+                projectiles[i].gameObject.SetActive(visible);
+                if (visible)
+                {
+                    float z = attack.StateName == "Telegraph" ? Mathf.Lerp(6, -.7f, attack.ApproachProgress)
+                        : Mathf.Lerp(-1.4f, -.7f, Mathf.Clamp01(attack.ActiveRemaining / .18f));
+                    projectiles[i].transform.localPosition = new Vector3(X(attack.Lane), .65f, z);
+                }
+            }
+            returnedProjectile.gameObject.SetActive(encounter.DeflectFeedbackRemaining > 0);
+            if (encounter.DeflectFeedbackRemaining > 0)
+                returnedProjectile.transform.localPosition = new Vector3(X(encounter.LastDeflectedLane), .85f,
+                    Mathf.Lerp(5.3f, -.7f, encounter.DeflectFeedbackRemaining / .6f));
             health.text = "ОХОТНИК\n" + Mathf.CeilToInt(session.State.playerHp) + " / 100";
             enemyHealth.text = "ПРОТИВНИК\n" + Mathf.CeilToInt(session.State.enemyHp) + " / " + Mathf.CeilToInt(session.Contract.enemyHealth);
             seal.text = "ПЕЧАТЬ\n" + Mathf.CeilToInt(session.Combat.Seal) + " / 100";
             resonance.text = "РЕЗОНАНС\n" + Mathf.CeilToInt(session.Combat.Resonance) + " / 100" + (session.Combat.ResonanceReserved ? "\nЗаряжен" : "");
             bool window = encounter.StageName == "CounterWindow";
             attackCue.text = encounter.ReadDelayRemaining > 0 ? "ПРОЧИТАЙТЕ ПОЛЕ  ·  " + encounter.ReadDelayRemaining.ToString("0.0")
-                : encounter.StageName == "Telegraph" ? (wave ? "НИЗКАЯ ВОЛНА  ·  ПКМ" : "ТЯЖЁЛЫЙ УДАР  ·  ПОЛОСА " + (encounter.AttackLane + 1)) + "  ·  " + encounter.StageRemaining.ToString("0.00")
-                : encounter.StageName == "Active" ? wave ? "НИЗКАЯ ВОЛНА" : "УДАР" : "";
+                : encounter.StageName == "Telegraph" ? (projectile ? "ОТРАЖАЕМЫЙ СНАРЯД  ·  SPACE" : wave ? "НИЗКАЯ ВОЛНА  ·  ПКМ" : "ТЯЖЁЛЫЙ УДАР  ·  ПОЛОСА " + (encounter.AttackLane + 1)) + "  ·  " + encounter.StageRemaining.ToString("0.00")
+                : encounter.StageName == "Active" ? projectile ? "ОТРАЖАЕМЫЕ СНАРЯДЫ" : wave ? "НИЗКАЯ ВОЛНА" : "УДАР" : "";
             counterCue.text = window ? encounter.CounterAvailable ? "ЛКМ — КОНТРАТАКА   " + encounter.CounterWindowRemaining.ToString("0.00") : "КОНТРАТАКА ВЫПОЛНЕНА"
-                : encounter.StageName == "Recovery" ? "ПРОТИВНИК ОТКРЫВАЕТСЯ…" : wave ? "ПКМ — ПЕРЕПРЫГНИТЕ ВОЛНУ" : "УЙДИТЕ С ОТМЕЧЕННОЙ ПОЛОСЫ";
+                : encounter.StageName == "Recovery" ? "ПРОТИВНИК ОТКРЫВАЕТСЯ…" : projectile ? "СМЕНИТЕ ПОЛОСУ ИЛИ ОТРАЗИТЕ НА SPACE" : wave ? "ПКМ — ПЕРЕПРЫГНИТЕ ВОЛНУ" : "УЙДИТЕ С ОТМЕЧЕННОЙ ПОЛОСЫ";
             bonusCue.text = session.Combat.SealBonusPending ? "Печать сломана: следующая контратака +60%" : "";
-            defenseCue.text = encounter.PerfectFeedbackRemaining > 0 && encounter.LastPerfect ? "ИДЕАЛЬНО\nПечать −8\nРезонанс +8"
+            defenseCue.text = encounter.DeflectFeedbackRemaining > 0 ? "ОТРАЖЕНО\nПечать −12\nРезонанс +12"
+                : encounter.PerfectFeedbackRemaining > 0 && encounter.LastPerfect ? "ИДЕАЛЬНО\nПечать −8\nРезонанс +8"
+                : encounter.DeflectRemaining > 0 ? "ОТРАЖЕНИЕ"
                 : encounter.DodgeRemaining > 0 ? "РЫВОК"
                 : session.Combat.DefenseCooldownRemaining > 0 ? "ЗАЩИТА\n" + session.Combat.DefenseCooldownRemaining.ToString("0.00")
                 : "ПКМ — РЫВОК\nГотов";

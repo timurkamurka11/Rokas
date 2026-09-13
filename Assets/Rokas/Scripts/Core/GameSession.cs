@@ -140,7 +140,7 @@ namespace Rokas.Core
 
         public bool EnterCombat3Practice(Combat3Practice practice)
         {
-            if (practice != Combat3Practice.Heavy && practice != Combat3Practice.LowWave) return false;
+            if (practice != Combat3Practice.Heavy && practice != Combat3Practice.LowWave && practice != Combat3Practice.Projectile) return false;
             if (!contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract))) return false;
             Combat.BeginCombat3(practice);
             NotifyChanged();
