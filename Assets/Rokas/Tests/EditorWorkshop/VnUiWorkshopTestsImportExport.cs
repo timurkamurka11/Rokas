@@ -26,7 +26,7 @@ namespace Rokas.EditorTools.Tests
 
             Assert.That(exportFileName, Is.Not.Null, "The export UI must expose the approved portable filename.");
             Assert.That(exportFileName.GetRawConstantValue(), Is.EqualTo("ROKAS_VN_WORKSHOP_PRESET.json"));
-            Assert.That(exportJson, Is.Not.Null, "The window must export through the existing schema-v1 serializer.");
+            Assert.That(exportJson, Is.Not.Null, "The window must export through the current validated serializer.");
             Assert.That(importJson, Is.Not.Null, "The window must import through the existing validated deserializer.");
             Assert.That(exportFile, Is.Not.Null, "The window must support an explicit user-selected export file.");
             Assert.That(importFile, Is.Not.Null, "The window must support an explicit user-selected import file.");
@@ -76,7 +76,10 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(mismatchResult.SourceHeadMismatch, Is.True,
                     "Source HEAD incompatibility must be surfaced explicitly.");
 
-                string invalidSchema = json1.Replace("\"schemaVersion\": 1", "\"schemaVersion\": 999");
+                string schemaToken = "\"schemaVersion\": " + VnPresentationWorkshopSerialization.SchemaVersion;
+                string invalidSchema = json1.Replace(schemaToken, "\"schemaVersion\": 999");
+                Assert.That(invalidSchema, Is.Not.EqualTo(json1),
+                    "The unsupported-schema proof must actually replace the current schema token.");
                 var invalidResult = (VnWorkshopImportResult)importJson.Invoke(window, new object[] { invalidSchema });
                 Assert.That(invalidResult.Success, Is.False, "Unsupported schema versions must be rejected.");
 
