@@ -57,6 +57,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Easing = VnWorkshopEasing.EaseInOut
             };
 
+        private static readonly VnWorkshopActionBounceValues ActionBounceBaseline =
+            new VnWorkshopActionBounceValues
+            {
+                Amplitude = 18f,
+                Duration = .28f,
+                ScaleEmphasis = .03f,
+                Overshoot = .15f,
+                Easing = VnWorkshopEasing.EaseInOut
+            };
+
         public static VnWorkshopTypographyValues ResolveTypography(VnPresentationWorkshopPreset preset)
         {
             if (preset == null) throw new ArgumentNullException(nameof(preset));
@@ -356,6 +366,97 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return SampleCharacterTransition(normalizedProgress, values, false);
         }
 
+        public static VnWorkshopActionBounceValues ResolveActionBounce(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopActionBounceOverride source = EnsureActionBounce(preset);
+            VnWorkshopActionBounceValues values = ActionBounceBaseline;
+            if (source.hasAmplitude) values.Amplitude = source.amplitude;
+            if (source.hasDuration) values.Duration = source.duration;
+            if (source.hasScaleEmphasis) values.ScaleEmphasis = source.scaleEmphasis;
+            if (source.hasOvershoot) values.Overshoot = source.overshoot;
+            if (source.hasEasing) values.Easing = source.easing;
+            return values;
+        }
+
+        public static void SetActionBouncePreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            float amplitude,
+            float duration,
+            float scaleEmphasis,
+            float overshoot,
+            VnWorkshopEasing easing)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            RequireRange(amplitude, 0f, 1000f, nameof(amplitude));
+            RequireRange(duration, .01f, 10f, nameof(duration));
+            RequireRange(scaleEmphasis, 0f, 1f, nameof(scaleEmphasis));
+            RequireRange(overshoot, 0f, 2f, nameof(overshoot));
+            ValidateEnum(easing, nameof(easing));
+
+            VnWorkshopActionBounceOverride target = EnsureActionBounce(preset);
+            target.hasAmplitude = !Mathf.Approximately(amplitude, ActionBounceBaseline.Amplitude);
+            target.amplitude = amplitude;
+            target.hasDuration = !Mathf.Approximately(duration, ActionBounceBaseline.Duration);
+            target.duration = duration;
+            target.hasScaleEmphasis = !Mathf.Approximately(scaleEmphasis, ActionBounceBaseline.ScaleEmphasis);
+            target.scaleEmphasis = scaleEmphasis;
+            target.hasOvershoot = !Mathf.Approximately(overshoot, ActionBounceBaseline.Overshoot);
+            target.overshoot = overshoot;
+            target.hasEasing = easing != ActionBounceBaseline.Easing;
+            target.easing = easing;
+        }
+
+        public static VnWorkshopActionBounceSample SampleActionBounce(
+            bool triggered,
+            float normalizedProgress,
+            VnWorkshopActionBounceValues values)
+        {
+            ValidateEnum(values.Easing, nameof(values.Easing));
+            if (!triggered)
+            {
+                return new VnWorkshopActionBounceSample
+                {
+                    PositionOffset = Vector2.zero,
+                    ScaleMultiplier = 1f,
+                    Complete = true
+                };
+            }
+
+            float raw = Mathf.Clamp01(normalizedProgress);
+            if (raw <= 0f)
+            {
+                return new VnWorkshopActionBounceSample
+                {
+                    PositionOffset = Vector2.zero,
+                    ScaleMultiplier = 1f,
+                    Complete = false
+                };
+            }
+            if (raw >= 1f)
+            {
+                return new VnWorkshopActionBounceSample
+                {
+                    PositionOffset = Vector2.zero,
+                    ScaleMultiplier = 1f,
+                    Complete = true
+                };
+            }
+
+            float eased = EvaluateEasing(raw, values.Easing);
+            float primary = Mathf.Sin(Mathf.PI * eased);
+            float rebound = Mathf.Sin(Mathf.PI * 2f * eased);
+            float y = -Mathf.Max(0f, values.Amplitude) *
+                      (primary + (Mathf.Max(0f, values.Overshoot) * .25f * rebound));
+            float scale = 1f + (Mathf.Max(0f, values.ScaleEmphasis) * primary);
+            return new VnWorkshopActionBounceSample
+            {
+                PositionOffset = new Vector2(0f, y),
+                ScaleMultiplier = scale,
+                Complete = false
+            };
+        }
+
         private static VnWorkshopCharacterTransitionSample SampleCharacterTransition(
             float normalizedProgress,
             VnWorkshopCharacterTransitionValues values,
@@ -488,6 +589,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (preset.characterTransition == null)
                 preset.characterTransition = new VnWorkshopCharacterTransitionOverride();
             return preset.characterTransition;
+        }
+
+        private static VnWorkshopActionBounceOverride EnsureActionBounce(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.actionBounce == null)
+                preset.actionBounce = new VnWorkshopActionBounceOverride();
+            return preset.actionBounce;
         }
 
         private static void RequireRange(float value, float min, float max, string name)

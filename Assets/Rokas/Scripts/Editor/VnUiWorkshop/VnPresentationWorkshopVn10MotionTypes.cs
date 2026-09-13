@@ -119,4 +119,54 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float Alpha;
         public bool Complete;
     }
+
+    [Serializable]
+    public sealed class VnWorkshopActionBounceOverride
+    {
+        public bool hasAmplitude;
+        public float amplitude;
+        public bool hasDuration;
+        public float duration;
+        public bool hasScaleEmphasis;
+        public float scaleEmphasis;
+        public bool hasOvershoot;
+        public float overshoot;
+        public bool hasEasing;
+        public VnWorkshopEasing easing;
+
+        public bool HasAnyOverride
+        {
+            get { return hasAmplitude || hasDuration || hasScaleEmphasis || hasOvershoot || hasEasing; }
+        }
+
+        public void Clear()
+        {
+            hasAmplitude = false;
+            amplitude = 0f;
+            hasDuration = false;
+            duration = 0f;
+            hasScaleEmphasis = false;
+            scaleEmphasis = 0f;
+            hasOvershoot = false;
+            overshoot = 0f;
+            hasEasing = false;
+            easing = VnWorkshopEasing.EaseInOut;
+        }
+    }
+
+    public struct VnWorkshopActionBounceValues
+    {
+        public float Amplitude;
+        public float Duration;
+        public float ScaleEmphasis;
+        public float Overshoot;
+        public VnWorkshopEasing Easing;
+    }
+
+    public struct VnWorkshopActionBounceSample
+    {
+        public Vector2 PositionOffset;
+        public float ScaleMultiplier;
+        public bool Complete;
+    }
 }
