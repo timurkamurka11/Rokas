@@ -280,6 +280,88 @@ namespace Rokas.EditorTools.Tests
             }
         }
 
+        [Test]
+        public void EditorWindowDirectManipulationAndInspectorEditOnlyCurrentOverrides()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            EditorWindow window = ScriptableObject.CreateInstance(windowType) as EditorWindow;
+            Assert.That(window, Is.Not.Null);
+
+            try
+            {
+                PropertyInfo selectedElement = windowType.GetProperty("SelectedElement", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo selectElementAt = windowType.GetMethod("SelectElementAt", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo dragSelected = windowType.GetMethod("DragSelectedElement", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo nudgeSelected = windowType.GetMethod("NudgeSelectedElement", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setPosition = windowType.GetMethod("SetSelectedPosition", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setSize = windowType.GetMethod("SetSelectedSize", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setScale = windowType.GetMethod("SetSelectedScale", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo resetSelected = windowType.GetMethod("ResetSelectedElement", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo resetAll = windowType.GetMethod("ResetAll", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setFocus = windowType.GetMethod("SetFocusValues", BindingFlags.Public | BindingFlags.Instance);
+
+                Assert.That(selectedElement, Is.Not.Null, "The real inspector must expose the selected editable element.");
+                Assert.That(selectElementAt, Is.Not.Null, "Preview selection must use the mirror renderer hit-test path.");
+                Assert.That(dragSelected, Is.Not.Null, "Selected elements must support mouse-drag deltas.");
+                Assert.That(nudgeSelected, Is.Not.Null, "Selected elements must support arrow-key nudging.");
+                Assert.That(setPosition, Is.Not.Null, "The inspector must support exact Position X/Y editing.");
+                Assert.That(setSize, Is.Not.Null, "The inspector must support exact Width/Height editing where the model supports it.");
+                Assert.That(setScale, Is.Not.Null, "The inspector must support exact Scale editing where the model supports it.");
+                Assert.That(resetSelected, Is.Not.Null, "The inspector must support Reset Element.");
+                Assert.That(resetAll, Is.Not.Null, "The Workshop must support Reset All.");
+                Assert.That(setFocus, Is.Not.Null, "The approved focus override fields must be editable without a second model.");
+
+                var preset = (VnPresentationWorkshopPreset)windowType.GetProperty("CurrentPreset").GetValue(window);
+                windowType.GetProperty("ComparisonView").SetValue(window,
+                    Enum.Parse(windowType.GetProperty("ComparisonView").PropertyType, "Current"));
+                windowType.GetProperty("PreviewScene").SetValue(window, VnWorkshopPreviewScene.MinaBody);
+
+                VnWorkshopPreviewFrame frame = (VnWorkshopPreviewFrame)windowType.GetMethod("BuildPreviewFrame").Invoke(window, null);
+                bool selected = (bool)selectElementAt.Invoke(window, new object[] { frame.MinaBody.center });
+                Assert.That(selected, Is.True);
+                Assert.That((VnWorkshopElement)selectedElement.GetValue(window), Is.EqualTo(VnWorkshopElement.MinaBody));
+
+                dragSelected.Invoke(window, new object[] { new Vector2(20f, -10f) });
+                nudgeSelected.Invoke(window, new object[] { Vector2.right, false });
+                nudgeSelected.Invoke(window, new object[] { Vector2.up, true });
+                setScale.Invoke(window, new object[] { 1.2f });
+                Assert.That(preset.minaBody.positionDelta, Is.EqualTo(new Vector2(21f, 0f)));
+                Assert.That(preset.minaBody.hasPositionDelta, Is.True);
+                Assert.That(preset.minaBody.scaleMultiplier, Is.EqualTo(1.2f));
+                Assert.That(preset.minaBody.hasScaleMultiplier, Is.True);
+
+                selectedElement.SetValue(window, VnWorkshopElement.DialogueText);
+                setPosition.Invoke(window, new object[] { new Vector2(7f, 8f) });
+                setSize.Invoke(window, new object[] { new Vector2(30f, 40f) });
+                Assert.That(preset.dialogueText.positionDelta, Is.EqualTo(new Vector2(7f, 8f)));
+                Assert.That(preset.dialogueText.sizeDelta, Is.EqualTo(new Vector2(30f, 40f)));
+                resetSelected.Invoke(window, null);
+                Assert.That(preset.dialogueText.HasAnyOverride, Is.False);
+                Assert.That(preset.minaBody.HasAnyOverride, Is.True,
+                    "Reset Element must not clear unrelated CurrentPreset overrides.");
+
+                setFocus.Invoke(window, new object[] { 325f, 1.08f, .91f, .72f, .80f });
+                Assert.That(preset.focus.hasTwoCharacterOffset, Is.True);
+                Assert.That(preset.focus.twoCharacterOffset, Is.EqualTo(325f));
+                Assert.That(preset.focus.hasActiveScale, Is.True);
+                Assert.That(preset.focus.activeScale, Is.EqualTo(1.08f));
+                Assert.That(preset.focus.hasInactiveScale, Is.True);
+                Assert.That(preset.focus.inactiveScale, Is.EqualTo(.91f));
+                Assert.That(preset.focus.hasInactiveBrightness, Is.True);
+                Assert.That(preset.focus.inactiveBrightness, Is.EqualTo(.72f));
+                Assert.That(preset.focus.hasInactiveAlpha, Is.True);
+                Assert.That(preset.focus.inactiveAlpha, Is.EqualTo(.80f));
+
+                resetAll.Invoke(window, null);
+                Assert.That(preset.HasAnyOverride, Is.False,
+                    "Reset All must clear CurrentPreset overrides without copying or mutating the Original baseline.");
+            }
+            finally
+            {
+                if (window != null) UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
         private static Type RequireType(string shortName)
         {
             Type type = Type.GetType(Namespace + shortName + ", " + EditorAssembly);
