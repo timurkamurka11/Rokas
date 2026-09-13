@@ -34,6 +34,25 @@ namespace Rokas.Tests
                 "Invalid proof dimensions must retain the known-safe default.");
         }
 
+        [Test]
+        public void RuntimeProofDoesNotCaptureWhileEnterWorldCurtainIsActive()
+        {
+            var curtain = new GameObject("EnterWorldCurtain");
+            try
+            {
+                Assert.That(RokasVnIntroRuntimeProofRunner.IsVnPresentationUnobscured(), Is.False,
+                    "Runtime screenshots must not be captured through the Enter World fade curtain.");
+
+                curtain.SetActive(false);
+                Assert.That(RokasVnIntroRuntimeProofRunner.IsVnPresentationUnobscured(), Is.True,
+                    "An inactive transition curtain must not block proof capture.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(curtain);
+            }
+        }
+
         [UnityTest]
         public IEnumerator RuntimeProofRecognizesNestedPolishedVnHierarchy()
         {
