@@ -19,6 +19,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         ExternalGif
     }
 
+    public enum VnSceneComposerMediaScaleMode
+    {
+        Fit,
+        Fill
+    }
+
     public enum VnSceneComposerPreviewAdvanceMode
     {
         ManualBeat,
@@ -33,6 +39,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string displayName = string.Empty;
         public string contentHash = string.Empty;
         public bool localPreviewDependency;
+        public VnSceneComposerMediaScaleMode scaleMode = VnSceneComposerMediaScaleMode.Fit;
     }
 
     [Serializable]
