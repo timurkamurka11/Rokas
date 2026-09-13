@@ -64,7 +64,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             string path = GetVariantPath(projectRoot, variantName);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path, VnPresentationWorkshopSerialization.Serialize(preset, SanitizeVariantName(variantName)));
+            string previewSampleText = VnWorkshopPreviewSampleStore.Get(preset);
+            File.WriteAllText(path, VnPresentationWorkshopSerialization.Serialize(
+                preset,
+                SanitizeVariantName(variantName),
+                previewSampleText));
         }
 
         public static VnWorkshopImportResult LoadVariant(string projectRoot, string variantName)
