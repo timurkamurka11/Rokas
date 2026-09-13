@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,11 +14,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public const string MenuPath = "ROKAS/VN UI Workshop";
 
+        private const float NudgeStep = 1f;
+        private const float LargeNudgeStep = 10f;
+
         [SerializeField] private VnPresentationWorkshopPreset currentPreset = new VnPresentationWorkshopPreset();
         [SerializeField] private VnWorkshopPreviewScene previewScene = VnWorkshopPreviewScene.MinaBody;
         [SerializeField] private VnWorkshopResolution previewResolution = VnWorkshopResolution.Reference1920x1080;
         [SerializeField] private VnWorkshopComparisonView comparisonView = VnWorkshopComparisonView.Current;
         [SerializeField] private VnWorkshopElement selectedElement = VnWorkshopElement.DialoguePanel;
+
+        [NonSerialized] private bool draggingSelected;
+        [NonSerialized] private Vector2 lastDragLogicalPoint;
 
         public VnPresentationWorkshopPreset CurrentPreset
         {
@@ -46,6 +53,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             set => comparisonView = value;
         }
 
+        public VnWorkshopElement SelectedElement
+        {
+            get => selectedElement;
+            set => selectedElement = value;
+        }
+
         [MenuItem(MenuPath)]
         public static void Open()
         {
@@ -63,6 +76,83 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return VnPresentationWorkshopPreviewRenderer.BuildFrame(previewPreset, previewResolution, previewScene);
         }
 
+        public bool SelectElementAt(Vector2 logicalPoint)
+        {
+            VnWorkshopElement? hit = VnPresentationWorkshopPreviewRenderer.HitTest(BuildPreviewFrame(), logicalPoint);
+            if (!hit.HasValue) return false;
+            selectedElement = hit.Value;
+            Repaint();
+            return true;
+        }
+
+        public void DragSelectedElement(Vector2 logicalDelta)
+        {
+            VnPresentationWorkshopEditing.ApplyDrag(CurrentPreset, selectedElement, logicalDelta);
+            Repaint();
+        }
+
+        public void NudgeSelectedElement(Vector2 direction, bool largeStep)
+        {
+            float step = largeStep ? LargeNudgeStep : NudgeStep;
+            VnPresentationWorkshopEditing.Nudge(CurrentPreset, selectedElement, direction * step);
+            Repaint();
+        }
+
+        public void SetSelectedPosition(Vector2 delta)
+        {
+            VnPresentationWorkshopEditing.SetPositionDelta(CurrentPreset, selectedElement, delta);
+            Repaint();
+        }
+
+        public void SetSelectedSize(Vector2 delta)
+        {
+            VnPresentationWorkshopEditing.SetSizeDelta(CurrentPreset, selectedElement, delta);
+            Repaint();
+        }
+
+        public void SetSelectedScale(float multiplier)
+        {
+            VnPresentationWorkshopEditing.SetScaleMultiplier(CurrentPreset, selectedElement, multiplier);
+            Repaint();
+        }
+
+        public void ResetSelectedElement()
+        {
+            CurrentPreset.ResetElement(selectedElement);
+            Repaint();
+        }
+
+        public void ResetAll()
+        {
+            CurrentPreset.ResetAll();
+            Repaint();
+        }
+
+        public void SetFocusValues(float twoCharacterOffset, float activeScale, float inactiveScale,
+            float inactiveBrightness, float inactiveAlpha)
+        {
+            RequireFinite(twoCharacterOffset, nameof(twoCharacterOffset));
+            RequireRange(activeScale, .05f, 5f, nameof(activeScale));
+            RequireRange(inactiveScale, .05f, 5f, nameof(inactiveScale));
+            RequireRange(inactiveBrightness, 0f, 1f, nameof(inactiveBrightness));
+            RequireRange(inactiveAlpha, 0f, 1f, nameof(inactiveAlpha));
+            if (twoCharacterOffset < 0f)
+                throw new ArgumentOutOfRangeException(nameof(twoCharacterOffset), "Character offset cannot be negative.");
+
+            VnWorkshopFocusValues baseline = VnPresentationWorkshopResolver.ResolveFocus(new VnPresentationWorkshopPreset());
+            SetFocusOverride(ref CurrentPreset.focus.hasTwoCharacterOffset, ref CurrentPreset.focus.twoCharacterOffset,
+                twoCharacterOffset, baseline.TwoCharacterOffset);
+            SetFocusOverride(ref CurrentPreset.focus.hasActiveScale, ref CurrentPreset.focus.activeScale,
+                activeScale, baseline.ActiveScale);
+            SetFocusOverride(ref CurrentPreset.focus.hasInactiveScale, ref CurrentPreset.focus.inactiveScale,
+                inactiveScale, baseline.InactiveScale);
+            SetFocusOverride(ref CurrentPreset.focus.hasInactiveBrightness, ref CurrentPreset.focus.inactiveBrightness,
+                inactiveBrightness, baseline.InactiveBrightness);
+            SetFocusOverride(ref CurrentPreset.focus.hasInactiveAlpha, ref CurrentPreset.focus.inactiveAlpha,
+                inactiveAlpha, baseline.InactiveAlpha);
+            Repaint();
+        }
+
         private void OnGUI()
         {
             DrawComparisonToolbar();
@@ -72,6 +162,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawPreviewColumn();
             DrawRightColumn();
             EditorGUILayout.EndHorizontal();
+
+            HandleKeyboardNudge(Event.current);
         }
 
         private void DrawComparisonToolbar()
@@ -108,22 +200,235 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.LabelField(comparisonView == VnWorkshopComparisonView.Original ? "Original" : "Current", EditorStyles.boldLabel);
             float previewHeight = Mathf.Max(360f, position.height - 72f);
             Rect previewRect = EditorGUILayout.GetControlRect(false, previewHeight, GUILayout.ExpandWidth(true));
-            VnPresentationWorkshopPreviewRenderer.Draw(previewRect, BuildPreviewFrame(), selectedElement);
+            VnWorkshopPreviewFrame frame = BuildPreviewFrame();
+            VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedElement);
+            HandlePreviewInput(previewRect, frame, Event.current);
             EditorGUILayout.EndVertical();
         }
 
         private void DrawRightColumn()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(230f));
+            EditorGUILayout.BeginVertical(GUILayout.Width(245f));
             EditorGUILayout.LabelField("Selected Element", EditorStyles.boldLabel);
             selectedElement = (VnWorkshopElement)EditorGUILayout.EnumPopup("Element", selectedElement);
+            EditorGUILayout.LabelField(GetFriendlyElementName(selectedElement), EditorStyles.miniBoldLabel);
             EditorGUILayout.Space();
-            EditorGUILayout.HelpBox(
-                comparisonView == VnWorkshopComparisonView.Original
-                    ? "Original is the immutable verified baseline."
-                    : "Current is the Workshop override preset.",
-                MessageType.Info);
+
+            if (comparisonView == VnWorkshopComparisonView.Original)
+            {
+                EditorGUILayout.HelpBox("Original is the immutable verified baseline. Switch to Current to edit.", MessageType.Info);
+            }
+
+            using (new EditorGUI.DisabledScope(comparisonView == VnWorkshopComparisonView.Original))
+            {
+                DrawSelectedElementInspector();
+                EditorGUILayout.Space();
+                DrawFocusInspector();
+                EditorGUILayout.Space();
+
+                if (GUILayout.Button("Reset Element"))
+                    ResetSelectedElement();
+                if (GUILayout.Button("Reset All"))
+                    ResetAll();
+            }
+
             EditorGUILayout.EndVertical();
+        }
+
+        private void DrawSelectedElementInspector()
+        {
+            VnWorkshopElementOverride elementOverride = CurrentPreset.GetElementOverride(selectedElement);
+            Vector2 positionDelta = elementOverride.hasPositionDelta ? elementOverride.positionDelta : Vector2.zero;
+
+            EditorGUILayout.LabelField("Layout", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Offsets from Original", EditorStyles.miniLabel);
+
+            EditorGUI.BeginChangeCheck();
+            float positionX = EditorGUILayout.FloatField("Position X", positionDelta.x);
+            float positionY = EditorGUILayout.FloatField("Position Y", positionDelta.y);
+            if (EditorGUI.EndChangeCheck())
+                SetSelectedPosition(new Vector2(positionX, positionY));
+
+            if (SupportsSize(selectedElement))
+            {
+                Vector2 sizeDelta = elementOverride.hasSizeDelta ? elementOverride.sizeDelta : Vector2.zero;
+                EditorGUI.BeginChangeCheck();
+                float width = EditorGUILayout.FloatField("Width", sizeDelta.x);
+                float height = EditorGUILayout.FloatField("Height", sizeDelta.y);
+                if (EditorGUI.EndChangeCheck())
+                    SetSelectedSize(new Vector2(width, height));
+            }
+
+            if (SupportsScale(selectedElement))
+            {
+                float scale = elementOverride.hasScaleMultiplier ? elementOverride.scaleMultiplier : 1f;
+                EditorGUI.BeginChangeCheck();
+                scale = EditorGUILayout.FloatField("Scale", scale);
+                if (EditorGUI.EndChangeCheck())
+                    SetSelectedScale(scale);
+            }
+
+            if (IsBakedControlHitRegion(selectedElement))
+            {
+                EditorGUILayout.HelpBox("Baked into panel — only the hit region is editable here.", MessageType.Info);
+            }
+        }
+
+        private void DrawFocusInspector()
+        {
+            VnWorkshopFocusValues focus = VnPresentationWorkshopResolver.ResolveFocus(CurrentPreset);
+            EditorGUILayout.LabelField("Focus", EditorStyles.boldLabel);
+
+            EditorGUI.BeginChangeCheck();
+            float offset = EditorGUILayout.FloatField("Character Offset", focus.TwoCharacterOffset);
+            float activeScale = EditorGUILayout.FloatField("Active Scale", focus.ActiveScale);
+            float inactiveScale = EditorGUILayout.FloatField("Inactive Scale", focus.InactiveScale);
+            float brightness = EditorGUILayout.Slider("Inactive Brightness", focus.InactiveBrightness, 0f, 1f);
+            float alpha = EditorGUILayout.Slider("Inactive Alpha", focus.InactiveAlpha, 0f, 1f);
+            if (EditorGUI.EndChangeCheck())
+                SetFocusValues(offset, activeScale, inactiveScale, brightness, alpha);
+        }
+
+        private void HandlePreviewInput(Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)
+        {
+            if (currentEvent == null || comparisonView != VnWorkshopComparisonView.Current) return;
+
+            if (currentEvent.type == EventType.MouseDown && currentEvent.button == 0 && previewRect.Contains(currentEvent.mousePosition))
+            {
+                Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
+                    previewRect, currentEvent.mousePosition, frame);
+                if (SelectElementAt(logicalPoint))
+                {
+                    draggingSelected = true;
+                    lastDragLogicalPoint = logicalPoint;
+                    Focus();
+                    GUI.FocusControl(null);
+                    currentEvent.Use();
+                }
+                return;
+            }
+
+            if (currentEvent.type == EventType.MouseDrag && currentEvent.button == 0 && draggingSelected)
+            {
+                Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
+                    previewRect, currentEvent.mousePosition, frame);
+                Vector2 logicalDelta = logicalPoint - lastDragLogicalPoint;
+                lastDragLogicalPoint = logicalPoint;
+                DragSelectedElement(logicalDelta);
+                currentEvent.Use();
+                return;
+            }
+
+            if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0 && draggingSelected)
+            {
+                draggingSelected = false;
+                currentEvent.Use();
+            }
+        }
+
+        private void HandleKeyboardNudge(Event currentEvent)
+        {
+            if (currentEvent == null || comparisonView != VnWorkshopComparisonView.Current ||
+                currentEvent.type != EventType.KeyDown || EditorGUIUtility.editingTextField)
+                return;
+
+            Vector2 direction;
+            switch (currentEvent.keyCode)
+            {
+                case KeyCode.LeftArrow:
+                    direction = Vector2.left;
+                    break;
+                case KeyCode.RightArrow:
+                    direction = Vector2.right;
+                    break;
+                case KeyCode.UpArrow:
+                    direction = Vector2.up;
+                    break;
+                case KeyCode.DownArrow:
+                    direction = Vector2.down;
+                    break;
+                default:
+                    return;
+            }
+
+            NudgeSelectedElement(direction, currentEvent.shift);
+            currentEvent.Use();
+        }
+
+        private static bool SupportsSize(VnWorkshopElement element)
+        {
+            switch (element)
+            {
+                case VnWorkshopElement.DialoguePanel:
+                case VnWorkshopElement.SpeakerName:
+                case VnWorkshopElement.DialogueText:
+                case VnWorkshopElement.Back:
+                case VnWorkshopElement.Next:
+                case VnWorkshopElement.MuteHitRegion:
+                case VnWorkshopElement.PauseHitRegion:
+                case VnWorkshopElement.SkipHitRegion:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool SupportsScale(VnWorkshopElement element)
+        {
+            switch (element)
+            {
+                case VnWorkshopElement.DialoguePanel:
+                case VnWorkshopElement.MinaBody:
+                case VnWorkshopElement.Back:
+                case VnWorkshopElement.Next:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsBakedControlHitRegion(VnWorkshopElement element)
+        {
+            return element == VnWorkshopElement.MuteHitRegion ||
+                   element == VnWorkshopElement.PauseHitRegion ||
+                   element == VnWorkshopElement.SkipHitRegion;
+        }
+
+        private static string GetFriendlyElementName(VnWorkshopElement element)
+        {
+            switch (element)
+            {
+                case VnWorkshopElement.DialoguePanel: return "Dialogue Panel";
+                case VnWorkshopElement.MinaBody: return "Mina / Visible Character";
+                case VnWorkshopElement.SpeakerName: return "Speaker Name";
+                case VnWorkshopElement.DialogueText: return "Dialogue Text";
+                case VnWorkshopElement.Back: return "Back";
+                case VnWorkshopElement.Next: return "Next";
+                case VnWorkshopElement.MuteHitRegion: return "Mute Hit Region";
+                case VnWorkshopElement.PauseHitRegion: return "Pause Hit Region";
+                case VnWorkshopElement.SkipHitRegion: return "Skip Hit Region";
+                default: return element.ToString();
+            }
+        }
+
+        private static void SetFocusOverride(ref bool enabled, ref float storage, float value, float baseline)
+        {
+            enabled = !Mathf.Approximately(value, baseline);
+            storage = enabled ? value : 0f;
+        }
+
+        private static void RequireFinite(float value, string name)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+                throw new ArgumentException("Workshop value must be finite: " + name, name);
+        }
+
+        private static void RequireRange(float value, float minimum, float maximum, string name)
+        {
+            RequireFinite(value, name);
+            if (value < minimum || value > maximum)
+                throw new ArgumentOutOfRangeException(name,
+                    "Workshop value must stay between " + minimum + " and " + maximum + ".");
         }
     }
 }
