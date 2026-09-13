@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Rokas.EditorTools.VnUiWorkshop
 {
-    public static class VnPresentationWorkshopVn10Resolver
+    public static partial class VnPresentationWorkshopVn10Resolver
     {
         private static readonly VnWorkshopTypographyValues TypographyBaseline = new VnWorkshopTypographyValues
         {
