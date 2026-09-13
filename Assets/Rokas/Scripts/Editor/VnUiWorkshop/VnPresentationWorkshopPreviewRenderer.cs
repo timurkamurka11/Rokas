@@ -190,7 +190,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return BuildFrame(preset, resolution, scene, null);
         }
 
-        public static VnWorkshopPreviewFrame BuildFrame(
+        internal static VnWorkshopPreviewFrame BuildFrame(
             VnPresentationWorkshopPreset preset,
             VnWorkshopResolution resolution,
             VnWorkshopPreviewScene scene,
