@@ -1,0 +1,46 @@
+name: TEMP VN Presentation Continuation RED
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/vn-visual-polish-refs
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  presentation-continuation-red:
+    name: VN presentation continuation focused RED
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run bounded VN presentation continuation tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroPresentationContinuationPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Presentation Continuation Focused RED
+          artifactsPath: artifacts-vn-presentation-continuation-red
+      - name: Upload RED evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-presentation-continuation-red-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
