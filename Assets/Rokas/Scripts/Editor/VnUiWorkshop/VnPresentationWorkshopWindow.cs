@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,9 +23,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private VnWorkshopResolution previewResolution = VnWorkshopResolution.Reference1920x1080;
         [SerializeField] private VnWorkshopComparisonView comparisonView = VnWorkshopComparisonView.Current;
         [SerializeField] private VnWorkshopElement selectedElement = VnWorkshopElement.DialoguePanel;
+        [SerializeField] private string variantName = "Variant";
+        [SerializeField] private int selectedVariantIndex;
 
         [NonSerialized] private bool draggingSelected;
         [NonSerialized] private Vector2 lastDragLogicalPoint;
+        [NonSerialized] private string variantStatus;
+        [NonSerialized] private MessageType variantStatusType = MessageType.None;
 
         public VnPresentationWorkshopPreset CurrentPreset
         {
@@ -153,6 +158,48 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Repaint();
         }
 
+        public string[] ListSavedVariants()
+        {
+            return VnPresentationWorkshopStorage.ListVariants(GetProjectRoot());
+        }
+
+        public void SaveCurrentVariant(string name)
+        {
+            VnPresentationWorkshopStorage.SaveVariant(GetProjectRoot(), name, CurrentPreset);
+            Repaint();
+        }
+
+        public VnWorkshopImportResult LoadSavedVariant(string name)
+        {
+            VnWorkshopImportResult result = VnPresentationWorkshopStorage.LoadVariant(GetProjectRoot(), name);
+            if (result.Success && result.Document != null && result.Document.preset != null)
+            {
+                currentPreset = result.Document.preset;
+                comparisonView = VnWorkshopComparisonView.Current;
+            }
+            Repaint();
+            return result;
+        }
+
+        public void DuplicateSavedVariant(string sourceName, string duplicateName)
+        {
+            VnPresentationWorkshopStorage.DuplicateVariant(GetProjectRoot(), sourceName, duplicateName);
+            Repaint();
+        }
+
+        public void RenameSavedVariant(string currentName, string newName)
+        {
+            VnPresentationWorkshopStorage.RenameVariant(GetProjectRoot(), currentName, newName);
+            Repaint();
+        }
+
+        public bool DeleteSavedVariant(string name)
+        {
+            bool deleted = VnPresentationWorkshopStorage.DeleteVariant(GetProjectRoot(), name);
+            Repaint();
+            return deleted;
+        }
+
         private void OnGUI()
         {
             DrawComparisonToolbar();
@@ -189,9 +236,107 @@ namespace Rokas.EditorTools.VnUiWorkshop
             previewScene = (VnWorkshopPreviewScene)EditorGUILayout.EnumPopup("State", previewScene);
             previewResolution = (VnWorkshopResolution)EditorGUILayout.EnumPopup("Resolution", previewResolution);
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Saved Variants", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Variant controls are connected in the next Workshop slice.", MessageType.None);
+            DrawVariantsPanel();
             EditorGUILayout.EndVertical();
+        }
+
+        private void DrawVariantsPanel()
+        {
+            EditorGUILayout.LabelField("Saved Variants", EditorStyles.boldLabel);
+
+            string[] variants;
+            try
+            {
+                variants = ListSavedVariants();
+            }
+            catch (Exception exception)
+            {
+                variants = new string[0];
+                SetVariantStatus("Could not read variants: " + exception.Message, MessageType.Error);
+            }
+
+            if (variants.Length > 0)
+            {
+                selectedVariantIndex = Mathf.Clamp(selectedVariantIndex, 0, variants.Length - 1);
+                int nextIndex = EditorGUILayout.Popup("Saved", selectedVariantIndex, variants);
+                if (nextIndex != selectedVariantIndex)
+                {
+                    selectedVariantIndex = nextIndex;
+                    variantName = variants[selectedVariantIndex];
+                }
+            }
+            else
+            {
+                selectedVariantIndex = 0;
+                EditorGUILayout.LabelField("Saved", "(none)");
+            }
+
+            variantName = EditorGUILayout.TextField("Name", variantName ?? string.Empty);
+
+            if (GUILayout.Button("Save Variant"))
+            {
+                TryVariantAction(
+                    () => SaveCurrentVariant(variantName),
+                    "Saved variant '" + VnPresentationWorkshopStorage.SanitizeVariantName(variantName) + "'.");
+            }
+
+            using (new EditorGUI.DisabledScope(variants.Length == 0))
+            {
+                string selectedName = variants.Length > 0 ? variants[selectedVariantIndex] : string.Empty;
+
+                if (GUILayout.Button("Load Variant"))
+                {
+                    try
+                    {
+                        VnWorkshopImportResult result = LoadSavedVariant(selectedName);
+                        if (!result.Success)
+                        {
+                            SetVariantStatus("Load failed: " + result.Error, MessageType.Error);
+                        }
+                        else if (result.SourceHeadMismatch)
+                        {
+                            SetVariantStatus("Loaded with source HEAD mismatch warning.", MessageType.Warning);
+                        }
+                        else
+                        {
+                            variantName = selectedName;
+                            SetVariantStatus("Loaded variant '" + selectedName + "'.", MessageType.Info);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        SetVariantStatus("Load failed: " + exception.Message, MessageType.Error);
+                    }
+                }
+
+                if (GUILayout.Button("Duplicate"))
+                {
+                    TryVariantAction(
+                        () => DuplicateSavedVariant(selectedName, variantName),
+                        "Duplicated '" + selectedName + "'.");
+                }
+
+                if (GUILayout.Button("Rename"))
+                {
+                    TryVariantAction(
+                        () => RenameSavedVariant(selectedName, variantName),
+                        "Renamed '" + selectedName + "'.");
+                }
+
+                if (GUILayout.Button("Delete"))
+                {
+                    TryVariantAction(
+                        () =>
+                        {
+                            if (!DeleteSavedVariant(selectedName))
+                                throw new IOException("Variant no longer exists: " + selectedName + ".");
+                        },
+                        "Deleted variant '" + selectedName + "'.");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(variantStatus))
+                EditorGUILayout.HelpBox(variantStatus, variantStatusType);
         }
 
         private void DrawPreviewColumn()
@@ -353,6 +498,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             NudgeSelectedElement(direction, currentEvent.shift);
             currentEvent.Use();
+        }
+
+        private void TryVariantAction(Action action, string successMessage)
+        {
+            try
+            {
+                action();
+                SetVariantStatus(successMessage, MessageType.Info);
+            }
+            catch (Exception exception)
+            {
+                SetVariantStatus(exception.Message, MessageType.Error);
+            }
+        }
+
+        private void SetVariantStatus(string message, MessageType type)
+        {
+            variantStatus = message;
+            variantStatusType = type;
+            Repaint();
+        }
+
+        private static string GetProjectRoot()
+        {
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            if (string.IsNullOrEmpty(projectRoot))
+                throw new InvalidOperationException("Could not resolve the Unity project root for Workshop variants.");
+            return projectRoot;
         }
 
         private static bool SupportsSize(VnWorkshopElement element)
