@@ -48,6 +48,7 @@ namespace Rokas.Presentation
         public bool CombatHitStop { get { return mission.HitStopRemaining > 0; } }
         public void CancelCombatInput() { mission.CancelInput(); }
         public void HandleCombatInput(bool dodge, bool deflect, bool resonance) { mission.HandleInput(dodge, deflect, resonance); }
+        public void HandleCombat3Input(bool left, bool right, bool attack) { mission.HandleCombat3Input(left, right, attack); }
         public bool LaptopOpen { get { return panel == "laptop"; } }
 
         public RokasView(RokasBootstrap owner, RokasAssets assets, GameSession session, RokasAudio audio, Action save)
@@ -265,6 +266,7 @@ namespace Rokas.Presentation
             }
             mission.CancelInput();
             panel = value;
+            session.SetCombat3Paused(Paused);
             audio.SetLaptopMode(panel == "laptop");
             RefreshPanel();
         }
@@ -301,6 +303,7 @@ namespace Rokas.Presentation
         {
             bool fromLaptop = panel == "laptop";
             panel = null;
+            session.SetCombat3Paused(Paused);
             audio.SetLaptopMode(false);
             ui.Clear(panels);
             sceneInput.interactable = true;
@@ -387,6 +390,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            mission.ClearReferences();
             effects.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;

@@ -21,6 +21,7 @@ namespace Rokas.Presentation
         private bool dirty;
         private bool saveBlocked;
         private bool focused = true;
+        private bool applicationPaused;
         private bool startupPending;
         private bool enterWorldTransition;
         private float autosave;
@@ -266,7 +267,16 @@ namespace Rokas.Presentation
             if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
             if (focused && !saveBlocked)
                 View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
-            if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
+            if (Session.Combat.Combat3 != null)
+            {
+                Session.SetCombat3Paused(applicationPaused || saveBlocked || View.Paused);
+                if (focused && !applicationPaused && !saveBlocked)
+                    View.HandleCombat3Input(Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow),
+                        Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow), Input.GetMouseButton(0));
+                // Preserve the original delta so the domain can suspend rather than hide a backlog.
+                if (focused && !applicationPaused && !saveBlocked && !View.Paused) Session.Tick(Time.unscaledDeltaTime);
+            }
+            else if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
             View.Tick(dt);
             sound.Tick(dt, focused);
 
@@ -278,10 +288,18 @@ namespace Rokas.Presentation
         private void OnApplicationFocus(bool value)
         {
             focused = value;
+            Session?.SetCombat3Focused(value);
             if (!value && Session != null) { View?.CancelCombatInput(); SaveNow(); }
         }
 
-        private void OnApplicationPause(bool value) { if (value) { View?.CancelCombatInput(); SaveNow(); } }
+        private void OnApplicationPause(bool value)
+        {
+            applicationPaused = value;
+            Session?.SetCombat3Paused(value || (View != null && View.Paused));
+            if (value) { View?.CancelCombatInput(); SaveNow(); }
+        }
+        private void OnDisable() { Session?.SetCombat3Paused(true); View?.CancelCombatInput(); }
+        private void OnEnable() { Session?.SetCombat3Paused(applicationPaused || (View != null && View.Paused)); }
         private void OnApplicationQuit() { SaveNow(); }
         private void OnDestroy()
         {

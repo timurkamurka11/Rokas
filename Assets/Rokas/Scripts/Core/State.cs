@@ -51,6 +51,7 @@ namespace Rokas.Core
         public float clickTimer;
         public float combatTime;
         public bool weakPointClaimed;
+        public bool combat3Review;
         public bool lampOn = true;
         public int mameInteractions;
         public MessageSaveData messages = new MessageSaveData();

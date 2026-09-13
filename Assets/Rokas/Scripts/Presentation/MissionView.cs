@@ -18,6 +18,7 @@ namespace Rokas.Presentation
         private readonly Func<bool> paused;
         private RawImage enemy;
         private CombatHud combatHud;
+        private Combat3ArenaView combat3Arena;
         private Image combatFlash;
         private readonly Image[] sparks = new Image[8];
         private float sparkTime;
@@ -34,10 +35,19 @@ namespace Rokas.Presentation
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world, Func<bool> paused)
         { this.ui = ui; this.assets = assets; this.session = session; this.audio = audio; this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused; }
 
-        public void CancelInput() { combatHud?.CancelInput(); }
+        public void CancelInput() { combatHud?.CancelInput(); combat3Arena?.CancelInput(); }
+        public void HandleCombat3Input(bool left, bool right, bool attack)
+        {
+            combat3Arena?.HandleInput(left, right, attack);
+        }
         public void HandleInput(bool dodge, bool deflect, bool resonance)
         {
             if (paused() || session.State.phase != RunPhase.Combat) return;
+            if (session.Combat.Combat3 != null)
+            {
+                if (resonance) session.ActivateResonance();
+                return;
+            }
             if (deflect) session.Deflect();
             else if (dodge) session.Dodge();
             if (resonance) session.ActivateResonance();
@@ -53,12 +63,20 @@ namespace Rokas.Presentation
                 ui.Label(parent, "PortalNote", "Город стихает. За воротами слышен поезд.", 67, 321, 1050, 70, 27);
                 ui.Button(parent, "EnterPortal", "Войти в искажение", 1240, 866, 600, 76,
                     () => travel(session.EnterPortal, "ПЛАТФОРМА КИСАРАГИ\nСледующая остановка не объявлена."), true);
+                if (Application.isEditor || Debug.isDebugBuild)
+                    ui.Button(parent, "EnterCombat3Review", "Пробная арена Combat 3", 1240, 764, 600, 70,
+                        () => travel(session.EnterCombat3Review, "ПРОБНАЯ АРЕНА\nПять полос. Читайте атаку."));
                 ui.Button(parent, "ReturnFromPortal", "Вернуться домой", 67, 881, 450, 60,
                     () => travel(session.ReturnHome, "Вы возвращаетесь по мокрым улицам."));
                 return;
             }
 
             bool fighting = session.State.phase == RunPhase.Combat;
+            if (fighting && session.Combat.Combat3 != null)
+            {
+                combat3Arena = new Combat3ArenaView(ui, parent, session, paused);
+                return;
+            }
             ui.Label(parent, "DepthLabel", "ГЛУБИНА 01     /     КОНТРАКТ E", 66, 134, 700, 43, 18, UiKit.Gold);
             ui.Label(parent, "EnemyName", "Безликий пассажир", 580, 131, 800, 64, 39, UiKit.Paper, true, TextAnchor.MiddleCenter);
             ui.Label(parent, "EnemyIdentity", "НОППЭРА-БО  /  ПОВРЕЖДЁННЫЙ", 650, 202, 660, 36, 16, UiKit.Muted, false, TextAnchor.MiddleCenter);
@@ -97,7 +115,7 @@ namespace Rokas.Presentation
             Refresh();
         }
 
-        public void Refresh() { combatHud?.Refresh(); }
+        public void Refresh() { combatHud?.Refresh(); combat3Arena?.Refresh(); }
 
         public void OnAction(CombatAction action)
         {
@@ -117,6 +135,12 @@ namespace Rokas.Presentation
 
         public void OnHit(CombatHit hit)
         {
+            if (combat3Arena != null)
+            {
+                combat3Arena.OnHit(hit);
+                audio.Play(hit.critical ? assets.critical : assets.hit);
+                return;
+            }
             if (!enemy) return;
             if (hit.targetIsEnemy) hitTime = .22f; else enemyAttackTime = .3f;
             audio.Play(hit.critical ? assets.critical : assets.hit);
@@ -134,6 +158,7 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool paused)
         {
+            if (combat3Arena != null) { combat3Arena.Tick(dt, paused); return; }
             if (paused) { CancelInput(); return; }
             HitStopRemaining = Mathf.Max(0, HitStopRemaining - dt);
             combatHud?.Tick(dt);
@@ -179,6 +204,8 @@ namespace Rokas.Presentation
         public void ClearReferences()
         {
             CancelInput();
+            combat3Arena?.Dispose();
+            combat3Arena = null;
             combatHud = null;
             combatFlash = null;
             HitStopRemaining = sparkTime = 0;

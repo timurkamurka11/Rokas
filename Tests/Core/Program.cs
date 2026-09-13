@@ -16,6 +16,12 @@ namespace Rokas.Core.Tests
                 }
                 if (combatFailures > 0) throw new InvalidOperationException(combatFailures + " Combat2 scenarios failed.");
                 CombatFoundationRedTests.RunAll();
+                foreach (string scenario in Combat3Phase0Cases.Names)
+                {
+                    try { Combat3Phase0Cases.Run(scenario); Console.WriteLine("PASS Combat3: " + scenario); }
+                    catch (Exception e) { combatFailures++; Console.WriteLine("FAIL Combat3: " + scenario + " " + (e.InnerException ?? e).Message); }
+                }
+                if (combatFailures > 0) throw new InvalidOperationException(combatFailures + " Combat3 scenarios failed.");
                 DomainBehaviorTests.RunAll();
                 FoodFeedbackTests.RunAll();
                 MessageDomainTests.RunAll();

@@ -35,6 +35,8 @@ namespace Rokas.Core
             economy = new EconomyService();
             food = new FoodService();
             Combat = new CombatService(state, contract, economy);
+            if (state.version == SaveData.CurrentVersion && state.combat3Review && state.phase == RunPhase.Combat)
+                Combat.BeginCombat3();
             Messages = new MessageService(state, contract, contracts, food);
             Messages.Changed += NotifyChanged;
             LiveMessages = new LiveMessengerService(state, Messages);
@@ -109,6 +111,7 @@ namespace Rokas.Core
         public bool EnterPortal()
         {
             if (!contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract))) return false;
+            State.combat3Review = false;
             Combat.ResetEncounter();
             NotifyChanged();
             return true;
@@ -127,6 +130,21 @@ namespace Rokas.Core
         public bool ActivateResonance() { return NotifyIf(Combat.ActivateResonance()); }
         public bool CancelCombatInput() { return NotifyIf(Combat.CancelCombatInput()); }
 
+        public bool EnterCombat3Review()
+        {
+            if (!contracts.BeginCombat(State, Contract, food.GetAutoInterval(State, Contract))) return false;
+            Combat.BeginCombat3();
+            NotifyChanged();
+            return true;
+        }
+
+        public bool SetCombat3Input(bool leftHeld, bool rightHeld, bool attackHeld)
+        {
+            return Combat.Combat3 != null && Combat.Combat3.SetInput(leftHeld, rightHeld, attackHeld);
+        }
+        public bool SetCombat3Paused(bool paused) { return NotifyIf(Combat.Combat3 != null && Combat.Combat3.SetPaused(paused)); }
+        public bool SetCombat3Focused(bool focused) { return NotifyIf(Combat.Combat3 != null && Combat.Combat3.SetFocused(focused)); }
+
         public void Tick(float seconds)
         {
             bool combatChanged = Combat.Tick(seconds);
@@ -144,6 +162,8 @@ namespace Rokas.Core
             {
                 return false;
             }
+
+            Combat.EndCombat3();
 
             bool delivered = false;
             if (result == RunPhase.Sealed || result == RunPhase.Failed)

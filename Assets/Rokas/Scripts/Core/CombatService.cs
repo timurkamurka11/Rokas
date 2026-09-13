@@ -24,6 +24,13 @@ namespace Rokas.Core
         private float stageTimer;
         private int attackSequence;
         private CombatAction lastAction;
+        private float combat3Immunity;
+
+        public Combat3Encounter Combat3 { get; private set; }
+        public bool SealBonusPending { get; private set; }
+        public bool ResonanceReserved { get; private set; }
+        public float DamageImmunityRemaining { get { return combat3Immunity; } }
+        internal bool Combat3Fighting { get { return state.phase == RunPhase.Combat && Combat3 != null; } }
 
         public event Action<CombatHit> Hit;
         public event Action<CombatAction> ActionResolved;
@@ -44,7 +51,7 @@ namespace Rokas.Core
         public float DefenseCooldownRemaining { get; private set; }
         // Retained for callers of the original API; the timed weak-point button is retired.
         public bool WeakPointActive { get { return false; } }
-        public bool EnemyTelegraph { get { return Fighting && state.enemyTimer <= CombatTuning.TelegraphDuration; } }
+        public bool EnemyTelegraph { get { return Combat3 != null ? Combat3.StageName == "Telegraph" : Fighting && state.enemyTimer <= CombatTuning.TelegraphDuration; } }
         public int EnemyPhase
         {
             get
@@ -54,7 +61,7 @@ namespace Rokas.Core
             }
         }
         public bool DelayedAttack { get { return EnemyPhase == 2 && attackSequence % 2 != 0; } }
-        private bool Fighting { get { return state.phase == RunPhase.Combat && Stage == CombatStage.Fighting; } }
+        private bool Fighting { get { return Combat3 == null && state.phase == RunPhase.Combat && Stage == CombatStage.Fighting; } }
         private float PerfectBonus { get { return ResonanceActive ? CombatTuning.ResonanceWindowBonus : 0; } }
 
         public CombatService(SaveData state, ContractDefinition contract, EconomyService economy)
@@ -67,6 +74,10 @@ namespace Rokas.Core
 
         internal void ResetEncounter()
         {
+            if (Combat3 != null) Combat3.Complete();
+            Combat3 = null;
+            SealBonusPending = ResonanceReserved = false;
+            combat3Immunity = 0;
             Stage = CombatStage.Fighting;
             Seal = CombatTuning.MaxSeal;
             Resonance = ResonanceRemaining = DefenseCooldownRemaining = stageTimer = 0;
@@ -80,6 +91,7 @@ namespace Rokas.Core
 
         internal bool BeginAttack()
         {
+            if (Combat3 != null) return false;
             if (state.phase != RunPhase.Combat || IsHolding || Stage == CombatStage.SealBreak) return false;
             if (Stage == CombatStage.Fighting && state.clickTimer > CombatTuning.Epsilon) return false;
             IsHolding = true;
@@ -89,6 +101,7 @@ namespace Rokas.Core
 
         internal bool ReleaseAttack()
         {
+            if (Combat3 != null) return false;
             if (!IsHolding || state.phase != RunPhase.Combat) return false;
             IsHolding = false;
             if (Stage == CombatStage.Ritual) { FailRitual(); return true; }
@@ -146,6 +159,7 @@ namespace Rokas.Core
 
         internal bool TraceRitualPoint(int index)
         {
+            if (Combat3 != null) return false;
             if (state.phase != RunPhase.Combat || Stage != CombatStage.Ritual || !IsHolding) return false;
             if (index == RitualPoint - 1) return false; // Pointer may remain inside the last point for several frames.
             if (index != RitualPoint) { FailRitual(); return false; }
@@ -166,6 +180,13 @@ namespace Rokas.Core
 
         internal bool ActivateResonance()
         {
+            if (Combat3 != null)
+            {
+                if (!Combat3Fighting || Combat3.Paused || !Combat3.Focused || Combat3.ReadDelayRemaining > 0 || ResonanceReserved || Resonance < 100) return false;
+                ResonanceReserved = true;
+                Resolve(CombatAction.Resonance);
+                return true;
+            }
             if (!Fighting || ResonanceActive || Resonance < CombatTuning.MaxResonance) return false;
             Resonance = 0;
             ResonanceRemaining = CombatTuning.ResonanceDuration;
@@ -175,6 +196,7 @@ namespace Rokas.Core
 
         internal bool CancelCombatInput()
         {
+            if (Combat3 != null) { Combat3.ClearInput(); return true; }
             bool wasHolding = IsHolding;
             bool changed = wasHolding || ComboStep != 0;
             IsHolding = false;
@@ -188,6 +210,7 @@ namespace Rokas.Core
 
         internal bool Tick(float seconds)
         {
+            if (Combat3 != null) return Combat3.Tick(seconds);
             if (state.phase != RunPhase.Combat || seconds <= 0 || float.IsNaN(seconds) || float.IsInfinity(seconds)) return false;
             float remaining = seconds;
             while (remaining > CombatTuning.Epsilon && state.phase == RunPhase.Combat)
@@ -214,6 +237,58 @@ namespace Rokas.Core
                     else FailRitual();
                 }
             }
+            return true;
+        }
+
+        internal void BeginCombat3()
+        {
+            ResetEncounter();
+            state.combat3Review = true;
+            state.playerHp = 100;
+            state.enemyHp = contract.enemyHealth;
+            state.combatTime = state.clickTimer = state.enemyTimer = state.autoTimer = 0;
+            Combat3 = new Combat3Encounter(this);
+        }
+
+        internal void EndCombat3()
+        {
+            if (Combat3 != null) Combat3.Complete();
+            Combat3 = null;
+            state.combat3Review = false;
+            ResonanceReserved = SealBonusPending = false;
+        }
+
+        internal void CancelCombat3Reservation() { ResonanceReserved = false; }
+        internal void AdvanceCombat3Timers(float dt)
+        {
+            state.combatTime += dt;
+            combat3Immunity = Math.Max(0, combat3Immunity - dt);
+        }
+
+        internal void Combat3Counter()
+        {
+            if (!Combat3Fighting) return;
+            bool sealBonus = SealBonusPending;
+            float multiplier = 1 + (sealBonus ? .6f : 0) + (ResonanceReserved ? .5f : 0);
+            if (ResonanceReserved) Resonance = 0;
+            ResonanceReserved = false;
+            if (sealBonus) { SealBonusPending = false; Seal = 100; }
+            else
+            {
+                Seal = Math.Max(0, Seal - 25);
+                if (Seal == 0) SealBonusPending = true;
+            }
+            Resonance = Math.Min(100, Resonance + 10);
+            Resolve(CombatAction.Finisher);
+            DamageEnemy(contract.clickDamage * economy.GetWeaponDamageMultiplier(state) * 1.8f * multiplier, sealBonus);
+        }
+
+        internal bool Combat3DamagePlayer()
+        {
+            if (!Combat3Fighting || combat3Immunity > CombatTuning.Epsilon) return false;
+            combat3Immunity = .65f;
+            ResonanceReserved = false;
+            DamagePlayer(contract.enemyDamage);
             return true;
         }
 
@@ -284,7 +359,7 @@ namespace Rokas.Core
             IsHolding = false;
             ChargeSeconds = 0;
             ComboStep = 0;
-            Resonance = Math.Max(0, Resonance - CombatTuning.MistakeResonanceLoss);
+            Resonance = Math.Max(0, Resonance - (Combat3 != null ? 10 : CombatTuning.MistakeResonanceLoss));
             if (state.playerHp <= CombatTuning.Epsilon) { state.playerHp = 0; state.phase = RunPhase.Failed; }
             Resolve(CombatAction.Damaged);
             Hit?.Invoke(new CombatHit(applied, false, false));

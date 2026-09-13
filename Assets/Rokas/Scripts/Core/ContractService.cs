@@ -77,6 +77,7 @@ namespace Rokas.Core
 
         internal static void ResetCombat(SaveData state)
         {
+            state.combat3Review = false;
             state.enemyHp = 0f;
             state.playerHp = 100f;
             state.enemyTimer = 0f;
