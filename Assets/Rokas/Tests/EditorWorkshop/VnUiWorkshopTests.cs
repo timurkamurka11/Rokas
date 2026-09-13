@@ -227,6 +227,59 @@ namespace Rokas.EditorTools.Tests
                 "The Workshop must never expose an ApplyToProduction action.");
         }
 
+        [Test]
+        public void EditorWindowPreviewComparisonKeepsOriginalImmutable()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            EditorWindow window = ScriptableObject.CreateInstance(windowType) as EditorWindow;
+            Assert.That(window, Is.Not.Null);
+
+            try
+            {
+                PropertyInfo presetProperty = windowType.GetProperty("CurrentPreset", BindingFlags.Public | BindingFlags.Instance);
+                PropertyInfo sceneProperty = windowType.GetProperty("PreviewScene", BindingFlags.Public | BindingFlags.Instance);
+                PropertyInfo resolutionProperty = windowType.GetProperty("PreviewResolution", BindingFlags.Public | BindingFlags.Instance);
+                PropertyInfo comparisonProperty = windowType.GetProperty("ComparisonView", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo buildPreview = windowType.GetMethod("BuildPreviewFrame", BindingFlags.Public | BindingFlags.Instance);
+
+                Assert.That(presetProperty, Is.Not.Null, "The window must own the current override-only preset.");
+                Assert.That(sceneProperty, Is.Not.Null, "The window must expose the preview-state selector state.");
+                Assert.That(resolutionProperty, Is.Not.Null, "The window must expose the preview-resolution selector state.");
+                Assert.That(comparisonProperty, Is.Not.Null, "The window must expose immutable Original/Current comparison state.");
+                Assert.That(buildPreview, Is.Not.Null, "The window must build its preview through the approved mirror renderer.");
+
+                var preset = (VnPresentationWorkshopPreset)presetProperty.GetValue(window);
+                preset.minaBody.hasPositionDelta = true;
+                preset.minaBody.positionDelta = new Vector2(37f, -12f);
+
+                sceneProperty.SetValue(window, VnWorkshopPreviewScene.MinaBody);
+                resolutionProperty.SetValue(window, VnWorkshopResolution.Wide1280x720);
+
+                object currentMode = Enum.Parse(comparisonProperty.PropertyType, "Current");
+                object originalMode = Enum.Parse(comparisonProperty.PropertyType, "Original");
+
+                comparisonProperty.SetValue(window, currentMode);
+                var current = (VnWorkshopPreviewFrame)buildPreview.Invoke(window, null);
+
+                comparisonProperty.SetValue(window, originalMode);
+                var original = (VnWorkshopPreviewFrame)buildPreview.Invoke(window, null);
+                VnWorkshopPreviewFrame baseline = VnPresentationWorkshopPreviewRenderer.BuildFrame(
+                    new VnPresentationWorkshopPreset(), VnWorkshopResolution.Wide1280x720, VnWorkshopPreviewScene.MinaBody);
+
+                Assert.That(original.MinaBody.center.x, Is.EqualTo(baseline.MinaBody.center.x).Within(.01f));
+                Assert.That(original.MinaBody.center.y, Is.EqualTo(baseline.MinaBody.center.y).Within(.01f));
+                Assert.That(current.MinaBody.center.x, Is.EqualTo(baseline.MinaBody.center.x + 37f).Within(.01f));
+                Assert.That(current.MinaBody.center.y, Is.EqualTo(baseline.MinaBody.center.y - 12f).Within(.01f));
+                Assert.That(preset.minaBody.hasPositionDelta, Is.True,
+                    "Viewing Original must never overwrite or reset the Current Workshop preset.");
+                Assert.That(preset.minaBody.positionDelta, Is.EqualTo(new Vector2(37f, -12f)));
+            }
+            finally
+            {
+                if (window != null) UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
         private static Type RequireType(string shortName)
         {
             Type type = Type.GetType(Namespace + shortName + ", " + EditorAssembly);
