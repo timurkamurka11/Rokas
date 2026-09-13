@@ -101,6 +101,11 @@ namespace Rokas.Presentation
             return new Vector2Int(width, height);
         }
 
+        public static bool IsVnPresentationUnobscured()
+        {
+            return GameObject.Find("EnterWorldCurtain") == null;
+        }
+
         private IEnumerator Start()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -198,6 +203,13 @@ namespace Rokas.Presentation
                 evidence.error = "Initial VN bus-stop beat or required VN UI was missing.";
                 yield break;
             }
+
+            yield return WaitFor(IsVnPresentationUnobscured, UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Initial VN presentation remained obscured by the Enter World transition curtain.";
+                yield break;
+            }
             yield return Capture("natural-01-bus-stop.png");
 
             float timeScaleBeforePause = Time.timeScale;
@@ -275,6 +287,13 @@ namespace Rokas.Presentation
             if (!evidence.busFrame)
             {
                 evidence.error = "Skip scenario did not reach the bus-stop beat.";
+                yield break;
+            }
+
+            yield return WaitFor(IsVnPresentationUnobscured, UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Skip proof remained obscured by the Enter World transition curtain.";
                 yield break;
             }
             yield return Capture("skip-01-before.png");
