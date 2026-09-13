@@ -100,6 +100,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopElementOverride pauseHitRegion = new VnWorkshopElementOverride();
         public VnWorkshopElementOverride skipHitRegion = new VnWorkshopElementOverride();
         public VnWorkshopFocusOverride focus = new VnWorkshopFocusOverride();
+        public VnWorkshopTypographyOverride typography = new VnWorkshopTypographyOverride();
 
         public bool HasAnyOverride
         {
@@ -109,7 +110,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                        speakerName.HasAnyOverride || dialogueText.HasAnyOverride ||
                        back.HasAnyOverride || next.HasAnyOverride ||
                        muteHitRegion.HasAnyOverride || pauseHitRegion.HasAnyOverride ||
-                       skipHitRegion.HasAnyOverride || focus.HasAnyOverride;
+                       skipHitRegion.HasAnyOverride || focus.HasAnyOverride ||
+                       (typography != null && typography.HasAnyOverride);
             }
         }
 
@@ -147,6 +149,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             pauseHitRegion.Clear();
             skipHitRegion.Clear();
             focus.Clear();
+            if (typography == null) typography = new VnWorkshopTypographyOverride();
+            typography.Clear();
         }
     }
 
