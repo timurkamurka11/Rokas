@@ -92,7 +92,7 @@ jobs:
           unityVersion: ${{ env.UNITY_VERSION }}
           testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposer.*Tests"
+          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerTests;Rokas.EditorTools.Tests.VnSceneComposerCrudTests"
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer focused EditMode
           artifactsPath: artifacts-vn-scene-composer-editmode
