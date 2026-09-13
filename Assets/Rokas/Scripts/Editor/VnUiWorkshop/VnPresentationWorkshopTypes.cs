@@ -124,6 +124,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopActionBounceOverride actionBounce = new VnWorkshopActionBounceOverride();
         public VnWorkshopBackgroundTransitionOverride backgroundTransition = new VnWorkshopBackgroundTransitionOverride();
         public VnWorkshopStageLayoutOverride stageLayout = new VnWorkshopStageLayoutOverride();
+        public VnWorkshopUiFeedbackOverride uiFeedback = new VnWorkshopUiFeedbackOverride();
 
         public bool HasAnyOverride
         {
@@ -141,7 +142,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                        (characterTransition != null && characterTransition.HasAnyOverride) ||
                        (actionBounce != null && actionBounce.HasAnyOverride) ||
                        (backgroundTransition != null && backgroundTransition.HasAnyOverride) ||
-                       (stageLayout != null && stageLayout.HasAnyOverride);
+                       (stageLayout != null && stageLayout.HasAnyOverride) ||
+                       (uiFeedback != null && uiFeedback.HasAnyOverride);
             }
         }
 
@@ -195,6 +197,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             backgroundTransition.Clear();
             if (stageLayout == null) stageLayout = new VnWorkshopStageLayoutOverride();
             stageLayout.Clear();
+            if (uiFeedback == null) uiFeedback = new VnWorkshopUiFeedbackOverride();
+            uiFeedback.Clear();
         }
     }
 
