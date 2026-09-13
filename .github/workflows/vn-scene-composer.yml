@@ -113,6 +113,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-B CRUD EditMode
           artifactsPath: artifacts-vn-scene-composer-crud
+      - name: Run SC-C Composer image media fixture
+        id: image-media-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerImageMediaTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-C image media EditMode
+          artifactsPath: artifacts-vn-scene-composer-image-media
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -121,4 +138,5 @@ jobs:
           path: |
             artifacts-vn-scene-composer-core
             artifacts-vn-scene-composer-crud
+            artifacts-vn-scene-composer-image-media
           if-no-files-found: warn
