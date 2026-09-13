@@ -131,6 +131,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RequireAsset(assets.vnMinaCharacterSheet, nameof(assets.vnMinaCharacterSheet));
             RequireAsset(assets.vnKeikoCharacterSheet, nameof(assets.vnKeikoCharacterSheet));
             RequireAsset(assets.sans, nameof(assets.sans));
+            RequireAsset(assets.serif, nameof(assets.serif));
             return assets;
         }
 
@@ -216,32 +217,55 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             Rect canvasRect = FitAspect(previewRect, frame.ScreenSize.x / frame.ScreenSize.y);
             GUI.Box(previewRect, GUIContent.none);
-            GUI.DrawTexture(canvasRect, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
 
-            if (frame.ShowKeiko)
-                DrawCharacter(canvasRect, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
-                    frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
-            if (frame.ShowMina)
-                DrawCharacter(canvasRect, frame, frame.MinaBody, frame.MinaTexture, frame.MinaUv,
-                    frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
-
-            GUI.DrawTexture(LogicalToPreview(canvasRect, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
-                ScaleMode.StretchToFill, true);
-
-            DrawText(LogicalToPreview(canvasRect, frame.SpeakerName, frame), frame.Speaker, frame.Font, 26, FontStyle.Bold);
-            DrawText(LogicalToPreview(canvasRect, frame.DialogueText, frame), frame.Dialogue, frame.Font, 22, FontStyle.Normal);
-            DrawText(LogicalToPreview(canvasRect, frame.Back, frame), "‹", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-            DrawText(LogicalToPreview(canvasRect, frame.Next, frame), "›", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-
-            if (showHitRegions)
+            GUI.BeginGroup(canvasRect);
+            try
             {
-                DrawHitRegion(canvasRect, frame, frame.MuteHitRegion, "Mute — Baked into panel");
-                DrawHitRegion(canvasRect, frame, frame.PauseHitRegion, "Pause — Baked into panel");
-                DrawHitRegion(canvasRect, frame, frame.SkipHitRegion, "Skip — Baked into panel");
-            }
+                Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
+                GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
 
-            if (selected.HasValue)
-                DrawOutline(LogicalToPreview(canvasRect, frame.GetElementRect(selected.Value), frame), 2f);
+                if (frame.ShowKeiko)
+                    DrawCharacter(localCanvas, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
+                        frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
+                if (frame.ShowMina)
+                    DrawCharacter(localCanvas, frame, frame.MinaBody, frame.MinaTexture, frame.MinaUv,
+                        frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+
+                GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
+                    ScaleMode.StretchToFill, true);
+
+                DrawText(LogicalToPreview(localCanvas, frame.SpeakerName, frame), frame.Speaker, frame.Font, 26, FontStyle.Bold);
+                DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue, frame.Font, 22, FontStyle.Normal);
+                DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+                DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+
+                if (showHitRegions)
+                {
+                    DrawHitRegion(localCanvas, frame, frame.MuteHitRegion, "Mute — Baked into panel");
+                    DrawHitRegion(localCanvas, frame, frame.PauseHitRegion, "Pause — Baked into panel");
+                    DrawHitRegion(localCanvas, frame, frame.SkipHitRegion, "Skip — Baked into panel");
+                }
+
+                if (selected.HasValue)
+                    DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
+            }
+            finally
+            {
+                GUI.EndGroup();
+            }
+        }
+
+        public static Rect ClipLogicalRectToViewport(Rect logicalRect, Vector2 virtualCanvasSize)
+        {
+            float width = Mathf.Max(0f, virtualCanvasSize.x);
+            float height = Mathf.Max(0f, virtualCanvasSize.y);
+            float xMin = Mathf.Clamp(logicalRect.xMin, 0f, width);
+            float xMax = Mathf.Clamp(logicalRect.xMax, 0f, width);
+            float yMin = Mathf.Clamp(logicalRect.yMin, 0f, height);
+            float yMax = Mathf.Clamp(logicalRect.yMax, 0f, height);
+            if (xMax < xMin) xMax = xMin;
+            if (yMax < yMin) yMax = yMin;
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
         }
 
         public static VnWorkshopElement? HitTest(VnWorkshopPreviewFrame frame, Vector2 logicalPoint)
