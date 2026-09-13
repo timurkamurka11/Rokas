@@ -40,12 +40,57 @@ namespace Rokas.EditorTools.VnUiWorkshop
             bool showMina,
             bool showKeiko,
             VnWorkshopFocusValues focus)
+            : this(screenSize, virtualCanvasSize, backgroundTexture, dialoguePanelTexture, font, font,
+                new VnWorkshopTypographyValues
+                {
+                    DialogueFontPreset = VnWorkshopFontPreset.ProjectSans,
+                    DialogueFontSize = 22f,
+                    DialogueAlignment = VnWorkshopTextAlignment.Left,
+                    SpeakerFontPreset = VnWorkshopFontPreset.ProjectSans,
+                    SpeakerFontSize = 26f
+                },
+                minaTexture, minaUv, keikoTexture, keikoUv, dialoguePanel, minaBody, keikoBody, speakerName,
+                dialogueText, muteHitRegion, pauseHitRegion, skipHitRegion, back, next, speaker, dialogue,
+                showMina, showKeiko, focus)
+        {
+        }
+
+        public VnWorkshopPreviewFrame(
+            Vector2 screenSize,
+            Vector2 virtualCanvasSize,
+            Texture2D backgroundTexture,
+            Texture2D dialoguePanelTexture,
+            Font dialogueFont,
+            Font speakerFont,
+            VnWorkshopTypographyValues typography,
+            Texture2D minaTexture,
+            Rect minaUv,
+            Texture2D keikoTexture,
+            Rect keikoUv,
+            Rect dialoguePanel,
+            Rect minaBody,
+            Rect keikoBody,
+            Rect speakerName,
+            Rect dialogueText,
+            Rect muteHitRegion,
+            Rect pauseHitRegion,
+            Rect skipHitRegion,
+            Rect back,
+            Rect next,
+            string speaker,
+            string dialogue,
+            bool showMina,
+            bool showKeiko,
+            VnWorkshopFocusValues focus)
         {
             ScreenSize = screenSize;
             VirtualCanvasSize = virtualCanvasSize;
             BackgroundTexture = backgroundTexture;
             DialoguePanelTexture = dialoguePanelTexture;
-            Font = font;
+            Font = dialogueFont;
+            DialogueFont = dialogueFont;
+            SpeakerFont = speakerFont;
+            Typography = typography;
             MinaTexture = minaTexture;
             MinaUv = minaUv;
             KeikoTexture = keikoTexture;
@@ -72,6 +117,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Texture2D BackgroundTexture { get; }
         public Texture2D DialoguePanelTexture { get; }
         public Font Font { get; }
+        public Font DialogueFont { get; }
+        public Font SpeakerFont { get; }
+        public VnWorkshopTypographyValues Typography { get; }
         public Texture2D MinaTexture { get; }
         public Rect MinaUv { get; }
         public Texture2D KeikoTexture { get; }
@@ -122,7 +170,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             if (assets == null)
                 throw new InvalidOperationException("ROKAS VN UI Workshop could not load Resources/RokasAssets.");
-
             RequireAsset(assets.vnBusStopRainNight, nameof(assets.vnBusStopRainNight));
             RequireAsset(assets.vnNightSkyRain, nameof(assets.vnNightSkyRain));
             RequireAsset(assets.vnBusStopPhoneMessageMina, nameof(assets.vnBusStopPhoneMessageMina));
@@ -140,8 +187,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopResolution resolution,
             VnWorkshopPreviewScene scene)
         {
-            if (preset == null)
-                throw new ArgumentNullException(nameof(preset));
+            return BuildFrame(preset, resolution, scene, null);
+        }
+
+        public static VnWorkshopPreviewFrame BuildFrame(
+            VnPresentationWorkshopPreset preset,
+            VnWorkshopResolution resolution,
+            VnWorkshopPreviewScene scene,
+            string dialogueOverride)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
 
             RokasAssets assets = LoadAssets();
             Vector2 screenSize = VnPresentationWorkshopResolver.GetScreenSize(resolution);
@@ -150,10 +205,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             ResolveScene(assets, scene, out Texture2D background, out Texture2D panelTexture,
                 out string speaker, out string dialogue, out bool showMina, out bool showKeiko);
+            if (dialogueOverride != null) dialogue = dialogueOverride;
 
-            Rect panel = BuildPanelRect(virtualCanvas, panelTexture);
-            panel = ApplyOverride(panel, preset.dialoguePanel);
-
+            Rect panel = ApplyOverride(BuildPanelRect(virtualCanvas, panelTexture), preset.dialoguePanel);
             Rect speakerName = ApplyOverride(RelativeRect(panel, .12f, .48f, .42f, .84f), preset.speakerName);
             Rect dialogueText = ApplyOverride(RelativeRect(panel, .10f, .14f, .90f, .54f), preset.dialogueText);
             Rect mute = ApplyOverride(CenteredRect(panel, .455f, .735f, 76f), preset.muteHitRegion);
@@ -165,10 +219,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnCharacterVisualState minaState = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
             VnCharacterVisualState keikoState = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
             VnWorkshopFocusValues focus = VnPresentationWorkshopResolver.ResolveFocus(preset);
+            VnWorkshopTypographyValues typography = VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
+            Font dialogueFont = ResolveFont(assets, typography.DialogueFontPreset);
+            Font speakerFont = ResolveFont(assets, typography.SpeakerFontPreset);
 
             Rect minaBody = BuildCharacterRect(assets.vnMinaCharacterSheet, minaState.BodyUv, virtualCanvas, 0f);
             Rect keikoBody = BuildCharacterRect(assets.vnKeikoCharacterSheet, keikoState.BodyUv, virtualCanvas, 0f);
-
             if (scene == VnWorkshopPreviewScene.TwoCharacterFocus)
             {
                 minaBody = MoveCenterX(minaBody, virtualCanvas.x * .5f + focus.TwoCharacterOffset);
@@ -176,45 +232,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 minaBody = ScaleAroundCenter(minaBody, focus.InactiveScale);
                 keikoBody = ScaleAroundCenter(keikoBody, focus.ActiveScale);
             }
-
             minaBody = ApplyOverride(minaBody, preset.minaBody);
 
             return new VnWorkshopPreviewFrame(
-                screenSize,
-                virtualCanvas,
-                background,
-                panelTexture,
-                assets.sans,
-                assets.vnMinaCharacterSheet,
-                minaState.BodyUv,
-                assets.vnKeikoCharacterSheet,
-                keikoState.BodyUv,
-                panel,
-                minaBody,
-                keikoBody,
-                speakerName,
-                dialogueText,
-                mute,
-                pause,
-                skip,
-                back,
-                next,
-                speaker,
-                dialogue,
-                showMina,
-                showKeiko,
-                focus);
+                screenSize, virtualCanvas, background, panelTexture, dialogueFont, speakerFont, typography,
+                assets.vnMinaCharacterSheet, minaState.BodyUv, assets.vnKeikoCharacterSheet, keikoState.BodyUv,
+                panel, minaBody, keikoBody, speakerName, dialogueText, mute, pause, skip, back, next,
+                speaker, dialogue, showMina, showKeiko, focus);
         }
 
-        public static void Draw(
-            Rect previewRect,
-            VnWorkshopPreviewFrame frame,
-            VnWorkshopElement? selected = null,
-            bool showHitRegions = true)
+        public static void Draw(Rect previewRect, VnWorkshopPreviewFrame frame,
+            VnWorkshopElement? selected = null, bool showHitRegions = true)
         {
-            if (frame == null)
-                throw new ArgumentNullException(nameof(frame));
-
+            if (frame == null) throw new ArgumentNullException(nameof(frame));
             Rect canvasRect = FitAspect(previewRect, frame.ScreenSize.x / frame.ScreenSize.y);
             GUI.Box(previewRect, GUIContent.none);
 
@@ -223,7 +253,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
                 GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
-
                 if (frame.ShowKeiko)
                     DrawCharacter(localCanvas, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
                         frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
@@ -234,10 +263,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
                     ScaleMode.StretchToFill, true);
 
-                DrawText(LogicalToPreview(localCanvas, frame.SpeakerName, frame), frame.Speaker, frame.Font, 26, FontStyle.Bold);
-                DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue, frame.Font, 22, FontStyle.Normal);
-                DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-                DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.Font, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+                DrawText(LogicalToPreview(localCanvas, frame.SpeakerName, frame), frame.Speaker,
+                    frame.SpeakerFont, Mathf.RoundToInt(frame.Typography.SpeakerFontSize), FontStyle.Bold);
+                DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue,
+                    frame.DialogueFont, Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
+                    ToTextAnchor(frame.Typography.DialogueAlignment));
+                DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+                DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
 
                 if (showHitRegions)
                 {
@@ -245,14 +277,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     DrawHitRegion(localCanvas, frame, frame.PauseHitRegion, "Pause — Baked into panel");
                     DrawHitRegion(localCanvas, frame, frame.SkipHitRegion, "Skip — Baked into panel");
                 }
-
-                if (selected.HasValue)
-                    DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
+                if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
             }
-            finally
-            {
-                GUI.EndGroup();
-            }
+            finally { GUI.EndGroup(); }
         }
 
         public static Rect ClipLogicalRectToViewport(Rect logicalRect, Vector2 virtualCanvasSize)
@@ -270,36 +297,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public static VnWorkshopElement? HitTest(VnWorkshopPreviewFrame frame, Vector2 logicalPoint)
         {
-            if (frame == null)
-                throw new ArgumentNullException(nameof(frame));
-
+            if (frame == null) throw new ArgumentNullException(nameof(frame));
             VnWorkshopElement[] order =
             {
-                VnWorkshopElement.Back,
-                VnWorkshopElement.Next,
-                VnWorkshopElement.MuteHitRegion,
-                VnWorkshopElement.PauseHitRegion,
-                VnWorkshopElement.SkipHitRegion,
-                VnWorkshopElement.SpeakerName,
-                VnWorkshopElement.DialogueText,
-                VnWorkshopElement.MinaBody,
-                VnWorkshopElement.DialoguePanel
+                VnWorkshopElement.Back, VnWorkshopElement.Next, VnWorkshopElement.MuteHitRegion,
+                VnWorkshopElement.PauseHitRegion, VnWorkshopElement.SkipHitRegion, VnWorkshopElement.SpeakerName,
+                VnWorkshopElement.DialogueText, VnWorkshopElement.MinaBody, VnWorkshopElement.DialoguePanel
             };
-
             foreach (VnWorkshopElement element in order)
-            {
-                if (frame.GetElementRect(element).Contains(logicalPoint))
-                    return element;
-            }
-
+                if (frame.GetElementRect(element).Contains(logicalPoint)) return element;
             return null;
         }
 
         public static Vector2 PreviewToLogical(Rect previewRect, Vector2 mousePosition, VnWorkshopPreviewFrame frame)
         {
-            if (frame == null)
-                throw new ArgumentNullException(nameof(frame));
-
+            if (frame == null) throw new ArgumentNullException(nameof(frame));
             Rect canvasRect = FitAspect(previewRect, frame.ScreenSize.x / frame.ScreenSize.y);
             float x = Mathf.InverseLerp(canvasRect.xMin, canvasRect.xMax, mousePosition.x) * frame.VirtualCanvasSize.x;
             float yFromTop = Mathf.InverseLerp(canvasRect.yMin, canvasRect.yMax, mousePosition.y);
@@ -309,9 +321,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public static Rect LogicalToPreview(Rect previewRect, Rect logicalRect, VnWorkshopPreviewFrame frame)
         {
-            if (frame == null)
-                throw new ArgumentNullException(nameof(frame));
-
+            if (frame == null) throw new ArgumentNullException(nameof(frame));
             float sx = previewRect.width / frame.VirtualCanvasSize.x;
             float sy = previewRect.height / frame.VirtualCanvasSize.y;
             float x = previewRect.x + logicalRect.x * sx;
@@ -319,60 +329,49 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return new Rect(x, y, logicalRect.width * sx, logicalRect.height * sy);
         }
 
-        private static void ResolveScene(
-            RokasAssets assets,
-            VnWorkshopPreviewScene scene,
-            out Texture2D background,
-            out Texture2D panel,
-            out string speaker,
-            out string dialogue,
-            out bool showMina,
-            out bool showKeiko)
+        private static void ResolveScene(RokasAssets assets, VnWorkshopPreviewScene scene,
+            out Texture2D background, out Texture2D panel, out string speaker, out string dialogue,
+            out bool showMina, out bool showKeiko)
         {
             switch (scene)
             {
                 case VnWorkshopPreviewScene.BusStopKeiko:
-                    background = assets.vnBusStopRainNight;
-                    panel = assets.vnDialoguePanelKeikoDark;
-                    speaker = "Keiko";
-                    dialogue = "The rain makes the city feel farther away than it is.";
-                    showMina = false;
-                    showKeiko = true;
-                    return;
+                    background = assets.vnBusStopRainNight; panel = assets.vnDialoguePanelKeikoDark; speaker = "Keiko";
+                    dialogue = "The rain makes the city feel farther away than it is."; showMina = false; showKeiko = true; return;
                 case VnWorkshopPreviewScene.NightSkyKeiko:
-                    background = assets.vnNightSkyRain;
-                    panel = assets.vnDialoguePanelKeikoDark;
-                    speaker = "Keiko";
-                    dialogue = "Look up. Even tonight, there is still a way forward.";
-                    showMina = false;
-                    showKeiko = true;
-                    return;
+                    background = assets.vnNightSkyRain; panel = assets.vnDialoguePanelKeikoDark; speaker = "Keiko";
+                    dialogue = "Look up. Even tonight, there is still a way forward."; showMina = false; showKeiko = true; return;
                 case VnWorkshopPreviewScene.MinaBody:
-                    background = assets.vnBusStopRainNight;
-                    panel = assets.vnDialoguePanelMinaLight;
-                    speaker = "Mina";
-                    dialogue = "I found you. Do not disappear again, okay?";
-                    showMina = true;
-                    showKeiko = false;
-                    return;
+                    background = assets.vnBusStopRainNight; panel = assets.vnDialoguePanelMinaLight; speaker = "Mina";
+                    dialogue = "I found you. Do not disappear again, okay?"; showMina = true; showKeiko = false; return;
                 case VnWorkshopPreviewScene.PhoneMessage:
-                    background = assets.vnBusStopPhoneMessageMina;
-                    panel = assets.vnDialoguePanelMinaLight;
-                    speaker = "Mina";
-                    dialogue = "One new message.";
-                    showMina = false;
-                    showKeiko = false;
-                    return;
+                    background = assets.vnBusStopPhoneMessageMina; panel = assets.vnDialoguePanelMinaLight; speaker = "Mina";
+                    dialogue = "One new message."; showMina = false; showKeiko = false; return;
                 case VnWorkshopPreviewScene.TwoCharacterFocus:
-                    background = assets.vnBusStopRainNight;
-                    panel = assets.vnDialoguePanelKeikoDark;
-                    speaker = "Keiko";
-                    dialogue = "Stay close. We move together from here.";
-                    showMina = true;
-                    showKeiko = true;
-                    return;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(scene), scene, null);
+                    background = assets.vnBusStopRainNight; panel = assets.vnDialoguePanelKeikoDark; speaker = "Keiko";
+                    dialogue = "Stay close. We move together from here."; showMina = true; showKeiko = true; return;
+                default: throw new ArgumentOutOfRangeException(nameof(scene), scene, null);
+            }
+        }
+
+        private static Font ResolveFont(RokasAssets assets, VnWorkshopFontPreset preset)
+        {
+            switch (preset)
+            {
+                case VnWorkshopFontPreset.ProjectSans: return assets.sans;
+                case VnWorkshopFontPreset.ProjectSerif: return assets.serif;
+                default: throw new ArgumentOutOfRangeException(nameof(preset), preset, null);
+            }
+        }
+
+        private static TextAnchor ToTextAnchor(VnWorkshopTextAlignment alignment)
+        {
+            switch (alignment)
+            {
+                case VnWorkshopTextAlignment.Left: return TextAnchor.MiddleLeft;
+                case VnWorkshopTextAlignment.Center: return TextAnchor.MiddleCenter;
+                case VnWorkshopTextAlignment.Right: return TextAnchor.MiddleRight;
+                default: return TextAnchor.MiddleLeft;
             }
         }
 
@@ -394,18 +393,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private static Rect RelativeRect(Rect parent, float minX, float minY, float maxX, float maxY)
         {
-            return new Rect(
-                parent.x + parent.width * minX,
-                parent.y + parent.height * minY,
-                parent.width * (maxX - minX),
-                parent.height * (maxY - minY));
+            return new Rect(parent.x + parent.width * minX, parent.y + parent.height * minY,
+                parent.width * (maxX - minX), parent.height * (maxY - minY));
         }
 
         private static Rect CenteredRect(Rect parent, float normalizedX, float normalizedY, float size)
         {
-            Vector2 center = new Vector2(
-                parent.x + parent.width * normalizedX,
-                parent.y + parent.height * normalizedY);
+            Vector2 center = new Vector2(parent.x + parent.width * normalizedX, parent.y + parent.height * normalizedY);
             return RectFromCenter(center, new Vector2(size, size));
         }
 
@@ -413,12 +407,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             Vector2 center = baseline.center;
             Vector2 size = baseline.size;
-            if (elementOverride.hasPositionDelta)
-                center += elementOverride.positionDelta;
-            if (elementOverride.hasSizeDelta)
-                size += elementOverride.sizeDelta;
-            if (elementOverride.hasScaleMultiplier)
-                size *= elementOverride.scaleMultiplier;
+            if (elementOverride.hasPositionDelta) center += elementOverride.positionDelta;
+            if (elementOverride.hasSizeDelta) size += elementOverride.sizeDelta;
+            if (elementOverride.hasScaleMultiplier) size *= elementOverride.scaleMultiplier;
             size.x = Mathf.Max(1f, size.x);
             size.y = Mathf.Max(1f, size.y);
             return RectFromCenter(center, size);
@@ -430,15 +421,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return rect;
         }
 
-        private static Rect ScaleAroundCenter(Rect rect, float scale)
-        {
-            return RectFromCenter(rect.center, rect.size * scale);
-        }
-
-        private static Rect RectFromCenter(Vector2 center, Vector2 size)
-        {
-            return new Rect(center - size * .5f, size);
-        }
+        private static Rect ScaleAroundCenter(Rect rect, float scale) => RectFromCenter(rect.center, rect.size * scale);
+        private static Rect RectFromCenter(Vector2 center, Vector2 size) => new Rect(center - size * .5f, size);
 
         private static Rect FitAspect(Rect available, float aspect)
         {
@@ -448,7 +432,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 float width = available.height * aspect;
                 return new Rect(available.center.x - width * .5f, available.y, width, available.height);
             }
-
             float height = available.width / aspect;
             return new Rect(available.x, available.center.y - height * .5f, available.width, height);
         }
@@ -468,7 +451,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             var guiStyle = new GUIStyle(GUI.skin.label)
             {
                 font = font,
-                fontSize = fontSize,
+                fontSize = Mathf.Max(1, fontSize),
                 fontStyle = style,
                 alignment = alignment,
                 wordWrap = true,
