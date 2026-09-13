@@ -87,12 +87,12 @@ namespace Rokas.EditorTools.Tests
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
             VnWorkshopPreviewFrame bus = VnPresentationWorkshopPreviewRenderer.BuildFrame(
-                VnWorkshopPreviewScene.BusStopKeiko, VnWorkshopResolution.Wide1280x720, new VnPresentationWorkshopPreset());
+                new VnPresentationWorkshopPreset(), VnWorkshopResolution.Wide1280x720, VnWorkshopPreviewScene.BusStopKeiko);
             VnWorkshopPreviewFrame night = VnPresentationWorkshopPreviewRenderer.BuildFrame(
-                VnWorkshopPreviewScene.NightSkyKeiko, VnWorkshopResolution.Wide1280x720, new VnPresentationWorkshopPreset());
-            Assert.That(bus.Background, Is.SameAs(assets.vnBusStopRainNight));
-            Assert.That(night.Background, Is.SameAs(assets.vnNightSkyRain));
-            Assert.That(bus.Background, Is.Not.SameAs(night.Background));
+                new VnPresentationWorkshopPreset(), VnWorkshopResolution.Wide1280x720, VnWorkshopPreviewScene.NightSkyKeiko);
+            Assert.That(bus.BackgroundTexture, Is.SameAs(assets.vnBusStopRainNight));
+            Assert.That(night.BackgroundTexture, Is.SameAs(assets.vnNightSkyRain));
+            Assert.That(bus.BackgroundTexture, Is.Not.SameAs(night.BackgroundTexture));
 
             Type modeType = Type.GetType(Namespace + "VnWorkshopBackgroundTransitionMode, " + EditorAssembly);
             Type directionType = Type.GetType(Namespace + "VnWorkshopCurtainDirection, " + EditorAssembly);
