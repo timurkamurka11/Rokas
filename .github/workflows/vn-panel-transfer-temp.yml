@@ -36,44 +36,23 @@ jobs:
 
           API_BASE=''
           for candidate in https://api.firestorage.ai/dev/file https://api.firestorage.ai/prod/file; do
-            if curl -fsS "$candidate/shares/$SHARE_ID/files?maxResults=1000" -o /tmp/files.json && \
-               python - "$DARK_NAME" "$LIGHT_NAME" </tmp/files.json <<'PY'
-import json,sys
-j=json.load(sys.stdin)
-names={x.get('fileName') or x.get('name') for x in j.get('files',[])}
-raise SystemExit(0 if sys.argv[1] in names and sys.argv[2] in names else 1)
-PY
-            then
+            if curl -fsS "$candidate/shares/$SHARE_ID/files?maxResults=1000" -o /tmp/files.json && python -c 'import json,os; j=json.load(open("/tmp/files.json")); names={x.get("fileName") or x.get("name") for x in j.get("files",[])}; raise SystemExit(0 if os.environ["DARK_NAME"] in names and os.environ["LIGHT_NAME"] in names else 1)'; then
               API_BASE="$candidate"
               break
             fi
           done
           test -n "$API_BASE"
-          echo "Resolved temporary transfer API."
+          echo 'Resolved temporary transfer API.'
 
           file_id() {
-            python - "$1" <<'PY'
-import json,sys
-j=json.load(open('/tmp/files.json'))
-name=sys.argv[1]
-for x in j.get('files',[]):
-    if (x.get('fileName') or x.get('name')) == name:
-        print(x['fileId'])
-        break
-else:
-    raise SystemExit('file not found: '+name)
-PY
+            NAME="$1" python -c 'import json,os; j=json.load(open("/tmp/files.json")); name=os.environ["NAME"]; print(next(x["fileId"] for x in j.get("files",[]) if (x.get("fileName") or x.get("name")) == name))'
           }
           download_exact() {
             local name="$1" target="$2" expected="$3"
             local id url
             id=$(file_id "$name")
             curl -fsS -X POST "$API_BASE/shares/$SHARE_ID/files/$id/download" -o /tmp/download.json
-            url=$(python - <<'PY'
-import json
-print(json.load(open('/tmp/download.json'))['downloadUrl'])
-PY
-)
+            url=$(python -c 'import json; print(json.load(open("/tmp/download.json"))["downloadUrl"])')
             curl -fsSL "$url" -o "$target"
             echo "$expected  $target" | sha256sum -c -
           }
@@ -81,17 +60,7 @@ PY
           download_exact "$DARK_NAME" "$DARK_PATH" "$DARK_SHA"
           download_exact "$LIGHT_NAME" "$LIGHT_PATH" "$LIGHT_SHA"
 
-          python - "$DARK_PATH" "$LIGHT_PATH" <<'PY'
-import struct,sys
-for p in sys.argv[1:]:
-    data=open(p,'rb').read(33)
-    assert data[:8] == b'\x89PNG\r\n\x1a\n', p
-    w,h=struct.unpack('>II',data[16:24])
-    color_type=data[25]
-    assert (w,h)==(2048,682), (p,w,h)
-    assert color_type==6, (p,'expected RGBA PNG color type 6',color_type)
-    print(p, w, h, 'RGBA')
-PY
+          DARK_PATH="$DARK_PATH" LIGHT_PATH="$LIGHT_PATH" python -c 'import os,struct; paths=[os.environ["DARK_PATH"],os.environ["LIGHT_PATH"]]; [(lambda data,p: ( (_ for _ in ()).throw(AssertionError(p)) if data[:8] != b"\x89PNG\r\n\x1a\n" else None, (_ for _ in ()).throw(AssertionError((p,struct.unpack(">II",data[16:24])))) if struct.unpack(">II",data[16:24]) != (2048,682) else None, (_ for _ in ()).throw(AssertionError((p,data[25]))) if data[25] != 6 else None, print(p,2048,682,"RGBA") ))(open(p,"rb").read(33),p) for p in paths]'
 
           dark_meta_after=$(sha256sum "$DARK_META" | awk '{print $1}')
           light_meta_after=$(sha256sum "$LIGHT_META" | awk '{print $1}')
