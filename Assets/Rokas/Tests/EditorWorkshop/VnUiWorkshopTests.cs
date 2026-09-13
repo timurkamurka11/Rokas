@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
 using Rokas.Presentation;
+using UnityEditor;
 using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
@@ -199,6 +201,30 @@ namespace Rokas.EditorTools.Tests
             Assert.That(renderer.GetMethod("CreateProductionView", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance), Is.Null,
                 "The isolated mirror renderer must not expose an API that creates or mutates VnIntroView.");
             Assert.That(scene.IsEnum, Is.True);
+        }
+
+        [Test]
+        public void EditorWindowContractUsesApprovedMenuAndHasNoProductionApplyAction()
+        {
+            Type window = RequireType("VnPresentationWorkshopWindow");
+            Assert.That(typeof(EditorWindow).IsAssignableFrom(window), Is.True,
+                "The Workshop entry point must be an editor-only EditorWindow.");
+
+            FieldInfo menuPath = window.GetField("MenuPath", BindingFlags.Public | BindingFlags.Static);
+            Assert.That(menuPath, Is.Not.Null, "The window must expose the approved menu path as an immutable constant.");
+            Assert.That(menuPath.GetRawConstantValue(), Is.EqualTo("ROKAS/VN UI Workshop"));
+
+            MethodInfo open = window.GetMethod("Open", BindingFlags.Public | BindingFlags.Static);
+            Assert.That(open, Is.Not.Null, "The Workshop must expose a static menu entry point.");
+            MenuItem menuItem = open.GetCustomAttributes(typeof(MenuItem), false).Cast<MenuItem>().SingleOrDefault();
+            Assert.That(menuItem, Is.Not.Null, "The Workshop Open method must be registered with Unity's MenuItem attribute.");
+            Assert.That(menuItem.menuItem, Is.EqualTo("ROKAS/VN UI Workshop"));
+
+            bool hasProductionApply = window
+                .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+                .Any(method => method.Name.IndexOf("ApplyToProduction", StringComparison.OrdinalIgnoreCase) >= 0);
+            Assert.That(hasProductionApply, Is.False,
+                "The Workshop must never expose an ApplyToProduction action.");
         }
 
         private static Type RequireType(string shortName)
