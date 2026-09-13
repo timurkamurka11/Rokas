@@ -56,19 +56,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float twoCharacterOffset;
         public bool hasActiveScale;
         public float activeScale;
+        public bool hasActiveBrightness;
+        public float activeBrightness;
+        public bool hasActiveForwardOffset;
+        public float activeForwardOffset;
         public bool hasInactiveScale;
         public float inactiveScale;
         public bool hasInactiveBrightness;
         public float inactiveBrightness;
         public bool hasInactiveAlpha;
         public float inactiveAlpha;
+        public bool hasTransitionDuration;
+        public float transitionDuration;
+        public bool hasEasing;
+        public VnWorkshopEasing easing;
 
         public bool HasAnyOverride
         {
             get
             {
-                return hasTwoCharacterOffset || hasActiveScale || hasInactiveScale ||
-                       hasInactiveBrightness || hasInactiveAlpha;
+                return hasTwoCharacterOffset || hasActiveScale || hasActiveBrightness || hasActiveForwardOffset ||
+                       hasInactiveScale || hasInactiveBrightness || hasInactiveAlpha || hasTransitionDuration || hasEasing;
             }
         }
 
@@ -78,12 +86,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             twoCharacterOffset = 0f;
             hasActiveScale = false;
             activeScale = 0f;
+            hasActiveBrightness = false;
+            activeBrightness = 0f;
+            hasActiveForwardOffset = false;
+            activeForwardOffset = 0f;
             hasInactiveScale = false;
             inactiveScale = 0f;
             hasInactiveBrightness = false;
             inactiveBrightness = 0f;
             hasInactiveAlpha = false;
             inactiveAlpha = 0f;
+            hasTransitionDuration = false;
+            transitionDuration = 0f;
+            hasEasing = false;
+            easing = VnWorkshopEasing.EaseInOut;
         }
     }
 
