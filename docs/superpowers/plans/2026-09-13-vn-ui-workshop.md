@@ -233,3 +233,9 @@ Final report must state exactly:
 READY FOR USER WORKSHOP REVIEW
 NOT INTEGRATED
 ```
+
+### Remote editor proof evidence
+
+- Automated EditorWindow proof is GREEN on `3ecee701537d17b4cc45a96e8c918f2d66295015` with Workshop EditMode `16/16` passed.
+- The proof invokes the real `ROKAS/VN UI Workshop` EditorWindow entry point, resolves authored ROKAS VN assets, builds representative 1280x720 and 1024x768 preview frames, and verifies local variant persistence across window re-instantiation.
+- Human visual/interaction judgment is intentionally not claimed by the remote batchmode proof; `MANUAL GUI REVIEW` remains pending user review.
