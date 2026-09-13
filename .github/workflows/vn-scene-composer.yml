@@ -79,8 +79,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Run Scene Composer focused tests
-        id: tests
+      - name: Run SC-A Composer core fixture
+        id: core-tests
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -92,14 +92,33 @@ jobs:
           unityVersion: ${{ env.UNITY_VERSION }}
           testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerTests;Rokas.EditorTools.Tests.VnSceneComposerCrudTests"
+          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerTests"
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Scene Composer focused EditMode
-          artifactsPath: artifacts-vn-scene-composer-editmode
+          checkName: Scene Composer SC-A core EditMode
+          artifactsPath: artifacts-vn-scene-composer-core
+      - name: Run SC-B Composer CRUD fixture
+        id: crud-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter "Rokas.EditorTools.Tests.VnSceneComposerCrudTests"
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-B CRUD EditMode
+          artifactsPath: artifacts-vn-scene-composer-crud
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
-          path: ${{ steps.tests.outputs.artifactsPath }}
+          path: |
+            artifacts-vn-scene-composer-core
+            artifacts-vn-scene-composer-crud
           if-no-files-found: warn
