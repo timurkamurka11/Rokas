@@ -67,6 +67,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Easing = VnWorkshopEasing.EaseInOut
             };
 
+        private static readonly VnWorkshopBackgroundTransitionValues BackgroundTransitionBaseline =
+            new VnWorkshopBackgroundTransitionValues
+            {
+                Mode = VnWorkshopBackgroundTransitionMode.Fade,
+                Duration = .40f,
+                CurtainDarkness = .85f,
+                Direction = VnWorkshopCurtainDirection.RightToLeft,
+                Easing = VnWorkshopEasing.EaseInOut
+            };
+
         public static VnWorkshopTypographyValues ResolveTypography(VnPresentationWorkshopPreset preset)
         {
             if (preset == null) throw new ArgumentNullException(nameof(preset));
@@ -457,6 +467,110 @@ namespace Rokas.EditorTools.VnUiWorkshop
             };
         }
 
+        public static VnWorkshopBackgroundTransitionValues ResolveBackgroundTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            VnWorkshopBackgroundTransitionOverride source = EnsureBackgroundTransition(preset);
+            VnWorkshopBackgroundTransitionValues values = BackgroundTransitionBaseline;
+            if (source.hasMode) values.Mode = source.mode;
+            if (source.hasDuration) values.Duration = source.duration;
+            if (source.hasCurtainDarkness) values.CurtainDarkness = source.curtainDarkness;
+            if (source.hasDirection) values.Direction = source.direction;
+            if (source.hasEasing) values.Easing = source.easing;
+            return values;
+        }
+
+        public static void SetBackgroundTransitionPreviewOverrides(
+            VnPresentationWorkshopPreset preset,
+            VnWorkshopBackgroundTransitionMode mode,
+            float duration,
+            float curtainDarkness,
+            VnWorkshopCurtainDirection direction,
+            VnWorkshopEasing easing)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            ValidateEnum(mode, nameof(mode));
+            ValidateEnum(direction, nameof(direction));
+            ValidateEnum(easing, nameof(easing));
+            RequireRange(duration, 0f, 10f, nameof(duration));
+            RequireRange(curtainDarkness, 0f, 1f, nameof(curtainDarkness));
+
+            VnWorkshopBackgroundTransitionOverride target = EnsureBackgroundTransition(preset);
+            target.hasMode = mode != BackgroundTransitionBaseline.Mode;
+            target.mode = mode;
+            target.hasDuration = !Mathf.Approximately(duration, BackgroundTransitionBaseline.Duration);
+            target.duration = duration;
+            target.hasCurtainDarkness = !Mathf.Approximately(curtainDarkness, BackgroundTransitionBaseline.CurtainDarkness);
+            target.curtainDarkness = curtainDarkness;
+            target.hasDirection = direction != BackgroundTransitionBaseline.Direction;
+            target.direction = direction;
+            target.hasEasing = easing != BackgroundTransitionBaseline.Easing;
+            target.easing = easing;
+        }
+
+        public static void ResetBackgroundTransitionPreviewOverrides(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null) throw new ArgumentNullException(nameof(preset));
+            EnsureBackgroundTransition(preset).Clear();
+        }
+
+        public static VnWorkshopBackgroundTransitionSample SampleBackgroundTransition(
+            float normalizedProgress,
+            VnWorkshopBackgroundTransitionValues values)
+        {
+            ValidateEnum(values.Mode, nameof(values.Mode));
+            ValidateEnum(values.Direction, nameof(values.Direction));
+            ValidateEnum(values.Easing, nameof(values.Easing));
+            RequireRange(values.CurtainDarkness, 0f, 1f, nameof(values.CurtainDarkness));
+
+            float raw = Mathf.Clamp01(normalizedProgress);
+            float eased = EvaluateEasing(raw, values.Easing);
+            var result = new VnWorkshopBackgroundTransitionSample
+            {
+                SourceAlpha = 1f,
+                TargetAlpha = 0f,
+                CurtainCoverage = 0f,
+                CurtainPosition = values.Direction == VnWorkshopCurtainDirection.RightToLeft ? 1f - eased : eased,
+                CurtainDarkness = 0f,
+                CurtainDirection = values.Direction,
+                Complete = raw >= 1f
+            };
+
+            if (raw <= 0f)
+                return result;
+
+            if (raw >= 1f)
+            {
+                result.SourceAlpha = 0f;
+                result.TargetAlpha = 1f;
+                result.CurtainCoverage = 0f;
+                result.CurtainDarkness = 0f;
+                return result;
+            }
+
+            switch (values.Mode)
+            {
+                case VnWorkshopBackgroundTransitionMode.Instant:
+                    bool targetVisible = raw >= .5f;
+                    result.SourceAlpha = targetVisible ? 0f : 1f;
+                    result.TargetAlpha = targetVisible ? 1f : 0f;
+                    return result;
+                case VnWorkshopBackgroundTransitionMode.Fade:
+                    result.SourceAlpha = 1f - eased;
+                    result.TargetAlpha = eased;
+                    return result;
+                case VnWorkshopBackgroundTransitionMode.Curtain:
+                    result.CurtainCoverage = 1f - Mathf.Abs((2f * eased) - 1f);
+                    result.CurtainDarkness = result.CurtainCoverage * values.CurtainDarkness;
+                    bool afterCover = eased >= .5f;
+                    result.SourceAlpha = afterCover ? 0f : 1f;
+                    result.TargetAlpha = afterCover ? 1f : 0f;
+                    return result;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(values.Mode), values.Mode, "Unsupported background transition mode.");
+            }
+        }
+
         private static VnWorkshopCharacterTransitionSample SampleCharacterTransition(
             float normalizedProgress,
             VnWorkshopCharacterTransitionValues values,
@@ -596,6 +710,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (preset.actionBounce == null)
                 preset.actionBounce = new VnWorkshopActionBounceOverride();
             return preset.actionBounce;
+        }
+
+        private static VnWorkshopBackgroundTransitionOverride EnsureBackgroundTransition(VnPresentationWorkshopPreset preset)
+        {
+            if (preset.backgroundTransition == null)
+                preset.backgroundTransition = new VnWorkshopBackgroundTransitionOverride();
+            return preset.backgroundTransition;
         }
 
         private static void RequireRange(float value, float min, float max, string name)

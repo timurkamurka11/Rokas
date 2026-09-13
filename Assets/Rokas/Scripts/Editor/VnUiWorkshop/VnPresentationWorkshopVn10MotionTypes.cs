@@ -24,6 +24,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
         Right
     }
 
+    public enum VnWorkshopBackgroundTransitionMode
+    {
+        Instant,
+        Fade,
+        Curtain
+    }
+
+    public enum VnWorkshopCurtainDirection
+    {
+        RightToLeft,
+        LeftToRight
+    }
+
     [Serializable]
     public sealed class VnWorkshopExpressionTransitionOverride
     {
@@ -167,6 +180,60 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public Vector2 PositionOffset;
         public float ScaleMultiplier;
+        public bool Complete;
+    }
+
+    [Serializable]
+    public sealed class VnWorkshopBackgroundTransitionOverride
+    {
+        public bool hasMode;
+        public VnWorkshopBackgroundTransitionMode mode;
+        public bool hasDuration;
+        public float duration;
+        public bool hasCurtainDarkness;
+        public float curtainDarkness;
+        public bool hasDirection;
+        public VnWorkshopCurtainDirection direction;
+        public bool hasEasing;
+        public VnWorkshopEasing easing;
+
+        public bool HasAnyOverride
+        {
+            get { return hasMode || hasDuration || hasCurtainDarkness || hasDirection || hasEasing; }
+        }
+
+        public void Clear()
+        {
+            hasMode = false;
+            mode = VnWorkshopBackgroundTransitionMode.Fade;
+            hasDuration = false;
+            duration = 0f;
+            hasCurtainDarkness = false;
+            curtainDarkness = 0f;
+            hasDirection = false;
+            direction = VnWorkshopCurtainDirection.RightToLeft;
+            hasEasing = false;
+            easing = VnWorkshopEasing.EaseInOut;
+        }
+    }
+
+    public struct VnWorkshopBackgroundTransitionValues
+    {
+        public VnWorkshopBackgroundTransitionMode Mode;
+        public float Duration;
+        public float CurtainDarkness;
+        public VnWorkshopCurtainDirection Direction;
+        public VnWorkshopEasing Easing;
+    }
+
+    public struct VnWorkshopBackgroundTransitionSample
+    {
+        public float SourceAlpha;
+        public float TargetAlpha;
+        public float CurtainCoverage;
+        public float CurtainPosition;
+        public float CurtainDarkness;
+        public VnWorkshopCurtainDirection CurtainDirection;
         public bool Complete;
     }
 }
