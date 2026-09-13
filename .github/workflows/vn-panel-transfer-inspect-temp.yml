@@ -1,0 +1,36 @@
+name: TEMP VN Panel Transfer Inspect
+
+on:
+  push:
+    branches:
+      - feature/vn-visual-polish-refs
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-share:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect temporary panel share
+        shell: bash
+        env:
+          SHARE_URL: https://firestorage.ai/ja/f/I-ehbdfMUaNk
+        run: |
+          set -euo pipefail
+          curl -fsSL "$SHARE_URL" -o /tmp/share.html
+          echo "HTML_BYTES=$(wc -c </tmp/share.html)"
+          echo '--- likely URLs/endpoints ---'
+          grep -oE 'https?://[^"[:space:]<>]+|/[^"[:space:]<>]*(download|api|file)[^"[:space:]<>]*' /tmp/share.html | head -120 || true
+          echo '--- filenames ---'
+          grep -oE '[A-Za-z0-9_-]+\.png' /tmp/share.html | sort -u || true
+          echo '--- first lines ---'
+          sed -n '1,80p' /tmp/share.html
+      - name: Upload inspected HTML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn-panel-transfer-inspect-${{ github.sha }}
+          path: /tmp/share.html
+          if-no-files-found: warn
