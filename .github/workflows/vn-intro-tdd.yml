@@ -405,6 +405,11 @@ jobs:
         with:
           name: vn-windows-development-player-${{ github.sha }}
           path: build
+      - name: Set Windows proof display resolution
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
       - name: Run natural, skip and persisted bypass at required resolutions
         shell: pwsh
         run: |
@@ -486,7 +491,7 @@ jobs:
               $image = [System.Drawing.Image]::FromFile($path)
               try {
                 if ($image.Width -ne $resolution.Width -or $image.Height -ne $resolution.Height) {
-                  throw "Wrong screenshot size for $($resolution.Name)/$relative: $($image.Width)x$($image.Height)"
+                  throw "Wrong screenshot size for $($resolution.Name)/$($relative): $($image.Width)x$($image.Height)"
                 }
               }
               finally {
