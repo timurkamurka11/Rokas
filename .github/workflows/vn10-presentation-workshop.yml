@@ -1,0 +1,92 @@
+name: ROKAS VN10 Presentation Workshop
+
+on:
+  push:
+    branches:
+      - feature/vn10-presentation-workshop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+  VN10_BASE: 43699c841e24ed806f377fbd9a7bec4d18f6cb1d
+
+jobs:
+  source-guard:
+    name: VN10 source / production guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify base, diff hygiene and editor-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$VN10_BASE" HEAD
+          git diff --check "$VN10_BASE"..HEAD
+          python - <<'PY'
+          import os, subprocess
+          base = os.environ['VN10_BASE']
+          changed = subprocess.check_output(['git','diff','--name-only',f'{base}..HEAD'], text=True).splitlines()
+          allowed_exact = {
+              '.github/workflows/vn10-presentation-workshop.yml',
+              'docs/superpowers/plans/2026-09-13-vn10-presentation-workshop.md',
+          }
+          allowed_prefixes = (
+              'Assets/Rokas/Scripts/Editor/VnUiWorkshop',
+              'Assets/Rokas/Tests/EditorWorkshop',
+          )
+          forbidden = [p for p in changed if p not in allowed_exact and not p.startswith(allowed_prefixes)]
+          if forbidden:
+              raise SystemExit('Forbidden VN10 diff paths: ' + repr(forbidden))
+          protected = [
+              'Assets/Rokas/Scripts/Presentation/VnIntroView.cs',
+              'Assets/Rokas/Scripts/Presentation/VnIntroController.cs',
+              'Assets/Rokas/Scripts/Presentation/VnIntroDialoguePresenter.cs',
+              'Assets/Rokas/Scripts/Presentation/RokasAssets.cs',
+          ]
+          touched = set(changed)
+          bad = [p for p in protected if p in touched]
+          bad += [p for p in changed if p.endswith('.yarn') or '/Yarn/' in p]
+          if bad:
+              raise SystemExit('Production VN files changed: ' + repr(sorted(set(bad))))
+          print('VN10_EDITOR_ONLY_SCOPE=PASS')
+          print('\n'.join(changed))
+          PY
+
+  workshop-editmode:
+    name: VN10 Workshop EditMode TDD
+    needs: source-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run VN UI Workshop EditMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnUiWorkshopTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN10 Workshop EditMode
+          artifactsPath: artifacts-vn10-workshop-editmode
+      - name: Upload VN10 Workshop test evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vn10-workshop-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
