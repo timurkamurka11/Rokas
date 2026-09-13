@@ -13,24 +13,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect temporary panel share
+      - name: Inspect temporary panel share client endpoint
         shell: bash
         env:
           SHARE_URL: https://firestorage.ai/ja/f/I-ehbdfMUaNk
         run: |
           set -euo pipefail
           curl -fsSL "$SHARE_URL" -o /tmp/share.html
-          echo "HTML_BYTES=$(wc -c </tmp/share.html)"
-          echo '--- likely URLs/endpoints ---'
-          grep -oE 'https?://[^"[:space:]<>]+|/[^"[:space:]<>]*(download|api|file)[^"[:space:]<>]*' /tmp/share.html | head -120 || true
-          echo '--- filenames ---'
-          grep -oE '[A-Za-z0-9_-]+\.png' /tmp/share.html | sort -u || true
-          echo '--- first lines ---'
-          sed -n '1,80p' /tmp/share.html
-      - name: Upload inspected HTML
+          JS_PATH=$(grep -oE '/_next/static/chunks/app/\(files\)/ja/f/page-[A-Za-z0-9]+\.js' /tmp/share.html | head -1)
+          test -n "$JS_PATH"
+          echo "JS_PATH=$JS_PATH"
+          curl -fsSL "https://firestorage.ai$JS_PATH" -o /tmp/page.js
+          echo "JS_BYTES=$(wc -c </tmp/page.js)"
+          echo '--- API/download string candidates ---'
+          grep -oE '.{0,100}(/api/|download|shareId|fileId|files).{0,160}' /tmp/page.js | head -160 || true
+          echo '--- absolute/relative API paths ---'
+          grep -oE 'https?://[^"[:space:]<>]+|/api/[A-Za-z0-9_?&=./{}:-]+' /tmp/page.js | sort -u | head -160 || true
+      - name: Upload inspected client JS
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: vn-panel-transfer-inspect-${{ github.sha }}
-          path: /tmp/share.html
+          path: |
+            /tmp/share.html
+            /tmp/page.js
           if-no-files-found: warn
