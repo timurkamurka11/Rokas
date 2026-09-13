@@ -106,6 +106,16 @@ namespace Rokas.Presentation
             return GameObject.Find("EnterWorldCurtain") == null;
         }
 
+        public static bool IsPortraitTransitionSettled(GameObject root)
+        {
+            Transform? currentTransform = FindDescendant(root, "Portrait");
+            Transform? previousTransform = FindDescendant(root, "PortraitPrevious");
+            RawImage? current = currentTransform ? currentTransform.GetComponent<RawImage>() : null;
+            RawImage? previous = previousTransform ? previousTransform.GetComponent<RawImage>() : null;
+            return current && previous && current.texture &&
+                   current.color.a >= .98f && previous.color.a <= .02f;
+        }
+
         private IEnumerator Start()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -210,6 +220,12 @@ namespace Rokas.Presentation
                 evidence.error = "Initial VN presentation remained obscured by the Enter World transition curtain.";
                 yield break;
             }
+            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Initial VN portrait transition did not settle before proof capture.";
+                yield break;
+            }
             yield return Capture("natural-01-bus-stop.png");
 
             float timeScaleBeforePause = Time.timeScale;
@@ -239,6 +255,12 @@ namespace Rokas.Presentation
                 evidence.error = "One continue did not advance from bus stop to night sky.";
                 yield break;
             }
+            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Night-sky VN portrait transition did not settle before proof capture.";
+                yield break;
+            }
             yield return Capture("natural-02-night-sky.png");
             yield return WaitRealtime(.35f);
             evidence.oneClickOneBeat = HasBackground(vnRoot, "VN_NightSky_Rain");
@@ -253,6 +275,12 @@ namespace Rokas.Presentation
             if (!evidence.minaPhoneFrame || !evidence.minaLineExact)
             {
                 evidence.error = "Mina phone beat or exact Mina line was not presented.";
+                yield break;
+            }
+            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Mina portrait transition did not settle before proof capture.";
                 yield break;
             }
             yield return Capture("natural-03-mina-phone.png");
@@ -294,6 +322,12 @@ namespace Rokas.Presentation
             if (!waitSucceeded)
             {
                 evidence.error = "Skip proof remained obscured by the Enter World transition curtain.";
+                yield break;
+            }
+            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            if (!waitSucceeded)
+            {
+                evidence.error = "Skip VN portrait transition did not settle before proof capture.";
                 yield break;
             }
             yield return Capture("skip-01-before.png");
