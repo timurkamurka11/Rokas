@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/vn-intro-yarn-flow
+      - feature/vn-visual-polish-refs
 
 permissions:
   contents: read
@@ -129,12 +130,28 @@ jobs:
           if-no-files-found: warn
 
   focused-playmode:
-    name: VN focused PlayMode
+    name: VN focused PlayMode - ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: flow
+            filter: Rokas.Tests.VnIntroPlayModeTests
+            artifact: flow
+          - label: visual-layout
+            filter: Rokas.Tests.VnIntroVisualLayoutPlayModeTests
+            artifact: visual-layout
+          - label: responsive-layout
+            filter: Rokas.Tests.VnIntroResponsiveLayoutPlayModeTests
+            artifact: responsive-layout
+          - label: runtime-proof-harness
+            filter: Rokas.Tests.VnIntroRuntimeProofHarnessPlayModeTests
+            artifact: runtime-proof-harness
     steps:
       - uses: actions/checkout@v7
-      - name: Run VN PlayMode tests
+      - name: Run VN focused PlayMode tests
         id: tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -147,15 +164,15 @@ jobs:
           unityVersion: ${{ env.UNITY_VERSION }}
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
+          customParameters: -testFilter ${{ matrix.filter }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: VN Intro Focused PlayMode
-          artifactsPath: artifacts-focused-playmode
+          checkName: VN Intro Focused PlayMode - ${{ matrix.label }}
+          artifactsPath: artifacts-focused-playmode-${{ matrix.artifact }}
       - name: Upload focused PlayMode evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: vn-focused-playmode-${{ github.sha }}
+          name: vn-focused-playmode-${{ matrix.artifact }}-${{ github.sha }}
           path: ${{ steps.tests.outputs.artifactsPath }}
           if-no-files-found: warn
 
@@ -378,17 +395,17 @@ jobs:
           retention-days: 3
 
   windows-runtime-proof:
-    name: Real Rokas.exe VN runtime + screenshots
+    name: Real Rokas.exe VN runtime + responsive screenshots
     needs: build-windows-player
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Download Windows Development Player
         uses: actions/download-artifact@v4
         with:
           name: vn-windows-development-player-${{ github.sha }}
           path: build
-      - name: Run natural, skip and persisted bypass scenarios
+      - name: Run natural, skip and persisted bypass at required resolutions
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -397,46 +414,51 @@ jobs:
           $proof = Join-Path $env:GITHUB_WORKSPACE 'vn-runtime-proof'
           New-Item -ItemType Directory -Force -Path $proof | Out-Null
 
-          function Invoke-RokasProof([string]$Scenario) {
-            $log = Join-Path $proof ("player-{0}.log" -f $Scenario)
+          function Invoke-RokasProof([string]$ResolutionName, [int]$Width, [int]$Height, [string]$Scenario) {
+            $resolutionProof = Join-Path $proof $ResolutionName
+            New-Item -ItemType Directory -Force -Path $resolutionProof | Out-Null
+            $log = Join-Path $resolutionProof ("player-{0}.log" -f $Scenario)
             $arguments = @(
               '-rokasVnIntroProof',
               '-rokasVnIntroScenario', $Scenario,
-              '-rokasVnIntroOutput', $proof,
+              '-rokasVnIntroOutput', $resolutionProof,
               '-screen-fullscreen', '0',
-              '-screen-width', '1920',
-              '-screen-height', '1080',
+              '-screen-width', $Width,
+              '-screen-height', $Height,
               '-force-d3d11',
               '-logFile', $log
             )
-            Write-Host "Launching real player scenario: $Scenario"
+            Write-Host "Launching real player: $ResolutionName $Scenario ($Width x $Height)"
             $process = Start-Process -FilePath $exe.FullName -ArgumentList $arguments -PassThru
             if (-not $process.WaitForExit(180000)) {
               try { $process.Kill($true) } catch {}
-              throw "Rokas.exe scenario '$Scenario' timed out."
+              throw "Rokas.exe '$ResolutionName/$Scenario' timed out."
             }
             if ($process.ExitCode -ne 0) {
               if (Test-Path $log) { Get-Content $log -Tail 160 }
-              throw "Rokas.exe scenario '$Scenario' exited with code $($process.ExitCode)."
+              throw "Rokas.exe '$ResolutionName/$Scenario' exited with code $($process.ExitCode)."
             }
           }
 
-          Invoke-RokasProof 'natural'
-          Invoke-RokasProof 'skip'
-          Invoke-RokasProof 'bypass'
-      - name: Validate runtime JSON and screenshot evidence
+          $resolutions = @(
+            @{ Name = '1280x720'; Width = 1280; Height = 720 },
+            @{ Name = '1024x768'; Width = 1024; Height = 768 }
+          )
+          foreach ($resolution in $resolutions) {
+            Invoke-RokasProof $resolution.Name $resolution.Width $resolution.Height 'natural'
+            Invoke-RokasProof $resolution.Name $resolution.Width $resolution.Height 'skip'
+            Invoke-RokasProof $resolution.Name $resolution.Width $resolution.Height 'bypass'
+          }
+      - name: Validate runtime JSON and exact screenshot dimensions
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Drawing
           $proof = Join-Path $env:GITHUB_WORKSPACE 'vn-runtime-proof'
-          foreach ($scenario in @('natural', 'skip', 'bypass')) {
-            $jsonPath = Join-Path $proof "$scenario/vn-intro-proof-result.json"
-            if (-not (Test-Path $jsonPath)) { throw "Missing runtime result: $jsonPath" }
-            $data = Get-Content $jsonPath -Raw | ConvertFrom-Json
-            if (-not $data.finalPass) { throw "$scenario runtime proof is not PASS: $($data.error)" }
-            if ($data.scenario -ne $scenario) { throw "Scenario mismatch in $jsonPath" }
-          }
-
+          $resolutions = @(
+            @{ Name = '1280x720'; Width = 1280; Height = 720 },
+            @{ Name = '1024x768'; Width = 1024; Height = 768 }
+          )
           $expectedPngs = @(
             'natural/natural-01-bus-stop.png',
             'natural/natural-02-night-sky.png',
@@ -446,14 +468,36 @@ jobs:
             'skip/skip-02-home.png',
             'bypass/bypass-01-home.png'
           )
-          foreach ($relative in $expectedPngs) {
-            $path = Join-Path $proof $relative
-            if (-not (Test-Path $path)) { throw "Missing screenshot: $relative" }
-            if ((Get-Item $path).Length -le 0) { throw "Empty screenshot: $relative" }
+
+          foreach ($resolution in $resolutions) {
+            $resolutionProof = Join-Path $proof $resolution.Name
+            foreach ($scenario in @('natural', 'skip', 'bypass')) {
+              $jsonPath = Join-Path $resolutionProof "$scenario/vn-intro-proof-result.json"
+              if (-not (Test-Path $jsonPath)) { throw "Missing runtime result: $jsonPath" }
+              $data = Get-Content $jsonPath -Raw | ConvertFrom-Json
+              if (-not $data.finalPass) { throw "$($resolution.Name)/$scenario runtime proof is not PASS: $($data.error)" }
+              if ($data.scenario -ne $scenario) { throw "Scenario mismatch in $jsonPath" }
+            }
+
+            foreach ($relative in $expectedPngs) {
+              $path = Join-Path $resolutionProof $relative
+              if (-not (Test-Path $path)) { throw "Missing screenshot: $($resolution.Name)/$relative" }
+              if ((Get-Item $path).Length -le 0) { throw "Empty screenshot: $($resolution.Name)/$relative" }
+              $image = [System.Drawing.Image]::FromFile($path)
+              try {
+                if ($image.Width -ne $resolution.Width -or $image.Height -ne $resolution.Height) {
+                  throw "Wrong screenshot size for $($resolution.Name)/$relative: $($image.Width)x$($image.Height)"
+                }
+              }
+              finally {
+                $image.Dispose()
+              }
+            }
           }
           Write-Host 'REAL_ROKAS_EXE_RUNTIME_PROOF=PASS'
           Write-Host 'RUNTIME_SCENARIOS=natural,skip,bypass'
-          Write-Host 'SCREENSHOTS=7/7'
+          Write-Host 'RESOLUTIONS=1280x720,1024x768'
+          Write-Host 'SCREENSHOTS=14/14'
       - name: Upload real-player VN runtime proof
         if: always()
         uses: actions/upload-artifact@v7
