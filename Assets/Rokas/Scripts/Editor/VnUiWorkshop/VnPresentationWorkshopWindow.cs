@@ -145,6 +145,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void SaveCurrentVariant(string name)
         {
+            VnWorkshopPreviewSampleStore.Set(CurrentPreset, PreviewSampleText);
             VnPresentationWorkshopStorage.SaveVariant(GetProjectRoot(), name, CurrentPreset);
             Repaint();
         }
@@ -156,6 +157,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 currentPreset = result.Document.preset;
                 comparisonView = VnWorkshopComparisonView.Current;
+                SetPreviewSampleText(result.Document.previewSampleText ?? DefaultPreviewSampleText);
+                VnWorkshopPreviewSampleStore.Set(CurrentPreset, PreviewSampleText);
             }
             Repaint();
             return result;
@@ -183,7 +186,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string ExportCurrentPresetJson(string name)
         {
             variantName = name ?? string.Empty;
-            return VnPresentationWorkshopSerialization.Serialize(CurrentPreset, variantName);
+            VnWorkshopPreviewSampleStore.Set(CurrentPreset, PreviewSampleText);
+            return VnPresentationWorkshopSerialization.Serialize(CurrentPreset, variantName, PreviewSampleText);
         }
 
         public void ExportCurrentPresetToFile(string path)
@@ -207,6 +211,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentPreset = result.Document.preset;
             variantName = result.Document.variantName ?? string.Empty;
             comparisonView = VnWorkshopComparisonView.Current;
+            SetPreviewSampleText(result.Document.previewSampleText ?? DefaultPreviewSampleText);
+            VnWorkshopPreviewSampleStore.Set(CurrentPreset, PreviewSampleText);
             SetVariantStatus(result.SourceHeadMismatch
                 ? "Imported with source HEAD mismatch. " + result.Error + " Production remains unchanged."
                 : "Imported Workshop preset '" + variantName + "'.",
@@ -312,6 +318,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (GUILayout.Button("Delete"))
                     TryVariantAction(() => { if (!DeleteSavedVariant(selectedName)) throw new IOException("Variant no longer exists: " + selectedName + "."); }, "Deleted variant '" + selectedName + "'.");
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("VN10 Profiles", EditorStyles.boldLabel);
+            if (GUILayout.Button(VnPresentationWorkshopVn10Profiles.ReferenceMotionPreviewName))
+                ApplyReferenceMotionPreview();
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Portable Preset", EditorStyles.boldLabel);
