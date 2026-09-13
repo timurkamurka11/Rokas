@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
+using Rokas.Presentation;
 using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
@@ -149,6 +150,55 @@ namespace Rokas.EditorTools.Tests
             Assert.That(storage.GetMethod("DeleteVariant", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
             Assert.That(storage.GetMethod("RenameVariant", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
             Assert.That(storage.GetMethod("DuplicateVariant", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
+        }
+
+        [Test]
+        public void RealAssetMirrorRendererRequiresAuthoredRokasAssetsAndMinaBodyUv()
+        {
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null, "The Workshop must mirror the real Resources/RokasAssets asset.");
+            Assert.That(assets.vnBusStopRainNight, Is.Not.Null);
+            Assert.That(assets.vnNightSkyRain, Is.Not.Null);
+            Assert.That(assets.vnBusStopPhoneMessageMina, Is.Not.Null);
+            Assert.That(assets.vnDialoguePanelKeikoDark, Is.Not.Null);
+            Assert.That(assets.vnDialoguePanelMinaLight, Is.Not.Null);
+            Assert.That(assets.vnMinaCharacterSheet, Is.Not.Null);
+            Assert.That(assets.sans, Is.Not.Null);
+
+            VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
+            Assert.That(mina.Character, Is.EqualTo("Mina"));
+            Assert.That(mina.BodyUv.x, Is.EqualTo(.000921f).Within(.000001f));
+            Assert.That(mina.BodyUv.y, Is.EqualTo(.008287f).Within(.000001f));
+            Assert.That(mina.BodyUv.width, Is.EqualTo(.361878f).Within(.000001f));
+            Assert.That(mina.BodyUv.height, Is.EqualTo(.986878f).Within(.000001f));
+
+            Type renderer = RequireType("VnPresentationWorkshopPreviewRenderer");
+            Assert.That(renderer.GetMethod("LoadAssets", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
+            Assert.That(renderer.GetMethod("BuildFrame", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
+        }
+
+        [Test]
+        public void RealAssetMirrorRendererExposesPureResolvedFrameWithoutProductionViewMutationApi()
+        {
+            Type renderer = RequireType("VnPresentationWorkshopPreviewRenderer");
+            Type frame = RequireType("VnWorkshopPreviewFrame");
+            Type scene = RequireType("VnWorkshopPreviewScene");
+
+            Assert.That(renderer.GetMethod("BuildFrame", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
+            Assert.That(frame.GetProperty("VirtualCanvasSize", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("DialoguePanel", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("MinaBody", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("SpeakerName", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("DialogueText", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("MuteHitRegion", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("PauseHitRegion", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("SkipHitRegion", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("Back", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+            Assert.That(frame.GetProperty("Next", BindingFlags.Public | BindingFlags.Instance), Is.Not.Null);
+
+            Assert.That(renderer.GetMethod("CreateProductionView", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance), Is.Null,
+                "The isolated mirror renderer must not expose an API that creates or mutates VnIntroView.");
+            Assert.That(scene.IsEnum, Is.True);
         }
 
         private static Type RequireType(string shortName)
