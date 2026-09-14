@@ -1,0 +1,487 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Rokas.Presentation;
+using UnityEditor;
+using UnityEngine;
+
+namespace Rokas.EditorTools.VnUiWorkshop
+{
+    public sealed class VnSceneComposerImportResult
+    {
+        public bool Success { get; private set; }
+        public bool SourceHeadMismatch { get; private set; }
+        public string Error { get; private set; }
+        public string[] Warnings { get; private set; }
+        public string ImportedSourceHead { get; private set; }
+        public string ExpectedSourceHead { get; private set; }
+        public VnSceneComposerProject Project { get; private set; }
+
+        internal static VnSceneComposerImportResult Failed(string error)
+        {
+            return new VnSceneComposerImportResult
+            {
+                Success = false,
+                SourceHeadMismatch = false,
+                Error = string.IsNullOrEmpty(error) ? "Unknown Scene Composer persistence error." : error,
+                Warnings = Array.Empty<string>(),
+                ImportedSourceHead = string.Empty,
+                ExpectedSourceHead = VnSceneComposerContract.SourceHead,
+                Project = null
+            };
+        }
+
+        internal static VnSceneComposerImportResult Loaded(VnSceneComposerProject project, IList<string> warnings)
+        {
+            string importedHead = project != null ? project.sourceHead ?? string.Empty : string.Empty;
+            bool mismatch = !string.Equals(importedHead, VnSceneComposerContract.SourceHead, StringComparison.Ordinal);
+            var messages = new List<string>();
+            if (warnings != null)
+            {
+                for (int i = 0; i < warnings.Count; i++)
+                {
+                    if (!string.IsNullOrWhiteSpace(warnings[i]) && !messages.Contains(warnings[i]))
+                        messages.Add(warnings[i]);
+                }
+            }
+            if (mismatch)
+            {
+                string sourceWarning = "Scene Composer source metadata mismatch. Imported: " + importedHead +
+                                       "; expected: " + VnSceneComposerContract.SourceHead + ".";
+                if (!messages.Contains(sourceWarning)) messages.Insert(0, sourceWarning);
+            }
+            return new VnSceneComposerImportResult
+            {
+                Success = true,
+                SourceHeadMismatch = mismatch,
+                Error = string.Empty,
+                Warnings = messages.ToArray(),
+                ImportedSourceHead = importedHead,
+                ExpectedSourceHead = VnSceneComposerContract.SourceHead,
+                Project = project
+            };
+        }
+    }
+
+    public static class VnSceneComposerSerialization
+    {
+        public const int SchemaVersion = VnSceneComposerContract.SchemaVersion;
+        private const string ExternalReferencePrefix = "external://";
+        private const float MaxPreviewDuration = 3600f;
+
+        public static string SerializePortable(VnSceneComposerProject project)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            if (!ValidateProject(project, out string error, out _))
+                throw new ArgumentException(error, nameof(project));
+
+            VnSceneComposerProject portable = CloneProject(project);
+            NormalizeProject(portable);
+            portable.schemaVersion = SchemaVersion;
+            MakeExternalReferencesPortable(portable);
+            return JsonUtility.ToJson(portable, true);
+        }
+
+        public static VnSceneComposerImportResult DeserializePortable(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is empty.");
+            if (json.IndexOf("\"schemaVersion\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing schemaVersion metadata.");
+            if (json.IndexOf("\"sourceHead\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing sourceHead metadata.");
+            if (json.IndexOf("\"projectId\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing projectId metadata.");
+            if (json.IndexOf("\"scenes\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing ordered scene data.");
+
+            VnSceneComposerProject project;
+            try
+            {
+                project = JsonUtility.FromJson<VnSceneComposerProject>(json);
+            }
+            catch (Exception exception)
+            {
+                return VnSceneComposerImportResult.Failed(
+                    "Scene Composer project JSON could not be parsed: " + exception.Message);
+            }
+
+            if (project == null)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON did not contain a project.");
+            if (project.schemaVersion != SchemaVersion)
+            {
+                return VnSceneComposerImportResult.Failed(
+                    "Unsupported Scene Composer schema version: " + project.schemaVersion +
+                    ". Supported version is " + SchemaVersion + ".");
+            }
+
+            NormalizeProject(project);
+            return RevalidateImported(project);
+        }
+
+        public static bool ValidateProject(VnSceneComposerProject project, out string error, out string[] warnings)
+        {
+            var diagnostics = new List<string>();
+            if (project == null)
+            {
+                error = "Scene Composer project is missing.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (project.schemaVersion != SchemaVersion)
+            {
+                error = "Unsupported Scene Composer schema version: " + project.schemaVersion + ".";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (!IsStableId(project.projectId))
+            {
+                error = "Scene Composer project ID must be a stable 32-character hexadecimal ID.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(project.sourceHead))
+            {
+                error = "Scene Composer sourceHead metadata is empty.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (project.defaultPresentation == null)
+            {
+                error = "Scene Composer project presentation defaults are missing.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (!ValidatePresentation(project.defaultPresentation, out error))
+            {
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (project.scenes == null)
+            {
+                error = "Scene Composer ordered scene list is missing.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null)
+                {
+                    error = "Scene Composer scene at index " + i + " is null.";
+                    warnings = diagnostics.ToArray();
+                    return false;
+                }
+                if (!IsStableId(scene.sceneId))
+                {
+                    error = "Scene Composer scene ID is missing or invalid at index " + i + ".";
+                    warnings = diagnostics.ToArray();
+                    return false;
+                }
+                if (!ids.Add(scene.sceneId))
+                {
+                    error = "Duplicate Scene Composer scene ID: " + scene.sceneId + ".";
+                    warnings = diagnostics.ToArray();
+                    return false;
+                }
+                if (!ValidateScene(project, scene, i, diagnostics, out error))
+                {
+                    warnings = diagnostics.ToArray();
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            warnings = diagnostics.ToArray();
+            return true;
+        }
+
+        internal static VnSceneComposerImportResult RevalidateImported(VnSceneComposerProject project)
+        {
+            if (!ValidateProject(project, out string error, out string[] warnings))
+                return VnSceneComposerImportResult.Failed(error);
+            return VnSceneComposerImportResult.Loaded(project, warnings);
+        }
+
+        internal static bool IsStableId(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length != 32) return false;
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                bool hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+                if (!hex) return false;
+            }
+            return true;
+        }
+
+        internal static bool IsExternalMedia(VnSceneComposerMediaKind kind)
+        {
+            return kind == VnSceneComposerMediaKind.ExternalImage ||
+                   kind == VnSceneComposerMediaKind.ExternalVideo ||
+                   kind == VnSceneComposerMediaKind.ExternalGif;
+        }
+
+        internal static bool IsPortableExternalReference(string reference)
+        {
+            return !string.IsNullOrEmpty(reference) &&
+                   reference.StartsWith(ExternalReferencePrefix, StringComparison.Ordinal);
+        }
+
+        private static bool ValidateScene(VnSceneComposerProject project, VnSceneComposerScene scene, int index,
+            List<string> diagnostics, out string error)
+        {
+            if (scene.media == null)
+            {
+                error = "Scene Composer media reference is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!ValidateMedia(scene, diagnostics, out error)) return false;
+
+            if (scene.characters == null)
+            {
+                error = "Scene Composer character list is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (scene.characters.Count > 3)
+            {
+                error = "Scene Composer supports zero to three authored characters per scene.";
+                return false;
+            }
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter character = scene.characters[i];
+                if (character == null)
+                {
+                    error = "Scene Composer character entry is null in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!VnCharacterVisualCatalog.TryResolve(character.stateId, out VnCharacterVisualState state))
+                {
+                    error = "Missing authored character state '" + (character.stateId ?? string.Empty) +
+                            "' in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!string.IsNullOrEmpty(character.characterId) &&
+                    !string.Equals(character.characterId, state.Character, StringComparison.OrdinalIgnoreCase))
+                {
+                    error = "Authored state '" + character.stateId + "' belongs to " + state.Character +
+                            ", not " + character.characterId + ".";
+                    return false;
+                }
+                if (!Enum.IsDefined(typeof(VnWorkshopStageSlot), character.stageSlot))
+                {
+                    error = "Invalid stage slot in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (character.hasPositionOffset && (!IsFinite(character.positionOffset.x) || !IsFinite(character.positionOffset.y)))
+                {
+                    error = "Character position offset must be finite in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (character.hasScaleMultiplier &&
+                    (!IsFinite(character.scaleMultiplier) || character.scaleMultiplier <= 0f || character.scaleMultiplier > 10f))
+                {
+                    error = "Character scale multiplier must be finite and greater than zero in scene " + scene.sceneId + ".";
+                    return false;
+                }
+            }
+
+            if (scene.presentationOverrides == null)
+            {
+                error = "Scene Composer presentation overrides are missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            try
+            {
+                VnPresentationWorkshopPreset resolved = VnSceneComposerComposition.ResolvePresentation(project, scene);
+                if (!ValidatePresentation(resolved, out error)) return false;
+            }
+            catch (Exception exception)
+            {
+                error = "Invalid Scene Composer presentation data in scene " + scene.sceneId + ": " + exception.Message;
+                return false;
+            }
+
+            if (scene.transition == null)
+            {
+                error = "Scene Composer transition data is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (scene.timing == null)
+            {
+                error = "Scene Composer timing data is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!Enum.IsDefined(typeof(VnSceneComposerPreviewAdvanceMode), scene.timing.previewAdvanceMode))
+            {
+                error = "Invalid Scene Composer preview advance mode in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!IsFinite(scene.timing.previewAutoDuration) || scene.timing.previewAutoDuration < 0f ||
+                scene.timing.previewAutoDuration > MaxPreviewDuration)
+            {
+                error = "Scene Composer preview auto duration must be finite and between 0 and " +
+                        MaxPreviewDuration + " seconds in scene " + scene.sceneId + ".";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool ValidateMedia(VnSceneComposerScene scene, List<string> diagnostics, out string error)
+        {
+            VnSceneComposerMediaReference media = scene.media;
+            if (!Enum.IsDefined(typeof(VnSceneComposerMediaKind), media.kind))
+            {
+                error = "Invalid Scene Composer media kind in scene " + scene.sceneId + ".";
+                return false;
+            }
+
+            if (media.kind == VnSceneComposerMediaKind.ExistingRokasAsset)
+            {
+                if (string.IsNullOrWhiteSpace(media.reference))
+                {
+                    error = "ROKAS asset GUID is missing in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                string path = AssetDatabase.GUIDToAssetPath(media.reference);
+                if (string.IsNullOrEmpty(path))
+                {
+                    error = "ROKAS asset GUID is invalid or missing in scene " + scene.sceneId + ": " + media.reference + ".";
+                    return false;
+                }
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                Sprite sprite = texture == null ? AssetDatabase.LoadAssetAtPath<Sprite>(path) : null;
+                if (texture == null && sprite == null)
+                {
+                    error = "ROKAS asset reference is not a previewable image in scene " + scene.sceneId + ".";
+                    return false;
+                }
+            }
+            else if (IsExternalMedia(media.kind))
+            {
+                if (string.IsNullOrWhiteSpace(media.reference) && string.IsNullOrWhiteSpace(media.displayName))
+                {
+                    error = "External media reference is missing in scene " + scene.sceneId + ".";
+                    return false;
+                }
+
+                bool available = !string.IsNullOrWhiteSpace(media.reference) &&
+                                 !IsPortableExternalReference(media.reference) &&
+                                 Path.IsPathRooted(media.reference) && File.Exists(media.reference);
+                if (!available)
+                {
+                    string label = !string.IsNullOrWhiteSpace(media.displayName) ? media.displayName : media.reference;
+                    diagnostics.Add("External media is missing or not locally bound for scene '" +
+                                    (scene.label ?? scene.sceneId) + "': " + (label ?? string.Empty) + ".");
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool ValidatePresentation(VnPresentationWorkshopPreset preset, out string error)
+        {
+            if (preset == null)
+            {
+                error = "Scene Composer presentation data is missing.";
+                return false;
+            }
+            VnPresentationWorkshopPreset clone = JsonUtility.FromJson<VnPresentationWorkshopPreset>(JsonUtility.ToJson(preset));
+            if (clone == null)
+            {
+                error = "Scene Composer presentation data could not be cloned for validation.";
+                return false;
+            }
+            return VnPresentationWorkshopSerialization.ValidatePreset(clone, out error);
+        }
+
+        private static VnSceneComposerProject CloneProject(VnSceneComposerProject project)
+        {
+            VnSceneComposerProject clone = JsonUtility.FromJson<VnSceneComposerProject>(JsonUtility.ToJson(project));
+            if (clone == null) throw new InvalidOperationException("Scene Composer project could not be cloned.");
+            return clone;
+        }
+
+        private static void NormalizeProject(VnSceneComposerProject project)
+        {
+            if (project.defaultPresentation == null) project.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
+            if (project.title == null) project.title = string.Empty;
+            if (project.sourceHead == null) project.sourceHead = string.Empty;
+            if (project.projectId == null) project.projectId = string.Empty;
+
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null) continue;
+                if (scene.sceneId == null) scene.sceneId = string.Empty;
+                if (scene.label == null) scene.label = string.Empty;
+                if (scene.previewText == null) scene.previewText = string.Empty;
+                if (scene.speaker == null) scene.speaker = string.Empty;
+                if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
+                if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
+                if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
+                if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+                if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+                if (scene.media.reference == null) scene.media.reference = string.Empty;
+                if (scene.media.displayName == null) scene.media.displayName = string.Empty;
+                if (scene.media.contentHash == null) scene.media.contentHash = string.Empty;
+                for (int c = 0; c < scene.characters.Count; c++)
+                {
+                    VnSceneComposerCharacter character = scene.characters[c];
+                    if (character == null) continue;
+                    if (character.characterId == null) character.characterId = string.Empty;
+                    if (character.stateId == null) character.stateId = string.Empty;
+                }
+            }
+        }
+
+        private static void MakeExternalReferencesPortable(VnSceneComposerProject project)
+        {
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null || scene.media == null || !IsExternalMedia(scene.media.kind)) continue;
+                VnSceneComposerMediaReference media = scene.media;
+                if (IsPortableExternalReference(media.reference)) continue;
+
+                string displayName = media.displayName;
+                if (string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(media.reference))
+                    displayName = Path.GetFileName(media.reference);
+                displayName = SafePortableSegment(displayName, "external-media");
+                string hash = SafePortableSegment(media.contentHash, "unhashed");
+                media.displayName = displayName;
+                media.reference = ExternalReferencePrefix + hash + "/" + displayName;
+                media.localPreviewDependency = true;
+            }
+        }
+
+        private static string SafePortableSegment(string value, string fallback)
+        {
+            string source = (value ?? string.Empty).Trim();
+            if (source.Length == 0) return fallback;
+            source = Path.GetFileName(source);
+            var chars = new char[Math.Min(source.Length, 160)];
+            int count = 0;
+            for (int i = 0; i < source.Length && count < chars.Length; i++)
+            {
+                char c = source[i];
+                if (char.IsLetterOrDigit(c) || c == '.' || c == '_' || c == '-') chars[count++] = c;
+                else chars[count++] = '_';
+            }
+            string result = new string(chars, 0, count).Trim('.');
+            return string.IsNullOrEmpty(result) ? fallback : result;
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+    }
+}
