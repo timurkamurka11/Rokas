@@ -290,6 +290,7 @@ namespace Rokas.EditorTools.Tests
         public void P6_PlayScenePlayFromHereAndPlayAllUseTheSameSampledVisualPath()
         {
             object project = Activator.CreateInstance(RequireType("VnSceneComposerProject"));
+            SetAutoPreviewSequenceGap(project, 0f);
             IList scenes = (IList)Get(project, "scenes");
             object first = Scene("First", "first", "PreviewAutoDuration", 1f);
             AddCharacter(first, "Mina", "mina_neutral", "Center");
