@@ -248,3 +248,360 @@ jobs:
             artifacts-vn-scene-composer-persistence
             artifacts-vn-scene-composer-window
           if-no-files-found: warn
+
+  workshop-vn10-editmode:
+    name: Existing VN Workshop / VN10 focused EditMode
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: composer-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run established VN UI Workshop focused tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnUiWorkshopTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-J - VN Workshop focused
+          artifactsPath: artifacts-scj-workshop-editmode
+      - name: Upload Workshop focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-workshop-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  vn-regressions:
+    name: SC-J VN regression - ${{ matrix.label }}
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: workshop-vn10-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: flow
+            mode: PlayMode
+            filter: Rokas.Tests.VnIntroPlayModeTests
+          - label: visual-layout
+            mode: PlayMode
+            filter: Rokas.Tests.VnIntroVisualLayoutPlayModeTests
+          - label: responsive-layout
+            mode: PlayMode
+            filter: Rokas.Tests.VnIntroResponsiveLayoutPlayModeTests
+          - label: runtime-proof-harness
+            mode: PlayMode
+            filter: Rokas.Tests.VnIntroRuntimeProofHarnessPlayModeTests
+          - label: main-menu-interaction
+            mode: PlayMode
+            filter: Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests
+          - label: story-main-menu
+            mode: PlayMode
+            filter: Rokas.Tests.StoryIntroMainMenuPlayModeTests
+          - label: progress
+            mode: EditMode
+            filter: Rokas.Core.Tests.VnIntroProgressTests
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run existing VN regression
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: ${{ matrix.mode }}
+          cliVersion: v0.1.60
+          customParameters: -testFilter ${{ matrix.filter }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-J regression - ${{ matrix.label }}
+          artifactsPath: artifacts-scj-vn-${{ matrix.label }}
+      - name: Upload VN regression evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-regression-${{ matrix.label }}-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  full-editmode:
+    name: SC-J Full Unity EditMode
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: workshop-vn10-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run complete EditMode suite
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-J - Full EditMode
+          artifactsPath: artifacts-scj-full-editmode
+      - name: Upload Full EditMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-full-editmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  full-playmode:
+    name: SC-J Full Unity PlayMode (Linux known VideoPlayer classifier)
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: workshop-vn10-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run complete PlayMode suite
+        id: tests
+        continue-on-error: true
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-J - Full PlayMode
+          artifactsPath: artifacts-scj-full-playmode
+      - name: Classify only the five known Linux VideoPlayer failures
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, xml.etree.ElementTree as ET
+          from pathlib import Path
+          allowed = {
+              'Rokas.Tests.StartupLaptopVideoPlayModeTests.ClosingLaptopDuringBootCancelsWithoutDesktopAndReopenIsReady',
+              'Rokas.Tests.StartupLaptopVideoPlayModeTests.CommittedLaptopMediaProducesAFrameThenDesktopAndCleansUp',
+              'Rokas.Tests.StartupLaptopVideoPlayModeTests.CommittedStartupAndStoryMediaProduceFramesThenMenuAndHomeOnce',
+              'Rokas.Tests.StartupLaptopVideoPlayModeTests.LaptopOpeningShowsBootGateBeforeDesktop',
+              'Rokas.Tests.StartupLaptopVideoPlayModeTests.RealStartDoesNotBuildHomeBeforeStartupVideoGate',
+          }
+          xmls = list(Path('artifacts-scj-full-playmode').rglob('*.xml'))
+          if len(xmls) != 1: raise SystemExit(f'Expected one result XML, found {xmls}')
+          root = ET.parse(xmls[0]).getroot()
+          failed=[]
+          for case in root.iter('test-case'):
+              if case.attrib.get('result') == 'Failed':
+                  failure=case.find('failure')
+                  text='' if failure is None else '\n'.join([failure.findtext('message',default='') or '', failure.findtext('stack-trace',default='') or ''])
+                  failed.append((case.attrib.get('fullname') or case.attrib.get('name') or '', text))
+          if not failed:
+              if os.environ.get('TEST_OUTCOME') != 'success': raise SystemExit('Infrastructure/compiler failure without test failures.')
+              print('FULL_PLAYMODE=GREEN')
+          else:
+              names={name for name,_ in failed}
+              if len(failed)!=5 or names!=allowed: raise SystemExit(f'Unexpected failures: {sorted(names)}')
+              for name,text in failed:
+                  if 'VideoPlayer cannot play url' not in text: raise SystemExit(f'{name}: wrong signature')
+                  if 'StartupPreview.mp4' not in text and 'LaptopBoot.mp4' not in text: raise SystemExit(f'{name}: wrong media')
+              print('CLASSIFIED_KNOWN_LINUX_VIDEOPLAYER_FAILURES=5/5')
+          PY
+      - name: Upload Full PlayMode evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-full-playmode-${{ github.sha }}
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  build-windows-player:
+    name: SC-J Windows Development Player
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: [source-guard, composer-editmode, workshop-vn10-editmode, vn-regressions, full-editmode, full-playmode]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: SceneComposer-WindowsBuild-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            SceneComposer-WindowsBuild-${{ runner.os }}-
+            VN10Workshop-WindowsBuild-${{ runner.os }}-
+            VNWorkshop-WindowsBuild-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Build exact StandaloneWindows64 Development Player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          targetPlatform: StandaloneWindows64
+          buildsPath: build
+          buildName: Rokas
+          buildMethod: Rokas.Editor.RokasVideoSmokeBuild.Build
+      - name: Verify Development Player package and no Composer runtime leak
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXE="$(find build -type f -iname 'Rokas.exe' -print -quit)"
+          test -n "$EXE" && test -s "$EXE"
+          BUILD_ROOT="$(dirname "$EXE")"
+          test -d "$BUILD_ROOT/Rokas_Data"
+          test -s "$BUILD_ROOT/Rokas_Data/StreamingAssets/RokasVideo/StartupPreview.mp4"
+          test -s "$BUILD_ROOT/Rokas_Data/StreamingAssets/RokasVideo/LaptopBoot.mp4"
+          if find "$BUILD_ROOT/Rokas_Data" -type f -iname '*Rokas.Editor*' | grep -q .; then
+            echo 'Rokas.Editor leaked into runtime player.' >&2
+            exit 1
+          fi
+          if find "$BUILD_ROOT" -type f \( -iname '*VnSceneComposer*' -o -iname 'ROKAS_VN_SCENE_COMPOSER_PROJECT.json' \) | grep -q .; then
+            echo 'Scene Composer editor files leaked into runtime player.' >&2
+            exit 1
+          fi
+          if [ -d "$BUILD_ROOT/Rokas_Data/Managed" ] && grep -R -a -l -E 'VnPresentationWorkshopWindow|VnSceneComposer|ROKAS_VN_SCENE_COMPOSER_PROJECT' "$BUILD_ROOT/Rokas_Data/Managed" >/tmp/scj_runtime_leak.txt 2>/dev/null; then
+            cat /tmp/scj_runtime_leak.txt >&2
+            echo 'Workshop/Scene Composer symbols leaked into runtime managed assemblies.' >&2
+            exit 1
+          fi
+          echo 'WINDOWS_DEVELOPMENT_PLAYER_PACKAGE=PASS'
+          echo 'SCENE_COMPOSER_RUNTIME_LEAK=NONE'
+      - name: Upload Windows Development Player
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-scene-composer-windows-player-${{ github.sha }}
+          path: build
+          if-no-files-found: error
+          retention-days: 3
+
+  windows-runtime-proof:
+    name: SC-J Real Rokas.exe VN runtime + responsive screenshots
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: build-windows-player
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Download Windows Development Player
+        uses: actions/download-artifact@v4
+        with:
+          name: scj-scene-composer-windows-player-${{ github.sha }}
+          path: build
+      - name: Set Windows proof display resolution
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+      - name: Run natural, skip and persisted bypass at required resolutions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Path build -Filter Rokas.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Rokas.exe was not found.' }
+          $proof = Join-Path $env:GITHUB_WORKSPACE 'scj-runtime-proof'
+          New-Item -ItemType Directory -Force -Path $proof | Out-Null
+          function Invoke-RokasProof([string]$ResolutionName,[int]$Width,[int]$Height,[string]$Scenario) {
+            $resolutionProof=Join-Path $proof $ResolutionName
+            New-Item -ItemType Directory -Force -Path $resolutionProof | Out-Null
+            $log=Join-Path $resolutionProof ("player-{0}.log" -f $Scenario)
+            $arguments=@('-rokasVnIntroProof','-rokasVnIntroScenario',$Scenario,'-rokasVnIntroOutput',$resolutionProof,'-screen-fullscreen','0','-screen-width',$Width,'-screen-height',$Height,'-force-d3d11','-logFile',$log)
+            $process=Start-Process -FilePath $exe.FullName -ArgumentList $arguments -PassThru
+            if (-not $process.WaitForExit(180000)) { try{$process.Kill($true)}catch{}; throw "Timeout $ResolutionName/$Scenario" }
+            if ($process.ExitCode -ne 0) { if(Test-Path $log){Get-Content $log -Tail 160}; throw "Exit $($process.ExitCode) $ResolutionName/$Scenario" }
+          }
+          foreach($r in @(@{Name='1280x720';Width=1280;Height=720},@{Name='1024x768';Width=1024;Height=768})) {
+            foreach($s in @('natural','skip','bypass')) { Invoke-RokasProof $r.Name $r.Width $r.Height $s }
+          }
+      - name: Validate runtime JSON and exact screenshot dimensions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Add-Type -AssemblyName System.Drawing
+          $proof=Join-Path $env:GITHUB_WORKSPACE 'scj-runtime-proof'
+          $expected=@('natural/natural-01-bus-stop.png','natural/natural-02-night-sky.png','natural/natural-03-mina-phone.png','natural/natural-04-home.png','skip/skip-01-before.png','skip/skip-02-home.png','bypass/bypass-01-home.png')
+          foreach($r in @(@{Name='1280x720';Width=1280;Height=720},@{Name='1024x768';Width=1024;Height=768})) {
+            $dir=Join-Path $proof $r.Name
+            foreach($s in @('natural','skip','bypass')) {
+              $json=Join-Path $dir "$s/vn-intro-proof-result.json"
+              if(-not(Test-Path $json)){throw "Missing $json"}
+              $data=Get-Content $json -Raw | ConvertFrom-Json
+              if(-not $data.finalPass){throw "$($r.Name)/$s failed: $($data.error)"}
+            }
+            foreach($relative in $expected) {
+              $path=Join-Path $dir $relative
+              if(-not(Test-Path $path)){throw "Missing $path"}
+              $image=[System.Drawing.Image]::FromFile($path)
+              try { if($image.Width -ne $r.Width -or $image.Height -ne $r.Height){throw "Wrong size $relative"} } finally {$image.Dispose()}
+            }
+          }
+          Write-Host 'REAL_ROKAS_EXE_RUNTIME_PROOF=PASS'
+          Write-Host 'SCREENSHOTS=14/14'
+      - name: Upload runtime proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scj-real-player-runtime-proof-${{ github.sha }}
+          path: scj-runtime-proof
+          if-no-files-found: warn
+          retention-days: 5
+
+  protected-refs-audit:
+    name: SC-J protected refs unchanged
+    if: contains(github.event.head_commit.message, '[full-scene-composer-proof]')
+    needs: windows-runtime-proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify protected branch SHAs
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_ref() {
+            local ref="$1" expected="$2" actual
+            actual="$(git ls-remote origin "refs/heads/$ref" | awk '{print $1}')"
+            test "$actual" = "$expected" || { echo "$ref changed: expected $expected got $actual" >&2; exit 1; }
+            echo "$ref=$actual"
+          }
+          check_ref 'feature/vn10-presentation-workshop' 'f58f1db08fc225c2831ff59d50d42e8c07ea15ce'
+          check_ref 'feature/vn-ui-workshop' '43699c841e24ed806f377fbd9a7bec4d18f6cb1d'
+          check_ref 'feature/vn-visual-polish-refs' '04a53a955286bb926365459ee11c6836ae490282'
+          check_ref 'integration/rokas-unified' 'fd5d99afd0ecb04c20edfdb8ac5916a4be41b139'
+          check_ref 'development' '5e494f188b90bdb6916e8e78e35ac38509bd0bce'
+          echo 'PROTECTED_REFS_UNCHANGED=PASS'
