@@ -304,9 +304,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public string[] ComposerGetAuthoredStateIds(string character)
         {
-            return EnumerateAuthoredCatalogStates()
-                .Where(state => string.Equals(state.Character, character ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                .Select(state => state.Id).Distinct().OrderBy(id => id, StringComparer.Ordinal).ToArray();
+            return VnSceneComposerCharacterStateResolver.GetStateIds(character);
         }
 
         public void ComposerAddCharacter(string character, string stateId)
@@ -314,8 +312,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = RequireSelectedScene();
             if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
             if (scene.characters.Count >= 3) throw new InvalidOperationException("Scene Composer supports at most three visible characters.");
-            VnCharacterVisualState state;
-            if (!VnCharacterVisualCatalog.TryResolve(stateId, out state))
+            if (!VnSceneComposerCharacterStateResolver.TryResolve(stateId, out VnSceneComposerResolvedCharacterState state))
                 throw new ArgumentException("Unknown authored VN character state: " + (stateId ?? string.Empty), nameof(stateId));
             if (!string.Equals(state.Character, character ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Authored state does not belong to selected character.", nameof(stateId));
@@ -471,6 +468,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUI.BeginChangeCheck();
             string label = EditorGUILayout.TextField("Scene Label", scene.label ?? string.Empty);
             if (EditorGUI.EndChangeCheck()) ComposerRenameSelectedScene(label);
+            DrawSceneComposerAssetLibraryControls(scene);
             DrawSceneComposerMediaInspector(scene);
             DrawSceneComposerTextInspector(scene);
             DrawSceneComposerCharacterInspector(scene);
@@ -585,9 +583,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             EditorGUILayout.Space(); EditorGUILayout.LabelField("Characters", EditorStyles.boldLabel);
             if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
-            string[] characters = EnumerateAuthoredCatalogStates().Select(state => state.Character)
-                .Where(name => !string.IsNullOrEmpty(name)).Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name, StringComparer.Ordinal).ToArray();
+            string[] characters = VnSceneComposerCharacterStateResolver.GetCharacters();
             if (scene.characters.Count < 3 && characters.Length > 0 && GUILayout.Button("+ Add Character"))
             {
                 string[] states = ComposerGetAuthoredStateIds(characters[0]);
@@ -629,7 +625,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical();
             }
             if (characters.Length == 0)
-                EditorGUILayout.HelpBox("No authored VN character states are available in the current catalog.", MessageType.Warning);
+                EditorGUILayout.HelpBox("No authored VN character states are available in the current catalog or Composer Asset Library.", MessageType.Warning);
         }
 
         private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)
@@ -837,7 +833,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private static VnCharacterVisualState[] EnumerateAuthoredCatalogStates()
         {
-            FieldInfo statesField = typeof(VnCharacterVisualCatalog).GetField("States", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo statesField = typeof(Rokas.Presentation.VnCharacterVisualCatalog).GetField("States", BindingFlags.NonPublic | BindingFlags.Static);
             IEnumerable entries = statesField != null ? statesField.GetValue(null) as IEnumerable : null;
             if (entries == null) return Array.Empty<VnCharacterVisualState>();
             var result = new List<VnCharacterVisualState>();
