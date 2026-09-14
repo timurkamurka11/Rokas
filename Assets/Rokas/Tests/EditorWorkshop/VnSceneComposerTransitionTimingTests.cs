@@ -72,7 +72,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That((string)Get(characterMotions[0], "characterId"), Is.EqualTo("Keiko"));
             Assert.That(focus.Count, Is.EqualTo(2));
             Assert.That((float)Get(focus[0], "Alpha"), Is.LessThan(1f));
-            Assert.That((float)Get(focus[1], "Alpha"), Is.GreaterThan((float)Get(focus[0], "Alpha"));
+            Assert.That((float)Get(focus[1], "Alpha"), Is.GreaterThan((float)Get(focus[0], "Alpha")));
         }
 
         [Test]
