@@ -1,0 +1,479 @@
+name: ROKAS VN Scene Composer P7 P8 Apply
+
+on:
+  push:
+    branches:
+      - feature/vn-scene-composer
+    paths:
+      - .github/workflows/vn-scene-composer-p7-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/vn-scene-composer
+          fetch-depth: 0
+      - name: Patch existing editor-only seams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p=Path(path)
+              text=p.read_text()
+              actual=text.count(old)
+              if actual != count:
+                  raise SystemExit(f'{path}: expected {count} occurrence(s), found {actual}: {old[:120]!r}')
+              p.write_text(text.replace(old,new,count))
+
+          renderer='Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.cs'
+          replace(renderer,
+              'public static class VnPresentationWorkshopPreviewRenderer',
+              'public static partial class VnPresentationWorkshopPreviewRenderer')
+          replace(renderer,
+              '                GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);',
+              '                if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))\n                    GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);')
+
+          playback='Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerPlaybackController.cs'
+          replace(playback,
+              '            SourceBackground = sourceBackground;\n            TargetBackground = targetBackground;\n        }',
+              '            SourceBackground = sourceBackground;\n            TargetBackground = targetBackground;\n            VnPresentationWorkshopPreviewRenderer.RegisterPlaybackFrame(this);\n        }')
+          replace(playback,
+              '        private VnSceneComposerGifPreview gifPreview;\n',
+              '        private VnSceneComposerGifPreview gifPreview;\n        private VnSceneComposerImagePreview sourceImagePreview;\n        private VnSceneComposerVideoPreview sourceVideoPreview;\n        private VnSceneComposerGifPreview sourceGifPreview;\n        private Texture sourceMediaTexture;\n')
+          replace(playback,
+              '            ReleaseMedia();\n            CurrentSceneIndex = sceneIndex;\n            SceneElapsedSeconds = 0f;\n            MediaTimeSeconds = 0f;\n            OpenMedia(project.scenes[sceneIndex]);\n            if (playMedia && videoPreview != null) videoPreview.Play();\n            RefreshMediaTexture();\n            RebuildFrame(0f);',
+              '            ReleaseMedia();\n            ReleaseSourceMedia();\n            CurrentSceneIndex = sceneIndex;\n            SceneElapsedSeconds = 0f;\n            MediaTimeSeconds = 0f;\n            OpenSourceMedia(ResolveSourceScene(sceneIndex));\n            OpenMedia(project.scenes[sceneIndex]);\n            if (playMedia && videoPreview != null) videoPreview.Play();\n            RefreshSourceMediaTexture();\n            RefreshMediaTexture();\n            RebuildFrame(0f);')
+          replace(playback,
+              '            VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(\n                project, sourceScene, VnWorkshopResolution.Reference1920x1080, null);',
+              '            VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(\n                project, sourceScene, VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);')
+          replace(playback,
+              '            Texture sourceVisual = sourceFrame.BackgroundTexture;',
+              '            Texture sourceVisual = sourceMediaTexture != null ? sourceMediaTexture : sourceFrame.BackgroundTexture;')
+          replace(playback,
+              '            ReleaseMedia();\n            CurrentMediaTexture = null;',
+              '            ReleaseMedia();\n            ReleaseSourceMedia();\n            CurrentMediaTexture = null;',
+              2)
+          marker='        private void OpenMedia(VnSceneComposerScene scene)\n'
+          source_methods='''        private void OpenSourceMedia(VnSceneComposerScene scene)\n        {\n            if (scene == null || scene.media == null) return;\n            switch (scene.media.kind)\n            {\n                case VnSceneComposerMediaKind.ExistingRokasAsset:\n                case VnSceneComposerMediaKind.ExternalImage:\n                    sourceImagePreview = VnSceneComposerMediaEditing.OpenImagePreview(scene.media);\n                    break;\n                case VnSceneComposerMediaKind.ExternalVideo:\n                    sourceVideoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);\n                    break;\n                case VnSceneComposerMediaKind.ExternalGif:\n                    sourceGifPreview = VnSceneComposerMediaEditing.OpenGifPreview(scene.media);\n                    break;\n            }\n        }\n\n        private void RefreshSourceMediaTexture()\n        {\n            if (sourceGifPreview != null) sourceMediaTexture = sourceGifPreview.currentTexture;\n            else if (sourceVideoPreview != null) sourceMediaTexture = sourceVideoPreview.texture;\n            else if (sourceImagePreview != null) sourceMediaTexture = sourceImagePreview.texture;\n            else sourceMediaTexture = null;\n        }\n\n        private void ReleaseSourceMedia()\n        {\n            if (sourceImagePreview != null) sourceImagePreview.Dispose();\n            if (sourceVideoPreview != null) sourceVideoPreview.Dispose();\n            if (sourceGifPreview != null) sourceGifPreview.Dispose();\n            sourceImagePreview = null;\n            sourceVideoPreview = null;\n            sourceGifPreview = null;\n            sourceMediaTexture = null;\n        }\n\n'''
+          replace(playback, marker, source_methods+marker)
+
+          sampler='Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTransitionSampler.cs'
+          replace(sampler,
+              '                    sample = VnPresentationWorkshopVn10Resolver.SampleExpressionTransition(\n                        previous.stateId, target.stateId, sampledProgress, values)',
+              '                    sample = VnPresentationWorkshopVn10Resolver.SampleComposerExpressionTransition(\n                        previous.stateId, target.stateId, sampledProgress, values)')
+          replace(sampler,
+              '            if (!string.IsNullOrEmpty(character.stateId) &&\n                VnCharacterVisualCatalog.TryResolve(character.stateId, out VnCharacterVisualState state))\n                return state.Character;',
+              '            if (!string.IsNullOrEmpty(character.stateId) &&\n                VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state))\n                return state.Character;')
+
+          window='Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.cs'
+          replace(window,
+              '        public VnWorkshopPreviewFrame BuildPreviewFrame()\n        {\n            VnPresentationWorkshopPreset previewPreset = comparisonView == VnWorkshopComparisonView.Original\n                ? new VnPresentationWorkshopPreset()\n                : CurrentPreset;',
+              '        public VnWorkshopPreviewFrame BuildPreviewFrame()\n        {\n            VnSceneComposerPlaybackFrame motionFrame = CurrentMotionPreviewFrame;\n            if (motionFrame != null) return motionFrame.WorkshopFrame;\n            VnPresentationWorkshopPreset previewPreset = comparisonView == VnWorkshopComparisonView.Original\n                ? new VnPresentationWorkshopPreset()\n                : CurrentPreset;')
+          PY
+      - name: Add playback-aware renderer adapter
+        shell: bash
+        run: |
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.Playback.cs <<'CS'
+          using System;
+          using System.IO;
+          using System.Runtime.CompilerServices;
+          using UnityEditor;
+          using UnityEngine;
+
+          namespace Rokas.EditorTools.VnUiWorkshop
+          {
+              public static partial class VnPresentationWorkshopPreviewRenderer
+              {
+                  private static readonly ConditionalWeakTable<VnWorkshopPreviewFrame, VnSceneComposerPlaybackFrame> PlaybackFrames =
+                      new ConditionalWeakTable<VnWorkshopPreviewFrame, VnSceneComposerPlaybackFrame>();
+
+                  internal static void RegisterPlaybackFrame(VnSceneComposerPlaybackFrame playbackFrame)
+                  {
+                      if (playbackFrame == null || playbackFrame.WorkshopFrame == null) return;
+                      PlaybackFrames.Remove(playbackFrame.WorkshopFrame);
+                      PlaybackFrames.Add(playbackFrame.WorkshopFrame, playbackFrame);
+                  }
+
+                  public static void Draw(Rect previewRect, VnSceneComposerPlaybackFrame playbackFrame,
+                      VnWorkshopElement? selected = null, bool showHitRegions = true)
+                  {
+                      if (playbackFrame == null) throw new ArgumentNullException(nameof(playbackFrame));
+                      if (playbackFrame.WorkshopFrame == null) throw new ArgumentException("Playback frame has no Workshop frame.", nameof(playbackFrame));
+                      RegisterPlaybackFrame(playbackFrame);
+                      Draw(previewRect, playbackFrame.WorkshopFrame, selected, showHitRegions);
+                  }
+
+                  private static bool TryDrawRegisteredPlaybackBackground(Rect localCanvas, VnWorkshopPreviewFrame frame)
+                  {
+                      if (frame == null || !PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame))
+                          return false;
+                      DrawPlaybackBackground(localCanvas, playbackFrame);
+                      return true;
+                  }
+
+                  private static void DrawPlaybackBackground(Rect rect, VnSceneComposerPlaybackFrame frame)
+                  {
+                      VnWorkshopBackgroundTransitionSample sample = frame.ComposerBackgroundTransition;
+                      Texture source = frame.SourceBackground ?? frame.TargetBackground ?? frame.WorkshopFrame.BackgroundTexture;
+                      Texture target = frame.TargetBackground ?? frame.SourceBackground ?? frame.WorkshopFrame.BackgroundTexture;
+                      if (source == null && target == null) return;
+
+                      if (sample.CurtainCoverage > .0001f)
+                      {
+                          Texture baseTexture = sample.TargetAlpha >= sample.SourceAlpha ? target : source;
+                          GUI.DrawTexture(rect, baseTexture, ScaleMode.StretchToFill, false);
+                          float coverage = Mathf.Clamp01(sample.CurtainCoverage);
+                          float width = rect.width * coverage;
+                          Rect curtain = sample.CurtainDirection == VnWorkshopCurtainDirection.RightToLeft
+                              ? new Rect(rect.xMax - width, rect.y, width, rect.height)
+                              : new Rect(rect.x, rect.y, width, rect.height);
+                          Color previous = GUI.color;
+                          GUI.color = new Color(0f, 0f, 0f, Mathf.Clamp01(sample.CurtainDarkness));
+                          GUI.DrawTexture(curtain, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+                          GUI.color = previous;
+                          return;
+                      }
+
+                      DrawTextureAlpha(rect, source, sample.SourceAlpha);
+                      DrawTextureAlpha(rect, target, sample.TargetAlpha);
+                  }
+
+                  private static void DrawTextureAlpha(Rect rect, Texture texture, float alpha)
+                  {
+                      if (texture == null || alpha <= .0001f) return;
+                      Color previous = GUI.color;
+                      GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
+                      GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false);
+                      GUI.color = previous;
+                  }
+
+                  public static Texture2D ComposePlaybackBackground(VnSceneComposerPlaybackFrame playbackFrame, int width, int height)
+                  {
+                      if (playbackFrame == null) throw new ArgumentNullException(nameof(playbackFrame));
+                      if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
+                      if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height));
+                      Texture sourceTexture = playbackFrame.SourceBackground ?? playbackFrame.TargetBackground ?? playbackFrame.WorkshopFrame?.BackgroundTexture;
+                      Texture targetTexture = playbackFrame.TargetBackground ?? playbackFrame.SourceBackground ?? playbackFrame.WorkshopFrame?.BackgroundTexture;
+                      Texture2D source = CreateReadableScaledCopy(sourceTexture, width, height);
+                      Texture2D target = CreateReadableScaledCopy(targetTexture, width, height);
+                      try
+                      {
+                          var output = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                          Color32[] sourcePixels = source.GetPixels32();
+                          Color32[] targetPixels = target.GetPixels32();
+                          Color32[] outputPixels = new Color32[sourcePixels.Length];
+                          VnWorkshopBackgroundTransitionSample sample = playbackFrame.ComposerBackgroundTransition;
+                          bool curtain = sample.CurtainCoverage > .0001f;
+                          float sourceAlpha = Mathf.Clamp01(sample.SourceAlpha);
+                          float targetAlpha = Mathf.Clamp01(sample.TargetAlpha);
+                          float total = sourceAlpha + targetAlpha;
+                          float targetWeight = total <= .0001f ? 1f : targetAlpha / total;
+                          float coverage = Mathf.Clamp01(sample.CurtainCoverage);
+                          float darkness = Mathf.Clamp01(sample.CurtainDarkness);
+
+                          for (int y = 0; y < height; y++)
+                          for (int x = 0; x < width; x++)
+                          {
+                              int index = y * width + x;
+                              Color color;
+                              if (curtain)
+                              {
+                                  color = sample.TargetAlpha >= sample.SourceAlpha ? targetPixels[index] : sourcePixels[index];
+                                  float normalizedX = (x + .5f) / width;
+                                  bool covered = sample.CurtainDirection == VnWorkshopCurtainDirection.RightToLeft
+                                      ? normalizedX >= 1f - coverage
+                                      : normalizedX <= coverage;
+                                  if (covered) color = Color.Lerp(color, Color.black, darkness);
+                              }
+                              else if (targetAlpha <= .0001f) color = sourcePixels[index];
+                              else if (sourceAlpha <= .0001f) color = targetPixels[index];
+                              else color = Color.Lerp(sourcePixels[index], targetPixels[index], targetWeight);
+                              outputPixels[index] = color;
+                          }
+                          output.SetPixels32(outputPixels);
+                          output.Apply(false, false);
+                          return output;
+                      }
+                      finally
+                      {
+                          UnityEngine.Object.DestroyImmediate(source);
+                          UnityEngine.Object.DestroyImmediate(target);
+                      }
+                  }
+
+                  private static Texture2D CreateReadableScaledCopy(Texture texture, int width, int height)
+                  {
+                      if (texture == null)
+                      {
+                          var empty = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                          Color32[] clear = new Color32[width * height];
+                          empty.SetPixels32(clear); empty.Apply();
+                          return empty;
+                      }
+
+                      Texture2D readable = null;
+                      bool ownsReadable = false;
+                      if (texture is Texture2D sourceTexture)
+                      {
+                          string path = AssetDatabase.GetAssetPath(sourceTexture);
+                          if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                          {
+                              readable = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                              ownsReadable = true;
+                              if (!ImageConversion.LoadImage(readable, File.ReadAllBytes(path), false))
+                              {
+                                  UnityEngine.Object.DestroyImmediate(readable);
+                                  readable = null;
+                                  ownsReadable = false;
+                              }
+                          }
+                          if (readable == null)
+                          {
+                              try
+                              {
+                                  sourceTexture.GetPixelBilinear(.5f, .5f);
+                                  readable = sourceTexture;
+                              }
+                              catch (UnityException) { }
+                          }
+                      }
+
+                      if (readable == null)
+                      {
+                          RenderTexture temporary = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
+                          RenderTexture previous = RenderTexture.active;
+                          try
+                          {
+                              Graphics.Blit(texture, temporary);
+                              RenderTexture.active = temporary;
+                              readable = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                              ownsReadable = true;
+                              readable.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                              readable.Apply(false, false);
+                          }
+                          finally
+                          {
+                              RenderTexture.active = previous;
+                              RenderTexture.ReleaseTemporary(temporary);
+                          }
+                      }
+
+                      var scaled = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                      for (int y = 0; y < height; y++)
+                      for (int x = 0; x < width; x++)
+                          scaled.SetPixel(x, y, readable.GetPixelBilinear((x + .5f) / width, (y + .5f) / height));
+                      scaled.Apply(false, false);
+                      if (ownsReadable) UnityEngine.Object.DestroyImmediate(readable);
+                      return scaled;
+                  }
+              }
+          }
+          CS
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.Playback.cs.meta <<'META'
+          fileFormatVersion: 2
+          guid: e17e120c453a4bd0a0f03f26c2e1d877
+          META
+      - name: Add Composer-aware expression resolver
+        shell: bash
+        run: |
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopVn10Resolver.SceneComposer.cs <<'CS'
+          using System;
+          using UnityEngine;
+
+          namespace Rokas.EditorTools.VnUiWorkshop
+          {
+              public static partial class VnPresentationWorkshopVn10Resolver
+              {
+                  public static VnWorkshopExpressionTransitionSample SampleComposerExpressionTransition(
+                      string startStateId,
+                      string endStateId,
+                      float normalizedProgress,
+                      VnWorkshopExpressionTransitionValues values)
+                  {
+                      if (!VnSceneComposerCharacterStateResolver.TryResolve(startStateId, out VnSceneComposerResolvedCharacterState start))
+                          throw new ArgumentException("Unknown authored VN character visual state: " + (startStateId ?? string.Empty), nameof(startStateId));
+                      if (!VnSceneComposerCharacterStateResolver.TryResolve(endStateId, out VnSceneComposerResolvedCharacterState end))
+                          throw new ArgumentException("Unknown authored VN character visual state: " + (endStateId ?? string.Empty), nameof(endStateId));
+                      if (!string.Equals(start.Character, end.Character, StringComparison.OrdinalIgnoreCase))
+                          throw new ArgumentException("Expression transition states must belong to the same authored character.");
+                      ValidateEnum(values.Easing, nameof(values.Easing));
+                      float raw = Mathf.Clamp01(normalizedProgress);
+                      float eased = EvaluateEasing(raw, values.Easing);
+                      return new VnWorkshopExpressionTransitionSample
+                      {
+                          StartStateId = start.Id,
+                          EndStateId = end.Id,
+                          StartAlpha = 1f - eased,
+                          EndAlpha = eased,
+                          Complete = raw >= 1f
+                      };
+                  }
+              }
+          }
+          CS
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopVn10Resolver.SceneComposer.cs.meta <<'META'
+          fileFormatVersion: 2
+          guid: 88fdf6da2ec5477784863f65ec9eb11c
+          META
+      - name: Add legacy Preview to real SC-G adapter
+        shell: bash
+        run: |
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.MotionPreviewBridge.cs <<'CS'
+          using System;
+          using UnityEngine;
+
+          namespace Rokas.EditorTools.VnUiWorkshop
+          {
+              public sealed partial class VnPresentationWorkshopWindow
+              {
+                  public VnSceneComposerPlaybackFrame CurrentMotionPreviewFrame
+                  {
+                      get
+                      {
+                          UpdatePreviewClock();
+                          if (previewEffect == VnWorkshopPreviewEffect.None || previewEffect == VnWorkshopPreviewEffect.UiPress)
+                              return null;
+                          VnSceneComposerProject project = BuildMotionPreviewProject();
+                          using (var controller = new VnSceneComposerPlaybackController(project))
+                          {
+                              controller.PlayScene(1);
+                              float duration = Mathf.Max(.01f, previewDuration);
+                              if (previewProgress > 0f) controller.Advance(duration * Mathf.Clamp01(previewProgress));
+                              return controller.CurrentFrame;
+                          }
+                      }
+                  }
+
+                  private VnSceneComposerProject BuildMotionPreviewProject()
+                  {
+                      VnPresentationWorkshopPreset preset = comparisonView == VnWorkshopComparisonView.Original
+                          ? new VnPresentationWorkshopPreset()
+                          : JsonUtility.FromJson<VnPresentationWorkshopPreset>(JsonUtility.ToJson(CurrentPreset));
+                      var project = new VnSceneComposerProject { defaultPresentation = preset ?? new VnPresentationWorkshopPreset() };
+                      var from = NewMotionPreviewScene("Legacy Preview Source", string.Empty);
+                      var target = NewMotionPreviewScene("Legacy Preview Target", PreviewSampleText);
+
+                      switch (previewEffect)
+                      {
+                          case VnWorkshopPreviewEffect.Expression:
+                              AddMotionCharacter(from, "Mina", ResolveMinaExpression(expressionFromIndex), VnWorkshopStageSlot.Center);
+                              AddMotionCharacter(target, "Mina", ResolveMinaExpression(expressionToIndex), VnWorkshopStageSlot.Center);
+                              from.speaker = target.speaker = "Mina";
+                              break;
+                          case VnWorkshopPreviewEffect.CharacterEnter:
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              target.speaker = "Mina";
+                              break;
+                          case VnWorkshopPreviewEffect.CharacterExit:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              from.speaker = "Mina";
+                              break;
+                          case VnWorkshopPreviewEffect.Bounce:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              from.speaker = target.speaker = "Mina";
+                              target.transition.triggerActionBounce = true;
+                              break;
+                          case VnWorkshopPreviewEffect.BackgroundTransition:
+                              SetMotionPreviewBackground(from, backgroundSource);
+                              SetMotionPreviewBackground(target, backgroundTarget);
+                              break;
+                          case VnWorkshopPreviewEffect.SpeakerSwitch:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Left);
+                              AddMotionCharacter(from, "Keiko", "keiko_neutral", VnWorkshopStageSlot.Right);
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Left);
+                              AddMotionCharacter(target, "Keiko", "keiko_neutral", VnWorkshopStageSlot.Right);
+                              from.speaker = "Mina";
+                              target.speaker = "Keiko";
+                              break;
+                          case VnWorkshopPreviewEffect.StageOneTwo:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Left);
+                              AddMotionCharacter(target, "Keiko", "keiko_neutral", VnWorkshopStageSlot.Right);
+                              break;
+                          case VnWorkshopPreviewEffect.StageTwoOne:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Left);
+                              AddMotionCharacter(from, "Keiko", "keiko_neutral", VnWorkshopStageSlot.Right);
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              break;
+                          default:
+                              AddMotionCharacter(from, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              AddMotionCharacter(target, "Mina", "mina_neutral", VnWorkshopStageSlot.Center);
+                              from.speaker = target.speaker = "Mina";
+                              break;
+                      }
+                      project.scenes.Add(from);
+                      project.scenes.Add(target);
+                      return project;
+                  }
+
+                  private VnSceneComposerScene NewMotionPreviewScene(string label, string text)
+                  {
+                      return new VnSceneComposerScene
+                      {
+                          label = label,
+                          previewText = text ?? string.Empty,
+                          narration = false,
+                          timing = new VnSceneComposerTiming
+                          {
+                              previewAdvanceMode = VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration,
+                              previewAutoDuration = Mathf.Max(.01f, previewDuration)
+                          }
+                      };
+                  }
+
+                  private static void AddMotionCharacter(VnSceneComposerScene scene, string character, string stateId, VnWorkshopStageSlot slot)
+                  {
+                      scene.characters.Add(new VnSceneComposerCharacter
+                      {
+                          characterId = character,
+                          stateId = stateId,
+                          stageSlot = slot
+                      });
+                  }
+
+                  private static string ResolveMinaExpression(int index)
+                  {
+                      if (MinaExpressionIds == null || MinaExpressionIds.Length == 0) return "mina_neutral";
+                      return MinaExpressionIds[Mathf.Clamp(index, 0, MinaExpressionIds.Length - 1)];
+                  }
+
+                  private static void SetMotionPreviewBackground(VnSceneComposerScene scene, VnWorkshopPreviewScene previewScene)
+                  {
+                      Rokas.Presentation.RokasAssets assets = VnPresentationWorkshopPreviewRenderer.LoadAssets();
+                      Texture2D texture;
+                      switch (previewScene)
+                      {
+                          case VnWorkshopPreviewScene.NightSkyKeiko: texture = assets.vnNightSkyRain; break;
+                          case VnWorkshopPreviewScene.PhoneMessage: texture = assets.vnBusStopPhoneMessageMina; break;
+                          default: texture = assets.vnBusStopRainNight; break;
+                      }
+                      VnSceneComposerMediaEditing.SetExistingRokasAsset(scene, texture, VnSceneComposerMediaScaleMode.Fill);
+                  }
+              }
+          }
+          CS
+          cat > Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.MotionPreviewBridge.cs.meta <<'META'
+          fileFormatVersion: 2
+          guid: 743285c07b1540b980b1af5a996d433f
+          META
+      - name: Commit editor-only repair and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'rokas-scene-composer-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/vn-scene-composer-p7-apply.yml
+          git add Assets/Rokas/Scripts/Editor/VnUiWorkshop
+          git diff --cached --check
+          git commit -m 'fix(vn-composer): wire P7 P8 rendered playback'
+          git push origin HEAD:feature/vn-scene-composer
