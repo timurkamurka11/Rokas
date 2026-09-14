@@ -114,7 +114,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public Vector2 ScreenSize { get; }
         public Vector2 VirtualCanvasSize { get; }
-        public Texture2D BackgroundTexture { get; }
+        public Texture2D BackgroundTexture { get; internal set; }
         public Texture2D DialoguePanelTexture { get; }
         public Font Font { get; }
         public Font DialogueFont { get; }
@@ -134,11 +134,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Rect SkipHitRegion { get; }
         public Rect Back { get; }
         public Rect Next { get; }
-        public string Speaker { get; }
-        public string Dialogue { get; }
-        public bool ShowMina { get; }
-        public bool ShowKeiko { get; }
+        public string Speaker { get; internal set; }
+        public string Dialogue { get; internal set; }
+        public bool ShowMina { get; internal set; }
+        public bool ShowKeiko { get; internal set; }
         public VnWorkshopFocusValues Focus { get; }
+        public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; }
 
         public Rect GetElementRect(VnWorkshopElement element)
         {
@@ -253,12 +254,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
                 GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
-                if (frame.ShowKeiko)
-                    DrawCharacter(localCanvas, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
-                        frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
-                if (frame.ShowMina)
-                    DrawCharacter(localCanvas, frame, frame.MinaBody, frame.MinaTexture, frame.MinaUv,
-                        frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+                if (frame.ComposerCharacters != null)
+                {
+                    for (int i = 0; i < frame.ComposerCharacters.Length; i++)
+                    {
+                        VnWorkshopPreviewCharacter character = frame.ComposerCharacters[i];
+                        if (character == null || character.Texture == null) continue;
+                        DrawCharacter(localCanvas, frame, character.Body, character.Texture, character.Uv,
+                            character.Alpha, character.Brightness);
+                    }
+                }
+                else
+                {
+                    if (frame.ShowKeiko)
+                        DrawCharacter(localCanvas, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
+                            frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
+                    if (frame.ShowMina)
+                        DrawCharacter(localCanvas, frame, frame.MinaBody, frame.MinaTexture, frame.MinaUv,
+                            frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+                }
 
                 GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
                     ScaleMode.StretchToFill, true);
@@ -439,8 +453,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static void DrawCharacter(Rect canvasRect, VnWorkshopPreviewFrame frame, Rect logicalRect,
             Texture2D texture, Rect uv, float alpha)
         {
+            DrawCharacter(canvasRect, frame, logicalRect, texture, uv, alpha, 1f);
+        }
+
+        private static void DrawCharacter(Rect canvasRect, VnWorkshopPreviewFrame frame, Rect logicalRect,
+            Texture2D texture, Rect uv, float alpha, float brightness)
+        {
             Color previous = GUI.color;
-            GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
+            float value = Mathf.Max(0f, brightness);
+            GUI.color = new Color(value, value, value, Mathf.Clamp01(alpha));
             GUI.DrawTextureWithTexCoords(LogicalToPreview(canvasRect, logicalRect, frame), texture, uv, true);
             GUI.color = previous;
         }
