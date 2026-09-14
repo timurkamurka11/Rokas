@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -7,6 +8,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public sealed partial class VnPresentationWorkshopWindow
     {
+        [SerializeField] private bool _sceneComposerAssetLibraryExpanded = true;
+        [SerializeField] private VnSceneComposerAssetPurpose _sceneComposerOnboardPurpose = VnSceneComposerAssetPurpose.ReferenceImage;
+        [SerializeField] private string _sceneComposerOnboardDisplayName = string.Empty;
+        [SerializeField] private string _sceneComposerOnboardCharacter = "Mina";
+        [SerializeField] private string _sceneComposerOnboardState = string.Empty;
+        [SerializeField] private int _sceneComposerBackgroundAssetIndex;
+
         public void ComposerRefreshAssets()
         {
             VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.Refresh(GetProjectRoot());
@@ -70,6 +78,78 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerAssetEntry entry = catalog.assets.FirstOrDefault(candidate => candidate != null &&
                 string.Equals(candidate.assetId, assetId, StringComparison.Ordinal));
             return VnSceneComposerAssetLibrary.LoadThumbnail(entry);
+        }
+
+        private void DrawSceneComposerAssetLibraryControls(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.Space();
+            _sceneComposerAssetLibraryExpanded = EditorGUILayout.Foldout(
+                _sceneComposerAssetLibraryExpanded, "Asset Library / Onboard Asset", true);
+            if (!_sceneComposerAssetLibraryExpanded) return;
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Refresh Assets")) ComposerRefreshAssets();
+            if (GUILayout.Button("Open Managed Folder"))
+            {
+                string absolute = VnSceneComposerAssetLibrary.ToAbsoluteProjectPath(GetProjectRoot(), VnSceneComposerAssetLibrary.OnboardedRoot);
+                EditorUtility.RevealInFinder(absolute);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            _sceneComposerOnboardPurpose = (VnSceneComposerAssetPurpose)EditorGUILayout.EnumPopup("Purpose", _sceneComposerOnboardPurpose);
+            _sceneComposerOnboardDisplayName = EditorGUILayout.TextField("Display Name", _sceneComposerOnboardDisplayName ?? string.Empty);
+            if (_sceneComposerOnboardPurpose == VnSceneComposerAssetPurpose.CharacterState)
+            {
+                _sceneComposerOnboardCharacter = EditorGUILayout.TextField("Character", _sceneComposerOnboardCharacter ?? string.Empty);
+                _sceneComposerOnboardState = EditorGUILayout.TextField("State / Pose", _sceneComposerOnboardState ?? string.Empty);
+            }
+            if (GUILayout.Button("Onboard Image Asset"))
+            {
+                string source = EditorUtility.OpenFilePanel("Onboard Scene Composer Image", string.Empty, "png,jpg,jpeg");
+                if (!string.IsNullOrEmpty(source))
+                {
+                    try
+                    {
+                        string display = string.IsNullOrWhiteSpace(_sceneComposerOnboardDisplayName)
+                            ? Path.GetFileNameWithoutExtension(source)
+                            : _sceneComposerOnboardDisplayName;
+                        VnSceneComposerAssetEntry entry = VnSceneComposerAssetLibrary.OnboardExternalImage(
+                            GetProjectRoot(), source, _sceneComposerOnboardPurpose, display,
+                            _sceneComposerOnboardPurpose == VnSceneComposerAssetPurpose.CharacterState ? _sceneComposerOnboardCharacter : string.Empty,
+                            _sceneComposerOnboardPurpose == VnSceneComposerAssetPurpose.CharacterState ? _sceneComposerOnboardState : string.Empty);
+                        ComposerRefreshAssets();
+                        SetSceneComposerStatus("Onboarded asset: " + entry.displayName + ".", MessageType.Info);
+                    }
+                    catch (Exception exception)
+                    {
+                        SetSceneComposerStatus("Asset onboarding failed: " + exception.Message, MessageType.Error);
+                    }
+                }
+            }
+
+            string[] backgroundIds = ComposerGetAvailableBackgroundAssetIds();
+            string[] backgroundNames = ComposerGetAvailableBackgroundDisplayNames();
+            if (backgroundIds.Length > 0)
+            {
+                _sceneComposerBackgroundAssetIndex = Mathf.Clamp(_sceneComposerBackgroundAssetIndex, 0, backgroundIds.Length - 1);
+                _sceneComposerBackgroundAssetIndex = EditorGUILayout.Popup(
+                    "Background", _sceneComposerBackgroundAssetIndex, backgroundNames);
+                Texture2D thumbnail = ComposerGetLibraryAssetThumbnail(backgroundIds[_sceneComposerBackgroundAssetIndex]);
+                if (thumbnail != null)
+                {
+                    Rect thumbRect = GUILayoutUtility.GetRect(120f, 72f, GUILayout.ExpandWidth(true));
+                    GUI.DrawTexture(thumbRect, thumbnail, ScaleMode.ScaleAndCrop, true);
+                }
+                if (GUILayout.Button("Use Selected Background"))
+                    TrySceneComposerMediaAction(() => ComposerSetLibraryBackground(backgroundIds[_sceneComposerBackgroundAssetIndex]));
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Background", "(no onboarded backgrounds)");
+            }
+            EditorGUILayout.LabelField("Managed assets stay editor-only until a future explicit production-apply task.", EditorStyles.miniLabel);
+            EditorGUILayout.EndVertical();
         }
     }
 }
