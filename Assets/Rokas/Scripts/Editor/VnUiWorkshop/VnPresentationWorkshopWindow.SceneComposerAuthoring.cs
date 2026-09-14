@@ -440,6 +440,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     TrySceneComposerPresentationAction(() => ComposerLoadPresentationPreset(GetProjectRoot(), variants[selectedVariantIndex]));
             }
             EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(variants.Length == 0))
+            {
+                string selectedName = variants.Length > 0 ? variants[selectedVariantIndex] : string.Empty;
+                if (GUILayout.Button("Duplicate"))
+                    TrySceneComposerPresentationAction(() => ComposerDuplicatePresentationPreset(GetProjectRoot(), selectedName, variantName));
+                if (GUILayout.Button("Rename"))
+                    TrySceneComposerPresentationAction(() => ComposerRenamePresentationPreset(GetProjectRoot(), selectedName, variantName));
+                if (GUILayout.Button("Delete"))
+                {
+                    bool confirmed = EditorUtility.DisplayDialog(
+                        "Delete Composer Presentation Preset",
+                        "Delete preset '" + selectedName + "'? This removes only the editor-local template and does not modify production Assets.",
+                        "Delete", "Cancel");
+                    if (confirmed)
+                        TrySceneComposerPresentationAction(() => ComposerDeletePresentationPreset(GetProjectRoot(), selectedName));
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Export JSON"))
             {
