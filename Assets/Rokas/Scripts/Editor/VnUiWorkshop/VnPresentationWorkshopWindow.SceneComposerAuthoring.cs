@@ -276,7 +276,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DrawSceneComposerSelectionOverlay(Rect previewRect, VnWorkshopPreviewFrame frame)
         {
-            if (frame == null || _sceneComposerSelectedCharacterIndex < 0 || frame.ComposerCharacters == null ||
+            if (frame == null) return;
+            DrawSceneComposerUiFeedbackPreview(previewRect, frame);
+            if (_sceneComposerSelectedCharacterIndex < 0 || frame.ComposerCharacters == null ||
                 _sceneComposerSelectedCharacterIndex >= frame.ComposerCharacters.Length) return;
             VnWorkshopPreviewCharacter character = frame.ComposerCharacters[_sceneComposerSelectedCharacterIndex];
             if (character == null) return;
@@ -496,6 +498,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (GUILayout.Button("Reset Sample")) ComposerResetPreviewSampleText();
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.LabelField("Preview-only sample. Never written to Yarn.", EditorStyles.miniLabel);
+            string glyphWarning = ComposerGetPreviewTextGlyphWarning();
+            if (!string.IsNullOrEmpty(glyphWarning))
+                EditorGUILayout.HelpBox(glyphWarning, MessageType.Warning);
         }
 
         private void DrawSceneComposerSerializedPresentationSections(VnSceneComposerScene scene)
@@ -528,6 +533,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawSceneComposerSerializedSection(ref _sceneComposerStageExpanded, "Stage Layout", active, "stageLayout");
             DrawSceneComposerSerializedSection(ref _sceneComposerFocusExpanded, "Speaker Focus", active, "focus");
             DrawSceneComposerSerializedSection(ref _sceneComposerUiFeedbackExpanded, "UI Feedback", active, "uiFeedback");
+            if (_sceneComposerUiFeedbackExpanded) DrawSceneComposerUiFeedbackPreviewControls();
             DrawSceneComposerSerializedSection(ref _sceneComposerTimingExpanded, "Timing / Pacing", active, "timing");
             _sceneComposerAdvancedExpanded = EditorGUILayout.Foldout(_sceneComposerAdvancedExpanded, "Advanced / Full Preset", true);
             if (_sceneComposerAdvancedExpanded) EditorGUILayout.PropertyField(active, true);
@@ -537,6 +543,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ResetSceneComposerPlayback();
                 MarkSceneComposerChanged();
             }
+        }
+
+        private void DrawSceneComposerUiFeedbackPreviewControls()
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.LabelField("Preview UI Feedback", EditorStyles.miniBoldLabel);
+            VnWorkshopElement[] targets =
+            {
+                VnWorkshopElement.Back,
+                VnWorkshopElement.Next,
+                VnWorkshopElement.MuteHitRegion,
+                VnWorkshopElement.PauseHitRegion,
+                VnWorkshopElement.SkipHitRegion
+            };
+            string[] targetNames = { "Back", "Next", "Mute", "Pause", "Skip" };
+            int currentTarget = Array.IndexOf(targets, _sceneComposerUiFeedbackPreviewElement);
+            if (currentTarget < 0) currentTarget = 0;
+            int nextTarget = EditorGUILayout.Popup("Target", currentTarget, targetNames);
+            if (nextTarget != currentTarget)
+                ComposerSetUiFeedbackPreview(targets[nextTarget], _sceneComposerUiFeedbackPreviewState, _sceneComposerUiFeedbackPreviewProgress);
+
+            string[] phaseNames = { "Normal", "Hover", "Pressed", "Release" };
+            int currentPhase = (int)_sceneComposerUiFeedbackPreviewState;
+            int nextPhase = GUILayout.Toolbar(currentPhase, phaseNames);
+            if (nextPhase != currentPhase)
+            {
+                VnWorkshopUiFeedbackState nextState = (VnWorkshopUiFeedbackState)nextPhase;
+                float phaseProgress = nextState == VnWorkshopUiFeedbackState.Release ? .5f : 1f;
+                ComposerSetUiFeedbackPreview(_sceneComposerUiFeedbackPreviewElement, nextState, phaseProgress);
+            }
+
+            EditorGUI.BeginChangeCheck();
+            float progress = EditorGUILayout.Slider("Phase Progress", _sceneComposerUiFeedbackPreviewProgress, 0f, 1f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetUiFeedbackPreview(_sceneComposerUiFeedbackPreviewElement, _sceneComposerUiFeedbackPreviewState, progress);
+            EditorGUILayout.LabelField("Preview uses effective Project Defaults + Scene Overrides.", EditorStyles.miniLabel);
+            EditorGUI.indentLevel--;
         }
 
         private static void DrawSceneComposerSerializedSection(ref bool expanded, string label,
