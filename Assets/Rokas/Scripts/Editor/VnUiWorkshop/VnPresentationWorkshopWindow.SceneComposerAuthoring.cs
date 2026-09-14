@@ -111,6 +111,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                 }
             }
+
+            if (frame.DialoguePanel.Contains(logicalPoint))
+            {
+                selectedElement = VnWorkshopElement.DialoguePanel;
+                _sceneComposerSelectedCharacterIndex = -1;
+                Repaint();
+                return true;
+            }
             return false;
         }
 
@@ -306,7 +314,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnWorkshopElement.Back, VnWorkshopElement.Next, VnWorkshopElement.MuteHitRegion,
                 VnWorkshopElement.PauseHitRegion, VnWorkshopElement.SkipHitRegion, VnWorkshopElement.SpeakerName,
-                VnWorkshopElement.DialogueText, VnWorkshopElement.DialoguePanel
+                VnWorkshopElement.DialogueText
             };
             for (int i = 0; i < order.Length; i++)
             {
