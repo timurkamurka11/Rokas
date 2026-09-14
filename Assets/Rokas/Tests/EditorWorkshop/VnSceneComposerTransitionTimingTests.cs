@@ -61,10 +61,10 @@ namespace Rokas.EditorTools.Tests
             Set(to, "speaker", "Keiko");
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
-            object midpoint = sample.Invoke(null, new[] { project, from, to, (object).5f });
-            IList stage = (IList)Get(midpoint, "stage");
-            IList characterMotions = (IList)Get(midpoint, "characterMotions");
-            IList focus = (IList)Get(midpoint, "focus");
+            object later = sample.Invoke(null, new[] { project, from, to, (object).75f });
+            IList stage = (IList)Get(later, "stage");
+            IList characterMotions = (IList)Get(later, "characterMotions");
+            IList focus = (IList)Get(later, "focus");
 
             Assert.That(stage.Count, Is.EqualTo(2));
             Assert.That(characterMotions.Count, Is.EqualTo(1), "Only Keiko is entering in this beat.");
