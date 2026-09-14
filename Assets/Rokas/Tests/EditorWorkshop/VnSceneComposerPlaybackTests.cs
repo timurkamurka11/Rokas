@@ -63,6 +63,7 @@ namespace Rokas.EditorTools.Tests
             Type projectType = RequireType("VnSceneComposerProject");
             Type controllerType = RequirePlaybackType();
             object project = Activator.CreateInstance(projectType);
+            SetAutoPreviewSequenceGap(project, 0f);
             IList scenes = (IList)Get(project, "scenes");
             scenes.Add(Scene("Auto", "auto", "PreviewAutoDuration", .25f));
             scenes.Add(Scene("Manual", "manual", "ManualBeat", 2f));
@@ -227,6 +228,20 @@ namespace Rokas.EditorTools.Tests
             SetEnum(timing, "previewAdvanceMode", timingMode);
             Set(timing, "previewAutoDuration", duration);
             return scene;
+        }
+
+        private static void SetAutoPreviewSequenceGap(object project, float sequenceGap)
+        {
+            object preset = Get(project, "defaultPresentation");
+            Type resolverType = RequireType("VnPresentationWorkshopVn10Resolver");
+            MethodInfo method = RequireStatic(
+                resolverType,
+                "SetTimingPreviewOverrides",
+                preset.GetType(),
+                typeof(float),
+                typeof(float),
+                typeof(float));
+            method.Invoke(null, new object[] { preset, .05f, .08f, sequenceGap });
         }
 
         private static void AddCharacter(object scene, string id, string state, string slot)
