@@ -85,12 +85,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (match == null) return;
 
-            if (!match.isPrepared && !match.isPlaying)
-            {
-                try { match.Prepare(); }
-                catch { return; }
-            }
-
+            // Composition owns routing only. It must never probe/decode media: real first-frame
+            // preparation belongs to the Scene Composer authoring-preview lifecycle. This also
+            // keeps deterministic CI routing tests from decoding dummy mp4 fixtures.
             Texture videoTexture = match.targetTexture;
             if (videoTexture == null) return;
             var sample = new VnWorkshopBackgroundTransitionSample
