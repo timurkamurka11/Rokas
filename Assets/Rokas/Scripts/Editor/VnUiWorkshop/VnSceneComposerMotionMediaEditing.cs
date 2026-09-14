@@ -44,7 +44,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
     }
 
-    public sealed class VnSceneComposerVideoPreview : IDisposable
+    public interface IVnSceneComposerVideoPreviewFactory
+    {
+        VnSceneComposerVideoPreview Open(VnSceneComposerMediaReference media, int width, int height);
+    }
+
+    internal sealed class VnSceneComposerDefaultVideoPreviewFactory : IVnSceneComposerVideoPreviewFactory
+    {
+        public VnSceneComposerVideoPreview Open(VnSceneComposerMediaReference media, int width, int height)
+        {
+            return new VnSceneComposerVideoPreview(media.reference, width, height, media.loop);
+        }
+    }
+
+    public class VnSceneComposerVideoPreview : IDisposable
     {
         public RenderTexture texture;
         public string warning;
@@ -53,8 +66,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private GameObject host;
         private VideoPlayer player;
         private bool playRequested;
+        private bool prepareRequested;
+        private bool previewFrameRequested;
+        private bool hasVisibleFrame;
 
-        internal VnSceneComposerVideoPreview(string path, int width, int height, bool shouldLoop)
+        protected internal VnSceneComposerVideoPreview(string path, int width, int height, bool shouldLoop)
         {
             loop = shouldLoop;
             warning = string.Empty;
@@ -90,51 +106,96 @@ namespace Rokas.EditorTools.VnUiWorkshop
             player.url = ToFileUrl(path);
             player.isLooping = loop;
             player.targetTexture = texture;
+            player.sendFrameReadyEvents = true;
             player.prepareCompleted += OnPrepared;
+            player.frameReady += OnFrameReady;
             player.errorReceived += OnError;
             VnSceneComposerMotionPreviewRegistry.Register(this);
         }
 
-        public bool IsPrepared { get { return player != null && player.isPrepared; } }
-        public bool IsPlaying { get { return player != null && player.isPlaying; } }
+        public virtual bool IsPrepared { get { return player != null && player.isPrepared; } }
+        public virtual bool IsPreparing { get { return player != null && prepareRequested && !player.isPrepared; } }
+        public virtual bool IsPlaying { get { return player != null && player.isPlaying; } }
+        public virtual bool HasVisibleFrame { get { return hasVisibleFrame; } }
 
-        public void Play()
+        public virtual void Prepare()
+        {
+            if (player == null) return;
+            playRequested = false;
+            if (player.isPrepared)
+            {
+                prepareRequested = false;
+                if (!hasVisibleFrame) RequestFirstFrame();
+                return;
+            }
+            if (prepareRequested) return;
+            prepareRequested = true;
+            player.Prepare();
+        }
+
+        public virtual void Play()
         {
             if (player == null) return;
             playRequested = true;
-            if (player.isPrepared) player.Play();
-            else player.Prepare();
-        }
-
-        public void Pause()
-        {
-            playRequested = false;
-            if (player != null && player.isPlaying) player.Pause();
-        }
-
-        public void Restart()
-        {
-            if (player == null) return;
+            previewFrameRequested = false;
             if (player.isPrepared)
             {
-                player.frame = 0;
-                if (playRequested) player.Play();
+                prepareRequested = false;
+                player.Play();
+            }
+            else if (!prepareRequested)
+            {
+                prepareRequested = true;
+                player.Prepare();
             }
         }
 
-        public void Stop()
+        public virtual void Pause()
         {
             playRequested = false;
+            previewFrameRequested = false;
+            if (player != null && player.isPlaying) player.Pause();
+        }
+
+        public virtual void Restart()
+        {
+            if (player == null) return;
+            hasVisibleFrame = false;
+            if (!player.isPrepared)
+            {
+                if (!prepareRequested)
+                {
+                    prepareRequested = true;
+                    player.Prepare();
+                }
+                return;
+            }
+
+            player.frame = 0;
+            if (playRequested) player.Play();
+            else RequestFirstFrame();
+        }
+
+        public virtual void Stop()
+        {
+            playRequested = false;
+            prepareRequested = false;
+            previewFrameRequested = false;
+            hasVisibleFrame = false;
             if (player != null) player.Stop();
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             VnSceneComposerMotionPreviewRegistry.Unregister(this);
             playRequested = false;
+            prepareRequested = false;
+            previewFrameRequested = false;
+            hasVisibleFrame = false;
             if (player != null)
             {
                 player.prepareCompleted -= OnPrepared;
+                player.frameReady -= OnFrameReady;
                 player.errorReceived -= OnError;
                 player.Stop();
                 player.targetTexture = null;
@@ -158,7 +219,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void OnPrepared(VideoPlayer prepared)
         {
-            if (prepared == player && playRequested) player.Play();
+            if (prepared != player) return;
+            prepareRequested = false;
+            if (playRequested) player.Play();
+            else RequestFirstFrame();
+        }
+
+        private void RequestFirstFrame()
+        {
+            if (player == null || !player.isPrepared) return;
+            previewFrameRequested = true;
+            hasVisibleFrame = false;
+            player.frame = 0;
+            player.Play();
+        }
+
+        private void OnFrameReady(VideoPlayer source, long frameIndex)
+        {
+            if (source != player) return;
+            hasVisibleFrame = true;
+            if (previewFrameRequested && !playRequested && source.isPlaying) source.Pause();
+            previewFrameRequested = false;
+            EditorApplication.QueuePlayerLoopUpdate();
         }
 
         private void OnError(VideoPlayer source, string message)
@@ -166,6 +248,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (source != player) return;
             warning = "External preview video failed: " + message;
             playRequested = false;
+            prepareRequested = false;
+            previewFrameRequested = false;
+            hasVisibleFrame = false;
             source.Stop();
         }
 
@@ -272,6 +357,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
     public static partial class VnSceneComposerMediaEditing
     {
+        private static readonly IVnSceneComposerVideoPreviewFactory DefaultVideoPreviewFactory =
+            new VnSceneComposerDefaultVideoPreviewFactory();
+        private static IVnSceneComposerVideoPreviewFactory videoPreviewFactory = DefaultVideoPreviewFactory;
+
+        public static IVnSceneComposerVideoPreviewFactory VideoPreviewFactory
+        {
+            get { return videoPreviewFactory ?? DefaultVideoPreviewFactory; }
+            set { videoPreviewFactory = value ?? DefaultVideoPreviewFactory; }
+        }
+
+        public static void ResetVideoPreviewFactory()
+        {
+            videoPreviewFactory = DefaultVideoPreviewFactory;
+        }
+
         public static void SetExternalVideo(VnSceneComposerScene scene, string path,
             VnSceneComposerMediaScaleMode scaleMode, bool loop)
         {
@@ -298,7 +398,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     warning = "Selected media is not a video."
                 };
-            return new VnSceneComposerVideoPreview(media.reference, width, height, media.loop);
+            return VideoPreviewFactory.Open(media, width, height);
         }
 
         public static VnSceneComposerGifPreview OpenGifPreview(VnSceneComposerMediaReference media)
