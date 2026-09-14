@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Rokas.Presentation;
@@ -46,24 +45,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return true;
             }
 
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            VnSceneComposerAssetEntry entry = catalog.assets
-                .FirstOrDefault(candidate => candidate != null && candidate.valid &&
-                    candidate.purpose == VnSceneComposerAssetPurpose.CharacterState &&
+            string projectRoot = VnSceneComposerAssetLibrary.GetDefaultProjectRoot();
+            VnSceneComposerAssetEntry entry = VnSceneComposerAssetLibrary
+                .FindByPurpose(projectRoot, VnSceneComposerAssetPurpose.CharacterState)
+                .FirstOrDefault(candidate => candidate != null && !candidate.missing &&
                     string.Equals(candidate.stateId, stateId, StringComparison.Ordinal));
-            if (entry == null || string.IsNullOrEmpty(entry.projectPath)) return false;
+            if (entry == null || string.IsNullOrEmpty(entry.assetPath)) return false;
 
-            Texture2D onboardedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(entry.projectPath);
+            Texture2D onboardedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(entry.assetPath);
             if (onboardedTexture == null) return false;
             resolved = new VnSceneComposerResolvedCharacterState
             {
                 Id = entry.stateId ?? string.Empty,
-                Character = entry.characterId ?? string.Empty,
+                Character = entry.character ?? string.Empty,
                 Texture = onboardedTexture,
                 BodyUv = new Rect(0f, 0f, 1f, 1f),
                 Onboarded = true,
-                AssetId = entry.assetId ?? string.Empty,
-                DisplayName = string.IsNullOrWhiteSpace(entry.displayName) ? entry.stateId : entry.displayName
+                AssetId = entry.stableAssetId ?? string.Empty,
+                DisplayName = string.IsNullOrWhiteSpace(entry.displayName) ? entry.stateName : entry.displayName
             };
             return true;
         }
@@ -74,11 +73,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             IEnumerable<string> production = EnumerateProductionStates()
                 .Where(state => string.Equals(state.Character, requested, StringComparison.OrdinalIgnoreCase))
                 .Select(state => state.Id);
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            IEnumerable<string> onboarded = catalog.assets
-                .Where(entry => entry != null && entry.valid && entry.purpose == VnSceneComposerAssetPurpose.CharacterState &&
-                    string.Equals(entry.characterId, requested, StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(entry.stateId))
+            string projectRoot = VnSceneComposerAssetLibrary.GetDefaultProjectRoot();
+            IEnumerable<string> onboarded = VnSceneComposerAssetLibrary.FindCharacterStates(projectRoot, requested)
+                .Where(entry => entry != null && !entry.missing && !string.IsNullOrWhiteSpace(entry.stateId))
                 .Select(entry => entry.stateId);
             return production.Concat(onboarded).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal).ToArray();
         }
@@ -86,10 +83,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static string[] GetCharacters()
         {
             IEnumerable<string> production = EnumerateProductionStates().Select(state => state.Character);
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            IEnumerable<string> onboarded = catalog.assets
-                .Where(entry => entry != null && entry.valid && entry.purpose == VnSceneComposerAssetPurpose.CharacterState)
-                .Select(entry => entry.characterId);
+            string projectRoot = VnSceneComposerAssetLibrary.GetDefaultProjectRoot();
+            IEnumerable<string> onboarded = VnSceneComposerAssetLibrary
+                .FindByPurpose(projectRoot, VnSceneComposerAssetPurpose.CharacterState)
+                .Where(entry => entry != null && !entry.missing)
+                .Select(entry => entry.character);
             return production.Concat(onboarded)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -120,14 +118,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (boxed is VnCharacterVisualState state && !string.IsNullOrEmpty(state.Id)) result.Add(state);
             }
             return result.OrderBy(state => state.Id, StringComparer.Ordinal).ToArray();
-        }
-
-        private static string GetProjectRoot()
-        {
-            string dataPath = Application.dataPath;
-            DirectoryInfo parent = Directory.GetParent(dataPath);
-            if (parent == null) throw new InvalidOperationException("Could not resolve Unity project root for Scene Composer assets.");
-            return parent.FullName;
         }
     }
 }
