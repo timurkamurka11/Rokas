@@ -16,6 +16,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ComposerBackgroundTransition = backgroundTransition;
             SourceBackground = sourceBackground;
             TargetBackground = targetBackground;
+            VnPresentationWorkshopPreviewRenderer.RegisterPlaybackFrame(this);
         }
 
         public VnWorkshopPreviewFrame WorkshopFrame { get; }
@@ -45,6 +46,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerImagePreview imagePreview;
         private VnSceneComposerVideoPreview videoPreview;
         private VnSceneComposerGifPreview gifPreview;
+        private VnSceneComposerImagePreview sourceImagePreview;
+        private VnSceneComposerVideoPreview sourceVideoPreview;
+        private VnSceneComposerGifPreview sourceGifPreview;
+        private Texture sourceMediaTexture;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
         {
@@ -177,6 +182,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             disposed = true;
             IsPlaying = false;
             ReleaseMedia();
+            ReleaseSourceMedia();
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;
@@ -186,11 +192,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             RequireSceneIndex(sceneIndex);
             ReleaseMedia();
+            ReleaseSourceMedia();
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
+            OpenSourceMedia(ResolveSourceScene(sceneIndex));
             OpenMedia(project.scenes[sceneIndex]);
             if (playMedia && videoPreview != null) videoPreview.Play();
+            RefreshSourceMediaTexture();
             RefreshMediaTexture();
             RebuildFrame(0f);
         }
@@ -216,11 +225,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
                 project, targetScene, VnWorkshopResolution.Reference1920x1080, targetBackground);
             VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(
-                project, sourceScene, VnWorkshopResolution.Reference1920x1080, null);
+                project, sourceScene, VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);
 
             ApplyRendererFacingSample(targetFrame, sourceFrame, sample, endpoint);
             Texture targetVisual = CurrentMediaTexture != null ? CurrentMediaTexture : targetFrame.BackgroundTexture;
-            Texture sourceVisual = sourceFrame.BackgroundTexture;
+            Texture sourceVisual = sourceMediaTexture != null ? sourceMediaTexture : sourceFrame.BackgroundTexture;
 
             CurrentSnapshot = sample;
             CurrentFrame = new VnSceneComposerPlaybackFrame(targetFrame, sample.background, sourceVisual, targetVisual);
@@ -347,6 +356,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private void OpenSourceMedia(VnSceneComposerScene scene)
+        {
+            if (scene == null || scene.media == null) return;
+            switch (scene.media.kind)
+            {
+                case VnSceneComposerMediaKind.ExistingRokasAsset:
+                case VnSceneComposerMediaKind.ExternalImage:
+                    sourceImagePreview = VnSceneComposerMediaEditing.OpenImagePreview(scene.media);
+                    break;
+                case VnSceneComposerMediaKind.ExternalVideo:
+                    sourceVideoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);
+                    break;
+                case VnSceneComposerMediaKind.ExternalGif:
+                    sourceGifPreview = VnSceneComposerMediaEditing.OpenGifPreview(scene.media);
+                    break;
+            }
+        }
+
+        private void RefreshSourceMediaTexture()
+        {
+            if (sourceGifPreview != null) sourceMediaTexture = sourceGifPreview.currentTexture;
+            else if (sourceVideoPreview != null) sourceMediaTexture = sourceVideoPreview.texture;
+            else if (sourceImagePreview != null) sourceMediaTexture = sourceImagePreview.texture;
+            else sourceMediaTexture = null;
+        }
+
+        private void ReleaseSourceMedia()
+        {
+            if (sourceImagePreview != null) sourceImagePreview.Dispose();
+            if (sourceVideoPreview != null) sourceVideoPreview.Dispose();
+            if (sourceGifPreview != null) sourceGifPreview.Dispose();
+            sourceImagePreview = null;
+            sourceVideoPreview = null;
+            sourceGifPreview = null;
+            sourceMediaTexture = null;
+        }
+
         private void OpenMedia(VnSceneComposerScene scene)
         {
             if (scene == null || scene.media == null) return;
@@ -418,6 +464,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
             ReleaseMedia();
+            ReleaseSourceMedia();
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;

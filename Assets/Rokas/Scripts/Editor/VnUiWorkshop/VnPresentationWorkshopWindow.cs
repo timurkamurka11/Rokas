@@ -57,6 +57,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public VnWorkshopPreviewFrame BuildPreviewFrame()
         {
+            VnSceneComposerPlaybackFrame motionFrame = CurrentMotionPreviewFrame;
+            if (motionFrame != null) return motionFrame.WorkshopFrame;
             VnPresentationWorkshopPreset previewPreset = comparisonView == VnWorkshopComparisonView.Original
                 ? new VnPresentationWorkshopPreset()
                 : CurrentPreset;

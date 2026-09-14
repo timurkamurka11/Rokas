@@ -159,7 +159,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
     }
 
-    public static class VnPresentationWorkshopPreviewRenderer
+    public static partial class VnPresentationWorkshopPreviewRenderer
     {
         private const float PanelAnchorMinX = .04f;
         private const float PanelAnchorMaxX = .96f;
@@ -253,7 +253,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             try
             {
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
-                GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
+                if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
+                    GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
                 if (frame.ComposerCharacters != null)
                 {
                     for (int i = 0; i < frame.ComposerCharacters.Length; i++)

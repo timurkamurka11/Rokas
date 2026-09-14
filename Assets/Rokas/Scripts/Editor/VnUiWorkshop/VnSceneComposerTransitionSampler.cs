@@ -217,7 +217,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 result.Add(new VnSceneComposerExpressionPreview
                 {
                     characterId = id,
-                    sample = VnPresentationWorkshopVn10Resolver.SampleExpressionTransition(
+                    sample = VnPresentationWorkshopVn10Resolver.SampleComposerExpressionTransition(
                         previous.stateId, target.stateId, sampledProgress, values)
                 });
             }
@@ -294,7 +294,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (character == null) return string.Empty;
             if (!string.IsNullOrEmpty(character.characterId)) return character.characterId;
             if (!string.IsNullOrEmpty(character.stateId) &&
-                VnCharacterVisualCatalog.TryResolve(character.stateId, out VnCharacterVisualState state))
+                VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state))
                 return state.Character;
             return string.Empty;
         }
