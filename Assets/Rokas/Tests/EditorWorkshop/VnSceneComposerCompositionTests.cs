@@ -84,7 +84,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That((string)Get(frame, "Speaker"), Is.EqualTo("Mina"));
             Assert.That((string)Get(frame, "Dialogue"), Is.EqualTo("Line one\nLine two"));
             IList previewCharacters = (IList)Get(frame, "ComposerCharacters");
-            Assert.That(previewCharacters, Has.Count.EqualTo(2));
+            Assert.That(previewCharacters.Count, Is.EqualTo(2));
 
             object mina = previewCharacters[0];
             object keiko = previewCharacters[1];
@@ -130,14 +130,14 @@ namespace Rokas.EditorTools.Tests
             object narration = build.Invoke(null, new object[] { project, scene, resolution, null });
             Assert.That((string)Get(narration, "Speaker"), Is.Empty);
             Assert.That((string)Get(narration, "Dialogue"), Does.Contain("Rain taps"));
-            Assert.That((IList)Get(narration, "ComposerCharacters"), Has.Count.EqualTo(0));
+            Assert.That(((IList)Get(narration, "ComposerCharacters")).Count, Is.EqualTo(0));
 
             IList characters = (IList)Get(scene, "characters");
             characters.Add(Character(characterType, slotType, "Mina", "mina_neutral", "Left"));
             characters.Add(Character(characterType, slotType, "Keiko", "keiko_neutral", "Center"));
             characters.Add(Character(characterType, slotType, "Mina", "mina_serious", "Right"));
             object three = build.Invoke(null, new object[] { project, scene, resolution, null });
-            Assert.That((IList)Get(three, "ComposerCharacters"), Has.Count.EqualTo(3));
+            Assert.That(((IList)Get(three, "ComposerCharacters")).Count, Is.EqualTo(3));
 
             characters.Add(Character(characterType, slotType, "Keiko", "keiko_surprised", "Center"));
             TargetInvocationException error = Assert.Throws<TargetInvocationException>(() =>
