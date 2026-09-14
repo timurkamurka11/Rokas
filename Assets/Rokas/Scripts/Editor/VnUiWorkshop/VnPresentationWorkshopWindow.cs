@@ -230,6 +230,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void OnGUI()
         {
+            DrawWorkspaceModeToolbar();
+            if (_sceneComposerWorkspaceActive)
+            {
+                DrawSceneComposerWorkspace();
+                return;
+            }
+
             DrawComparisonToolbar();
             EditorGUILayout.BeginHorizontal();
             DrawLeftColumn();
