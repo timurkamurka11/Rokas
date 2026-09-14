@@ -167,6 +167,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             if (scope == PlaybackScope.OrderedRange && CurrentSceneIndex < rangeEnd)
             {
+                float sequenceGap = Mathf.Max(0f, timing.sequenceGap);
+                if (SceneElapsedSeconds + .00001f < duration + sequenceGap)
+                {
+                    RebuildFrame(1f);
+                    return;
+                }
                 ResetScene(CurrentSceneIndex + 1, true);
                 return;
             }
