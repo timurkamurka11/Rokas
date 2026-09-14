@@ -181,6 +181,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-F transition timing EditMode
           artifactsPath: artifacts-vn-scene-composer-transition-timing
+      - name: Run SC-G Composer playback fixture
+        id: playback-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-G playback EditMode
+          artifactsPath: artifacts-vn-scene-composer-playback
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -193,4 +210,5 @@ jobs:
             artifacts-vn-scene-composer-motion-media
             artifacts-vn-scene-composer-composition
             artifacts-vn-scene-composer-transition-timing
+            artifacts-vn-scene-composer-playback
           if-no-files-found: warn
