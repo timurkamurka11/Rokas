@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
@@ -36,6 +37,43 @@ namespace Rokas.EditorTools.Tests
 
                 Assert.That(warning, Does.Contain("missing glyph").IgnoreCase);
                 Assert.That(RequireFinalParityMethod(windowType, "ComposerGetActivePresentationPreset").Invoke(window, null), Is.Not.Null);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void FinalParity_ComposerPreviewTextUiSurfacesLiveGlyphWarning()
+        {
+            Type windowType = typeof(VnPresentationWorkshopWindow);
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                RequireFinalParityMethod(windowType, "ComposerAddScene").Invoke(window, null);
+                RequireFinalParityMethod(windowType, "ComposerSetPresentationScope", typeof(bool))
+                    .Invoke(window, new object[] { false });
+
+                RequireFinalParityMethod(windowType, "ComposerSetPreviewSampleText", typeof(string))
+                    .Invoke(window, new object[] { "Привет" });
+                string supported = (string)RequireFinalParityMethod(windowType, "ComposerGetPreviewTextGlyphWarning")
+                    .Invoke(window, null);
+                Assert.That(supported, Is.Empty, "Supported Cyrillic preview text should not show a false warning.");
+
+                RequireFinalParityMethod(windowType, "ComposerSetPreviewSampleText", typeof(string))
+                    .Invoke(window, new object[] { "Missing glyph: \u0378" });
+                string missing = (string)RequireFinalParityMethod(windowType, "ComposerGetPreviewTextGlyphWarning")
+                    .Invoke(window, null);
+                Assert.That(missing, Does.Contain("missing glyph").IgnoreCase,
+                    "Changing Preview Text must immediately re-evaluate canonical glyph coverage.");
+
+                string source = ReadProjectSource(
+                    "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+                Assert.That(source, Does.Contain("ComposerGetPreviewTextGlyphWarning()"),
+                    "#44 requires the actual Scene Composer Preview Text UI to consume the canonical glyph validator.");
+                Assert.That(source, Does.Contain("EditorGUILayout.HelpBox(glyphWarning, MessageType.Warning)"),
+                    "#44 requires the user to actually see the missing-glyph diagnostic in Scene Composer.");
             }
             finally
             {
@@ -124,6 +162,113 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void FinalParity_ComposerUiFeedbackPreviewUsesEffectiveDefaultsOverridesAndCentralRenderer()
+        {
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                window.ComposerSetPresentationScope(true);
+                VnPresentationWorkshopPreset defaults = window.ComposerGetActivePresentationPreset();
+                VnPresentationWorkshopVn10Resolver.SetUiFeedbackPreviewOverrides(
+                    defaults,
+                    1.20f,
+                    .94f,
+                    new Vector2(0f, -5f),
+                    .12f,
+                    VnWorkshopEasing.EaseOut,
+                    1.10f,
+                    .88f,
+                    .95f,
+                    .90f,
+                    .18f,
+                    .48f);
+
+                window.ComposerSetPresentationScope(false);
+                VnPresentationWorkshopPreset sceneOverrides = window.ComposerGetActivePresentationPreset();
+                VnPresentationWorkshopVn10Resolver.SetUiFeedbackPreviewOverrides(
+                    sceneOverrides,
+                    1.06f,
+                    .80f,
+                    new Vector2(7f, -3f),
+                    .12f,
+                    VnWorkshopEasing.EaseOut,
+                    1.08f,
+                    .70f,
+                    1f,
+                    .60f,
+                    .18f,
+                    .50f);
+
+                MethodInfo sampleMethod = RequireFinalParityMethod(
+                    typeof(VnPresentationWorkshopWindow),
+                    "ComposerSampleUiFeedback",
+                    typeof(VnWorkshopElement),
+                    typeof(VnWorkshopUiFeedbackState),
+                    typeof(float));
+                var inheritedHover = (VnWorkshopUiFeedbackSample)sampleMethod.Invoke(window, new object[]
+                {
+                    VnWorkshopElement.Back, VnWorkshopUiFeedbackState.Hover, 1f
+                });
+                Assert.That(inheritedHover.ScaleMultiplier, Is.EqualTo(1.20f).Within(.0001f),
+                    "Scene UI feedback preview must inherit Project Defaults when the Scene Override leaves that field unset.");
+                Assert.That(inheritedHover.Brightness, Is.EqualTo(1.10f).Within(.0001f));
+                Assert.That(inheritedHover.Alpha, Is.EqualTo(.95f).Within(.0001f));
+
+                var scenePressed = (VnWorkshopUiFeedbackSample)sampleMethod.Invoke(window, new object[]
+                {
+                    VnWorkshopElement.Back, VnWorkshopUiFeedbackState.Pressed, 1f
+                });
+                Assert.That(scenePressed.ScaleMultiplier, Is.EqualTo(.80f).Within(.0001f));
+                Assert.That(scenePressed.PositionOffset, Is.EqualTo(new Vector2(7f, -3f)));
+                Assert.That(scenePressed.Brightness, Is.EqualTo(.70f).Within(.0001f));
+                Assert.That(scenePressed.Alpha, Is.EqualTo(.60f).Within(.0001f));
+
+                VnWorkshopPreviewFrame frame = window.ComposerBuildSelectedPreviewFrame();
+                MethodInfo resolveRect = typeof(VnPresentationWorkshopPreviewRenderer).GetMethod(
+                    "ResolveUiFeedbackLogicalRect",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null,
+                    new[] { typeof(VnWorkshopPreviewFrame), typeof(VnWorkshopElement), typeof(VnWorkshopUiFeedbackSample) },
+                    null);
+                Assert.That(resolveRect, Is.Not.Null,
+                    "#90-93 require a renderer-facing UI feedback transform path, not sampler-only API coverage.");
+                Rect pressedRect = (Rect)resolveRect.Invoke(null, new object[]
+                {
+                    frame, VnWorkshopElement.Back, scenePressed
+                });
+                Assert.That(pressedRect.size, Is.EqualTo(frame.Back.size * .80f));
+                Assert.That(pressedRect.center, Is.EqualTo(frame.Back.center + new Vector2(7f, -3f)));
+
+                var bakedPressed = (VnWorkshopUiFeedbackSample)sampleMethod.Invoke(window, new object[]
+                {
+                    VnWorkshopElement.MuteHitRegion, VnWorkshopUiFeedbackState.Pressed, 1f
+                });
+                Rect bakedRect = (Rect)resolveRect.Invoke(null, new object[]
+                {
+                    frame, VnWorkshopElement.MuteHitRegion, bakedPressed
+                });
+                Assert.That(bakedRect, Is.EqualTo(frame.MuteHitRegion),
+                    "Baked Mute/Pause/Skip controls must not receive independent transform feedback.");
+
+                string authoring = ReadProjectSource(
+                    "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+                Assert.That(authoring, Does.Contain("ComposerSetUiFeedbackPreview"),
+                    "Scene Composer must expose authoring controls for Normal/Hover/Pressed/Release preview phases.");
+                Assert.That(authoring, Does.Contain("\"Normal\"").And.Contain("\"Hover\"").And.Contain("\"Pressed\"").And.Contain("\"Release\""));
+
+                string workspace = ReadProjectSource(
+                    "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs");
+                Assert.That(workspace, Does.Contain("DrawSceneComposerUiFeedbackPreview(previewRect, frame)"),
+                    "The central Scene Preview must consume canonical UI feedback, not leave it as serialized/API-only data.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void FinalParity_PlayAllHonorsCanonicalAutoPreviewSequenceGapBetweenScenes()
         {
             var project = new VnSceneComposerProject();
@@ -161,6 +306,12 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1),
                     "Play All should advance only after the canonical AutoPreviewSequenceGap has elapsed.");
             }
+        }
+
+        private static string ReadProjectSource(string relativePath)
+        {
+            string root = Directory.GetParent(Application.dataPath).FullName;
+            return File.ReadAllText(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
         }
 
         private static MethodInfo RequireFinalParityMethod(Type type, string name, params Type[] parameters)
