@@ -71,7 +71,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     VnSceneComposerCharacter character = scene.characters[i];
                     if (character != null && !string.IsNullOrEmpty(character.stateId) &&
-                        VnCharacterVisualCatalog.TryResolve(character.stateId, out VnCharacterVisualState state) &&
+                        VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state) &&
                         string.Equals(state.Character, "Mina", StringComparison.OrdinalIgnoreCase) &&
                         string.IsNullOrEmpty(scene.speaker))
                         return VnWorkshopPreviewScene.MinaBody;
@@ -88,7 +88,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int count = scene.characters.Count;
             if (count == 0) return Array.Empty<VnWorkshopPreviewCharacter>();
 
-            RokasAssets assets = VnPresentationWorkshopPreviewRenderer.LoadAssets();
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(preset);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
             int activeIndex = FindActiveIndex(scene);
@@ -98,28 +97,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnSceneComposerCharacter source = scene.characters[i];
                 if (source == null) throw new ArgumentException("Scene contains a null authored character entry.", nameof(scene));
-                if (!VnCharacterVisualCatalog.TryResolve(source.stateId, out VnCharacterVisualState state))
+                if (!VnSceneComposerCharacterStateResolver.TryResolve(source.stateId, out VnSceneComposerResolvedCharacterState state))
                     throw new ArgumentException("Unknown authored VN character state: " + (source.stateId ?? string.Empty), nameof(scene));
                 if (!string.IsNullOrEmpty(source.characterId) &&
                     !string.Equals(source.characterId, state.Character, StringComparison.OrdinalIgnoreCase))
                     throw new ArgumentException("Authored state '" + source.stateId + "' belongs to " + state.Character +
                         ", not " + source.characterId + ".", nameof(scene));
 
-                Texture2D texture;
+                Texture2D texture = state.Texture;
                 Rect baseline;
                 if (string.Equals(state.Character, "Mina", StringComparison.OrdinalIgnoreCase))
-                {
-                    texture = assets.vnMinaCharacterSheet;
                     baseline = frame.MinaBody;
-                }
                 else if (string.Equals(state.Character, "Keiko", StringComparison.OrdinalIgnoreCase))
-                {
-                    texture = assets.vnKeikoCharacterSheet;
                     baseline = frame.KeikoBody;
-                }
                 else
+                    baseline = frame.MinaBody;
+
+                if (state.Onboarded && texture != null && texture.width > 0 && texture.height > 0)
                 {
-                    throw new ArgumentException("No authored Workshop texture exists for character: " + state.Character, nameof(scene));
+                    Vector2 baselineCenter = baseline.center;
+                    float authoredHeight = baseline.height;
+                    float authoredWidth = authoredHeight * ((float)texture.width / texture.height);
+                    baseline = RectFromCenter(baselineCenter, new Vector2(authoredWidth, authoredHeight));
                 }
 
                 ResolveSlot(source.stageSlot, stage, out float xOffset, out float slotScale);
@@ -169,7 +168,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerCharacter character = scene.characters[i];
                 if (character == null) continue;
                 if (string.Equals(character.characterId, scene.speaker, StringComparison.OrdinalIgnoreCase)) return i;
-                if (VnCharacterVisualCatalog.TryResolve(character.stateId, out VnCharacterVisualState state) &&
+                if (VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state) &&
                     string.Equals(state.Character, scene.speaker, StringComparison.OrdinalIgnoreCase)) return i;
             }
             return -1;
