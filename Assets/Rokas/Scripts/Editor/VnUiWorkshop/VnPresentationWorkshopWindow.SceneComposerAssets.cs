@@ -92,8 +92,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (GUILayout.Button("Refresh Assets")) ComposerRefreshAssets();
             if (GUILayout.Button("Open Managed Folder"))
             {
-                string absolute = VnSceneComposerAssetLibrary.ToAbsoluteProjectPath(GetProjectRoot(), VnSceneComposerAssetLibrary.OnboardedRoot);
-                EditorUtility.RevealInFinder(absolute);
+                string relative = VnSceneComposerAssetLibrary.OnboardedRoot.Replace('/', Path.DirectorySeparatorChar);
+                EditorUtility.RevealInFinder(Path.Combine(GetProjectRoot(), relative));
             }
             EditorGUILayout.EndHorizontal();
 
