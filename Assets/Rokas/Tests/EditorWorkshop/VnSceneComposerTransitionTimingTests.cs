@@ -31,7 +31,7 @@ namespace Rokas.EditorTools.Tests
             Set(background, "duration", .8f);
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
-            object midpoint = sample.Invoke(null, new[] { project, from, to, (object).5f });
+            object midpoint = sample.Invoke(null, new[] { project, from, to, (object)0.5f });
             object backgroundSample = Get(midpoint, "background");
             object bounceSample = Get(midpoint, "bounce");
 
@@ -61,7 +61,7 @@ namespace Rokas.EditorTools.Tests
             Set(to, "speaker", "Keiko");
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
-            object later = sample.Invoke(null, new[] { project, from, to, (object).75f });
+            object later = sample.Invoke(null, new[] { project, from, to, (object)0.75f });
             IList stage = (IList)Get(later, "stage");
             IList characterMotions = (IList)Get(later, "characterMotions");
             IList focus = (IList)Get(later, "focus");
@@ -90,7 +90,7 @@ namespace Rokas.EditorTools.Tests
             ((IList)Get(to, "characters")).Add(Character(characterType, slotType, "Mina", "mina_happy", "Center"));
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
-            object midpoint = sample.Invoke(null, new[] { project, from, to, (object).5f });
+            object midpoint = sample.Invoke(null, new[] { project, from, to, (object)0.5f });
             IList expressions = (IList)Get(midpoint, "expressions");
             Assert.That(expressions.Count, Is.EqualTo(1));
             Assert.That((string)Get(expressions[0], "characterId"), Is.EqualTo("Mina"));
@@ -114,7 +114,7 @@ namespace Rokas.EditorTools.Tests
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
             object start = sample.Invoke(null, new[] { project, from, to, (object)0f });
-            object middle = sample.Invoke(null, new[] { project, from, to, (object).5f });
+            object middle = sample.Invoke(null, new[] { project, from, to, (object)0.5f });
             object end = sample.Invoke(null, new[] { project, from, to, (object)1f });
             string startText = (string)Get(start, "visibleText");
             string middleText = (string)Get(middle, "visibleText");
