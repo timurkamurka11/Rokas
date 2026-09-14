@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Rokas.Presentation;
 using UnityEngine;
+using UnityEngine.Video;
 
 namespace Rokas.EditorTools.VnUiWorkshop
 {
@@ -58,7 +59,51 @@ namespace Rokas.EditorTools.VnUiWorkshop
             frame.ShowMina = false;
             frame.ShowKeiko = false;
             frame.ComposerCharacters = BuildCharacters(frame, preset, scene);
+            RegisterStaticExternalVideoContext(scene, frame);
             return frame;
+        }
+
+        private static void RegisterStaticExternalVideoContext(VnSceneComposerScene scene, VnWorkshopPreviewFrame frame)
+        {
+            if (scene == null || frame == null || scene.media == null ||
+                scene.media.kind != VnSceneComposerMediaKind.ExternalVideo ||
+                string.IsNullOrEmpty(scene.media.reference)) return;
+
+            string expectedUrl;
+            try { expectedUrl = new Uri(System.IO.Path.GetFullPath(scene.media.reference)).AbsoluteUri; }
+            catch { expectedUrl = System.IO.Path.GetFullPath(scene.media.reference); }
+
+            VideoPlayer[] players = Resources.FindObjectsOfTypeAll<VideoPlayer>();
+            VideoPlayer match = null;
+            for (int i = players.Length - 1; i >= 0; i--)
+            {
+                VideoPlayer candidate = players[i];
+                if (candidate == null || candidate.targetTexture == null) continue;
+                if (!string.Equals(candidate.url ?? string.Empty, expectedUrl, StringComparison.OrdinalIgnoreCase)) continue;
+                match = candidate;
+                break;
+            }
+            if (match == null) return;
+
+            if (!match.isPrepared && !match.isPlaying)
+            {
+                try { match.Prepare(); }
+                catch { return; }
+            }
+
+            Texture videoTexture = match.targetTexture;
+            if (videoTexture == null) return;
+            var sample = new VnWorkshopBackgroundTransitionSample
+            {
+                SourceAlpha = 0f,
+                TargetAlpha = 1f,
+                CurtainCoverage = 0f,
+                CurtainPosition = 1f,
+                CurtainDarkness = 0f,
+                CurtainDirection = VnWorkshopCurtainDirection.LeftToRight,
+                Complete = true
+            };
+            new VnSceneComposerPlaybackFrame(frame, sample, videoTexture, videoTexture);
         }
 
         private static VnWorkshopPreviewScene SelectBaseScene(VnSceneComposerScene scene)
