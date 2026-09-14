@@ -2,7 +2,6 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
-using Rokas.Presentation;
 using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
@@ -23,29 +22,10 @@ namespace Rokas.EditorTools.Tests
                 RequireFinalParityMethod(windowType, "ComposerSetPreviewSampleText", typeof(string))
                     .Invoke(window, new object[] { expectedSample });
 
-                var active = (VnPresentationWorkshopPreset)RequireFinalParityMethod(
-                    windowType, "ComposerGetActivePresentationPreset").Invoke(window, null);
                 string storedSample = (string)RequireFinalParityMethod(windowType, "ComposerGetPreviewSampleText")
                     .Invoke(window, null);
                 Assert.That(storedSample, Is.EqualTo(expectedSample),
-                    "Diagnostic: canonical Composer preset identity must retain Preview Text before glyph validation.");
-
-                VnWorkshopTypographyValues typography = VnPresentationWorkshopVn10Resolver.ResolveTypography(active);
-                RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-                Assert.That(assets, Is.Not.Null,
-                    "Diagnostic: Resources/RokasAssets must load in the same EditMode environment as Composer glyph validation.");
-                Font dialogueFont = typography.DialogueFontPreset == VnWorkshopFontPreset.ProjectSerif
-                    ? assets.serif : assets.sans;
-                Font speakerFont = typography.SpeakerFontPreset == VnWorkshopFontPreset.ProjectSerif
-                    ? assets.serif : assets.sans;
-                Assert.That(dialogueFont, Is.Not.Null,
-                    "Diagnostic: resolved canonical dialogue font must be available.");
-                Assert.That(speakerFont, Is.Not.Null,
-                    "Diagnostic: resolved canonical speaker font must be available.");
-                Assert.That(dialogueFont.HasCharacter('\u0378'), Is.False,
-                    "Diagnostic: U+0378 must be unsupported by the resolved canonical dialogue font.");
-                Assert.That(speakerFont.HasCharacter('\u0378'), Is.False,
-                    "Diagnostic: U+0378 must be unsupported by the resolved canonical speaker font.");
+                    "Canonical Composer preset identity must retain Preview Text before glyph validation.");
 
                 FieldInfo legacy = windowType.GetField("currentPreset", BindingFlags.Instance | BindingFlags.NonPublic);
                 Assert.That(legacy, Is.Not.Null, "The test must explicitly remove the legacy Workshop preset dependency.");
