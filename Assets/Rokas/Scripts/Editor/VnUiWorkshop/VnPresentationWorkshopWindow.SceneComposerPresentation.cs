@@ -1,0 +1,285 @@
+using System;
+using UnityEditor;
+using UnityEngine;
+
+namespace Rokas.EditorTools.VnUiWorkshop
+{
+    public sealed partial class VnPresentationWorkshopWindow
+    {
+        [SerializeField] private bool _sceneComposerPresentationProjectDefaults;
+
+        public static string[] ComposerGetPresentationCapabilityIds()
+        {
+            return new[]
+            {
+                "preview-modes", "element-layout", "character-layout", "variants", "portable-preset", "profiles",
+                "typography", "preview-text", "typewriter", "expression", "character-enter-exit", "bounce",
+                "background-transition", "stage-layout", "speaker-focus", "ui-feedback", "timing", "resolution-preview"
+            };
+        }
+
+        public void ComposerSetPresentationScope(bool projectDefaults)
+        {
+            EnsureSceneComposerProject();
+            if (!projectDefaults) RequireSelectedScene();
+            _sceneComposerPresentationProjectDefaults = projectDefaults;
+            Repaint();
+        }
+
+        public VnPresentationWorkshopPreset ComposerGetActivePresentationPreset()
+        {
+            EnsureSceneComposerProject();
+            if (_sceneComposerPresentationProjectDefaults)
+            {
+                if (_sceneComposerProject.defaultPresentation == null)
+                    _sceneComposerProject.defaultPresentation = new VnPresentationWorkshopPreset();
+                return _sceneComposerProject.defaultPresentation;
+            }
+
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.presentationOverrides == null)
+                scene.presentationOverrides = new VnPresentationWorkshopPreset();
+            return scene.presentationOverrides;
+        }
+
+        public void ComposerSetElementLayout(VnWorkshopElement element, Vector2 positionDelta, Vector2 sizeDelta, float scaleMultiplier)
+        {
+            if (float.IsNaN(scaleMultiplier) || float.IsInfinity(scaleMultiplier) || scaleMultiplier < .05f || scaleMultiplier > 5f)
+                throw new ArgumentOutOfRangeException(nameof(scaleMultiplier));
+            MutateComposerPresentation("Edit VN Scene UI Layout", preset =>
+            {
+                VnWorkshopElementOverride target = preset.GetElementOverride(element);
+                target.hasPositionDelta = positionDelta != Vector2.zero;
+                target.positionDelta = positionDelta;
+                target.hasSizeDelta = sizeDelta != Vector2.zero;
+                target.sizeDelta = sizeDelta;
+                target.hasScaleMultiplier = !Mathf.Approximately(scaleMultiplier, 1f);
+                target.scaleMultiplier = scaleMultiplier;
+            });
+        }
+
+        public void ComposerResetElement(VnWorkshopElement element)
+        {
+            MutateComposerPresentation("Reset VN Scene UI Element", preset => preset.ResetElement(element));
+        }
+
+        public void ComposerResetAllPresentation()
+        {
+            MutateComposerPresentation("Reset VN Scene Presentation", preset => preset.ResetAll());
+        }
+
+        public void ComposerSetCharacterTransform(int characterIndex, Vector2 positionOffset, float scaleMultiplier)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.characters == null || characterIndex < 0 || characterIndex >= scene.characters.Count || scene.characters[characterIndex] == null)
+                throw new ArgumentOutOfRangeException(nameof(characterIndex));
+            if (float.IsNaN(scaleMultiplier) || float.IsInfinity(scaleMultiplier) || scaleMultiplier < .05f || scaleMultiplier > 5f)
+                throw new ArgumentOutOfRangeException(nameof(scaleMultiplier));
+
+            RecordSceneComposerUndo("Edit VN Scene Character Transform");
+            VnSceneComposerCharacter character = scene.characters[characterIndex];
+            character.hasPositionOffset = positionOffset != Vector2.zero;
+            character.positionOffset = positionOffset;
+            character.hasScaleMultiplier = !Mathf.Approximately(scaleMultiplier, 1f);
+            character.scaleMultiplier = scaleMultiplier;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerResetCharacterTransform(int characterIndex)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.characters == null || characterIndex < 0 || characterIndex >= scene.characters.Count || scene.characters[characterIndex] == null)
+                throw new ArgumentOutOfRangeException(nameof(characterIndex));
+            RecordSceneComposerUndo("Reset VN Scene Character Transform");
+            VnSceneComposerCharacter character = scene.characters[characterIndex];
+            character.hasPositionOffset = false;
+            character.positionOffset = Vector2.zero;
+            character.hasScaleMultiplier = false;
+            character.scaleMultiplier = 1f;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerSetTypography(
+            VnWorkshopFontPreset dialogueFontPreset, float dialogueFontSize, float dialogueCharacterSpacing,
+            float dialogueLineSpacing, float dialogueParagraphSpacing, VnWorkshopTextAlignment dialogueAlignment,
+            VnWorkshopFontPreset speakerFontPreset, float speakerFontSize, float speakerCharacterSpacing)
+        {
+            MutateComposerPresentation("Edit VN Scene Typography", preset =>
+                VnPresentationWorkshopVn10Resolver.SetTypographyPreviewOverrides(
+                    preset, dialogueFontPreset, dialogueFontSize, dialogueCharacterSpacing, dialogueLineSpacing,
+                    dialogueParagraphSpacing, dialogueAlignment, speakerFontPreset, speakerFontSize, speakerCharacterSpacing));
+        }
+
+        public void ComposerSetTypewriter(bool enabled, float charactersPerSecond, float baseCharacterDelay,
+            float commaPause, float periodPause, float ellipsisPause, float questionPause,
+            float exclamationPause, float lineStartDelay)
+        {
+            MutateComposerPresentation("Edit VN Scene Typewriter", preset =>
+                VnPresentationWorkshopVn10Resolver.SetTypewriterPreviewOverrides(
+                    preset, enabled, charactersPerSecond, baseCharacterDelay, commaPause, periodPause,
+                    ellipsisPause, questionPause, exclamationPause, lineStartDelay));
+        }
+
+        public void ComposerSetExpressionTransition(float duration, VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Expression Transition", preset =>
+                VnPresentationWorkshopVn10Resolver.SetExpressionTransitionPreviewOverrides(preset, duration, easing));
+        }
+
+        public void ComposerSetCharacterTransition(VnWorkshopCharacterTransitionMode mode, float duration,
+            float fadeDuration, float slideDistance, VnWorkshopSlideDirection slideDirection, VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Character Transition", preset =>
+                VnPresentationWorkshopVn10Resolver.SetCharacterTransitionPreviewOverrides(
+                    preset, mode, duration, fadeDuration, slideDistance, slideDirection, easing));
+        }
+
+        public void ComposerSetBounce(float amplitude, float duration, float scaleEmphasis, float overshoot,
+            VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Bounce", preset =>
+                VnPresentationWorkshopVn10Resolver.SetActionBouncePreviewOverrides(
+                    preset, amplitude, duration, scaleEmphasis, overshoot, easing));
+        }
+
+        public void ComposerSetBackgroundTransition(VnWorkshopBackgroundTransitionMode mode, float duration,
+            float curtainDarkness, VnWorkshopCurtainDirection direction, VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Background Transition", preset =>
+                VnPresentationWorkshopVn10Resolver.SetBackgroundTransitionPreviewOverrides(
+                    preset, mode, duration, curtainDarkness, direction, easing));
+        }
+
+        public void ComposerSetStageLayout(float leftX, float centerX, float rightX, float slotY,
+            float leftScale, float centerScale, float rightScale, float spacing, float repositionDuration,
+            VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Stage Layout", preset =>
+                VnPresentationWorkshopVn10Resolver.SetStageLayoutPreviewOverrides(
+                    preset, leftX, centerX, rightX, slotY, leftScale, centerScale, rightScale,
+                    spacing, repositionDuration, easing));
+        }
+
+        public void ComposerSetSpeakerFocus(float activeScale, float activeBrightness, float activeForwardOffset,
+            float inactiveScale, float inactiveBrightness, float inactiveAlpha, float transitionDuration,
+            VnWorkshopEasing easing)
+        {
+            MutateComposerPresentation("Edit VN Scene Speaker Focus", preset =>
+                VnPresentationWorkshopVn10Resolver.SetSpeakerFocusPreviewOverrides(
+                    preset, activeScale, activeBrightness, activeForwardOffset, inactiveScale,
+                    inactiveBrightness, inactiveAlpha, transitionDuration, easing));
+        }
+
+        public void ComposerSetUiFeedback(float hoverScale, float pressedScale, Vector2 pressedOffset,
+            float duration, VnWorkshopEasing easing, float hoverBrightness, float pressedBrightness,
+            float hoverAlpha, float pressedAlpha, float hoverOverlayHighlight, float pressedOverlayHighlight)
+        {
+            MutateComposerPresentation("Edit VN Scene UI Feedback", preset =>
+                VnPresentationWorkshopVn10Resolver.SetUiFeedbackPreviewOverrides(
+                    preset, hoverScale, pressedScale, pressedOffset, duration, easing, hoverBrightness,
+                    pressedBrightness, hoverAlpha, pressedAlpha, hoverOverlayHighlight, pressedOverlayHighlight));
+        }
+
+        public void ComposerSetTiming(float minimumBeatSettleDuration, float postTransitionBreathingRoom,
+            float autoPreviewSequenceGap)
+        {
+            MutateComposerPresentation("Edit VN Scene Timing", preset =>
+                VnPresentationWorkshopVn10Resolver.SetTimingPreviewOverrides(
+                    preset, minimumBeatSettleDuration, postTransitionBreathingRoom, autoPreviewSequenceGap));
+        }
+
+        public void ComposerApplyReferenceMotionProfile()
+        {
+            MutateComposerPresentation("Apply VN Reference Motion Profile",
+                VnPresentationWorkshopVn10Profiles.ApplyReferenceMotionPreview);
+        }
+
+        public void ComposerSetPreviewResolution(VnWorkshopResolution resolution)
+        {
+            if (!Enum.IsDefined(typeof(VnWorkshopResolution), resolution))
+                throw new ArgumentOutOfRangeException(nameof(resolution));
+            RecordSceneComposerUndo("Change VN Scene Preview Resolution");
+            previewResolution = resolution;
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerSavePresentationPreset(string projectRoot, string name)
+        {
+            VnPresentationWorkshopPreset active = ComposerGetActivePresentationPreset();
+            VnPresentationWorkshopStorage.SaveVariant(projectRoot, name, active);
+            SetSceneComposerStatus("Saved presentation preset '" + VnPresentationWorkshopStorage.SanitizeVariantName(name) + "'.", MessageType.Info);
+        }
+
+        public VnWorkshopImportResult ComposerLoadPresentationPreset(string projectRoot, string name)
+        {
+            VnWorkshopImportResult result = VnPresentationWorkshopStorage.LoadVariant(projectRoot, name);
+            if (result.Success && result.Document != null && result.Document.preset != null)
+                ApplyComposerPresentationPreset(result.Document.preset, result.Document.previewSampleText, "Load VN Scene Presentation Preset");
+            else
+                SetSceneComposerStatus("Presentation preset load failed: " + result.Error, MessageType.Error);
+            return result;
+        }
+
+        public string ComposerExportPresentationPresetJson(string name)
+        {
+            VnPresentationWorkshopPreset active = ComposerGetActivePresentationPreset();
+            string sample = VnWorkshopPreviewSampleStore.Get(active);
+            return VnPresentationWorkshopSerialization.Serialize(active, name ?? string.Empty, sample);
+        }
+
+        public VnWorkshopImportResult ComposerImportPresentationPresetJson(string json)
+        {
+            VnWorkshopImportResult result = VnPresentationWorkshopSerialization.Deserialize(json);
+            if (result.Success && result.Document != null && result.Document.preset != null)
+                ApplyComposerPresentationPreset(result.Document.preset, result.Document.previewSampleText, "Import VN Scene Presentation Preset");
+            else
+                SetSceneComposerStatus("Presentation preset import failed: " + result.Error, MessageType.Error);
+            return result;
+        }
+
+        public string ComposerGetPreviewSampleText()
+        {
+            return VnWorkshopPreviewSampleStore.Get(ComposerGetActivePresentationPreset());
+        }
+
+        public void ComposerSetPreviewSampleText(string text)
+        {
+            RecordSceneComposerUndo("Edit VN Preview Sample Text");
+            VnWorkshopPreviewSampleStore.Set(ComposerGetActivePresentationPreset(), text ?? string.Empty);
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerResetPreviewSampleText()
+        {
+            ComposerSetPreviewSampleText(VnWorkshopPreviewSampleStore.DefaultText);
+        }
+
+        private void ApplyComposerPresentationPreset(VnPresentationWorkshopPreset imported, string previewSampleText, string undoLabel)
+        {
+            if (imported == null) throw new ArgumentNullException(nameof(imported));
+            RecordSceneComposerUndo(undoLabel);
+            VnPresentationWorkshopPreset replacement = JsonUtility.FromJson<VnPresentationWorkshopPreset>(JsonUtility.ToJson(imported));
+            if (replacement == null) replacement = new VnPresentationWorkshopPreset();
+            if (_sceneComposerPresentationProjectDefaults)
+                _sceneComposerProject.defaultPresentation = replacement;
+            else
+                RequireSelectedScene().presentationOverrides = replacement;
+            VnWorkshopPreviewSampleStore.Set(replacement, previewSampleText ?? VnWorkshopPreviewSampleStore.DefaultText);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+            SetSceneComposerStatus("Presentation preset applied to " +
+                (_sceneComposerPresentationProjectDefaults ? "Project Defaults." : "Scene Overrides."), MessageType.Info);
+        }
+
+        private void MutateComposerPresentation(string undoLabel, Action<VnPresentationWorkshopPreset> mutation)
+        {
+            if (mutation == null) throw new ArgumentNullException(nameof(mutation));
+            RecordSceneComposerUndo(undoLabel);
+            mutation(ComposerGetActivePresentationPreset());
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+    }
+}
