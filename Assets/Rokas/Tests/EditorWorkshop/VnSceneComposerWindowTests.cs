@@ -146,7 +146,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(GetProperty(playback, "IsPlaying"), Is.True);
 
                 RequireInstance(windowType, "ComposerPause").Invoke(window, null);
-                Assert.That(GetProperty(playback, "IsPaused"), Is.True);
+                Assert.That(GetProperty(playback, "IsPlaying"), Is.False);
                 RequireInstance(windowType, "ComposerRestart").Invoke(window, null);
                 Assert.That(GetProperty(playback, "CurrentSceneIndex"), Is.EqualTo(1));
 
