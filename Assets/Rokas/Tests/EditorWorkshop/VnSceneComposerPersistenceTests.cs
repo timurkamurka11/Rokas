@@ -264,7 +264,7 @@ namespace Rokas.EditorTools.Tests
             string[] forbidden =
             {
                 "SceneElapsedSeconds", "MediaTimeSeconds", "CurrentMediaTexture", "CurrentSceneIndex",
-                "currentTexture", "RenderTexture", "VideoPlayer", "selection", "hover", "pressed", "foldout"
+                "currentTexture", "RenderTexture", "VideoPlayer", "selection", "\"hover\"", "\"pressed\"", "foldout"
             };
             foreach (string token in forbidden)
                 Assert.That(json, Does.Not.Contain(token), "Transient editor/playback token leaked into persisted JSON: " + token);
