@@ -198,6 +198,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-G playback EditMode
           artifactsPath: artifacts-vn-scene-composer-playback
+      - name: Run SC-H Composer persistence fixture
+        id: persistence-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPersistenceTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-H persistence EditMode
+          artifactsPath: artifacts-vn-scene-composer-persistence
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -211,4 +228,5 @@ jobs:
             artifacts-vn-scene-composer-composition
             artifacts-vn-scene-composer-transition-timing
             artifacts-vn-scene-composer-playback
+            artifacts-vn-scene-composer-persistence
           if-no-files-found: warn
