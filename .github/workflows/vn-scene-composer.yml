@@ -147,6 +147,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-D motion media EditMode
           artifactsPath: artifacts-vn-scene-composer-motion-media
+      - name: Run SC-E Composer composition fixture
+        id: composition-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerCompositionTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer SC-E composition EditMode
+          artifactsPath: artifacts-vn-scene-composer-composition
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -157,4 +174,5 @@ jobs:
             artifacts-vn-scene-composer-crud
             artifacts-vn-scene-composer-image-media
             artifacts-vn-scene-composer-motion-media
+            artifacts-vn-scene-composer-composition
           if-no-files-found: warn
