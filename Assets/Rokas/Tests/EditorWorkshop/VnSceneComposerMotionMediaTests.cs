@@ -181,18 +181,15 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void PlaybackControllerProvidesInjectableVideoFactoryForDeterministicRoutingTests()
+        public void PlaybackUsesInjectableVideoFactoryForDeterministicRoutingTests()
         {
-            Type controllerType = RequireType("VnSceneComposerPlaybackController");
-            Type projectType = RequireType("VnSceneComposerProject");
+            Type editingType = RequireType("VnSceneComposerMediaEditing");
             Type factoryType = RequireType("IVnSceneComposerVideoPreviewFactory");
-            ConstructorInfo constructor = controllerType.GetConstructor(
-                BindingFlags.Public | BindingFlags.Instance,
-                null,
-                new[] { projectType, factoryType },
-                null);
-            Assert.That(constructor, Is.Not.Null,
-                "Playback must accept an editor-only fake video provider so CI can prove routing/pause/restart/loop/scene-switch without pretending a fake mp4 decoded.");
+            PropertyInfo factory = editingType.GetProperty("VideoPreviewFactory", BindingFlags.Public | BindingFlags.Static);
+            Assert.That(factory, Is.Not.Null,
+                "Playback and static preview must share an editor-only injectable video factory so CI can prove routing without pretending a fake mp4 decoded.");
+            Assert.That(factory.PropertyType, Is.EqualTo(factoryType));
+            RequireStatic(editingType, "ResetVideoPreviewFactory");
         }
 
         [Test]
