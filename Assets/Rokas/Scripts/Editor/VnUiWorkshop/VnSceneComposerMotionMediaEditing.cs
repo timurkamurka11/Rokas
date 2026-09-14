@@ -62,6 +62,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public RenderTexture texture;
         public string warning;
         public bool loop;
+        public event Action Changed;
 
         private GameObject host;
         private VideoPlayer player;
@@ -190,6 +191,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             prepareRequested = false;
             previewFrameRequested = false;
             hasVisibleFrame = false;
+            Changed = null;
             if (player != null)
             {
                 player.prepareCompleted -= OnPrepared;
@@ -221,6 +223,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             prepareRequested = false;
             if (playRequested) player.Play();
             else RequestFirstFrame();
+            Changed?.Invoke();
         }
 
         private void RequestFirstFrame()
@@ -239,6 +242,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (previewFrameRequested && !playRequested && source.isPlaying) source.Pause();
             previewFrameRequested = false;
             EditorApplication.QueuePlayerLoopUpdate();
+            Changed?.Invoke();
         }
 
         private void OnError(VideoPlayer source, string message)
@@ -250,6 +254,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             previewFrameRequested = false;
             hasVisibleFrame = false;
             source.Stop();
+            Changed?.Invoke();
         }
 
         private static string ToFileUrl(string path)
