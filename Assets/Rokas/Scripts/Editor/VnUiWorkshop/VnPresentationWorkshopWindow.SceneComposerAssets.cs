@@ -20,38 +20,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.Refresh(GetProjectRoot());
             ClearSceneComposerThumbnailCache();
             ResetSceneComposerPlayback();
-            string warning = catalog.warnings != null && catalog.warnings.Count > 0
-                ? string.Join("\n", catalog.warnings)
-                : string.Empty;
-            SetSceneComposerStatus(string.IsNullOrEmpty(warning)
+            string[] issues = catalog.entries
+                .Where(entry => entry != null && (entry.missing || !string.IsNullOrWhiteSpace(entry.warning)))
+                .Select(entry => string.IsNullOrWhiteSpace(entry.warning)
+                    ? "Missing asset: " + (entry.assetPath ?? string.Empty)
+                    : entry.warning)
+                .Distinct()
+                .ToArray();
+            SetSceneComposerStatus(issues.Length == 0
                 ? "Scene Composer Asset Library refreshed."
-                : "Asset Library refreshed with warnings:\n" + warning,
-                string.IsNullOrEmpty(warning) ? MessageType.Info : MessageType.Warning);
+                : "Asset Library refreshed with warnings:\n" + string.Join("\n", issues),
+                issues.Length == 0 ? MessageType.Info : MessageType.Warning);
         }
 
         public string[] ComposerGetAvailableBackgroundAssetIds()
         {
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            return catalog.assets
-                .Where(entry => entry != null && entry.valid &&
-                    entry.purpose == VnSceneComposerAssetPurpose.Background &&
-                    !string.IsNullOrWhiteSpace(entry.assetId))
-                .OrderBy(entry => entry.displayName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(entry => entry.assetId, StringComparer.Ordinal)
-                .Select(entry => entry.assetId)
+            return VnSceneComposerAssetLibrary.FindByPurpose(GetProjectRoot(), VnSceneComposerAssetPurpose.Background)
+                .Where(entry => entry != null && !entry.missing && !string.IsNullOrWhiteSpace(entry.stableAssetId))
+                .Select(entry => entry.stableAssetId)
                 .ToArray();
         }
 
         public string[] ComposerGetAvailableBackgroundDisplayNames()
         {
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            return catalog.assets
-                .Where(entry => entry != null && entry.valid &&
-                    entry.purpose == VnSceneComposerAssetPurpose.Background &&
-                    !string.IsNullOrWhiteSpace(entry.assetId))
-                .OrderBy(entry => entry.displayName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(entry => entry.assetId, StringComparer.Ordinal)
-                .Select(entry => string.IsNullOrWhiteSpace(entry.displayName) ? entry.assetId : entry.displayName)
+            return VnSceneComposerAssetLibrary.FindByPurpose(GetProjectRoot(), VnSceneComposerAssetPurpose.Background)
+                .Where(entry => entry != null && !entry.missing && !string.IsNullOrWhiteSpace(entry.stableAssetId))
+                .Select(entry => string.IsNullOrWhiteSpace(entry.displayName) ? entry.stableAssetId : entry.displayName)
                 .ToArray();
         }
 
@@ -59,25 +53,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (string.IsNullOrWhiteSpace(assetId))
                 throw new ArgumentException("Background asset identity is required.", nameof(assetId));
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            VnSceneComposerAssetEntry entry = catalog.assets.FirstOrDefault(candidate => candidate != null &&
-                candidate.valid && candidate.purpose == VnSceneComposerAssetPurpose.Background &&
-                string.Equals(candidate.assetId, assetId, StringComparison.Ordinal));
+            VnSceneComposerAssetEntry entry = VnSceneComposerAssetLibrary
+                .FindByPurpose(GetProjectRoot(), VnSceneComposerAssetPurpose.Background)
+                .FirstOrDefault(candidate => candidate != null && !candidate.missing &&
+                    string.Equals(candidate.stableAssetId, assetId, StringComparison.Ordinal));
             if (entry == null)
                 throw new ArgumentException("Unknown or invalid Scene Composer background asset: " + assetId, nameof(assetId));
-            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(entry.projectPath);
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(entry.assetPath);
             if (texture == null)
-                throw new InvalidOperationException("Scene Composer background texture is missing: " + entry.projectPath);
+                throw new InvalidOperationException("Scene Composer background texture is missing: " + entry.assetPath);
             ComposerSetExistingRokasAsset(texture);
         }
 
         public Texture2D ComposerGetLibraryAssetThumbnail(string assetId)
         {
             if (string.IsNullOrWhiteSpace(assetId)) return null;
-            VnSceneComposerAssetCatalog catalog = VnSceneComposerAssetLibrary.LoadCatalog(GetProjectRoot());
-            VnSceneComposerAssetEntry entry = catalog.assets.FirstOrDefault(candidate => candidate != null &&
-                string.Equals(candidate.assetId, assetId, StringComparison.Ordinal));
-            return VnSceneComposerAssetLibrary.LoadThumbnail(entry);
+            VnSceneComposerAssetEntry entry = Enum.GetValues(typeof(VnSceneComposerAssetPurpose))
+                .Cast<VnSceneComposerAssetPurpose>()
+                .SelectMany(purpose => VnSceneComposerAssetLibrary.FindByPurpose(GetProjectRoot(), purpose))
+                .FirstOrDefault(candidate => candidate != null && !candidate.missing &&
+                    string.Equals(candidate.stableAssetId, assetId, StringComparison.Ordinal));
+            return entry == null ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(entry.assetPath);
         }
 
         private void DrawSceneComposerAssetLibraryControls(VnSceneComposerScene scene)
@@ -92,7 +88,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (GUILayout.Button("Refresh Assets")) ComposerRefreshAssets();
             if (GUILayout.Button("Open Managed Folder"))
             {
-                string relative = VnSceneComposerAssetLibrary.OnboardedRoot.Replace('/', Path.DirectorySeparatorChar);
+                string relative = VnSceneComposerAssetLibrary.ManagedRootRelative.Replace('/', Path.DirectorySeparatorChar);
                 EditorUtility.RevealInFinder(Path.Combine(GetProjectRoot(), relative));
             }
             EditorGUILayout.EndHorizontal();
@@ -114,12 +110,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         string display = string.IsNullOrWhiteSpace(_sceneComposerOnboardDisplayName)
                             ? Path.GetFileNameWithoutExtension(source)
                             : _sceneComposerOnboardDisplayName;
-                        VnSceneComposerAssetEntry entry = VnSceneComposerAssetLibrary.OnboardExternalImage(
+                        VnSceneComposerAssetOnboardResult result = VnSceneComposerAssetLibrary.Onboard(
                             GetProjectRoot(), source, _sceneComposerOnboardPurpose, display,
                             _sceneComposerOnboardPurpose == VnSceneComposerAssetPurpose.CharacterState ? _sceneComposerOnboardCharacter : string.Empty,
                             _sceneComposerOnboardPurpose == VnSceneComposerAssetPurpose.CharacterState ? _sceneComposerOnboardState : string.Empty);
+                        if (!result.Success || result.Entry == null)
+                            throw new InvalidOperationException(result.Error ?? "Asset onboarding failed.");
                         ComposerRefreshAssets();
-                        SetSceneComposerStatus("Onboarded asset: " + entry.displayName + ".", MessageType.Info);
+                        SetSceneComposerStatus((result.Duplicate ? "Already registered: " : "Onboarded asset: ") +
+                            result.Entry.displayName + ".", result.Duplicate ? MessageType.Warning : MessageType.Info);
                     }
                     catch (Exception exception)
                     {
