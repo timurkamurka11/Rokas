@@ -86,14 +86,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (string.IsNullOrWhiteSpace(json))
                 return VnSceneComposerImportResult.Failed("Scene Composer project JSON is empty.");
-            if (json.IndexOf("\"schemaVersion\"", StringComparison.Ordinal) < 0)
-                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing schemaVersion metadata.");
-            if (json.IndexOf("\"sourceHead\"", StringComparison.Ordinal) < 0)
-                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing sourceHead metadata.");
-            if (json.IndexOf("\"projectId\"", StringComparison.Ordinal) < 0)
-                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing projectId metadata.");
-            if (json.IndexOf("\"scenes\"", StringComparison.Ordinal) < 0)
-                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing ordered scene data.");
 
             VnSceneComposerProject project;
             try
@@ -105,6 +97,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return VnSceneComposerImportResult.Failed(
                     "Scene Composer project JSON could not be parsed: " + exception.Message);
             }
+
+            if (json.IndexOf("\"schemaVersion\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing schemaVersion metadata.");
+            if (json.IndexOf("\"sourceHead\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing sourceHead metadata.");
+            if (json.IndexOf("\"projectId\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing projectId metadata.");
+            if (json.IndexOf("\"scenes\"", StringComparison.Ordinal) < 0)
+                return VnSceneComposerImportResult.Failed("Scene Composer project JSON is missing ordered scene data.");
 
             if (project == null)
                 return VnSceneComposerImportResult.Failed("Scene Composer project JSON did not contain a project.");
