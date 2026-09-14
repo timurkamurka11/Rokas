@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.Presentation;
+using UnityEditor;
 using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
@@ -168,6 +170,127 @@ namespace Rokas.EditorTools.Tests
             Assert.That(error.InnerException.Message, Does.Contain("authored").IgnoreCase);
         }
 
+        [Test]
+        public void OnboardedFullBodyStateRendersOwnTextureWithFullUvWithoutProductionCatalogEntry()
+        {
+            Type purposeType = RequireType("VnSceneComposerAssetPurpose");
+            Type libraryType = RequireType("VnSceneComposerAssetLibrary");
+            string projectRoot = ProjectRoot();
+            string source = CreateTransparentPng(8, 14);
+            string stableId = null;
+            string assetPath = null;
+            try
+            {
+                object onboard = InvokeStatic(libraryType, "Onboard",
+                    new[] { typeof(string), typeof(string), purposeType, typeof(string), typeof(string), typeof(string) },
+                    projectRoot, source, Enum.Parse(purposeType, "CharacterState"), "Rendered Full Body", "Mina", "tdd_render_full_body");
+                Assert.That((bool)Get(onboard, "Success"), Is.True, Get(onboard, "Error") as string);
+                object entry = Get(onboard, "Entry");
+                stableId = (string)Get(entry, "stableAssetId");
+                assetPath = (string)Get(entry, "assetPath");
+                string stateId = (string)Get(entry, "stateId");
+                Assert.That(VnCharacterVisualCatalog.TryResolve(stateId, out _), Is.False,
+                    "Onboarded states must remain outside the production character catalog.");
+
+                Type projectType = RequireType("VnSceneComposerProject");
+                Type sceneType = RequireType("VnSceneComposerScene");
+                Type characterType = RequireType("VnSceneComposerCharacter");
+                Type slotType = RequireType("VnWorkshopStageSlot");
+                Type resolutionType = RequireType("VnWorkshopResolution");
+                Type compositionType = RequireType("VnSceneComposerComposition");
+                object project = Activator.CreateInstance(projectType);
+                object scene = Activator.CreateInstance(sceneType);
+                Set(scene, "speaker", "Mina");
+                ((IList)Get(scene, "characters")).Add(Character(characterType, slotType, "Mina", stateId, "Center"));
+
+                MethodInfo build = RequireStatic(compositionType, "BuildFrame",
+                    projectType, sceneType, resolutionType, typeof(Texture2D));
+                object frame = build.Invoke(null, new object[]
+                {
+                    project, scene, Enum.Parse(resolutionType, "Reference1920x1080"), null
+                });
+                object preview = ((IList)Get(frame, "ComposerCharacters"))[0];
+                Texture2D expected = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                Assert.That(expected, Is.Not.Null);
+                Assert.That(Get(preview, "Texture"), Is.SameAs(expected));
+                Assert.That((Rect)Get(preview, "Uv"), Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+                Assert.That(((Rect)Get(preview, "Body")).width, Is.GreaterThan(0f));
+                Assert.That(((Rect)Get(preview, "Body")).height, Is.GreaterThan(0f));
+            }
+            finally
+            {
+                CleanupLibraryAsset(libraryType, projectRoot, stableId, assetPath);
+                if (File.Exists(source)) File.Delete(source);
+            }
+        }
+
+        [Test]
+        public void WindowSelectorsDiscoverOnboardedStateAndBackgroundAndAssignWithoutGuidTyping()
+        {
+            Type purposeType = RequireType("VnSceneComposerAssetPurpose");
+            Type libraryType = RequireType("VnSceneComposerAssetLibrary");
+            string projectRoot = ProjectRoot();
+            string stateSource = CreateTransparentPng(8, 14);
+            string backgroundSource = CreateOpaquePng(16, 9);
+            string stateStableId = null;
+            string stateAssetPath = null;
+            string backgroundStableId = null;
+            string backgroundAssetPath = null;
+            UnityEngine.Object window = null;
+            try
+            {
+                object stateResult = InvokeStatic(libraryType, "Onboard",
+                    new[] { typeof(string), typeof(string), purposeType, typeof(string), typeof(string), typeof(string) },
+                    projectRoot, stateSource, Enum.Parse(purposeType, "CharacterState"), "Selector State", "Mina", "tdd_selector_state");
+                object stateEntry = Get(stateResult, "Entry");
+                stateStableId = (string)Get(stateEntry, "stableAssetId");
+                stateAssetPath = (string)Get(stateEntry, "assetPath");
+                string stateId = (string)Get(stateEntry, "stateId");
+
+                object backgroundResult = InvokeStatic(libraryType, "Onboard",
+                    new[] { typeof(string), typeof(string), purposeType, typeof(string), typeof(string), typeof(string) },
+                    projectRoot, backgroundSource, Enum.Parse(purposeType, "Background"), "Selector Background", string.Empty, string.Empty);
+                object backgroundEntry = Get(backgroundResult, "Entry");
+                backgroundStableId = (string)Get(backgroundEntry, "stableAssetId");
+                backgroundAssetPath = (string)Get(backgroundEntry, "assetPath");
+                string backgroundGuid = (string)Get(backgroundEntry, "assetGuid");
+
+                Type windowType = RequireType("VnPresentationWorkshopWindow");
+                window = ScriptableObject.CreateInstance(windowType);
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                RequireInstance(windowType, "ComposerRefreshAssets").Invoke(window, null);
+
+                string[] states = (string[])RequireInstance(windowType, "ComposerGetAuthoredStateIds", typeof(string))
+                    .Invoke(window, new object[] { "Mina" });
+                Assert.That(states, Does.Contain(stateId));
+                RequireInstance(windowType, "ComposerAddCharacter", typeof(string), typeof(string))
+                    .Invoke(window, new object[] { "Mina", stateId });
+
+                string[] backgrounds = (string[])RequireInstance(windowType, "ComposerGetAvailableBackgroundAssetIds")
+                    .Invoke(window, null);
+                Assert.That(backgrounds, Does.Contain(backgroundStableId));
+                RequireInstance(windowType, "ComposerSetLibraryBackground", typeof(string))
+                    .Invoke(window, new object[] { backgroundStableId });
+
+                IList scenes = (IList)Get(GetField(window, "_sceneComposerProject"), "scenes");
+                object scene = scenes[0];
+                IList characters = (IList)Get(scene, "characters");
+                Assert.That(characters.Count, Is.EqualTo(1));
+                Assert.That((string)Get(characters[0], "stateId"), Is.EqualTo(stateId));
+                object media = Get(scene, "media");
+                Assert.That(Get(media, "kind").ToString(), Is.EqualTo("ExistingRokasAsset"));
+                Assert.That((string)Get(media, "reference"), Is.EqualTo(backgroundGuid));
+            }
+            finally
+            {
+                if (window != null) UnityEngine.Object.DestroyImmediate(window);
+                CleanupLibraryAsset(libraryType, projectRoot, stateStableId, stateAssetPath);
+                CleanupLibraryAsset(libraryType, projectRoot, backgroundStableId, backgroundAssetPath);
+                if (File.Exists(stateSource)) File.Delete(stateSource);
+                if (File.Exists(backgroundSource)) File.Delete(backgroundSource);
+            }
+        }
+
         private static object Character(Type characterType, Type slotType,
             string characterId, string stateId, string slot)
         {
@@ -176,6 +299,69 @@ namespace Rokas.EditorTools.Tests
             Set(character, "stateId", stateId);
             Set(character, "stageSlot", Enum.Parse(slotType, slot));
             return character;
+        }
+
+        private static string ProjectRoot()
+        {
+            return Directory.GetParent(Application.dataPath).FullName;
+        }
+
+        private static string CreateTransparentPng(int width, int height)
+        {
+            string path = Path.Combine(Path.GetTempPath(), "rokas-vn-composition-state-" + Guid.NewGuid().ToString("N") + ".png");
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Color[] pixels = Enumerable.Range(0, width * height)
+                .Select(index => new Color(.2f, .7f, .9f, index % 3 == 0 ? .35f : 1f)).ToArray();
+            texture.SetPixels(pixels);
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(texture);
+            return path;
+        }
+
+        private static string CreateOpaquePng(int width, int height)
+        {
+            string path = Path.Combine(Path.GetTempPath(), "rokas-vn-composition-bg-" + Guid.NewGuid().ToString("N") + ".png");
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels(Enumerable.Repeat(new Color(.15f, .2f, .35f, 1f), width * height).ToArray());
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(texture);
+            return path;
+        }
+
+        private static void CleanupLibraryAsset(Type libraryType, string projectRoot, string stableId, string assetPath)
+        {
+            if (libraryType != null && !string.IsNullOrWhiteSpace(stableId))
+            {
+                MethodInfo unregister = libraryType.GetMethod("Unregister", BindingFlags.Public | BindingFlags.Static,
+                    null, new[] { typeof(string), typeof(string) }, null);
+                if (unregister != null) unregister.Invoke(null, new object[] { projectRoot, stableId });
+            }
+            if (!string.IsNullOrWhiteSpace(assetPath)) AssetDatabase.DeleteAsset(assetPath);
+            AssetDatabase.Refresh();
+        }
+
+        private static object InvokeStatic(Type type, string name, Type[] parameters, params object[] args)
+        {
+            MethodInfo method = RequireStatic(type, name, parameters);
+            try { return method.Invoke(null, args); }
+            catch (TargetInvocationException exception) { throw exception.InnerException ?? exception; }
+        }
+
+        private static MethodInfo RequireInstance(Type type, string name, params Type[] parameters)
+        {
+            MethodInfo method = type.GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                null, parameters ?? Type.EmptyTypes, null);
+            Assert.That(method, Is.Not.Null, "Missing Scene Composer window method: " + type.Name + "." + name);
+            return method;
+        }
+
+        private static object GetField(object instance, string name)
+        {
+            FieldInfo field = instance.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "Missing field: " + instance.GetType().Name + "." + name);
+            return field.GetValue(instance);
         }
 
         private static Type RequireType(string shortName)
