@@ -9,6 +9,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public sealed partial class VnPresentationWorkshopWindow
     {
+        [SerializeField] private VnWorkshopElement _sceneComposerUiFeedbackPreviewElement = VnWorkshopElement.Back;
+        [SerializeField] private VnWorkshopUiFeedbackState _sceneComposerUiFeedbackPreviewState = VnWorkshopUiFeedbackState.Normal;
+        [SerializeField] private float _sceneComposerUiFeedbackPreviewProgress = 1f;
+
         public string ComposerGetPreviewTextGlyphWarning()
         {
             string sample = ComposerGetPreviewSampleText();
@@ -46,13 +50,75 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopUiFeedbackState state,
             float normalizedProgress)
         {
-            VnWorkshopUiFeedbackValues values =
-                VnPresentationWorkshopVn10Resolver.ResolveUiFeedback(ComposerGetActivePresentationPreset());
+            EnsureSceneComposerProject();
+            VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(
+                _sceneComposerProject,
+                RequireSelectedScene());
+            VnWorkshopUiFeedbackValues values = VnPresentationWorkshopVn10Resolver.ResolveUiFeedback(effective);
             return VnPresentationWorkshopVn10Resolver.SampleUiFeedback(
                 element,
                 state,
                 Mathf.Clamp01(normalizedProgress),
                 values);
+        }
+
+        public void ComposerSetUiFeedbackPreview(
+            VnWorkshopElement element,
+            VnWorkshopUiFeedbackState state,
+            float normalizedProgress)
+        {
+            if (!IsSceneComposerUiFeedbackElement(element))
+                throw new ArgumentOutOfRangeException(nameof(element), element, "UI feedback preview supports Back, Next, Mute, Pause and Skip controls.");
+            if (!Enum.IsDefined(typeof(VnWorkshopUiFeedbackState), state))
+                throw new ArgumentOutOfRangeException(nameof(state), state, null);
+            if (float.IsNaN(normalizedProgress) || float.IsInfinity(normalizedProgress))
+                throw new ArgumentOutOfRangeException(nameof(normalizedProgress));
+
+            _sceneComposerUiFeedbackPreviewElement = element;
+            _sceneComposerUiFeedbackPreviewState = state;
+            _sceneComposerUiFeedbackPreviewProgress = Mathf.Clamp01(normalizedProgress);
+            Repaint();
+        }
+
+        public VnWorkshopElement ComposerGetUiFeedbackPreviewElement()
+        {
+            return _sceneComposerUiFeedbackPreviewElement;
+        }
+
+        public VnWorkshopUiFeedbackState ComposerGetUiFeedbackPreviewState()
+        {
+            return _sceneComposerUiFeedbackPreviewState;
+        }
+
+        public float ComposerGetUiFeedbackPreviewProgress()
+        {
+            return _sceneComposerUiFeedbackPreviewProgress;
+        }
+
+        private void DrawSceneComposerUiFeedbackPreview(Rect previewRect, VnWorkshopPreviewFrame frame)
+        {
+            if (frame == null || comparisonView != VnWorkshopComparisonView.Current) return;
+            if (!IsSceneComposerUiFeedbackElement(_sceneComposerUiFeedbackPreviewElement))
+                _sceneComposerUiFeedbackPreviewElement = VnWorkshopElement.Back;
+
+            VnWorkshopUiFeedbackSample sample = ComposerSampleUiFeedback(
+                _sceneComposerUiFeedbackPreviewElement,
+                _sceneComposerUiFeedbackPreviewState,
+                _sceneComposerUiFeedbackPreviewProgress);
+            VnPresentationWorkshopPreviewRenderer.DrawUiFeedbackPreview(
+                previewRect,
+                frame,
+                _sceneComposerUiFeedbackPreviewElement,
+                sample);
+        }
+
+        private static bool IsSceneComposerUiFeedbackElement(VnWorkshopElement element)
+        {
+            return element == VnWorkshopElement.Back ||
+                   element == VnWorkshopElement.Next ||
+                   element == VnWorkshopElement.MuteHitRegion ||
+                   element == VnWorkshopElement.PauseHitRegion ||
+                   element == VnWorkshopElement.SkipHitRegion;
         }
 
         private static bool ComposerFontHasGlyph(Font font, char character)
