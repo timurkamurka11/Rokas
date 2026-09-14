@@ -163,11 +163,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             hasVisibleFrame = false;
             if (!player.isPrepared)
             {
-                if (!prepareRequested)
-                {
-                    prepareRequested = true;
-                    player.Prepare();
-                }
+                // Restart is a transport action, not a decode/probe action. The real authoring
+                // preview owns explicit Prepare(), while deterministic routing tests can safely
+                // exercise Restart against an unprepared/dummy media binding.
                 return;
             }
 
