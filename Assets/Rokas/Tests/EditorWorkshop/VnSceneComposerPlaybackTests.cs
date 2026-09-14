@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
 {
-    public sealed class VnSceneComposerPlaybackTests
+    public sealed partial class VnSceneComposerPlaybackTests
     {
         private const string EditorAssembly = "Rokas.Editor";
         private const string Namespace = "Rokas.EditorTools.VnUiWorkshop.";
