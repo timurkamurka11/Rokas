@@ -93,6 +93,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = VnSceneComposerEditing.AddScene(
                 _sceneComposerProject, "Scene " + (_sceneComposerProject.scenes.Count + 1));
             _sceneComposerSelectedSceneId = scene.sceneId;
+            _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -113,6 +114,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RecordSceneComposerUndo("Duplicate VN Scene");
             VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(_sceneComposerProject, scene.sceneId);
             if (copy != null) _sceneComposerSelectedSceneId = copy.sceneId;
+            _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -146,6 +148,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 int nextIndex = Mathf.Clamp(deletedIndex, 0, _sceneComposerProject.scenes.Count - 1);
                 _sceneComposerSelectedSceneId = _sceneComposerProject.scenes[nextIndex].sceneId;
             }
+            _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -158,6 +161,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = _sceneComposerProject.scenes[index];
             if (scene == null) throw new InvalidOperationException("Selected Scene Composer scene is missing.");
             _sceneComposerSelectedSceneId = scene.sceneId;
+            _sceneComposerSelectedCharacterIndex = -1;
             Repaint();
         }
 
@@ -292,6 +296,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerProject = result.Project;
                 _sceneComposerSelectedSceneId = _sceneComposerProject.scenes != null && _sceneComposerProject.scenes.Count > 0 && _sceneComposerProject.scenes[0] != null
                     ? _sceneComposerProject.scenes[0].sceneId : string.Empty;
+                _sceneComposerSelectedCharacterIndex = -1;
                 EnsureSceneComposerEditorUpdateRegistered();
                 bool hasWarnings = result.Warnings != null && result.Warnings.Length > 0;
                 SetSceneComposerStatus(hasWarnings ? string.Join("\n", result.Warnings) : "Loaded Scene Composer project.",
@@ -421,15 +426,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             EditorGUILayout.LabelField("Scene Preview", EditorStyles.boldLabel);
             VnWorkshopPreviewFrame frame = null;
+            bool staticAuthoringPreview = _sceneComposerPlayback == null || _sceneComposerPlayback.CurrentFrame == null;
             try
             {
-                if (_sceneComposerPlayback != null && _sceneComposerPlayback.CurrentFrame != null) frame = _sceneComposerPlayback.CurrentFrame.WorkshopFrame;
-                if (frame == null && GetSelectedScene() != null) frame = ComposerBuildSelectedPreviewFrame();
+                if (!staticAuthoringPreview) frame = _sceneComposerPlayback.CurrentFrame.WorkshopFrame;
+                if (frame == null && GetSelectedScene() != null)
+                {
+                    ComposerPrepareSelectedVideoForAuthoring();
+                    frame = ComposerBuildSelectedPreviewFrameForDisplay();
+                    staticAuthoringPreview = true;
+                }
             }
             catch (Exception exception) { SetSceneComposerStatus("Preview failed: " + exception.Message, MessageType.Error); }
             float previewHeight = Mathf.Max(300f, position.height - 145f);
             Rect previewRect = EditorGUILayout.GetControlRect(false, previewHeight, GUILayout.ExpandWidth(true));
-            if (frame != null) VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, null, false);
+            if (frame != null)
+            {
+                VnWorkshopElement? selectedUi = staticAuthoringPreview && _sceneComposerSelectedCharacterIndex < 0
+                    ? (VnWorkshopElement?)selectedElement : null;
+                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview);
+                if (staticAuthoringPreview)
+                {
+                    DrawSceneComposerSelectionOverlay(previewRect, frame);
+                    HandleSceneComposerPreviewInput(previewRect, frame, Event.current);
+                    DrawSceneComposerVideoPreparationState(previewRect);
+                }
+            }
             else GUI.Box(previewRect, "Select or add a scene to preview.");
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(_sceneComposerProject.scenes.Count == 0))
@@ -610,6 +632,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     character.stateId = nextState; character.stageSlot = slot;
                     ResetSceneComposerPlayback(); MarkSceneComposerChanged();
                 }
+                DrawSceneComposerCharacterTransformControls(i, character);
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Set Active Speaker"))
                 {
@@ -619,6 +642,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (GUILayout.Button("Remove"))
                 {
                     RecordSceneComposerUndo("Remove VN Scene Character"); scene.characters.RemoveAt(i);
+                    _sceneComposerSelectedCharacterIndex = -1;
                     ResetSceneComposerPlayback(); MarkSceneComposerChanged();
                     EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical(); break;
                 }
@@ -630,23 +654,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)
         {
-            EditorGUILayout.Space(); EditorGUILayout.LabelField("VN10 Presentation", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Project Defaults → Scene Overrides", EditorStyles.miniLabel);
-            SerializedObject serialized = new SerializedObject(this); serialized.Update();
-            SerializedProperty project = serialized.FindProperty("_sceneComposerProject");
-            if (project != null)
-            {
-                SerializedProperty defaults = project.FindPropertyRelative("defaultPresentation");
-                _sceneComposerProjectDefaultsExpanded = EditorGUILayout.Foldout(_sceneComposerProjectDefaultsExpanded, "Project Defaults", true);
-                if (_sceneComposerProjectDefaultsExpanded && defaults != null) EditorGUILayout.PropertyField(defaults, true);
-                int sceneIndex = FindSceneIndex(scene.sceneId);
-                SerializedProperty scenes = project.FindPropertyRelative("scenes");
-                SerializedProperty sceneProperty = scenes != null && sceneIndex >= 0 && sceneIndex < scenes.arraySize ? scenes.GetArrayElementAtIndex(sceneIndex) : null;
-                SerializedProperty overrides = sceneProperty != null ? sceneProperty.FindPropertyRelative("presentationOverrides") : null;
-                _sceneComposerSceneOverridesExpanded = EditorGUILayout.Foldout(_sceneComposerSceneOverridesExpanded, "Scene Overrides", true);
-                if (_sceneComposerSceneOverridesExpanded && overrides != null) EditorGUILayout.PropertyField(overrides, true);
-            }
-            if (serialized.ApplyModifiedProperties()) { ResetSceneComposerPlayback(); Repaint(); }
+            DrawSceneComposerPresentationControls(scene);
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Scene Playback", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
             bool bounce = scene.transition != null && scene.transition.triggerActionBounce;
             bounce = EditorGUILayout.Toggle("Trigger Action Bounce", bounce);
