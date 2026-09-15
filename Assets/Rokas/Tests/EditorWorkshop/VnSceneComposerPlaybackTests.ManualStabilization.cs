@@ -33,19 +33,26 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(getElementRect, Is.Not.Null);
                 Rect dialogueRect = (Rect)getElementRect.Invoke(frame, new[] { dialogueText });
                 Vector2 screenSize = (Vector2)Get(frame, "ScreenSize");
+                Rect previewRect = new Rect(0f, 0f, screenSize.x, screenSize.y);
+                Type rendererType = RequireType("VnPresentationWorkshopPreviewRenderer");
+                MethodInfo logicalToPreview = rendererType.GetMethod("LogicalToPreview",
+                    BindingFlags.Public | BindingFlags.Static, null,
+                    new[] { typeof(Rect), typeof(Rect), frame.GetType() }, null);
+                Assert.That(logicalToPreview, Is.Not.Null);
+                Rect dialoguePreviewRect = (Rect)logicalToPreview.Invoke(null, new object[]
+                {
+                    previewRect, dialogueRect, frame
+                });
                 var click = new Event
                 {
                     type = EventType.MouseDown,
                     button = 0,
-                    mousePosition = dialogueRect.center
+                    mousePosition = dialoguePreviewRect.center
                 };
 
                 ManualRequireInstance(windowType, "HandleSceneComposerPreviewInput",
                         typeof(Rect), frame.GetType(), typeof(Event))
-                    .Invoke(window, new object[]
-                    {
-                        new Rect(0f, 0f, screenSize.x, screenSize.y), frame, click
-                    });
+                    .Invoke(window, new object[] { previewRect, frame, click });
 
                 object selected = ManualInvoke(windowType, window, "ComposerGetSelectedPresentationElement");
                 Assert.That(selected.ToString(), Is.EqualTo("DialogueText"),
