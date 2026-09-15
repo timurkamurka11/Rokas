@@ -215,9 +215,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (currentEvent.type == EventType.MouseDown && currentEvent.button == 0 && previewRect.Contains(currentEvent.mousePosition))
             {
                 Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(previewRect, currentEvent.mousePosition, frame);
-                bool selected = IsSceneComposerAdvancedLayoutEditingVisible()
-                    ? ComposerSelectPreviewObjectAt(logicalPoint)
-                    : ComposerSelectPreviewCharacterAt(frame, logicalPoint);
+                bool selected = ComposerSelectPreviewObjectAt(logicalPoint);
                 if (selected)
                 {
                     _sceneComposerDraggingPreviewObject = true;
@@ -251,6 +249,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             if (currentEvent.type != EventType.KeyDown || EditorGUIUtility.editingTextField) return;
+            if (currentEvent.keyCode == KeyCode.Backspace || currentEvent.keyCode == KeyCode.Delete)
+            {
+                if (DeleteSceneComposerSelectedObject()) currentEvent.Use();
+                return;
+            }
+
             Vector2 direction;
             switch (currentEvent.keyCode)
             {
@@ -262,12 +266,35 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             bool characterSelected = _sceneComposerSelectedCharacterIndex >= 0;
-            if (!characterSelected && !IsSceneComposerAdvancedLayoutEditingVisible()) return;
             RecordSceneComposerUndo(characterSelected ? "Nudge VN Scene Character" : "Nudge VN Scene UI Element");
             float step = currentEvent.shift ? SceneComposerLargeNudgeStep : SceneComposerNudgeStep;
             if (characterSelected) ApplySceneComposerCharacterDrag(direction * step);
             else ApplySceneComposerElementDrag(direction * step);
             currentEvent.Use();
+        }
+
+        private bool DeleteSceneComposerSelectedObject()
+        {
+            VnSceneComposerScene scene = GetSelectedScene();
+            if (scene == null) return false;
+
+            if (scene.characters != null && _sceneComposerSelectedCharacterIndex >= 0 &&
+                _sceneComposerSelectedCharacterIndex < scene.characters.Count)
+            {
+                RecordSceneComposerUndo("Remove VN Scene Character");
+                scene.characters.RemoveAt(_sceneComposerSelectedCharacterIndex);
+                _sceneComposerSelectedCharacterIndex = -1;
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+                return true;
+            }
+
+            if (scene.presentationOverrides == null) return false;
+            RecordSceneComposerUndo("Restore VN Scene UI Element");
+            scene.presentationOverrides.ResetElement(selectedElement);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+            return true;
         }
 
         private void ApplySceneComposerElementDrag(Vector2 logicalDelta)
@@ -297,12 +324,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerSelectionOverlay(Rect previewRect, VnWorkshopPreviewFrame frame)
         {
             if (frame == null) return;
-            if (_sceneComposerSelectedCharacterIndex < 0 || frame.ComposerCharacters == null ||
-                _sceneComposerSelectedCharacterIndex >= frame.ComposerCharacters.Length) return;
-            VnWorkshopPreviewCharacter character = frame.ComposerCharacters[_sceneComposerSelectedCharacterIndex];
-            if (character == null) return;
+            Rect logicalRect;
+            if (_sceneComposerSelectedCharacterIndex >= 0 && frame.ComposerCharacters != null &&
+                _sceneComposerSelectedCharacterIndex < frame.ComposerCharacters.Length)
+            {
+                VnWorkshopPreviewCharacter character = frame.ComposerCharacters[_sceneComposerSelectedCharacterIndex];
+                if (character == null) return;
+                logicalRect = character.Body;
+            }
+            else
+            {
+                logicalRect = selectedElement == VnWorkshopElement.DialoguePanel
+                    ? frame.DialoguePanel
+                    : frame.GetElementRect(selectedElement);
+                if (logicalRect.width <= 0f || logicalRect.height <= 0f) return;
+            }
+
             Rect canvasRect = FitSceneComposerPreviewRect(previewRect, frame.ScreenSize.x / Mathf.Max(1f, frame.ScreenSize.y));
-            Rect rect = VnPresentationWorkshopPreviewRenderer.LogicalToPreview(canvasRect, character.Body, frame);
+            Rect rect = VnPresentationWorkshopPreviewRenderer.LogicalToPreview(canvasRect, logicalRect, frame);
             DrawSceneComposerOutline(rect, 2f);
         }
 
