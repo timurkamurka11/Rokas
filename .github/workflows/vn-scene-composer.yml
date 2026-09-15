@@ -77,7 +77,7 @@ jobs:
     name: Scene Composer focused EditMode TDD
     needs: source-guard
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
       - name: Run SC-A Composer core fixture
@@ -233,6 +233,23 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Scene Composer SC-I window EditMode
           artifactsPath: artifacts-vn-scene-composer-window
+      - name: Run Scene Composer UX-A-H fixture
+        id: ux-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerUxTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer UX-A-H EditMode
+          artifactsPath: artifacts-vn-scene-composer-ux
       - name: Upload Scene Composer focused test evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -248,6 +265,7 @@ jobs:
             artifacts-vn-scene-composer-playback
             artifacts-vn-scene-composer-persistence
             artifacts-vn-scene-composer-window
+            artifacts-vn-scene-composer-ux
           if-no-files-found: warn
 
   workshop-vn10-editmode:
