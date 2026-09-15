@@ -60,9 +60,12 @@ namespace Rokas.EditorTools.Tests
                     "Logical/preview round trip must remain inside DialogueText. point=" + roundTripPoint +
                     ", dialogueLogical=" + dialogueRect);
 
-                MethodInfo hitTestUi = ManualRequireInstance(windowType, "HitTestSceneComposerUi",
-                    frame.GetType(), typeof(Vector2));
-                object directHit = hitTestUi.Invoke(window, new object[] { frame, roundTripPoint });
+                MethodInfo hitTestUi = windowType.GetMethod("HitTestSceneComposerUi",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                    null, new[] { frame.GetType(), typeof(Vector2) }, null);
+                Assert.That(hitTestUi, Is.Not.Null,
+                    "Missing static Scene Composer UI hit-test diagnostic helper.");
+                object directHit = hitTestUi.Invoke(null, new object[] { frame, roundTripPoint });
                 Assert.That(directHit, Is.Not.Null,
                     "UI hit-test must resolve the synthetic DialogueText point before Event dispatch.");
                 Assert.That(directHit.ToString(), Is.EqualTo("DialogueText"),
