@@ -38,7 +38,7 @@ namespace Rokas.EditorTools.Tests
             };
 
             CollectionAssert.AreEqual(required, labels);
-            Assert.That(VnPresentationWorkshopWindow.MenuPath, Is.EqualTo("ROKAS/VN UI Workshop"));
+            Assert.That(VnPresentationWorkshopWindow.MenuPath, Is.EqualTo("ROKAS/Редактор новеллы"));
         }
 
         [Test]
