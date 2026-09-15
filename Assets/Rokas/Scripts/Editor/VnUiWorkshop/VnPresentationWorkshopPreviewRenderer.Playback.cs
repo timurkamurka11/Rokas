@@ -44,8 +44,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             if (sample.CurtainCoverage > .0001f)
             {
-                Texture baseTexture = sample.TargetAlpha >= sample.SourceAlpha ? target : source;
-                GUI.DrawTexture(rect, baseTexture, ScaleMode.StretchToFill, false);
+                bool useTarget = sample.TargetAlpha >= sample.SourceAlpha;
+                Texture baseTexture = useTarget ? target : source;
+                VnSceneComposerMediaScaleMode baseScaleMode = useTarget ? frame.TargetScaleMode : frame.SourceScaleMode;
+                GUI.DrawTexture(rect, baseTexture, VnSceneComposerMediaEditing.ToUnityScaleMode(baseScaleMode), false);
                 float coverage = Mathf.Clamp01(sample.CurtainCoverage);
                 float width = rect.width * coverage;
                 Rect curtain = sample.CurtainDirection == VnWorkshopCurtainDirection.RightToLeft
@@ -58,16 +60,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
-            DrawTextureAlpha(rect, source, sample.SourceAlpha);
-            DrawTextureAlpha(rect, target, sample.TargetAlpha);
+            DrawTextureAlpha(rect, source, frame.SourceScaleMode, sample.SourceAlpha);
+            DrawTextureAlpha(rect, target, frame.TargetScaleMode, sample.TargetAlpha);
         }
 
-        private static void DrawTextureAlpha(Rect rect, Texture texture, float alpha)
+        private static void DrawTextureAlpha(Rect rect, Texture texture,
+            VnSceneComposerMediaScaleMode scaleMode, float alpha)
         {
             if (texture == null || alpha <= .0001f) return;
             Color previous = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
-            GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false);
+            GUI.DrawTexture(rect, texture, VnSceneComposerMediaEditing.ToUnityScaleMode(scaleMode), false);
             GUI.color = previous;
         }
 
