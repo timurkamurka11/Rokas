@@ -530,14 +530,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     DrawSceneComposerTextInspector(scene);
                     break;
                 case 3:
-                    DrawSceneComposerAnimationShortcut(
-                        "Анимация персонажа",
-                        "Все существующие параметры анимации персонажа сохранены в разделе «Дополнительно».");
+                    DrawSceneComposerCharacterAnimationInspector(scene);
                     break;
                 case 4:
-                    DrawSceneComposerAnimationShortcut(
-                        "Анимация сцены",
-                        "Все существующие параметры анимации сцены сохранены в разделе «Дополнительно».");
+                    DrawSceneComposerSceneAnimationInspector(scene);
                     break;
                 case 5:
                     DrawSceneComposerMediaInspector(scene);
@@ -880,12 +876,178 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return (display ?? string.Empty).Replace('_', ' ');
         }
 
-        private void DrawSceneComposerAnimationShortcut(string title, string message)
+        private void DrawSceneComposerAnimationScope()
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(message, MessageType.Info);
-            if (GUILayout.Button("Открыть Дополнительно"))
-                _sceneComposerInspectorSection = SceneComposerInspectorSections.Length - 1;
+            EditorGUILayout.LabelField("Применить:", EditorStyles.miniBoldLabel);
+            int current = _sceneComposerPresentationProjectDefaults ? 1 : 0;
+            int next = GUILayout.Toolbar(current, new[] { "Только к этой сцене", "Ко всем сценам" });
+            if (next != current) ComposerSetPresentationScope(next == 1);
+            EditorGUILayout.Space();
+        }
+
+        private VnPresentationWorkshopPreset GetSceneComposerAnimationDisplayPreset(VnSceneComposerScene scene)
+        {
+            if (_sceneComposerPresentationProjectDefaults)
+                return _sceneComposerProject.defaultPresentation ?? new VnPresentationWorkshopPreset();
+            return VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
+        }
+
+        private void DrawSceneComposerCharacterAnimationInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("Анимация персонажа", EditorStyles.boldLabel);
+            DrawSceneComposerAnimationScope();
+
+            VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
+            VnWorkshopCharacterTransitionValues transition = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(effective);
+            VnWorkshopExpressionTransitionValues expression = VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(effective);
+            VnWorkshopActionBounceValues bounce = VnPresentationWorkshopVn10Resolver.ResolveActionBounce(effective);
+
+            string[] enterLabels = { "Без анимации", "Плавное появление", "Появление со сдвигом" };
+            string[] exitLabels = { "Без анимации", "Плавное исчезновение", "Исчезновение со сдвигом" };
+            string[] directionLabels = { "Слева", "Справа" };
+
+            EditorGUI.BeginChangeCheck();
+            int nextMode = Mathf.Clamp((int)transition.Mode, 0, enterLabels.Length - 1);
+            EditorGUILayout.LabelField(new GUIContent("Появление", "Как персонаж появляется в сцене."), EditorStyles.miniBoldLabel);
+            nextMode = EditorGUILayout.Popup("Способ", nextMode, enterLabels);
+            EditorGUILayout.LabelField(new GUIContent("Исчезновение", "Как персонаж покидает сцену."), EditorStyles.miniBoldLabel);
+            nextMode = EditorGUILayout.Popup("Способ", nextMode, exitLabels);
+            float nextDuration = EditorGUILayout.Slider("Длительность, с", transition.Duration, 0f, 3f);
+            VnWorkshopSlideDirection nextDirection = transition.SlideDirection;
+            if ((VnWorkshopCharacterTransitionMode)nextMode == VnWorkshopCharacterTransitionMode.SlideAndFade)
+            {
+                int directionIndex = EditorGUILayout.Popup("Направление", (int)transition.SlideDirection, directionLabels);
+                nextDirection = (VnWorkshopSlideDirection)directionIndex;
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                ComposerSetCharacterTransition(
+                    (VnWorkshopCharacterTransitionMode)nextMode,
+                    nextDuration,
+                    transition.FadeDuration,
+                    transition.SlideDistance,
+                    nextDirection,
+                    transition.Easing);
+            }
+            EditorGUILayout.HelpBox(
+                "Появление и исчезновение используют единый профиль перехода, сохраняя существующую логику сцены.",
+                MessageType.None);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(new GUIContent("Смена позы / эмоции", "Как меняется внешний вид персонажа между сценами."), EditorStyles.miniBoldLabel);
+            EditorGUI.BeginChangeCheck();
+            float expressionDuration = EditorGUILayout.Slider("Длительность, с", expression.Duration, 0f, 3f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetExpressionTransition(expressionDuration, expression.Easing);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(new GUIContent("Акцент / движение", "Короткое движение, выделяющее персонажа."), EditorStyles.miniBoldLabel);
+            bool triggered = scene.transition != null && scene.transition.triggerActionBounce;
+            EditorGUI.BeginChangeCheck();
+            bool nextTriggered = EditorGUILayout.Toggle("Использовать акцент", triggered);
+            if (EditorGUI.EndChangeCheck())
+            {
+                RecordSceneComposerUndo("Toggle VN Scene Character Accent");
+                if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+                scene.transition.triggerActionBounce = nextTriggered;
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+            }
+            EditorGUI.BeginChangeCheck();
+            float nextAmplitude = EditorGUILayout.Slider("Сила", bounce.Amplitude, 0f, 100f);
+            float nextBounceDuration = EditorGUILayout.Slider("Длительность, с", bounce.Duration, .01f, 3f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetBounce(nextAmplitude, nextBounceDuration, bounce.ScaleEmphasis, bounce.Overshoot, bounce.Easing);
+        }
+
+        private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("Анимация сцены", EditorStyles.boldLabel);
+            DrawSceneComposerAnimationScope();
+
+            VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
+            VnWorkshopBackgroundTransitionValues background = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(effective);
+            VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
+            VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
+            VnWorkshopTimingValues timing = VnPresentationWorkshopVn10Resolver.ResolveTiming(effective);
+
+            EditorGUILayout.LabelField(new GUIContent("Переход фона", "Как фон меняется при переходе к этой сцене."), EditorStyles.miniBoldLabel);
+            string[] backgroundLabels = { "Без перехода", "Плавный переход", "Шторка" };
+            string[] curtainDirectionLabels = { "Справа налево", "Слева направо" };
+            EditorGUI.BeginChangeCheck();
+            int backgroundMode = EditorGUILayout.Popup("Способ", (int)background.Mode, backgroundLabels);
+            float backgroundDuration = EditorGUILayout.Slider("Длительность, с", background.Duration, 0f, 3f);
+            VnWorkshopCurtainDirection curtainDirection = background.Direction;
+            if ((VnWorkshopBackgroundTransitionMode)backgroundMode == VnWorkshopBackgroundTransitionMode.Curtain)
+            {
+                int direction = EditorGUILayout.Popup("Направление", (int)background.Direction, curtainDirectionLabels);
+                curtainDirection = (VnWorkshopCurtainDirection)direction;
+            }
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetBackgroundTransition(
+                    (VnWorkshopBackgroundTransitionMode)backgroundMode,
+                    backgroundDuration,
+                    background.CurtainDarkness,
+                    curtainDirection,
+                    background.Easing);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(new GUIContent("Расположение персонажей", "Как персонажи располагаются и перестраиваются на сцене."), EditorStyles.miniBoldLabel);
+            string[] characterCountLabels = { "Нет персонажей", "1 персонаж", "2 персонажа", "3 персонажа" };
+            string[] characterSlotLabels = { "", "Центр", "Слева / Справа", "Слева / Центр / Справа" };
+            int characterCount = Mathf.Clamp(scene.characters != null ? scene.characters.Count : 0, 0, 3);
+            EditorGUILayout.LabelField("Схема", characterCountLabels[characterCount] +
+                (characterCount > 0 ? " · " + characterSlotLabels[characterCount] : string.Empty));
+            EditorGUI.BeginChangeCheck();
+            float repositionDuration = EditorGUILayout.Slider("Длительность перестановки, с", stage.RepositionDuration, 0f, 3f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetStageLayout(
+                    stage.LeftX, stage.CenterX, stage.RightX, stage.SlotY,
+                    stage.LeftScale, stage.CenterScale, stage.RightScale, stage.Spacing,
+                    repositionDuration, stage.Easing);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(new GUIContent("Фокус говорящего", "Выделяет говорящего персонажа и приглушает остальных."), EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox("Фокус автоматически следует за полем «Говорящий» при нескольких персонажах.", MessageType.None);
+            EditorGUI.BeginChangeCheck();
+            float inactiveBrightness = EditorGUILayout.Slider("Яркость остальных", focus.InactiveBrightness, 0f, 1.5f);
+            float focusDuration = EditorGUILayout.Slider("Длительность фокуса, с", focus.TransitionDuration, 0f, 3f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetSpeakerFocus(
+                    focus.ActiveScale, focus.ActiveBrightness, focus.ActiveForwardOffset,
+                    focus.InactiveScale, inactiveBrightness, focus.InactiveAlpha,
+                    focusDuration, focus.Easing);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(new GUIContent("Тайминг сцены", "Продолжительность сцены и переход к следующей сцене."), EditorStyles.miniBoldLabel);
+            if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+            string[] advanceLabels = { "Вручную", "Автоматически" };
+            int currentAdvance = scene.timing.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;
+            EditorGUI.BeginChangeCheck();
+            int nextAdvance = EditorGUILayout.Popup(
+                new GUIContent("Переход к следующей сцене", "Как продолжается воспроизведение после этой сцены."),
+                currentAdvance, advanceLabels);
+            float nextAutoDuration = scene.timing.previewAutoDuration;
+            if (nextAdvance == 1)
+                nextAutoDuration = EditorGUILayout.FloatField("Длительность сцены, с", Mathf.Max(0f, nextAutoDuration));
+            if (EditorGUI.EndChangeCheck())
+            {
+                RecordSceneComposerUndo("Edit VN Scene Advance Timing");
+                scene.timing.previewAdvanceMode = nextAdvance == 1
+                    ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration
+                    : VnSceneComposerPreviewAdvanceMode.ManualBeat;
+                scene.timing.previewAutoDuration = Mathf.Max(0f, nextAutoDuration);
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+            }
+
+            if (nextAdvance == 1)
+            {
+                EditorGUI.BeginChangeCheck();
+                float sequenceGap = EditorGUILayout.Slider("Пауза между сценами, с", timing.AutoPreviewSequenceGap, 0f, 10f);
+                if (EditorGUI.EndChangeCheck())
+                    ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
+            }
         }
 
         private void DrawSceneComposerSceneSettings(VnSceneComposerScene scene)
@@ -907,23 +1069,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)
         {
             DrawSceneComposerPresentationControls(scene);
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Scene Playback", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            bool bounce = scene.transition != null && scene.transition.triggerActionBounce;
-            bounce = EditorGUILayout.Toggle("Trigger Action Bounce", bounce);
-            VnSceneComposerPreviewAdvanceMode advance = scene.timing != null ? scene.timing.previewAdvanceMode : VnSceneComposerPreviewAdvanceMode.ManualBeat;
-            advance = (VnSceneComposerPreviewAdvanceMode)EditorGUILayout.EnumPopup("Preview Advance", advance);
-            float duration = scene.timing != null ? scene.timing.previewAutoDuration : 2f;
-            if (advance == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration) duration = EditorGUILayout.FloatField("Auto Duration", duration);
-            if (EditorGUI.EndChangeCheck())
-            {
-                RecordSceneComposerUndo("Edit VN Scene Timing");
-                if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
-                if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
-                scene.transition.triggerActionBounce = bounce; scene.timing.previewAdvanceMode = advance;
-                scene.timing.previewAutoDuration = Mathf.Max(0f, duration); ResetSceneComposerPlayback(); MarkSceneComposerChanged();
-            }
         }
 
         private void EnsureSceneComposerProject()
