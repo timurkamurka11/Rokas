@@ -438,6 +438,124 @@ namespace Rokas.EditorTools.Tests
             Assert.That(presetLifecycle, Does.Contain("ComposerDeletePresentationPreset"));
         }
 
+        [Test]
+        public void UxH_BasicPreviewHidesEngineeringHitRegionsAndUiFeedbackPreview()
+        {
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string preview = ExtractMethodBody(scene, "private void DrawSceneComposerPreview()");
+
+            Assert.That(preview, Does.Contain("IsSceneComposerAdvancedLayoutEditingVisible()"),
+                "Hit-region/layout overlays must be explicitly gated by the advanced layout disclosure.");
+            Assert.That(preview, Does.Contain("IsSceneComposerAdvancedUiFeedbackPreviewVisible()"),
+                "UI-feedback simulation must be explicitly gated by the advanced effects disclosure.");
+            Assert.That(preview, Does.Not.Contain(
+                "VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,"),
+                "A normal static authoring preview must not automatically turn on hit-region debug rendering.");
+        }
+
+        [Test]
+        public void UxH_BasicProjectAndMediaHideTechnicalEditorInternals()
+        {
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string project = ExtractMethodBody(scene, "private void DrawSceneComposerProjectStorage()");
+            string media = ExtractMethodBody(scene, "private void DrawSceneComposerMediaInspector(VnSceneComposerScene scene)");
+            string additional = ExtractMethodBody(scene, "private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)");
+
+            Assert.That(project, Does.Not.Contain("\"ID проекта\""),
+                "Stable project IDs are engineering metadata and must not occupy the normal project header.");
+            Assert.That(project, Does.Not.Contain("Library/ROKAS/VnSceneComposer"),
+                "The editor storage path must not be exposed in basic authoring.");
+            Assert.That(media, Does.Not.Contain("\"Ресурс ROKAS\""),
+                "Basic media authoring should use image/GIF/video concepts rather than a raw project-asset field.");
+            Assert.That(media, Does.Not.Contain("production Assets"),
+                "Ordinary Russian media help must not leak internal English production terminology.");
+            Assert.That(additional, Does.Contain("DrawSceneComposerProjectTechnicalInfo();"),
+                "Project ID/storage diagnostics must remain reachable from Дополнительно instead of being deleted.");
+        }
+
+        [Test]
+        public void UxH_AdvancedScopeUsesUserIntentInsteadOfDefaultsOverridesJargon()
+        {
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string presentation = ExtractMethodBody(authoring,
+                "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+
+            Assert.That(presentation, Does.Contain("\"Применить:\""));
+            Assert.That(presentation, Does.Contain("\"Только к этой сцене\""));
+            Assert.That(presentation, Does.Contain("\"Ко всем сценам\""));
+            Assert.That(presentation, Does.Contain("ComposerSetPresentationScope"),
+                "Friendly scope wording must continue to mutate the canonical defaults/overrides model.");
+            Assert.That(presentation, Does.Not.Contain("\"Project Defaults\""));
+            Assert.That(presentation, Does.Not.Contain("\"Scene Overrides\""));
+        }
+
+        [Test]
+        public void UxH_AdvancedPresentationUsesRussianIntentHeadings()
+        {
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string presentation = ExtractMethodBody(authoring,
+                "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+            string sections = ExtractMethodBody(authoring,
+                "private void DrawSceneComposerSerializedPresentationSections(VnSceneComposerScene scene)");
+
+            Assert.That(presentation, Does.Contain("\"Разметка интерфейса\""),
+                "Exact layout and hit-region editing must live under a clear Russian advanced heading.");
+            Assert.That(sections, Does.Contain("\"Расширенная типографика\""));
+            Assert.That(sections, Does.Contain("\"Эффекты интерфейса\""));
+            Assert.That(presentation, Does.Not.Contain("\"UI Layout / Hit Regions\""));
+            Assert.That(presentation, Does.Not.Contain("\"Presentation\""));
+            Assert.That(sections, Does.Not.Contain("\"Advanced / Full Preset\""));
+        }
+
+        [Test]
+        public void UxH_PreviewTextGlyphAndPresetJsonRemainAdvancedAndPreserved()
+        {
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string additional = ExtractMethodBody(scene, "private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)");
+            string presentation = ExtractMethodBody(authoring,
+                "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+            string sample = ExtractMethodBody(authoring, "private void DrawSceneComposerPreviewTextControls()");
+            string presets = ExtractMethodBody(authoring, "private void DrawSceneComposerPresetControls()");
+
+            Assert.That(additional, Does.Contain("DrawSceneComposerPresentationInspector(scene);"));
+            Assert.That(presentation, Does.Contain("DrawSceneComposerPreviewTextControls();"));
+            Assert.That(presentation, Does.Contain("DrawSceneComposerPresetControls();"));
+            Assert.That(sample, Does.Contain("ComposerGetPreviewTextGlyphWarning()"),
+                "Glyph diagnostics must remain available inside the advanced typography-test path.");
+            Assert.That(presets, Does.Contain("ComposerExportPresentationPresetJson"));
+            Assert.That(presets, Does.Contain("ComposerImportPresentationPresetJson"),
+                "JSON import/export must remain available in advanced presentation templates.");
+        }
+
+        [Test]
+        public void UxH_AssetLibraryHasFriendlyRussianAdvancedEntryPoint()
+        {
+            string assets = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAssets.cs");
+            string controls = ExtractMethodBody(assets,
+                "private void DrawSceneComposerAssetLibraryControls(VnSceneComposerScene scene)");
+
+            Assert.That(controls, Does.Contain("\"Библиотека ресурсов\""));
+            Assert.That(controls, Does.Contain("\"Обновить\""));
+            Assert.That(controls, Does.Contain("\"Открыть папку\""));
+            Assert.That(controls, Does.Contain("ComposerSetExistingRokasAsset"),
+                "Moving the raw project asset picker out of basic Media must not remove that capability.");
+            Assert.That(controls, Does.Not.Contain("\"Asset Library / Onboard Asset\""));
+            Assert.That(controls, Does.Not.Contain("\"Refresh Assets\""));
+            Assert.That(controls, Does.Not.Contain("\"Open Managed Folder\""));
+        }
+
+        [Test]
+        public void UxH_BasicPlaybackStatusUsesRussianTimeUnit()
+        {
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string preview = ExtractMethodBody(scene, "private void DrawSceneComposerPreview()");
+
+            Assert.That(preview, Does.Contain("+ \" с\""),
+                "The ordinary playback status must use the Russian seconds abbreviation.");
+            Assert.That(preview, Does.Not.Contain("+ \"s\""));
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
