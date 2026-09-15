@@ -81,6 +81,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             EnsureSceneComposerProject();
             _sceneComposerWorkspaceActive = true;
+            comparisonView = VnWorkshopComparisonView.Current;
             EnsureSelectedScene();
             EnsureSceneComposerEditorUpdateRegistered();
             _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
@@ -500,7 +501,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.EndHorizontal();
 
             VnWorkshopPreviewFrame frame = null;
-            bool staticAuthoringPreview = _sceneComposerPlayback == null || _sceneComposerPlayback.CurrentFrame == null;
+            bool staticAuthoringPreview = _sceneComposerPlayback == null ||
+                                          !_sceneComposerPlayback.IsPlaying ||
+                                          _sceneComposerPlayback.CurrentFrame == null;
             try
             {
                 if (!staticAuthoringPreview) frame = _sceneComposerPlayback.CurrentFrame.WorkshopFrame;
@@ -589,30 +592,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             switch (_sceneComposerInspectorSection)
             {
-                case 0:
-                    DrawSceneComposerBackgroundInspector(scene);
-                    break;
-                case 1:
-                    DrawSceneComposerCharacterInspector(scene);
-                    break;
-                case 2:
-                    DrawSceneComposerTextInspector(scene);
-                    break;
-                case 3:
-                    DrawSceneComposerCharacterAnimationInspector(scene);
-                    break;
-                case 4:
-                    DrawSceneComposerSceneAnimationInspector(scene);
-                    break;
-                case 5:
-                    DrawSceneComposerMediaInspector(scene);
-                    break;
-                case 6:
-                    DrawSceneComposerSceneSettings(scene);
-                    break;
-                default:
-                    DrawSceneComposerAdditionalInspector(scene);
-                    break;
+                case 0: DrawSceneComposerBackgroundInspector(scene); break;
+                case 1: DrawSceneComposerCharacterInspector(scene); break;
+                case 2: DrawSceneComposerTextInspector(scene); break;
+                case 3: DrawSceneComposerCharacterAnimationInspector(scene); break;
+                case 4: DrawSceneComposerSceneAnimationInspector(scene); break;
+                case 5: DrawSceneComposerMediaInspector(scene); break;
+                case 6: DrawSceneComposerSceneSettings(scene); break;
+                default: DrawSceneComposerAdditionalInspector(scene); break;
             }
 
             EditorGUILayout.EndVertical();
@@ -677,7 +664,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 EditorGUILayout.HelpBox("В библиотеке пока нет фонов. Добавить фон можно в «Дополнительно».", MessageType.Info);
                 return;
             }
-
             _sceneComposerBackgroundAssetIndex = Mathf.Clamp(_sceneComposerBackgroundAssetIndex, 0, backgroundIds.Length - 1);
             _sceneComposerBackgroundAssetIndex = EditorGUILayout.Popup("Фон", _sceneComposerBackgroundAssetIndex, backgroundNames);
             Texture2D thumbnail = ComposerGetLibraryAssetThumbnail(backgroundIds[_sceneComposerBackgroundAssetIndex]);
@@ -755,50 +741,37 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
             VnWorkshopTypographyValues typography = VnPresentationWorkshopVn10Resolver.ResolveTypography(effective);
             VnWorkshopTypewriterValues typewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(effective);
-
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Оформление текста", EditorStyles.miniBoldLabel);
             int fontIndex = typography.DialogueFontPreset == VnWorkshopFontPreset.ProjectSerif ? 1 : 0;
             EditorGUI.BeginChangeCheck();
             int nextFontIndex = EditorGUILayout.Popup("Шрифт", fontIndex, new[] { "Без засечек", "С засечками" });
             float nextFontSize = EditorGUILayout.Slider("Размер текста", typography.DialogueFontSize, 8f, 96f);
-            float nextSpeed = EditorGUILayout.Slider(
-                new GUIContent("Скорость текста", "Скорость появления символов во время реплики."),
-                typewriter.CharactersPerSecond, 1f, 240f);
+            float nextSpeed = EditorGUILayout.Slider(new GUIContent("Скорость текста", "Скорость появления символов во время реплики."), typewriter.CharactersPerSecond, 1f, 240f);
             if (EditorGUI.EndChangeCheck())
             {
-                VnWorkshopFontPreset nextFont = nextFontIndex == 1
-                    ? VnWorkshopFontPreset.ProjectSerif
-                    : VnWorkshopFontPreset.ProjectSans;
+                VnWorkshopFontPreset nextFont = nextFontIndex == 1 ? VnWorkshopFontPreset.ProjectSerif : VnWorkshopFontPreset.ProjectSans;
                 SetSceneComposerBasicTextStyle(nextFont, nextFontSize, nextSpeed);
             }
         }
 
-        private void SetSceneComposerBasicTextStyle(
-            VnWorkshopFontPreset dialogueFontPreset,
-            float dialogueFontSize,
-            float charactersPerSecond)
+        private void SetSceneComposerBasicTextStyle(VnWorkshopFontPreset dialogueFontPreset, float dialogueFontSize, float charactersPerSecond)
         {
             EnsureSceneComposerProject();
             VnPresentationWorkshopPreset inheritedPreset = _sceneComposerPresentationProjectDefaults
                 ? new VnPresentationWorkshopPreset()
                 : (_sceneComposerProject.defaultPresentation ?? new VnPresentationWorkshopPreset());
-            VnWorkshopTypographyValues inheritedTypography =
-                VnPresentationWorkshopVn10Resolver.ResolveTypography(inheritedPreset);
-            VnWorkshopTypewriterValues inheritedTypewriter =
-                VnPresentationWorkshopVn10Resolver.ResolveTypewriter(inheritedPreset);
-
+            VnWorkshopTypographyValues inheritedTypography = VnPresentationWorkshopVn10Resolver.ResolveTypography(inheritedPreset);
+            VnWorkshopTypewriterValues inheritedTypewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(inheritedPreset);
             MutateComposerPresentation("Edit VN Scene Basic Text Style", preset =>
             {
                 if (preset.typography == null) preset.typography = new VnWorkshopTypographyOverride();
                 if (preset.typewriter == null) preset.typewriter = new VnWorkshopTypewriterOverride();
-
                 preset.typography.hasDialogueFontPreset = dialogueFontPreset != inheritedTypography.DialogueFontPreset;
                 preset.typography.dialogueFontPreset = dialogueFontPreset;
                 preset.typography.hasDialogueFontSize = !Mathf.Approximately(dialogueFontSize, inheritedTypography.DialogueFontSize);
                 preset.typography.dialogueFontSize = dialogueFontSize;
-                preset.typewriter.hasCharactersPerSecond = !Mathf.Approximately(
-                    charactersPerSecond, inheritedTypewriter.CharactersPerSecond);
+                preset.typewriter.hasCharactersPerSecond = !Mathf.Approximately(charactersPerSecond, inheritedTypewriter.CharactersPerSecond);
                 preset.typewriter.charactersPerSecond = charactersPerSecond;
             });
         }
@@ -808,7 +781,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.LabelField("Персонажи", EditorStyles.boldLabel);
             if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
             string[] characters = VnSceneComposerCharacterStateResolver.GetCharacters();
-
             if (scene.characters.Count == 0)
             {
                 EditorGUILayout.HelpBox("В сцене пока нет персонажей.", MessageType.Info);
@@ -820,8 +792,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         if (states.Length > 0) ComposerAddCharacter(characters[0], states[0]);
                     }
                 }
-                if (characters.Length == 0)
-                    EditorGUILayout.HelpBox("В каталоге пока нет доступных персонажей и поз.", MessageType.Warning);
+                if (characters.Length == 0) EditorGUILayout.HelpBox("В каталоге пока нет доступных персонажей и поз.", MessageType.Warning);
                 return;
             }
 
@@ -832,8 +803,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (listed == null) continue;
                 bool selected = _sceneComposerSelectedCharacterIndex == i;
                 string stateName = GetSceneComposerCharacterStateDisplayName(listed.stateId);
-                string rowLabel = (selected ? "● " : string.Empty) +
-                    (listed.characterId ?? string.Empty) +
+                string rowLabel = (selected ? "● " : string.Empty) + (listed.characterId ?? string.Empty) +
                     (string.IsNullOrEmpty(stateName) ? string.Empty : " · " + stateName);
                 if (GUILayout.Button(rowLabel, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
                 {
@@ -851,8 +821,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
 
-            if (_sceneComposerSelectedCharacterIndex < 0 || _sceneComposerSelectedCharacterIndex >= scene.characters.Count ||
-                scene.characters[_sceneComposerSelectedCharacterIndex] == null)
+            if (_sceneComposerSelectedCharacterIndex < 0 || _sceneComposerSelectedCharacterIndex >= scene.characters.Count || scene.characters[_sceneComposerSelectedCharacterIndex] == null)
             {
                 EditorGUILayout.HelpBox("Выберите персонажа в списке или на сцене.", MessageType.Info);
                 return;
@@ -862,83 +831,55 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerCharacter character = scene.characters[selectedIndex];
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Выбранный персонаж", EditorStyles.miniBoldLabel);
-
-            int characterIndex = Mathf.Max(0, Array.FindIndex(characters,
-                name => string.Equals(name, character.characterId, StringComparison.OrdinalIgnoreCase)));
+            int characterIndex = Mathf.Max(0, Array.FindIndex(characters, name => string.Equals(name, character.characterId, StringComparison.OrdinalIgnoreCase)));
             string currentCharacter = characters.Length > 0 ? characters[characterIndex] : character.characterId;
             string[] currentStates = ComposerGetAuthoredStateIds(currentCharacter);
             int currentStateIndex = Mathf.Max(0, Array.IndexOf(currentStates, character.stateId));
-            string[] currentStateNames = currentStates.Select(GetSceneComposerCharacterStateDisplayName).ToArray();
-
-            int currentPosition = character.hasPositionOffset ? 3 :
-                (character.stageSlot == VnWorkshopStageSlot.Left ? 0 :
-                    (character.stageSlot == VnWorkshopStageSlot.Right ? 2 : 1));
+            int currentPosition = character.hasPositionOffset ? 3 : (character.stageSlot == VnWorkshopStageSlot.Left ? 0 : (character.stageSlot == VnWorkshopStageSlot.Right ? 2 : 1));
             string[] positionLabels = { "Слева", "Центр", "Справа", "Свободно" };
             float currentScale = character.hasScaleMultiplier ? character.scaleMultiplier : 1f;
-
             EditorGUI.BeginChangeCheck();
-            int nextCharacterIndex = characters.Length > 0
-                ? EditorGUILayout.Popup("Персонаж", characterIndex, characters)
-                : 0;
+            int nextCharacterIndex = characters.Length > 0 ? EditorGUILayout.Popup("Персонаж", characterIndex, characters) : 0;
             string nextCharacter = characters.Length > 0 ? characters[nextCharacterIndex] : character.characterId;
             string[] nextStates = ComposerGetAuthoredStateIds(nextCharacter);
             string[] nextStateNames = nextStates.Select(GetSceneComposerCharacterStateDisplayName).ToArray();
             int nextStateIndex = string.Equals(nextCharacter, currentCharacter, StringComparison.OrdinalIgnoreCase)
-                ? Mathf.Clamp(currentStateIndex, 0, Mathf.Max(0, nextStates.Length - 1))
-                : 0;
+                ? Mathf.Clamp(currentStateIndex, 0, Mathf.Max(0, nextStates.Length - 1)) : 0;
             if (nextStates.Length > 0)
-                nextStateIndex = EditorGUILayout.Popup(
-                    new GUIContent("Поза / эмоция", "Внешний вид персонажа в этой сцене."),
-                    nextStateIndex, nextStateNames);
+                nextStateIndex = EditorGUILayout.Popup(new GUIContent("Поза / эмоция", "Внешний вид персонажа в этой сцене."), nextStateIndex, nextStateNames);
             string nextState = nextStates.Length > 0 ? nextStates[nextStateIndex] : character.stateId;
-            int nextPosition = EditorGUILayout.Popup(
-                new GUIContent("Положение", "Быстро разместить персонажа на сцене."),
-                currentPosition, positionLabels);
-            float nextScale = EditorGUILayout.Slider(
-                new GUIContent("Размер", "Размер персонажа в кадре."),
-                currentScale, .05f, 5f);
-
+            int nextPosition = EditorGUILayout.Popup(new GUIContent("Положение", "Быстро разместить персонажа на сцене."), currentPosition, positionLabels);
+            float nextScale = EditorGUILayout.Slider(new GUIContent("Размер", "Размер персонажа в кадре."), currentScale, .05f, 5f);
             if (EditorGUI.EndChangeCheck())
             {
                 RecordSceneComposerUndo("Edit VN Scene Character");
                 character.characterId = nextCharacter;
                 character.stateId = nextState;
-                if (nextPosition == 3)
-                {
-                    character.hasPositionOffset = true;
-                }
+                if (nextPosition == 3) character.hasPositionOffset = true;
                 else
                 {
-                    character.stageSlot = nextPosition == 0 ? VnWorkshopStageSlot.Left :
-                        (nextPosition == 2 ? VnWorkshopStageSlot.Right : VnWorkshopStageSlot.Center);
+                    character.stageSlot = nextPosition == 0 ? VnWorkshopStageSlot.Left : (nextPosition == 2 ? VnWorkshopStageSlot.Right : VnWorkshopStageSlot.Center);
                     character.hasPositionOffset = false;
                     character.positionOffset = Vector2.zero;
                 }
                 character.hasScaleMultiplier = !Mathf.Approximately(nextScale, 1f);
                 character.scaleMultiplier = nextScale;
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
+                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
 
             DrawSceneComposerCharacterTransformControls(selectedIndex, character);
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Сделать говорящим"))
             {
-                RecordSceneComposerUndo("Set VN Scene Speaker");
-                scene.narration = false;
-                scene.speaker = character.characterId;
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
+                RecordSceneComposerUndo("Set VN Scene Speaker"); scene.narration = false; scene.speaker = character.characterId;
+                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
             if (GUILayout.Button("Удалить"))
             {
                 RecordSceneComposerUndo("Remove VN Scene Character");
                 scene.characters.RemoveAt(selectedIndex);
-                _sceneComposerSelectedCharacterIndex = scene.characters.Count == 0
-                    ? -1
-                    : Mathf.Clamp(selectedIndex, 0, scene.characters.Count - 1);
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
+                _sceneComposerSelectedCharacterIndex = scene.characters.Count == 0 ? -1 : Mathf.Clamp(selectedIndex, 0, scene.characters.Count - 1);
+                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
             EditorGUILayout.EndHorizontal();
         }
@@ -949,8 +890,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return stateId ?? string.Empty;
             string display = string.IsNullOrWhiteSpace(state.DisplayName) ? state.Id : state.DisplayName;
             string prefix = (state.Character ?? string.Empty) + "_";
-            if (!string.IsNullOrEmpty(prefix) && display.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                display = display.Substring(prefix.Length);
+            if (!string.IsNullOrEmpty(prefix) && display.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) display = display.Substring(prefix.Length);
             return (display ?? string.Empty).Replace('_', ' ');
         }
 
@@ -974,16 +914,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             EditorGUILayout.LabelField("Анимация персонажа", EditorStyles.boldLabel);
             DrawSceneComposerAnimationScope();
-
             VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
             VnWorkshopCharacterTransitionValues transition = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(effective);
             VnWorkshopExpressionTransitionValues expression = VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(effective);
             VnWorkshopActionBounceValues bounce = VnPresentationWorkshopVn10Resolver.ResolveActionBounce(effective);
-
             string[] enterLabels = { "Без анимации", "Плавное появление", "Появление со сдвигом" };
             string[] exitLabels = { "Без анимации", "Плавное исчезновение", "Исчезновение со сдвигом" };
             string[] directionLabels = { "Слева", "Справа" };
-
             EditorGUI.BeginChangeCheck();
             int nextMode = Mathf.Clamp((int)transition.Mode, 0, enterLabels.Length - 1);
             EditorGUILayout.LabelField(new GUIContent("Появление", "Как персонаж появляется в сцене."), EditorStyles.miniBoldLabel);
@@ -998,26 +935,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 nextDirection = (VnWorkshopSlideDirection)directionIndex;
             }
             if (EditorGUI.EndChangeCheck())
-            {
-                ComposerSetCharacterTransition(
-                    (VnWorkshopCharacterTransitionMode)nextMode,
-                    nextDuration,
-                    transition.FadeDuration,
-                    transition.SlideDistance,
-                    nextDirection,
-                    transition.Easing);
-            }
-            EditorGUILayout.HelpBox(
-                "Появление и исчезновение используют единый профиль перехода, сохраняя существующую логику сцены.",
-                MessageType.None);
-
+                ComposerSetCharacterTransition((VnWorkshopCharacterTransitionMode)nextMode, nextDuration, transition.FadeDuration, transition.SlideDistance, nextDirection, transition.Easing);
+            EditorGUILayout.HelpBox("Появление и исчезновение используют единый профиль перехода, сохраняя существующую логику сцены.", MessageType.None);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Смена позы / эмоции", "Как меняется внешний вид персонажа между сценами."), EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
             float expressionDuration = EditorGUILayout.Slider("Длительность, с", expression.Duration, 0f, 3f);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetExpressionTransition(expressionDuration, expression.Easing);
-
+            if (EditorGUI.EndChangeCheck()) ComposerSetExpressionTransition(expressionDuration, expression.Easing);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Акцент / движение", "Короткое движение, выделяющее персонажа."), EditorStyles.miniBoldLabel);
             bool triggered = scene.transition != null && scene.transition.triggerActionBounce;
@@ -1028,27 +952,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 RecordSceneComposerUndo("Toggle VN Scene Character Accent");
                 if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
                 scene.transition.triggerActionBounce = nextTriggered;
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
+                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
             EditorGUI.BeginChangeCheck();
             float nextAmplitude = EditorGUILayout.Slider("Сила", bounce.Amplitude, 0f, 100f);
             float nextBounceDuration = EditorGUILayout.Slider("Длительность, с", bounce.Duration, .01f, 3f);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetBounce(nextAmplitude, nextBounceDuration, bounce.ScaleEmphasis, bounce.Overshoot, bounce.Easing);
+            if (EditorGUI.EndChangeCheck()) ComposerSetBounce(nextAmplitude, nextBounceDuration, bounce.ScaleEmphasis, bounce.Overshoot, bounce.Easing);
         }
 
         private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Анимация сцены", EditorStyles.boldLabel);
             DrawSceneComposerAnimationScope();
-
             VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
             VnWorkshopBackgroundTransitionValues background = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(effective);
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
             VnWorkshopTimingValues timing = VnPresentationWorkshopVn10Resolver.ResolveTiming(effective);
-
             EditorGUILayout.LabelField(new GUIContent("Переход фона", "Как фон меняется при переходе к этой сцене."), EditorStyles.miniBoldLabel);
             string[] backgroundLabels = { "Без перехода", "Плавный переход", "Шторка" };
             string[] curtainDirectionLabels = { "Справа налево", "Слева направо" };
@@ -1061,70 +981,44 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 int direction = EditorGUILayout.Popup("Направление", (int)background.Direction, curtainDirectionLabels);
                 curtainDirection = (VnWorkshopCurtainDirection)direction;
             }
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetBackgroundTransition(
-                    (VnWorkshopBackgroundTransitionMode)backgroundMode,
-                    backgroundDuration,
-                    background.CurtainDarkness,
-                    curtainDirection,
-                    background.Easing);
-
+            if (EditorGUI.EndChangeCheck()) ComposerSetBackgroundTransition((VnWorkshopBackgroundTransitionMode)backgroundMode, backgroundDuration, background.CurtainDarkness, curtainDirection, background.Easing);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Расположение персонажей", "Как персонажи располагаются и перестраиваются на сцене."), EditorStyles.miniBoldLabel);
             string[] characterCountLabels = { "Нет персонажей", "1 персонаж", "2 персонажа", "3 персонажа" };
             string[] characterSlotLabels = { "", "Центр", "Слева / Справа", "Слева / Центр / Справа" };
             int characterCount = Mathf.Clamp(scene.characters != null ? scene.characters.Count : 0, 0, 3);
-            EditorGUILayout.LabelField("Схема", characterCountLabels[characterCount] +
-                (characterCount > 0 ? " · " + characterSlotLabels[characterCount] : string.Empty));
+            EditorGUILayout.LabelField("Схема", characterCountLabels[characterCount] + (characterCount > 0 ? " · " + characterSlotLabels[characterCount] : string.Empty));
             EditorGUI.BeginChangeCheck();
             float repositionDuration = EditorGUILayout.Slider("Длительность перестановки, с", stage.RepositionDuration, 0f, 3f);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetStageLayout(
-                    stage.LeftX, stage.CenterX, stage.RightX, stage.SlotY,
-                    stage.LeftScale, stage.CenterScale, stage.RightScale, stage.Spacing,
-                    repositionDuration, stage.Easing);
-
+            if (EditorGUI.EndChangeCheck()) ComposerSetStageLayout(stage.LeftX, stage.CenterX, stage.RightX, stage.SlotY, stage.LeftScale, stage.CenterScale, stage.RightScale, stage.Spacing, repositionDuration, stage.Easing);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Фокус говорящего", "Выделяет говорящего персонажа и приглушает остальных."), EditorStyles.miniBoldLabel);
             EditorGUILayout.HelpBox("Фокус автоматически следует за полем «Говорящий» при нескольких персонажах.", MessageType.None);
             EditorGUI.BeginChangeCheck();
             float inactiveBrightness = EditorGUILayout.Slider("Яркость остальных", focus.InactiveBrightness, 0f, 1.5f);
             float focusDuration = EditorGUILayout.Slider("Длительность фокуса, с", focus.TransitionDuration, 0f, 3f);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetSpeakerFocus(
-                    focus.ActiveScale, focus.ActiveBrightness, focus.ActiveForwardOffset,
-                    focus.InactiveScale, inactiveBrightness, focus.InactiveAlpha,
-                    focusDuration, focus.Easing);
-
+            if (EditorGUI.EndChangeCheck()) ComposerSetSpeakerFocus(focus.ActiveScale, focus.ActiveBrightness, focus.ActiveForwardOffset, focus.InactiveScale, inactiveBrightness, focus.InactiveAlpha, focusDuration, focus.Easing);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Тайминг сцены", "Продолжительность сцены и переход к следующей сцене."), EditorStyles.miniBoldLabel);
             if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
             string[] advanceLabels = { "Вручную", "Автоматически" };
             int currentAdvance = scene.timing.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;
             EditorGUI.BeginChangeCheck();
-            int nextAdvance = EditorGUILayout.Popup(
-                new GUIContent("Переход к следующей сцене", "Как продолжается воспроизведение после этой сцены."),
-                currentAdvance, advanceLabels);
+            int nextAdvance = EditorGUILayout.Popup(new GUIContent("Переход к следующей сцене", "Как продолжается воспроизведение после этой сцены."), currentAdvance, advanceLabels);
             float nextAutoDuration = scene.timing.previewAutoDuration;
-            if (nextAdvance == 1)
-                nextAutoDuration = EditorGUILayout.FloatField("Длительность сцены, с", Mathf.Max(0f, nextAutoDuration));
+            if (nextAdvance == 1) nextAutoDuration = EditorGUILayout.FloatField("Длительность сцены, с", Mathf.Max(0f, nextAutoDuration));
             if (EditorGUI.EndChangeCheck())
             {
                 RecordSceneComposerUndo("Edit VN Scene Advance Timing");
-                scene.timing.previewAdvanceMode = nextAdvance == 1
-                    ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration
-                    : VnSceneComposerPreviewAdvanceMode.ManualBeat;
+                scene.timing.previewAdvanceMode = nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration : VnSceneComposerPreviewAdvanceMode.ManualBeat;
                 scene.timing.previewAutoDuration = Mathf.Max(0f, nextAutoDuration);
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
+                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
-
             if (nextAdvance == 1)
             {
                 EditorGUI.BeginChangeCheck();
                 float sequenceGap = EditorGUILayout.Slider("Пауза между сценами, с", timing.AutoPreviewSequenceGap, 0f, 10f);
-                if (EditorGUI.EndChangeCheck())
-                    ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
+                if (EditorGUI.EndChangeCheck()) ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
             }
         }
 
@@ -1145,10 +1039,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawSceneComposerPresentationInspector(scene);
         }
 
-        private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)
-        {
-            DrawSceneComposerPresentationControls(scene);
-        }
+        private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene) { DrawSceneComposerPresentationControls(scene); }
 
         private void EnsureSceneComposerProject()
         {
