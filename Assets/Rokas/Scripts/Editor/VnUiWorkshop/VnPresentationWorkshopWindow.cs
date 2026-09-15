@@ -13,7 +13,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
     public sealed partial class VnPresentationWorkshopWindow : EditorWindow
     {
-        public const string MenuPath = "ROKAS/VN UI Workshop";
+        public const string MenuPath = "ROKAS/Редактор новеллы";
         public const string ExportFileName = "ROKAS_VN_WORKSHOP_PRESET.json";
 
         private const float NudgeStep = 1f;
@@ -50,8 +50,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static void Open()
         {
             VnPresentationWorkshopWindow window = GetWindow<VnPresentationWorkshopWindow>();
-            window.titleContent = new GUIContent("VN UI Workshop");
+            window.titleContent = new GUIContent("ROKAS — Редактор новеллы");
             window.minSize = new Vector2(960f, 600f);
+            window.ActivateSceneComposerWorkspace();
             window.Show();
         }
 
@@ -232,20 +233,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void OnGUI()
         {
-            DrawWorkspaceModeToolbar();
-            if (_sceneComposerWorkspaceActive)
-            {
-                DrawSceneComposerWorkspace();
-                return;
-            }
-
-            DrawComparisonToolbar();
-            EditorGUILayout.BeginHorizontal();
-            DrawLeftColumn();
-            DrawPreviewColumn();
-            DrawRightColumn();
-            EditorGUILayout.EndHorizontal();
-            HandleKeyboardNudge(Event.current);
+            if (!_sceneComposerWorkspaceActive) ActivateSceneComposerWorkspace();
+            DrawSceneComposerWorkspace();
         }
 
         private void DrawComparisonToolbar()
