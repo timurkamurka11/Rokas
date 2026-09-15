@@ -141,7 +141,7 @@ namespace Rokas.EditorTools.Tests
             string authoring = ReadUxFEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
             string request = ExtractUxFMethodBody(authoring, "public bool ComposerPrepareSelectedVideoForAuthoring()");
 
-            Assert.That(prepare, Does.Contain("if (IsPrepared)"));
+            Assert.That(prepare, Does.Contain("if (player.isPrepared)"));
             Assert.That(prepare, Does.Contain("if (prepareRequested) return;"),
                 "Repeated Prepare requests for the same video preview must be coalesced.");
             Assert.That(request, Does.Contain("!video.IsPrepared && !video.IsPreparing"),
@@ -152,12 +152,12 @@ namespace Rokas.EditorTools.Tests
         public void UxF_IdlePreparedAuthoringIsPausedAndDoesNotContinuouslyRepaint()
         {
             string motion = ReadUxFEditorSource("VnSceneComposerMotionMediaEditing.cs");
-            string frameReady = ExtractUxFMethodBody(motion, "private void OnFrameReady(VideoPlayer source, long frameIdx)");
+            string frameReady = ExtractUxFMethodBody(motion, "private void OnFrameReady(VideoPlayer source, long frameIndex)");
             string window = ReadUxFEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
             string update = ExtractUxFMethodBody(window, "private void SceneComposerEditorUpdate()");
 
-            Assert.That(frameReady, Does.Contain("previewFrameRequested && !playRequested && player.isPlaying"));
-            Assert.That(frameReady, Does.Contain("player.Pause();"),
+            Assert.That(frameReady, Does.Contain("previewFrameRequested && !playRequested && source.isPlaying"));
+            Assert.That(frameReady, Does.Contain("source.Pause();"),
                 "Authoring first-frame decoding must settle into a paused stable preview.");
             Assert.That(update, Does.Contain("!_sceneComposerPlayback.IsPlaying"),
                 "An idle paused authoring preview must not drive the continuous playback repaint loop.");
@@ -350,7 +350,7 @@ namespace Rokas.EditorTools.Tests
         public void UxF_PreparingAuthoringPreviewUsesPosterInsteadOfEmptyVideoTexture()
         {
             string videoUi = ReadUxFEditorSource("VnPresentationWorkshopWindow.SceneComposerVideo.cs");
-            string build = ExtractUxFMethodBody(videoUi, "private VnSceneComposerPlaybackFrame ComposerBuildSelectedPreviewPlaybackFrame()");
+            string build = ExtractUxFMethodBody(videoUi, "public VnSceneComposerPlaybackFrame ComposerBuildSelectedPreviewPlaybackFrame()");
 
             Assert.That(build, Does.Contain("HasVisibleFrame"),
                 "The static authoring renderer must gate the video RenderTexture until it contains a decoded visible frame.");
