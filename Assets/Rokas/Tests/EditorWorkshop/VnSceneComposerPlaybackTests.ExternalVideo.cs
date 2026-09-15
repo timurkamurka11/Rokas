@@ -94,8 +94,11 @@ namespace Rokas.EditorTools.Tests
                     "The renderer-facing frame must use ExternalVideo media instead of the default static VN background.");
 
                 controller.PlayScene(0);
-                FakeVideoPreview playing = factory.Created[factory.Created.Count - 1];
-                Assert.That(initial.DisposeCalls, Is.EqualTo(1));
+                Assert.That(factory.Created.Count, Is.EqualTo(1),
+                    "Playing the already-open current video scene must reuse the existing compatible preview.");
+                FakeVideoPreview playing = initial;
+                Assert.That(initial.DisposeCalls, Is.EqualTo(0),
+                    "Same-scene playback must not dispose the prepared preview before it is used.");
                 Assert.That(playing.PlayCalls, Is.EqualTo(1));
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(playing.texture));
                 Assert.That(controller.CurrentFrame.TargetBackground, Is.SameAs(playing.texture));
