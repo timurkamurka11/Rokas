@@ -44,7 +44,7 @@ namespace Rokas.EditorTools.Tests
                 BindingFlags.Instance | BindingFlags.NonPublic), Is.Not.Null,
                 "Legacy preset state may remain for compatibility even though it is hidden from ordinary authoring.");
             Assert.That(windowType.GetMethod("BuildPreviewFrame",
-                BindingFlags.Instance | BindingFlags.NonPublic), Is.Not.Null,
+                BindingFlags.Instance | BindingFlags.Public), Is.Not.Null,
                 "The proven Workshop preview path must remain available to compatibility tests.");
             Assert.That(windowType.GetMethod("ActivateSceneComposerWorkspace",
                 BindingFlags.Instance | BindingFlags.Public), Is.Not.Null,
