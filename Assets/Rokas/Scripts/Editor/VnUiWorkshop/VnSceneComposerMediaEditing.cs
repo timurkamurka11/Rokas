@@ -87,7 +87,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public static ScaleMode ToUnityScaleMode(VnSceneComposerMediaScaleMode scaleMode)
         {
-            return scaleMode == VnSceneComposerMediaScaleMode.Fill ? ScaleMode.ScaleAndCrop : ScaleMode.ScaleToFit;
+            switch (scaleMode)
+            {
+                case VnSceneComposerMediaScaleMode.Fill:
+                    return ScaleMode.ScaleAndCrop;
+                case VnSceneComposerMediaScaleMode.Stretch:
+                    return ScaleMode.StretchToFill;
+                default:
+                    return ScaleMode.ScaleToFit;
+            }
         }
 
         public static void DrawImagePreview(Rect viewport, VnSceneComposerMediaReference media,
