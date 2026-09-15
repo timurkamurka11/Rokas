@@ -643,8 +643,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             EditorGUILayout.EndHorizontal();
             if (GUILayout.Button("Убрать медиа")) ComposerClearMedia();
+
+            string[] displayModeLabels = { "Вписать", "Заполнить", "Растянуть" };
+            int currentDisplayMode = scene.media.scaleMode == VnSceneComposerMediaScaleMode.Fill ? 1 :
+                (scene.media.scaleMode == VnSceneComposerMediaScaleMode.Stretch ? 2 : 0);
             EditorGUI.BeginChangeCheck();
-            VnSceneComposerMediaScaleMode scaleMode = (VnSceneComposerMediaScaleMode)EditorGUILayout.EnumPopup("Масштаб", scene.media.scaleMode);
+            int nextDisplayMode = EditorGUILayout.Popup("Отображение", currentDisplayMode, displayModeLabels);
+            VnSceneComposerMediaScaleMode scaleMode = nextDisplayMode == 1
+                ? VnSceneComposerMediaScaleMode.Fill
+                : (nextDisplayMode == 2 ? VnSceneComposerMediaScaleMode.Stretch : VnSceneComposerMediaScaleMode.Fit);
             bool loop = scene.media.loop;
             if (scene.media.kind == VnSceneComposerMediaKind.ExternalGif || scene.media.kind == VnSceneComposerMediaKind.ExternalVideo)
                 loop = EditorGUILayout.Toggle("Зациклить", loop);
