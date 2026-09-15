@@ -283,6 +283,161 @@ namespace Rokas.EditorTools.Tests
             Assert.That(exact, Does.Not.Contain("Reset Transform"));
         }
 
+        [Test]
+        public void UxE_CharacterAnimationUsesRussianVnConcepts()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerInspector()");
+
+            Assert.That(inspector, Does.Contain("DrawSceneComposerCharacterAnimationInspector(scene);"),
+                "Анимация персонажа must be a real ordinary authoring surface instead of a shortcut to Дополнительно.");
+            string[] requiredLabels =
+            {
+                "Анимация персонажа",
+                "Появление",
+                "Исчезновение",
+                "Смена позы / эмоции",
+                "Акцент / движение",
+                "Без анимации",
+                "Плавное появление",
+                "Появление со сдвигом",
+                "Плавное исчезновение",
+                "Исчезновение со сдвигом"
+            };
+            foreach (string label in requiredLabels)
+                Assert.That(source, Does.Contain("\"" + label + "\""),
+                    "Basic character animation must expose the Russian VN concept: " + label + ".");
+
+            Assert.That(source, Does.Contain("ComposerSetCharacterTransition("),
+                "Basic enter/exit authoring must edit the proven canonical characterTransition profile.");
+            Assert.That(source, Does.Contain("ComposerSetExpressionTransition("),
+                "Pose/emotion transition authoring must reuse the canonical expressionTransition profile.");
+            Assert.That(source, Does.Contain("scene.transition.triggerActionBounce"),
+                "The one basic accent trigger must remain the canonical scene transition flag.");
+            Assert.That(source, Does.Contain("ComposerSetBounce("),
+                "Accent parameters must continue to edit the canonical actionBounce profile.");
+        }
+
+        [Test]
+        public void UxE_SceneAnimationUsesRussianVnConcepts()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerInspector()");
+
+            Assert.That(inspector, Does.Contain("DrawSceneComposerSceneAnimationInspector(scene);"),
+                "Анимация сцены must be a real ordinary authoring surface instead of a shortcut to Дополнительно.");
+            string[] requiredLabels =
+            {
+                "Анимация сцены",
+                "Переход фона",
+                "Расположение персонажей",
+                "Фокус говорящего",
+                "Тайминг сцены",
+                "Без перехода",
+                "Плавный переход",
+                "Шторка",
+                "Слева направо",
+                "Справа налево",
+                "1 персонаж",
+                "2 персонажа",
+                "3 персонажа",
+                "Переход к следующей сцене",
+                "Вручную",
+                "Автоматически"
+            };
+            foreach (string label in requiredLabels)
+                Assert.That(source, Does.Contain("\"" + label + "\""),
+                    "Basic scene animation must expose the Russian VN concept: " + label + ".");
+
+            Assert.That(source, Does.Contain("ComposerSetBackgroundTransition("));
+            Assert.That(source, Does.Contain("ComposerSetStageLayout("));
+            Assert.That(source, Does.Contain("ComposerSetSpeakerFocus("));
+            Assert.That(source, Does.Contain("ComposerSetTiming("));
+            Assert.That(source, Does.Contain("scene.timing.previewAdvanceMode"),
+                "Manual/automatic scene advance must keep using the canonical scene timing model.");
+        }
+
+        [Test]
+        public void UxE_AdvancedKeepsParityButHidesEngineeringAnimationHierarchy()
+        {
+            string sceneSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string additional = ExtractMethodBody(sceneSource, "private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)");
+            string playback = ExtractMethodBody(sceneSource, "private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)");
+            string sections = ExtractMethodBody(authoringSource, "private void DrawSceneComposerSerializedPresentationSections(VnSceneComposerScene scene)");
+
+            Assert.That(additional, Does.Contain("DrawSceneComposerPresentationInspector(scene);"),
+                "Advanced presentation functionality must remain reachable from Дополнительно.");
+            string[] canonicalProperties =
+            {
+                "expressionTransition", "characterTransition", "actionBounce", "backgroundTransition",
+                "stageLayout", "focus", "uiFeedback", "timing"
+            };
+            foreach (string property in canonicalProperties)
+                Assert.That(sections, Does.Contain("\"" + property + "\""),
+                    "Advanced parity must retain the canonical presentation property: " + property + ".");
+
+            Assert.That(sections, Does.Contain("\"Эффекты интерфейса\""),
+                "Detailed UI Feedback must remain available under a Russian advanced concept.");
+            Assert.That(playback, Does.Not.Contain("Trigger Action Bounce"),
+                "The scene-level bounce trigger must not duplicate Action Bounce outside the one Акцент / движение workflow.");
+            Assert.That(playback, Does.Not.Contain("Scene Playback"),
+                "Basic scene timing now belongs to Анимация сцены, not a second engineering playback block.");
+
+            string[] oldEngineeringHeadings =
+            {
+                "Authored State / Expression",
+                "Character Enter / Exit",
+                "Action Bounce",
+                "Background Transition",
+                "Stage Layout",
+                "Speaker Focus",
+                "UI Feedback",
+                "Timing / Pacing"
+            };
+            foreach (string heading in oldEngineeringHeadings)
+                Assert.That(sections, Does.Not.Contain("\"" + heading + "\""),
+                    "The advanced disclosure must not repeat the old engineering animation heading: " + heading + ".");
+        }
+
+        [Test]
+        public void UxE_AnimationEngineParityStillConsumesCanonicalPresentationState()
+        {
+            string presentation = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPresentation.cs");
+            string sampler = ReadEditorSource("VnSceneComposerTransitionSampler.cs");
+            string presetLifecycle = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPresetLifecycle.cs");
+
+            string[] setters =
+            {
+                "ComposerSetExpressionTransition", "ComposerSetCharacterTransition", "ComposerSetBounce",
+                "ComposerSetBackgroundTransition", "ComposerSetStageLayout", "ComposerSetSpeakerFocus",
+                "ComposerSetUiFeedback", "ComposerSetTiming"
+            };
+            foreach (string setter in setters)
+                Assert.That(presentation, Does.Contain(setter),
+                    "UX-E must preserve the proven presentation mutation API: " + setter + ".");
+
+            Assert.That(sampler, Does.Contain("ResolveBackgroundTransition(preset)"));
+            Assert.That(sampler, Does.Contain("ResolveActionBounce(preset)"));
+            Assert.That(sampler, Does.Contain("ResolveStageLayout(preset)"));
+            Assert.That(sampler, Does.Contain("ResolveCharacterTransition(preset)"));
+            Assert.That(sampler, Does.Contain("ResolveExpressionTransition(preset)"));
+            Assert.That(sampler, Does.Contain("ResolveSpeakerFocus(preset)"));
+            Assert.That(sampler, Does.Contain("SampleCharacterEnter"));
+            Assert.That(sampler, Does.Contain("SampleCharacterExit"));
+            Assert.That(sampler, Does.Contain("toScene.transition.triggerActionBounce"));
+            Assert.That(sampler, Does.Contain("timing.AutoPreviewSequenceGap"),
+                "AutoPreviewSequenceGap must continue feeding ordered playback timing.");
+
+            Assert.That(presentation, Does.Contain("ComposerSavePresentationPreset"));
+            Assert.That(presentation, Does.Contain("ComposerLoadPresentationPreset"));
+            Assert.That(presentation, Does.Contain("ComposerExportPresentationPresetJson"));
+            Assert.That(presentation, Does.Contain("ComposerImportPresentationPresetJson"));
+            Assert.That(presetLifecycle, Does.Contain("ComposerDuplicatePresentationPreset"));
+            Assert.That(presetLifecycle, Does.Contain("ComposerRenamePresentationPreset"));
+            Assert.That(presetLifecycle, Does.Contain("ComposerDeletePresentationPreset"));
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
