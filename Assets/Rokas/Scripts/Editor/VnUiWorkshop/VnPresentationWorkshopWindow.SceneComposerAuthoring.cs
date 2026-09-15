@@ -23,6 +23,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerUiFeedbackExpanded;
         [SerializeField] private bool _sceneComposerTimingExpanded;
         [SerializeField] private bool _sceneComposerAdvancedExpanded;
+        [SerializeField] private bool _sceneComposerPreviewTextExpanded;
 
         [NonSerialized] private bool _sceneComposerDraggingPreviewObject;
         [NonSerialized] private bool _sceneComposerDraggingCharacter;
@@ -481,25 +482,33 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerPreviewTextControls()
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Preview Text", EditorStyles.miniBoldLabel);
+            _sceneComposerPreviewTextExpanded = EditorGUILayout.Foldout(
+                _sceneComposerPreviewTextExpanded, "Тест оформления текста", true);
+            if (!_sceneComposerPreviewTextExpanded) return;
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.LabelField("Тестовый текст оформления", EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox(
+                "Используется только для проверки внешнего вида текста.\nНе является текстом сцены.",
+                MessageType.Info);
             string sample = ComposerGetPreviewSampleText();
             EditorGUI.BeginChangeCheck();
             string next = EditorGUILayout.TextArea(sample ?? string.Empty, GUILayout.MinHeight(48f));
             if (EditorGUI.EndChangeCheck()) ComposerSetPreviewSampleText(next);
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Load TXT"))
+            if (GUILayout.Button("Загрузить TXT"))
             {
-                string path = EditorUtility.OpenFilePanel("Load UTF-8 Preview Text", string.Empty, "txt");
+                string path = EditorUtility.OpenFilePanel("Загрузить тестовый текст UTF-8", string.Empty, "txt");
                 if (!string.IsNullOrEmpty(path))
                     TrySceneComposerPresentationAction(() => ComposerSetPreviewSampleText(File.ReadAllText(path)));
             }
-            if (GUILayout.Button("Clear")) ComposerSetPreviewSampleText(string.Empty);
-            if (GUILayout.Button("Reset Sample")) ComposerResetPreviewSampleText();
+            if (GUILayout.Button("Очистить")) ComposerSetPreviewSampleText(string.Empty);
+            if (GUILayout.Button("Сбросить пример")) ComposerResetPreviewSampleText();
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField("Preview-only sample. Never written to Yarn.", EditorStyles.miniLabel);
             string glyphWarning = ComposerGetPreviewTextGlyphWarning();
             if (!string.IsNullOrEmpty(glyphWarning))
                 EditorGUILayout.HelpBox(glyphWarning, MessageType.Warning);
+            EditorGUI.indentLevel--;
         }
 
         private void DrawSceneComposerSerializedPresentationSections(VnSceneComposerScene scene)
