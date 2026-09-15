@@ -50,6 +50,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerVideoPreview sourceVideoPreview;
         private VnSceneComposerGifPreview sourceGifPreview;
         private Texture sourceMediaTexture;
+        private string openedVideoSignature = string.Empty;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
         {
@@ -197,13 +198,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ResetScene(int sceneIndex, bool playMedia)
         {
             RequireSceneIndex(sceneIndex);
-            ReleaseMedia();
+            VnSceneComposerScene targetScene = project.scenes[sceneIndex];
+            bool reuseVideoPreview = sceneIndex == CurrentSceneIndex && CanReuseVideoPreview(targetScene);
+            if (!reuseVideoPreview) ReleaseMedia();
             ReleaseSourceMedia();
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
             OpenSourceMedia(ResolveSourceScene(sceneIndex));
-            OpenMedia(project.scenes[sceneIndex]);
+            if (!reuseVideoPreview) OpenMedia(targetScene);
             if (playMedia && videoPreview != null) videoPreview.Play();
             RefreshSourceMediaTexture();
             RefreshMediaTexture();
@@ -410,11 +413,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     break;
                 case VnSceneComposerMediaKind.ExternalVideo:
                     videoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);
+                    openedVideoSignature = BuildVideoSignature(scene.media);
                     break;
                 case VnSceneComposerMediaKind.ExternalGif:
                     gifPreview = VnSceneComposerMediaEditing.OpenGifPreview(scene.media);
                     break;
             }
+        }
+
+        private bool CanReuseVideoPreview(VnSceneComposerScene scene)
+        {
+            return scene != null && scene.media != null &&
+                   scene.media.kind == VnSceneComposerMediaKind.ExternalVideo &&
+                   videoPreview != null && videoPreview.texture != null &&
+                   string.Equals(openedVideoSignature, BuildVideoSignature(scene.media), StringComparison.Ordinal);
+        }
+
+        private static string BuildVideoSignature(VnSceneComposerMediaReference media)
+        {
+            if (media == null) return string.Empty;
+            return (media.reference ?? string.Empty) + "|" + (media.contentHash ?? string.Empty) + "|" + media.loop;
         }
 
         private void RefreshMediaTexture()
@@ -433,6 +451,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             imagePreview = null;
             videoPreview = null;
             gifPreview = null;
+            openedVideoSignature = string.Empty;
         }
 
         private VnSceneComposerScene ResolveSourceScene(int targetIndex)
