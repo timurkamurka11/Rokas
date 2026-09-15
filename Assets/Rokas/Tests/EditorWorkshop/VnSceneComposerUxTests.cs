@@ -244,13 +244,19 @@ namespace Rokas.EditorTools.Tests
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
             string select = ExtractMethodBody(source, "public bool ComposerSelectPreviewObjectAt(Vector2 logicalPoint)");
+            string selectCharacter = ExtractMethodBody(source,
+                "private bool ComposerSelectPreviewCharacterAt(VnWorkshopPreviewFrame frame, Vector2 logicalPoint)");
             string input = ExtractMethodBody(source,
                 "private void HandleSceneComposerPreviewInput(Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)");
             string drag = ExtractMethodBody(source, "private void ApplySceneComposerCharacterDrag(Vector2 logicalDelta)");
 
-            Assert.That(select, Does.Contain("_sceneComposerSelectedCharacterIndex = i"),
+            Assert.That(select, Does.Contain("ComposerSelectPreviewCharacterAt(frame, logicalPoint)"),
+                "The public preview selector must continue delegating character hit-testing to the canonical character-selection path.");
+            Assert.That(selectCharacter, Does.Contain("_sceneComposerSelectedCharacterIndex = i"),
                 "Clicking a character in the central preview must select that same authored character.");
             Assert.That(input, Does.Contain("ComposerSelectPreviewObjectAt(logicalPoint)"));
+            Assert.That(input, Does.Contain("ComposerSelectPreviewCharacterAt(frame, logicalPoint)"),
+                "Basic preview interaction must keep direct character selection while UI-layout selection stays advanced-only.");
             Assert.That(input, Does.Contain("ApplySceneComposerCharacterDrag(logicalDelta);"),
                 "Mouse drag in the preview must continue to route to the character drag path.");
             Assert.That(drag, Does.Contain("character.positionOffset = next;"));
