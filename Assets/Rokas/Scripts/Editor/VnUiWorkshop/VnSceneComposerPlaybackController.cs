@@ -11,11 +11,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopBackgroundTransitionSample backgroundTransition,
             Texture sourceBackground,
             Texture targetBackground)
+            : this(workshopFrame, backgroundTransition, sourceBackground, targetBackground,
+                VnSceneComposerMediaScaleMode.Fit, VnSceneComposerMediaScaleMode.Fit)
+        {
+        }
+
+        internal VnSceneComposerPlaybackFrame(
+            VnWorkshopPreviewFrame workshopFrame,
+            VnWorkshopBackgroundTransitionSample backgroundTransition,
+            Texture sourceBackground,
+            Texture targetBackground,
+            VnSceneComposerMediaScaleMode sourceScaleMode,
+            VnSceneComposerMediaScaleMode targetScaleMode)
         {
             WorkshopFrame = workshopFrame;
             ComposerBackgroundTransition = backgroundTransition;
             SourceBackground = sourceBackground;
             TargetBackground = targetBackground;
+            SourceScaleMode = sourceScaleMode;
+            TargetScaleMode = targetScaleMode;
             VnPresentationWorkshopPreviewRenderer.RegisterPlaybackFrame(this);
         }
 
@@ -23,6 +37,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopBackgroundTransitionSample ComposerBackgroundTransition { get; }
         public Texture SourceBackground { get; }
         public Texture TargetBackground { get; }
+        public VnSceneComposerMediaScaleMode SourceScaleMode { get; }
+        public VnSceneComposerMediaScaleMode TargetScaleMode { get; }
         public string Dialogue { get { return WorkshopFrame != null ? WorkshopFrame.Dialogue : string.Empty; } }
         public VnWorkshopPreviewCharacter[] ComposerCharacters
         {
@@ -239,9 +255,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ApplyRendererFacingSample(targetFrame, sourceFrame, sample, endpoint);
             Texture targetVisual = CurrentMediaTexture != null ? CurrentMediaTexture : targetFrame.BackgroundTexture;
             Texture sourceVisual = sourceMediaTexture != null ? sourceMediaTexture : sourceFrame.BackgroundTexture;
+            VnSceneComposerMediaScaleMode targetScaleMode = targetScene.media != null
+                ? targetScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit;
+            VnSceneComposerMediaScaleMode sourceScaleMode = sourceScene.media != null
+                ? sourceScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit;
 
             CurrentSnapshot = sample;
-            CurrentFrame = new VnSceneComposerPlaybackFrame(targetFrame, sample.background, sourceVisual, targetVisual);
+            CurrentFrame = new VnSceneComposerPlaybackFrame(
+                targetFrame, sample.background, sourceVisual, targetVisual, sourceScaleMode, targetScaleMode);
         }
 
         private static void ApplyRendererFacingSample(
