@@ -444,7 +444,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnWorkshopElement? selectedUi = staticAuthoringPreview && _sceneComposerSelectedCharacterIndex < 0
                     ? (VnWorkshopElement?)selectedElement : null;
-                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview);
+                VnWorkshopElement? uiFeedbackElement = null;
+                VnWorkshopUiFeedbackSample? uiFeedbackSample = null;
+                if (staticAuthoringPreview && comparisonView == VnWorkshopComparisonView.Current)
+                {
+                    if (!IsSceneComposerUiFeedbackElement(_sceneComposerUiFeedbackPreviewElement))
+                        _sceneComposerUiFeedbackPreviewElement = VnWorkshopElement.Back;
+                    uiFeedbackElement = _sceneComposerUiFeedbackPreviewElement;
+                    uiFeedbackSample = ComposerSampleUiFeedback(
+                        _sceneComposerUiFeedbackPreviewElement,
+                        _sceneComposerUiFeedbackPreviewState,
+                        _sceneComposerUiFeedbackPreviewProgress);
+                }
+                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,
+                    uiFeedbackElement, uiFeedbackSample);
                 if (staticAuthoringPreview)
                 {
                     DrawSceneComposerSelectionOverlay(previewRect, frame);

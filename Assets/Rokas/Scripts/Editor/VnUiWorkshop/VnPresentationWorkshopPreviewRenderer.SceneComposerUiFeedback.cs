@@ -28,6 +28,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                    !Mathf.Approximately(sample.OverlayHighlight, 0f);
         }
 
+        public static bool ShouldReplaceIndependentUiFeedbackControl(
+            VnWorkshopElement feedbackElement,
+            VnWorkshopElement renderedElement,
+            VnWorkshopUiFeedbackSample sample)
+        {
+            return feedbackElement == renderedElement &&
+                   (renderedElement == VnWorkshopElement.Back || renderedElement == VnWorkshopElement.Next) &&
+                   ShouldDrawUiFeedbackPreview(sample);
+        }
+
         public static void DrawUiFeedbackPreview(
             Rect previewRect,
             VnWorkshopPreviewFrame frame,

@@ -277,7 +277,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerSelectionOverlay(Rect previewRect, VnWorkshopPreviewFrame frame)
         {
             if (frame == null) return;
-            DrawSceneComposerUiFeedbackPreview(previewRect, frame);
             if (_sceneComposerSelectedCharacterIndex < 0 || frame.ComposerCharacters == null ||
                 _sceneComposerSelectedCharacterIndex >= frame.ComposerCharacters.Length) return;
             VnWorkshopPreviewCharacter character = frame.ComposerCharacters[_sceneComposerSelectedCharacterIndex];

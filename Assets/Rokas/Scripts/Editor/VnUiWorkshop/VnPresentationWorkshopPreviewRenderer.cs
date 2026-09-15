@@ -245,6 +245,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static void Draw(Rect previewRect, VnWorkshopPreviewFrame frame,
             VnWorkshopElement? selected = null, bool showHitRegions = true)
         {
+            Draw(previewRect, frame, selected, showHitRegions, null, null);
+        }
+
+        public static void Draw(Rect previewRect, VnWorkshopPreviewFrame frame,
+            VnWorkshopElement? selected, bool showHitRegions,
+            VnWorkshopElement? uiFeedbackElement, VnWorkshopUiFeedbackSample? uiFeedbackSample)
+        {
             if (frame == null) throw new ArgumentNullException(nameof(frame));
             Rect canvasRect = FitAspect(previewRect, frame.ScreenSize.x / frame.ScreenSize.y);
             GUI.Box(previewRect, GUIContent.none);
@@ -283,8 +290,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue,
                     frame.DialogueFont, Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
                     ToTextAnchor(frame.Typography.DialogueAlignment));
-                DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-                DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+
+                bool replaceBack = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
+                    ShouldReplaceIndependentUiFeedbackControl(
+                        uiFeedbackElement.Value, VnWorkshopElement.Back, uiFeedbackSample.Value);
+                bool replaceNext = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
+                    ShouldReplaceIndependentUiFeedbackControl(
+                        uiFeedbackElement.Value, VnWorkshopElement.Next, uiFeedbackSample.Value);
+
+                if (!replaceBack)
+                    DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
+                if (!replaceNext)
+                    DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
 
                 if (showHitRegions)
                 {
@@ -292,6 +309,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     DrawHitRegion(localCanvas, frame, frame.PauseHitRegion, "Pause — Baked into panel");
                     DrawHitRegion(localCanvas, frame, frame.SkipHitRegion, "Skip — Baked into panel");
                 }
+
+                if (uiFeedbackElement.HasValue && uiFeedbackSample.HasValue)
+                    DrawUiFeedbackPreview(localCanvas, frame, uiFeedbackElement.Value, uiFeedbackSample.Value);
+
                 if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
             }
             finally { GUI.EndGroup(); }
