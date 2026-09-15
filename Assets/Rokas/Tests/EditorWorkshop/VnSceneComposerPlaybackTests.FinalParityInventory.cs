@@ -254,10 +254,10 @@ namespace Rokas.EditorTools.Tests
                 string authoring = ReadProjectSource(
                     "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
                 Assert.That(authoring, Does.Contain("ComposerSetUiFeedbackPreview"),
-                    "Scene Composer must keep the canonical UI feedback preview setter behind the advanced authoring surface.");
+                    "Scene Composer must preserve authoring controls for all UI feedback preview phases.");
                 Assert.That(authoring,
                     Does.Contain("\"Обычное\"").And.Contain("\"Наведение\"").And.Contain("\"Нажатие\"").And.Contain("\"Отпускание\""),
-                    "Advanced UI feedback phases must remain reachable through their Russian authoring labels.");
+                    "Advanced UI feedback authoring must preserve all four phases while presenting them in Russian.");
                 Assert.That(authoring, Does.Contain("DrawSceneComposerUiFeedbackPreviewControls();"),
                     "Detailed UI feedback controls must remain reachable in the advanced presentation section.");
                 Assert.That(authoring, Does.Not.Contain("DrawSceneComposerUiFeedbackPreview(previewRect, frame);"),
@@ -265,15 +265,16 @@ namespace Rokas.EditorTools.Tests
 
                 string workspace = ReadProjectSource(
                     "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs");
-                Assert.That(workspace, Does.Contain("bool advancedPreview = staticAuthoringPreview && _sceneComposerInspectorSection == 7;"),
-                    "Engineering preview feedback must be gated behind Дополнительно.");
-                Assert.That(workspace, Does.Contain("if (advancedPreview && comparisonView == VnWorkshopComparisonView.Current)"),
-                    "Canonical UI feedback sampling must remain active for the advanced preview.");
+                Assert.That(workspace, Does.Contain("bool advancedUiFeedback = staticAuthoringPreview && IsSceneComposerAdvancedUiFeedbackPreviewVisible();"),
+                    "UX-H must gate engineering UI feedback simulation behind the advanced inspector.");
+                Assert.That(workspace, Does.Contain("if (advancedUiFeedback && comparisonView == VnWorkshopComparisonView.Current)"),
+                    "The advanced preview must continue sampling canonical effective UI feedback state.");
+                Assert.That(workspace, Does.Contain("uiFeedbackSample = ComposerSampleUiFeedback("),
+                    "The advanced preview must still sample canonical effective UI feedback values.");
                 Assert.That(workspace,
-                    Does.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, false,"),
-                    "Basic preview must hide hit-region debug drawing while still routing advanced UI feedback through the central renderer.");
-                Assert.That(workspace, Does.Contain("uiFeedbackElement, uiFeedbackSample"),
-                    "The central renderer must continue receiving the canonical UI feedback element/sample pair.");
+                    Does.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, advancedLayout,")
+                        .And.Contain("uiFeedbackElement, uiFeedbackSample);"),
+                    "The central Scene Preview must still pass canonical UI feedback into the existing renderer while hit-region drawing remains advanced-only.");
             }
             finally
             {
