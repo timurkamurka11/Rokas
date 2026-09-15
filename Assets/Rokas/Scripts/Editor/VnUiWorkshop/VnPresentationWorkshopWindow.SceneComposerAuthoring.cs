@@ -24,6 +24,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerTimingExpanded;
         [SerializeField] private bool _sceneComposerAdvancedExpanded;
         [SerializeField] private bool _sceneComposerPreviewTextExpanded;
+        [SerializeField] private bool _sceneComposerExactCharacterTransformExpanded;
 
         [NonSerialized] private bool _sceneComposerDraggingPreviewObject;
         [NonSerialized] private bool _sceneComposerDraggingCharacter;
@@ -328,24 +329,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DrawSceneComposerCharacterTransformControls(int characterIndex, VnSceneComposerCharacter character)
         {
+            _sceneComposerExactCharacterTransformExpanded = EditorGUILayout.Foldout(
+                _sceneComposerExactCharacterTransformExpanded,
+                new GUIContent("Точное положение", "Точная настройка координат персонажа."),
+                true);
+            if (!_sceneComposerExactCharacterTransformExpanded) return;
+
+            EditorGUI.indentLevel++;
             Vector2 position = character.hasPositionOffset ? character.positionOffset : Vector2.zero;
             float scale = character.hasScaleMultiplier ? character.scaleMultiplier : 1f;
-            EditorGUILayout.LabelField("Transform", EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
-            float x = EditorGUILayout.FloatField("Position X", position.x);
-            float y = EditorGUILayout.FloatField("Position Y", position.y);
-            float nextScale = EditorGUILayout.FloatField("Scale", scale);
+            float x = EditorGUILayout.FloatField("X", position.x);
+            float y = EditorGUILayout.FloatField("Y", position.y);
+            float nextScale = EditorGUILayout.FloatField("Масштаб", scale);
             if (EditorGUI.EndChangeCheck())
                 ComposerSetCharacterTransform(characterIndex, new Vector2(x, y), Mathf.Clamp(nextScale, .05f, 5f));
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(_sceneComposerSelectedCharacterIndex == characterIndex ? "Selected in Preview" : "Select for Preview"))
-            {
-                _sceneComposerSelectedCharacterIndex = characterIndex;
-                Repaint();
-            }
-            if (GUILayout.Button("Reset Transform")) ComposerResetCharacterTransform(characterIndex);
-            EditorGUILayout.EndHorizontal();
+            if (GUILayout.Button("Сбросить положение и размер"))
+                ComposerResetCharacterTransform(characterIndex);
+            EditorGUI.indentLevel--;
         }
 
         private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)
