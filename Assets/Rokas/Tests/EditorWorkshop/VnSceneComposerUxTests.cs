@@ -121,6 +121,83 @@ namespace Rokas.EditorTools.Tests
             Assert.That(preview, Does.Not.Contain("\"Restart\""));
         }
 
+        [Test]
+        public void UxC_BasicTextUsesOneCanonicalRussianSceneTextSurface()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+
+            Assert.That(textInspector, Does.Contain("\"Текст\""));
+            Assert.That(textInspector, Does.Contain("\"Текст без персонажа\""),
+                "Narration must remain the existing scene.narration mode with a human Russian label.");
+            Assert.That(textInspector, Does.Contain("\"Говорящий\""),
+                "Speaker authoring must remain visible beside the canonical scene text.");
+            Assert.That(textInspector, Does.Contain("\"Текст сцены\""),
+                "The one real multiline content field must be identified as Текст сцены.");
+            Assert.That(textInspector, Does.Contain("scene.previewText"),
+                "The real scene-text editor must stay bound to the existing canonical scene.previewText path.");
+            Assert.That(CountOccurrences(textInspector, "EditorGUILayout.TextArea("), Is.EqualTo(1),
+                "Basic text authoring must expose exactly one multiline scene-content field.");
+            Assert.That(textInspector, Does.Not.Contain("Preview Text"));
+            Assert.That(textInspector, Does.Not.Contain("ComposerGetPreviewSampleText"));
+            Assert.That(textInspector, Does.Not.Contain("Тестовый текст оформления"));
+        }
+
+        [Test]
+        public void UxC_BasicTextExposesCanonicalFontSizeAndSpeedControls()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+
+            Assert.That(textInspector, Does.Contain("\"Шрифт\""),
+                "Basic text authoring must expose Шрифт without opening Дополнительно.");
+            Assert.That(textInspector, Does.Contain("\"Размер текста\""),
+                "Basic text authoring must expose Размер текста without opening raw Typography controls.");
+            Assert.That(textInspector, Does.Contain("\"Скорость текста\""),
+                "Basic text authoring must expose Скорость текста without opening raw Typewriter controls.");
+            Assert.That(textInspector, Does.Contain("VnSceneComposerComposition.ResolvePresentation"),
+                "Basic formatting must read the canonical effective Project Defaults + Scene Overrides presentation.");
+        }
+
+        [Test]
+        public void UxC_PreviewSampleIsCollapsedAdvancedTypographyTestOnly()
+        {
+            string sceneSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string additional = ExtractMethodBody(sceneSource, "private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)");
+            string presentation = ExtractMethodBody(authoringSource, "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+            string sample = ExtractMethodBody(authoringSource, "private void DrawSceneComposerPreviewTextControls()");
+
+            Assert.That(additional, Does.Contain("\"Дополнительно\""),
+                "Preview/sample text must remain reachable only through the Дополнительно workflow.");
+            Assert.That(presentation, Does.Contain("DrawSceneComposerPreviewTextControls();"));
+            Assert.That(authoringSource, Does.Contain("[SerializeField] private bool _sceneComposerPreviewTextExpanded;"),
+                "Typography test text must default to a collapsed advanced disclosure state.");
+            Assert.That(sample, Does.Contain("EditorGUILayout.Foldout"));
+            Assert.That(sample, Does.Contain("\"Тест оформления текста\""),
+                "Advanced sample text must be presented as a typography test, not as Preview Text.");
+            Assert.That(sample, Does.Contain("\"Тестовый текст оформления\""));
+            Assert.That(sample, Does.Contain("Используется только для проверки внешнего вида текста."));
+            Assert.That(sample, Does.Contain("Не является текстом сцены."),
+                "The sample editor must explicitly say that it is not scene content.");
+            Assert.That(sample, Does.Not.Contain("EditorGUILayout.LabelField(\"Preview Text\""));
+        }
+
+        [Test]
+        public void UxC_TypographyTestPreservesTextCoreGlyphWarning()
+        {
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string sample = ExtractMethodBody(authoring, "private void DrawSceneComposerPreviewTextControls()");
+            string parity = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerFinalParity.cs");
+
+            Assert.That(sample, Does.Contain("ComposerGetPreviewTextGlyphWarning()"),
+                "Typography test text must keep automatic missing-glyph feedback.");
+            Assert.That(parity, Does.Contain("FontEngine.LoadFontFace"));
+            Assert.That(parity, Does.Contain("FontEngine.TryGetGlyphWithUnicodeValue"));
+            Assert.That(parity, Does.Contain("FontEngine.UnloadFontFace"),
+                "TextCore glyph validation must continue to unload the font face in the proven path.");
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
@@ -154,6 +231,19 @@ namespace Rokas.EditorTools.Tests
 
             Assert.Fail("Unterminated method body: " + signature);
             return string.Empty;
+        }
+
+        private static int CountOccurrences(string source, string value)
+        {
+            if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(value)) return 0;
+            int count = 0;
+            int offset = 0;
+            while ((offset = source.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                offset += value.Length;
+            }
+            return count;
         }
 
         private static Type RequireType(string shortName)
