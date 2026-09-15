@@ -47,9 +47,35 @@ Demote technical trees, typography test, raw presets/JSON and exact-engine param
 
 Integrate the supplied dialogue-panel asset only from an actual binary asset, preserving name/text/control hit regions and direct editing. Add the simplest canonical scene-local custom visual-element path; no new graph/prefab/asset-database architecture.
 
+## M-AUDIO — Background music / BGM authoring
+
+Future phase only. Do not implement before M-A through M-F are accepted.
+
+Normal authoring terminology is `Музыка` / `Фоновая музыка`, never AudioSource/AudioClip/mixer jargon. The ordinary workflow is: `+ Добавить музыку` → choose a track (MP3 primary; WAV/OGG where the current Unity-compatible asset pipeline already supports them) → edit `Трек`, `Громкость`, `Зациклить`, `Плавное появление`, `Плавное затухание` → `▶ Прослушать` or `Убрать музыку`.
+
+Use one canonical scene-level BGM model and the existing asset IDs/project-relative paths/import-resolver patterns; do not introduce a parallel media database. Prefer the current Scene data model unless inspection proves another existing canonical owner.
+
+Playback semantics:
+
+- `Проиграть сцену`, `Проиграть отсюда`, `Проиграть всё`, `Пауза`, `Продолжить`, `Сначала` and scene changes must keep BGM state coherent.
+- Adjacent scenes using the same track should continue it without an unnecessary restart where practical.
+- A different authored track should transition cleanly; a simple existing-compatible fade/crossfade is preferred over new architecture.
+- Explicit `Без музыки` should stop/fade the current BGM according to authored settings.
+- Keep BGM distinct from video-owned audio and future SFX.
+
+Keep the UI intentionally simple: no waveform/timeline editor, multitrack mixer, buses, node graph, automation curves or mastering UI. Normal defaults should be volume `1.0` / `100%`, loop ON for BGM unless existing semantics require otherwise, and no hidden long fades; exact defaults must be covered by tests.
+
+When this phase is reached, behavioral TDD must cover assigning/clearing BGM, volume and loop persistence, same-track continuity across scenes, replacement, no-music semantics, pause/resume/restart, and project serialization/deserialization. Manual listening remains required for audible quality, fade smoothness and practical gaplessness.
+
+Manual M-AUDIO acceptance must include choosing an MP3, hearing it in `Проиграть сцену`, adjusting volume/loop/fades, removing it, playing two adjacent scenes with the same track without an unnecessary restart, switching to another track cleanly, and transitioning to `Без музыки` correctly.
+
 ## M-G — Screenshot-driven polish
 
 Only after functional acceptance: improve tiny section/transport controls, header density, scene-card readability/selection and local spacing. Preserve the three-column layout and dominant center preview.
+
+## Phase order
+
+M-A → M-B → M-C → M-D → M-E → M-F → M-AUDIO → M-G → manual full acceptance → final certification.
 
 ## Phase report format
 
@@ -57,4 +83,4 @@ For every phase report: recovered HEAD/TREE; phase; RCA (symptom/source/root cau
 
 ## Current execution gate
 
-Begin with M-A only. Do not start panel cosmetics, visual spacing, video latency or animation timing until the M-A state/input failure has a focused behavioral explanation and fix.
+Begin with M-A only. Do not start panel cosmetics, visual spacing, video latency, animation timing or BGM authoring until the M-A state/input failure has a focused behavioral explanation and fix.
