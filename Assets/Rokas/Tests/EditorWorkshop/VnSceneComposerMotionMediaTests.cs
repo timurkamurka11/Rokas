@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using Rokas.EditorTools.VnUiWorkshop;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,6 +15,36 @@ namespace Rokas.EditorTools.Tests
         private const string Namespace = "Rokas.EditorTools.VnUiWorkshop.";
         private const string TwoFrameGifBase64 =
             "R0lGODlhAgABAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQICgAAACwAAAAAAgABAAAIBQABAAgIACH5BAgUAAAALAAAAAACAAEAgQD/AAAAAAAAAAAAAAgFAAEACAgAOw==";
+
+        private sealed class VisibleVideoPreview : VnSceneComposerVideoPreview
+        {
+            public VisibleVideoPreview(bool shouldLoop)
+                : base(null, 16, 16, shouldLoop)
+            {
+                warning = string.Empty;
+                texture = new RenderTexture(32, 18, 0)
+                {
+                    name = "ROKAS_SC_D_VisibleVideo"
+                };
+                texture.Create();
+            }
+
+            public override bool IsPrepared { get { return true; } }
+            public override bool IsPreparing { get { return false; } }
+            public override bool IsPlaying { get { return false; } }
+            public override bool HasVisibleFrame { get { return true; } }
+        }
+
+        private sealed class VisibleVideoFactory : IVnSceneComposerVideoPreviewFactory
+        {
+            public VisibleVideoPreview Last;
+
+            public VnSceneComposerVideoPreview Open(VnSceneComposerMediaReference media, int width, int height)
+            {
+                Last = new VisibleVideoPreview(media != null && media.loop);
+                return Last;
+            }
+        }
 
         [Test]
         public void ExternalVideoIsEditorLocalAndPreviewControllerOwnsDeterministicRenderTarget()
@@ -60,7 +91,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(Get(preview, "texture"), Is.Null);
 
                 File.Delete(path);
-                object missing = open.Invoke(null, new object[] { media, 320, 180 });
+                object missing = open.Invoke(null, new[] { media, 320, 180 });
                 Assert.That(Get(missing, "texture"), Is.Null);
                 Assert.That(GetString(missing, "warning"), Does.Contain("missing").IgnoreCase);
                 RequireInstance(previewType, "Dispose").Invoke(missing, null);
@@ -144,6 +175,8 @@ namespace Rokas.EditorTools.Tests
         {
             Type windowType = RequireType("VnPresentationWorkshopWindow");
             UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
+            var factory = new VisibleVideoFactory();
+            VnSceneComposerMediaEditing.VideoPreviewFactory = factory;
             string path = Path.Combine(Path.GetTempPath(), "rokas-vn-video-routing-" + Guid.NewGuid().ToString("N") + ".mp4");
             File.WriteAllBytes(path, new byte[] { 0, 0, 0, 0 });
             try
@@ -156,10 +189,12 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(playbackFrame, Is.Not.Null);
                 Texture target = (Texture)GetProperty(playbackFrame, "TargetBackground");
                 Assert.That(target, Is.Not.Null.And.TypeOf<RenderTexture>(),
-                    "ExternalVideo must reach the renderer as its RenderTexture, never disappear through a Texture2D cast.");
+                    "Once ExternalVideo has a visible decoded frame, it must reach the renderer as its RenderTexture rather than disappear through a Texture2D cast.");
             }
             finally
             {
+                VnSceneComposerMediaEditing.ResetVideoPreviewFactory();
+                if (factory.Last != null) factory.Last.Dispose();
                 UnityEngine.Object.DestroyImmediate(window);
                 if (File.Exists(path)) File.Delete(path);
             }
