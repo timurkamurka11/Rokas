@@ -79,9 +79,18 @@ namespace Rokas.EditorTools.Tests
 
             string workspace = ReadProjectSource(
                 "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs");
+            Assert.That(workspace, Does.Contain("bool advancedPreview = staticAuthoringPreview && _sceneComposerInspectorSection == 7;"),
+                "UI Feedback preview must remain available only through the advanced Дополнительно context.");
+            Assert.That(workspace, Does.Contain("if (advancedPreview && comparisonView == VnWorkshopComparisonView.Current)"),
+                "The advanced preview must continue sampling canonical UI Feedback state.");
             Assert.That(workspace,
-                Does.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,"),
-                "The central Scene Preview must pass its canonical feedback sample into the existing renderer before Back/Next are drawn.");
+                Does.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, false,"),
+                "Basic authoring must hide hit-region debug rendering while the central renderer keeps the canonical UI Feedback integration.");
+            Assert.That(workspace, Does.Contain("uiFeedbackElement, uiFeedbackSample"),
+                "The central Scene Preview must continue passing its canonical feedback element/sample into the existing renderer before Back/Next are drawn.");
+            Assert.That(workspace,
+                Does.Not.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,"),
+                "UX-H must not re-enable engineering hit-region rendering merely because the preview is static.");
 
             string authoring = ReadProjectSource(
                 "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
