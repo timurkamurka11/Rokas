@@ -607,12 +607,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (!string.IsNullOrEmpty(video.warning))
             {
                 GUI.Box(new Rect(previewRect.x + 12f, previewRect.y + 12f, Mathf.Max(180f, previewRect.width - 24f), 44f),
-                    "Missing / failed External Video\n" + video.warning);
+                    "Не удалось открыть видео\n" + video.warning);
                 return;
             }
             if (video.IsPreparing || !video.HasVisibleFrame)
             {
-                GUI.Box(new Rect(previewRect.center.x - 90f, previewRect.center.y - 20f, 180f, 40f), "Preparing video…");
+                GUI.Box(new Rect(previewRect.center.x - 90f, previewRect.center.y - 20f, 180f, 40f), "Подготовка видео…");
             }
         }
 
