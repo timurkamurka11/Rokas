@@ -15,7 +15,7 @@ namespace Rokas.EditorTools.Tests
             VnPresentationWorkshopWindow.Open();
             VnPresentationWorkshopWindow window = EditorWindow.GetWindow<VnPresentationWorkshopWindow>();
             Assert.That(window, Is.Not.Null, "The real ROKAS/VN UI Workshop entry point must open an EditorWindow.");
-            Assert.That(window.titleContent.text, Is.EqualTo("VN UI Workshop"));
+            Assert.That(window.titleContent.text, Is.EqualTo("ROKAS — Редактор новеллы"));
             Assert.That(window.CurrentPreset, Is.Not.Null);
             Assert.That(window.PreviewScene, Is.EqualTo(VnWorkshopPreviewScene.MinaBody));
             Assert.That(window.PreviewResolution, Is.EqualTo(VnWorkshopResolution.Reference1920x1080));
