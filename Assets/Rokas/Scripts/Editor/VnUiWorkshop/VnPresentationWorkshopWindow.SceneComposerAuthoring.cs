@@ -535,15 +535,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             DrawSceneComposerSerializedSection(ref _sceneComposerTypographyExpanded, "Typography", active, "typography");
             DrawSceneComposerSerializedSection(ref _sceneComposerTextRevealExpanded, "Text Reveal / Typewriter", active, "typewriter");
-            DrawSceneComposerSerializedSection(ref _sceneComposerExpressionExpanded, "Authored State / Expression", active, "expressionTransition");
-            DrawSceneComposerSerializedSection(ref _sceneComposerCharacterMotionExpanded, "Character Enter / Exit", active, "characterTransition");
-            DrawSceneComposerSerializedSection(ref _sceneComposerBounceExpanded, "Action Bounce", active, "actionBounce");
-            DrawSceneComposerSerializedSection(ref _sceneComposerBackgroundTransitionExpanded, "Background Transition", active, "backgroundTransition");
-            DrawSceneComposerSerializedSection(ref _sceneComposerStageExpanded, "Stage Layout", active, "stageLayout");
-            DrawSceneComposerSerializedSection(ref _sceneComposerFocusExpanded, "Speaker Focus", active, "focus");
-            DrawSceneComposerSerializedSection(ref _sceneComposerUiFeedbackExpanded, "UI Feedback", active, "uiFeedback");
+            DrawSceneComposerSerializedSection(ref _sceneComposerExpressionExpanded, "Смена позы / эмоции — точные параметры", active, "expressionTransition");
+            DrawSceneComposerSerializedSection(ref _sceneComposerCharacterMotionExpanded, "Появление и исчезновение — точные параметры", active, "characterTransition");
+            DrawSceneComposerSerializedSection(ref _sceneComposerBounceExpanded, "Акцент / движение — точные параметры", active, "actionBounce");
+            DrawSceneComposerSerializedSection(ref _sceneComposerBackgroundTransitionExpanded, "Переход фона — точные параметры", active, "backgroundTransition");
+            DrawSceneComposerSerializedSection(ref _sceneComposerStageExpanded, "Расположение персонажей — точные параметры", active, "stageLayout");
+            DrawSceneComposerSerializedSection(ref _sceneComposerFocusExpanded, "Фокус говорящего — точные параметры", active, "focus");
+            DrawSceneComposerSerializedSection(ref _sceneComposerUiFeedbackExpanded, "Эффекты интерфейса", active, "uiFeedback");
             if (_sceneComposerUiFeedbackExpanded) DrawSceneComposerUiFeedbackPreviewControls();
-            DrawSceneComposerSerializedSection(ref _sceneComposerTimingExpanded, "Timing / Pacing", active, "timing");
+            DrawSceneComposerSerializedSection(ref _sceneComposerTimingExpanded, "Тайминг сцены — точные параметры", active, "timing");
             _sceneComposerAdvancedExpanded = EditorGUILayout.Foldout(_sceneComposerAdvancedExpanded, "Advanced / Full Preset", true);
             if (_sceneComposerAdvancedExpanded) EditorGUILayout.PropertyField(active, true);
 
