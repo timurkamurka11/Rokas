@@ -51,6 +51,76 @@ namespace Rokas.EditorTools.Tests
                 "Existing Scene Composer compatibility entry points must remain intact.");
         }
 
+        [Test]
+        public void UxB_CoreWorkspaceUsesRussianSceneListAndPreview()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string storyboard = ExtractMethodBody(source, "private void DrawSceneComposerStoryboard()");
+            string preview = ExtractMethodBody(source, "private void DrawSceneComposerPreview()");
+
+            Assert.That(storyboard, Does.Contain("\"Сцены\""),
+                "The left authoring column must be presented as Сцены.");
+            Assert.That(storyboard, Does.Contain("\"+ Добавить сцену\""),
+                "The primary scene action must be the Russian Добавить сцену action.");
+            Assert.That(storyboard, Does.Not.Contain("\"Storyboard\""),
+                "The ordinary scene list must not retain the engineering Storyboard heading.");
+            Assert.That(preview, Does.Contain("\"Предпросмотр сцены\""),
+                "The dominant center column must be presented as Предпросмотр сцены.");
+            Assert.That(preview, Does.Not.Contain("\"Scene Preview\""),
+                "The ordinary center column must not retain the English Scene Preview heading.");
+        }
+
+        [Test]
+        public void UxB_RightInspectorExposesRussianCoreAuthoringSections()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs") + "\n" +
+                ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs") + "\n" +
+                ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAssets.cs");
+
+            string[] requiredSections =
+            {
+                "Фон",
+                "Персонажи",
+                "Текст",
+                "Анимация сцены",
+                "Анимация персонажа",
+                "Медиа",
+                "Настройки сцены",
+                "Дополнительно"
+            };
+            foreach (string section in requiredSections)
+            {
+                Assert.That(source, Does.Contain("\"" + section + "\""),
+                    "The ordinary inspector must expose the Russian core section: " + section + ".");
+            }
+        }
+
+        [Test]
+        public void UxB_BasicPlaybackUsesRussianTransportLabels()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string preview = ExtractMethodBody(source, "private void DrawSceneComposerPreview()");
+
+            string[] requiredLabels =
+            {
+                "Предыдущая",
+                "Проиграть сцену",
+                "Проиграть всё",
+                "Пауза",
+                "Сначала",
+                "Следующая"
+            };
+            foreach (string label in requiredLabels)
+            {
+                Assert.That(preview, Does.Contain("\"" + label + "\""),
+                    "Basic playback must expose the Russian transport label: " + label + ".");
+            }
+
+            Assert.That(preview, Does.Not.Contain("\"Play Scene\""));
+            Assert.That(preview, Does.Not.Contain("\"Play All\""));
+            Assert.That(preview, Does.Not.Contain("\"Restart\""));
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
