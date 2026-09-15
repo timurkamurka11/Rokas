@@ -59,6 +59,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
     public class VnSceneComposerVideoPreview : IDisposable
     {
+        private const int MaxVideoPreviewDimension = 1920;
+
         public RenderTexture texture;
         public string warning;
         public bool loop;
@@ -88,7 +90,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 name = "ROKAS_VnSceneComposerVideoPreview",
                 hideFlags = HideFlags.HideAndDontSave,
-                filterMode = FilterMode.Bilinear,
+                filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
             texture.Create();
@@ -102,6 +104,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             player.waitForFirstFrame = true;
             player.skipOnDrop = true;
             player.renderMode = VideoRenderMode.RenderTexture;
+            player.aspectRatio = VideoAspectRatio.FitInside;
             player.audioOutputMode = VideoAudioOutputMode.None;
             player.source = VideoSource.Url;
             player.url = ToFileUrl(path);
@@ -220,9 +223,44 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (prepared != player) return;
             prepareRequested = false;
+            EnsureRenderTargetMatchesPreparedSource(prepared);
             if (playRequested) player.Play();
             else RequestFirstFrame();
             Changed?.Invoke();
+        }
+
+        private void EnsureRenderTargetMatchesPreparedSource(VideoPlayer prepared)
+        {
+            if (prepared == null || prepared != player || texture == null) return;
+            int sourceWidth = (int)prepared.width;
+            int sourceHeight = (int)prepared.height;
+            if (sourceWidth <= 0 || sourceHeight <= 0) return;
+
+            Vector2Int desired = ResolvePreparedRenderSize(sourceWidth, sourceHeight);
+            if (texture.width == desired.x && texture.height == desired.y) return;
+
+            prepared.targetTexture = null;
+            texture.Release();
+            texture.width = desired.x;
+            texture.height = desired.y;
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.Create();
+            prepared.targetTexture = texture;
+        }
+
+        private static Vector2Int ResolvePreparedRenderSize(int sourceWidth, int sourceHeight)
+        {
+            sourceWidth = Mathf.Max(16, sourceWidth);
+            sourceHeight = Mathf.Max(16, sourceHeight);
+            int longest = Mathf.Max(sourceWidth, sourceHeight);
+            if (longest <= MaxVideoPreviewDimension)
+                return new Vector2Int(sourceWidth, sourceHeight);
+
+            float scale = MaxVideoPreviewDimension / (float)longest;
+            return new Vector2Int(
+                Mathf.Max(16, Mathf.RoundToInt(sourceWidth * scale)),
+                Mathf.Max(16, Mathf.RoundToInt(sourceHeight * scale)));
         }
 
         private void RequestFirstFrame()
