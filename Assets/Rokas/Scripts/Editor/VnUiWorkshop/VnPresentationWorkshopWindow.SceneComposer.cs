@@ -454,11 +454,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Rect previewRect = EditorGUILayout.GetControlRect(false, previewHeight, GUILayout.ExpandWidth(true));
             if (frame != null)
             {
-                VnWorkshopElement? selectedUi = staticAuthoringPreview && _sceneComposerSelectedCharacterIndex < 0
+                bool advancedLayout = staticAuthoringPreview && IsSceneComposerAdvancedLayoutEditingVisible();
+                bool advancedUiFeedback = staticAuthoringPreview && IsSceneComposerAdvancedUiFeedbackPreviewVisible();
+                VnWorkshopElement? selectedUi = advancedLayout && _sceneComposerSelectedCharacterIndex < 0
                     ? (VnWorkshopElement?)selectedElement : null;
                 VnWorkshopElement? uiFeedbackElement = null;
                 VnWorkshopUiFeedbackSample? uiFeedbackSample = null;
-                if (staticAuthoringPreview && comparisonView == VnWorkshopComparisonView.Current)
+                if (advancedUiFeedback && comparisonView == VnWorkshopComparisonView.Current)
                 {
                     if (!IsSceneComposerUiFeedbackElement(_sceneComposerUiFeedbackPreviewElement))
                         _sceneComposerUiFeedbackPreviewElement = VnWorkshopElement.Back;
@@ -468,7 +470,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         _sceneComposerUiFeedbackPreviewState,
                         _sceneComposerUiFeedbackPreviewProgress);
                 }
-                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,
+                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, advancedLayout,
                     uiFeedbackElement, uiFeedbackSample);
                 if (staticAuthoringPreview)
                 {
@@ -494,7 +496,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 string state = _sceneComposerPlayback.IsPlaying ? "Воспроизведение" : "Пауза / остановлено";
                 EditorGUILayout.LabelField(state + " · Сцена " + (_sceneComposerPlayback.CurrentSceneIndex + 1) + " · " +
-                    _sceneComposerPlayback.SceneElapsedSeconds.ToString("0.00") + "s", EditorStyles.miniLabel);
+                    _sceneComposerPlayback.SceneElapsedSeconds.ToString("0.00") + " с", EditorStyles.miniLabel);
             }
             EditorGUILayout.EndVertical();
         }
@@ -561,7 +563,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerProject.title = title;
                 MarkSceneComposerChanged();
             }
-            EditorGUILayout.LabelField("ID проекта", _sceneComposerProject.projectId, EditorStyles.miniLabel);
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Сохранить проект"))
             {
@@ -583,6 +584,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerSavedProjectIndex = Mathf.Clamp(_sceneComposerSavedProjectIndex, 0, saved.Length - 1);
                 _sceneComposerSavedProjectIndex = EditorGUILayout.Popup("Сохранённый проект", _sceneComposerSavedProjectIndex, saved);
             }
+        }
+
+        private void DrawSceneComposerProjectTechnicalInfo()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Технические данные проекта", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("ID проекта", _sceneComposerProject.projectId, EditorStyles.miniLabel);
             EditorGUILayout.LabelField("Хранение: Library/ROKAS/VnSceneComposer.", EditorStyles.miniLabel);
         }
 
@@ -615,16 +623,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
             EditorGUILayout.LabelField("Тип", GetSceneComposerMediaKindLabel(scene.media.kind));
             EditorGUILayout.LabelField("Выбрано", string.IsNullOrEmpty(scene.media.displayName) ? "Нет" : scene.media.displayName);
-            UnityEngine.Object currentAsset = null;
-            if (scene.media.kind == VnSceneComposerMediaKind.ExistingRokasAsset && !string.IsNullOrEmpty(scene.media.reference))
-            {
-                string path = AssetDatabase.GUIDToAssetPath(scene.media.reference);
-                if (!string.IsNullOrEmpty(path)) currentAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-            }
-            EditorGUI.BeginChangeCheck();
-            UnityEngine.Object nextAsset = EditorGUILayout.ObjectField("Ресурс ROKAS", currentAsset, typeof(Texture2D), false);
-            if (EditorGUI.EndChangeCheck() && nextAsset != null)
-                TrySceneComposerMediaAction(() => ComposerSetExistingRokasAsset(nextAsset));
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Изображение"))
             {
@@ -663,7 +661,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string warning = GetSceneComposerMediaWarning(scene.media);
             if (!string.IsNullOrEmpty(warning)) EditorGUILayout.HelpBox(warning, MessageType.Warning);
             else if (scene.media.localPreviewDependency)
-                EditorGUILayout.HelpBox("Внешний файл используется только в редакторе и не копируется в production Assets.", MessageType.Info);
+                EditorGUILayout.HelpBox("Внешний файл используется только в редакторе и не копируется в игровые ресурсы.", MessageType.Info);
         }
 
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
@@ -1069,6 +1067,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Дополнительно", EditorStyles.boldLabel);
+            DrawSceneComposerProjectTechnicalInfo();
             DrawSceneComposerAssetLibraryControls(scene);
             DrawSceneComposerPresentationInspector(scene);
         }
