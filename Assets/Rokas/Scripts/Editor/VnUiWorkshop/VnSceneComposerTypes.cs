@@ -22,7 +22,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public enum VnSceneComposerMediaScaleMode
     {
         Fit,
-        Fill
+        Fill,
+        Stretch
     }
 
     public enum VnSceneComposerPreviewAdvanceMode
