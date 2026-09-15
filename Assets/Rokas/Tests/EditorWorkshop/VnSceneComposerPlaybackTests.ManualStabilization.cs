@@ -84,29 +84,54 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(ManualGetPrivateField(window, "comparisonView").ToString(), Is.EqualTo("Current"),
                     "Synthetic event must enter the Current authoring path.");
 
-                var click = new Event
+                Type guiClipType = typeof(GUI).Assembly.GetType("UnityEngine.GUIClip");
+                Assert.That(guiClipType, Is.Not.Null, "Missing UnityEngine.GUIClip test harness type.");
+                MethodInfo pushGuiClip = guiClipType.GetMethod("Push",
+                    BindingFlags.NonPublic | BindingFlags.Static, null,
+                    new[] { typeof(Rect), typeof(Vector2), typeof(Vector2), typeof(bool) }, null);
+                MethodInfo popGuiClip = guiClipType.GetMethod("Pop",
+                    BindingFlags.NonPublic | BindingFlags.Static, null, Type.EmptyTypes, null);
+                Assert.That(pushGuiClip, Is.Not.Null, "Missing GUIClip.Push test harness helper.");
+                Assert.That(popGuiClip, Is.Not.Null, "Missing GUIClip.Pop test harness helper.");
+
+                pushGuiClip.Invoke(null, new object[] { previewRect, Vector2.zero, Vector2.zero, false });
+                try
                 {
-                    type = EventType.MouseDown,
-                    button = 0,
-                    mousePosition = dialoguePreviewRect.center
-                };
-                Assert.That(click.type, Is.EqualTo(EventType.MouseDown));
-                Assert.That(click.button, Is.EqualTo(0));
-                Assert.That(previewRect.Contains(click.mousePosition), Is.True);
+                    var click = new Event
+                    {
+                        type = EventType.MouseDown,
+                        button = 0,
+                        mousePosition = dialoguePreviewRect.center
+                    };
+                    Assert.That(click.rawType, Is.EqualTo(EventType.MouseDown),
+                        "Synthetic event raw type must remain MouseDown.");
+                    Assert.That(click.type, Is.EqualTo(EventType.MouseDown),
+                        "Synthetic MouseDown must be inside the test GUI clip before production dispatch.");
+                    Assert.That(click.button, Is.EqualTo(0));
+                    Assert.That(previewRect.Contains(click.mousePosition), Is.True);
 
-                ManualRequireInstance(windowType, "HandleSceneComposerPreviewInput",
-                        typeof(Rect), frame.GetType(), typeof(Event))
-                    .Invoke(window, new object[] { previewRect, frame, click });
+                    ManualRequireInstance(windowType, "HandleSceneComposerPreviewInput",
+                            typeof(Rect), frame.GetType(), typeof(Event))
+                        .Invoke(window, new object[] { previewRect, frame, click });
 
-                object selected = ManualInvoke(windowType, window, "ComposerGetSelectedPresentationElement");
-                bool dragging = (bool)ManualGetPrivateField(window, "_sceneComposerDraggingPreviewObject");
-                int selectedCharacter = (int)ManualGetPrivateField(window, "_sceneComposerSelectedCharacterIndex");
-                Assert.That(click.type, Is.EqualTo(EventType.Used),
-                    "MouseDown was not consumed by authoring handler. selected=" + selected +
-                    ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
-                Assert.That(selected.ToString(), Is.EqualTo("DialogueText"),
-                    "Normal authoring must select canonical UI objects directly; Advanced layout mode must not be required. " +
-                    "event=" + click.type + ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
+                    object selected = ManualInvoke(windowType, window, "ComposerGetSelectedPresentationElement");
+                    bool dragging = (bool)ManualGetPrivateField(window, "_sceneComposerDraggingPreviewObject");
+                    int selectedCharacter = (int)ManualGetPrivateField(window, "_sceneComposerSelectedCharacterIndex");
+                    Assert.That(click.type, Is.EqualTo(EventType.Used),
+                        "MouseDown was not consumed by authoring handler. selected=" + selected +
+                        ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
+                    Assert.That(selected.ToString(), Is.EqualTo("DialogueText"),
+                        "Normal authoring must select canonical UI objects directly; Advanced layout mode must not be required. " +
+                        "event=" + click.type + ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
+                    Assert.That(dragging, Is.True,
+                        "DialogueText MouseDown must initialize direct-manipulation drag state.");
+                    Assert.That(selectedCharacter, Is.EqualTo(-1),
+                        "DialogueText MouseDown must not fall through to character selection.");
+                }
+                finally
+                {
+                    popGuiClip.Invoke(null, null);
+                }
             }
             finally
             {
