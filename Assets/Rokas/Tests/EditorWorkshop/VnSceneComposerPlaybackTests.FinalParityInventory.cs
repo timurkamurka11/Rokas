@@ -256,13 +256,14 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(authoring, Does.Contain("ComposerSetUiFeedbackPreview"),
                     "Scene Composer must expose authoring controls for Normal/Hover/Pressed/Release preview phases.");
                 Assert.That(authoring, Does.Contain("\"Normal\"").And.Contain("\"Hover\"").And.Contain("\"Pressed\"").And.Contain("\"Release\""));
-                Assert.That(authoring, Does.Contain("DrawSceneComposerUiFeedbackPreview(previewRect, frame)"),
-                    "The static authoring overlay path must render the canonical UI feedback sample.");
+                Assert.That(authoring, Does.Not.Contain("DrawSceneComposerUiFeedbackPreview(previewRect, frame);"),
+                    "UI feedback must be integrated into the existing renderer pass instead of drawn as an additive overlay.");
 
                 string workspace = ReadProjectSource(
                     "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs");
-                Assert.That(workspace, Does.Contain("DrawSceneComposerSelectionOverlay(previewRect, frame);"),
-                    "The central Scene Preview must execute the authoring overlay path that consumes UI feedback.");
+                Assert.That(workspace,
+                    Does.Contain("VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, staticAuthoringPreview,"),
+                    "The central Scene Preview must pass canonical UI feedback into the existing renderer before Back/Next are drawn.");
             }
             finally
             {
