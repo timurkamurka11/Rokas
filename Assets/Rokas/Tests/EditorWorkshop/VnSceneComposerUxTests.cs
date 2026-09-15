@@ -198,6 +198,91 @@ namespace Rokas.EditorTools.Tests
                 "TextCore glyph validation must continue to unload the font face in the proven path.");
         }
 
+        [Test]
+        public void UxD_BasicCharacterInspectorUsesContextualRussianControls()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerCharacterInspector(VnSceneComposerScene scene)");
+
+            Assert.That(inspector, Does.Contain("\"+ Добавить персонажа\""));
+            Assert.That(inspector, Does.Contain("\"Персонаж\""));
+            Assert.That(inspector, Does.Contain("\"Поза / эмоция\""),
+                "The ordinary pose picker must use the visual-novel concept Поза / эмоция.");
+            Assert.That(inspector, Does.Contain("\"Положение\""));
+            Assert.That(inspector, Does.Contain("\"Размер\""),
+                "Character size must be an ordinary control rather than raw Scale engineering UI.");
+            Assert.That(inspector, Does.Contain("\"Слева\""));
+            Assert.That(inspector, Does.Contain("\"Центр\""));
+            Assert.That(inspector, Does.Contain("\"Справа\""));
+            Assert.That(inspector, Does.Contain("\"Свободно\""),
+                "Dragged characters must have a clear free-position state in the basic inspector.");
+            Assert.That(inspector, Does.Contain("character.stageSlot"),
+                "Position presets must keep using the canonical stage slot.");
+            Assert.That(inspector, Does.Contain("character.hasPositionOffset"),
+                "Free positioning must remain the existing canonical position-offset path.");
+            Assert.That(inspector, Does.Not.Contain("\"Поза / состояние\""));
+        }
+
+        [Test]
+        public void UxD_CharacterListHasFriendlyEmptyAndSelectionStates()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerCharacterInspector(VnSceneComposerScene scene)");
+
+            Assert.That(inspector, Does.Contain("В сцене пока нет персонажей."),
+                "An empty scene must explain that there are no characters yet.");
+            Assert.That(inspector, Does.Contain("Выберите персонажа в списке или на сцене."),
+                "When characters exist but none is selected, the inspector must explain the natural list/preview selection workflow.");
+            Assert.That(inspector, Does.Contain("_sceneComposerSelectedCharacterIndex = i"),
+                "Selecting a character in the list must use the same active-character state as preview selection.");
+            Assert.That(inspector, Does.Not.Contain("Select for Preview"));
+            Assert.That(inspector, Does.Not.Contain("Selected in Preview"));
+        }
+
+        [Test]
+        public void UxD_PreviewSelectionAndDirectDragRemainCanonical()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string select = ExtractMethodBody(source, "public bool ComposerSelectPreviewObjectAt(Vector2 logicalPoint)");
+            string input = ExtractMethodBody(source,
+                "private void HandleSceneComposerPreviewInput(Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)");
+            string drag = ExtractMethodBody(source, "private void ApplySceneComposerCharacterDrag(Vector2 logicalDelta)");
+
+            Assert.That(select, Does.Contain("_sceneComposerSelectedCharacterIndex = i"),
+                "Clicking a character in the central preview must select that same authored character.");
+            Assert.That(input, Does.Contain("ComposerSelectPreviewObjectAt(logicalPoint)"));
+            Assert.That(input, Does.Contain("ApplySceneComposerCharacterDrag(logicalDelta);"),
+                "Mouse drag in the preview must continue to route to the character drag path.");
+            Assert.That(drag, Does.Contain("character.positionOffset = next;"));
+            Assert.That(drag, Does.Contain("character.hasPositionOffset = next != Vector2.zero;"),
+                "Direct drag must keep mutating the canonical VnSceneComposerCharacter position offset.");
+        }
+
+        [Test]
+        public void UxD_ExactTransformIsSecondaryRussianDisclosure()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string exact = ExtractMethodBody(source,
+                "private void DrawSceneComposerCharacterTransformControls(int characterIndex, VnSceneComposerCharacter character)");
+
+            Assert.That(exact, Does.Contain("\"Точное положение\""),
+                "Exact coordinates must remain available behind a secondary disclosure.");
+            Assert.That(exact, Does.Contain("\"X\""));
+            Assert.That(exact, Does.Contain("\"Y\""));
+            Assert.That(exact, Does.Contain("\"Масштаб\""));
+            Assert.That(exact, Does.Contain("\"Сбросить положение и размер\""),
+                "The reset label must describe the existing reset semantics accurately.");
+            Assert.That(exact, Does.Contain("ComposerSetCharacterTransform"));
+            Assert.That(exact, Does.Contain("ComposerResetCharacterTransform"));
+            Assert.That(exact, Does.Not.Contain("\"Transform\""));
+            Assert.That(exact, Does.Not.Contain("\"Position X\""));
+            Assert.That(exact, Does.Not.Contain("\"Position Y\""));
+            Assert.That(exact, Does.Not.Contain("\"Scale\""));
+            Assert.That(exact, Does.Not.Contain("Select for Preview"));
+            Assert.That(exact, Does.Not.Contain("Selected in Preview"));
+            Assert.That(exact, Does.Not.Contain("Reset Transform"));
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
