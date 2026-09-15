@@ -10,7 +10,7 @@ namespace Rokas.EditorTools.Tests
     {
         private const string EditorAssembly = "Rokas.Editor";
         private const string Namespace = "Rokas.EditorTools.VnUiWorkshop.";
-        private const string ExpectedMenuPath = "ROKAS/VN UI Workshop";
+        private const string ExpectedMenuPath = "ROKAS/Редактор новеллы";
 
         [Test]
         public void EditorWindowContractUsesApprovedMenuAndHasNoProductionApplyAction()
