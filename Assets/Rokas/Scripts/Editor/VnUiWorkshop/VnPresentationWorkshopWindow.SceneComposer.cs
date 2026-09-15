@@ -342,6 +342,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 stageSlot = scene.characters.Count == 0 ? VnWorkshopStageSlot.Center :
                     (scene.characters.Count == 1 ? VnWorkshopStageSlot.Left : VnWorkshopStageSlot.Right)
             });
+            _sceneComposerSelectedCharacterIndex = scene.characters.Count - 1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -733,50 +734,150 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.LabelField("Персонажи", EditorStyles.boldLabel);
             if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
             string[] characters = VnSceneComposerCharacterStateResolver.GetCharacters();
-            if (scene.characters.Count < 3 && characters.Length > 0 && GUILayout.Button("+ Добавить персонажа"))
+
+            if (scene.characters.Count == 0)
             {
-                string[] states = ComposerGetAuthoredStateIds(characters[0]);
-                if (states.Length > 0) ComposerAddCharacter(characters[0], states[0]);
+                EditorGUILayout.HelpBox("В сцене пока нет персонажей.", MessageType.Info);
+                using (new EditorGUI.DisabledScope(characters.Length == 0))
+                {
+                    if (GUILayout.Button("+ Добавить персонажа"))
+                    {
+                        string[] states = ComposerGetAuthoredStateIds(characters[0]);
+                        if (states.Length > 0) ComposerAddCharacter(characters[0], states[0]);
+                    }
+                }
+                if (characters.Length == 0)
+                    EditorGUILayout.HelpBox("В каталоге пока нет доступных персонажей и поз.", MessageType.Warning);
+                return;
             }
+
+            EditorGUILayout.LabelField("Персонажи в сцене", EditorStyles.miniBoldLabel);
             for (int i = 0; i < scene.characters.Count; i++)
             {
-                VnSceneComposerCharacter character = scene.characters[i];
-                if (character == null) continue;
-                EditorGUILayout.BeginVertical("box");
-                int characterIndex = Mathf.Max(0, Array.FindIndex(characters,
-                    name => string.Equals(name, character.characterId, StringComparison.OrdinalIgnoreCase)));
-                EditorGUI.BeginChangeCheck();
-                characterIndex = characters.Length > 0 ? EditorGUILayout.Popup("Персонаж", characterIndex, characters) : 0;
-                string nextCharacter = characters.Length > 0 ? characters[characterIndex] : character.characterId;
-                string[] states = ComposerGetAuthoredStateIds(nextCharacter);
-                int stateIndex = Mathf.Max(0, Array.IndexOf(states, character.stateId));
-                stateIndex = states.Length > 0 ? EditorGUILayout.Popup("Поза / состояние", stateIndex, states) : 0;
-                string nextState = states.Length > 0 ? states[stateIndex] : character.stateId;
-                VnWorkshopStageSlot slot = (VnWorkshopStageSlot)EditorGUILayout.EnumPopup("Положение", character.stageSlot);
-                if (EditorGUI.EndChangeCheck())
+                VnSceneComposerCharacter listed = scene.characters[i];
+                if (listed == null) continue;
+                bool selected = _sceneComposerSelectedCharacterIndex == i;
+                string stateName = GetSceneComposerCharacterStateDisplayName(listed.stateId);
+                string rowLabel = (selected ? "● " : string.Empty) +
+                    (listed.characterId ?? string.Empty) +
+                    (string.IsNullOrEmpty(stateName) ? string.Empty : " · " + stateName);
+                if (GUILayout.Button(rowLabel, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
                 {
-                    RecordSceneComposerUndo("Edit VN Scene Character"); character.characterId = nextCharacter;
-                    character.stateId = nextState; character.stageSlot = slot;
-                    ResetSceneComposerPlayback(); MarkSceneComposerChanged();
+                    _sceneComposerSelectedCharacterIndex = i;
+                    Repaint();
                 }
-                DrawSceneComposerCharacterTransformControls(i, character);
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Сделать говорящим"))
-                {
-                    RecordSceneComposerUndo("Set VN Scene Speaker"); scene.narration = false; scene.speaker = character.characterId;
-                    ResetSceneComposerPlayback(); MarkSceneComposerChanged();
-                }
-                if (GUILayout.Button("Удалить"))
-                {
-                    RecordSceneComposerUndo("Remove VN Scene Character"); scene.characters.RemoveAt(i);
-                    _sceneComposerSelectedCharacterIndex = -1;
-                    ResetSceneComposerPlayback(); MarkSceneComposerChanged();
-                    EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical(); break;
-                }
-                EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical();
             }
-            if (characters.Length == 0)
-                EditorGUILayout.HelpBox("В каталоге пока нет доступных персонажей и поз.", MessageType.Warning);
+
+            using (new EditorGUI.DisabledScope(scene.characters.Count >= 3 || characters.Length == 0))
+            {
+                if (GUILayout.Button("+ Добавить персонажа"))
+                {
+                    string[] states = ComposerGetAuthoredStateIds(characters[0]);
+                    if (states.Length > 0) ComposerAddCharacter(characters[0], states[0]);
+                }
+            }
+
+            if (_sceneComposerSelectedCharacterIndex < 0 || _sceneComposerSelectedCharacterIndex >= scene.characters.Count ||
+                scene.characters[_sceneComposerSelectedCharacterIndex] == null)
+            {
+                EditorGUILayout.HelpBox("Выберите персонажа в списке или на сцене.", MessageType.Info);
+                return;
+            }
+
+            int selectedIndex = _sceneComposerSelectedCharacterIndex;
+            VnSceneComposerCharacter character = scene.characters[selectedIndex];
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Выбранный персонаж", EditorStyles.miniBoldLabel);
+
+            int characterIndex = Mathf.Max(0, Array.FindIndex(characters,
+                name => string.Equals(name, character.characterId, StringComparison.OrdinalIgnoreCase)));
+            string currentCharacter = characters.Length > 0 ? characters[characterIndex] : character.characterId;
+            string[] currentStates = ComposerGetAuthoredStateIds(currentCharacter);
+            int currentStateIndex = Mathf.Max(0, Array.IndexOf(currentStates, character.stateId));
+            string[] currentStateNames = currentStates.Select(GetSceneComposerCharacterStateDisplayName).ToArray();
+
+            int currentPosition = character.hasPositionOffset ? 3 :
+                (character.stageSlot == VnWorkshopStageSlot.Left ? 0 :
+                    (character.stageSlot == VnWorkshopStageSlot.Right ? 2 : 1));
+            string[] positionLabels = { "Слева", "Центр", "Справа", "Свободно" };
+            float currentScale = character.hasScaleMultiplier ? character.scaleMultiplier : 1f;
+
+            EditorGUI.BeginChangeCheck();
+            int nextCharacterIndex = characters.Length > 0
+                ? EditorGUILayout.Popup("Персонаж", characterIndex, characters)
+                : 0;
+            string nextCharacter = characters.Length > 0 ? characters[nextCharacterIndex] : character.characterId;
+            string[] nextStates = ComposerGetAuthoredStateIds(nextCharacter);
+            string[] nextStateNames = nextStates.Select(GetSceneComposerCharacterStateDisplayName).ToArray();
+            int nextStateIndex = string.Equals(nextCharacter, currentCharacter, StringComparison.OrdinalIgnoreCase)
+                ? Mathf.Clamp(currentStateIndex, 0, Mathf.Max(0, nextStates.Length - 1))
+                : 0;
+            if (nextStates.Length > 0)
+                nextStateIndex = EditorGUILayout.Popup(
+                    new GUIContent("Поза / эмоция", "Внешний вид персонажа в этой сцене."),
+                    nextStateIndex, nextStateNames);
+            string nextState = nextStates.Length > 0 ? nextStates[nextStateIndex] : character.stateId;
+            int nextPosition = EditorGUILayout.Popup(
+                new GUIContent("Положение", "Быстро разместить персонажа на сцене."),
+                currentPosition, positionLabels);
+            float nextScale = EditorGUILayout.Slider(
+                new GUIContent("Размер", "Размер персонажа в кадре."),
+                currentScale, .05f, 5f);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                RecordSceneComposerUndo("Edit VN Scene Character");
+                character.characterId = nextCharacter;
+                character.stateId = nextState;
+                if (nextPosition == 3)
+                {
+                    character.hasPositionOffset = true;
+                }
+                else
+                {
+                    character.stageSlot = nextPosition == 0 ? VnWorkshopStageSlot.Left :
+                        (nextPosition == 2 ? VnWorkshopStageSlot.Right : VnWorkshopStageSlot.Center);
+                    character.hasPositionOffset = false;
+                    character.positionOffset = Vector2.zero;
+                }
+                character.hasScaleMultiplier = !Mathf.Approximately(nextScale, 1f);
+                character.scaleMultiplier = nextScale;
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+            }
+
+            DrawSceneComposerCharacterTransformControls(selectedIndex, character);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Сделать говорящим"))
+            {
+                RecordSceneComposerUndo("Set VN Scene Speaker");
+                scene.narration = false;
+                scene.speaker = character.characterId;
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+            }
+            if (GUILayout.Button("Удалить"))
+            {
+                RecordSceneComposerUndo("Remove VN Scene Character");
+                scene.characters.RemoveAt(selectedIndex);
+                _sceneComposerSelectedCharacterIndex = scene.characters.Count == 0
+                    ? -1
+                    : Mathf.Clamp(selectedIndex, 0, scene.characters.Count - 1);
+                ResetSceneComposerPlayback();
+                MarkSceneComposerChanged();
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private static string GetSceneComposerCharacterStateDisplayName(string stateId)
+        {
+            if (!VnSceneComposerCharacterStateResolver.TryResolve(stateId, out VnSceneComposerResolvedCharacterState state) || state == null)
+                return stateId ?? string.Empty;
+            string display = string.IsNullOrWhiteSpace(state.DisplayName) ? state.Id : state.DisplayName;
+            string prefix = (state.Character ?? string.Empty) + "_";
+            if (!string.IsNullOrEmpty(prefix) && display.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                display = display.Substring(prefix.Length);
+            return (display ?? string.Empty).Replace('_', ' ');
         }
 
         private void DrawSceneComposerAnimationShortcut(string title, string message)
