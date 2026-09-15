@@ -562,6 +562,69 @@ namespace Rokas.EditorTools.Tests
             Assert.That(preview, Does.Not.Contain("+ \"s\""));
         }
 
+        [Test]
+        public void VisualPolish_ProjectControlsAreAHeaderAboveTheThreeColumnWorkspace()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string workspace = ExtractMethodBody(source, "public void DrawSceneComposerWorkspace()");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerInspector()");
+
+            Assert.That(workspace, Does.Contain("DrawSceneComposerProjectStorage();"),
+                "Project name/save/load controls should read as a top tool header rather than consume contextual inspector space.");
+            Assert.That(workspace, Does.Contain("DrawSceneComposerStoryboard();")
+                .And.Contain("DrawSceneComposerPreview();")
+                .And.Contain("DrawSceneComposerInspector();"),
+                "The proven left / center / right Scene Composer regions must remain the core workspace.");
+            Assert.That(inspector, Does.Not.Contain("DrawSceneComposerProjectStorage();"),
+                "The contextual inspector should be reserved for scene authoring after the project controls move to the header.");
+        }
+
+        [Test]
+        public void VisualPolish_SceneCardsAreCompactAndKeepManagementSecondary()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string storyboard = ExtractMethodBody(source, "private void DrawSceneComposerStoryboard()");
+
+            Assert.That(storyboard, Does.Contain("Создайте первую сцену."),
+                "The empty storyboard should use the concise approved empty state.");
+            Assert.That(storyboard, Does.Contain("SceneComposerSceneThumbnailWidth"),
+                "Scene thumbnails should use a compact card-sized width rather than the previous full-column 220x100 block.");
+            Assert.That(storyboard, Does.Contain("EditorStyles.miniButtonLeft")
+                .And.Contain("EditorStyles.miniButtonMid")
+                .And.Contain("EditorStyles.miniButtonRight"),
+                "Duplicate/delete/reorder actions should form a compact secondary action row on the selected scene.");
+        }
+
+        [Test]
+        public void VisualPolish_PreviewTransportReadsAsOneBarWithPrimaryPlayActions()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string preview = ExtractMethodBody(source, "private void DrawSceneComposerPreview()");
+
+            Assert.That(preview, Does.Contain("EditorGUILayout.BeginHorizontal(EditorStyles.toolbar)"),
+                "Playback should read as one coherent transport strip beneath the preview.");
+            Assert.That(preview, Does.Contain("SceneComposerPrimaryTransportButtonStyle"),
+                "Play Scene and Play All should receive stronger visual priority than navigation and utility transport actions.");
+            Assert.That(preview, Does.Contain("\"Проиграть отсюда\""),
+                "Play From Here remains available as a secondary/contextual transport action.");
+            Assert.That(preview, Does.Contain("GUILayout.FlexibleSpace();"),
+                "The contextual Play From Here action should be visually separated from the core transport cluster.");
+        }
+
+        [Test]
+        public void VisualPolish_RightInspectorIsContextualAndVisuallyGrouped()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string inspector = ExtractMethodBody(source, "private void DrawSceneComposerInspector()");
+
+            Assert.That(inspector, Does.Contain("\"Свойства сцены\""),
+                "The right column should identify itself as contextual scene properties.");
+            Assert.That(inspector, Does.Contain("EditorGUILayout.BeginVertical(EditorStyles.helpBox)"),
+                "The active inspector section should be visually grouped instead of reading as a flat control dump.");
+            Assert.That(inspector, Does.Not.Contain("DrawSceneComposerProjectStorage();"),
+                "Project-wide controls do not belong inside the contextual scene inspector after visual polish.");
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
