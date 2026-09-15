@@ -27,7 +27,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CurtainDirection = VnWorkshopCurtainDirection.LeftToRight,
                 Complete = true
             };
-            return new VnSceneComposerPlaybackFrame(frame, sample, visual, visual);
+            VnSceneComposerMediaScaleMode scaleMode = scene.media != null
+                ? scene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit;
+            return new VnSceneComposerPlaybackFrame(frame, sample, visual, visual, scaleMode, scaleMode);
         }
     }
 }
