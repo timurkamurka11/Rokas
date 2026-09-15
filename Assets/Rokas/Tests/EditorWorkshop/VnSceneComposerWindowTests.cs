@@ -36,6 +36,28 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void ActivatingSceneComposerRestoresEditableCurrentPreview()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            try
+            {
+                object comparison = GetField(window, "comparisonView");
+                SetField(window, "comparisonView", Enum.Parse(comparison.GetType(), "Original"));
+                Assert.That(GetField(window, "comparisonView").ToString(), Is.EqualTo("Original"));
+
+                RequireInstance(windowType, "ActivateSceneComposerWorkspace").Invoke(window, null);
+
+                Assert.That(GetField(window, "comparisonView").ToString(), Is.EqualTo("Current"),
+                    "The normal Scene Composer must never inherit the hidden legacy Original comparison state, because that makes the preview ignore ordinary edits and pointer input.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void SceneCrudWiringPreservesStableIdsAndDuplicateGetsNewId()
         {
             Type windowType = RequireType("VnPresentationWorkshopWindow");
