@@ -43,6 +43,31 @@ namespace Rokas.EditorTools.Tests
                 {
                     previewRect, dialogueRect, frame
                 });
+
+                Assert.That(previewRect.Contains(dialoguePreviewRect.center), Is.True,
+                    "Synthetic click center must be inside visible preview. dialogueLogical=" + dialogueRect +
+                    ", dialoguePreview=" + dialoguePreviewRect + ", preview=" + previewRect);
+
+                MethodInfo previewToLogical = rendererType.GetMethod("PreviewToLogical",
+                    BindingFlags.Public | BindingFlags.Static, null,
+                    new[] { typeof(Rect), typeof(Vector2), frame.GetType() }, null);
+                Assert.That(previewToLogical, Is.Not.Null);
+                Vector2 roundTripPoint = (Vector2)previewToLogical.Invoke(null, new object[]
+                {
+                    previewRect, dialoguePreviewRect.center, frame
+                });
+                Assert.That(dialogueRect.Contains(roundTripPoint), Is.True,
+                    "Logical/preview round trip must remain inside DialogueText. point=" + roundTripPoint +
+                    ", dialogueLogical=" + dialogueRect);
+
+                MethodInfo hitTestUi = ManualRequireInstance(windowType, "HitTestSceneComposerUi",
+                    frame.GetType(), typeof(Vector2));
+                object directHit = hitTestUi.Invoke(window, new object[] { frame, roundTripPoint });
+                Assert.That(directHit, Is.Not.Null,
+                    "UI hit-test must resolve the synthetic DialogueText point before Event dispatch.");
+                Assert.That(directHit.ToString(), Is.EqualTo("DialogueText"),
+                    "UI hit-test must resolve DialogueText before Event dispatch.");
+
                 var click = new Event
                 {
                     type = EventType.MouseDown,
