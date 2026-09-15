@@ -212,13 +212,13 @@ namespace Rokas.EditorTools.Tests
 
             FieldInfo menuPath = window.GetField("MenuPath", BindingFlags.Public | BindingFlags.Static);
             Assert.That(menuPath, Is.Not.Null, "The window must expose the approved menu path as an immutable constant.");
-            Assert.That(menuPath.GetRawConstantValue(), Is.EqualTo("ROKAS/VN UI Workshop"));
+            Assert.That(menuPath.GetRawConstantValue(), Is.EqualTo("ROKAS/Редактор новеллы"));
 
             MethodInfo open = window.GetMethod("Open", BindingFlags.Public | BindingFlags.Static);
             Assert.That(open, Is.Not.Null, "The Workshop must expose a static menu entry point.");
             MenuItem menuItem = open.GetCustomAttributes(typeof(MenuItem), false).Cast<MenuItem>().SingleOrDefault();
             Assert.That(menuItem, Is.Not.Null, "The Workshop Open method must be registered with Unity's MenuItem attribute.");
-            Assert.That(menuItem.menuItem, Is.EqualTo("ROKAS/VN UI Workshop"));
+            Assert.That(menuItem.menuItem, Is.EqualTo("ROKAS/Редактор новеллы"));
 
             bool hasProductionApply = window
                 .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
