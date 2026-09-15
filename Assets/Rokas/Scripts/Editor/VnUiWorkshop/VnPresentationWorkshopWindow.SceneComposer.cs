@@ -27,6 +27,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private static readonly string[] SceneComposerInspectorSections =
+        {
+            "Фон",
+            "Персонажи",
+            "Текст",
+            "Анимация персонажа",
+            "Анимация сцены",
+            "Медиа",
+            "Настройки сцены",
+            "Дополнительно"
+        };
+
         [SerializeField] private bool _sceneComposerWorkspaceActive;
         [SerializeField] private VnSceneComposerProject _sceneComposerProject = new VnSceneComposerProject();
         [SerializeField] private string _sceneComposerSelectedSceneId = string.Empty;
@@ -35,6 +47,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerProjectDefaultsExpanded;
         [SerializeField] private bool _sceneComposerSceneOverridesExpanded;
         [SerializeField] private int _sceneComposerSavedProjectIndex;
+        [SerializeField] private int _sceneComposerInspectorSection;
 
         [NonSerialized] private VnSceneComposerPlaybackController _sceneComposerPlayback;
         [NonSerialized] private Dictionary<string, SceneComposerThumbnailCacheEntry> _sceneComposerThumbnailCache;
@@ -284,7 +297,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             EnsureSceneComposerProject();
             VnSceneComposerStorage.SaveProject(projectRoot, _sceneComposerProject);
-            SetSceneComposerStatus("Saved " + VnSceneComposerStorage.ProjectFileName + ".", MessageType.Info);
+            SetSceneComposerStatus("Проект сохранён: " + VnSceneComposerStorage.ProjectFileName + ".", MessageType.Info);
         }
 
         public VnSceneComposerImportResult ComposerLoadProject(string projectRoot, string projectId)
@@ -299,11 +312,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerSelectedCharacterIndex = -1;
                 EnsureSceneComposerEditorUpdateRegistered();
                 bool hasWarnings = result.Warnings != null && result.Warnings.Length > 0;
-                SetSceneComposerStatus(hasWarnings ? string.Join("\n", result.Warnings) : "Loaded Scene Composer project.",
+                SetSceneComposerStatus(hasWarnings ? string.Join("\n", result.Warnings) : "Проект загружен.",
                     hasWarnings ? MessageType.Warning : MessageType.Info);
                 Repaint();
             }
-            else SetSceneComposerStatus("Load failed: " + result.Error, MessageType.Error);
+            else SetSceneComposerStatus("Не удалось загрузить проект: " + result.Error, MessageType.Error);
             return result;
         }
 
@@ -376,11 +389,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerStoryboard()
         {
             EditorGUILayout.BeginVertical(GUILayout.Width(250f));
-            EditorGUILayout.LabelField("Storyboard", EditorStyles.boldLabel);
-            if (GUILayout.Button("+ Add Scene")) ComposerAddScene();
+            EditorGUILayout.LabelField("Сцены", EditorStyles.boldLabel);
+            if (GUILayout.Button("+ Добавить сцену")) ComposerAddScene();
             _sceneComposerStoryboardScroll = EditorGUILayout.BeginScrollView(_sceneComposerStoryboardScroll, GUILayout.ExpandHeight(true));
             if (_sceneComposerProject.scenes.Count == 0)
-                EditorGUILayout.HelpBox("No scenes yet. Add a scene to begin authoring.", MessageType.Info);
+                EditorGUILayout.HelpBox("Сцен пока нет. Добавьте первую сцену.", MessageType.Info);
             for (int i = 0; i < _sceneComposerProject.scenes.Count; i++)
             {
                 VnSceneComposerScene scene = _sceneComposerProject.scenes[i];
@@ -393,10 +406,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     Rect thumbnailRect = GUILayoutUtility.GetRect(220f, 100f, GUILayout.ExpandWidth(true));
                     GUI.DrawTexture(thumbnailRect, thumbnail, ScaleMode.ScaleAndCrop, true);
                 }
-                string label = string.IsNullOrWhiteSpace(scene.label) ? "Scene " + (i + 1) : scene.label;
+                string label = GetSceneComposerDisplayLabel(scene, i);
                 if (GUILayout.Button(label, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton)) ComposerSelectScene(i);
-                string media = scene.media != null ? scene.media.kind.ToString() : "None";
-                string detail = !string.IsNullOrEmpty(scene.speaker) ? scene.speaker : (scene.narration ? "Narration" : "No speaker");
+                string media = GetSceneComposerMediaKindLabel(scene.media != null ? scene.media.kind : VnSceneComposerMediaKind.None);
+                string detail = !string.IsNullOrEmpty(scene.speaker) ? scene.speaker : (scene.narration ? "Текст без персонажа" : "Без говорящего");
                 EditorGUILayout.LabelField(media + " · " + detail, EditorStyles.miniLabel);
                 if (!string.IsNullOrEmpty(scene.previewText))
                 {
@@ -407,12 +420,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (selected)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button("Duplicate")) ComposerDuplicateSelectedScene();
-                    if (GUILayout.Button("Delete")) ComposerDeleteSelectedScene();
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.BeginHorizontal();
-                    using (new EditorGUI.DisabledScope(i == 0)) if (GUILayout.Button("Move Up")) ComposerMoveSelectedScene(-1);
-                    using (new EditorGUI.DisabledScope(i >= _sceneComposerProject.scenes.Count - 1)) if (GUILayout.Button("Move Down")) ComposerMoveSelectedScene(1);
+                    if (GUILayout.Button("Дублировать")) ComposerDuplicateSelectedScene();
+                    if (GUILayout.Button("Удалить")) ComposerDeleteSelectedScene();
+                    using (new EditorGUI.DisabledScope(i == 0)) if (GUILayout.Button("↑", GUILayout.Width(28f))) ComposerMoveSelectedScene(-1);
+                    using (new EditorGUI.DisabledScope(i >= _sceneComposerProject.scenes.Count - 1)) if (GUILayout.Button("↓", GUILayout.Width(28f))) ComposerMoveSelectedScene(1);
                     EditorGUILayout.EndHorizontal();
                 }
                 EditorGUILayout.EndVertical();
@@ -424,7 +435,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerPreview()
         {
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-            EditorGUILayout.LabelField("Scene Preview", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Предпросмотр сцены", EditorStyles.boldLabel);
             VnWorkshopPreviewFrame frame = null;
             bool staticAuthoringPreview = _sceneComposerPlayback == null || _sceneComposerPlayback.CurrentFrame == null;
             try
@@ -437,7 +448,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     staticAuthoringPreview = true;
                 }
             }
-            catch (Exception exception) { SetSceneComposerStatus("Preview failed: " + exception.Message, MessageType.Error); }
+            catch (Exception exception) { SetSceneComposerStatus("Не удалось обновить предпросмотр: " + exception.Message, MessageType.Error); }
             float previewHeight = Mathf.Max(300f, position.height - 145f);
             Rect previewRect = EditorGUILayout.GetControlRect(false, previewHeight, GUILayout.ExpandWidth(true));
             if (frame != null)
@@ -465,23 +476,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     DrawSceneComposerVideoPreparationState(previewRect);
                 }
             }
-            else GUI.Box(previewRect, "Select or add a scene to preview.");
+            else GUI.Box(previewRect, "Выберите или добавьте сцену.");
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(_sceneComposerProject.scenes.Count == 0))
             {
-                if (GUILayout.Button("Previous")) ComposerPrevious();
-                if (GUILayout.Button("Play Scene")) ComposerPlayScene();
-                if (GUILayout.Button("Play From Here")) ComposerPlayFromHere();
-                if (GUILayout.Button("Play All")) ComposerPlayAll();
-                if (GUILayout.Button("Pause")) ComposerPause();
-                if (GUILayout.Button("Restart")) ComposerRestart();
-                if (GUILayout.Button("Next")) ComposerNext();
+                if (GUILayout.Button("Предыдущая")) ComposerPrevious();
+                if (GUILayout.Button("Проиграть сцену")) ComposerPlayScene();
+                if (GUILayout.Button("Проиграть отсюда")) ComposerPlayFromHere();
+                if (GUILayout.Button("Проиграть всё")) ComposerPlayAll();
+                if (GUILayout.Button("Пауза")) ComposerPause();
+                if (GUILayout.Button("Сначала")) ComposerRestart();
+                if (GUILayout.Button("Следующая")) ComposerNext();
             }
             EditorGUILayout.EndHorizontal();
             if (_sceneComposerPlayback != null && _sceneComposerPlayback.CurrentSceneIndex >= 0)
             {
-                string state = _sceneComposerPlayback.IsPlaying ? "Playing" : "Paused / stopped";
-                EditorGUILayout.LabelField(state + " · Scene " + (_sceneComposerPlayback.CurrentSceneIndex + 1) + " · " +
+                string state = _sceneComposerPlayback.IsPlaying ? "Воспроизведение" : "Пауза / остановлено";
+                EditorGUILayout.LabelField(state + " · Сцена " + (_sceneComposerPlayback.CurrentSceneIndex + 1) + " · " +
                     _sceneComposerPlayback.SceneElapsedSeconds.ToString("0.00") + "s", EditorStyles.miniLabel);
             }
             EditorGUILayout.EndVertical();
@@ -495,45 +506,75 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = GetSelectedScene();
             if (scene == null)
             {
-                EditorGUILayout.HelpBox("No scene selected.", MessageType.Info);
+                EditorGUILayout.HelpBox("Сцена не выбрана.", MessageType.Info);
                 EditorGUILayout.EndScrollView(); EditorGUILayout.EndVertical(); return;
             }
+
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Selected Scene", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            string label = EditorGUILayout.TextField("Scene Label", scene.label ?? string.Empty);
-            if (EditorGUI.EndChangeCheck()) ComposerRenameSelectedScene(label);
-            DrawSceneComposerAssetLibraryControls(scene);
-            DrawSceneComposerMediaInspector(scene);
-            DrawSceneComposerTextInspector(scene);
-            DrawSceneComposerCharacterInspector(scene);
-            DrawSceneComposerPresentationInspector(scene);
+            EditorGUILayout.LabelField("Сцена", EditorStyles.boldLabel);
+            _sceneComposerInspectorSection = Mathf.Clamp(_sceneComposerInspectorSection, 0, SceneComposerInspectorSections.Length - 1);
+            _sceneComposerInspectorSection = GUILayout.SelectionGrid(
+                _sceneComposerInspectorSection, SceneComposerInspectorSections, 2, EditorStyles.miniButton);
+            EditorGUILayout.Space();
+
+            switch (_sceneComposerInspectorSection)
+            {
+                case 0:
+                    DrawSceneComposerBackgroundInspector(scene);
+                    break;
+                case 1:
+                    DrawSceneComposerCharacterInspector(scene);
+                    break;
+                case 2:
+                    DrawSceneComposerTextInspector(scene);
+                    break;
+                case 3:
+                    DrawSceneComposerAnimationShortcut(
+                        "Анимация персонажа",
+                        "Все существующие параметры анимации персонажа сохранены в разделе «Дополнительно».");
+                    break;
+                case 4:
+                    DrawSceneComposerAnimationShortcut(
+                        "Анимация сцены",
+                        "Все существующие параметры анимации сцены сохранены в разделе «Дополнительно».");
+                    break;
+                case 5:
+                    DrawSceneComposerMediaInspector(scene);
+                    break;
+                case 6:
+                    DrawSceneComposerSceneSettings(scene);
+                    break;
+                default:
+                    DrawSceneComposerAdditionalInspector(scene);
+                    break;
+            }
+
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndVertical();
         }
 
         private void DrawSceneComposerProjectStorage()
         {
-            EditorGUILayout.LabelField("Scene Composer Project", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Проект новеллы", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
-            string title = EditorGUILayout.TextField("Title", _sceneComposerProject.title ?? string.Empty);
+            string title = EditorGUILayout.TextField("Название", _sceneComposerProject.title ?? string.Empty);
             if (EditorGUI.EndChangeCheck())
             {
                 RecordSceneComposerUndo("Rename Scene Composer Project");
                 _sceneComposerProject.title = title;
                 MarkSceneComposerChanged();
             }
-            EditorGUILayout.LabelField("Project ID", _sceneComposerProject.projectId, EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("ID проекта", _sceneComposerProject.projectId, EditorStyles.miniLabel);
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save Project"))
+            if (GUILayout.Button("Сохранить проект"))
             {
                 try { ComposerSaveProject(GetProjectRoot()); }
-                catch (Exception exception) { SetSceneComposerStatus("Save failed: " + exception.Message, MessageType.Error); }
+                catch (Exception exception) { SetSceneComposerStatus("Не удалось сохранить проект: " + exception.Message, MessageType.Error); }
             }
             string[] saved = ListSceneComposerProjectIds();
             using (new EditorGUI.DisabledScope(saved.Length == 0))
             {
-                if (GUILayout.Button("Load Project"))
+                if (GUILayout.Button("Загрузить проект"))
                 {
                     _sceneComposerSavedProjectIndex = Mathf.Clamp(_sceneComposerSavedProjectIndex, 0, Mathf.Max(0, saved.Length - 1));
                     if (saved.Length > 0) ComposerLoadProject(GetProjectRoot(), saved[_sceneComposerSavedProjectIndex]);
@@ -543,17 +584,40 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (saved.Length > 0)
             {
                 _sceneComposerSavedProjectIndex = Mathf.Clamp(_sceneComposerSavedProjectIndex, 0, saved.Length - 1);
-                _sceneComposerSavedProjectIndex = EditorGUILayout.Popup("Saved Project", _sceneComposerSavedProjectIndex, saved);
+                _sceneComposerSavedProjectIndex = EditorGUILayout.Popup("Сохранённый проект", _sceneComposerSavedProjectIndex, saved);
             }
-            EditorGUILayout.LabelField("Stored under Library/ROKAS/VnSceneComposer only.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Хранение: Library/ROKAS/VnSceneComposer.", EditorStyles.miniLabel);
+        }
+
+        private void DrawSceneComposerBackgroundInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("Фон", EditorStyles.boldLabel);
+            string[] backgroundIds = ComposerGetAvailableBackgroundAssetIds();
+            string[] backgroundNames = ComposerGetAvailableBackgroundDisplayNames();
+            if (backgroundIds.Length == 0)
+            {
+                EditorGUILayout.HelpBox("В библиотеке пока нет фонов. Добавить фон можно в «Дополнительно».", MessageType.Info);
+                return;
+            }
+
+            _sceneComposerBackgroundAssetIndex = Mathf.Clamp(_sceneComposerBackgroundAssetIndex, 0, backgroundIds.Length - 1);
+            _sceneComposerBackgroundAssetIndex = EditorGUILayout.Popup("Фон", _sceneComposerBackgroundAssetIndex, backgroundNames);
+            Texture2D thumbnail = ComposerGetLibraryAssetThumbnail(backgroundIds[_sceneComposerBackgroundAssetIndex]);
+            if (thumbnail != null)
+            {
+                Rect thumbRect = GUILayoutUtility.GetRect(160f, 90f, GUILayout.ExpandWidth(true));
+                GUI.DrawTexture(thumbRect, thumbnail, ScaleMode.ScaleAndCrop, true);
+            }
+            if (GUILayout.Button("Выбрать фон"))
+                TrySceneComposerMediaAction(() => ComposerSetLibraryBackground(backgroundIds[_sceneComposerBackgroundAssetIndex]));
         }
 
         private void DrawSceneComposerMediaInspector(VnSceneComposerScene scene)
         {
-            EditorGUILayout.Space(); EditorGUILayout.LabelField("Media", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Медиа", EditorStyles.boldLabel);
             if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
-            EditorGUILayout.LabelField("Type", scene.media.kind.ToString());
-            EditorGUILayout.LabelField("Current", string.IsNullOrEmpty(scene.media.displayName) ? "(none)" : scene.media.displayName);
+            EditorGUILayout.LabelField("Тип", GetSceneComposerMediaKindLabel(scene.media.kind));
+            EditorGUILayout.LabelField("Выбрано", string.IsNullOrEmpty(scene.media.displayName) ? "Нет" : scene.media.displayName);
             UnityEngine.Object currentAsset = null;
             if (scene.media.kind == VnSceneComposerMediaKind.ExistingRokasAsset && !string.IsNullOrEmpty(scene.media.reference))
             {
@@ -561,32 +625,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (!string.IsNullOrEmpty(path)) currentAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
             }
             EditorGUI.BeginChangeCheck();
-            UnityEngine.Object nextAsset = EditorGUILayout.ObjectField("Choose ROKAS Asset", currentAsset, typeof(Texture2D), false);
+            UnityEngine.Object nextAsset = EditorGUILayout.ObjectField("Ресурс ROKAS", currentAsset, typeof(Texture2D), false);
             if (EditorGUI.EndChangeCheck() && nextAsset != null)
                 TrySceneComposerMediaAction(() => ComposerSetExistingRokasAsset(nextAsset));
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Load Image"))
+            if (GUILayout.Button("Изображение"))
             {
-                string path = EditorUtility.OpenFilePanel("Load Scene Image", string.Empty, "png,jpg,jpeg");
+                string path = EditorUtility.OpenFilePanel("Выбрать изображение сцены", string.Empty, "png,jpg,jpeg");
                 if (!string.IsNullOrEmpty(path)) TrySceneComposerMediaAction(() => ComposerSetExternalImage(path));
             }
-            if (GUILayout.Button("Load Video"))
+            if (GUILayout.Button("Видео"))
             {
-                string path = EditorUtility.OpenFilePanel("Load Scene Video", string.Empty, "mp4,mov,m4v,webm");
+                string path = EditorUtility.OpenFilePanel("Выбрать видео сцены", string.Empty, "mp4,mov,m4v,webm");
                 if (!string.IsNullOrEmpty(path)) TrySceneComposerMediaAction(() => ComposerSetExternalVideo(path));
             }
-            if (GUILayout.Button("Load GIF"))
+            if (GUILayout.Button("GIF"))
             {
-                string path = EditorUtility.OpenFilePanel("Load Scene GIF", string.Empty, "gif");
+                string path = EditorUtility.OpenFilePanel("Выбрать GIF сцены", string.Empty, "gif");
                 if (!string.IsNullOrEmpty(path)) TrySceneComposerMediaAction(() => ComposerSetExternalGif(path));
             }
             EditorGUILayout.EndHorizontal();
-            if (GUILayout.Button("Clear / Remove Media")) ComposerClearMedia();
+            if (GUILayout.Button("Убрать медиа")) ComposerClearMedia();
             EditorGUI.BeginChangeCheck();
-            VnSceneComposerMediaScaleMode scaleMode = (VnSceneComposerMediaScaleMode)EditorGUILayout.EnumPopup("Scale", scene.media.scaleMode);
+            VnSceneComposerMediaScaleMode scaleMode = (VnSceneComposerMediaScaleMode)EditorGUILayout.EnumPopup("Масштаб", scene.media.scaleMode);
             bool loop = scene.media.loop;
             if (scene.media.kind == VnSceneComposerMediaKind.ExternalGif || scene.media.kind == VnSceneComposerMediaKind.ExternalVideo)
-                loop = EditorGUILayout.Toggle("Loop", loop);
+                loop = EditorGUILayout.Toggle("Зациклить", loop);
             if (EditorGUI.EndChangeCheck())
             {
                 RecordSceneComposerUndo("Edit VN Scene Media"); scene.media.scaleMode = scaleMode; scene.media.loop = loop;
@@ -595,16 +659,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string warning = GetSceneComposerMediaWarning(scene.media);
             if (!string.IsNullOrEmpty(warning)) EditorGUILayout.HelpBox(warning, MessageType.Warning);
             else if (scene.media.localPreviewDependency)
-                EditorGUILayout.HelpBox("External media is local to this editor machine and is not copied into production Assets.", MessageType.Info);
+                EditorGUILayout.HelpBox("Внешний файл используется только в редакторе и не копируется в production Assets.", MessageType.Info);
         }
 
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
-            EditorGUILayout.Space(); EditorGUILayout.LabelField("Text / Narration", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
-            bool narration = EditorGUILayout.Toggle("Narration / No Character", scene.narration);
-            string speaker = EditorGUILayout.TextField("Speaker Name", scene.speaker ?? string.Empty);
-            EditorGUILayout.LabelField("Dialogue / Narration");
+            bool narration = EditorGUILayout.Toggle("Текст без персонажа", scene.narration);
+            string speaker = EditorGUILayout.TextField("Говорящий", scene.speaker ?? string.Empty);
+            EditorGUILayout.LabelField("Текст сцены");
             string text = EditorGUILayout.TextArea(scene.previewText ?? string.Empty, GUILayout.MinHeight(70f));
             if (EditorGUI.EndChangeCheck())
             {
@@ -616,10 +680,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DrawSceneComposerCharacterInspector(VnSceneComposerScene scene)
         {
-            EditorGUILayout.Space(); EditorGUILayout.LabelField("Characters", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Персонажи", EditorStyles.boldLabel);
             if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
             string[] characters = VnSceneComposerCharacterStateResolver.GetCharacters();
-            if (scene.characters.Count < 3 && characters.Length > 0 && GUILayout.Button("+ Add Character"))
+            if (scene.characters.Count < 3 && characters.Length > 0 && GUILayout.Button("+ Добавить персонажа"))
             {
                 string[] states = ComposerGetAuthoredStateIds(characters[0]);
                 if (states.Length > 0) ComposerAddCharacter(characters[0], states[0]);
@@ -632,13 +696,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 int characterIndex = Mathf.Max(0, Array.FindIndex(characters,
                     name => string.Equals(name, character.characterId, StringComparison.OrdinalIgnoreCase)));
                 EditorGUI.BeginChangeCheck();
-                characterIndex = characters.Length > 0 ? EditorGUILayout.Popup("Character", characterIndex, characters) : 0;
+                characterIndex = characters.Length > 0 ? EditorGUILayout.Popup("Персонаж", characterIndex, characters) : 0;
                 string nextCharacter = characters.Length > 0 ? characters[characterIndex] : character.characterId;
                 string[] states = ComposerGetAuthoredStateIds(nextCharacter);
                 int stateIndex = Mathf.Max(0, Array.IndexOf(states, character.stateId));
-                stateIndex = states.Length > 0 ? EditorGUILayout.Popup("Authored State / Pose", stateIndex, states) : 0;
+                stateIndex = states.Length > 0 ? EditorGUILayout.Popup("Поза / состояние", stateIndex, states) : 0;
                 string nextState = states.Length > 0 ? states[stateIndex] : character.stateId;
-                VnWorkshopStageSlot slot = (VnWorkshopStageSlot)EditorGUILayout.EnumPopup("Stage Slot", character.stageSlot);
+                VnWorkshopStageSlot slot = (VnWorkshopStageSlot)EditorGUILayout.EnumPopup("Положение", character.stageSlot);
                 if (EditorGUI.EndChangeCheck())
                 {
                     RecordSceneComposerUndo("Edit VN Scene Character"); character.characterId = nextCharacter;
@@ -647,12 +711,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
                 DrawSceneComposerCharacterTransformControls(i, character);
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Set Active Speaker"))
+                if (GUILayout.Button("Сделать говорящим"))
                 {
                     RecordSceneComposerUndo("Set VN Scene Speaker"); scene.narration = false; scene.speaker = character.characterId;
                     ResetSceneComposerPlayback(); MarkSceneComposerChanged();
                 }
-                if (GUILayout.Button("Remove"))
+                if (GUILayout.Button("Удалить"))
                 {
                     RecordSceneComposerUndo("Remove VN Scene Character"); scene.characters.RemoveAt(i);
                     _sceneComposerSelectedCharacterIndex = -1;
@@ -662,7 +726,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 EditorGUILayout.EndHorizontal(); EditorGUILayout.EndVertical();
             }
             if (characters.Length == 0)
-                EditorGUILayout.HelpBox("No authored VN character states are available in the current catalog or Composer Asset Library.", MessageType.Warning);
+                EditorGUILayout.HelpBox("В каталоге пока нет доступных персонажей и поз.", MessageType.Warning);
+        }
+
+        private void DrawSceneComposerAnimationShortcut(string title, string message)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(message, MessageType.Info);
+            if (GUILayout.Button("Открыть Дополнительно"))
+                _sceneComposerInspectorSection = SceneComposerInspectorSections.Length - 1;
+        }
+
+        private void DrawSceneComposerSceneSettings(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("Настройки сцены", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            string label = EditorGUILayout.TextField("Название сцены", scene.label ?? string.Empty);
+            if (EditorGUI.EndChangeCheck()) ComposerRenameSelectedScene(label);
+            EditorGUILayout.HelpBox("Расширенные параметры переходов, тайминга и оформления находятся в «Дополнительно».", MessageType.None);
+        }
+
+        private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("Дополнительно", EditorStyles.boldLabel);
+            DrawSceneComposerAssetLibraryControls(scene);
+            DrawSceneComposerPresentationInspector(scene);
         }
 
         private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene)
@@ -770,7 +858,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             try { _sceneComposerPlayback.Advance(delta); SyncSceneComposerSelectionFromPlayback(); Repaint(); }
             catch (Exception exception)
             {
-                _sceneComposerPlayback.Pause(); SetSceneComposerStatus("Playback preview failed: " + exception.Message, MessageType.Error);
+                _sceneComposerPlayback.Pause(); SetSceneComposerStatus("Не удалось воспроизвести предпросмотр: " + exception.Message, MessageType.Error);
             }
         }
 
@@ -812,29 +900,50 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return media.kind + "|" + (media.reference ?? string.Empty) + "|" + (media.contentHash ?? string.Empty) + "|" + media.loop + "|" + media.scaleMode;
         }
 
+        private static string GetSceneComposerDisplayLabel(VnSceneComposerScene scene, int index)
+        {
+            string fallback = "Сцена " + (index + 1);
+            if (scene == null || string.IsNullOrWhiteSpace(scene.label)) return fallback;
+            string generated = "Scene " + (index + 1);
+            return string.Equals(scene.label, generated, StringComparison.Ordinal) ? fallback : scene.label;
+        }
+
+        private static string GetSceneComposerMediaKindLabel(VnSceneComposerMediaKind kind)
+        {
+            switch (kind)
+            {
+                case VnSceneComposerMediaKind.None: return "Без медиа";
+                case VnSceneComposerMediaKind.ExistingRokasAsset: return "Ресурс";
+                case VnSceneComposerMediaKind.ExternalImage: return "Изображение";
+                case VnSceneComposerMediaKind.ExternalGif: return "GIF";
+                case VnSceneComposerMediaKind.ExternalVideo: return "Видео";
+                default: return kind.ToString();
+            }
+        }
+
         private void RecordSceneComposerUndo(string label) { Undo.RegisterCompleteObjectUndo(this, label); }
         private void MarkSceneComposerChanged() { EditorUtility.SetDirty(this); Repaint(); }
         private void SetSceneComposerStatus(string message, MessageType type) { _sceneComposerStatus = message ?? string.Empty; _sceneComposerStatusType = type; Repaint(); }
 
         private void TrySceneComposerMediaAction(Action action)
         {
-            try { action(); SetSceneComposerStatus("Scene media updated.", MessageType.Info); }
+            try { action(); SetSceneComposerStatus("Медиа сцены обновлено.", MessageType.Info); }
             catch (Exception exception) { SetSceneComposerStatus(exception.Message, MessageType.Error); }
         }
 
         private string GetSceneComposerMediaWarning(VnSceneComposerMediaReference media)
         {
-            if (media == null) return "Scene media reference is missing.";
+            if (media == null) return "Ссылка на медиа отсутствует.";
             if (media.kind == VnSceneComposerMediaKind.None) return string.Empty;
             if (media.kind == VnSceneComposerMediaKind.ExistingRokasAsset)
             {
-                if (string.IsNullOrEmpty(media.reference)) return "ROKAS asset GUID is missing.";
-                return string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(media.reference)) ? "ROKAS asset reference is missing or invalid." : string.Empty;
+                if (string.IsNullOrEmpty(media.reference)) return "Не указан ресурс ROKAS.";
+                return string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(media.reference)) ? "Ресурс ROKAS не найден." : string.Empty;
             }
             if (VnSceneComposerSerialization.IsExternalMedia(media.kind) &&
                 (string.IsNullOrEmpty(media.reference) || VnSceneComposerSerialization.IsPortableExternalReference(media.reference) ||
                  !Path.IsPathRooted(media.reference) || !File.Exists(media.reference)))
-                return "External media is missing or not locally bound on this machine.";
+                return "Внешний файл не найден или не привязан на этом компьютере.";
             return string.Empty;
         }
 
@@ -849,7 +958,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             catch (Exception exception)
             {
-                SetSceneComposerStatus("Could not list saved Composer projects: " + exception.Message, MessageType.Warning);
+                SetSceneComposerStatus("Не удалось прочитать сохранённые проекты: " + exception.Message, MessageType.Warning);
                 return Array.Empty<string>();
             }
         }
