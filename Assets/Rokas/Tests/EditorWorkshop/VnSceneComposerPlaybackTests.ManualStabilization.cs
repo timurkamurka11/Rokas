@@ -24,8 +24,9 @@ namespace Rokas.EditorTools.Tests
                 Type elementType = RequireType("VnWorkshopElement");
                 object back = Enum.Parse(elementType, "Back");
                 object dialogueText = Enum.Parse(elementType, "DialogueText");
-                ManualRequireInstance(windowType, "ComposerSetSelectedPresentationElement", elementType)
-                    .Invoke(window, new[] { back });
+                MethodInfo setSelectedElement = ManualRequireInstance(windowType,
+                    "ComposerSetSelectedPresentationElement", elementType);
+                setSelectedElement.Invoke(window, new[] { back });
 
                 object frame = ManualInvoke(windowType, window, "ComposerBuildSelectedPreviewFrame");
                 MethodInfo getElementRect = frame.GetType().GetMethod("GetElementRect",
@@ -71,20 +72,41 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(directHit.ToString(), Is.EqualTo("DialogueText"),
                     "UI hit-test must resolve DialogueText before Event dispatch.");
 
+                MethodInfo selectObject = ManualRequireInstance(windowType,
+                    "ComposerSelectPreviewObjectAt", typeof(Vector2));
+                bool directSelected = (bool)selectObject.Invoke(window, new object[] { roundTripPoint });
+                Assert.That(directSelected, Is.True,
+                    "Full Scene Composer selector must accept the DialogueText point before Event dispatch.");
+                object directSelection = ManualInvoke(windowType, window, "ComposerGetSelectedPresentationElement");
+                Assert.That(directSelection.ToString(), Is.EqualTo("DialogueText"),
+                    "Full Scene Composer selector must select DialogueText before Event dispatch.");
+                setSelectedElement.Invoke(window, new[] { back });
+                Assert.That(ManualGetPrivateField(window, "comparisonView").ToString(), Is.EqualTo("Current"),
+                    "Synthetic event must enter the Current authoring path.");
+
                 var click = new Event
                 {
                     type = EventType.MouseDown,
                     button = 0,
                     mousePosition = dialoguePreviewRect.center
                 };
+                Assert.That(click.type, Is.EqualTo(EventType.MouseDown));
+                Assert.That(click.button, Is.EqualTo(0));
+                Assert.That(previewRect.Contains(click.mousePosition), Is.True);
 
                 ManualRequireInstance(windowType, "HandleSceneComposerPreviewInput",
                         typeof(Rect), frame.GetType(), typeof(Event))
                     .Invoke(window, new object[] { previewRect, frame, click });
 
                 object selected = ManualInvoke(windowType, window, "ComposerGetSelectedPresentationElement");
+                bool dragging = (bool)ManualGetPrivateField(window, "_sceneComposerDraggingPreviewObject");
+                int selectedCharacter = (int)ManualGetPrivateField(window, "_sceneComposerSelectedCharacterIndex");
+                Assert.That(click.type, Is.EqualTo(EventType.Used),
+                    "MouseDown was not consumed by authoring handler. selected=" + selected +
+                    ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
                 Assert.That(selected.ToString(), Is.EqualTo("DialogueText"),
-                    "Normal authoring must select canonical UI objects directly; Advanced layout mode must not be required.");
+                    "Normal authoring must select canonical UI objects directly; Advanced layout mode must not be required. " +
+                    "event=" + click.type + ", dragging=" + dragging + ", characterIndex=" + selectedCharacter);
             }
             finally
             {
