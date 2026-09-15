@@ -19,6 +19,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return new Rect(center - size * .5f, size);
         }
 
+        public static bool ShouldDrawUiFeedbackPreview(VnWorkshopUiFeedbackSample sample)
+        {
+            return !Mathf.Approximately(sample.ScaleMultiplier, 1f) ||
+                   sample.PositionOffset.sqrMagnitude > .000001f ||
+                   !Mathf.Approximately(sample.Brightness, 1f) ||
+                   !Mathf.Approximately(sample.Alpha, 1f) ||
+                   !Mathf.Approximately(sample.OverlayHighlight, 0f);
+        }
+
         public static void DrawUiFeedbackPreview(
             Rect previewRect,
             VnWorkshopPreviewFrame frame,
@@ -26,6 +35,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopUiFeedbackSample sample)
         {
             if (frame == null) throw new ArgumentNullException(nameof(frame));
+            if (!ShouldDrawUiFeedbackPreview(sample)) return;
+
             Rect canvasRect = FitAspect(previewRect, frame.ScreenSize.x / Mathf.Max(1f, frame.ScreenSize.y));
             Rect logical = ResolveUiFeedbackLogicalRect(frame, element, sample);
             Rect rect = LogicalToPreview(canvasRect, logical, frame);
