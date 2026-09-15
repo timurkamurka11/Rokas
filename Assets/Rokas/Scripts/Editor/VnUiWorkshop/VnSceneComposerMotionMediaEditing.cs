@@ -161,7 +161,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public virtual void Restart()
         {
             if (player == null) return;
-            hasVisibleFrame = false;
             if (!player.isPrepared)
             {
                 // Restart is a transport action, not a decode/probe action. The real authoring
@@ -230,7 +229,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (player == null || !player.isPrepared) return;
             previewFrameRequested = true;
-            hasVisibleFrame = false;
             player.frame = 0;
             player.Play();
         }
