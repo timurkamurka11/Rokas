@@ -6,6 +6,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public VnSceneComposerPlaybackFrame ComposerBuildSelectedPreviewPlaybackFrame()
         {
+            if (IsSceneComposerFocusedPreviewActive())
+            {
+                VnSceneComposerPlaybackFrame focused = CurrentMotionPreviewFrame;
+                if (focused != null) return focused;
+            }
+
             VnSceneComposerScene scene = RequireSelectedScene();
             int index = FindSceneIndex(scene.sceneId);
             Texture media = ComposerGetSceneThumbnail(index);
