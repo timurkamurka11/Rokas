@@ -64,6 +64,41 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void CleanSceneStartUserPlaySceneFirstVisibleBackgroundDoesNotExposeNeutralBlack()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            Type playbackFrameType = RequireType("VnSceneComposerPlaybackFrame");
+            Type rendererType = RequireType("VnPresentationWorkshopPreviewRenderer");
+            UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
+            try
+            {
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                IList scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                AssignKnownBackground(scenes[0]);
+
+                ManualInvoke(windowType, window, "ComposerPlayScene");
+                object controller = ManualGetPrivateField(window, "_sceneComposerPlayback");
+                object frame = Get(controller, "CurrentFrame");
+                Assert.That(Get(frame, "SourceBackground"), Is.SameAs(Texture2D.blackTexture),
+                    "Neutral source selection must remain intact; this regression is about what becomes visible.");
+
+                Texture2D composed = (Texture2D)RequireStatic(rendererType, "ComposePlaybackBackground",
+                        playbackFrameType, typeof(int), typeof(int))
+                    .Invoke(null, new object[] { frame, 32, 18 });
+                try
+                {
+                    Color32[] pixels = composed.GetPixels32();
+                    bool anyVisibleTarget = Array.Exists(pixels,
+                        pixel => pixel.r > 2 || pixel.g > 2 || pixel.b > 2);
+                    Assert.That(anyVisibleTarget, Is.True,
+                        "The first user-visible Play Scene background must already show the authored target instead of exposing the neutral black transition source.");
+                }
+                finally { UnityEngine.Object.DestroyImmediate(composed); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(window); }
+        }
+
+        [Test]
         public void CleanSceneStartPlayAllPreservesRealPreviousSceneTransitionSource()
         {
             Type projectType = RequireType("VnSceneComposerProject");
