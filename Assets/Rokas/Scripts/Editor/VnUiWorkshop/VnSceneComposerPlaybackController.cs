@@ -200,8 +200,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
             VnSceneComposerPreviewTimingPlan timing = VnSceneComposerTransitionSampler.ResolveTiming(project, scene);
             float duration = ResolveScenePreviewDuration(timing);
-            float progress = duration <= 0f ? 1f : Mathf.Clamp01(SceneElapsedSeconds / duration);
-            RebuildFrame(progress);
+            RebuildFrame(SceneElapsedSeconds, true);
 
             if (!timing.usesPreviewAutoDuration || SceneElapsedSeconds < duration) return;
 
@@ -267,7 +266,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RebuildFrame(0f);
         }
 
-        private void RebuildFrame(float normalizedProgress)
+        private void RebuildFrame(float progressOrElapsedSeconds, bool useElapsedSeconds = false)
         {
             if (CurrentSceneIndex < 0)
             {
@@ -278,9 +277,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             VnSceneComposerScene targetScene = project.scenes[CurrentSceneIndex];
             VnSceneComposerScene sourceScene = currentSourceScene ?? ResolveSourceScene(CurrentSceneIndex);
-            float progress = Mathf.Clamp01(normalizedProgress);
-            VnSceneComposerTransitionSnapshot sample =
-                VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, progress);
+            float progress = useElapsedSeconds
+                ? Mathf.Max(0f, progressOrElapsedSeconds)
+                : Mathf.Clamp01(progressOrElapsedSeconds);
+            VnSceneComposerTransitionSnapshot sample = useElapsedSeconds
+                ? VnSceneComposerElapsedTransitionSampler.Sample(project, sourceScene, targetScene, progress)
+                : VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, progress);
             VnSceneComposerTransitionSnapshot endpoint =
                 VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, 1f);
             if (suppressCurrentBackgroundTransition)
