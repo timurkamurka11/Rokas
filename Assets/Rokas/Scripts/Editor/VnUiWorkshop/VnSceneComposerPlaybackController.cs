@@ -66,6 +66,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerVideoPreview sourceVideoPreview;
         private VnSceneComposerGifPreview sourceGifPreview;
         private Texture sourceMediaTexture;
+        private VnSceneComposerScene currentSourceScene;
         private string openedVideoSignature = string.Empty;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
@@ -95,6 +96,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ResetScene(sceneIndex, true);
         }
 
+        internal void PlaySceneFromNeutralStart(int sceneIndex)
+        {
+            RequireSceneIndex(sceneIndex);
+            scope = PlaybackScope.SingleScene;
+            rangeStart = rangeEnd = sceneIndex;
+            IsPlaying = true;
+            ResetSceneFromNeutralStart(sceneIndex, true);
+        }
+
         public void PlayFromHere(int sceneIndex)
         {
             RequireSceneIndex(sceneIndex);
@@ -103,6 +113,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             rangeEnd = project.scenes.Count - 1;
             IsPlaying = true;
             ResetScene(sceneIndex, true);
+        }
+
+        internal void PlayFromHereFromNeutralStart(int sceneIndex)
+        {
+            RequireSceneIndex(sceneIndex);
+            scope = PlaybackScope.OrderedRange;
+            rangeStart = sceneIndex;
+            rangeEnd = project.scenes.Count - 1;
+            IsPlaying = true;
+            ResetSceneFromNeutralStart(sceneIndex, true);
         }
 
         public void PlayAll()
@@ -206,6 +226,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             IsPlaying = false;
             ReleaseMedia();
             ReleaseSourceMedia();
+            currentSourceScene = null;
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;
@@ -213,15 +234,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetScene(int sceneIndex, bool playMedia)
         {
+            ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex));
+        }
+
+        private void ResetSceneFromNeutralStart(int sceneIndex, bool playMedia)
+        {
+            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline());
+        }
+
+        private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene)
+        {
             RequireSceneIndex(sceneIndex);
             VnSceneComposerScene targetScene = project.scenes[sceneIndex];
             bool reuseVideoPreview = sceneIndex == CurrentSceneIndex && CanReuseVideoPreview(targetScene);
             if (!reuseVideoPreview) ReleaseMedia();
             ReleaseSourceMedia();
+            currentSourceScene = sourceScene ?? CreatePreviewBaseline();
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
-            OpenSourceMedia(ResolveSourceScene(sceneIndex));
+            OpenSourceMedia(currentSourceScene);
             if (!reuseVideoPreview) OpenMedia(targetScene);
             if (playMedia && videoPreview != null) videoPreview.Play();
             RefreshSourceMediaTexture();
@@ -239,7 +271,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             VnSceneComposerScene targetScene = project.scenes[CurrentSceneIndex];
-            VnSceneComposerScene sourceScene = ResolveSourceScene(CurrentSceneIndex);
+            VnSceneComposerScene sourceScene = currentSourceScene ?? ResolveSourceScene(CurrentSceneIndex);
             float progress = Mathf.Clamp01(normalizedProgress);
             VnSceneComposerTransitionSnapshot sample =
                 VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, progress);
@@ -477,8 +509,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private VnSceneComposerScene ResolveSourceScene(int targetIndex)
         {
-            if (scope == PlaybackScope.OrderedRange && targetIndex > 0)
-                return project.scenes[targetIndex - 1];
+            if (targetIndex > 0) return project.scenes[targetIndex - 1];
+            return CreatePreviewBaseline();
+        }
+
+        private static VnSceneComposerScene CreatePreviewBaseline()
+        {
             return new VnSceneComposerScene
             {
                 sceneId = "__scene_composer_preview_baseline__",
@@ -512,6 +548,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MediaTimeSeconds = 0f;
             ReleaseMedia();
             ReleaseSourceMedia();
+            currentSourceScene = null;
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;
