@@ -137,7 +137,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             rangeStart = 0;
             rangeEnd = project.scenes.Count - 1;
             IsPlaying = true;
-            ResetScene(0, true);
+            ResetSceneFromNeutralStart(0, true);
         }
 
         public void Pause()
@@ -166,7 +166,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (project.scenes.Count == 0) return;
             int target = Mathf.Clamp(CurrentSceneIndex - 1, 0, project.scenes.Count - 1);
-            ResetScene(target, IsPlaying);
+            if (target == 0) ResetSceneFromNeutralStart(target, IsPlaying);
+            else ResetScene(target, IsPlaying);
         }
 
         public void Next()
