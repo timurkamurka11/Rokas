@@ -271,14 +271,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void ComposerPlayScene()
         {
             int index = GetSelectedSceneIndexOrThrow();
-            EnsureSceneComposerPlayback().PlayScene(index);
+            EnsureSceneComposerPlayback().PlaySceneFromNeutralStart(index);
             BeginSceneComposerPlaybackTick();
         }
 
         public void ComposerPlayFromHere()
         {
             int index = GetSelectedSceneIndexOrThrow();
-            EnsureSceneComposerPlayback().PlayFromHere(index);
+            EnsureSceneComposerPlayback().PlayFromHereFromNeutralStart(index);
             BeginSceneComposerPlaybackTick();
         }
 
@@ -1047,7 +1047,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (_sceneComposerProject.scenes == null) _sceneComposerProject.scenes = new List<VnSceneComposerScene>();
             if (_sceneComposerProject.defaultPresentation == null) _sceneComposerProject.defaultPresentation = new VnPresentationWorkshopPreset();
         }
-
         private VnSceneComposerScene GetSelectedScene()
         {
             EnsureSceneComposerProject(); int index = FindSceneIndex(_sceneComposerSelectedSceneId);
