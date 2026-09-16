@@ -39,29 +39,28 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void CleanSceneStartPlaySceneDoesNotUsePreviousSceneAsTransitionSource()
         {
-            Type projectType = RequireType("VnSceneComposerProject");
-            Type controllerType = RequirePlaybackType();
-            object project = Activator.CreateInstance(projectType);
-            IList scenes = (IList)Get(project, "scenes");
-            object previous = Scene("Previous", "previous", "ManualBeat", 1f);
-            Texture2D previousBackground = AssignKnownBackground(previous);
-            object target = Scene("Target", "target", "ManualBeat", 1f);
-            scenes.Add(previous);
-            scenes.Add(target);
-
-            object controller = NewController(controllerType, projectType, project);
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
             try
             {
-                Invoke(controllerType, controller, "PlayScene", typeof(int), 1);
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                IList scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                Texture2D previousBackground = AssignKnownBackground(scenes[0]);
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                ManualRequireInstance(windowType, "ComposerSelectScene", typeof(int))
+                    .Invoke(window, new object[] { 1 });
+
+                ManualInvoke(windowType, window, "ComposerPlayScene");
+                object controller = ManualGetPrivateField(window, "_sceneComposerPlayback");
                 object frame = Get(controller, "CurrentFrame");
                 Texture source = (Texture)Get(frame, "SourceBackground");
 
                 Assert.That(source, Is.Not.SameAs(previousBackground),
-                    "Isolated Play Scene must not source scene N-1, otherwise the previous scene can flash first.");
+                    "The user-facing isolated Play Scene command must not source scene N-1, otherwise the previous scene can flash first.");
                 Assert.That(source, Is.SameAs(Texture2D.blackTexture),
-                    "Isolated Play Scene should transition from the neutral black preview baseline.");
+                    "The user-facing isolated Play Scene command should transition from the neutral black preview baseline.");
             }
-            finally { Dispose(controller); }
+            finally { UnityEngine.Object.DestroyImmediate(window); }
         }
 
         [Test]
@@ -90,6 +89,50 @@ namespace Rokas.EditorTools.Tests
                     "Ordered Play All must preserve the genuine scene 1 -> scene 2 transition source.");
             }
             finally { Dispose(controller); }
+        }
+
+        [Test]
+        public void CleanSceneStartPlayFromHereStartsNeutralThenUsesRealPreviousSceneAtBoundary()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
+            try
+            {
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                object project = ManualGetPrivateField(window, "_sceneComposerProject");
+                SetAutoPreviewSequenceGap(project, 0f);
+                IList scenes = (IList)Get(project, "scenes");
+                Texture2D firstBackground = LoadRokasTexture("vnBusStopPhoneMessageMina");
+                SetSceneBackground(scenes[0], firstBackground);
+
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                scenes = (IList)Get(project, "scenes");
+                object second = scenes[1];
+                Texture2D secondBackground = LoadRokasTexture("vnNightSkyRain");
+                SetSceneBackground(second, secondBackground);
+                object secondTiming = Get(second, "timing");
+                SetEnum(secondTiming, "previewAdvanceMode", "PreviewAutoDuration");
+                Set(secondTiming, "previewAutoDuration", .1f);
+
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                ManualRequireInstance(windowType, "ComposerSelectScene", typeof(int))
+                    .Invoke(window, new object[] { 1 });
+                ManualInvoke(windowType, window, "ComposerPlayFromHere");
+
+                object controller = ManualGetPrivateField(window, "_sceneComposerPlayback");
+                Assert.That((int)Get(controller, "CurrentSceneIndex"), Is.EqualTo(1));
+                object initialFrame = Get(controller, "CurrentFrame");
+                Assert.That(Get(initialFrame, "SourceBackground"), Is.SameAs(Texture2D.blackTexture),
+                    "The user-facing Play From Here command must start selected scene N from a neutral baseline instead of flashing scene N-1.");
+
+                Type controllerType = RequirePlaybackType();
+                Invoke(controllerType, controller, "Advance", typeof(float), .2f);
+                Assert.That((int)Get(controller, "CurrentSceneIndex"), Is.EqualTo(2));
+                object boundaryFrame = Get(controller, "CurrentFrame");
+                Assert.That(Get(boundaryFrame, "SourceBackground"), Is.SameAs(secondBackground),
+                    "After the isolated Play From Here start, the real scene N -> scene N+1 boundary must restore the authored previous-scene source.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(window); }
         }
 
         private static Texture2D AssignKnownBackground(object scene)
