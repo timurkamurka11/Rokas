@@ -147,6 +147,7 @@ namespace Rokas.EditorTools.Tests
             object target = Scene("Target", "target", "PreviewAutoDuration", 1f);
             AddCharacter(target, "Mina", "mina_neutral", "Center");
             Set(Get(target, "transition"), "triggerActionBounce", true);
+            ConfigureActionBounce(target, 1f);
             ConfigureBackgroundTransition(target, "Curtain", 1f);
             scenes.Add(target);
 
@@ -267,6 +268,13 @@ namespace Rokas.EditorTools.Tests
             Set(transition, "fadeDuration", fade);
             Set(transition, "hasSlideDistance", true);
             Set(transition, "slideDistance", distance);
+        }
+
+        private static void ConfigureActionBounce(object scene, float duration)
+        {
+            object bounce = Get(Get(scene, "presentationOverrides"), "actionBounce");
+            Set(bounce, "hasDuration", true);
+            Set(bounce, "duration", duration);
         }
 
         private static void ConfigureBackgroundTransition(object scene, string mode, float duration)
