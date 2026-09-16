@@ -99,6 +99,90 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void CleanSceneStartUserPlayAllFirstVisibleBackgroundDoesNotExposeNeutralBlack()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            Type playbackFrameType = RequireType("VnSceneComposerPlaybackFrame");
+            Type rendererType = RequireType("VnPresentationWorkshopPreviewRenderer");
+            UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
+            try
+            {
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                IList scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                AssignKnownBackground(scenes[0]);
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                SetSceneBackground(scenes[1], LoadRokasTexture("vnNightSkyRain"));
+                ManualRequireInstance(windowType, "ComposerSelectScene", typeof(int))
+                    .Invoke(window, new object[] { 1 });
+
+                ManualInvoke(windowType, window, "ComposerPlayAll");
+                object controller = ManualGetPrivateField(window, "_sceneComposerPlayback");
+                Assert.That((int)Get(controller, "CurrentSceneIndex"), Is.EqualTo(0));
+                object frame = Get(controller, "CurrentFrame");
+                Assert.That(Get(frame, "SourceBackground"), Is.SameAs(Texture2D.blackTexture),
+                    "Play All scene zero keeps the neutral baseline source; the bug is exposing that source to the user.");
+
+                Texture2D composed = (Texture2D)RequireStatic(rendererType, "ComposePlaybackBackground",
+                        playbackFrameType, typeof(int), typeof(int))
+                    .Invoke(null, new object[] { frame, 32, 18 });
+                try
+                {
+                    Color32[] pixels = composed.GetPixels32();
+                    bool anyVisibleTarget = Array.Exists(pixels,
+                        pixel => pixel.r > 2 || pixel.g > 2 || pixel.b > 2);
+                    Assert.That(anyVisibleTarget, Is.True,
+                        "The first user-visible Play All frame must show scene one immediately instead of fading from the neutral black baseline.");
+                }
+                finally { UnityEngine.Object.DestroyImmediate(composed); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(window); }
+        }
+
+        [Test]
+        public void CleanSceneStartUserPreviousToFirstSceneDoesNotExposeNeutralBlack()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            Type playbackFrameType = RequireType("VnSceneComposerPlaybackFrame");
+            Type rendererType = RequireType("VnPresentationWorkshopPreviewRenderer");
+            UnityEngine.Object window = ScriptableObject.CreateInstance(windowType);
+            try
+            {
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                IList scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                AssignKnownBackground(scenes[0]);
+                ManualInvoke(windowType, window, "ComposerAddScene");
+                scenes = (IList)Get(ManualGetPrivateField(window, "_sceneComposerProject"), "scenes");
+                SetSceneBackground(scenes[1], LoadRokasTexture("vnNightSkyRain"));
+
+                ManualInvoke(windowType, window, "ComposerPlayAll");
+                ManualInvoke(windowType, window, "ComposerNext");
+                object controller = ManualGetPrivateField(window, "_sceneComposerPlayback");
+                Assert.That((int)Get(controller, "CurrentSceneIndex"), Is.EqualTo(1));
+
+                ManualInvoke(windowType, window, "ComposerPrevious");
+                Assert.That((int)Get(controller, "CurrentSceneIndex"), Is.EqualTo(0));
+                object frame = Get(controller, "CurrentFrame");
+                Assert.That(Get(frame, "SourceBackground"), Is.SameAs(Texture2D.blackTexture),
+                    "Previous-to-first keeps scene zero's neutral baseline source; the bug is exposing it as a transport flash.");
+
+                Texture2D composed = (Texture2D)RequireStatic(rendererType, "ComposePlaybackBackground",
+                        playbackFrameType, typeof(int), typeof(int))
+                    .Invoke(null, new object[] { frame, 32, 18 });
+                try
+                {
+                    Color32[] pixels = composed.GetPixels32();
+                    bool anyVisibleTarget = Array.Exists(pixels,
+                        pixel => pixel.r > 2 || pixel.g > 2 || pixel.b > 2);
+                    Assert.That(anyVisibleTarget, Is.True,
+                        "Previous to the first scene must show the destination background immediately instead of flashing the neutral black baseline.");
+                }
+                finally { UnityEngine.Object.DestroyImmediate(composed); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(window); }
+        }
+
+        [Test]
         public void CleanSceneStartPlayAllPreservesRealPreviousSceneTransitionSource()
         {
             Type projectType = RequireType("VnSceneComposerProject");
