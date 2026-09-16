@@ -12,6 +12,7 @@ namespace Rokas.EditorTools.Tests
         {
             System.Type windowType = Md3RequireType("VnPresentationWorkshopWindow");
             UnityEngine.Object window = Md3CreateWindow(windowType);
+            object bounce = Md3EnumValue("VnWorkshopPreviewEffect", "Bounce");
             try
             {
                 Md3Invoke(window, "ComposerAddScene");
@@ -26,7 +27,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(Md3GetField(window, "_sceneComposerPlayback"), Is.Null,
                     "Focused preview should be independent from the normal Scene Composer transport before it starts.");
 
-                Md3Invoke(window, "PreviewBounce");
+                Md3Invoke(window, "ComposerPreviewFocusedEffect", bounce);
                 object snapshot = Md3Invoke(window, "GetPreviewPlaybackSnapshot");
 
                 Assert.That((float)Md3GetField(snapshot, "Duration"), Is.EqualTo(2f).Within(.0001f),
@@ -46,7 +47,7 @@ namespace Rokas.EditorTools.Tests
 
                 Md4SetField(window, "previewProgress", .65f);
                 Md4SetField(window, "previewPlaying", true);
-                Md3Invoke(window, "PreviewBounce");
+                Md3Invoke(window, "ComposerPreviewFocusedEffect", bounce);
                 object repeated = Md3Invoke(window, "GetPreviewPlaybackSnapshot");
                 Assert.That((float)Md3GetField(repeated, "NormalizedProgress"), Is.EqualTo(0f).Within(.0001f),
                     "Pressing focused preview again must restart from the beginning instead of retaining stale progress.");
@@ -63,6 +64,7 @@ namespace Rokas.EditorTools.Tests
         {
             System.Type windowType = Md3RequireType("VnPresentationWorkshopWindow");
             UnityEngine.Object window = Md3CreateWindow(windowType);
+            object bounce = Md3EnumValue("VnWorkshopPreviewEffect", "Bounce");
             try
             {
                 Md3Invoke(window, "ComposerAddScene");
@@ -70,7 +72,7 @@ namespace Rokas.EditorTools.Tests
                 Md3Invoke(window, "ComposerSetPresentationScope", false);
                 Md3SetDuration(window, "bounce", .5f);
 
-                Md3Invoke(window, "PreviewBounce");
+                Md3Invoke(window, "ComposerPreviewFocusedEffect", bounce);
                 Assert.That(Md3GetProperty(window, "CurrentMotionPreviewFrame"), Is.Not.Null,
                     "A running focused preview should own a temporary motion frame.");
 
