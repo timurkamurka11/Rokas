@@ -169,37 +169,37 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PreviewExpression()
         {
-            VnWorkshopExpressionTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(CurrentPreset);
+            VnWorkshopExpressionTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.Expression, Mathf.Max(.01f, values.Duration));
         }
 
         public void PreviewCharacterEnter()
         {
-            VnWorkshopCharacterTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(CurrentPreset);
+            VnWorkshopCharacterTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.CharacterEnter, Mathf.Max(.01f, values.Duration));
         }
 
         public void PreviewCharacterExit()
         {
-            VnWorkshopCharacterTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(CurrentPreset);
+            VnWorkshopCharacterTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.CharacterExit, Mathf.Max(.01f, values.Duration));
         }
 
         public void PreviewBounce()
         {
-            VnWorkshopActionBounceValues values = VnPresentationWorkshopVn10Resolver.ResolveActionBounce(CurrentPreset);
+            VnWorkshopActionBounceValues values = VnPresentationWorkshopVn10Resolver.ResolveActionBounce(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.Bounce, Mathf.Max(.01f, values.Duration));
         }
 
         public void PreviewBackgroundTransition()
         {
-            VnWorkshopBackgroundTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(CurrentPreset);
+            VnWorkshopBackgroundTransitionValues values = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.BackgroundTransition, Mathf.Max(.01f, values.Duration));
         }
 
         public void PreviewSpeakerSwitch()
         {
-            VnWorkshopSpeakerFocusValues values = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(CurrentPreset);
+            VnWorkshopSpeakerFocusValues values = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(VnWorkshopPreviewEffect.SpeakerSwitch, Mathf.Max(.01f, values.TransitionDuration));
         }
 
@@ -323,7 +323,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void StartStagePreview(VnWorkshopPreviewEffect effect)
         {
-            VnWorkshopStageLayoutValues values = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(CurrentPreset);
+            VnWorkshopStageLayoutValues values = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(GetMotionPreviewPresentationPreset());
             StartPreviewEffect(effect, Mathf.Max(.01f, values.RepositionDuration));
         }
 
