@@ -477,7 +477,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private VnSceneComposerScene ResolveSourceScene(int targetIndex)
         {
-            if (targetIndex > 0) return project.scenes[targetIndex - 1];
+            if (scope == PlaybackScope.OrderedRange && targetIndex > 0)
+                return project.scenes[targetIndex - 1];
             return new VnSceneComposerScene
             {
                 sceneId = "__scene_composer_preview_baseline__",
