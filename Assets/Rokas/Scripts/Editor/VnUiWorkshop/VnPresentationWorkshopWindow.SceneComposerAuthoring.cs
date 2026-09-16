@@ -157,6 +157,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             video.Changed += OnSceneComposerVideoPreviewChanged;
             if (string.IsNullOrEmpty(video.warning) && !video.IsPrepared && !video.IsPreparing)
                 video.Prepare();
+            if (string.IsNullOrEmpty(video.warning))
+                VnSceneComposerPreparedVideoRegistry.Prime(_sceneComposerProject, scene, video);
             return true;
         }
 
