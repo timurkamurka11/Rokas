@@ -10,7 +10,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             get
             {
                 UpdatePreviewClock();
+                CompleteSceneComposerFocusedPreview();
                 if (previewEffect == VnWorkshopPreviewEffect.None || previewEffect == VnWorkshopPreviewEffect.UiPress)
+                    return null;
+                if (_sceneComposerWorkspaceActive && _sceneComposerFocusedPreviewPreset == null)
                     return null;
                 VnSceneComposerProject project = BuildMotionPreviewProject();
                 using (var controller = new VnSceneComposerPlaybackController(project))
@@ -25,9 +28,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private VnSceneComposerProject BuildMotionPreviewProject()
         {
-            VnPresentationWorkshopPreset preset = comparisonView == VnWorkshopComparisonView.Original
-                ? new VnPresentationWorkshopPreset()
-                : JsonUtility.FromJson<VnPresentationWorkshopPreset>(JsonUtility.ToJson(CurrentPreset));
+            VnPresentationWorkshopPreset preset = ResolveMotionPreviewPreset();
             var project = new VnSceneComposerProject { defaultPresentation = preset ?? new VnPresentationWorkshopPreset() };
             var from = NewMotionPreviewScene("Legacy Preview Source", string.Empty);
             var target = NewMotionPreviewScene("Legacy Preview Target", PreviewSampleText);
