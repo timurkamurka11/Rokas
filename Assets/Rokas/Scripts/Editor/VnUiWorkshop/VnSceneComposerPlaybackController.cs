@@ -61,6 +61,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private bool disposed;
         private VnSceneComposerImagePreview imagePreview;
         private VnSceneComposerVideoPreview videoPreview;
+        private bool ownsVideoPreview;
         private VnSceneComposerGifPreview gifPreview;
         private VnSceneComposerImagePreview sourceImagePreview;
         private VnSceneComposerVideoPreview sourceVideoPreview;
@@ -472,7 +473,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     imagePreview = VnSceneComposerMediaEditing.OpenImagePreview(scene.media);
                     break;
                 case VnSceneComposerMediaKind.ExternalVideo:
-                    videoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);
+                    if (VnSceneComposerPreparedVideoRegistry.TryBorrow(project, scene,
+                        out VnSceneComposerVideoPreview preparedVideo))
+                    {
+                        videoPreview = preparedVideo;
+                        ownsVideoPreview = false;
+                    }
+                    else
+                    {
+                        videoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);
+                        ownsVideoPreview = true;
+                    }
                     openedVideoSignature = BuildVideoSignature(scene.media);
                     break;
                 case VnSceneComposerMediaKind.ExternalGif:
@@ -506,10 +517,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ReleaseMedia()
         {
             if (imagePreview != null) imagePreview.Dispose();
-            if (videoPreview != null) videoPreview.Dispose();
+            if (videoPreview != null && ownsVideoPreview) videoPreview.Dispose();
             if (gifPreview != null) gifPreview.Dispose();
             imagePreview = null;
             videoPreview = null;
+            ownsVideoPreview = false;
             gifPreview = null;
             openedVideoSignature = string.Empty;
         }
