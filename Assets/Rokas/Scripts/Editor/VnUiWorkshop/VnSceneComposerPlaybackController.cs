@@ -67,6 +67,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerGifPreview sourceGifPreview;
         private Texture sourceMediaTexture;
         private VnSceneComposerScene currentSourceScene;
+        private bool suppressCurrentBackgroundTransition;
         private string openedVideoSignature = string.Empty;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
@@ -227,6 +228,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ReleaseMedia();
             ReleaseSourceMedia();
             currentSourceScene = null;
+            suppressCurrentBackgroundTransition = false;
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;
@@ -234,15 +236,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetScene(int sceneIndex, bool playMedia)
         {
-            ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex));
+            ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex), false);
         }
 
         private void ResetSceneFromNeutralStart(int sceneIndex, bool playMedia)
         {
-            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline());
+            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true);
         }
 
-        private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene)
+        private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
+            bool suppressBackgroundTransition)
         {
             RequireSceneIndex(sceneIndex);
             VnSceneComposerScene targetScene = project.scenes[sceneIndex];
@@ -250,6 +253,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (!reuseVideoPreview) ReleaseMedia();
             ReleaseSourceMedia();
             currentSourceScene = sourceScene ?? CreatePreviewBaseline();
+            suppressCurrentBackgroundTransition = suppressBackgroundTransition;
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
@@ -277,6 +281,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, progress);
             VnSceneComposerTransitionSnapshot endpoint =
                 VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, 1f);
+            if (suppressCurrentBackgroundTransition)
+                sample.background = endpoint.background;
 
             Texture2D targetBackground = CurrentMediaTexture as Texture2D;
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
@@ -549,6 +555,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ReleaseMedia();
             ReleaseSourceMedia();
             currentSourceScene = null;
+            suppressCurrentBackgroundTransition = false;
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
             CurrentFrame = null;
