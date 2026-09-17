@@ -57,6 +57,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     ?? new VnPresentationWorkshopPreset();
         }
 
+        private VnPresentationWorkshopPreset GetMotionPreviewPresentationPreset()
+        {
+            return ResolveMotionPreviewPreset();
+        }
+
         private bool IsSceneComposerFocusedPreviewActive()
         {
             UpdatePreviewClock();
