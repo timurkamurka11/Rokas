@@ -6,7 +6,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public static class VnSceneComposerContract
     {
-        public const int SchemaVersion = 1;
+        public const int SchemaVersion = 2;
         public const string SourceHead = "f58f1db08fc225c2831ff59d50d42e8c07ea15ce";
     }
 
@@ -70,18 +70,61 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
+    public sealed class VnSceneComposerDialogueBeat
+    {
+        public string beatId = VnSceneComposerScene.NewStableId();
+        public string speaker = string.Empty;
+        [TextArea(3, 10)] public string text = string.Empty;
+        public bool narration;
+    }
+
+    [Serializable]
     public sealed class VnSceneComposerScene
     {
         public string sceneId = NewStableId();
         public string label = "Scene";
         public VnSceneComposerMediaReference media = new VnSceneComposerMediaReference();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();
-        public string speaker = string.Empty;
-        [TextArea(3, 10)] public string previewText = string.Empty;
-        public bool narration;
+        public List<VnSceneComposerDialogueBeat> dialogueBeats =
+            new List<VnSceneComposerDialogueBeat> { new VnSceneComposerDialogueBeat() };
         public VnPresentationWorkshopPreset presentationOverrides = new VnPresentationWorkshopPreset();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();
         public VnSceneComposerTiming timing = new VnSceneComposerTiming();
+
+        // Transitional source-compatible accessors. JsonUtility serializes fields rather than
+        // properties, so the canonical persisted authority remains dialogueBeats only while the
+        // existing composer call sites are migrated incrementally during M-DIALOGUE.
+        public string speaker
+        {
+            get { return PrimaryDialogueBeat.speaker; }
+            set { PrimaryDialogueBeat.speaker = value ?? string.Empty; }
+        }
+
+        public string previewText
+        {
+            get { return PrimaryDialogueBeat.text; }
+            set { PrimaryDialogueBeat.text = value ?? string.Empty; }
+        }
+
+        public bool narration
+        {
+            get { return PrimaryDialogueBeat.narration; }
+            set { PrimaryDialogueBeat.narration = value; }
+        }
+
+        private VnSceneComposerDialogueBeat PrimaryDialogueBeat
+        {
+            get
+            {
+                if (dialogueBeats == null) dialogueBeats = new List<VnSceneComposerDialogueBeat>();
+                if (dialogueBeats.Count == 0 || dialogueBeats[0] == null)
+                {
+                    if (dialogueBeats.Count == 0) dialogueBeats.Add(new VnSceneComposerDialogueBeat());
+                    else dialogueBeats[0] = new VnSceneComposerDialogueBeat();
+                }
+                return dialogueBeats[0];
+            }
+        }
 
         internal static string NewStableId()
         {
