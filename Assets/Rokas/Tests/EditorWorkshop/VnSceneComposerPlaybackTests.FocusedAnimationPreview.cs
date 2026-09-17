@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -89,6 +90,51 @@ namespace Rokas.EditorTools.Tests
                 Undo.ClearAll();
                 UnityEngine.Object.DestroyImmediate(window);
             }
+        }
+
+        [Test]
+        public void FocusedAnimationPreviewButtonsAreWiredToFocusedPreviewAction()
+        {
+            string path = Path.Combine(Application.dataPath,
+                "Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs");
+            string source = File.ReadAllText(path);
+            string character = Md4ExtractMethodBody(source,
+                "private void DrawSceneComposerCharacterAnimationInspector(VnSceneComposerScene scene)");
+            string scene = Md4ExtractMethodBody(source,
+                "private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)");
+
+            Assert.That(character, Does.Contain("\"▶ Проверить появление\""));
+            Assert.That(character, Does.Contain("\"▶ Проверить исчезновение\""));
+            Assert.That(character, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.CharacterEnter);"));
+            Assert.That(character, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.CharacterExit);"));
+            Assert.That(character, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.Expression);"));
+            Assert.That(character, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.Bounce);"));
+
+            Assert.That(scene, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.BackgroundTransition);"));
+            Assert.That(scene, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.StageOneTwo);"));
+            Assert.That(scene, Does.Contain("ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);"));
+            Assert.That(character + scene, Does.Contain("\"▶ Проверить\""),
+                "Focused animation preview must be creator-facing from the ordinary animation inspectors.");
+        }
+
+        private static string Md4ExtractMethodBody(string source, string signature)
+        {
+            int start = source.IndexOf(signature, System.StringComparison.Ordinal);
+            Assert.That(start, Is.GreaterThanOrEqualTo(0), "Missing method: " + signature);
+            int open = source.IndexOf('{', start);
+            Assert.That(open, Is.GreaterThanOrEqualTo(0), "Missing method body: " + signature);
+            int depth = 0;
+            for (int i = open; i < source.Length; i++)
+            {
+                if (source[i] == '{') depth++;
+                else if (source[i] == '}')
+                {
+                    depth--;
+                    if (depth == 0) return source.Substring(open, i - open + 1);
+                }
+            }
+            Assert.Fail("Unterminated method body: " + signature);
+            return string.Empty;
         }
 
         private static void Md4SetField(object target, string name, object value)
