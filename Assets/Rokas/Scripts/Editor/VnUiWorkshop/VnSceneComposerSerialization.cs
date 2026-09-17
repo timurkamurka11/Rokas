@@ -66,8 +66,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public static class VnSceneComposerSerialization
     {
         public const int SchemaVersion = VnSceneComposerContract.SchemaVersion;
+        private const int LegacySchemaVersion = 1;
         private const string ExternalReferencePrefix = "external://";
         private const float MaxPreviewDuration = 3600f;
+
+        [Serializable]
+        private sealed class LegacyDialogueProjectV1
+        {
+            public List<LegacyDialogueSceneV1> scenes = new List<LegacyDialogueSceneV1>();
+        }
+
+        [Serializable]
+        private sealed class LegacyDialogueSceneV1
+        {
+            public string speaker = string.Empty;
+            public string previewText = string.Empty;
+            public bool narration;
+        }
 
         public static string SerializePortable(VnSceneComposerProject project)
         {
@@ -109,11 +124,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             if (project == null)
                 return VnSceneComposerImportResult.Failed("Scene Composer project JSON did not contain a project.");
-            if (project.schemaVersion != SchemaVersion)
+
+            if (project.schemaVersion == LegacySchemaVersion)
+            {
+                VnSceneComposerImportResult migrationFailure = MigrateLegacyDialogueV1(json, project);
+                if (migrationFailure != null) return migrationFailure;
+            }
+            else if (project.schemaVersion != SchemaVersion)
             {
                 return VnSceneComposerImportResult.Failed(
                     "Unsupported Scene Composer schema version: " + project.schemaVersion +
-                    ". Supported version is " + SchemaVersion + ".");
+                    ". Supported versions are " + LegacySchemaVersion + " and " + SchemaVersion + ".");
             }
 
             NormalizeProject(project);
@@ -229,6 +250,42 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             return !string.IsNullOrEmpty(reference) &&
                    reference.StartsWith(ExternalReferencePrefix, StringComparison.Ordinal);
+        }
+
+        private static VnSceneComposerImportResult MigrateLegacyDialogueV1(string json, VnSceneComposerProject project)
+        {
+            LegacyDialogueProjectV1 legacy;
+            try
+            {
+                legacy = JsonUtility.FromJson<LegacyDialogueProjectV1>(json);
+            }
+            catch (Exception exception)
+            {
+                return VnSceneComposerImportResult.Failed(
+                    "Scene Composer legacy dialogue could not be parsed: " + exception.Message);
+            }
+
+            if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null) continue;
+                LegacyDialogueSceneV1 source = legacy != null && legacy.scenes != null && i < legacy.scenes.Count
+                    ? legacy.scenes[i]
+                    : null;
+                scene.dialogueBeats = new List<VnSceneComposerDialogueBeat>
+                {
+                    new VnSceneComposerDialogueBeat
+                    {
+                        speaker = source != null ? source.speaker ?? string.Empty : string.Empty,
+                        text = source != null ? source.previewText ?? string.Empty : string.Empty,
+                        narration = source != null && source.narration
+                    }
+                };
+            }
+
+            project.schemaVersion = SchemaVersion;
+            return null;
         }
 
         private static bool ValidateScene(VnSceneComposerProject project, VnSceneComposerScene scene, int index,
@@ -423,8 +480,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (scene == null) continue;
                 if (scene.sceneId == null) scene.sceneId = string.Empty;
                 if (scene.label == null) scene.label = string.Empty;
-                if (scene.previewText == null) scene.previewText = string.Empty;
-                if (scene.speaker == null) scene.speaker = string.Empty;
+                if (scene.dialogueBeats == null) scene.dialogueBeats = new List<VnSceneComposerDialogueBeat>();
+                if (scene.dialogueBeats.Count == 0) scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat());
+                for (int b = 0; b < scene.dialogueBeats.Count; b++)
+                {
+                    VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
+                    if (beat == null)
+                    {
+                        scene.dialogueBeats[b] = beat = new VnSceneComposerDialogueBeat();
+                    }
+                    if (beat.speaker == null) beat.speaker = string.Empty;
+                    if (beat.text == null) beat.text = string.Empty;
+                }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
                 if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
