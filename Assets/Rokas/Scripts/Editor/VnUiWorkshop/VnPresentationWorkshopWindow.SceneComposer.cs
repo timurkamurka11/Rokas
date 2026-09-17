@@ -946,12 +946,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (EditorGUI.EndChangeCheck())
                 ComposerSetCharacterTransition((VnWorkshopCharacterTransitionMode)nextMode, nextDuration, transition.FadeDuration, transition.SlideDistance, nextDirection, transition.Easing);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("▶ Проверить появление")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.CharacterEnter);
+            if (GUILayout.Button("▶ Проверить исчезновение")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.CharacterExit);
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.HelpBox("Появление и исчезновение используют единый профиль перехода, сохраняя существующую логику сцены.", MessageType.None);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Смена позы / эмоции", "Как меняется внешний вид персонажа между сценами."), EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
             float expressionDuration = DrawSceneComposerDurationControl("Длительность", expression.Duration, 0f);
             if (EditorGUI.EndChangeCheck()) ComposerSetExpressionTransition(expressionDuration, expression.Easing);
+            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.Expression);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Акцент / движение", "Короткое движение, выделяющее персонажа."), EditorStyles.miniBoldLabel);
             bool triggered = scene.transition != null && scene.transition.triggerActionBounce;
@@ -968,6 +973,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float nextAmplitude = EditorGUILayout.Slider("Сила", bounce.Amplitude, 0f, 100f);
             float nextBounceDuration = DrawSceneComposerDurationControl("Длительность", bounce.Duration, .01f);
             if (EditorGUI.EndChangeCheck()) ComposerSetBounce(nextAmplitude, nextBounceDuration, bounce.ScaleEmphasis, bounce.Overshoot, bounce.Easing);
+            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.Bounce);
         }
 
         private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)
@@ -992,6 +998,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 curtainDirection = (VnWorkshopCurtainDirection)direction;
             }
             if (EditorGUI.EndChangeCheck()) ComposerSetBackgroundTransition((VnWorkshopBackgroundTransitionMode)backgroundMode, backgroundDuration, background.CurtainDarkness, curtainDirection, background.Easing);
+            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.BackgroundTransition);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Расположение персонажей", "Как персонажи располагаются и перестраиваются на сцене."), EditorStyles.miniBoldLabel);
             string[] characterCountLabels = { "Нет персонажей", "1 персонаж", "2 персонажа", "3 персонажа" };
@@ -1001,6 +1008,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUI.BeginChangeCheck();
             float repositionDuration = DrawSceneComposerDurationControl("Длительность перестановки", stage.RepositionDuration, 0f);
             if (EditorGUI.EndChangeCheck()) ComposerSetStageLayout(stage.LeftX, stage.CenterX, stage.RightX, stage.SlotY, stage.LeftScale, stage.CenterScale, stage.RightScale, stage.Spacing, repositionDuration, stage.Easing);
+            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.StageOneTwo);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Фокус говорящего", "Выделяет говорящего персонажа и приглушает остальных."), EditorStyles.miniBoldLabel);
             EditorGUILayout.HelpBox("Фокус автоматически следует за полем «Говорящий» при нескольких персонажах.", MessageType.None);
@@ -1008,6 +1016,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float inactiveBrightness = EditorGUILayout.Slider("Яркость остальных", focus.InactiveBrightness, 0f, 1.5f);
             float focusDuration = DrawSceneComposerDurationControl("Длительность фокуса", focus.TransitionDuration, 0f);
             if (EditorGUI.EndChangeCheck()) ComposerSetSpeakerFocus(focus.ActiveScale, focus.ActiveBrightness, focus.ActiveForwardOffset, focus.InactiveScale, inactiveBrightness, focus.InactiveAlpha, focusDuration, focus.Easing);
+            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Тайминг сцены", "Продолжительность сцены и переход к следующей сцене."), EditorStyles.miniBoldLabel);
             if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
