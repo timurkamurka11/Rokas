@@ -65,6 +65,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerGifPreview gifPreview;
         private VnSceneComposerImagePreview sourceImagePreview;
         private VnSceneComposerVideoPreview sourceVideoPreview;
+        private bool ownsSourceVideoPreview;
+        private bool retainedOutgoingVideoSource;
         private VnSceneComposerGifPreview sourceGifPreview;
         private Texture sourceMediaTexture;
         private VnSceneComposerScene currentSourceScene;
@@ -253,19 +255,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             bool sameVideoBoundary = preserveCompatibleVideoTimeline &&
                                      sceneIndex != CurrentSceneIndex &&
                                      CanReuseVideoPreview(targetScene);
+            bool retainOutgoingVideo = preserveCompatibleVideoTimeline &&
+                                       sceneIndex != CurrentSceneIndex &&
+                                       !sameVideoBoundary &&
+                                       CanRetainCurrentVideoAsOutgoing(targetScene);
             bool reuseVideoPreview = (sceneIndex == CurrentSceneIndex || sameVideoBoundary) &&
                                      CanReuseVideoPreview(targetScene);
             float continuedMediaTime = sameVideoBoundary ? MediaTimeSeconds : 0f;
             Texture continuedVideoTexture = sameVideoBoundary ? CurrentMediaTexture : null;
-            if (!reuseVideoPreview) ReleaseMedia();
+
             ReleaseSourceMedia();
+            if (retainOutgoingVideo) PromoteCurrentVideoToSource();
+            else if (!reuseVideoPreview) ReleaseMedia();
+
             currentSourceScene = sourceScene ?? CreatePreviewBaseline();
             suppressCurrentBackgroundTransition = suppressBackgroundTransition;
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
             MediaTimeSeconds = continuedMediaTime;
             if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
-            else OpenSourceMedia(currentSourceScene);
+            else if (!retainOutgoingVideo) OpenSourceMedia(currentSourceScene);
             if (!reuseVideoPreview) OpenMedia(targetScene);
             if (playMedia && videoPreview != null && (!sameVideoBoundary || !videoPreview.IsPlaying)) videoPreview.Play();
             RefreshSourceMediaTexture();
@@ -305,10 +314,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ApplyRendererFacingSample(targetFrame, sourceFrame, sample, endpoint);
             Texture targetVisual = CurrentMediaTexture != null ? CurrentMediaTexture : targetFrame.BackgroundTexture;
             Texture sourceVisual = sourceMediaTexture != null ? sourceMediaTexture : sourceFrame.BackgroundTexture;
-            VnSceneComposerMediaScaleMode targetScaleMode = targetScene.media != null
-                ? targetScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit;
             VnSceneComposerMediaScaleMode sourceScaleMode = sourceScene.media != null
                 ? sourceScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit;
+            bool routingRetainedOutgoing = retainedOutgoingVideoSource && videoPreview != null &&
+                                           !videoPreview.HasVisibleFrame && sourceMediaTexture != null &&
+                                           ReferenceEquals(CurrentMediaTexture, sourceMediaTexture);
+            VnSceneComposerMediaScaleMode targetScaleMode = routingRetainedOutgoing
+                ? sourceScaleMode
+                : (targetScene.media != null ? targetScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit);
 
             CurrentSnapshot = sample;
             CurrentFrame = new VnSceneComposerPlaybackFrame(
@@ -447,11 +460,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     break;
                 case VnSceneComposerMediaKind.ExternalVideo:
                     sourceVideoPreview = VnSceneComposerMediaEditing.OpenVideoPreview(scene.media, 1280, 720);
+                    ownsSourceVideoPreview = true;
+                    retainedOutgoingVideoSource = false;
                     break;
                 case VnSceneComposerMediaKind.ExternalGif:
                     sourceGifPreview = VnSceneComposerMediaEditing.OpenGifPreview(scene.media);
                     break;
             }
+        }
+
+        private bool CanRetainCurrentVideoAsOutgoing(VnSceneComposerScene targetScene)
+        {
+            return targetScene != null && targetScene.media != null &&
+                   targetScene.media.kind == VnSceneComposerMediaKind.ExternalVideo &&
+                   videoPreview != null && videoPreview.texture != null && videoPreview.HasVisibleFrame &&
+                   CurrentMediaTexture != null;
+        }
+
+        private void PromoteCurrentVideoToSource()
+        {
+            sourceVideoPreview = videoPreview;
+            ownsSourceVideoPreview = ownsVideoPreview;
+            retainedOutgoingVideoSource = true;
+            sourceMediaTexture = CurrentMediaTexture != null ? CurrentMediaTexture : videoPreview.texture;
+            sourceVideoPreview.Pause();
+            videoPreview = null;
+            ownsVideoPreview = false;
+            openedVideoSignature = string.Empty;
+            CurrentMediaTexture = sourceMediaTexture;
         }
 
         private void RefreshSourceMediaTexture()
@@ -465,10 +501,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ReleaseSourceMedia()
         {
             if (sourceImagePreview != null) sourceImagePreview.Dispose();
-            if (sourceVideoPreview != null) sourceVideoPreview.Dispose();
+            if (sourceVideoPreview != null && ownsSourceVideoPreview) sourceVideoPreview.Dispose();
             if (sourceGifPreview != null) sourceGifPreview.Dispose();
             sourceImagePreview = null;
             sourceVideoPreview = null;
+            ownsSourceVideoPreview = false;
+            retainedOutgoingVideoSource = false;
             sourceGifPreview = null;
             sourceMediaTexture = null;
         }
@@ -519,7 +557,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void RefreshMediaTexture()
         {
             if (gifPreview != null) CurrentMediaTexture = gifPreview.currentTexture;
-            else if (videoPreview != null) CurrentMediaTexture = videoPreview.texture;
+            else if (videoPreview != null)
+            {
+                CurrentMediaTexture = retainedOutgoingVideoSource && !videoPreview.HasVisibleFrame && sourceMediaTexture != null
+                    ? sourceMediaTexture
+                    : videoPreview.texture;
+            }
             else if (imagePreview != null) CurrentMediaTexture = imagePreview.texture;
             else CurrentMediaTexture = null;
         }
