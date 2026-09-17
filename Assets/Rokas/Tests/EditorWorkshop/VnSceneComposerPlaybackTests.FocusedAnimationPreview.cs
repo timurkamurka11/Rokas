@@ -28,12 +28,12 @@ namespace Rokas.EditorTools.Tests
                     "Focused preview should be independent from the normal Scene Composer transport before it starts.");
 
                 Md3Invoke(window, "ComposerPreviewFocusedEffect", bounce);
+                Assert.That((float)Md3GetField(window, "previewProgress"), Is.EqualTo(0f).Within(.0001f),
+                    "Focused preview must reset to the beginning before the preview clock advances.");
                 object snapshot = Md3Invoke(window, "GetPreviewPlaybackSnapshot");
 
                 Assert.That((float)Md3GetField(snapshot, "Duration"), Is.EqualTo(2f).Within(.0001f),
                     "Focused preview must use the currently authored Scene Composer duration rather than the hidden legacy Workshop preset.");
-                Assert.That((float)Md3GetField(snapshot, "NormalizedProgress"), Is.EqualTo(0f).Within(.0001f),
-                    "Focused preview must start from the beginning.");
                 Assert.That(Md3GetProperty(window, "CurrentMotionPreviewFrame"), Is.Not.Null,
                     "Focused preview must render through the existing MotionPreviewBridge frame path.");
                 Assert.That(JsonUtility.ToJson(project), Is.EqualTo(projectBefore),
@@ -48,9 +48,8 @@ namespace Rokas.EditorTools.Tests
                 Md4SetField(window, "previewProgress", .65f);
                 Md4SetField(window, "previewPlaying", true);
                 Md3Invoke(window, "ComposerPreviewFocusedEffect", bounce);
-                object repeated = Md3Invoke(window, "GetPreviewPlaybackSnapshot");
-                Assert.That((float)Md3GetField(repeated, "NormalizedProgress"), Is.EqualTo(0f).Within(.0001f),
-                    "Pressing focused preview again must restart from the beginning instead of retaining stale progress.");
+                Assert.That((float)Md3GetField(window, "previewProgress"), Is.EqualTo(0f).Within(.0001f),
+                    "Pressing focused preview again must restart from the beginning before the preview clock advances.");
             }
             finally
             {
