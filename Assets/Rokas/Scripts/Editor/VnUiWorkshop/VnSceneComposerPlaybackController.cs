@@ -212,7 +212,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     RebuildFrame(1f);
                     return;
                 }
-                ResetScene(CurrentSceneIndex + 1, true);
+                ResetScene(CurrentSceneIndex + 1, true, ResolveSourceScene(CurrentSceneIndex + 1), false, true);
                 return;
             }
 
@@ -246,22 +246,30 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
-            bool suppressBackgroundTransition)
+            bool suppressBackgroundTransition, bool preserveCompatibleVideoTimeline = false)
         {
             RequireSceneIndex(sceneIndex);
             VnSceneComposerScene targetScene = project.scenes[sceneIndex];
-            bool reuseVideoPreview = sceneIndex == CurrentSceneIndex && CanReuseVideoPreview(targetScene);
+            bool sameVideoBoundary = preserveCompatibleVideoTimeline &&
+                                     sceneIndex != CurrentSceneIndex &&
+                                     CanReuseVideoPreview(targetScene);
+            bool reuseVideoPreview = (sceneIndex == CurrentSceneIndex || sameVideoBoundary) &&
+                                     CanReuseVideoPreview(targetScene);
+            float continuedMediaTime = sameVideoBoundary ? MediaTimeSeconds : 0f;
+            Texture continuedVideoTexture = sameVideoBoundary ? CurrentMediaTexture : null;
             if (!reuseVideoPreview) ReleaseMedia();
             ReleaseSourceMedia();
             currentSourceScene = sourceScene ?? CreatePreviewBaseline();
             suppressCurrentBackgroundTransition = suppressBackgroundTransition;
             CurrentSceneIndex = sceneIndex;
             SceneElapsedSeconds = 0f;
-            MediaTimeSeconds = 0f;
-            OpenSourceMedia(currentSourceScene);
+            MediaTimeSeconds = continuedMediaTime;
+            if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
+            else OpenSourceMedia(currentSourceScene);
             if (!reuseVideoPreview) OpenMedia(targetScene);
-            if (playMedia && videoPreview != null) videoPreview.Play();
+            if (playMedia && videoPreview != null && (!sameVideoBoundary || !videoPreview.IsPlaying)) videoPreview.Play();
             RefreshSourceMediaTexture();
+            if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
             RefreshMediaTexture();
             RebuildFrame(0f);
         }
