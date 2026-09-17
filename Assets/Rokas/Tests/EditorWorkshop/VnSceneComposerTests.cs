@@ -17,18 +17,18 @@ namespace Rokas.EditorTools.Tests
         private const string ManagedRoot = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets";
 
         [Test]
-        public void ComposerContractPinsVerifiedVn10SourceAndStartsAtSchemaOne()
+        public void ComposerContractPinsVerifiedVn10SourceAndUsesDialogueBeatSchemaTwo()
         {
             Type contract = RequireType("VnSceneComposerContract");
             FieldInfo schemaVersion = RequirePublicStaticField(contract, "SchemaVersion");
             FieldInfo sourceHead = RequirePublicStaticField(contract, "SourceHead");
 
-            Assert.That(schemaVersion.GetRawConstantValue(), Is.EqualTo(1));
+            Assert.That(schemaVersion.GetRawConstantValue(), Is.EqualTo(2));
             Assert.That(sourceHead.GetRawConstantValue(), Is.EqualTo(ExpectedSourceHead));
         }
 
         [Test]
-        public void ComposerProjectAndSceneModelsExposeStableIdentityAndAuthoringData()
+        public void ComposerProjectAndSceneModelsExposeCanonicalDialogueBeatList()
         {
             Type project = RequireType("VnSceneComposerProject");
             RequirePublicInstanceField(project, "schemaVersion");
@@ -43,12 +43,23 @@ namespace Rokas.EditorTools.Tests
             RequirePublicInstanceField(scene, "label");
             RequirePublicInstanceField(scene, "media");
             RequirePublicInstanceField(scene, "characters");
-            RequirePublicInstanceField(scene, "speaker");
-            RequirePublicInstanceField(scene, "previewText");
-            RequirePublicInstanceField(scene, "narration");
+            FieldInfo beatsField = RequirePublicInstanceField(scene, "dialogueBeats");
             RequirePublicInstanceField(scene, "presentationOverrides");
             RequirePublicInstanceField(scene, "transition");
             RequirePublicInstanceField(scene, "timing");
+
+            Assert.That(scene.GetField("speaker", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+            Assert.That(scene.GetField("previewText", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+            Assert.That(scene.GetField("narration", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+
+            object instance = Activator.CreateInstance(scene);
+            IList beats = beatsField.GetValue(instance) as IList;
+            Assert.That(beats, Is.Not.Null.And.Count.EqualTo(1));
+            object beat = beats[0];
+            Assert.That((string)Get(beat, "beatId"), Has.Length.EqualTo(32));
+            Assert.That((string)Get(beat, "speaker"), Is.Empty);
+            Assert.That((string)Get(beat, "text"), Is.Empty);
+            Assert.That((bool)Get(beat, "narration"), Is.False);
         }
 
         [Test]
