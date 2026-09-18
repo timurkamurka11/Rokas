@@ -154,6 +154,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
             });
         }
 
+        public void ComposerSetBounceAmplitude(float amplitude)
+        {
+            VnWorkshopActionBounceValues current = ResolveComposerBounceForTargetedMutation();
+            ComposerSetBounce(amplitude, current.Duration, current.ScaleEmphasis, current.Overshoot, current.Easing);
+        }
+
+        public void ComposerSetBounceDuration(float duration)
+        {
+            VnWorkshopActionBounceValues current = ResolveComposerBounceForTargetedMutation();
+            ComposerSetBounce(current.Amplitude, duration, current.ScaleEmphasis, current.Overshoot, current.Easing);
+        }
+
+        private VnWorkshopActionBounceValues ResolveComposerBounceForTargetedMutation()
+        {
+            EnsureSceneComposerProject();
+            VnPresentationWorkshopPreset effective = _sceneComposerPresentationProjectDefaults
+                ? _sceneComposerProject.defaultPresentation ?? new VnPresentationWorkshopPreset()
+                : VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, RequireSelectedScene());
+            return VnPresentationWorkshopVn10Resolver.ResolveActionBounce(effective);
+        }
+
         public void ComposerSetBackgroundTransition(VnWorkshopBackgroundTransitionMode mode, float duration,
             float curtainDarkness, VnWorkshopCurtainDirection direction, VnWorkshopEasing easing)
         {

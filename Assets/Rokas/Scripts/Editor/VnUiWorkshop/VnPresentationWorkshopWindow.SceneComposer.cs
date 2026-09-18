@@ -1055,11 +1055,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private static float DrawSceneComposerDurationControl(string label, float value, float minimum)
         {
-            EditorGUILayout.BeginHorizontal();
-            float nextValue = EditorGUILayout.Slider(label, value, minimum, ComposerDurationMaximum);
-            nextValue = EditorGUILayout.FloatField(nextValue, GUILayout.Width(64f));
-            EditorGUILayout.LabelField("с", GUILayout.Width(12f));
-            EditorGUILayout.EndHorizontal();
+            Rect rowRect = EditorGUILayout.GetControlRect(true, EditorGUIUtility.singleLineHeight);
+            const float fieldWidth = 58f;
+            const float unitWidth = 14f;
+            const float gap = 4f;
+            float labelWidth = Mathf.Min(EditorGUIUtility.labelWidth, rowRect.width * .42f);
+            Rect labelRect = new Rect(rowRect.x, rowRect.y, labelWidth, rowRect.height);
+            Rect unitRect = new Rect(rowRect.xMax - unitWidth, rowRect.y, unitWidth, rowRect.height);
+            Rect fieldRect = new Rect(unitRect.x - gap - fieldWidth, rowRect.y, fieldWidth, rowRect.height);
+            float sliderWidth = Mathf.Max(40f, fieldRect.x - gap - labelRect.xMax);
+            Rect sliderRect = new Rect(labelRect.xMax, rowRect.y, sliderWidth, rowRect.height);
+
+            EditorGUI.LabelField(labelRect, label);
+            float nextValue = GUI.HorizontalSlider(
+                sliderRect, value, minimum, ComposerDurationMaximum);
+            nextValue = EditorGUI.FloatField(fieldRect, nextValue);
+            EditorGUI.LabelField(unitRect, "с");
             return nextValue;
         }
 
@@ -1078,15 +1089,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopCharacterTransitionValues transition = VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(effective);
             VnWorkshopExpressionTransitionValues expression = VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(effective);
             VnWorkshopActionBounceValues bounce = VnPresentationWorkshopVn10Resolver.ResolveActionBounce(effective);
-            string[] enterLabels = { "Без анимации", "Плавное появление", "Появление со сдвигом" };
-            string[] exitLabels = { "Без анимации", "Плавное исчезновение", "Исчезновение со сдвигом" };
+            string[] transitionLabels = { "Без анимации", "Плавный переход", "Переход со сдвигом" };
             string[] directionLabels = { "Слева", "Справа" };
+            EditorGUILayout.LabelField(new GUIContent(
+                "Переход персонажа",
+                "Один общий способ используется для появления и исчезновения персонажа."),
+                EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
-            int nextMode = Mathf.Clamp((int)transition.Mode, 0, enterLabels.Length - 1);
-            EditorGUILayout.LabelField(new GUIContent("Появление", "Как персонаж появляется в сцене."), EditorStyles.miniBoldLabel);
-            nextMode = EditorGUILayout.Popup("Способ", nextMode, enterLabels);
-            EditorGUILayout.LabelField(new GUIContent("Исчезновение", "Как персонаж покидает сцену."), EditorStyles.miniBoldLabel);
-            nextMode = EditorGUILayout.Popup("Способ", nextMode, exitLabels);
+            int nextMode = Mathf.Clamp((int)transition.Mode, 0, transitionLabels.Length - 1);
+            nextMode = EditorGUILayout.Popup("Способ", nextMode, transitionLabels);
             float nextDuration = DrawSceneComposerDurationControl("Длительность", transition.Duration, 0f);
             VnWorkshopSlideDirection nextDirection = transition.SlideDirection;
             if ((VnWorkshopCharacterTransitionMode)nextMode == VnWorkshopCharacterTransitionMode.SlideAndFade)
@@ -1121,8 +1132,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             EditorGUI.BeginChangeCheck();
             float nextAmplitude = EditorGUILayout.Slider("Сила", bounce.Amplitude, 0f, 100f);
+            if (EditorGUI.EndChangeCheck()) ComposerSetBounceAmplitude(nextAmplitude);
+
+            EditorGUI.BeginChangeCheck();
             float nextBounceDuration = DrawSceneComposerDurationControl("Длительность", bounce.Duration, .01f);
-            if (EditorGUI.EndChangeCheck()) ComposerSetBounce(nextAmplitude, nextBounceDuration, bounce.ScaleEmphasis, bounce.Overshoot, bounce.Easing);
+            if (EditorGUI.EndChangeCheck()) ComposerSetBounceDuration(nextBounceDuration);
             if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.Bounce);
         }
 
