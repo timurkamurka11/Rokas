@@ -82,6 +82,23 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
+      - name: Run M-E ordinary authoring progressive disclosure fixture
+        id: me-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerMeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer M-E ordinary authoring EditMode
+          artifactsPath: artifacts-vn-scene-composer-me
       - name: Run SC-A Composer core fixture
         id: core-tests
         uses: game-ci/unity-test-runner@v4
@@ -258,6 +275,7 @@ jobs:
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
           path: |
+            artifacts-vn-scene-composer-me
             artifacts-vn-scene-composer-core
             artifacts-vn-scene-composer-crud
             artifacts-vn-scene-composer-image-media
