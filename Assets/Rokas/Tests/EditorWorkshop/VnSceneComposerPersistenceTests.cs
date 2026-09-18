@@ -270,6 +270,122 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(json, Does.Not.Contain(token), "Transient editor/playback token leaked into persisted JSON: " + token);
         }
 
+        [Test]
+        public void MD_MultiBeatUnicodeRoundTripPreservesOrderIdsAndLineBreaks()
+        {
+            Type serializationType = RequirePersistenceType();
+            Type projectType = RequireType("VnSceneComposerProject");
+            MethodInfo serialize = RequireStatic(serializationType, "SerializePortable", projectType);
+            MethodInfo deserialize = RequireStatic(serializationType, "DeserializePortable", typeof(string));
+            object project = Project(projectType, FixedProjectId, "Unicode Beats");
+            object scene = Scene(SceneOneId, "Dialogue", string.Empty, "ManualBeat", 2f);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            beats.Clear();
+            beats.Add(Beat("10101010101010101010101010101010", "Aiko", "Привет", false));
+            beats.Add(Beat("20202020202020202020202020202020", "Tim", "你好", false));
+            beats.Add(Beat("30303030303030303030303030303030", "Aiko", "Hello", false));
+            beats.Add(Beat("40404040404040404040404040404040", "Tim", "line1\nline2", true));
+            ((IList)Get(project, "scenes")).Add(scene);
+
+            string json = (string)serialize.Invoke(null, new[] { project });
+            object result = deserialize.Invoke(null, new object[] { json });
+            Assert.That((bool)Get(result, "Success"), Is.True, (string)Get(result, "Error"));
+            object loaded = Get(result, "Project");
+            IList loadedBeats = (IList)Get(((IList)Get(loaded, "scenes"))[0], "dialogueBeats");
+
+            Assert.That(loadedBeats.Count, Is.EqualTo(4));
+            AssertBeat(loadedBeats[0], "10101010101010101010101010101010", "Aiko", "Привет", false);
+            AssertBeat(loadedBeats[1], "20202020202020202020202020202020", "Tim", "你好", false);
+            AssertBeat(loadedBeats[2], "30303030303030303030303030303030", "Aiko", "Hello", false);
+            AssertBeat(loadedBeats[3], "40404040404040404040404040404040", "Tim", "line1\nline2", true);
+        }
+
+        [Test]
+        public void MD_ZeroBeatSchemaTwoSceneIsRejectedBeforeSerialization()
+        {
+            Type serializationType = RequirePersistenceType();
+            Type projectType = RequireType("VnSceneComposerProject");
+            MethodInfo serialize = RequireStatic(serializationType, "SerializePortable", projectType);
+            object project = Project(projectType, FixedProjectId, "Zero Beats");
+            object scene = Scene(SceneOneId, "Invalid", "text", "ManualBeat", 1f);
+            ((IList)Get(scene, "dialogueBeats")).Clear();
+            ((IList)Get(project, "scenes")).Add(scene);
+
+            AssertBeatValidationFailure(serialize, project, "beat");
+        }
+
+        [Test]
+        public void MD_NullBeatSchemaTwoSceneIsRejectedBeforeSerialization()
+        {
+            Type serializationType = RequirePersistenceType();
+            Type projectType = RequireType("VnSceneComposerProject");
+            MethodInfo serialize = RequireStatic(serializationType, "SerializePortable", projectType);
+            object project = Project(projectType, FixedProjectId, "Null Beat");
+            object scene = Scene(SceneOneId, "Invalid", "text", "ManualBeat", 1f);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            beats.Clear();
+            beats.Add(null);
+            ((IList)Get(project, "scenes")).Add(scene);
+
+            AssertBeatValidationFailure(serialize, project, "beat");
+        }
+
+        [Test]
+        public void MD_MissingBeatIdSchemaTwoSceneIsRejectedBeforeSerialization()
+        {
+            Type serializationType = RequirePersistenceType();
+            Type projectType = RequireType("VnSceneComposerProject");
+            MethodInfo serialize = RequireStatic(serializationType, "SerializePortable", projectType);
+            object project = Project(projectType, FixedProjectId, "Missing Beat ID");
+            object scene = Scene(SceneOneId, "Invalid", "text", "ManualBeat", 1f);
+            Set(((IList)Get(scene, "dialogueBeats"))[0], "beatId", string.Empty);
+            ((IList)Get(project, "scenes")).Add(scene);
+
+            AssertBeatValidationFailure(serialize, project, "id");
+        }
+
+        [Test]
+        public void MD_DuplicateBeatIdsSchemaTwoSceneIsRejectedBeforeSerialization()
+        {
+            Type serializationType = RequirePersistenceType();
+            Type projectType = RequireType("VnSceneComposerProject");
+            MethodInfo serialize = RequireStatic(serializationType, "SerializePortable", projectType);
+            object project = Project(projectType, FixedProjectId, "Duplicate Beat IDs");
+            object scene = Scene(SceneOneId, "Invalid", "text", "ManualBeat", 1f);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            string duplicateId = Get(beats[0], "beatId") as string;
+            beats.Add(Beat(duplicateId, "Tim", "Second", false));
+            ((IList)Get(project, "scenes")).Add(scene);
+
+            AssertBeatValidationFailure(serialize, project, "duplicate");
+        }
+
+        private static object Beat(string beatId, string speaker, string text, bool narration)
+        {
+            object beat = Activator.CreateInstance(RequireType("VnSceneComposerDialogueBeat"));
+            Set(beat, "beatId", beatId);
+            Set(beat, "speaker", speaker);
+            Set(beat, "text", text);
+            Set(beat, "narration", narration);
+            return beat;
+        }
+
+        private static void AssertBeat(object beat, string beatId, string speaker, string text, bool narration)
+        {
+            Assert.That((string)Get(beat, "beatId"), Is.EqualTo(beatId));
+            Assert.That((string)Get(beat, "speaker"), Is.EqualTo(speaker));
+            Assert.That((string)Get(beat, "text"), Is.EqualTo(text));
+            Assert.That((bool)Get(beat, "narration"), Is.EqualTo(narration));
+        }
+
+        private static void AssertBeatValidationFailure(MethodInfo serialize, object project, string expectedToken)
+        {
+            TargetInvocationException error = Assert.Throws<TargetInvocationException>(() =>
+                serialize.Invoke(null, new[] { project }));
+            Assert.That(error.InnerException, Is.TypeOf<ArgumentException>());
+            Assert.That(error.InnerException.Message, Does.Contain(expectedToken).IgnoreCase);
+        }
+
         private static object Project(Type projectType, string projectId, string title)
         {
             object project = Activator.CreateInstance(projectType);

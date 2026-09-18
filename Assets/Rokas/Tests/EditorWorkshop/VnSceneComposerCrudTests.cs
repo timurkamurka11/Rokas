@@ -84,6 +84,173 @@ namespace Rokas.EditorTools.Tests
             Assert.That(SceneIdAt(project, 1), Is.EqualTo(GetString(copy, "sceneId")));
         }
 
+        [Test]
+        public void MD_AddBeatInsertsEmptyBeatAfterAnchorWithUniqueId()
+        {
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type dialogueType = RequireType("VnSceneComposerDialogue");
+            object scene = Activator.CreateInstance(sceneType);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            object a = beats[0];
+            Set(a, "speaker", "Aiko");
+            Set(a, "text", "A");
+            string aId = GetString(a, "beatId");
+
+            MethodInfo add = RequireStaticAnyVisibility(dialogueType, "AddBeat", sceneType, typeof(string));
+            object b = add.Invoke(null, new object[] { scene, aId });
+
+            Assert.That(beats.Count, Is.EqualTo(2));
+            Assert.That(beats[0], Is.SameAs(a));
+            Assert.That(beats[1], Is.SameAs(b));
+            Assert.That(GetString(b, "beatId"), Is.Not.Empty.And.Not.EqualTo(aId));
+            Assert.That(GetString(b, "speaker"), Is.Empty);
+            Assert.That(GetString(b, "text"), Is.Empty);
+            Assert.That((bool)Get(b, "narration"), Is.False);
+        }
+
+        [Test]
+        public void MD_DuplicateBeatCopiesDialogueIntoIndependentIdentity()
+        {
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type dialogueType = RequireType("VnSceneComposerDialogue");
+            object scene = Activator.CreateInstance(sceneType);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            object a = beats[0];
+            Set(a, "speaker", "Aiko");
+            Set(a, "text", "Привет");
+            Set(a, "narration", true);
+            string aId = GetString(a, "beatId");
+
+            MethodInfo duplicate = RequireStaticAnyVisibility(dialogueType, "DuplicateBeat", sceneType, typeof(string));
+            object copy = duplicate.Invoke(null, new object[] { scene, aId });
+
+            Assert.That(beats.Count, Is.EqualTo(2));
+            Assert.That(beats[1], Is.SameAs(copy).And.Not.SameAs(a));
+            Assert.That(GetString(copy, "beatId"), Is.Not.EqualTo(aId));
+            Assert.That(GetString(copy, "speaker"), Is.EqualTo("Aiko"));
+            Assert.That(GetString(copy, "text"), Is.EqualTo("Привет"));
+            Assert.That((bool)Get(copy, "narration"), Is.True);
+
+            Set(copy, "text", "Changed");
+            Assert.That(GetString(a, "text"), Is.EqualTo("Привет"));
+        }
+
+        [Test]
+        public void MD_MoveBeatReordersExistingStableIdentity()
+        {
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type beatType = RequireType("VnSceneComposerDialogueBeat");
+            Type dialogueType = RequireType("VnSceneComposerDialogue");
+            object scene = Activator.CreateInstance(sceneType);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            object a = beats[0];
+            Set(a, "text", "A");
+            object b = Activator.CreateInstance(beatType);
+            Set(b, "text", "B");
+            beats.Add(b);
+            string aId = GetString(a, "beatId");
+            string bId = GetString(b, "beatId");
+
+            MethodInfo move = RequireStaticAnyVisibility(dialogueType, "MoveBeat", sceneType, typeof(string), typeof(int));
+            bool moved = (bool)move.Invoke(null, new object[] { scene, bId, 0 });
+
+            Assert.That(moved, Is.True);
+            Assert.That(GetString(beats[0], "beatId"), Is.EqualTo(bId));
+            Assert.That(GetString(beats[1], "beatId"), Is.EqualTo(aId));
+            Assert.That(beats[0], Is.SameAs(b));
+            Assert.That(beats[1], Is.SameAs(a));
+        }
+
+        [Test]
+        public void MD_DeleteBeatSelectsNextThenPreviousAndReplacesLast()
+        {
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type beatType = RequireType("VnSceneComposerDialogueBeat");
+            Type dialogueType = RequireType("VnSceneComposerDialogue");
+            object scene = Activator.CreateInstance(sceneType);
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            object a = beats[0];
+            Set(a, "text", "A");
+            object b = Activator.CreateInstance(beatType);
+            Set(b, "text", "B");
+            object c = Activator.CreateInstance(beatType);
+            Set(c, "text", "C");
+            beats.Add(b);
+            beats.Add(c);
+            string aId = GetString(a, "beatId");
+            string bId = GetString(b, "beatId");
+            string cId = GetString(c, "beatId");
+
+            MethodInfo delete = RequireStaticAnyVisibility(dialogueType, "DeleteBeat", sceneType, typeof(string));
+
+            string afterB = (string)delete.Invoke(null, new object[] { scene, bId });
+            Assert.That(afterB, Is.EqualTo(cId), "Deleting a middle beat selects the next beat.");
+            Assert.That(beats.Cast<object>().Select(x => GetString(x, "beatId")).ToArray(),
+                Is.EqualTo(new[] { aId, cId }));
+
+            string afterC = (string)delete.Invoke(null, new object[] { scene, cId });
+            Assert.That(afterC, Is.EqualTo(aId), "Deleting the final beat selects the previous beat.");
+            Assert.That(beats.Count, Is.EqualTo(1));
+
+            string replacementId = (string)delete.Invoke(null, new object[] { scene, aId });
+            Assert.That(beats.Count, Is.EqualTo(1));
+            Assert.That(replacementId, Is.EqualTo(GetString(beats[0], "beatId")));
+            Assert.That(replacementId, Is.Not.Empty.And.Not.EqualTo(aId));
+            Assert.That(GetString(beats[0], "speaker"), Is.Empty);
+            Assert.That(GetString(beats[0], "text"), Is.Empty);
+            Assert.That((bool)Get(beats[0], "narration"), Is.False);
+        }
+
+        [Test]
+        public void MD_DuplicateSceneRegeneratesBeatIdsAndKeepsBeatObjectsIndependent()
+        {
+            Type projectType = RequireType("VnSceneComposerProject");
+            Type editingType = RequireType("VnSceneComposerEditing");
+            Type beatType = RequireType("VnSceneComposerDialogueBeat");
+            object project = Activator.CreateInstance(projectType);
+            MethodInfo addScene = RequireStatic(editingType, "AddScene", projectType, typeof(string));
+            MethodInfo duplicateScene = RequireStatic(editingType, "DuplicateScene", projectType, typeof(string));
+            object source = addScene.Invoke(null, new object[] { project, "Multi" });
+            IList sourceBeats = (IList)Get(source, "dialogueBeats");
+            object first = sourceBeats[0];
+            Set(first, "speaker", "Aiko");
+            Set(first, "text", "Привет");
+            object second = Activator.CreateInstance(beatType);
+            Set(second, "speaker", "Tim");
+            Set(second, "text", "你好");
+            Set(second, "narration", true);
+            sourceBeats.Add(second);
+
+            string sourceSceneId = GetString(source, "sceneId");
+            string[] sourceBeatIds = sourceBeats.Cast<object>().Select(x => GetString(x, "beatId")).ToArray();
+            object copy = duplicateScene.Invoke(null, new object[] { project, sourceSceneId });
+            IList copyBeats = (IList)Get(copy, "dialogueBeats");
+
+            Assert.That(GetString(copy, "sceneId"), Is.Not.EqualTo(sourceSceneId));
+            Assert.That(copyBeats.Count, Is.EqualTo(sourceBeats.Count));
+            for (int i = 0; i < sourceBeats.Count; i++)
+            {
+                Assert.That(copyBeats[i], Is.Not.SameAs(sourceBeats[i]));
+                Assert.That(GetString(copyBeats[i], "beatId"), Is.Not.EqualTo(sourceBeatIds[i]),
+                    "Duplicating a Scene must regenerate every canonical beat identity.");
+                Assert.That(GetString(copyBeats[i], "speaker"), Is.EqualTo(GetString(sourceBeats[i], "speaker")));
+                Assert.That(GetString(copyBeats[i], "text"), Is.EqualTo(GetString(sourceBeats[i], "text")));
+                Assert.That((bool)Get(copyBeats[i], "narration"), Is.EqualTo((bool)Get(sourceBeats[i], "narration")));
+            }
+
+            Set(copyBeats[1], "text", "Changed clone");
+            Assert.That(GetString(sourceBeats[1], "text"), Is.EqualTo("你好"));
+        }
+
+        private static MethodInfo RequireStaticAnyVisibility(Type type, string name, params Type[] parameters)
+        {
+            MethodInfo method = type.GetMethod(name,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                null, parameters, null);
+            Assert.That(method, Is.Not.Null, "Missing static method: " + type.Name + "." + name);
+            return method;
+        }
+
         private static Type RequireType(string shortName)
         {
             Assembly assembly = AppDomain.CurrentDomain.GetAssemblies().SingleOrDefault(a => a.GetName().Name == EditorAssembly);
