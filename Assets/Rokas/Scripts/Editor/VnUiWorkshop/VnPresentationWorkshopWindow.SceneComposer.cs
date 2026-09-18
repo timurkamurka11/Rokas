@@ -63,6 +63,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerWorkspaceActive;
         [SerializeField] private VnSceneComposerProject _sceneComposerProject = new VnSceneComposerProject();
         [SerializeField] private string _sceneComposerSelectedSceneId = string.Empty;
+        [SerializeField] private string _sceneComposerSelectedDialogueBeatId = string.Empty;
         [SerializeField] private Vector2 _sceneComposerStoryboardScroll;
         [SerializeField] private Vector2 _sceneComposerInspectorScroll;
         [SerializeField] private bool _sceneComposerProjectDefaultsExpanded;
@@ -132,6 +133,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = VnSceneComposerEditing.AddScene(
                 _sceneComposerProject, "Scene " + (_sceneComposerProject.scenes.Count + 1));
             _sceneComposerSelectedSceneId = scene.sceneId;
+            SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
@@ -152,7 +154,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (scene == null) return;
             RecordSceneComposerUndo("Duplicate VN Scene");
             VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(_sceneComposerProject, scene.sceneId);
-            if (copy != null) _sceneComposerSelectedSceneId = copy.sceneId;
+            if (copy != null)
+            {
+                _sceneComposerSelectedSceneId = copy.sceneId;
+                SelectFirstSceneComposerDialogueBeat(copy);
+            }
             _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
@@ -181,11 +187,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RecordSceneComposerUndo("Delete VN Scene");
             InvalidateSceneComposerThumbnail(scene.sceneId);
             VnSceneComposerEditing.DeleteScene(_sceneComposerProject, scene.sceneId);
-            if (_sceneComposerProject.scenes.Count == 0) _sceneComposerSelectedSceneId = string.Empty;
+            if (_sceneComposerProject.scenes.Count == 0)
+            {
+                _sceneComposerSelectedSceneId = string.Empty;
+                _sceneComposerSelectedDialogueBeatId = string.Empty;
+            }
             else
             {
                 int nextIndex = Mathf.Clamp(deletedIndex, 0, _sceneComposerProject.scenes.Count - 1);
-                _sceneComposerSelectedSceneId = _sceneComposerProject.scenes[nextIndex].sceneId;
+                VnSceneComposerScene nextScene = _sceneComposerProject.scenes[nextIndex];
+                _sceneComposerSelectedSceneId = nextScene.sceneId;
+                SelectFirstSceneComposerDialogueBeat(nextScene);
             }
             _sceneComposerSelectedCharacterIndex = -1;
             ResetSceneComposerPlayback();
@@ -200,8 +212,72 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = _sceneComposerProject.scenes[index];
             if (scene == null) throw new InvalidOperationException("Selected Scene Composer scene is missing.");
             _sceneComposerSelectedSceneId = scene.sceneId;
+            SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
             Repaint();
+        }
+
+        public string ComposerGetSelectedDialogueBeatId()
+        {
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            return beat != null ? beat.beatId ?? string.Empty : string.Empty;
+        }
+
+        public void ComposerSelectDialogueBeat(string beatId)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (VnSceneComposerDialogue.FindIndex(scene, beatId) < 0)
+                throw new ArgumentException("Dialogue beat is not part of the selected Scene.", nameof(beatId));
+            _sceneComposerSelectedDialogueBeatId = beatId;
+            Repaint();
+        }
+
+        public void ComposerAddDialogueBeat()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat selected = ComposerGetSelectedDialogueBeat();
+            RecordSceneComposerUndo("Add VN Dialogue Beat");
+            VnSceneComposerDialogueBeat added = VnSceneComposerDialogue.AddBeat(
+                scene, selected != null ? selected.beatId : string.Empty);
+            _sceneComposerSelectedDialogueBeatId = added != null ? added.beatId ?? string.Empty : string.Empty;
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerDuplicateSelectedDialogueBeat()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat selected = ComposerGetSelectedDialogueBeat();
+            if (selected == null) return;
+            RecordSceneComposerUndo("Duplicate VN Dialogue Beat");
+            VnSceneComposerDialogueBeat copy = VnSceneComposerDialogue.DuplicateBeat(scene, selected.beatId);
+            if (copy != null) _sceneComposerSelectedDialogueBeatId = copy.beatId ?? string.Empty;
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerDeleteSelectedDialogueBeat()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat selected = ComposerGetSelectedDialogueBeat();
+            if (selected == null) return;
+            RecordSceneComposerUndo("Delete VN Dialogue Beat");
+            _sceneComposerSelectedDialogueBeatId = VnSceneComposerDialogue.DeleteBeat(scene, selected.beatId);
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerMoveSelectedDialogueBeat(int direction)
+        {
+            if (direction == 0) return;
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat selected = ComposerGetSelectedDialogueBeat();
+            if (selected == null || scene.dialogueBeats == null) return;
+            int source = VnSceneComposerDialogue.FindIndex(scene, selected.beatId);
+            if (source < 0) return;
+            int target = Mathf.Clamp(source + direction, 0, scene.dialogueBeats.Count - 1);
+            if (target == source) return;
+            RecordSceneComposerUndo("Reorder VN Dialogue Beat");
+            VnSceneComposerDialogue.MoveBeat(scene, selected.beatId, target);
+            _sceneComposerSelectedDialogueBeatId = selected.beatId;
+            MarkSceneComposerChanged();
         }
 
         public void ComposerSetExistingRokasAsset(UnityEngine.Object asset)
@@ -263,9 +339,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopPreviewFrame ComposerBuildSelectedPreviewFrame()
         {
             VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
             int index = FindSceneIndex(scene.sceneId);
             Texture2D background = ComposerGetSceneThumbnail(index) as Texture2D;
-            return VnSceneComposerComposition.BuildFrame(_sceneComposerProject, scene, previewResolution, background);
+            return VnSceneComposerComposition.BuildFrame(_sceneComposerProject, scene, beat, previewResolution, background);
         }
 
         public void ComposerPlayScene()
@@ -319,6 +396,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             BeginSceneComposerPlaybackTick();
         }
 
+        public void ComposerAdvanceDialogue()
+        {
+            if (_sceneComposerPlayback == null) return;
+            int previousScene = _sceneComposerPlayback.CurrentSceneIndex;
+            _sceneComposerPlayback.AdvanceDialogue();
+            if (_sceneComposerPlayback.CurrentSceneIndex != previousScene)
+                SyncSceneComposerSelectionFromPlayback();
+            _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
+            Repaint();
+        }
+
         public void ComposerSaveProject(string projectRoot)
         {
             EnsureSceneComposerProject();
@@ -335,6 +423,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerProject = result.Project;
                 _sceneComposerSelectedSceneId = _sceneComposerProject.scenes != null && _sceneComposerProject.scenes.Count > 0 && _sceneComposerProject.scenes[0] != null
                     ? _sceneComposerProject.scenes[0].sceneId : string.Empty;
+                SelectFirstSceneComposerDialogueBeat(GetSelectedScene());
                 _sceneComposerSelectedCharacterIndex = -1;
                 EnsureSceneComposerEditorUpdateRegistered();
                 bool hasWarnings = result.Warnings != null && result.Warnings.Length > 0;
@@ -452,11 +541,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 string numberedLabel = (i + 1).ToString("00") + "  " + label;
                 if (GUILayout.Button(numberedLabel, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton)) ComposerSelectScene(i);
                 string media = GetSceneComposerMediaKindLabel(scene.media != null ? scene.media.kind : VnSceneComposerMediaKind.None);
-                string detail = !string.IsNullOrEmpty(scene.speaker) ? scene.speaker : (scene.narration ? "Текст без персонажа" : "Без говорящего");
+                VnSceneComposerDialogueBeat summaryBeat = ResolveSceneComposerDialogueBeat(scene, string.Empty);
+                string detail = summaryBeat != null && !string.IsNullOrEmpty(summaryBeat.speaker)
+                    ? summaryBeat.speaker
+                    : (summaryBeat != null && summaryBeat.narration ? "Текст без персонажа" : "Без говорящего");
                 EditorGUILayout.LabelField(media + " · " + detail, EditorStyles.miniLabel);
-                if (!string.IsNullOrEmpty(scene.previewText))
+                if (summaryBeat != null && !string.IsNullOrEmpty(summaryBeat.text))
                 {
-                    string shortText = scene.previewText.Replace('\n', ' ');
+                    string shortText = summaryBeat.text.Replace('\n', ' ');
                     if (shortText.Length > 30) shortText = shortText.Substring(0, 30) + "…";
                     EditorGUILayout.LabelField(shortText, EditorStyles.miniLabel);
                 }
@@ -726,16 +818,70 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            bool narration = EditorGUILayout.Toggle("Текст без персонажа", scene.narration);
-            string speaker = EditorGUILayout.TextField("Говорящий", scene.speaker ?? string.Empty);
-            EditorGUILayout.LabelField("Текст сцены");
-            string text = EditorGUILayout.TextArea(scene.previewText ?? string.Empty, GUILayout.MinHeight(70f));
-            if (EditorGUI.EndChangeCheck())
+            EditorGUILayout.LabelField("Реплики", EditorStyles.miniBoldLabel);
+
+            VnSceneComposerDialogueBeat selectedBeat = ComposerGetSelectedDialogueBeat();
+            if (scene.dialogueBeats != null)
             {
-                RecordSceneComposerUndo("Edit VN Scene Text"); scene.narration = narration;
-                scene.speaker = narration ? string.Empty : speaker; scene.previewText = text;
-                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
+                for (int i = 0; i < scene.dialogueBeats.Count; i++)
+                {
+                    VnSceneComposerDialogueBeat beat = scene.dialogueBeats[i];
+                    if (beat == null) continue;
+                    bool selected = selectedBeat != null &&
+                                    string.Equals(beat.beatId, selectedBeat.beatId, StringComparison.Ordinal);
+                    string speakerLabel = beat.narration
+                        ? "Текст без персонажа"
+                        : (string.IsNullOrWhiteSpace(beat.speaker) ? "Без говорящего" : beat.speaker);
+                    string textLabel = (beat.text ?? string.Empty).Replace('\n', ' ').Trim();
+                    if (textLabel.Length > 28) textLabel = textLabel.Substring(0, 28) + "…";
+                    string rowLabel = (i + 1) + ". " + speakerLabel +
+                                      (string.IsNullOrEmpty(textLabel) ? string.Empty : " — " + textLabel);
+                    if (GUILayout.Button(rowLabel, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
+                        ComposerSelectDialogueBeat(beat.beatId);
+                }
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("+ Реплика")) ComposerAddDialogueBeat();
+            selectedBeat = ComposerGetSelectedDialogueBeat();
+            using (new EditorGUI.DisabledScope(selectedBeat == null))
+            {
+                if (GUILayout.Button("Дублировать")) ComposerDuplicateSelectedDialogueBeat();
+                if (GUILayout.Button("Удалить")) ComposerDeleteSelectedDialogueBeat();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            selectedBeat = ComposerGetSelectedDialogueBeat();
+            int selectedIndex = selectedBeat != null ? VnSceneComposerDialogue.FindIndex(scene, selectedBeat.beatId) : -1;
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(selectedIndex <= 0))
+            {
+                if (GUILayout.Button("↑", GUILayout.Width(36f))) ComposerMoveSelectedDialogueBeat(-1);
+            }
+            using (new EditorGUI.DisabledScope(selectedIndex < 0 || scene.dialogueBeats == null ||
+                                                selectedIndex >= scene.dialogueBeats.Count - 1))
+            {
+                if (GUILayout.Button("↓", GUILayout.Width(36f))) ComposerMoveSelectedDialogueBeat(1);
+            }
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+
+            selectedBeat = ComposerGetSelectedDialogueBeat();
+            if (selectedBeat != null)
+            {
+                EditorGUI.BeginChangeCheck();
+                bool narration = EditorGUILayout.Toggle("Текст без персонажа", selectedBeat.narration);
+                string speaker = EditorGUILayout.TextField("Говорящий", selectedBeat.speaker ?? string.Empty);
+                EditorGUILayout.LabelField("Текст реплики");
+                string text = EditorGUILayout.TextArea(selectedBeat.text ?? string.Empty, GUILayout.MinHeight(70f));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    RecordSceneComposerUndo("Edit VN Dialogue Beat");
+                    selectedBeat.narration = narration;
+                    selectedBeat.speaker = narration ? string.Empty : speaker;
+                    selectedBeat.text = text;
+                    MarkSceneComposerChanged();
+                }
             }
 
             VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
@@ -1079,12 +1225,52 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return scene;
         }
 
+        private VnSceneComposerDialogueBeat ComposerGetSelectedDialogueBeat()
+        {
+            VnSceneComposerScene scene = GetSelectedScene();
+            if (scene == null) return null;
+            VnSceneComposerDialogueBeat selected = ResolveSceneComposerDialogueBeat(
+                scene, _sceneComposerSelectedDialogueBeatId);
+            if (selected == null)
+            {
+                _sceneComposerSelectedDialogueBeatId = string.Empty;
+                return null;
+            }
+            _sceneComposerSelectedDialogueBeatId = selected.beatId ?? string.Empty;
+            return selected;
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveSceneComposerDialogueBeat(
+            VnSceneComposerScene scene, string beatId)
+        {
+            if (scene == null || scene.dialogueBeats == null || scene.dialogueBeats.Count == 0) return null;
+            int selectedIndex = VnSceneComposerDialogue.FindIndex(scene, beatId);
+            if (selectedIndex >= 0) return scene.dialogueBeats[selectedIndex];
+            for (int i = 0; i < scene.dialogueBeats.Count; i++)
+            {
+                if (scene.dialogueBeats[i] != null) return scene.dialogueBeats[i];
+            }
+            return null;
+        }
+
+        private void SelectFirstSceneComposerDialogueBeat(VnSceneComposerScene scene)
+        {
+            VnSceneComposerDialogueBeat beat = ResolveSceneComposerDialogueBeat(scene, string.Empty);
+            _sceneComposerSelectedDialogueBeatId = beat != null ? beat.beatId ?? string.Empty : string.Empty;
+        }
+
         private void EnsureSelectedScene()
         {
             EnsureSceneComposerProject();
-            if (GetSelectedScene() != null) return;
+            VnSceneComposerScene selected = GetSelectedScene();
+            if (selected != null)
+            {
+                ComposerGetSelectedDialogueBeat();
+                return;
+            }
             _sceneComposerSelectedSceneId = _sceneComposerProject.scenes.Count > 0 && _sceneComposerProject.scenes[0] != null
                 ? _sceneComposerProject.scenes[0].sceneId : string.Empty;
+            SelectFirstSceneComposerDialogueBeat(GetSelectedScene());
         }
 
         private int FindSceneIndex(string sceneId)
@@ -1150,8 +1336,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (_sceneComposerPlayback == null) return;
             int index = _sceneComposerPlayback.CurrentSceneIndex;
-            if (index >= 0 && index < _sceneComposerProject.scenes.Count && _sceneComposerProject.scenes[index] != null)
-                _sceneComposerSelectedSceneId = _sceneComposerProject.scenes[index].sceneId;
+            if (index < 0 || index >= _sceneComposerProject.scenes.Count) return;
+            VnSceneComposerScene scene = _sceneComposerProject.scenes[index];
+            if (scene == null || string.Equals(scene.sceneId, _sceneComposerSelectedSceneId, StringComparison.Ordinal)) return;
+            _sceneComposerSelectedSceneId = scene.sceneId;
+            SelectFirstSceneComposerDialogueBeat(scene);
+            _sceneComposerSelectedCharacterIndex = -1;
         }
 
         private void DisposeSceneComposerRuntimeResources()
