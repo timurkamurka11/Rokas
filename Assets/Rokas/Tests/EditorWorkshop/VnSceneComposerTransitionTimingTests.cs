@@ -55,10 +55,10 @@ namespace Rokas.EditorTools.Tests
             object to = Activator.CreateInstance(sceneType);
 
             ((IList)Get(from, "characters")).Add(Character(characterType, slotType, "Mina", "mina_neutral", "Center"));
-            Set(from, "speaker", "Mina");
+            SetProperty(from, "speaker", "Mina");
             ((IList)Get(to, "characters")).Add(Character(characterType, slotType, "Mina", "mina_neutral", "Left"));
             ((IList)Get(to, "characters")).Add(Character(characterType, slotType, "Keiko", "keiko_neutral", "Right"));
-            Set(to, "speaker", "Keiko");
+            SetProperty(to, "speaker", "Keiko");
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
             object later = sample.Invoke(null, new[] { project, from, to, (object)0.75f });
@@ -110,7 +110,7 @@ namespace Rokas.EditorTools.Tests
             object project = Activator.CreateInstance(projectType);
             object from = Activator.CreateInstance(sceneType);
             object to = Activator.CreateInstance(sceneType);
-            Set(to, "previewText", "One line, then another.");
+            SetProperty(to, "previewText", "One line, then another.");
 
             MethodInfo sample = RequireStatic(samplerType, "Sample", projectType, sceneType, sceneType, typeof(float));
             object start = sample.Invoke(null, new[] { project, from, to, (object)0f });
@@ -133,7 +133,7 @@ namespace Rokas.EditorTools.Tests
             Type samplerType = RequireType("VnSceneComposerTransitionSampler");
             object project = Activator.CreateInstance(projectType);
             object scene = Activator.CreateInstance(sceneType);
-            Set(scene, "previewText", "Timing sample.");
+            SetProperty(scene, "previewText", "Timing sample.");
             object timing = Get(scene, "timing");
             SetEnum(timing, "previewAdvanceMode", "PreviewAutoDuration");
             Set(timing, "previewAutoDuration", 4.25f);
@@ -185,6 +185,13 @@ namespace Rokas.EditorTools.Tests
             PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
             Assert.That(property, Is.Not.Null, "Missing public field/property: " + type.Name + "." + name);
             return property.GetValue(instance, null);
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing public property: " + instance.GetType().Name + "." + name);
+            property.SetValue(instance, value, null);
         }
 
         private static void Set(object instance, string name, object value)
