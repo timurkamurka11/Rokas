@@ -170,12 +170,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnSceneComposerCharacter source = scene.characters[i];
                 if (source == null) throw new ArgumentException("Scene contains a null authored character entry.", nameof(scene));
-                if (!VnSceneComposerCharacterStateResolver.TryResolve(source.stateId, out VnSceneComposerResolvedCharacterState state))
-                    throw new ArgumentException("Unknown authored VN character state: " + (source.stateId ?? string.Empty), nameof(scene));
-                if (!string.IsNullOrEmpty(source.characterId) &&
-                    !string.Equals(source.characterId, state.Character, StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException("Authored state '" + source.stateId + "' belongs to " + state.Character +
-                        ", not " + source.characterId + ".", nameof(scene));
+                string characterId = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(source);
+                if (string.IsNullOrWhiteSpace(characterId))
+                    throw new ArgumentException("Authored Scene character identity cannot be resolved.", nameof(scene));
+                string effectiveStateId = VnSceneComposerBeatCharacterStateResolver.ResolveStateId(
+                    scene, beat, characterId);
+                if (!VnSceneComposerCharacterStateResolver.TryResolve(
+                        effectiveStateId, out VnSceneComposerResolvedCharacterState state))
+                    throw new ArgumentException(
+                        "Unknown effective VN character state: " + effectiveStateId, nameof(scene));
 
                 Texture2D texture = state.Texture;
                 Rect baseline;
@@ -219,8 +222,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
                 result[i] = new VnWorkshopPreviewCharacter
                 {
-                    CharacterId = string.IsNullOrEmpty(source.characterId) ? state.Character : source.characterId,
-                    StateId = source.stateId ?? string.Empty,
+                    CharacterId = characterId,
+                    StateId = effectiveStateId,
                     Slot = source.stageSlot,
                     Texture = texture,
                     Uv = state.BodyUv,
