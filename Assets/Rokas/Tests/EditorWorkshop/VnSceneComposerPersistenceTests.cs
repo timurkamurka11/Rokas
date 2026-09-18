@@ -95,7 +95,7 @@ namespace Rokas.EditorTools.Tests
 
             object project = Project(projectType, FixedProjectId, "Schema");
             string valid = (string)serialize.Invoke(null, new[] { project });
-            string unsupported = valid.Replace("\"schemaVersion\": 2", "\"schemaVersion\": 999");
+            string unsupported = valid.Replace("\"schemaVersion\": 3", "\"schemaVersion\": 999");
             Assert.That(unsupported, Is.Not.EqualTo(valid), "Fixture must actually change schemaVersion.");
             object unsupportedResult = deserialize.Invoke(null, new object[] { unsupported });
             Assert.That((bool)Get(unsupportedResult, "Success"), Is.False);

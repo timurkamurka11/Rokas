@@ -30,7 +30,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 speaker = source.speaker ?? string.Empty,
                 text = source.text ?? string.Empty,
-                narration = source.narration
+                narration = source.narration,
+                targetCharacterId = source.targetCharacterId ?? string.Empty,
+                hasStateOverride = source.hasStateOverride,
+                stateId = source.stateId ?? string.Empty,
+                effect = source.effect,
+                effectStrength = source.effectStrength,
+                effectDuration = source.effectDuration
             };
             scene.dialogueBeats.Insert(sourceIndex + 1, copy);
             return copy;

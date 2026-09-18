@@ -67,6 +67,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public const int SchemaVersion = VnSceneComposerContract.SchemaVersion;
         private const int LegacySchemaVersion = 1;
+        private const int BeatStateSchemaVersion = 2;
         private const string ExternalReferencePrefix = "external://";
         private const float MaxPreviewDuration = 3600f;
 
@@ -130,11 +131,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerImportResult migrationFailure = MigrateLegacyDialogueV1(json, project);
                 if (migrationFailure != null) return migrationFailure;
             }
+            else if (project.schemaVersion == BeatStateSchemaVersion)
+            {
+                MigrateBeatStateSchemaV2(project);
+            }
             else if (project.schemaVersion != SchemaVersion)
             {
                 return VnSceneComposerImportResult.Failed(
                     "Unsupported Scene Composer schema version: " + project.schemaVersion +
-                    ". Supported versions are " + LegacySchemaVersion + " and " + SchemaVersion + ".");
+                    ". Supported versions are " + LegacySchemaVersion + ", " +
+                    BeatStateSchemaVersion + " and " + SchemaVersion + ".");
             }
 
             NormalizeProject(project);
@@ -349,6 +355,51 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
 
+            for (int b = 0; b < scene.dialogueBeats.Count; b++)
+            {
+                VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
+                if (beat == null || string.IsNullOrWhiteSpace(beat.targetCharacterId)) continue;
+
+                VnSceneComposerCharacter target = null;
+                for (int c = 0; c < scene.characters.Count; c++)
+                {
+                    VnSceneComposerCharacter candidate = scene.characters[c];
+                    if (candidate == null) continue;
+                    string candidateId = candidate.characterId ?? string.Empty;
+                    if (string.IsNullOrEmpty(candidateId) &&
+                        VnSceneComposerCharacterStateResolver.TryResolve(candidate.stateId, out VnSceneComposerResolvedCharacterState baseState))
+                        candidateId = baseState.Character;
+                    if (string.Equals(candidateId, beat.targetCharacterId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        target = candidate;
+                        break;
+                    }
+                }
+                if (target == null)
+                {
+                    error = "Dialogue Beat target character '" + beat.targetCharacterId +
+                            "' is not visible in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (beat.hasStateOverride)
+                {
+                    if (!VnSceneComposerCharacterStateResolver.TryResolve(
+                            beat.stateId, out VnSceneComposerResolvedCharacterState resolvedBeatState))
+                    {
+                        error = "Missing dialogue Beat character state '" + (beat.stateId ?? string.Empty) +
+                                "' in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!string.Equals(resolvedBeatState.Character, beat.targetCharacterId,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        error = "Dialogue Beat state '" + beat.stateId + "' belongs to " +
+                                resolvedBeatState.Character + ", not " + beat.targetCharacterId + ".";
+                        return false;
+                    }
+                }
+            }
+
             if (scene.presentationOverrides == null)
             {
                 error = "Scene Composer presentation overrides are missing for scene " + scene.sceneId + ".";
@@ -423,6 +474,29 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (!beatIds.Add(beat.beatId))
                 {
                     error = "Duplicate Scene Composer dialogue beat ID: " + beat.beatId + ".";
+                    return false;
+                }
+                if (!Enum.IsDefined(typeof(VnSceneComposerBeatEffect), beat.effect))
+                {
+                    error = "Invalid Scene Composer dialogue Beat effect at index " + i + ".";
+                    return false;
+                }
+                bool hasTarget = !string.IsNullOrWhiteSpace(beat.targetCharacterId);
+                if (beat.hasStateOverride && !hasTarget)
+                {
+                    error = "Dialogue Beat state override requires a target character in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!hasTarget && beat.effect != VnSceneComposerBeatEffect.None)
+                {
+                    error = "Dialogue Beat effect requires a target character in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (beat.effect == VnSceneComposerBeatEffect.Accent &&
+                    (!IsFinite(beat.effectStrength) || beat.effectStrength < 0f ||
+                     !IsFinite(beat.effectDuration) || beat.effectDuration <= 0f || beat.effectDuration > 10f))
+                {
+                    error = "Dialogue Beat Accent parameters are invalid in scene " + scene.sceneId + ".";
                     return false;
                 }
             }
@@ -507,6 +581,29 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return clone;
         }
 
+        private static void MigrateBeatStateSchemaV2(VnSceneComposerProject project)
+        {
+            if (project == null) return;
+            if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null || scene.dialogueBeats == null) continue;
+                for (int b = 0; b < scene.dialogueBeats.Count; b++)
+                {
+                    VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
+                    if (beat == null) continue;
+                    beat.targetCharacterId = string.Empty;
+                    beat.hasStateOverride = false;
+                    beat.stateId = string.Empty;
+                    beat.effect = VnSceneComposerBeatEffect.None;
+                    beat.effectStrength = 18f;
+                    beat.effectDuration = .28f;
+                }
+            }
+            project.schemaVersion = SchemaVersion;
+        }
+
         private static void NormalizeProject(VnSceneComposerProject project)
         {
             if (project.defaultPresentation == null) project.defaultPresentation = new VnPresentationWorkshopPreset();
@@ -532,6 +629,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                     if (beat.speaker == null) beat.speaker = string.Empty;
                     if (beat.text == null) beat.text = string.Empty;
+                    if (beat.targetCharacterId == null) beat.targetCharacterId = string.Empty;
+                    if (beat.stateId == null) beat.stateId = string.Empty;
+                    if (!IsFinite(beat.effectStrength) || beat.effectStrength < 0f) beat.effectStrength = 18f;
+                    if (!IsFinite(beat.effectDuration) || beat.effectDuration <= 0f) beat.effectDuration = .28f;
                 }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
                 if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();

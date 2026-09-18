@@ -6,7 +6,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public static class VnSceneComposerContract
     {
-        public const int SchemaVersion = 2;
+        public const int SchemaVersion = 3;
         public const string SourceHead = "f58f1db08fc225c2831ff59d50d42e8c07ea15ce";
     }
 
@@ -30,6 +30,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         ManualBeat,
         PreviewAutoDuration
+    }
+
+    public enum VnSceneComposerBeatEffect
+    {
+        None,
+        Accent
     }
 
     [Serializable]
@@ -76,6 +82,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string speaker = string.Empty;
         [TextArea(3, 10)] public string text = string.Empty;
         public bool narration;
+
+        // M-F1: explicit target identity is independent from display speaker text.
+        // hasStateOverride == false is the canonical "Keep Previous" behavior.
+        public string targetCharacterId = string.Empty;
+        public bool hasStateOverride;
+        public string stateId = string.Empty;
+        public VnSceneComposerBeatEffect effect = VnSceneComposerBeatEffect.None;
+        public float effectStrength = 18f;
+        public float effectDuration = .28f;
     }
 
     [Serializable]
