@@ -54,8 +54,8 @@ namespace Rokas.EditorTools.Tests
             MethodInfo duplicate = RequireStatic(editingType, "DuplicateScene", projectType, typeof(string));
 
             object source = add.Invoke(null, new object[] { project, "Source" });
-            Set(source, "speaker", "Mina");
-            Set(source, "previewText", "Original line");
+            SetProperty(source, "speaker", "Mina");
+            SetProperty(source, "previewText", "Original line");
             object sourceMedia = Get(source, "media");
             Set(sourceMedia, "displayName", "Background A");
             Set(sourceMedia, "reference", "guid:abc");
@@ -70,16 +70,16 @@ namespace Rokas.EditorTools.Tests
 
             Assert.That(copy, Is.Not.Null);
             Assert.That(GetString(copy, "sceneId"), Is.Not.EqualTo(sourceId));
-            Assert.That(GetString(copy, "speaker"), Is.EqualTo("Mina"));
+            Assert.That(GetPropertyString(copy, "speaker"), Is.EqualTo("Mina"));
             Assert.That(Get(copy, "media"), Is.Not.SameAs(sourceMedia));
             Assert.That(Get(copy, "presentationOverrides"), Is.Not.SameAs(Get(source, "presentationOverrides")));
             Assert.That(Get(copy, "characters"), Is.Not.SameAs(characters));
             Assert.That(((IList)Get(copy, "characters")).Count, Is.EqualTo(1));
 
             Set(Get(copy, "media"), "displayName", "Changed");
-            Set(copy, "previewText", "Changed line");
+            SetProperty(copy, "previewText", "Changed line");
             Assert.That(GetString(sourceMedia, "displayName"), Is.EqualTo("Background A"));
-            Assert.That(GetString(source, "previewText"), Is.EqualTo("Original line"));
+            Assert.That(GetPropertyString(source, "previewText"), Is.EqualTo("Original line"));
             Assert.That(SceneCount(project), Is.EqualTo(2));
             Assert.That(SceneIdAt(project, 1), Is.EqualTo(GetString(copy, "sceneId")));
         }
@@ -107,9 +107,19 @@ namespace Rokas.EditorTools.Tests
             return field;
         }
 
+        private static PropertyInfo Property(object instance, string name)
+        {
+            PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing public property: " + instance.GetType().Name + "." + name);
+            return property;
+        }
+
         private static object Get(object instance, string name) { return Field(instance, name).GetValue(instance); }
         private static string GetString(object instance, string name) { return (string)Get(instance, name); }
         private static void Set(object instance, string name, object value) { Field(instance, name).SetValue(instance, value); }
+        private static object GetProperty(object instance, string name) { return Property(instance, name).GetValue(instance); }
+        private static string GetPropertyString(object instance, string name) { return (string)GetProperty(instance, name); }
+        private static void SetProperty(object instance, string name, object value) { Property(instance, name).SetValue(instance, value); }
         private static IList Scenes(object project) { return (IList)Get(project, "scenes"); }
         private static int SceneCount(object project) { return Scenes(project).Count; }
         private static string SceneIdAt(object project, int index) { return GetString(Scenes(project)[index], "sceneId"); }
