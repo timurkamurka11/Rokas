@@ -191,16 +191,16 @@ namespace Rokas.EditorTools.Tests
                 IList scenes = (IList)Get(project, "scenes");
                 object from = Scene("Pose A", "a", "PreviewAutoDuration", 1f);
                 AddCharacter(from, "Mina", stateA, "Center");
-                Set(from, "speaker", "Mina");
+                SetProperty(from, "speaker", "Mina");
                 scenes.Add(from);
                 object target = Scene("Pose B", "b", "PreviewAutoDuration", 1f);
                 AddCharacter(target, "Mina", stateB, "Center");
-                Set(target, "speaker", "Mina");
+                SetProperty(target, "speaker", "Mina");
                 ConfigureExpression(target, 1f);
                 scenes.Add(target);
                 object snap = Scene("Pose C", "c", "PreviewAutoDuration", 1f);
                 AddCharacter(snap, "Mina", stateC, "Center");
-                Set(snap, "speaker", "Mina");
+                SetProperty(snap, "speaker", "Mina");
                 ConfigureExpression(snap, 0f);
                 scenes.Add(snap);
 
@@ -244,12 +244,12 @@ namespace Rokas.EditorTools.Tests
             IList scenes = (IList)Get(project, "scenes");
             object from = Scene("One", "A", "PreviewAutoDuration", 1f);
             AddCharacter(from, "Mina", "mina_neutral", "Center");
-            Set(from, "speaker", "Mina");
+            SetProperty(from, "speaker", "Mina");
             scenes.Add(from);
             object target = Scene("Two", "Deterministic visible typewriter", "PreviewAutoDuration", 1f);
             AddCharacter(target, "Mina", "mina_neutral", "Left");
             AddCharacter(target, "Keiko", "keiko_neutral", "Right");
-            Set(target, "speaker", "Keiko");
+            SetProperty(target, "speaker", "Keiko");
             scenes.Add(target);
             Type projectType = RequireType("VnSceneComposerProject");
             Type controllerType = RequirePlaybackType();
