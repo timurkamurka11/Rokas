@@ -33,6 +33,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public VnWorkshopBackgroundTransitionSample background;
         public VnWorkshopActionBounceSample bounce;
+        public string beatEffectCharacterId = string.Empty;
+        public VnWorkshopActionBounceSample beatEffect;
         public VnWorkshopStageTransitionSample[] stage = Array.Empty<VnWorkshopStageTransitionSample>();
         public VnSceneComposerCharacterMotionPreview[] characterMotions = Array.Empty<VnSceneComposerCharacterMotionPreview>();
         public VnSceneComposerExpressionPreview[] expressions = Array.Empty<VnSceneComposerExpressionPreview>();

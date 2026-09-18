@@ -75,6 +75,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
             result.visibleText = VnSceneComposerTransitionSampler.Sample(
                 project, fromScene, toScene, previousBeat, activeBeat,
                 Progress(beatElapsedSeconds, typewriterDuration)).visibleText;
+
+            result.beatEffectCharacterId = string.Empty;
+            result.beatEffect = VnPresentationWorkshopVn10Resolver.SampleActionBounce(
+                false, 1f, bounce);
+            if (activeBeat.effect == VnSceneComposerBeatEffect.Accent &&
+                !string.IsNullOrWhiteSpace(activeBeat.targetCharacterId))
+            {
+                VnWorkshopActionBounceValues beatBounce = bounce;
+                beatBounce.Amplitude = Mathf.Max(0f, activeBeat.effectStrength);
+                beatBounce.Duration = Mathf.Max(.01f, activeBeat.effectDuration);
+                result.beatEffectCharacterId = activeBeat.targetCharacterId;
+                result.beatEffect = VnPresentationWorkshopVn10Resolver.SampleActionBounce(
+                    true,
+                    Progress(beatElapsedSeconds, beatBounce.Duration),
+                    beatBounce);
+            }
+
             result.timing = VnSceneComposerTransitionSampler.ResolveTiming(project, toScene, activeBeat);
             return result;
         }

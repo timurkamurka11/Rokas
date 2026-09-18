@@ -410,6 +410,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     character.Alpha *= Mathf.Clamp01(expression.sample.EndAlpha);
 
                 ApplyBounce(character, sample.bounce);
+                if (!string.IsNullOrEmpty(sample.beatEffectCharacterId) &&
+                    string.Equals(character.CharacterId, sample.beatEffectCharacterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    ApplyBounce(character, sample.beatEffect);
                 rendered.Add(character);
             }
 
