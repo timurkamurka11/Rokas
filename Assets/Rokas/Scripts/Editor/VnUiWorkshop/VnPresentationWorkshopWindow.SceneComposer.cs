@@ -635,6 +635,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     HandleSceneComposerPreviewInput(previewRect, frame, Event.current);
                     DrawSceneComposerVideoPreparationState(previewRect);
                 }
+                else
+                {
+                    HandleSceneComposerPlaybackInput(previewRect, frame, Event.current);
+                }
             }
             else GUI.Box(previewRect, "Выберите или добавьте сцену.");
 
