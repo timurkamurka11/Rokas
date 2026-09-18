@@ -84,8 +84,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         public int CurrentSceneIndex { get; private set; }
+        public int CurrentBeatIndex { get; private set; }
         public bool IsPlaying { get; private set; }
         public float SceneElapsedSeconds { get; private set; }
+        public float BeatElapsedSeconds { get; private set; }
         public float MediaTimeSeconds { get; private set; }
         public Texture CurrentMediaTexture { get; private set; }
         public VnSceneComposerTransitionSnapshot CurrentSnapshot { get; private set; }
@@ -153,7 +155,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (CurrentSceneIndex < 0) return;
             IsPlaying = true;
+            CurrentBeatIndex = 0;
             SceneElapsedSeconds = 0f;
+            BeatElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
             if (gifPreview != null) gifPreview.Restart();
             if (videoPreview != null)
@@ -194,13 +198,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (!IsPlaying || CurrentSceneIndex < 0) return;
 
             SceneElapsedSeconds += deltaSeconds;
+            BeatElapsedSeconds += deltaSeconds;
             MediaTimeSeconds += deltaSeconds;
             if (gifPreview != null) gifPreview.Advance(deltaSeconds);
             if (videoPreview != null && !videoPreview.IsPlaying) videoPreview.Play();
             RefreshMediaTexture();
 
             VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
-            VnSceneComposerPreviewTimingPlan timing = VnSceneComposerTransitionSampler.ResolveTiming(project, scene);
+            VnSceneComposerDialogueBeat activeBeat = ResolveBeat(scene, CurrentBeatIndex);
+            VnSceneComposerPreviewTimingPlan timing =
+                VnSceneComposerTransitionSampler.ResolveTiming(project, scene, activeBeat);
             float duration = ResolveScenePreviewDuration(timing);
             RebuildFrame(SceneElapsedSeconds, true);
 
@@ -215,6 +222,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     return;
                 }
                 ResetScene(CurrentSceneIndex + 1, true, ResolveSourceScene(CurrentSceneIndex + 1), false, true);
+                return;
+            }
+
+            IsPlaying = false;
+            if (videoPreview != null) videoPreview.Pause();
+            RebuildFrame(1f);
+        }
+
+        public void AdvanceDialogue()
+        {
+            if (CurrentSceneIndex < 0) return;
+
+            VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
+            int beatCount = BeatCount(scene);
+            if (CurrentBeatIndex + 1 < beatCount)
+            {
+                CurrentBeatIndex++;
+                BeatElapsedSeconds = 0f;
+                RebuildFrame(SceneElapsedSeconds, true);
+                return;
+            }
+
+            if (scope == PlaybackScope.OrderedRange && CurrentSceneIndex < rangeEnd)
+            {
+                ResetScene(CurrentSceneIndex + 1, true,
+                    ResolveSourceScene(CurrentSceneIndex + 1), false, true);
                 return;
             }
 
@@ -271,7 +304,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentSourceScene = sourceScene ?? CreatePreviewBaseline();
             suppressCurrentBackgroundTransition = suppressBackgroundTransition;
             CurrentSceneIndex = sceneIndex;
+            CurrentBeatIndex = 0;
             SceneElapsedSeconds = 0f;
+            BeatElapsedSeconds = 0f;
             MediaTimeSeconds = continuedMediaTime;
             if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
             else if (!retainOutgoingVideo) OpenSourceMedia(currentSourceScene);
@@ -294,22 +329,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             VnSceneComposerScene targetScene = project.scenes[CurrentSceneIndex];
             VnSceneComposerScene sourceScene = currentSourceScene ?? ResolveSourceScene(CurrentSceneIndex);
+            VnSceneComposerDialogueBeat targetBeat = ResolveBeat(targetScene, CurrentBeatIndex);
+            VnSceneComposerDialogueBeat previousBeat = CurrentBeatIndex > 0
+                ? ResolveBeat(targetScene, CurrentBeatIndex - 1)
+                : ResolveFirstBeat(sourceScene);
             float progress = useElapsedSeconds
                 ? Mathf.Max(0f, progressOrElapsedSeconds)
                 : Mathf.Clamp01(progressOrElapsedSeconds);
             VnSceneComposerTransitionSnapshot sample = useElapsedSeconds
-                ? VnSceneComposerElapsedTransitionSampler.Sample(project, sourceScene, targetScene, progress)
-                : VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, progress);
+                ? VnSceneComposerElapsedTransitionSampler.Sample(
+                    project, sourceScene, targetScene, previousBeat, targetBeat,
+                    progress, BeatElapsedSeconds)
+                : VnSceneComposerTransitionSampler.Sample(
+                    project, sourceScene, targetScene, previousBeat, targetBeat, progress);
             VnSceneComposerTransitionSnapshot endpoint =
-                VnSceneComposerTransitionSampler.Sample(project, sourceScene, targetScene, 1f);
+                VnSceneComposerTransitionSampler.Sample(
+                    project, sourceScene, targetScene, previousBeat, targetBeat, 1f);
             if (suppressCurrentBackgroundTransition)
                 sample.background = endpoint.background;
 
             Texture2D targetBackground = CurrentMediaTexture as Texture2D;
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
-                project, targetScene, VnWorkshopResolution.Reference1920x1080, targetBackground);
+                project, targetScene, targetBeat, VnWorkshopResolution.Reference1920x1080, targetBackground);
             VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(
-                project, sourceScene, VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);
+                project, sourceScene, ResolveFirstBeat(sourceScene),
+                VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);
 
             ApplyRendererFacingSample(targetFrame, sourceFrame, sample, endpoint);
             Texture targetVisual = CurrentMediaTexture != null ? CurrentMediaTexture : targetFrame.BackgroundTexture;
@@ -598,6 +642,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
             };
         }
 
+        private static int BeatCount(VnSceneComposerScene scene)
+        {
+            return scene != null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0
+                ? scene.dialogueBeats.Count
+                : 1;
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveFirstBeat(VnSceneComposerScene scene)
+        {
+            return ResolveBeat(scene, 0);
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveBeat(VnSceneComposerScene scene, int beatIndex)
+        {
+            if (scene != null && scene.dialogueBeats != null &&
+                beatIndex >= 0 && beatIndex < scene.dialogueBeats.Count &&
+                scene.dialogueBeats[beatIndex] != null)
+                return scene.dialogueBeats[beatIndex];
+
+            return new VnSceneComposerDialogueBeat
+            {
+                beatId = string.Empty,
+                speaker = string.Empty,
+                text = string.Empty,
+                narration = false
+            };
+        }
+
         private static float ResolveScenePreviewDuration(VnSceneComposerPreviewTimingPlan timing)
         {
             if (timing == null) return 0f;
@@ -616,7 +688,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             IsPlaying = false;
             CurrentSceneIndex = -1;
+            CurrentBeatIndex = 0;
             SceneElapsedSeconds = 0f;
+            BeatElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
             ReleaseMedia();
             ReleaseSourceMedia();
