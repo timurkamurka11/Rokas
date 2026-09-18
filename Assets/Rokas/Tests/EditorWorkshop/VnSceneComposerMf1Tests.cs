@@ -229,6 +229,24 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Get(loaded, "effect").ToString(), Is.EqualTo("Accent"));
             Assert.That(GetFloat(loaded, "effectStrength"), Is.EqualTo(35f).Within(.0001f));
             Assert.That(GetFloat(loaded, "effectDuration"), Is.EqualTo(.55f).Within(.0001f));
+            Assert.That(ResolveState(result.Project.scenes[0], loaded, "Mina"), Is.EqualTo("mina_happy"),
+                "Save/load must reproduce the same effective Beat character state.");
+        }
+
+        [Test]
+        public void MF1_PersistenceRejectsBeatStateOwnedByAnotherCharacter()
+        {
+            var project = new VnSceneComposerProject();
+            VnSceneComposerScene scene = SceneWithCharacter("Mina", "mina_neutral");
+            VnSceneComposerDialogueBeat beat = scene.dialogueBeats[0];
+            SetBeatState(beat, "Mina", true, "keiko_serious");
+            project.scenes.Add(scene);
+
+            ArgumentException error = Assert.Throws<ArgumentException>(() =>
+                VnSceneComposerSerialization.SerializePortable(project));
+            Assert.That(error.Message, Does.Contain("belongs").IgnoreCase
+                .And.Contain("Keiko")
+                .And.Contain("Mina"));
         }
 
         [Test]
@@ -299,6 +317,7 @@ namespace Rokas.EditorTools.Tests
                 scene.dialogueBeats.Add(second);
                 project.scenes.Add(scene);
 
+                string authoredBeforePlayback = JsonUtility.ToJson(project);
                 controller = new VnSceneComposerPlaybackController(project);
                 controller.PlayAll();
                 controller.Advance(.25f);
@@ -320,6 +339,9 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(preview.DisposeCalls, Is.EqualTo(0));
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(texture));
                 Assert.That(PreviewState(controller.CurrentFrame.WorkshopFrame, "Mina"), Is.EqualTo("mina_serious"));
+                Assert.That(scene.characters[0].stateId, Is.EqualTo("mina_neutral"));
+                Assert.That(JsonUtility.ToJson(project), Is.EqualTo(authoredBeforePlayback),
+                    "Beat playback must remain read-only with respect to authored project data.");
             }
             finally
             {
