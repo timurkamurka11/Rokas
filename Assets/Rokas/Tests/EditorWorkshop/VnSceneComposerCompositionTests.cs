@@ -66,7 +66,7 @@ namespace Rokas.EditorTools.Tests
             Type workshopFrameType = RequireType("VnWorkshopPreviewFrame");
             object project = Activator.CreateInstance(projectType);
             object scene = Activator.CreateInstance(sceneType);
-            Set(scene, "speaker", "Mina");
+            SetProperty(scene, "speaker", "Mina");
             Set(scene, "previewText", "Line one\nLine two");
 
             IList characters = (IList)Get(scene, "characters");
@@ -122,9 +122,9 @@ namespace Rokas.EditorTools.Tests
             Type compositionType = RequireType("VnSceneComposerComposition");
             object project = Activator.CreateInstance(projectType);
             object scene = Activator.CreateInstance(sceneType);
-            Set(scene, "speaker", "Narrator");
+            SetProperty(scene, "speaker", "Narrator");
             Set(scene, "previewText", "A quiet room.\nRain taps the window.");
-            Set(scene, "narration", true);
+            SetProperty(scene, "narration", true);
 
             MethodInfo build = RequireStatic(compositionType, "BuildFrame",
                 projectType, sceneType, resolutionType, typeof(Texture2D));
@@ -200,7 +200,7 @@ namespace Rokas.EditorTools.Tests
                 Type compositionType = RequireType("VnSceneComposerComposition");
                 object project = Activator.CreateInstance(projectType);
                 object scene = Activator.CreateInstance(sceneType);
-                Set(scene, "speaker", "Mina");
+                SetProperty(scene, "speaker", "Mina");
                 ((IList)Get(scene, "characters")).Add(Character(characterType, slotType, "Mina", stateId, "Center"));
 
                 MethodInfo build = RequireStatic(compositionType, "BuildFrame",
@@ -388,6 +388,14 @@ namespace Rokas.EditorTools.Tests
             PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
             Assert.That(property, Is.Not.Null, "Missing public field/property: " + type.Name + "." + name);
             return property.GetValue(instance, null);
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            Type type = instance.GetType();
+            PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing public property: " + type.Name + "." + name);
+            property.SetValue(instance, value, null);
         }
 
         private static void Set(object instance, string name, object value)
