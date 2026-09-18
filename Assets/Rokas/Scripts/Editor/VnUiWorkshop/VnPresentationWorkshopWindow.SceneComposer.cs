@@ -70,6 +70,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerSceneOverridesExpanded;
         [SerializeField] private int _sceneComposerSavedProjectIndex;
         [SerializeField] private int _sceneComposerInspectorSection;
+        [SerializeField] private bool _sceneComposerAdvancedAnimationGroupExpanded;
+        [SerializeField] private bool _sceneComposerAdvancedPresentationGroupExpanded;
+        [SerializeField] private bool _sceneComposerAdvancedTechnicalGroupExpanded;
 
         [NonSerialized] private VnSceneComposerPlaybackController _sceneComposerPlayback;
         [NonSerialized] private Dictionary<string, SceneComposerThumbnailCacheEntry> _sceneComposerThumbnailCache;
@@ -1148,7 +1151,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopBackgroundTransitionValues background = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(effective);
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
-            VnWorkshopTimingValues timing = VnPresentationWorkshopVn10Resolver.ResolveTiming(effective);
             EditorGUILayout.LabelField(new GUIContent("Переход фона", "Как фон меняется при переходе к этой сцене."), EditorStyles.miniBoldLabel);
             string[] backgroundLabels = { "Без перехода", "Плавный переход", "Шторка" };
             string[] curtainDirectionLabels = { "Справа налево", "Слева направо" };
@@ -1197,12 +1199,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 scene.timing.previewAutoDuration = Mathf.Max(0f, nextAutoDuration);
                 ResetSceneComposerPlayback(); MarkSceneComposerChanged();
             }
-            if (nextAdvance == 1)
-            {
-                EditorGUI.BeginChangeCheck();
-                float sequenceGap = EditorGUILayout.Slider("Пауза между сценами, с", timing.AutoPreviewSequenceGap, 0f, 10f);
-                if (EditorGUI.EndChangeCheck()) ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
-            }
+        }
+
+        private void DrawSceneComposerAdvancedTimingControls(VnSceneComposerScene scene)
+        {
+            VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
+            VnWorkshopTimingValues timing = VnPresentationWorkshopVn10Resolver.ResolveTiming(effective);
+            EditorGUILayout.LabelField("Точный тайминг перехода", EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox(
+                "Редкая настройка паузы между автоматически проигрываемыми сценами. Обычной сцене она не требуется.",
+                MessageType.None);
+            EditorGUI.BeginChangeCheck();
+            float sequenceGap = EditorGUILayout.Slider(
+                "Пауза между сценами, с", timing.AutoPreviewSequenceGap, 0f, 10f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
         }
 
         private void DrawSceneComposerSceneSettings(VnSceneComposerScene scene)
@@ -1217,9 +1228,38 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Дополнительно", EditorStyles.boldLabel);
-            DrawSceneComposerProjectTechnicalInfo();
+            EditorGUILayout.HelpBox(
+                "Редкие настройки для точной настройки проекта. Для обычной сцены этот раздел не нужен.",
+                MessageType.None);
+
             DrawSceneComposerAssetLibraryControls(scene);
-            DrawSceneComposerPresentationInspector(scene);
+
+            _sceneComposerAdvancedAnimationGroupExpanded = EditorGUILayout.Foldout(
+                _sceneComposerAdvancedAnimationGroupExpanded, "Расширенная анимация", true);
+            if (_sceneComposerAdvancedAnimationGroupExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerAdvancedTimingControls(scene);
+                EditorGUI.indentLevel--;
+            }
+
+            _sceneComposerAdvancedPresentationGroupExpanded = EditorGUILayout.Foldout(
+                _sceneComposerAdvancedPresentationGroupExpanded, "Расширенное оформление", true);
+            if (_sceneComposerAdvancedPresentationGroupExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerPresentationInspector(scene);
+                EditorGUI.indentLevel--;
+            }
+
+            _sceneComposerAdvancedTechnicalGroupExpanded = EditorGUILayout.Foldout(
+                _sceneComposerAdvancedTechnicalGroupExpanded, "Технические параметры", true);
+            if (_sceneComposerAdvancedTechnicalGroupExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerProjectTechnicalInfo();
+                EditorGUI.indentLevel--;
+            }
         }
 
         private void DrawSceneComposerPresentationInspector(VnSceneComposerScene scene) { DrawSceneComposerPresentationControls(scene); }

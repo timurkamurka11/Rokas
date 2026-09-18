@@ -8,7 +8,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public sealed partial class VnPresentationWorkshopWindow
     {
-        [SerializeField] private bool _sceneComposerAssetLibraryExpanded = true;
+        [SerializeField] private bool _sceneComposerAssetLibraryExpanded;
         [SerializeField] private VnSceneComposerAssetPurpose _sceneComposerOnboardPurpose = VnSceneComposerAssetPurpose.ReferenceImage;
         [SerializeField] private string _sceneComposerOnboardDisplayName = string.Empty;
         [SerializeField] private string _sceneComposerOnboardCharacter = "Mina";
