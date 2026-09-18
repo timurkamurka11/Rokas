@@ -522,7 +522,12 @@ namespace Rokas.EditorTools.Tests
                     BindingFlags.Public | BindingFlags.Instance,
                     null, new[] { typeof(string), typeof(bool), typeof(string) }, null);
                 Assert.That(setState, Is.Not.Null);
+
+                // Isolate the mutation under test from setup Undo records, matching the established
+                // Scene Composer Undo test pattern.
+                Undo.ClearAll();
                 setState.Invoke(window, new object[] { "Mina", true, "mina_happy" });
+                Undo.FlushUndoRecordObjects();
                 VnSceneComposerDialogueBeat beat = GetProject(window).scenes[0].dialogueBeats[0];
                 Assert.That(GetBool(beat, "hasStateOverride"), Is.True);
                 Assert.That(GetString(beat, "stateId"), Is.EqualTo("mina_happy"));
