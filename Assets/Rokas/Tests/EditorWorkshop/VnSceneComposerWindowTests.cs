@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using Rokas.EditorTools.VnUiWorkshop;
 using Rokas.Presentation;
 using UnityEditor;
 using UnityEngine;
@@ -328,6 +329,201 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MD_DialogueBeatSelectionCrudAndPreviewFollowStableIdentity()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            try
+            {
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                object scene = Scenes(window)[0];
+                IList beats = (IList)GetField(scene, "dialogueBeats");
+                Assert.That(beats, Has.Count.EqualTo(1));
+                string firstId = GetString(beats[0], "beatId");
+                SetField(beats[0], "speaker", "Aiko");
+                SetField(beats[0], "text", "First beat");
+
+                MethodInfo selectedId = RequireInstance(windowType, "ComposerGetSelectedDialogueBeatId");
+                MethodInfo select = RequireInstance(windowType, "ComposerSelectDialogueBeat", typeof(string));
+                MethodInfo add = RequireInstance(windowType, "ComposerAddDialogueBeat");
+                MethodInfo duplicate = RequireInstance(windowType, "ComposerDuplicateSelectedDialogueBeat");
+                MethodInfo delete = RequireInstance(windowType, "ComposerDeleteSelectedDialogueBeat");
+                MethodInfo move = RequireInstance(windowType, "ComposerMoveSelectedDialogueBeat", typeof(int));
+
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(firstId));
+
+                add.Invoke(window, null);
+                beats = (IList)GetField(scene, "dialogueBeats");
+                Assert.That(beats, Has.Count.EqualTo(2));
+                string secondId = (string)selectedId.Invoke(window, null);
+                Assert.That(secondId, Is.Not.EqualTo(firstId));
+                object second = beats.Cast<object>().Single(beat => GetString(beat, "beatId") == secondId);
+                SetField(second, "speaker", "Tim");
+                SetField(second, "text", "Second beat");
+
+                object frame = RequireInstance(windowType, "ComposerBuildSelectedPreviewFrame").Invoke(window, null);
+                Assert.That(GetProperty(frame, "Speaker"), Is.EqualTo("Tim"));
+                Assert.That(GetProperty(frame, "Dialogue"), Is.EqualTo("Second beat"),
+                    "Authoring preview must resolve the selected canonical dialogue beat.");
+
+                select.Invoke(window, new object[] { firstId });
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(firstId));
+                duplicate.Invoke(window, null);
+                beats = (IList)GetField(scene, "dialogueBeats");
+                Assert.That(beats, Has.Count.EqualTo(3));
+                string copyId = (string)selectedId.Invoke(window, null);
+                Assert.That(copyId, Is.Not.EqualTo(firstId));
+                object copy = beats.Cast<object>().Single(beat => GetString(beat, "beatId") == copyId);
+                Assert.That(GetString(copy, "speaker"), Is.EqualTo("Aiko"));
+                Assert.That(GetString(copy, "text"), Is.EqualTo("First beat"));
+                SetField(copy, "text", "Independent copy");
+                Assert.That(GetString(beats.Cast<object>().Single(beat => GetString(beat, "beatId") == firstId), "text"),
+                    Is.EqualTo("First beat"));
+
+                string[] beforeMove = BeatIds(scene);
+                move.Invoke(window, new object[] { 1 });
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(copyId),
+                    "Beat reorder must preserve selection by stable identity.");
+                Assert.That(BeatIds(scene), Is.Not.EqualTo(beforeMove));
+
+                delete.Invoke(window, null);
+                Assert.That(((IList)GetField(scene, "dialogueBeats")).Count, Is.EqualTo(2));
+                string afterDelete = (string)selectedId.Invoke(window, null);
+                Assert.That(BeatIds(scene), Does.Contain(afterDelete),
+                    "Deleting the selected Beat must choose a deterministic existing neighbor.");
+
+                object project = GetField(window, "_sceneComposerProject");
+                string portable = (string)RequireType("VnSceneComposerSerialization")
+                    .GetMethod("SerializePortable", BindingFlags.Public | BindingFlags.Static)
+                    .Invoke(null, new[] { project });
+                Assert.That(portable, Does.Not.Contain("_sceneComposerSelectedDialogueBeatId"));
+                Assert.That(portable, Does.Not.Contain("selectedDialogueBeatId"),
+                    "Authoring Beat selection is transient editor state, not portable story data.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void MD_DialogueBeatMutationsAreUndoableAndSelectionRecoversByStableIdentity()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            try
+            {
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                object scene = Scenes(window)[0];
+                MethodInfo selectedId = RequireInstance(windowType, "ComposerGetSelectedDialogueBeatId");
+                MethodInfo add = RequireInstance(windowType, "ComposerAddDialogueBeat");
+                MethodInfo move = RequireInstance(windowType, "ComposerMoveSelectedDialogueBeat", typeof(int));
+                MethodInfo delete = RequireInstance(windowType, "ComposerDeleteSelectedDialogueBeat");
+
+                Undo.ClearAll();
+                string initialId = (string)selectedId.Invoke(window, null);
+                add.Invoke(window, null);
+                Undo.FlushUndoRecordObjects();
+                Assert.That(((IList)GetField(scene, "dialogueBeats")).Count, Is.EqualTo(2));
+                string addedId = (string)selectedId.Invoke(window, null);
+                Assert.That(addedId, Is.Not.EqualTo(initialId));
+                Undo.PerformUndo();
+                scene = Scenes(window)[0];
+                Assert.That(((IList)GetField(scene, "dialogueBeats")).Count, Is.EqualTo(1));
+                Assert.That(BeatIds(scene), Does.Contain((string)selectedId.Invoke(window, null)));
+
+                add.Invoke(window, null);
+                scene = Scenes(window)[0];
+                string movingId = (string)selectedId.Invoke(window, null);
+                string[] beforeMove = BeatIds(scene);
+                Undo.ClearAll();
+                move.Invoke(window, new object[] { -1 });
+                Undo.FlushUndoRecordObjects();
+                Assert.That(BeatIds(scene), Is.Not.EqualTo(beforeMove));
+                Undo.PerformUndo();
+                scene = Scenes(window)[0];
+                Assert.That(BeatIds(scene), Is.EqualTo(beforeMove));
+                Assert.That(BeatIds(scene), Does.Contain((string)selectedId.Invoke(window, null)));
+
+                Undo.ClearAll();
+                delete.Invoke(window, null);
+                Undo.FlushUndoRecordObjects();
+                Assert.That(((IList)GetField(Scenes(window)[0], "dialogueBeats")).Count, Is.EqualTo(1));
+                Undo.PerformUndo();
+                scene = Scenes(window)[0];
+                Assert.That(((IList)GetField(scene, "dialogueBeats")).Count, Is.EqualTo(2));
+                Assert.That(BeatIds(scene), Does.Contain((string)selectedId.Invoke(window, null)));
+                Assert.That(BeatIds(scene), Does.Contain(movingId));
+            }
+            finally
+            {
+                Undo.ClearAll();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void MD_DialogueBeatSelectionDoesNotReopenPrepareRestartOrDisposeAuthoringVideo()
+        {
+            var factory = new WindowBeatVideoFactory();
+            VnSceneComposerMediaEditing.VideoPreviewFactory = factory;
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            try
+            {
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                var scene = (VnSceneComposerScene)Scenes(window)[0];
+                scene.media = new VnSceneComposerMediaReference
+                {
+                    kind = VnSceneComposerMediaKind.ExternalVideo,
+                    reference = "md-authoring-selection.mp4",
+                    displayName = "md-authoring-selection.mp4",
+                    contentHash = "md-authoring-selection",
+                    scaleMode = VnSceneComposerMediaScaleMode.Fit,
+                    loop = false
+                };
+                VnSceneComposerDialogueBeat first = scene.dialogueBeats[0];
+                var second = new VnSceneComposerDialogueBeat { speaker = "Tim", text = "Second" };
+                scene.dialogueBeats.Add(second);
+
+                Assert.That((bool)RequireInstance(windowType, "ComposerPrepareSelectedVideoForAuthoring").Invoke(window, null), Is.True);
+                Assert.That(factory.Created, Has.Count.EqualTo(1));
+                WindowBeatVideoPreview preview = factory.Created[0];
+                Texture before = RequireInstance(windowType, "ComposerGetSceneThumbnail", typeof(int))
+                    .Invoke(window, new object[] { 0 }) as Texture;
+                int prepareBefore = preview.PrepareCalls;
+                int restartBefore = preview.RestartCalls;
+                int disposeBefore = preview.DisposeCalls;
+
+                RequireInstance(windowType, "ComposerSelectDialogueBeat", typeof(string))
+                    .Invoke(window, new object[] { second.beatId });
+
+                Texture after = RequireInstance(windowType, "ComposerGetSceneThumbnail", typeof(int))
+                    .Invoke(window, new object[] { 0 }) as Texture;
+                Assert.That(factory.Created, Has.Count.EqualTo(1),
+                    "Beat selection must not reopen the selected Scene video.");
+                Assert.That(after, Is.SameAs(before),
+                    "Beat selection must retain the same authoring video texture/resource identity.");
+                Assert.That(preview.PrepareCalls, Is.EqualTo(prepareBefore));
+                Assert.That(preview.RestartCalls, Is.EqualTo(restartBefore));
+                Assert.That(preview.DisposeCalls, Is.EqualTo(disposeBefore));
+                Assert.That((string)RequireInstance(windowType, "ComposerGetSelectedDialogueBeatId").Invoke(window, null),
+                    Is.EqualTo(second.beatId));
+                Assert.That(first.beatId, Is.Not.EqualTo(second.beatId));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                VnSceneComposerMediaEditing.ResetVideoPreviewFactory();
+                for (int i = 0; i < factory.Created.Count; i++)
+                {
+                    WindowBeatVideoPreview preview = factory.Created[i];
+                    if (preview != null && preview.texture != null) preview.Dispose();
+                }
+            }
+        }
+
+        [Test]
         public void ComposerEditorSurfaceHasNoProductionApplyOrYarnWritePath()
         {
             Assembly assembly = AppDomain.CurrentDomain.GetAssemblies().Single(a => a.GetName().Name == EditorAssembly);
@@ -340,6 +536,56 @@ namespace Rokas.EditorTools.Tests
                                name.IndexOf("WriteYarn", StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToArray();
             Assert.That(forbiddenMethodNames, Is.Empty);
+        }
+
+        private sealed class WindowBeatVideoPreview : VnSceneComposerVideoPreview
+        {
+            public int PrepareCalls;
+            public int RestartCalls;
+            public int DisposeCalls;
+            private bool prepared;
+
+            public WindowBeatVideoPreview(int serial)
+                : base(null, 16, 16, false)
+            {
+                warning = string.Empty;
+                texture = new RenderTexture(32, 18, 0) { name = "ROKAS_MD_WindowVideo_" + serial };
+                texture.Create();
+            }
+
+            public override bool IsPrepared { get { return prepared; } }
+            public override bool IsPreparing { get { return false; } }
+            public override bool HasVisibleFrame { get { return prepared; } }
+
+            public override void Prepare()
+            {
+                PrepareCalls++;
+                prepared = true;
+            }
+
+            public override void Restart()
+            {
+                RestartCalls++;
+            }
+
+            public override void Dispose()
+            {
+                DisposeCalls++;
+                base.Dispose();
+            }
+        }
+
+        private sealed class WindowBeatVideoFactory : IVnSceneComposerVideoPreviewFactory
+        {
+            public readonly System.Collections.Generic.List<WindowBeatVideoPreview> Created =
+                new System.Collections.Generic.List<WindowBeatVideoPreview>();
+
+            public VnSceneComposerVideoPreview Open(VnSceneComposerMediaReference media, int width, int height)
+            {
+                var preview = new WindowBeatVideoPreview(Created.Count);
+                Created.Add(preview);
+                return preview;
+            }
         }
 
         private static UnityEngine.Object CreateWindow(Type windowType)
@@ -356,6 +602,12 @@ namespace Rokas.EditorTools.Tests
             IList scenes = (IList)GetField(project, "scenes");
             Assert.That(scenes, Is.Not.Null);
             return scenes;
+        }
+
+        private static string[] BeatIds(object scene)
+        {
+            IList beats = (IList)GetField(scene, "dialogueBeats");
+            return beats.Cast<object>().Select(beat => GetString(beat, "beatId")).ToArray();
         }
 
         private static string[] SceneIds(object window)
