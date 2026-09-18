@@ -211,12 +211,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float duration = ResolveScenePreviewDuration(timing);
             RebuildFrame(SceneElapsedSeconds, true);
 
-            if (!timing.usesPreviewAutoDuration || SceneElapsedSeconds < duration) return;
+            if (!timing.usesPreviewAutoDuration || BeatElapsedSeconds < duration) return;
+
+            if (CurrentBeatIndex + 1 < BeatCount(scene))
+            {
+                AdvanceDialogue();
+                return;
+            }
 
             if (scope == PlaybackScope.OrderedRange && CurrentSceneIndex < rangeEnd)
             {
                 float sequenceGap = Mathf.Max(0f, timing.sequenceGap);
-                if (SceneElapsedSeconds + .00001f < duration + sequenceGap)
+                if (BeatElapsedSeconds + .00001f < duration + sequenceGap)
                 {
                     RebuildFrame(1f);
                     return;
