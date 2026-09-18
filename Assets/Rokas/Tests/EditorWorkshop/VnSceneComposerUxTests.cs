@@ -353,28 +353,29 @@ namespace Rokas.EditorTools.Tests
             string[] requiredLabels =
             {
                 "Анимация персонажа",
-                "Появление",
-                "Исчезновение",
+                "Переход персонажа",
                 "Смена позы / эмоции",
                 "Акцент / движение",
                 "Без анимации",
-                "Плавное появление",
-                "Появление со сдвигом",
-                "Плавное исчезновение",
-                "Исчезновение со сдвигом"
+                "Плавный переход",
+                "Переход со сдвигом",
+                "▶ Проверить появление",
+                "▶ Проверить исчезновение"
             };
             foreach (string label in requiredLabels)
                 Assert.That(source, Does.Contain("\"" + label + "\""),
                     "Basic character animation must expose the Russian VN concept: " + label + ".");
 
             Assert.That(source, Does.Contain("ComposerSetCharacterTransition("),
-                "Basic enter/exit authoring must edit the proven canonical characterTransition profile.");
+                "Shared enter/exit authoring must edit the proven canonical characterTransition profile.");
             Assert.That(source, Does.Contain("ComposerSetExpressionTransition("),
                 "Pose/emotion transition authoring must reuse the canonical expressionTransition profile.");
             Assert.That(source, Does.Contain("scene.transition.triggerActionBounce"),
                 "The one basic accent trigger must remain the canonical scene transition flag.");
-            Assert.That(source, Does.Contain("ComposerSetBounce("),
-                "Accent parameters must continue to edit the canonical actionBounce profile.");
+            Assert.That(source, Does.Contain("ComposerSetBounceAmplitude("),
+                "Accent Strength must use the targeted canonical actionBounce mutation path.");
+            Assert.That(source, Does.Contain("ComposerSetBounceDuration("),
+                "Accent Duration must use the targeted canonical actionBounce mutation path.");
         }
 
         [Test]
