@@ -90,7 +90,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 name = "ROKAS_VnSceneComposerVideoPreview",
                 hideFlags = HideFlags.HideAndDontSave,
-                filterMode = FilterMode.Point,
+                filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Clamp
             };
             texture.Create();
@@ -104,7 +104,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             player.waitForFirstFrame = true;
             player.skipOnDrop = true;
             player.renderMode = VideoRenderMode.RenderTexture;
-            player.aspectRatio = VideoAspectRatio.FitInside;
+            // The prepared RenderTexture is resized to the decoded source aspect before the first
+            // visible frame. Fill that source-aspect target here; creator-facing Fit/Fill/Stretch
+            // is applied once by the outer Scene Composer renderer.
+            player.aspectRatio = VideoAspectRatio.Stretch;
             player.audioOutputMode = VideoAudioOutputMode.None;
             player.source = VideoSource.Url;
             player.url = ToFileUrl(path);
@@ -243,7 +246,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             texture.Release();
             texture.width = desired.x;
             texture.height = desired.y;
-            texture.filterMode = FilterMode.Point;
+            texture.filterMode = FilterMode.Bilinear;
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.Create();
             prepared.targetTexture = texture;
