@@ -193,8 +193,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 title = _sceneComposerProject.title,
                 defaultPresentation = new VnPresentationWorkshopPreset()
             };
+            VnSceneComposerDialogueBeat baselineBeat = ResolveSceneComposerDialogueBeat(
+                baselineScene, _sceneComposerSelectedDialogueBeatId);
             VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
-                baselineProject, baselineScene, previewResolution, media as Texture2D);
+                baselineProject, baselineScene, baselineBeat, previewResolution, media as Texture2D);
             Texture visual = media != null ? media : frame.BackgroundTexture;
             var sample = new VnWorkshopBackgroundTransitionSample
             {
@@ -272,6 +274,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float step = currentEvent.shift ? SceneComposerLargeNudgeStep : SceneComposerNudgeStep;
             if (characterSelected) ApplySceneComposerCharacterDrag(direction * step);
             else ApplySceneComposerElementDrag(direction * step);
+            currentEvent.Use();
+        }
+
+        private void HandleSceneComposerPlaybackInput(
+            Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)
+        {
+            if (currentEvent == null || frame == null || _sceneComposerPlayback == null ||
+                !_sceneComposerPlayback.IsPlaying || currentEvent.type != EventType.MouseDown ||
+                currentEvent.button != 0 || !previewRect.Contains(currentEvent.mousePosition))
+                return;
+
+            Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
+                previewRect, currentEvent.mousePosition, frame);
+            if (!frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint)) return;
+
+            ComposerAdvanceDialogue();
             currentEvent.Use();
         }
 
