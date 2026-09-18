@@ -63,6 +63,66 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MC3_FitFillAndStretchProduceExpectedFinalDrawGeometry()
+        {
+            Rect landscapeTarget = new Rect(0f, 0f, 1000f, 1000f);
+            Rect fitScreen = Rect.zero;
+            Rect fitSource = Rect.zero;
+            GUI.CalculateScaledTextureRects(
+                landscapeTarget,
+                VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fit),
+                16f / 9f,
+                ref fitScreen,
+                ref fitSource);
+
+            Assert.That(fitScreen.width / fitScreen.height, Is.EqualTo(16f / 9f).Within(.002f),
+                "Fit must preserve a 16:9 source inside a square viewport.");
+            Assert.That(fitSource, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)),
+                "Fit must show the complete source rather than crop it.");
+
+            Rect portraitTarget = new Rect(0f, 0f, 1600f, 900f);
+            Rect fillScreen = Rect.zero;
+            Rect fillSource = Rect.zero;
+            GUI.CalculateScaledTextureRects(
+                portraitTarget,
+                VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fill),
+                9f / 16f,
+                ref fillScreen,
+                ref fillSource);
+
+            Assert.That(fillScreen, Is.EqualTo(portraitTarget),
+                "Fill must cover the whole viewport.");
+            Assert.That(fillSource.width, Is.LessThan(1f),
+                "Portrait Fill in a landscape viewport must crop source content horizontally/vertically as needed instead of stretching.");
+            Assert.That(fillSource.height, Is.EqualTo(1f).Within(.002f));
+
+            Rect ultrawideTarget = new Rect(0f, 0f, 1000f, 700f);
+            Rect ultrawideFitScreen = Rect.zero;
+            Rect ultrawideFitSource = Rect.zero;
+            GUI.CalculateScaledTextureRects(
+                ultrawideTarget,
+                VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fit),
+                2560f / 1080f,
+                ref ultrawideFitScreen,
+                ref ultrawideFitSource);
+            Assert.That(ultrawideFitScreen.width / ultrawideFitScreen.height,
+                Is.EqualTo(2560f / 1080f).Within(.002f),
+                "Non-16:9 Fit must preserve the original source aspect.");
+
+            Rect stretchScreen = Rect.zero;
+            Rect stretchSource = Rect.zero;
+            GUI.CalculateScaledTextureRects(
+                landscapeTarget,
+                VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Stretch),
+                16f / 9f,
+                ref stretchScreen,
+                ref stretchSource);
+            Assert.That(stretchScreen, Is.EqualTo(landscapeTarget));
+            Assert.That(stretchScreen.width / stretchScreen.height, Is.Not.EqualTo(16f / 9f).Within(.002f),
+                "Stretch is the explicit mode allowed to break source aspect.");
+        }
+
+        [Test]
         public void MC3_PreparedTargetsDoNotNeedlesslyResample1080p720pOrUltrawideGeometry()
         {
             MethodInfo resolve = typeof(VnSceneComposerVideoPreview).GetMethod(
