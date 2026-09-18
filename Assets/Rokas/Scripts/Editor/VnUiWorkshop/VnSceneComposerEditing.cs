@@ -54,6 +54,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             copy.sceneId = VnSceneComposerScene.NewStableId();
             if (copy.media == null) copy.media = new VnSceneComposerMediaReference();
             if (copy.characters == null) copy.characters = new System.Collections.Generic.List<VnSceneComposerCharacter>();
+            if (copy.dialogueBeats == null) copy.dialogueBeats = new System.Collections.Generic.List<VnSceneComposerDialogueBeat>();
+            if (copy.dialogueBeats.Count == 0) copy.dialogueBeats.Add(new VnSceneComposerDialogueBeat());
+            for (int i = 0; i < copy.dialogueBeats.Count; i++)
+            {
+                if (copy.dialogueBeats[i] == null) copy.dialogueBeats[i] = new VnSceneComposerDialogueBeat();
+                copy.dialogueBeats[i].beatId = VnSceneComposerScene.NewStableId();
+            }
             if (copy.presentationOverrides == null) copy.presentationOverrides = new VnPresentationWorkshopPreset();
             if (copy.transition == null) copy.transition = new VnSceneComposerTransition();
             if (copy.timing == null) copy.timing = new VnSceneComposerTiming();
