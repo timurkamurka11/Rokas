@@ -477,6 +477,9 @@ namespace Rokas.EditorTools.Tests
 
                 Undo.PerformUndo();
 
+                // Undo restores the serialized ScriptableObject graph; reacquire the nested Beat
+                // instead of asserting against the stale pre-Undo managed reference.
+                beat = GetProject(window).scenes[0].dialogueBeats[0];
                 Assert.That(GetBool(beat, "hasStateOverride"), Is.False);
                 Assert.That(GetString(beat, "stateId"), Is.Empty);
             }
