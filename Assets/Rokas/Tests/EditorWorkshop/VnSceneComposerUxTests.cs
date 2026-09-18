@@ -679,6 +679,126 @@ namespace Rokas.EditorTools.Tests
                 "Project-wide controls do not belong inside the contextual scene inspector after visual polish.");
         }
 
+        [Test]
+        public void ME_AdditionalGroupsAdvancedCapabilitiesBehindCollapsedCreatorFacingRoutes()
+        {
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string assets = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAssets.cs");
+            string additional = ExtractMethodBody(scene, "private void DrawSceneComposerAdditionalInspector(VnSceneComposerScene scene)");
+
+            Assert.That(additional, Does.Contain("\"Расширенное оформление\""),
+                "Advanced presentation controls must sit behind a deliberate creator-facing group instead of opening as an immediate wall.");
+            Assert.That(additional, Does.Contain("\"Технические параметры\""),
+                "Project IDs/paths and other technical metadata must sit behind a deliberate technical group.");
+            Assert.That(scene, Does.Contain("_sceneComposerAdvancedPresentationGroupExpanded;")
+                .And.Contain("_sceneComposerAdvancedTechnicalGroupExpanded;"),
+                "Advanced top-level groups must have durable editor state.");
+            Assert.That(scene, Does.Not.Contain("_sceneComposerAdvancedPresentationGroupExpanded = true")
+                .And.Not.Contain("_sceneComposerAdvancedTechnicalGroupExpanded = true"),
+                "Advanced top-level groups must be collapsed by default.");
+            Assert.That(assets, Does.Not.Contain("_sceneComposerAssetLibraryExpanded = true"),
+                "Asset Library must not open as a large default-expanded power-user panel.");
+        }
+
+        [Test]
+        public void ME_BasicSceneAnimationDoesNotExposeLowLevelSequenceGap()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string animation = ExtractMethodBody(source,
+                "private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)");
+
+            Assert.That(animation, Does.Not.Contain("\"Пауза между сценами, с\""),
+                "Low-level sequence-gap tuning belongs in Advanced, not the normal Scene Animation flow.");
+            Assert.That(animation, Does.Not.Contain("ComposerSetTiming("),
+                "Basic Scene Animation should edit creator-facing scene progression without exposing the exact presentation timing tree.");
+        }
+
+        [Test]
+        public void ME_AdvancedDebugAndImportToolsAreCollapsedInsteadOfDominatingPresentation()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string presentation = ExtractMethodBody(source,
+                "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+
+            Assert.That(presentation, Does.Contain("\"Диагностика / отладка\""),
+                "Original/current comparison and reference-motion tools must be demoted into a diagnostics group.");
+            Assert.That(presentation, Does.Contain("\"Шаблоны и импорт / экспорт\""),
+                "Preset lifecycle and raw JSON tools must be grouped as power-user import/export functionality.");
+            Assert.That(source, Does.Contain("_sceneComposerDiagnosticsExpanded;")
+                .And.Contain("_sceneComposerPresetToolsExpanded;"));
+            Assert.That(source, Does.Not.Contain("_sceneComposerDiagnosticsExpanded = true")
+                .And.Not.Contain("_sceneComposerPresetToolsExpanded = true"),
+                "Diagnostics and import/export groups must be collapsed by default.");
+        }
+
+        [Test]
+        public void ME_DialogueBeatEditorRemainsCanonicalTextSurface()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string text = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+
+            Assert.That(text, Does.Contain("\"Реплики\"")
+                .And.Contain("\"+ Реплика\"")
+                .And.Contain("\"Дублировать\"")
+                .And.Contain("\"Удалить\"")
+                .And.Contain("\"Говорящий\"")
+                .And.Contain("\"Текст без персонажа\"")
+                .And.Contain("\"Текст реплики\""),
+                "Normal Text authoring must remain centered on real ordered dialogue Beats.");
+            Assert.That(text, Does.Not.Contain("Тест оформления текста"),
+                "Sample typography text must never compete with real dialogue Beats in the normal Text section.");
+        }
+
+        [Test]
+        public void ME_AdvancedScopeUsesCreatorFriendlyTerminology()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string presentation = ExtractMethodBody(source,
+                "private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)");
+
+            Assert.That(presentation, Does.Contain("\"Применить:\"")
+                .And.Contain("\"Только к этой сцене\"")
+                .And.Contain("\"Ко всем сценам\""));
+            Assert.That(presentation, Does.Not.Contain("Project Defaults")
+                .And.Not.Contain("Scene Overrides"),
+                "Creator-facing scope language must not expose implementation terminology.");
+        }
+
+        [Test]
+        public void ME_ExistingAdvancedFunctionalityRemainsReachable()
+        {
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string presentation = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPresentation.cs");
+            string scene = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+
+            Assert.That(authoring, Does.Contain("DrawSceneComposerSerializedPresentationSections")
+                .And.Contain("DrawSceneComposerPresetControls")
+                .And.Contain("DrawSceneComposerPreviewTextControls"),
+                "Progressive disclosure must move advanced parity, not delete it.");
+            Assert.That(presentation, Does.Contain("ComposerExportPresentationPresetJson")
+                .And.Contain("ComposerImportPresentationPresetJson")
+                .And.Contain("ComposerSetTiming")
+                .And.Contain("ComposerApplyReferenceMotionProfile"));
+            Assert.That(scene, Does.Contain("DrawSceneComposerProjectTechnicalInfo")
+                .And.Contain("DrawSceneComposerAssetLibraryControls"));
+        }
+
+        [Test]
+        public void ME_PlaybackPrimaryActionsRemainProminentAndControllerSemanticsStayUntouched()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string preview = ExtractMethodBody(source, "private void DrawSceneComposerPreview()");
+
+            Assert.That(preview, Does.Contain("\"Проиграть сцену\"")
+                .And.Contain("\"Проиграть всё\"")
+                .And.Contain("SceneComposerPrimaryTransportButtonStyle"));
+            Assert.That(preview, Does.Contain("\"Предыдущая\"")
+                .And.Contain("\"Следующая\"")
+                .And.Contain("\"Пауза\"")
+                .And.Contain("\"Сначала\"")
+                .And.Contain("\"Проиграть отсюда\""));
+        }
+
         private static string ReadEditorSource(string fileName)
         {
             string path = Path.Combine(
