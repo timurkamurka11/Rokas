@@ -126,6 +126,84 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MD_ElapsedSamplerKeepsSceneClockSeparateFromBeatClock()
+        {
+            Type projectType = RequireType("VnSceneComposerProject");
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type beatType = RequireType("VnSceneComposerDialogueBeat");
+            Type characterType = RequireType("VnSceneComposerCharacter");
+            Type slotType = RequireType("VnWorkshopStageSlot");
+            Type elapsedSamplerType = RequireType("VnSceneComposerElapsedTransitionSampler");
+            object project = Activator.CreateInstance(projectType);
+            object fromScene = Activator.CreateInstance(sceneType);
+            object toScene = Activator.CreateInstance(sceneType);
+
+            IList beats = (IList)Get(toScene, "dialogueBeats");
+            object beat0 = beats[0];
+            Set(beat0, "speaker", "Mina");
+            Set(beat0, "text", "First beat");
+
+            object beat1 = Activator.CreateInstance(beatType);
+            Set(beat1, "speaker", "Keiko");
+            Set(beat1, "text", "Second beat");
+            beats.Add(beat1);
+
+            ((IList)Get(toScene, "characters")).Add(
+                Character(characterType, slotType, "Mina", "mina_neutral", "Left"));
+            ((IList)Get(toScene, "characters")).Add(
+                Character(characterType, slotType, "Keiko", "keiko_neutral", "Right"));
+
+            MethodInfo sample = elapsedSamplerType.GetMethod("Sample",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                new[]
+                {
+                    projectType, sceneType, sceneType, beatType, beatType, typeof(float), typeof(float)
+                },
+                null);
+            Assert.That(sample, Is.Not.Null,
+                "M-DIALOGUE requires separate scene and beat elapsed clocks in elapsed sampling.");
+
+            object beatStart = sample.Invoke(null,
+                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)0f });
+            object beatLater = sample.Invoke(null,
+                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)5f });
+
+            Assert.That((bool)Get(Get(beatStart, "background"), "Complete"), Is.True,
+                "Beat change must not restart the completed Scene background transition.");
+            IList startStage = (IList)Get(beatStart, "stage");
+            Assert.That(startStage.Count, Is.EqualTo(2));
+            for (int i = 0; i < startStage.Count; i++)
+                Assert.That((bool)Get(startStage[i], "Complete"), Is.True,
+                    "Beat change must not restart Scene stage presentation.");
+
+            IList motions = (IList)Get(beatStart, "characterMotions");
+            Assert.That(motions.Count, Is.EqualTo(2));
+            for (int i = 0; i < motions.Count; i++)
+                Assert.That((bool)Get(Get(motions[i], "sample"), "Complete"), Is.True,
+                    "Beat change must not replay character entry.");
+
+            Assert.That((string)Get(beatStart, "visibleText"), Is.Empty,
+                "Beat 2 typewriter must begin from Beat 2 elapsed time, not Scene elapsed time.");
+            Assert.That((string)Get(beatLater, "visibleText"), Is.EqualTo("Second beat"));
+
+            IList startFocus = (IList)Get(beatStart, "focus");
+            IList laterFocus = (IList)Get(beatLater, "focus");
+            Assert.That(startFocus.Count, Is.EqualTo(2));
+            Assert.That(laterFocus.Count, Is.EqualTo(2));
+            Assert.That((float)Get(startFocus[0], "Alpha"), Is.GreaterThan((float)Get(startFocus[1], "Alpha")),
+                "At Beat 2 start, focus should still begin from the previous effective speaker.");
+            Assert.That((float)Get(laterFocus[1], "Alpha"), Is.GreaterThan((float)Get(laterFocus[0], "Alpha")),
+                "Beat clock should complete focus toward the active effective speaker.");
+
+            Assert.That((bool)Get(Get(beatLater, "background"), "Complete"), Is.True);
+            IList laterStage = (IList)Get(beatLater, "stage");
+            Assert.That(laterStage.Count, Is.EqualTo(2));
+            for (int i = 0; i < laterStage.Count; i++)
+                Assert.That((bool)Get(laterStage[i], "Complete"), Is.True);
+        }
+
+        [Test]
         public void TimingPlanKeepsAuthoringAutoDurationSeparateFromManualBeatSemantics()
         {
             Type projectType = RequireType("VnSceneComposerProject");
