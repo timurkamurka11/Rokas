@@ -67,7 +67,7 @@ namespace Rokas.EditorTools.Tests
             object project = Activator.CreateInstance(projectType);
             object scene = Activator.CreateInstance(sceneType);
             SetProperty(scene, "speaker", "Mina");
-            Set(scene, "previewText", "Line one\nLine two");
+            SetProperty(scene, "previewText", "Line one\nLine two");
 
             IList characters = (IList)Get(scene, "characters");
             characters.Add(Character(characterType, slotType, "Mina", "mina_happy", "Left"));
@@ -123,7 +123,7 @@ namespace Rokas.EditorTools.Tests
             object project = Activator.CreateInstance(projectType);
             object scene = Activator.CreateInstance(sceneType);
             SetProperty(scene, "speaker", "Narrator");
-            Set(scene, "previewText", "A quiet room.\nRain taps the window.");
+            SetProperty(scene, "previewText", "A quiet room.\nRain taps the window.");
             SetProperty(scene, "narration", true);
 
             MethodInfo build = RequireStatic(compositionType, "BuildFrame",
