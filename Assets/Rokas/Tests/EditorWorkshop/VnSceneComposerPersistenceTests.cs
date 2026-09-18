@@ -29,7 +29,7 @@ namespace Rokas.EditorTools.Tests
             Set(typography, "dialogueFontSize", 31f);
 
             object first = Scene(SceneOneId, "Intro", "Hello from Mina.", "PreviewAutoDuration", 1.75f);
-            Set(first, "speaker", "Mina");
+            SetProperty(first, "speaker", "Mina");
             AddCharacter(first, "Mina", "mina_happy", "Left");
             Set(Get(first, "transition"), "triggerActionBounce", true);
             object firstBounce = Get(Get(first, "presentationOverrides"), "actionBounce");
@@ -37,7 +37,7 @@ namespace Rokas.EditorTools.Tests
             Set(firstBounce, "amplitude", 48f);
 
             object second = Scene(SceneTwoId, "Narration", "Rain crosses the window.\nThen silence.", "ManualBeat", 3f);
-            Set(second, "narration", true);
+            SetProperty(second, "narration", true);
             object media = Get(second, "media");
             string absolute = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "machine-specific", "portable.gif"));
             SetEnum(media, "kind", "ExternalGif");
@@ -95,7 +95,7 @@ namespace Rokas.EditorTools.Tests
 
             object project = Project(projectType, FixedProjectId, "Schema");
             string valid = (string)serialize.Invoke(null, new[] { project });
-            string unsupported = valid.Replace("\"schemaVersion\": 1", "\"schemaVersion\": 999");
+            string unsupported = valid.Replace("\"schemaVersion\": 2", "\"schemaVersion\": 999");
             Assert.That(unsupported, Is.Not.EqualTo(valid), "Fixture must actually change schemaVersion.");
             object unsupportedResult = deserialize.Invoke(null, new object[] { unsupported });
             Assert.That((bool)Get(unsupportedResult, "Success"), Is.False);
@@ -284,7 +284,7 @@ namespace Rokas.EditorTools.Tests
             object scene = Activator.CreateInstance(sceneType);
             Set(scene, "sceneId", id);
             Set(scene, "label", label);
-            Set(scene, "previewText", text);
+            SetProperty(scene, "previewText", text);
             object timing = Get(scene, "timing");
             SetEnum(timing, "previewAdvanceMode", timingMode);
             Set(timing, "previewAutoDuration", duration);
@@ -339,6 +339,13 @@ namespace Rokas.EditorTools.Tests
             PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
             Assert.That(property, Is.Not.Null, "Missing public field/property: " + type.Name + "." + name);
             return property.GetValue(instance, null);
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing public property: " + instance.GetType().Name + "." + name);
+            property.SetValue(instance, value, null);
         }
 
         private static void Set(object instance, string name, object value)
