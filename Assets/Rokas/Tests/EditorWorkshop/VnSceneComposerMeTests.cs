@@ -71,6 +71,23 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void ME_CollapsedAdvancedPresentationDoesNotEnableHiddenPreviewDebugOverlays()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string layoutGate = ExtractMethodBody(source,
+                "private bool IsSceneComposerAdvancedLayoutEditingVisible()");
+            string feedbackGate = ExtractMethodBody(source,
+                "private bool IsSceneComposerAdvancedUiFeedbackPreviewVisible()");
+
+            Assert.That(layoutGate, Does.Contain("_sceneComposerAdvancedPresentationGroupExpanded")
+                .And.Contain("_sceneComposerPresentationLayoutExpanded"),
+                "Hidden layout/hit-region overlays must require both the parent Advanced group and the layout group.");
+            Assert.That(feedbackGate, Does.Contain("_sceneComposerAdvancedPresentationGroupExpanded")
+                .And.Contain("_sceneComposerUiFeedbackExpanded"),
+                "Hidden UI-feedback simulation must require the parent Advanced group and its detailed effects group.");
+        }
+
+        [Test]
         public void ME_SceneSettingsRemainConcise()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
