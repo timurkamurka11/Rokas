@@ -11,12 +11,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene toScene,
             float sceneElapsedSeconds)
         {
+            return Sample(project, fromScene, toScene,
+                ResolveFirstBeat(fromScene), ResolveFirstBeat(toScene),
+                sceneElapsedSeconds, sceneElapsedSeconds);
+        }
+
+        internal static VnSceneComposerTransitionSnapshot Sample(
+            VnSceneComposerProject project,
+            VnSceneComposerScene fromScene,
+            VnSceneComposerScene toScene,
+            VnSceneComposerDialogueBeat previousBeat,
+            VnSceneComposerDialogueBeat activeBeat,
+            float sceneElapsedSeconds,
+            float beatElapsedSeconds)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (fromScene == null) throw new ArgumentNullException(nameof(fromScene));
             if (toScene == null) throw new ArgumentNullException(nameof(toScene));
-            if (sceneElapsedSeconds < 0f || float.IsNaN(sceneElapsedSeconds) || float.IsInfinity(sceneElapsedSeconds))
-                throw new ArgumentOutOfRangeException(nameof(sceneElapsedSeconds),
-                    "Scene elapsed time must be finite and non-negative.");
+            if (previousBeat == null) throw new ArgumentNullException(nameof(previousBeat));
+            if (activeBeat == null) throw new ArgumentNullException(nameof(activeBeat));
+            ValidateElapsed(sceneElapsedSeconds, nameof(sceneElapsedSeconds));
+            ValidateElapsed(beatElapsedSeconds, nameof(beatElapsedSeconds));
 
             VnPresentationWorkshopPreset preset = VnSceneComposerComposition.ResolvePresentation(project, toScene);
             VnWorkshopBackgroundTransitionValues background =
@@ -34,25 +49,56 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopTypewriterValues typewriter =
                 VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
             float typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(
-                toScene.previewText ?? string.Empty, typewriter);
+                activeBeat.text ?? string.Empty, typewriter);
 
             VnSceneComposerTransitionSnapshot result =
-                VnSceneComposerTransitionSampler.Sample(project, fromScene, toScene, 0f);
+                VnSceneComposerTransitionSampler.Sample(
+                    project, fromScene, toScene, previousBeat, activeBeat, 0f);
             result.background = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, background.Duration)).background;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(sceneElapsedSeconds, background.Duration)).background;
             result.bounce = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, bounce.Duration)).bounce;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(sceneElapsedSeconds, bounce.Duration)).bounce;
             result.stage = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, stage.RepositionDuration)).stage;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(sceneElapsedSeconds, stage.RepositionDuration)).stage;
             result.characterMotions = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, character.Duration)).characterMotions;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(sceneElapsedSeconds, character.Duration)).characterMotions;
             result.expressions = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, expression.Duration)).expressions;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(sceneElapsedSeconds, expression.Duration)).expressions;
             result.focus = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, focus.TransitionDuration)).focus;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(beatElapsedSeconds, focus.TransitionDuration)).focus;
             result.visibleText = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, Progress(sceneElapsedSeconds, typewriterDuration)).visibleText;
+                project, fromScene, toScene, previousBeat, activeBeat,
+                Progress(beatElapsedSeconds, typewriterDuration)).visibleText;
+            result.timing = VnSceneComposerTransitionSampler.ResolveTiming(project, toScene, activeBeat);
             return result;
+        }
+
+        private static void ValidateElapsed(float elapsedSeconds, string parameterName)
+        {
+            if (elapsedSeconds < 0f || float.IsNaN(elapsedSeconds) || float.IsInfinity(elapsedSeconds))
+                throw new ArgumentOutOfRangeException(parameterName,
+                    "Elapsed time must be finite and non-negative.");
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveFirstBeat(VnSceneComposerScene scene)
+        {
+            if (scene != null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0 &&
+                scene.dialogueBeats[0] != null)
+                return scene.dialogueBeats[0];
+
+            return new VnSceneComposerDialogueBeat
+            {
+                beatId = string.Empty,
+                speaker = string.Empty,
+                text = string.Empty,
+                narration = false
+            };
         }
 
         private static float Progress(float elapsedSeconds, float durationSeconds)

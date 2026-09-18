@@ -49,9 +49,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene toScene,
             float normalizedProgress)
         {
+            return Sample(project, fromScene, toScene,
+                ResolveFirstBeat(fromScene), ResolveFirstBeat(toScene), normalizedProgress);
+        }
+
+        public static VnSceneComposerTransitionSnapshot Sample(
+            VnSceneComposerProject project,
+            VnSceneComposerScene fromScene,
+            VnSceneComposerScene toScene,
+            VnSceneComposerDialogueBeat fromBeat,
+            VnSceneComposerDialogueBeat toBeat,
+            float normalizedProgress)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (fromScene == null) throw new ArgumentNullException(nameof(fromScene));
             if (toScene == null) throw new ArgumentNullException(nameof(toScene));
+            if (fromBeat == null) throw new ArgumentNullException(nameof(fromBeat));
+            if (toBeat == null) throw new ArgumentNullException(nameof(toBeat));
 
             float progress = Mathf.Clamp01(normalizedProgress);
             VnPresentationWorkshopPreset preset = VnSceneComposerComposition.ResolvePresentation(project, toScene);
@@ -71,7 +85,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopTypewriterValues typewriterValues =
                 VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
 
-            string text = toScene.previewText ?? string.Empty;
+            string text = toBeat.text ?? string.Empty;
             float typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(text, typewriterValues);
             int visibleCharacters = typewriterDuration <= 0f
                 ? VnPresentationWorkshopVn10Resolver.InstantCompleteVisibleCharacters(text)
@@ -89,9 +103,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 stage = SampleStage(CountCharacters(fromScene), CountCharacters(toScene), progress, stageValues),
                 characterMotions = SampleCharacterMotions(fromScene, toScene, progress, characterValues),
                 expressions = SampleExpressions(fromScene, toScene, progress, expressionValues),
-                focus = SampleFocus(fromScene, toScene, progress, focusValues),
+                focus = SampleFocus(toScene, fromBeat, toBeat, progress, focusValues),
                 visibleText = text.Substring(0, Mathf.Clamp(visibleCharacters, 0, text.Length)),
-                timing = ResolveTiming(project, toScene)
+                timing = ResolveTiming(project, toScene, toBeat)
             };
         }
 
@@ -99,8 +113,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerProject project,
             VnSceneComposerScene scene)
         {
+            return ResolveTiming(project, scene, ResolveFirstBeat(scene));
+        }
+
+        public static VnSceneComposerPreviewTimingPlan ResolveTiming(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (scene == null) throw new ArgumentNullException(nameof(scene));
+            if (beat == null) throw new ArgumentNullException(nameof(beat));
 
             VnPresentationWorkshopPreset preset = VnSceneComposerComposition.ResolvePresentation(project, scene);
             VnWorkshopTypewriterValues typewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
@@ -113,7 +136,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 usesPreviewAutoDuration = auto,
                 previewAutoDuration = auto ? Mathf.Max(0f, scene.timing.previewAutoDuration) : 0f,
                 typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(
-                    scene.previewText ?? string.Empty, typewriter),
+                    beat.text ?? string.Empty, typewriter),
                 settleDuration = Mathf.Max(0f, timing.MinimumBeatSettleDuration),
                 breathingRoom = Mathf.Max(0f, timing.PostTransitionBreathingRoom),
                 sequenceGap = Mathf.Max(0f, timing.AutoPreviewSequenceGap)
@@ -225,12 +248,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private static VnWorkshopSpeakerFocusSample[] SampleFocus(
-            VnSceneComposerScene fromScene,
-            VnSceneComposerScene toScene,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat fromBeat,
+            VnSceneComposerDialogueBeat toBeat,
             float progress,
             VnWorkshopSpeakerFocusValues values)
         {
-            int count = CountCharacters(toScene);
+            int count = CountCharacters(scene);
             if (count == 0) return Array.Empty<VnWorkshopSpeakerFocusSample>();
             if (count == 1)
             {
@@ -240,8 +264,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 };
             }
 
-            int previous = FindSpeakerIndex(toScene, fromScene.speaker);
-            int active = FindSpeakerIndex(toScene, toScene.speaker);
+            int previous = FindSpeakerIndex(scene, EffectiveSpeaker(fromBeat));
+            int active = FindSpeakerIndex(scene, EffectiveSpeaker(toBeat));
             if (previous < 0 && active < 0)
             {
                 var neutral = new VnWorkshopSpeakerFocusSample[count];
@@ -297,6 +321,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state))
                 return state.Character;
             return string.Empty;
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveFirstBeat(VnSceneComposerScene scene)
+        {
+            if (scene != null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0 &&
+                scene.dialogueBeats[0] != null)
+                return scene.dialogueBeats[0];
+
+            return new VnSceneComposerDialogueBeat
+            {
+                beatId = string.Empty,
+                speaker = string.Empty,
+                text = string.Empty,
+                narration = false
+            };
+        }
+
+        private static string EffectiveSpeaker(VnSceneComposerDialogueBeat beat)
+        {
+            return beat == null || beat.narration ? string.Empty : beat.speaker ?? string.Empty;
         }
 
         private static int CountCharacters(VnSceneComposerScene scene)
