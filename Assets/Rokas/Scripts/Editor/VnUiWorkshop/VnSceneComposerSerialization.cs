@@ -291,6 +291,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static bool ValidateScene(VnSceneComposerProject project, VnSceneComposerScene scene, int index,
             List<string> diagnostics, out string error)
         {
+            if (!ValidateDialogueBeats(scene, out error)) return false;
+
             if (scene.media == null)
             {
                 error = "Scene Composer media reference is missing for scene " + scene.sceneId + ".";
@@ -384,6 +386,45 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 error = "Scene Composer preview auto duration must be finite and between 0 and " +
                         MaxPreviewDuration + " seconds in scene " + scene.sceneId + ".";
                 return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool ValidateDialogueBeats(VnSceneComposerScene scene, out string error)
+        {
+            if (scene.dialogueBeats == null)
+            {
+                error = "Scene Composer dialogue beat list is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (scene.dialogueBeats.Count == 0)
+            {
+                error = "Scene Composer scene " + scene.sceneId + " must contain at least one dialogue beat.";
+                return false;
+            }
+
+            var beatIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < scene.dialogueBeats.Count; i++)
+            {
+                VnSceneComposerDialogueBeat beat = scene.dialogueBeats[i];
+                if (beat == null)
+                {
+                    error = "Scene Composer dialogue beat at index " + i + " is null in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!IsStableId(beat.beatId))
+                {
+                    error = "Scene Composer dialogue beat ID is missing or invalid at index " + i +
+                            " in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!beatIds.Add(beat.beatId))
+                {
+                    error = "Duplicate Scene Composer dialogue beat ID: " + beat.beatId + ".";
+                    return false;
+                }
             }
 
             error = string.Empty;
