@@ -204,6 +204,220 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MD_PreviewAutoDurationAdvancesBeatsBeforeSceneBoundary()
+        {
+            var project = new VnSceneComposerProject();
+            SetAutoPreviewSequenceGap(project, .25f);
+            project.scenes.Add(MdScene("Auto 0", VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration, .20f,
+                "Beat A", "Beat B"));
+            project.scenes.Add(MdScene("Auto 1", VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration, .20f,
+                "Beat C"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayAll();
+                controller.Advance(.21f);
+
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
+                    "Auto timing must advance the active Beat before crossing the real Scene boundary.");
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+                Assert.That(controller.BeatElapsedSeconds, Is.EqualTo(0f).Within(.0001f),
+                    "Starting the next Beat resets only the Beat clock.");
+                Assert.That(controller.SceneElapsedSeconds, Is.GreaterThan(0f),
+                    "Starting the next Beat must preserve the Scene presentation clock.");
+
+                controller.Advance(.21f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
+                    "sequenceGap belongs only after the final Beat before a real Scene boundary.");
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+
+                controller.Advance(.25f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0));
+            }
+        }
+
+        [Test]
+        public void MD_ManualBeatNeverAutoAdvancesDialogue()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Manual", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f,
+                "Beat A", "Beat B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(0);
+                controller.Advance(100f);
+
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0),
+                    "ManualBeat must never advance dialogue from elapsed time.");
+                Assert.That(controller.BeatElapsedSeconds, Is.EqualTo(100f).Within(.0001f));
+            }
+        }
+
+        [Test]
+        public void MD_PlaySceneStopsAfterFinalBeat()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Single scope", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f,
+                "Beat A", "Beat B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(0);
+                controller.AdvanceDialogue();
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+                Assert.That(controller.IsPlaying, Is.True);
+
+                controller.AdvanceDialogue();
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+                Assert.That(controller.IsPlaying, Is.False,
+                    "Play Scene must stop after its final Beat instead of navigating to another Scene.");
+            }
+        }
+
+        [Test]
+        public void MD_PlayAllAdvancesAllBeatsThenNextScene()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Scene 0", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f,
+                "0A", "0B"));
+            project.scenes.Add(MdScene("Scene 1", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f,
+                "1A", "1B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayAll();
+                controller.AdvanceDialogue();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((0, 1)));
+
+                controller.AdvanceDialogue();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 0)));
+
+                controller.AdvanceDialogue();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 1)));
+
+                controller.AdvanceDialogue();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 1)));
+                Assert.That(controller.IsPlaying, Is.False);
+            }
+        }
+
+        [Test]
+        public void MD_PlayFromHereStartsSelectedSceneAtBeatZero()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Scene 0", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "0A", "0B"));
+            project.scenes.Add(MdScene("Scene 1", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "1A", "1B"));
+            project.scenes.Add(MdScene("Scene 2", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "2A"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(0);
+                controller.AdvanceDialogue();
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+
+                controller.PlayFromHere(1);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0));
+                Assert.That(controller.BeatElapsedSeconds, Is.EqualTo(0f).Within(.0001f));
+            }
+        }
+
+        [Test]
+        public void MD_PausePreservesCurrentBeatAndClocks()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Pause", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f,
+                "Beat A", "Beat B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(0);
+                controller.Advance(.50f);
+                controller.AdvanceDialogue();
+                controller.Advance(.25f);
+
+                float sceneElapsed = controller.SceneElapsedSeconds;
+                float beatElapsed = controller.BeatElapsedSeconds;
+                controller.Pause();
+                controller.Advance(10f);
+
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+                Assert.That(controller.SceneElapsedSeconds, Is.EqualTo(sceneElapsed).Within(.0001f));
+                Assert.That(controller.BeatElapsedSeconds, Is.EqualTo(beatElapsed).Within(.0001f));
+            }
+        }
+
+        [Test]
+        public void MD_RestartReturnsCurrentPlaybackSceneToBeatZero()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Scene 0", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "0A"));
+            project.scenes.Add(MdScene("Scene 1", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "1A", "1B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(1);
+                controller.AdvanceDialogue();
+                controller.Advance(.30f);
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+
+                controller.Restart();
+
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0));
+                Assert.That(controller.SceneElapsedSeconds, Is.EqualTo(0f).Within(.0001f));
+                Assert.That(controller.BeatElapsedSeconds, Is.EqualTo(0f).Within(.0001f));
+                Assert.That(controller.MediaTimeSeconds, Is.EqualTo(0f).Within(.0001f));
+            }
+        }
+
+        [Test]
+        public void MD_ToolbarNextPreviousRemainSceneNavigation()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Add(MdScene("Scene 0", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "0A", "0B"));
+            project.scenes.Add(MdScene("Scene 1", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "1A", "1B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayScene(0);
+                controller.AdvanceDialogue();
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+
+                controller.Next();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 0)));
+
+                controller.AdvanceDialogue();
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
+                controller.Previous();
+                Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((0, 0)));
+            }
+        }
+
+        [Test]
+        public void MD_OneBeatScenePreservesLegacyTransportBehavior()
+        {
+            var project = new VnSceneComposerProject();
+            SetAutoPreviewSequenceGap(project, 0f);
+            project.scenes.Add(MdScene("Legacy 0", VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration, .10f, "A"));
+            project.scenes.Add(MdScene("Legacy 1", VnSceneComposerPreviewAdvanceMode.ManualBeat, 1f, "B"));
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayAll();
+                controller.Advance(.11f);
+
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1),
+                    "A one-Beat Scene must preserve the historical auto Scene-boundary behavior.");
+                Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0));
+            }
+        }
+
+        [Test]
         public void MD_LegacySchemaOneDialogueImportsAsExactlyOneCanonicalBeat()
         {
             Type serializationType = RequireType("VnSceneComposerSerialization");
@@ -241,5 +455,35 @@ namespace Rokas.EditorTools.Tests
             Assert.That((string)Get(beats[0], "text"), Is.EqualTo("Привет 你好 Hello"));
             Assert.That((bool)Get(beats[0], "narration"), Is.False);
         }
+        private static VnSceneComposerScene MdScene(
+            string label,
+            VnSceneComposerPreviewAdvanceMode mode,
+            float previewAutoDuration,
+            params string[] dialogue)
+        {
+            var scene = new VnSceneComposerScene
+            {
+                label = label,
+                timing = new VnSceneComposerTiming
+                {
+                    previewAdvanceMode = mode,
+                    previewAutoDuration = previewAutoDuration
+                }
+            };
+            scene.dialogueBeats.Clear();
+            if (dialogue == null || dialogue.Length == 0)
+                dialogue = new[] { string.Empty };
+            for (int i = 0; i < dialogue.Length; i++)
+            {
+                scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat
+                {
+                    speaker = i % 2 == 0 ? "Aiko" : "Tim",
+                    text = dialogue[i] ?? string.Empty,
+                    narration = false
+                });
+            }
+            return scene;
+        }
+
     }
 }
