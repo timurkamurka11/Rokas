@@ -11,7 +11,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private const float SceneComposerLargeNudgeStep = 10f;
 
         [SerializeField] private int _sceneComposerSelectedCharacterIndex = -1;
-        [SerializeField] private bool _sceneComposerPresentationLayoutExpanded = true;
+        [SerializeField] private bool _sceneComposerPresentationLayoutExpanded;
         [SerializeField] private bool _sceneComposerTypographyExpanded;
         [SerializeField] private bool _sceneComposerTextRevealExpanded;
         [SerializeField] private bool _sceneComposerExpressionExpanded;
@@ -24,6 +24,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerTimingExpanded;
         [SerializeField] private bool _sceneComposerAdvancedExpanded;
         [SerializeField] private bool _sceneComposerPreviewTextExpanded;
+        [SerializeField] private bool _sceneComposerDiagnosticsExpanded;
+        [SerializeField] private bool _sceneComposerPresetToolsExpanded;
         [SerializeField] private bool _sceneComposerExactCharacterTransformExpanded;
 
         [NonSerialized] private bool _sceneComposerDraggingPreviewObject;
@@ -32,12 +34,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private bool IsSceneComposerAdvancedLayoutEditingVisible()
         {
-            return _sceneComposerInspectorSection == 7 && _sceneComposerPresentationLayoutExpanded;
+            return _sceneComposerInspectorSection == 7 &&
+                   _sceneComposerAdvancedPresentationGroupExpanded &&
+                   _sceneComposerPresentationLayoutExpanded;
         }
 
         private bool IsSceneComposerAdvancedUiFeedbackPreviewVisible()
         {
-            return _sceneComposerInspectorSection == 7 && _sceneComposerUiFeedbackExpanded;
+            return _sceneComposerInspectorSection == 7 &&
+                   _sceneComposerAdvancedPresentationGroupExpanded &&
+                   _sceneComposerUiFeedbackExpanded;
         }
 
         public VnWorkshopElement ComposerGetSelectedPresentationElement()
@@ -431,7 +437,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerPresentationControls(VnSceneComposerScene scene)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Расширенные параметры", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Точная настройка оформления и поведения предпросмотра.", EditorStyles.miniLabel);
 
             EditorGUILayout.LabelField("Применить:", EditorStyles.miniBoldLabel);
@@ -439,18 +444,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int nextScope = GUILayout.Toolbar(scope, new[] { "Только к этой сцене", "Ко всем сценам" });
             if (nextScope != scope) ComposerSetPresentationScope(nextScope == 1);
 
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(comparisonView == VnWorkshopComparisonView.Original, "Исходный", EditorStyles.miniButtonLeft))
-                comparisonView = VnWorkshopComparisonView.Original;
-            if (GUILayout.Toggle(comparisonView == VnWorkshopComparisonView.Current, "Текущий", EditorStyles.miniButtonMid))
-                comparisonView = VnWorkshopComparisonView.Current;
-            if (GUILayout.Button("До / после", EditorStyles.miniButtonRight))
-                comparisonView = comparisonView == VnWorkshopComparisonView.Original
-                    ? VnWorkshopComparisonView.Current : VnWorkshopComparisonView.Original;
-            EditorGUILayout.EndHorizontal();
-
             EditorGUI.BeginChangeCheck();
-            VnWorkshopResolution nextResolution = (VnWorkshopResolution)EditorGUILayout.EnumPopup("Разрешение предпросмотра", previewResolution);
+            VnWorkshopResolution nextResolution = (VnWorkshopResolution)EditorGUILayout.EnumPopup(
+                "Разрешение предпросмотра", previewResolution);
             if (EditorGUI.EndChangeCheck()) ComposerSetPreviewResolution(nextResolution);
 
             _sceneComposerPresentationLayoutExpanded = EditorGUILayout.Foldout(
@@ -480,25 +476,63 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     float scale = elementOverride.hasScaleMultiplier ? elementOverride.scaleMultiplier : 1f;
                     EditorGUI.BeginChangeCheck();
                     float nextScale = EditorGUILayout.FloatField("Масштаб", scale);
-                    if (EditorGUI.EndChangeCheck()) ComposerSetSelectedPresentationScale(Mathf.Clamp(nextScale, .05f, 5f));
+                    if (EditorGUI.EndChangeCheck())
+                        ComposerSetSelectedPresentationScale(Mathf.Clamp(nextScale, .05f, 5f));
                 }
                 if (IsBakedControlHitRegion(selectedElement))
-                    EditorGUILayout.HelpBox("Изображение элемента не меняется — редактируется только его область нажатия.", MessageType.Info);
+                    EditorGUILayout.HelpBox(
+                        "Изображение элемента не меняется — редактируется только его область нажатия.",
+                        MessageType.Info);
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Сбросить элемент")) ComposerResetElement(selectedElement);
                 if (GUILayout.Button("Сбросить всё")) ComposerResetAllPresentation();
                 EditorGUILayout.EndHorizontal();
-                EditorGUILayout.HelpBox("Щёлкните элемент или персонажа в предпросмотре. Перетаскивание меняет положение; стрелки сдвигают на 1, Shift + стрелки — на 10.", MessageType.None);
+                EditorGUILayout.HelpBox(
+                    "Щёлкните элемент или персонажа в предпросмотре. Перетаскивание меняет положение; стрелки сдвигают на 1, Shift + стрелки — на 10.",
+                    MessageType.None);
                 EditorGUI.indentLevel--;
             }
 
-            EditorGUILayout.Space();
-            if (GUILayout.Button("Применить эталонное движение"))
-                ComposerApplyReferenceMotionProfile();
-
-            DrawSceneComposerPresetControls();
             DrawSceneComposerPreviewTextControls();
             DrawSceneComposerSerializedPresentationSections(scene);
+
+            _sceneComposerPresetToolsExpanded = EditorGUILayout.Foldout(
+                _sceneComposerPresetToolsExpanded, "Шаблоны и импорт / экспорт", true);
+            if (_sceneComposerPresetToolsExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerPresetControls();
+                EditorGUI.indentLevel--;
+            }
+
+            _sceneComposerDiagnosticsExpanded = EditorGUILayout.Foldout(
+                _sceneComposerDiagnosticsExpanded, "Диагностика / отладка", true);
+            if (_sceneComposerDiagnosticsExpanded)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField("Сравнение предпросмотра", EditorStyles.miniBoldLabel);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Toggle(
+                        comparisonView == VnWorkshopComparisonView.Original,
+                        "Исходный", EditorStyles.miniButtonLeft))
+                    comparisonView = VnWorkshopComparisonView.Original;
+                if (GUILayout.Toggle(
+                        comparisonView == VnWorkshopComparisonView.Current,
+                        "Текущий", EditorStyles.miniButtonMid))
+                    comparisonView = VnWorkshopComparisonView.Current;
+                if (GUILayout.Button("До / после", EditorStyles.miniButtonRight))
+                    comparisonView = comparisonView == VnWorkshopComparisonView.Original
+                        ? VnWorkshopComparisonView.Current
+                        : VnWorkshopComparisonView.Original;
+                EditorGUILayout.EndHorizontal();
+
+                if (GUILayout.Button("Применить эталонное движение"))
+                    ComposerApplyReferenceMotionProfile();
+                EditorGUILayout.HelpBox(
+                    "Инструменты сравнения и эталонного движения предназначены для диагностики и точной настройки.",
+                    MessageType.None);
+                EditorGUI.indentLevel--;
+            }
         }
 
         private void DrawSceneComposerPresetControls()
