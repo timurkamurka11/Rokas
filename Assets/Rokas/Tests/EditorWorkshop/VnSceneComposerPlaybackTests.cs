@@ -224,7 +224,7 @@ namespace Rokas.EditorTools.Tests
             Type sceneType = RequireType("VnSceneComposerScene");
             object scene = Activator.CreateInstance(sceneType);
             Set(scene, "label", label);
-            Set(scene, "previewText", text);
+            SetProperty(scene, "previewText", text);
             object timing = Get(scene, "timing");
             SetEnum(timing, "previewAdvanceMode", timingMode);
             Set(timing, "previewAutoDuration", duration);
@@ -341,6 +341,13 @@ namespace Rokas.EditorTools.Tests
             PropertyInfo property = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
             Assert.That(property, Is.Not.Null, "Missing public field/property: " + type.Name + "." + name);
             return property.GetValue(instance, null);
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing public property: " + instance.GetType().Name + "." + name);
+            property.SetValue(instance, value, null);
         }
 
         private static void Set(object instance, string name, object value)
