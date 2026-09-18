@@ -20,8 +20,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerVideoPreview video = GetSelectedComposerVideoPreview();
                 if (video == null || !video.HasVisibleFrame) media = null;
             }
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
             VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
-                _sceneComposerProject, scene, previewResolution, media as Texture2D);
+                _sceneComposerProject, scene, beat, previewResolution, media as Texture2D);
             Texture visual = media != null ? media : frame.BackgroundTexture;
             var sample = new VnWorkshopBackgroundTransitionSample
             {
