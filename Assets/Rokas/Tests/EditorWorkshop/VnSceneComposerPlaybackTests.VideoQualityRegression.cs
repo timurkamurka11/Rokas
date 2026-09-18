@@ -66,14 +66,12 @@ namespace Rokas.EditorTools.Tests
         public void MC3_FitFillAndStretchProduceExpectedFinalDrawGeometry()
         {
             Rect landscapeTarget = new Rect(0f, 0f, 1000f, 1000f);
-            Rect fitScreen = Rect.zero;
-            Rect fitSource = Rect.zero;
-            GUI.CalculateScaledTextureRects(
+            Mc3CalculateScaledTextureRects(
                 landscapeTarget,
                 VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fit),
                 16f / 9f,
-                ref fitScreen,
-                ref fitSource);
+                out Rect fitScreen,
+                out Rect fitSource);
 
             Assert.That(fitScreen.width / fitScreen.height, Is.EqualTo(16f / 9f).Within(.002f),
                 "Fit must preserve a 16:9 source inside a square viewport.");
@@ -81,14 +79,12 @@ namespace Rokas.EditorTools.Tests
                 "Fit must show the complete source rather than crop it.");
 
             Rect portraitTarget = new Rect(0f, 0f, 1600f, 900f);
-            Rect fillScreen = Rect.zero;
-            Rect fillSource = Rect.zero;
-            GUI.CalculateScaledTextureRects(
+            Mc3CalculateScaledTextureRects(
                 portraitTarget,
                 VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fill),
                 9f / 16f,
-                ref fillScreen,
-                ref fillSource);
+                out Rect fillScreen,
+                out Rect fillSource);
 
             Assert.That(fillScreen, Is.EqualTo(portraitTarget),
                 "Fill must cover the whole viewport.");
@@ -97,27 +93,25 @@ namespace Rokas.EditorTools.Tests
                 "Portrait Fill in a landscape viewport must crop source height instead of stretching.");
 
             Rect ultrawideTarget = new Rect(0f, 0f, 1000f, 700f);
-            Rect ultrawideFitScreen = Rect.zero;
-            Rect ultrawideFitSource = Rect.zero;
-            GUI.CalculateScaledTextureRects(
+            Mc3CalculateScaledTextureRects(
                 ultrawideTarget,
                 VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Fit),
                 2560f / 1080f,
-                ref ultrawideFitScreen,
-                ref ultrawideFitSource);
+                out Rect ultrawideFitScreen,
+                out Rect ultrawideFitSource);
             Assert.That(ultrawideFitScreen.width / ultrawideFitScreen.height,
                 Is.EqualTo(2560f / 1080f).Within(.002f),
                 "Non-16:9 Fit must preserve the original source aspect.");
+            Assert.That(ultrawideFitSource, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
 
-            Rect stretchScreen = Rect.zero;
-            Rect stretchSource = Rect.zero;
-            GUI.CalculateScaledTextureRects(
+            Mc3CalculateScaledTextureRects(
                 landscapeTarget,
                 VnSceneComposerMediaEditing.ToUnityScaleMode(VnSceneComposerMediaScaleMode.Stretch),
                 16f / 9f,
-                ref stretchScreen,
-                ref stretchSource);
+                out Rect stretchScreen,
+                out Rect stretchSource);
             Assert.That(stretchScreen, Is.EqualTo(landscapeTarget));
+            Assert.That(stretchSource, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
             Assert.That(stretchScreen.width / stretchScreen.height, Is.Not.EqualTo(16f / 9f).Within(.002f),
                 "Stretch is the explicit mode allowed to break source aspect.");
         }
@@ -165,6 +159,23 @@ namespace Rokas.EditorTools.Tests
                                   " height=" + geometry.y + " aspect=" +
                                   (geometry.x / (double)geometry.y).ToString("0.0000") +
                                   " codec=" + codec + " bytes=" + bytes.Length);
+        }
+
+        private static void Mc3CalculateScaledTextureRects(
+            Rect position, ScaleMode scaleMode, float imageAspect, out Rect screenRect, out Rect sourceRect)
+        {
+            MethodInfo calculate = typeof(GUI).GetMethod(
+                "CalculateScaledTextureRects",
+                BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                new[] { typeof(Rect), typeof(ScaleMode), typeof(float), typeof(Rect).MakeByRefType(), typeof(Rect).MakeByRefType() },
+                null);
+            Assert.That(calculate, Is.Not.Null,
+                "Unity IMGUI must expose its internal geometry calculation used by GUI.DrawTexture.");
+            object[] args = { position, scaleMode, imageAspect, Rect.zero, Rect.zero };
+            calculate.Invoke(null, args);
+            screenRect = (Rect)args[3];
+            sourceRect = (Rect)args[4];
         }
 
         private static string CreateMc3ExistingDummyVideoPath()
