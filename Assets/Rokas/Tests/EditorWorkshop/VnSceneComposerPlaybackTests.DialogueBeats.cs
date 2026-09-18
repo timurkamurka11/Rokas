@@ -10,13 +10,13 @@ namespace Rokas.EditorTools.Tests
     public sealed partial class VnSceneComposerPlaybackTests
     {
         [Test]
-        public void MD_CanonicalDialogueModelUsesSchemaTwoAndOneInitialBeat()
+        public void MD_CanonicalDialogueModelUsesSchemaThreeAndOneInitialBeat()
         {
             Type contractType = RequireType("VnSceneComposerContract");
             FieldInfo schema = contractType.GetField("SchemaVersion", BindingFlags.Public | BindingFlags.Static);
             Assert.That(schema, Is.Not.Null);
-            Assert.That(schema.GetRawConstantValue(), Is.EqualTo(2),
-                "M-DIALOGUE portable data must move to canonical schema v2.");
+            Assert.That(schema.GetRawConstantValue(), Is.EqualTo(3),
+                "Canonical Scene Composer portable data must use schema v3.");
 
             Type sceneType = RequireType("VnSceneComposerScene");
             FieldInfo beatsField = sceneType.GetField("dialogueBeats", BindingFlags.Public | BindingFlags.Instance);
@@ -35,7 +35,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That((bool)Get(beat, "narration"), Is.False);
 
             Assert.That(sceneType.GetField("speaker", BindingFlags.Public | BindingFlags.Instance), Is.Null,
-                "Legacy single-dialogue fields must not remain independent serialized authorities in schema v2.");
+                "Legacy single-dialogue fields must not remain independent serialized authorities in the current schema.");
             Assert.That(sceneType.GetField("previewText", BindingFlags.Public | BindingFlags.Instance), Is.Null);
             Assert.That(sceneType.GetField("narration", BindingFlags.Public | BindingFlags.Instance), Is.Null);
         }
