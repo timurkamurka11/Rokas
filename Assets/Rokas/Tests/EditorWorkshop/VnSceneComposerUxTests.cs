@@ -230,6 +230,24 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MDREG_PlaybackDialoguePanelAndNextBothAdvanceDialogue()
+        {
+            string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string playbackInput = ExtractMethodBody(authoringSource,
+                "private void HandleSceneComposerPlaybackInput(");
+
+            Assert.That(playbackInput, Does.Contain("frame.DialoguePanel"),
+                "Normal playback must treat the visible dialogue panel as a dialogue-advance hit region.");
+            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"),
+                "The explicit round Next control must remain a dialogue-advance hit region.");
+            Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
+            Assert.That(playbackInput, Does.Contain("currentEvent.Use();"),
+                "A handled playback click must be consumed exactly as playback input.");
+            Assert.That(playbackInput, Does.Not.Contain("ComposerNext();"),
+                "Preview clicks must advance dialogue beats, not invoke scene-level toolbar navigation.");
+        }
+
+        [Test]
         public void UxD_BasicCharacterInspectorUsesContextualRussianControls()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
