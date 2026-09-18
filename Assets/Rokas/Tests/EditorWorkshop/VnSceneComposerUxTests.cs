@@ -209,6 +209,27 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MD_PlaybackPreviewNextRoutesDialogueWithoutChangingToolbarSceneNext()
+        {
+            string sceneSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string preview = ExtractMethodBody(sceneSource, "private void DrawSceneComposerPreview()");
+            string playbackInput = ExtractMethodBody(authoringSource,
+                "private void HandleSceneComposerPlaybackInput(");
+
+            Assert.That(preview, Does.Contain("HandleSceneComposerPlaybackInput(previewRect, frame, Event.current);"),
+                "During active playback, the renderer-facing Next hit region must route dialogue progression.");
+            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"));
+            Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
+            Assert.That(playbackInput, Does.Not.Contain("ComposerSelectPreviewObjectAt"),
+                "Playback clicking must not enable authoring selection/drag behavior.");
+            Assert.That(playbackInput, Does.Not.Contain("RecordSceneComposerUndo"),
+                "Transient playback dialogue progression must not create Undo records.");
+            Assert.That(preview, Does.Contain("ComposerNext();"),
+                "Toolbar Следующая must remain real Scene navigation.");
+        }
+
+        [Test]
         public void UxD_BasicCharacterInspectorUsesContextualRussianControls()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
