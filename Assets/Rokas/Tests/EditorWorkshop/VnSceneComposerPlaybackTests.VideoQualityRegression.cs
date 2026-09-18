@@ -92,9 +92,9 @@ namespace Rokas.EditorTools.Tests
 
             Assert.That(fillScreen, Is.EqualTo(portraitTarget),
                 "Fill must cover the whole viewport.");
-            Assert.That(fillSource.width, Is.LessThan(1f),
-                "Portrait Fill in a landscape viewport must crop source content horizontally/vertically as needed instead of stretching.");
-            Assert.That(fillSource.height, Is.EqualTo(1f).Within(.002f));
+            Assert.That(fillSource.width, Is.EqualTo(1f).Within(.002f));
+            Assert.That(fillSource.height, Is.LessThan(1f),
+                "Portrait Fill in a landscape viewport must crop source height instead of stretching.");
 
             Rect ultrawideTarget = new Rect(0f, 0f, 1000f, 700f);
             Rect ultrawideFitScreen = Rect.zero;
