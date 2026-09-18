@@ -112,6 +112,74 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MD_BeatAwareCompositionResolvesEffectiveDialogueAndFocus()
+        {
+            Type projectType = RequireType("VnSceneComposerProject");
+            Type sceneType = RequireType("VnSceneComposerScene");
+            Type beatType = RequireType("VnSceneComposerDialogueBeat");
+            Type characterType = RequireType("VnSceneComposerCharacter");
+            Type slotType = RequireType("VnWorkshopStageSlot");
+            Type resolutionType = RequireType("VnWorkshopResolution");
+            Type compositionType = RequireType("VnSceneComposerComposition");
+            object project = Activator.CreateInstance(projectType);
+            object scene = Activator.CreateInstance(sceneType);
+
+            IList beats = (IList)Get(scene, "dialogueBeats");
+            Assert.That(beats, Has.Count.EqualTo(1));
+            object beat0 = beats[0];
+            Set(beat0, "speaker", "Mina");
+            Set(beat0, "text", "First beat");
+
+            object beat1 = Activator.CreateInstance(beatType);
+            Set(beat1, "speaker", "Keiko");
+            Set(beat1, "text", "Second beat");
+            beats.Add(beat1);
+
+            IList characters = (IList)Get(scene, "characters");
+            characters.Add(Character(characterType, slotType, "Mina", "mina_happy", "Left"));
+            characters.Add(Character(characterType, slotType, "Keiko", "keiko_serious", "Right"));
+
+            MethodInfo build = compositionType.GetMethod("BuildFrame",
+                BindingFlags.Public | BindingFlags.Static,
+                null,
+                new[] { projectType, sceneType, beatType, resolutionType, typeof(Texture2D) },
+                null);
+            Assert.That(build, Is.Not.Null,
+                "M-DIALOGUE requires beat-aware composition instead of reading Scene-level dialogue proxies.");
+
+            object resolution = Enum.Parse(resolutionType, "Reference1920x1080");
+            object frame0 = build.Invoke(null, new[] { project, scene, beat0, resolution, null });
+            object frame1 = build.Invoke(null, new[] { project, scene, beat1, resolution, null });
+
+            Assert.That((string)Get(frame0, "Speaker"), Is.EqualTo("Mina"));
+            Assert.That((string)Get(frame0, "Dialogue"), Is.EqualTo("First beat"));
+            Assert.That((string)Get(frame1, "Speaker"), Is.EqualTo("Keiko"));
+            Assert.That((string)Get(frame1, "Dialogue"), Is.EqualTo("Second beat"));
+
+            IList frame0Characters = (IList)Get(frame0, "ComposerCharacters");
+            IList frame1Characters = (IList)Get(frame1, "ComposerCharacters");
+            Assert.That(frame0Characters.Count, Is.EqualTo(2));
+            Assert.That(frame1Characters.Count, Is.EqualTo(2));
+
+            Assert.That((string)Get(frame0Characters[0], "StateId"), Is.EqualTo("mina_happy"));
+            Assert.That((string)Get(frame1Characters[0], "StateId"), Is.EqualTo("mina_happy"));
+            Assert.That(Get(frame0Characters[0], "Slot").ToString(), Is.EqualTo("Left"));
+            Assert.That(Get(frame1Characters[0], "Slot").ToString(), Is.EqualTo("Left"));
+            Assert.That((string)Get(frame0Characters[1], "StateId"), Is.EqualTo("keiko_serious"));
+            Assert.That((string)Get(frame1Characters[1], "StateId"), Is.EqualTo("keiko_serious"));
+            Assert.That(Get(frame0Characters[1], "Slot").ToString(), Is.EqualTo("Right"));
+            Assert.That(Get(frame1Characters[1], "Slot").ToString(), Is.EqualTo("Right"));
+
+            Assert.That((bool)Get(frame0Characters[0], "Active"), Is.True);
+            Assert.That((bool)Get(frame0Characters[1], "Active"), Is.False);
+            Assert.That((bool)Get(frame1Characters[0], "Active"), Is.False);
+            Assert.That((bool)Get(frame1Characters[1], "Active"), Is.True);
+
+            Assert.That(((IList)Get(scene, "characters")).Count, Is.EqualTo(2),
+                "Beat-aware composition must not rebuild or mutate Scene visual state.");
+        }
+
+        [Test]
         public void NarrationSupportsZeroCharactersAndComposerSupportsAtMostThreeVisibleCharacters()
         {
             Type projectType = RequireType("VnSceneComposerProject");
