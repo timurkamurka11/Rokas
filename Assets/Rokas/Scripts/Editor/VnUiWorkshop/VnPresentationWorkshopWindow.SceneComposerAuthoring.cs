@@ -287,7 +287,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
                 previewRect, currentEvent.mousePosition, frame);
-            if (!frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint)) return;
+            bool dialoguePanelHit = frame.DialoguePanel.Contains(logicalPoint);
+            bool nextHit = frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint);
+            if (!dialoguePanelHit && !nextHit) return;
 
             ComposerAdvanceDialogue();
             currentEvent.Use();
