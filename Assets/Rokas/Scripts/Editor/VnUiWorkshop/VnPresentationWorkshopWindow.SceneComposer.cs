@@ -235,6 +235,81 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Repaint();
         }
 
+        public void ComposerSetSelectedDialogueBeatCharacterState(
+            string targetCharacterId, bool hasStateOverride, string stateId)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null) throw new InvalidOperationException("No dialogue Beat is selected.");
+
+            string target = targetCharacterId ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                if (hasStateOverride)
+                    throw new ArgumentException("State override requires a target character.", nameof(targetCharacterId));
+                target = string.Empty;
+            }
+            else
+            {
+                bool found = false;
+                for (int i = 0; scene.characters != null && i < scene.characters.Count; i++)
+                {
+                    VnSceneComposerCharacter character = scene.characters[i];
+                    if (character == null) continue;
+                    string id = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(character);
+                    if (string.Equals(id, target, StringComparison.OrdinalIgnoreCase))
+                    {
+                        target = id;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    throw new ArgumentException("Beat target character is not visible in the selected Scene.",
+                        nameof(targetCharacterId));
+            }
+
+            string nextState = hasStateOverride ? stateId ?? string.Empty : string.Empty;
+            if (hasStateOverride)
+            {
+                if (!VnSceneComposerCharacterStateResolver.TryResolve(
+                        nextState, out VnSceneComposerResolvedCharacterState resolved))
+                    throw new ArgumentException("Unknown Beat character state: " + nextState, nameof(stateId));
+                if (!string.Equals(resolved.Character, target, StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException(
+                        "Beat character state belongs to " + resolved.Character + ", not " + target + ".",
+                        nameof(stateId));
+            }
+
+            RecordSceneComposerUndo("Edit VN Dialogue Beat Character State");
+            beat.targetCharacterId = target;
+            beat.hasStateOverride = hasStateOverride;
+            beat.stateId = nextState;
+            if (string.IsNullOrEmpty(target))
+                beat.effect = VnSceneComposerBeatEffect.None;
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerSetSelectedDialogueBeatEffect(
+            VnSceneComposerBeatEffect effect, float strength, float duration)
+        {
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null) throw new InvalidOperationException("No dialogue Beat is selected.");
+            if (!Enum.IsDefined(typeof(VnSceneComposerBeatEffect), effect))
+                throw new ArgumentOutOfRangeException(nameof(effect), effect, null);
+            if (effect != VnSceneComposerBeatEffect.None &&
+                string.IsNullOrWhiteSpace(beat.targetCharacterId))
+                throw new InvalidOperationException("Beat animation requires a target character.");
+
+            float safeStrength = Mathf.Max(0f, strength);
+            float safeDuration = Mathf.Clamp(duration, .01f, 10f);
+            RecordSceneComposerUndo("Edit VN Dialogue Beat Animation");
+            beat.effect = effect;
+            beat.effectStrength = safeStrength;
+            beat.effectDuration = safeDuration;
+            MarkSceneComposerChanged();
+        }
+
         public void ComposerAddDialogueBeat()
         {
             VnSceneComposerScene scene = RequireSelectedScene();
@@ -889,6 +964,84 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     selectedBeat.text = text;
                     MarkSceneComposerChanged();
                 }
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Состояние персонажа в этой реплике", EditorStyles.miniBoldLabel);
+                string[] targetIds = GetSceneComposerBeatTargetCharacterIds(scene);
+                string[] targetLabels = new string[targetIds.Length + 1];
+                targetLabels[0] = "Без персонажа";
+                for (int i = 0; i < targetIds.Length; i++) targetLabels[i + 1] = targetIds[i];
+
+                int targetIndex = 0;
+                for (int i = 0; i < targetIds.Length; i++)
+                {
+                    if (string.Equals(targetIds[i], selectedBeat.targetCharacterId,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetIndex = i + 1;
+                        break;
+                    }
+                }
+
+                EditorGUI.BeginChangeCheck();
+                int nextTargetIndex = EditorGUILayout.Popup("Персонаж реплики", targetIndex, targetLabels);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    string nextTarget = nextTargetIndex > 0 ? targetIds[nextTargetIndex - 1] : string.Empty;
+                    ComposerSetSelectedDialogueBeatCharacterState(nextTarget, false, string.Empty);
+                    selectedBeat = ComposerGetSelectedDialogueBeat();
+                }
+
+                string targetCharacter = selectedBeat != null ? selectedBeat.targetCharacterId ?? string.Empty : string.Empty;
+                using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(targetCharacter)))
+                {
+                    string[] stateIds = string.IsNullOrEmpty(targetCharacter)
+                        ? Array.Empty<string>()
+                        : ComposerGetAuthoredStateIds(targetCharacter);
+                    string[] stateLabels = new string[stateIds.Length + 1];
+                    stateLabels[0] = "Оставить предыдущее";
+                    int stateIndex = 0;
+                    for (int i = 0; i < stateIds.Length; i++)
+                    {
+                        stateLabels[i + 1] = GetSceneComposerBeatStateDisplayName(targetCharacter, stateIds[i]);
+                        if (selectedBeat.hasStateOverride &&
+                            string.Equals(stateIds[i], selectedBeat.stateId, StringComparison.Ordinal))
+                            stateIndex = i + 1;
+                    }
+
+                    EditorGUI.BeginChangeCheck();
+                    int nextStateIndex = EditorGUILayout.Popup("Эмоция / поза", stateIndex, stateLabels);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        bool hasOverride = nextStateIndex > 0;
+                        string nextState = hasOverride ? stateIds[nextStateIndex - 1] : string.Empty;
+                        ComposerSetSelectedDialogueBeatCharacterState(targetCharacter, hasOverride, nextState);
+                        selectedBeat = ComposerGetSelectedDialogueBeat();
+                    }
+
+                    string[] effectLabels = { "Без анимации", "Акцент" };
+                    int effectIndex = selectedBeat.effect == VnSceneComposerBeatEffect.Accent ? 1 : 0;
+                    EditorGUI.BeginChangeCheck();
+                    int nextEffectIndex = EditorGUILayout.Popup("Анимация реплики", effectIndex, effectLabels);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        ComposerSetSelectedDialogueBeatEffect(
+                            nextEffectIndex == 1 ? VnSceneComposerBeatEffect.Accent : VnSceneComposerBeatEffect.None,
+                            selectedBeat.effectStrength, selectedBeat.effectDuration);
+                        selectedBeat = ComposerGetSelectedDialogueBeat();
+                    }
+
+                    if (selectedBeat.effect == VnSceneComposerBeatEffect.Accent)
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        float strength = EditorGUILayout.Slider("Сила", selectedBeat.effectStrength, 0f, 100f);
+                        float duration = DrawSceneComposerDurationControl(
+                            "Длительность", selectedBeat.effectDuration, .01f);
+                        if (EditorGUI.EndChangeCheck())
+                            ComposerSetSelectedDialogueBeatEffect(
+                                VnSceneComposerBeatEffect.Accent, strength, duration);
+                    }
+                }
             }
 
             VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
@@ -1430,6 +1583,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (media == null) return "none";
             return media.kind + "|" + (media.reference ?? string.Empty) + "|" + (media.contentHash ?? string.Empty) + "|" + media.loop + "|" + media.scaleMode;
+        }
+
+        private static string[] GetSceneComposerBeatTargetCharacterIds(VnSceneComposerScene scene)
+        {
+            if (scene == null || scene.characters == null) return Array.Empty<string>();
+            return scene.characters
+                .Where(character => character != null)
+                .Select(VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string GetSceneComposerBeatStateDisplayName(string characterId, string stateId)
+        {
+            if (VnSceneComposerCharacterStateResolver.TryResolve(
+                    stateId, out VnSceneComposerResolvedCharacterState resolved) &&
+                !string.IsNullOrWhiteSpace(resolved.DisplayName) &&
+                !string.Equals(resolved.DisplayName, resolved.Id, StringComparison.Ordinal))
+                return resolved.DisplayName;
+
+            string label = stateId ?? string.Empty;
+            string prefix = (characterId ?? string.Empty).Trim().ToLowerInvariant() + "_";
+            if (label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                label = label.Substring(prefix.Length);
+            label = label.Replace('_', ' ').Trim();
+            if (label.Length == 0) return "Состояние";
+            return char.ToUpperInvariant(label[0]) + label.Substring(1);
         }
 
         private static string GetSceneComposerDisplayLabel(VnSceneComposerScene scene, int index)
