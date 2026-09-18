@@ -122,25 +122,35 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void UxC_BasicTextUsesOneCanonicalRussianSceneTextSurface()
+        public void MD_BasicTextUsesSelectedCanonicalDialogueBeatSurface()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
             string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
 
-            Assert.That(textInspector, Does.Contain("\"Текст\""));
-            Assert.That(textInspector, Does.Contain("\"Текст без персонажа\""),
-                "Narration must remain the existing scene.narration mode with a human Russian label.");
-            Assert.That(textInspector, Does.Contain("\"Говорящий\""),
-                "Speaker authoring must remain visible beside the canonical scene text.");
-            Assert.That(textInspector, Does.Contain("\"Текст сцены\""),
-                "The one real multiline content field must be identified as Текст сцены.");
-            Assert.That(textInspector, Does.Contain("scene.previewText"),
-                "The real scene-text editor must stay bound to the existing canonical scene.previewText path.");
+            string[] requiredLabels =
+            {
+                "Реплики",
+                "+ Реплика",
+                "Дублировать",
+                "Удалить",
+                "↑",
+                "↓",
+                "Говорящий"
+            };
+            foreach (string label in requiredLabels)
+            {
+                Assert.That(textInspector, Does.Contain("\"" + label + "\""),
+                    "M-DIALOGUE basic text authoring must expose the creator-facing control: " + label + ".");
+            }
+
+            Assert.That(textInspector, Does.Contain("ComposerGetSelectedDialogueBeat"),
+                "The normal text inspector must edit the selected canonical dialogue beat.");
+            Assert.That(textInspector, Does.Not.Contain("scene.previewText"),
+                "Task 6 must not bind ordinary authoring permanently to the first-beat compatibility proxy.");
+            Assert.That(textInspector, Does.Not.Contain("scene.speaker"),
+                "Task 6 must resolve the selected canonical beat instead of using Scene speaker proxy state.");
             Assert.That(CountOccurrences(textInspector, "EditorGUILayout.TextArea("), Is.EqualTo(1),
-                "Basic text authoring must expose exactly one multiline scene-content field.");
-            Assert.That(textInspector, Does.Not.Contain("Preview Text"));
-            Assert.That(textInspector, Does.Not.Contain("ComposerGetPreviewSampleText"));
-            Assert.That(textInspector, Does.Not.Contain("Тестовый текст оформления"));
+                "The selected dialogue beat still owns exactly one multiline content editor.");
         }
 
         [Test]
