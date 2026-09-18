@@ -41,26 +41,54 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopResolution resolution,
             Texture2D backgroundOverride)
         {
+            if (scene == null) throw new ArgumentNullException(nameof(scene));
+            return BuildFrame(project, scene, ResolveFirstBeat(scene), resolution, backgroundOverride);
+        }
+
+        public static VnWorkshopPreviewFrame BuildFrame(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            VnWorkshopResolution resolution,
+            Texture2D backgroundOverride = null)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (scene == null) throw new ArgumentNullException(nameof(scene));
+            if (beat == null) throw new ArgumentNullException(nameof(beat));
             if (scene.characters == null) scene.characters = new System.Collections.Generic.List<VnSceneComposerCharacter>();
             if (scene.characters.Count > 3)
                 throw new ArgumentOutOfRangeException(nameof(scene.characters), scene.characters.Count,
                     "Scene Composer supports zero to three visible authored characters.");
 
             VnPresentationWorkshopPreset preset = ResolvePresentation(project, scene);
-            VnWorkshopPreviewScene baseScene = SelectBaseScene(scene);
+            VnWorkshopPreviewScene baseScene = SelectBaseScene(scene, beat);
+            string dialogue = beat.text ?? string.Empty;
             VnWorkshopPreviewFrame frame = VnPresentationWorkshopPreviewRenderer.BuildFrame(
-                preset, resolution, baseScene, scene.previewText ?? string.Empty);
+                preset, resolution, baseScene, dialogue);
 
             frame.BackgroundTexture = backgroundOverride != null ? backgroundOverride : Texture2D.blackTexture;
-            frame.Speaker = scene.narration ? string.Empty : (scene.speaker ?? string.Empty);
-            frame.Dialogue = scene.previewText ?? string.Empty;
+            frame.Speaker = beat.narration ? string.Empty : (beat.speaker ?? string.Empty);
+            frame.Dialogue = dialogue;
             frame.ShowMina = false;
             frame.ShowKeiko = false;
-            frame.ComposerCharacters = BuildCharacters(frame, preset, scene);
+            frame.ComposerCharacters = BuildCharacters(frame, preset, scene, beat);
             RegisterStaticExternalVideoContext(scene, frame);
             return frame;
+        }
+
+        private static VnSceneComposerDialogueBeat ResolveFirstBeat(VnSceneComposerScene scene)
+        {
+            if (scene != null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0 &&
+                scene.dialogueBeats[0] != null)
+                return scene.dialogueBeats[0];
+
+            return new VnSceneComposerDialogueBeat
+            {
+                beatId = string.Empty,
+                speaker = string.Empty,
+                text = string.Empty,
+                narration = false
+            };
         }
 
         private static void RegisterStaticExternalVideoContext(VnSceneComposerScene scene, VnWorkshopPreviewFrame frame)
@@ -103,9 +131,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             new VnSceneComposerPlaybackFrame(frame, sample, videoTexture, videoTexture);
         }
 
-        private static VnWorkshopPreviewScene SelectBaseScene(VnSceneComposerScene scene)
+        private static VnWorkshopPreviewScene SelectBaseScene(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
         {
-            if (!scene.narration && string.Equals(scene.speaker, "Mina", StringComparison.OrdinalIgnoreCase))
+            if (!beat.narration && string.Equals(beat.speaker, "Mina", StringComparison.OrdinalIgnoreCase))
                 return VnWorkshopPreviewScene.MinaBody;
             if (scene.characters != null)
             {
@@ -115,7 +145,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (character != null && !string.IsNullOrEmpty(character.stateId) &&
                         VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state) &&
                         string.Equals(state.Character, "Mina", StringComparison.OrdinalIgnoreCase) &&
-                        string.IsNullOrEmpty(scene.speaker))
+                        string.IsNullOrEmpty(beat.speaker))
                         return VnWorkshopPreviewScene.MinaBody;
                 }
             }
@@ -125,14 +155,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static VnWorkshopPreviewCharacter[] BuildCharacters(
             VnWorkshopPreviewFrame frame,
             VnPresentationWorkshopPreset preset,
-            VnSceneComposerScene scene)
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
         {
             int count = scene.characters.Count;
             if (count == 0) return Array.Empty<VnWorkshopPreviewCharacter>();
 
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(preset);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
-            int activeIndex = FindActiveIndex(scene);
+            int activeIndex = FindActiveIndex(scene, beat);
             var result = new VnWorkshopPreviewCharacter[count];
 
             for (int i = 0; i < count; i++)
@@ -202,16 +233,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return result;
         }
 
-        private static int FindActiveIndex(VnSceneComposerScene scene)
+        private static int FindActiveIndex(VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
         {
-            if (scene.narration || string.IsNullOrEmpty(scene.speaker)) return -1;
+            if (beat == null || beat.narration || string.IsNullOrEmpty(beat.speaker)) return -1;
             for (int i = 0; i < scene.characters.Count; i++)
             {
                 VnSceneComposerCharacter character = scene.characters[i];
                 if (character == null) continue;
-                if (string.Equals(character.characterId, scene.speaker, StringComparison.OrdinalIgnoreCase)) return i;
+                if (string.Equals(character.characterId, beat.speaker, StringComparison.OrdinalIgnoreCase)) return i;
                 if (VnSceneComposerCharacterStateResolver.TryResolve(character.stateId, out VnSceneComposerResolvedCharacterState state) &&
-                    string.Equals(state.Character, scene.speaker, StringComparison.OrdinalIgnoreCase)) return i;
+                    string.Equals(state.Character, beat.speaker, StringComparison.OrdinalIgnoreCase)) return i;
             }
             return -1;
         }
