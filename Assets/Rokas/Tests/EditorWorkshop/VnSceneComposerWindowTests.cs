@@ -133,8 +133,8 @@ namespace Rokas.EditorTools.Tests
             {
                 RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
                 object scene = Scenes(window)[0];
-                SetField(scene, "speaker", "Mina");
-                SetField(scene, "previewText", "Composer selected scene preview");
+                SetProperty(scene, "speaker", "Mina");
+                SetProperty(scene, "previewText", "Composer selected scene preview");
 
                 object frame = RequireInstance(windowType, "ComposerBuildSelectedPreviewFrame").Invoke(window, null);
                 Assert.That(frame, Is.Not.Null);
@@ -397,6 +397,15 @@ namespace Rokas.EditorTools.Tests
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.That(field, Is.Not.Null, "Missing field: " + instance.GetType().Name + "." + name);
             field.SetValue(instance, value);
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            Assert.That(instance, Is.Not.Null);
+            PropertyInfo property = instance.GetType().GetProperty(name,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(property, Is.Not.Null, "Missing property: " + instance.GetType().Name + "." + name);
+            property.SetValue(instance, value, null);
         }
 
         private static object GetProperty(object instance, string name)
