@@ -11,6 +11,12 @@ namespace Rokas.EditorTools.Tests
 {
     public sealed partial class VnSceneComposerPlaybackTests
     {
+        private sealed class Mc3InspectableVideoPreview : VnSceneComposerVideoPreview
+        {
+            internal Mc3InspectableVideoPreview(string path, int width, int height, bool loop)
+                : base(path, width, height, loop) { }
+        }
+
         [Test]
         public void MC3_LiveVideoPreviewUsesFilteredSamplingForScaledDisplay()
         {
@@ -18,7 +24,7 @@ namespace Rokas.EditorTools.Tests
             VnSceneComposerVideoPreview preview = null;
             try
             {
-                preview = new VnSceneComposerVideoPreview(path, 640, 360, false);
+                preview = new Mc3InspectableVideoPreview(path, 640, 360, false);
                 Assert.That(preview.texture, Is.Not.Null);
                 Assert.That(preview.texture.filterMode, Is.EqualTo(FilterMode.Bilinear),
                     "Live video is routinely displayed at a different size from its prepared RenderTexture. " +
@@ -38,7 +44,7 @@ namespace Rokas.EditorTools.Tests
             VnSceneComposerVideoPreview preview = null;
             try
             {
-                preview = new VnSceneComposerVideoPreview(path, 640, 360, false);
+                preview = new Mc3InspectableVideoPreview(path, 640, 360, false);
                 FieldInfo playerField = typeof(VnSceneComposerVideoPreview).GetField(
                     "player", BindingFlags.Instance | BindingFlags.NonPublic);
                 Assert.That(playerField, Is.Not.Null);
