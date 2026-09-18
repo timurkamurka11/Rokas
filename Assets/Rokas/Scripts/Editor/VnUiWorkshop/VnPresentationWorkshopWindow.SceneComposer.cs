@@ -1420,8 +1420,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void EnsureSceneComposerProject()
         {
             if (_sceneComposerProject == null) _sceneComposerProject = new VnSceneComposerProject();
+            bool migrated = VnSceneComposerSerialization.EnsureCurrentSchema(_sceneComposerProject);
             if (_sceneComposerProject.scenes == null) _sceneComposerProject.scenes = new List<VnSceneComposerScene>();
             if (_sceneComposerProject.defaultPresentation == null) _sceneComposerProject.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (migrated) EditorUtility.SetDirty(this);
         }
         private VnSceneComposerScene GetSelectedScene()
         {

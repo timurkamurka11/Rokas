@@ -205,6 +205,36 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MF1_OpenSchemaTwoWindowProjectUpgradesInMemoryBeforeAuthoring()
+        {
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                window.ComposerAddCharacter("Mina", "mina_neutral");
+                VnSceneComposerProject project = GetProject(window);
+                VnSceneComposerDialogueBeat beat = project.scenes[0].dialogueBeats[0];
+                project.schemaVersion = 2;
+                SetBeatState(beat, "Mina", true, "mina_happy");
+                SetBeatEffect(beat, "Accent", 60f, .7f);
+
+                window.ComposerGetSelectedDialogueBeatId();
+
+                Assert.That(project.schemaVersion, Is.EqualTo(3));
+                beat = project.scenes[0].dialogueBeats[0];
+                Assert.That(GetString(beat, "targetCharacterId"), Is.Empty);
+                Assert.That(GetBool(beat, "hasStateOverride"), Is.False);
+                Assert.That(GetString(beat, "stateId"), Is.Empty);
+                Assert.That(Get(beat, "effect").ToString(), Is.EqualTo("None"));
+                Assert.That(project.scenes[0].characters[0].stateId, Is.EqualTo("mina_neutral"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void MF1_SerializationRoundTripPreservesBeatStateEffectAndStableId()
         {
             var project = new VnSceneComposerProject();

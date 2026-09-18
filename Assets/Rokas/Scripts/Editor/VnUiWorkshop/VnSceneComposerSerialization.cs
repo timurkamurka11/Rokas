@@ -226,6 +226,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
+        internal static bool EnsureCurrentSchema(VnSceneComposerProject project)
+        {
+            if (project == null) return false;
+            if (project.schemaVersion == SchemaVersion) return false;
+            if (project.schemaVersion != BeatStateSchemaVersion) return false;
+
+            MigrateBeatStateSchemaV2(project);
+            NormalizeProject(project);
+            return true;
+        }
+
         internal static VnSceneComposerImportResult RevalidateImported(VnSceneComposerProject project)
         {
             if (!ValidateProject(project, out string error, out string[] warnings))
