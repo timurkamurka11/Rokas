@@ -52,10 +52,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float fontSize,
             Color color,
             VnWorkshopTextAlignment alignment,
-            Vector2 positionDelta,
-            Vector2 sizeDelta)
+            Vector2 position,
+            Vector2 size)
         {
-            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, positionDelta, sizeDelta);
+            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, position, size);
             RecordSceneComposerUndo("Edit Shared VN Dialogue Typography");
             VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
             VnWorkshopTypographyValues baseline =
