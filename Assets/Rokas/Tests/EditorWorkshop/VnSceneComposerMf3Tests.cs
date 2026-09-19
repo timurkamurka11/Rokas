@@ -93,7 +93,7 @@ namespace Rokas.EditorTools.Tests
             IList copied = GetDecorations(copy);
             Assert.That(copied.Count, Is.EqualTo(1));
             Assert.That((string)GetField(copied[0], "decorationId"), Is.Not.EqualTo(DecorationId));
-            Assert.That(VnSceneComposerSerialization.IsStableId((string)GetField(copied[0], "decorationId")), Is.True);
+            Assert.That(IsStableId((string)GetField(copied[0], "decorationId")), Is.True);
             Assert.That((string)GetField(copied[0], "assetGuid"), Is.EqualTo(DecorationGuid));
             Assert.That((Vector2)GetField(copied[0], "position"), Is.EqualTo(new Vector2(140f, 90f)));
             Assert.That((float)GetField(copied[0], "opacity"), Is.EqualTo(.5f).Within(.0001f));
@@ -323,6 +323,20 @@ namespace Rokas.EditorTools.Tests
             string authoring = File.ReadAllText(authoringPath);
             Assert.That(authoring, Does.Contain("VnSceneComposerAssetPurpose.UiOverlay"),
                 "M-F3 must reuse the established UiOverlay onboarding path instead of creating another importer.");
+        }
+
+        private static bool IsStableId(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length != 32) return false;
+            for (int i = 0; i < value.Length; i++)
+            {
+                char ch = value[i];
+                bool hex = (ch >= '0' && ch <= '9') ||
+                           (ch >= 'a' && ch <= 'f') ||
+                           (ch >= 'A' && ch <= 'F');
+                if (!hex) return false;
+            }
+            return true;
         }
 
         private static Type RequireType(string simpleName)
