@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -13,162 +13,269 @@ namespace Rokas.EditorTools.Tests
     public sealed class VnSceneComposerMTextTests
     {
         private const string DefaultTmpPath = "Assets/Rokas/Resources/RokasSans TMP.asset";
+        private const string DefaultSourcePath = "Assets/Rokas/Art/UI/Fonts/RokasSans.ttf";
         private const string MissingGuid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        private readonly List<string> _createdAssets = new List<string>();
 
-        [Test]
-        public void MText_ZeroTextSceneRemainsCompatibleAndDialogueUntouched()
+        [TearDown]
+        public void TearDown()
         {
-            var project = ProjectWithScene();
-            project.scenes[0].dialogueBeats[0].speaker = "Mina";
-            project.scenes[0].dialogueBeats[0].text = "Dialogue remains authoritative.";
-
-            string json = VnSceneComposerSerialization.SerializePortable(project);
-            VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(json);
-
-            Assert.That(loaded.Success, Is.True, loaded.Error);
-            Assert.That(loaded.Project.scenes[0].textElements, Is.Not.Null);
-            Assert.That(loaded.Project.scenes[0].textElements, Is.Empty);
-            Assert.That(loaded.Project.scenes[0].dialogueBeats[0].text,
-                Is.EqualTo("Dialogue remains authoritative."));
+            Undo.ClearAll();
+            for (int i = 0; i < _createdAssets.Count; i++)
+            {
+                string path = _createdAssets[i];
+                if (!string.IsNullOrEmpty(path) && AssetDatabase.LoadMainAssetAtPath(path) != null)
+                    AssetDatabase.DeleteAsset(path);
+            }
+            _createdAssets.Clear();
+            AssetDatabase.Refresh();
         }
 
         [Test]
-        public void MText_MultipleIndependentUnicodeElementsRoundTripAllCoreProperties()
+        public void MText_OldProjectResolvesToRokasSansAndDefaultDialogueLayout()
         {
             var project = ProjectWithScene();
-            string fontGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
-            Assert.That(fontGuid, Is.Not.Empty);
+            VnWorkshopTypographyValues values =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(project.defaultPresentation);
 
-            project.scenes[0].textElements.Add(new VnSceneComposerTextElement
-            {
-                textElementId = "11111111111111111111111111111111",
-                text = "Санкт-Петербург\n23:40",
-                fontAssetGuid = fontGuid,
-                fontDisplayName = "RokasSans TMP",
-                fontSize = 61f,
-                position = new Vector2(321f, 222f),
-                size = new Vector2(777f, 155f),
-                color = new Color(.2f, .4f, .7f, 1f),
-                opacity = .63f,
-                alignment = VnSceneComposerTextAlignment.Right,
-                visible = true,
-                layer = VnSceneComposerTextLayer.FrontCharacters
-            });
-            project.scenes[0].textElements.Add(new VnSceneComposerTextElement
-            {
-                textElementId = "22222222222222222222222222222222",
-                text = "上海 · 第三章",
-                fontAssetGuid = fontGuid,
-                fontDisplayName = "RokasSans TMP",
-                fontSize = 42f,
-                position = new Vector2(1100f, 160f),
-                size = new Vector2(520f, 120f),
-                color = Color.white,
-                opacity = 1f,
-                alignment = VnSceneComposerTextAlignment.Center,
-                visible = false,
-                layer = VnSceneComposerTextLayer.BehindCharacters
-            });
+            Assert.That(values.DialogueFontAssetGuid, Is.Empty);
+            Assert.That(values.SpeakerFontAssetGuid, Is.Empty);
+            Assert.That(values.DialogueFontSize, Is.EqualTo(22f).Within(.001f));
+            Assert.That(values.SpeakerFontSize, Is.EqualTo(26f).Within(.001f));
+            Assert.That(values.DialogueColor, Is.EqualTo(Color.white));
+            Assert.That(values.SpeakerColor, Is.EqualTo(Color.white));
 
-            string json = VnSceneComposerSerialization.SerializePortable(project);
-            VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(json);
-
-            Assert.That(loaded.Success, Is.True, loaded.Error);
-            Assert.That(loaded.Project.scenes[0].textElements, Has.Count.EqualTo(2));
-            VnSceneComposerTextElement first = loaded.Project.scenes[0].textElements[0];
-            VnSceneComposerTextElement second = loaded.Project.scenes[0].textElements[1];
-            Assert.That(first.text, Is.EqualTo("Санкт-Петербург\n23:40"));
-            Assert.That(second.text, Is.EqualTo("上海 · 第三章"));
-            Assert.That(first.fontAssetGuid, Is.EqualTo(fontGuid));
-            Assert.That(first.fontSize, Is.EqualTo(61f).Within(.001f));
-            Assert.That(first.position, Is.EqualTo(new Vector2(321f, 222f)));
-            Assert.That(first.size, Is.EqualTo(new Vector2(777f, 155f)));
-            Assert.That(first.color.r, Is.EqualTo(.2f).Within(.001f));
-            Assert.That(first.opacity, Is.EqualTo(.63f).Within(.001f));
-            Assert.That(first.alignment, Is.EqualTo(VnSceneComposerTextAlignment.Right));
-            Assert.That(second.visible, Is.False);
-            Assert.That(second.layer, Is.EqualTo(VnSceneComposerTextLayer.BehindCharacters));
-        }
-
-        [Test]
-        public void MText_MissingFontIsSafeVisibleWarningNotValidationFailure()
-        {
-            var project = ProjectWithScene();
-            project.scenes[0].textElements.Add(new VnSceneComposerTextElement
-            {
-                textElementId = "33333333333333333333333333333333",
-                text = "Missing font",
-                fontAssetGuid = MissingGuid,
-                fontDisplayName = "Missing Font"
-            });
-
-            bool valid = VnSceneComposerSerialization.ValidateProject(project, out string error, out string[] warnings);
-
-            Assert.That(valid, Is.True, error);
-            Assert.That(warnings.Any(w => w.IndexOf("font", StringComparison.OrdinalIgnoreCase) >= 0), Is.True);
             VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
                 project, project.scenes[0], VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
-            Assert.That(frame.ComposerTexts, Is.Empty);
-            Assert.That(frame.ComposerTextWarnings, Is.Not.Empty);
+            Assert.That(frame.DialogueFont, Is.Not.Null);
+            Assert.That(frame.SpeakerFont, Is.Not.Null);
         }
 
         [Test]
-        public void MText_DuplicateSceneCopiesTextButRegeneratesIndependentIds()
+        public void MText_SpeakerFontSelectionPersists()
         {
             var project = ProjectWithScene();
-            string fontGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
-            project.scenes[0].textElements.Add(Text("44444444444444444444444444444444", "Original", fontGuid));
+            string guid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            project.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
+            project.defaultPresentation.typography.speakerFontAssetGuid = guid;
 
-            VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(project, project.scenes[0].sceneId);
-
-            Assert.That(copy, Is.Not.Null);
-            Assert.That(copy.textElements, Has.Count.EqualTo(1));
-            Assert.That(copy.textElements[0].text, Is.EqualTo("Original"));
-            Assert.That(copy.textElements[0].textElementId,
-                Is.Not.EqualTo(project.scenes[0].textElements[0].textElementId));
-            copy.textElements[0].text = "Copy";
-            Assert.That(project.scenes[0].textElements[0].text, Is.EqualTo("Original"));
+            VnSceneComposerProject loaded = RoundTrip(project);
+            Assert.That(loaded.defaultPresentation.typography.speakerFontAssetGuid, Is.EqualTo(guid));
         }
 
         [Test]
-        public void MText_WindowCrudEditsIndependentSceneTextWithoutRecreatingPlayback()
+        public void MText_DialogueFontSelectionPersists()
+        {
+            var project = ProjectWithScene();
+            string guid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = guid;
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+            Assert.That(loaded.defaultPresentation.typography.dialogueFontAssetGuid, Is.EqualTo(guid));
+        }
+
+        [Test]
+        public void MText_SpeakerAndDialogueMayUseDifferentFonts()
+        {
+            VnSceneComposerFontImportResult imported = ImportTestFont("MText Dialogue Face");
+            var project = ProjectWithScene();
+            string defaultGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            project.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
+            project.defaultPresentation.typography.speakerFontAssetGuid = defaultGuid;
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = imported.TmpFontAssetGuid;
+
+            VnWorkshopTypographyValues values =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(project.defaultPresentation);
+            Assert.That(values.SpeakerFontAssetGuid, Is.EqualTo(defaultGuid));
+            Assert.That(values.DialogueFontAssetGuid, Is.EqualTo(imported.TmpFontAssetGuid));
+            Assert.That(values.DialogueFontAssetGuid, Is.Not.EqualTo(values.SpeakerFontAssetGuid));
+        }
+
+        [Test]
+        public void MText_FontImportCreatesProjectOwnedSourceAndTmpAsset()
+        {
+            VnSceneComposerFontImportResult imported = ImportTestFont("MText Import Face");
+
+            Assert.That(imported.Success, Is.True, imported.Error);
+            Assert.That(imported.SourceAssetPath, Does.StartWith("Assets/"));
+            Assert.That(imported.TmpFontAssetPath, Does.StartWith("Assets/"));
+            Assert.That(imported.TmpFontAssetGuid, Has.Length.EqualTo(32));
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(imported.SourceAssetPath), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(imported.TmpFontAssetPath), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(imported.TmpFontAssetPath).GetType().Name,
+                Is.EqualTo("TMP_FontAsset"));
+        }
+
+        [Test]
+        public void MText_RuntimeDataNeverStoresMachineLocalFontPath()
+        {
+            VnSceneComposerFontImportResult imported = ImportTestFont("MText Runtime Face");
+            var project = ProjectWithScene();
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = imported.TmpFontAssetGuid;
+
+            string json = VnSceneComposerSerialization.SerializePortable(project);
+
+            Assert.That(json, Does.Contain(imported.TmpFontAssetGuid));
+            Assert.That(json, Does.Not.Contain("C:\\Windows\\Fonts"));
+            Assert.That(json, Does.Not.Contain(Path.GetFullPath(
+                Path.Combine(Directory.GetParent(Application.dataPath).FullName, DefaultSourcePath))));
+        }
+
+        [Test]
+        public void MText_SelectingSameFontAgainReusesProjectAssets()
+        {
+            VnSceneComposerFontImportResult first = ImportTestFont("MText Reuse Face");
+            VnSceneComposerFontImportResult second =
+                VnSceneComposerTextFontResolver.ImportProjectFont(DefaultSourcePath, "MText Reuse Face");
+
+            Assert.That(second.Success, Is.True, second.Error);
+            Assert.That(second.SourceAssetPath, Is.EqualTo(first.SourceAssetPath));
+            Assert.That(second.TmpFontAssetPath, Is.EqualTo(first.TmpFontAssetPath));
+            Assert.That(second.TmpFontAssetGuid, Is.EqualTo(first.TmpFontAssetGuid));
+        }
+
+        [Test]
+        public void MText_DifferentFontVariantIdentityRemainsDistinct()
+        {
+            string regular = VnSceneComposerTextFontResolver.BuildStableIdentity(
+                "Golos Text Regular", "0123456789abcdef");
+            string semibold = VnSceneComposerTextFontResolver.BuildStableIdentity(
+                "Golos Text SemiBold", "fedcba9876543210");
+
+            Assert.That(regular, Is.Not.EqualTo(semibold));
+            Assert.That(regular, Does.Contain("golos text regular"));
+            Assert.That(semibold, Does.Contain("golos text semibold"));
+        }
+
+        [Test]
+        public void MText_SpeakerPositionIsSharedAcrossDialogueBeats()
+        {
+            var project = ProjectWithTwoBeats();
+            project.defaultPresentation.speakerName.hasPositionDelta = true;
+            project.defaultPresentation.speakerName.positionDelta = new Vector2(47f, -21f);
+
+            VnWorkshopPreviewFrame first = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[0],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+            VnWorkshopPreviewFrame second = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[1],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+
+            Assert.That(second.SpeakerName, Is.EqualTo(first.SpeakerName));
+        }
+
+        [Test]
+        public void MText_DialoguePositionIsSharedAcrossDialogueBeats()
+        {
+            var project = ProjectWithTwoBeats();
+            project.defaultPresentation.dialogueText.hasPositionDelta = true;
+            project.defaultPresentation.dialogueText.positionDelta = new Vector2(-36f, 18f);
+            project.defaultPresentation.dialogueText.hasSizeDelta = true;
+            project.defaultPresentation.dialogueText.sizeDelta = new Vector2(140f, 30f);
+
+            VnWorkshopPreviewFrame first = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[0],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+            VnWorkshopPreviewFrame second = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[1],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+
+            Assert.That(second.DialogueText, Is.EqualTo(first.DialogueText));
+        }
+
+        [Test]
+        public void MText_BeatNavigationDoesNotResetTypography()
+        {
+            var project = ProjectWithTwoBeats();
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 39f;
+            project.defaultPresentation.typography.hasSpeakerFontSize = true;
+            project.defaultPresentation.typography.speakerFontSize = 31f;
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                VnWorkshopTypographyValues before = playback.CurrentFrame.WorkshopFrame.Typography;
+                playback.AdvanceDialogue();
+                VnWorkshopTypographyValues after = playback.CurrentFrame.WorkshopFrame.Typography;
+                Assert.That(after.DialogueFontSize, Is.EqualTo(before.DialogueFontSize));
+                Assert.That(after.SpeakerFontSize, Is.EqualTo(before.SpeakerFontSize));
+            }
+        }
+
+        [Test]
+        public void MText_ContentChangesDoNotResetTypography()
+        {
+            var project = ProjectWithScene();
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 44f;
+            project.scenes[0].dialogueBeats[0].text = "До";
+            project.scenes[0].dialogueBeats[0].text = "После";
+
+            VnWorkshopTypographyValues values =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(project.defaultPresentation);
+            Assert.That(values.DialogueFontSize, Is.EqualTo(44f));
+        }
+
+        [Test]
+        public void MText_CustomPlaqueChangeDoesNotResetTypography()
+        {
+            var project = ProjectWithScene();
+            project.defaultPresentation.typography.hasSpeakerFontSize = true;
+            project.defaultPresentation.typography.speakerFontSize = 34f;
+            project.defaultPresentation.dialoguePanelVisual.hasAssetGuid = true;
+            project.defaultPresentation.dialoguePanelVisual.assetGuid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+            Assert.That(
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(project.defaultPresentation).SpeakerFontSize,
+                Is.EqualTo(34f));
+        }
+
+        [Test]
+        public void MText_SaveReopenPreservesTypographyAndLayout()
+        {
+            var project = ProjectWithScene();
+            string guid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = guid;
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 37f;
+            project.defaultPresentation.typography.hasDialogueColor = true;
+            project.defaultPresentation.typography.dialogueColor = new Color(.2f, .7f, .9f, .65f);
+            project.defaultPresentation.dialogueText.hasPositionDelta = true;
+            project.defaultPresentation.dialogueText.positionDelta = new Vector2(25f, -14f);
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+
+            Assert.That(loaded.defaultPresentation.typography.dialogueFontAssetGuid, Is.EqualTo(guid));
+            Assert.That(loaded.defaultPresentation.typography.dialogueFontSize, Is.EqualTo(37f));
+            Assert.That(loaded.defaultPresentation.typography.dialogueColor.a, Is.EqualTo(.65f).Within(.001f));
+            Assert.That(loaded.defaultPresentation.dialogueText.positionDelta, Is.EqualTo(new Vector2(25f, -14f)));
+        }
+
+        [Test]
+        public void MText_UndoRestoresSharedTypographyLayout()
         {
             VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
             try
             {
                 window.ComposerAddScene();
-                window.ComposerPlayScene();
-                object playback = Field(window, "_sceneComposerPlayback");
-                string firstId = window.ComposerAddText();
-                Assert.That(firstId, Is.Not.Empty);
-                Assert.That(Field(window, "_sceneComposerPlayback"), Is.SameAs(playback));
+                Undo.ClearAll();
+                window.ComposerSetSharedDialogueTypography(
+                    string.Empty, 48f, new Color(.7f, .4f, .2f, .8f),
+                    VnWorkshopTextAlignment.Center, new Vector2(33f, 12f), new Vector2(80f, 20f));
+                Undo.FlushUndoRecordObjects();
 
-                window.ComposerSetSelectedTextContent("Глава 1\n上海");
-                window.ComposerSetSelectedTextPosition(new Vector2(410f, 130f));
-                window.ComposerSetSelectedTextSize(new Vector2(900f, 190f));
-                window.ComposerSetSelectedTextFontSize(72f);
-                window.ComposerSetSelectedTextColor(new Color(.8f, .6f, .4f, 1f));
-                window.ComposerSetSelectedTextOpacity(.55f);
-                window.ComposerSetSelectedTextAlignment(VnSceneComposerTextAlignment.Right);
-                window.ComposerSetSelectedTextLayer(VnSceneComposerTextLayer.BehindCharacters);
-                window.ComposerSetSelectedTextVisible(false);
+                Assert.That(Project(window).defaultPresentation.typography.dialogueFontSize, Is.EqualTo(48f));
+                Undo.PerformUndo();
 
-                VnSceneComposerTextElement edited = Texts(Scene(window))[0];
-                Assert.That(edited.text, Is.EqualTo("Глава 1\n上海"));
-                Assert.That(edited.position, Is.EqualTo(new Vector2(410f, 130f)));
-                Assert.That(edited.size, Is.EqualTo(new Vector2(900f, 190f)));
-                Assert.That(edited.fontSize, Is.EqualTo(72f));
-                Assert.That(edited.opacity, Is.EqualTo(.55f).Within(.001f));
-                Assert.That(edited.alignment, Is.EqualTo(VnSceneComposerTextAlignment.Right));
-                Assert.That(edited.layer, Is.EqualTo(VnSceneComposerTextLayer.BehindCharacters));
-                Assert.That(edited.visible, Is.False);
-                Assert.That(Field(window, "_sceneComposerPlayback"), Is.SameAs(playback));
-
-                string secondId = window.ComposerDuplicateSelectedText();
-                Assert.That(secondId, Is.Not.EqualTo(firstId));
-                Assert.That(Texts(Scene(window)), Has.Count.EqualTo(2));
-                Assert.That(window.ComposerDeleteSelectedText(), Is.True);
-                Assert.That(Texts(Scene(window)), Has.Count.EqualTo(1));
+                VnWorkshopTypographyValues restored =
+                    VnPresentationWorkshopVn10Resolver.ResolveTypography(Project(window).defaultPresentation);
+                Assert.That(restored.DialogueFontSize, Is.EqualTo(22f).Within(.001f));
+                Assert.That(Project(window).defaultPresentation.dialogueText.hasPositionDelta, Is.False);
             }
             finally
             {
@@ -177,192 +284,208 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MText_AddEditAndDeleteParticipateInExistingUnityUndo()
-        {
-            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
-            try
-            {
-                window.ComposerAddScene();
-                Undo.ClearAll();
-
-                window.ComposerAddText();
-                Undo.FlushUndoRecordObjects();
-                Assert.That(Texts(Scene(window)), Has.Count.EqualTo(1));
-                Undo.PerformUndo();
-                Assert.That(Texts(Scene(window)), Is.Empty);
-
-                window.ComposerAddText();
-                Undo.FlushUndoRecordObjects();
-                Undo.ClearAll();
-                string id = window.ComposerGetSelectedTextId();
-
-                window.ComposerSetSelectedTextContent("Undo me");
-                Undo.FlushUndoRecordObjects();
-                Assert.That(Texts(Scene(window))[0].text, Is.EqualTo("Undo me"));
-                Undo.PerformUndo();
-                Assert.That(Texts(Scene(window))[0].text, Is.EqualTo("Новый текст"));
-
-                Undo.ClearAll();
-                window.ComposerSelectText(id);
-                window.ComposerDeleteSelectedText();
-                Undo.FlushUndoRecordObjects();
-                Assert.That(Texts(Scene(window)), Is.Empty);
-                Undo.PerformUndo();
-                Assert.That(Texts(Scene(window)), Has.Count.EqualTo(1));
-            }
-            finally
-            {
-                Undo.ClearAll();
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void MText_PreviewAndPlaySceneUseSameAuthoritativeTextFrame()
+        public void MText_PreviewAndPlaySceneResolveIdenticalTypography()
         {
             var project = ProjectWithScene();
-            string fontGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
-            project.scenes[0].textElements.Add(Text("55555555555555555555555555555555", "LOCATION", fontGuid));
+            string guid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            project.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
+            project.defaultPresentation.typography.speakerFontAssetGuid = guid;
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = guid;
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 41f;
+            project.defaultPresentation.typography.hasDialogueAlignment = true;
+            project.defaultPresentation.typography.dialogueAlignment = VnWorkshopTextAlignment.Center;
+            project.defaultPresentation.dialogueText.hasPositionDelta = true;
+            project.defaultPresentation.dialogueText.positionDelta = new Vector2(20f, 11f);
 
             VnWorkshopPreviewFrame preview = VnSceneComposerComposition.BuildFrame(
                 project, project.scenes[0], VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
-            Assert.That(preview.ComposerTexts, Has.Length.EqualTo(1));
 
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayScene(0);
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts, Has.Length.EqualTo(1));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].TextElementId,
-                    Is.EqualTo(preview.ComposerTexts[0].TextElementId));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].Text,
-                    Is.EqualTo(preview.ComposerTexts[0].Text));
+                VnWorkshopPreviewFrame play = playback.CurrentFrame.WorkshopFrame;
+                Assert.That(play.DialogueFont.name, Is.EqualTo(preview.DialogueFont.name));
+                Assert.That(play.SpeakerFont.name, Is.EqualTo(preview.SpeakerFont.name));
+                Assert.That(play.Typography.DialogueFontSize, Is.EqualTo(preview.Typography.DialogueFontSize));
+                Assert.That(play.Typography.DialogueAlignment, Is.EqualTo(preview.Typography.DialogueAlignment));
+                Assert.That(play.DialogueText, Is.EqualTo(preview.DialogueText));
             }
         }
 
         [Test]
-        public void MText_DialogueBeatAdvanceKeepsStaticSceneText()
+        public void MText_MissingProjectFontWarnsButDialogueRemainsVisibleAndReferenceSurvives()
         {
             var project = ProjectWithScene();
-            string fontGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
-            project.scenes[0].textElements.Add(Text("66666666666666666666666666666666", "STATIC", fontGuid));
-            project.scenes[0].dialogueBeats.Add(new VnSceneComposerDialogueBeat { speaker = "Mina", text = "Second" });
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = MissingGuid;
 
-            using (var playback = new VnSceneComposerPlaybackController(project))
-            {
-                playback.PlayScene(0);
-                string id = playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].TextElementId;
-                playback.AdvanceDialogue();
-                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(1));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts, Has.Length.EqualTo(1));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].TextElementId, Is.EqualTo(id));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].Text, Is.EqualTo("STATIC"));
-            }
+            VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+            Assert.That(frame.DialogueFont, Is.Not.Null);
+            Assert.That(frame.Dialogue, Is.EqualTo("Первая реплика"));
+            Assert.That(project.defaultPresentation.typography.dialogueFontAssetGuid, Is.EqualTo(MissingGuid));
+
+            bool valid = VnSceneComposerSerialization.ValidateProject(project, out string error, out string[] warnings);
+            Assert.That(valid, Is.True, error);
+            Assert.That(warnings, Has.Some.Contains("font"));
         }
 
         [Test]
-        public void MText_SceneTransitionKeepsOutgoingTextUntilCoveredSwapThenUsesIncomingOnly()
+        public void MText_ExistingRokasSansTmpPathStillResolves()
         {
+            string guid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            Assert.That(guid, Is.Not.Empty);
+            Assert.That(VnSceneComposerTextFontResolver.TryResolvePreviewFont(
+                guid, out Font font, out string warning), Is.True, warning);
+            Assert.That(font, Is.Not.Null);
+        }
+
+        [Test]
+        public void MText_TransitionRevealUsesAuthoredTypographyWithoutDefaultFlash()
+        {
+            VnSceneComposerFontImportResult imported = ImportTestFont("MText Transition Face");
             var project = new VnSceneComposerProject();
-            string fontGuid = AssetDatabase.AssetPathToGUID(DefaultTmpPath);
-            var outgoing = new VnSceneComposerScene { label = "Outgoing" };
-            var incoming = new VnSceneComposerScene { label = "Incoming" };
-            outgoing.textElements.Add(Text("77777777777777777777777777777777", "OUT", fontGuid));
-            incoming.textElements.Add(Text("88888888888888888888888888888888", "IN", fontGuid));
-            incoming.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.DarkCurtain;
-            incoming.transition.sceneTransitionDirection = VnSceneComposerSceneTransitionDirection.LeftToRight;
-            incoming.transition.sceneTransitionDuration = 1f;
-            project.scenes.Add(outgoing);
-            project.scenes.Add(incoming);
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid = imported.TmpFontAssetGuid;
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 43f;
+
+            var first = new VnSceneComposerScene { label = "First" };
+            first.dialogueBeats[0].text = "One";
+            var second = new VnSceneComposerScene { label = "Second" };
+            second.dialogueBeats[0].text = "Two";
+            second.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.DarkCurtain;
+            second.transition.sceneTransitionDuration = 1f;
+            project.scenes.Add(first);
+            project.scenes.Add(second);
 
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayFromHere(0);
                 playback.Next();
-                playback.Advance(.49f);
-                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(0));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].Text, Is.EqualTo("OUT"));
-
-                playback.Advance(.02f);
+                playback.Advance(.51f);
                 Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts, Has.Length.EqualTo(1));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts[0].Text, Is.EqualTo("IN"));
-                Assert.That(playback.CurrentFrame.WorkshopFrame.ComposerTexts.Any(t => t.Text == "OUT"), Is.False);
-                Assert.That(playback.CurrentFrame.SceneTransitionOverlay.Coverage, Is.GreaterThan(.95f));
+                Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.DialogueFontAssetGuid,
+                    Is.EqualTo(imported.TmpFontAssetGuid));
+                Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.DialogueFontSize, Is.EqualTo(43f));
             }
         }
 
         [Test]
-        public void MText_AuthoringUiExposesAddTextWithoutReplacingDialogueAuthoring()
+        public void MText_DuplicateSceneUsesSameSharedTypographyProfile()
+        {
+            var project = ProjectWithScene();
+            project.defaultPresentation.typography.hasSpeakerFontSize = true;
+            project.defaultPresentation.typography.speakerFontSize = 33f;
+            project.defaultPresentation.speakerName.hasPositionDelta = true;
+            project.defaultPresentation.speakerName.positionDelta = new Vector2(17f, 9f);
+
+            VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(project, project.scenes[0].sceneId);
+            VnWorkshopPreviewFrame originalFrame = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+            VnWorkshopPreviewFrame copyFrame = VnSceneComposerComposition.BuildFrame(
+                project, copy, VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+
+            Assert.That(copyFrame.Typography.SpeakerFontSize, Is.EqualTo(originalFrame.Typography.SpeakerFontSize));
+            Assert.That(copyFrame.SpeakerName, Is.EqualTo(originalFrame.SpeakerName));
+        }
+
+        [Test]
+        public void MText_AuthoringUiUsesExistingSpeakerAndDialogueInsteadOfStandaloneTextObjects()
         {
             string root = Path.Combine(Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop");
             string window = File.ReadAllText(Path.Combine(root, "VnPresentationWorkshopWindow.SceneComposer.cs"));
-            string textUi = File.ReadAllText(Path.Combine(root, "VnPresentationWorkshopWindow.SceneComposerTextElements.cs"));
+            string typographyUi = File.ReadAllText(
+                Path.Combine(root, "VnPresentationWorkshopWindow.SceneComposerTextElements.cs"));
 
-            Assert.That(window, Does.Contain("DrawSceneComposerArbitraryTextInspector(scene)")
-                .And.Contain("\"Реплики\""));
-            Assert.That(textUi, Does.Contain("\"+ Добавить текст\"")
-                .And.Contain("\"Текст сцены\"")
-                .And.Contain("TextArea"));
+            Assert.That(window, Does.Not.Contain("DrawSceneComposerArbitraryTextInspector(scene)"));
+            Assert.That(typographyUi, Does.Not.Contain("+ Добавить текст"));
+            Assert.That(window, Does.Contain(""Говорящий"").And.Contain(""Текст реплики""));
+            Assert.That(typographyUi, Does.Contain("Изменить текст говорящего")
+                .And.Contain("Изменить текст реплики")
+                .And.Contain("GetInstalledWindowsFonts"));
         }
 
         [Test]
-        public void MText_DefaultFontIsProjectTmpAssetAndNoWindowsFontDependencyIsIntroduced()
+        public void MText_TmpFallbackCanBeConfiguredWithoutDuplicateEntries()
         {
-            UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(DefaultTmpPath);
-            Assert.That(asset, Is.Not.Null);
-            Assert.That(asset.GetType().Name, Is.EqualTo("TMP_FontAsset"));
+            VnSceneComposerFontImportResult primary = ImportTestFont("MText Primary Face");
+            VnSceneComposerFontImportResult fallback = ImportTestFont("MText Fallback Face");
 
-            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
-            try
-            {
-                window.ComposerAddScene();
-                window.ComposerAddText();
-                VnSceneComposerTextElement element = Texts(Scene(window))[0];
-                Assert.That(element.fontAssetGuid, Is.EqualTo(AssetDatabase.AssetPathToGUID(DefaultTmpPath)));
-                Assert.That(element.fontAssetGuid, Is.Not.Empty);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
+            Assert.That(VnSceneComposerTextFontResolver.ConfigureFallback(
+                primary.TmpFontAssetGuid, fallback.TmpFontAssetGuid, out string error), Is.True, error);
+            Assert.That(VnSceneComposerTextFontResolver.ConfigureFallback(
+                primary.TmpFontAssetGuid, fallback.TmpFontAssetGuid, out error), Is.True, error);
+
+            string description = VnSceneComposerTextFontResolver.DescribeFallbacks(
+                VnSceneComposerTextFontResolver.ResolveAsset(primary.TmpFontAssetGuid));
+            Assert.That(description, Does.Contain("1"));
+        }
+
+        [Test]
+        public void MText_InstalledFontEnumerationIsSafeAndVariantAware()
+        {
+            VnSceneComposerInstalledFontFace[] faces = VnSceneComposerTextFontResolver.GetInstalledWindowsFonts();
+            Assert.That(faces, Is.Not.Null);
+#if UNITY_EDITOR_WIN
+            Assert.That(faces, Is.Not.Empty);
+            Assert.That(faces, Has.All.Matches<VnSceneComposerInstalledFontFace>(
+                f => f != null && !string.IsNullOrWhiteSpace(f.DisplayName) &&
+                     (f.SourcePath.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                      f.SourcePath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))));
+#endif
+        }
+
+        private VnSceneComposerFontImportResult ImportTestFont(string displayName)
+        {
+            VnSceneComposerFontImportResult result =
+                VnSceneComposerTextFontResolver.ImportProjectFont(DefaultSourcePath, displayName);
+            Assert.That(result.Success, Is.True, result.Error);
+            Remember(result.SourceAssetPath);
+            Remember(result.TmpFontAssetPath);
+            return result;
+        }
+
+        private void Remember(string path)
+        {
+            if (!string.IsNullOrEmpty(path) && !_createdAssets.Contains(path))
+                _createdAssets.Add(path);
         }
 
         private static VnSceneComposerProject ProjectWithScene()
         {
             var project = new VnSceneComposerProject();
-            project.scenes.Add(new VnSceneComposerScene());
+            var scene = new VnSceneComposerScene();
+            scene.dialogueBeats[0].speaker = "KEIKO";
+            scene.dialogueBeats[0].text = "Первая реплика";
+            project.scenes.Add(scene);
             return project;
         }
 
-        private static VnSceneComposerTextElement Text(string id, string value, string fontGuid)
+        private static VnSceneComposerProject ProjectWithTwoBeats()
         {
-            return new VnSceneComposerTextElement
+            VnSceneComposerProject project = ProjectWithScene();
+            project.scenes[0].dialogueBeats.Add(new VnSceneComposerDialogueBeat
             {
-                textElementId = id,
-                text = value,
-                fontAssetGuid = fontGuid,
-                fontDisplayName = "RokasSans TMP",
-                fontSize = 48f,
-                position = new Vector2(960f, 360f),
-                size = new Vector2(720f, 160f),
-                color = Color.white,
-                opacity = 1f,
-                alignment = VnSceneComposerTextAlignment.Center,
-                visible = true,
-                layer = VnSceneComposerTextLayer.FrontCharacters
-            };
+                speaker = "MINA",
+                text = "Вторая реплика"
+            });
+            return project;
         }
 
-        private static VnSceneComposerScene Scene(VnPresentationWorkshopWindow window)
+        private static VnSceneComposerProject RoundTrip(VnSceneComposerProject project)
         {
-            object project = Field(window, "_sceneComposerProject");
-            IList scenes = (IList)project.GetType().GetField("scenes").GetValue(project);
-            return (VnSceneComposerScene)scenes[0];
+            string json = VnSceneComposerSerialization.SerializePortable(project);
+            VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(json);
+            Assert.That(loaded.Success, Is.True, loaded.Error);
+            return loaded.Project;
         }
 
-        private static System.Collections.Generic.List<VnSceneComposerTextElement> Texts(VnSceneComposerScene scene)
+        private static VnSceneComposerProject Project(VnPresentationWorkshopWindow window)
         {
-            return scene.textElements;
+            return (VnSceneComposerProject)Field(window, "_sceneComposerProject");
         }
 
         private static object Field(object instance, string name)
