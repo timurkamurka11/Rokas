@@ -78,7 +78,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerSetSelectedDecorationScale(float scale)
         {
-            if (!IsFinite(scale)) throw new ArgumentException("Decoration scale must be finite.", nameof(scale));
+            if (!IsFiniteDecorationValue(scale)) throw new ArgumentException("Decoration scale must be finite.", nameof(scale));
             VnSceneComposerDecoration decoration = RequireSelectedDecoration();
             RecordSceneComposerUndo("Scale VN Scene Decoration");
             decoration.scale = Mathf.Clamp(scale, .05f, 5f);
@@ -87,7 +87,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerSetSelectedDecorationOpacity(float opacity)
         {
-            if (!IsFinite(opacity)) throw new ArgumentException("Decoration opacity must be finite.", nameof(opacity));
+            if (!IsFiniteDecorationValue(opacity)) throw new ArgumentException("Decoration opacity must be finite.", nameof(opacity));
             VnSceneComposerDecoration decoration = RequireSelectedDecoration();
             RecordSceneComposerUndo("Change VN Scene Decoration Opacity");
             decoration.opacity = Mathf.Clamp01(opacity);
@@ -208,6 +208,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (decoration == null) return;
             decoration.position += logicalDelta;
             MarkSceneComposerChanged();
+        }
+
+        private static bool IsFiniteDecorationValue(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         internal void TrySceneComposerDecorationAction(Action action)
