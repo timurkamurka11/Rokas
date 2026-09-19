@@ -402,7 +402,7 @@ namespace Rokas.EditorTools.Tests
 
             Assert.That(window, Does.Not.Contain("DrawSceneComposerArbitraryTextInspector(scene)"));
             Assert.That(typographyUi, Does.Not.Contain("+ Добавить текст"));
-            Assert.That(window, Does.Contain("\\\"Говорящий\\\"").And.Contain("\\\"Текст реплики\\\""));
+            Assert.That(window, Does.Contain("\"Говорящий\"").And.Contain("\"Текст реплики\""));
             Assert.That(typographyUi, Does.Contain("Изменить текст говорящего")
                 .And.Contain("Изменить текст реплики")
                 .And.Contain("GetInstalledWindowsFonts"));
