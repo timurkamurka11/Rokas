@@ -1176,8 +1176,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
-            DrawSceneComposerArbitraryTextInspector(scene);
-            EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Реплики", EditorStyles.miniBoldLabel);
 
             VnSceneComposerDialogueBeat selectedBeat = ComposerGetSelectedDialogueBeat();
@@ -1322,21 +1320,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
 
+            DrawSceneComposerDialogueTypographyInspector(scene);
+
             VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
-            VnWorkshopTypographyValues typography = VnPresentationWorkshopVn10Resolver.ResolveTypography(effective);
             VnWorkshopTypewriterValues typewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(effective);
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Оформление текста", EditorStyles.miniBoldLabel);
-            int fontIndex = typography.DialogueFontPreset == VnWorkshopFontPreset.ProjectSerif ? 1 : 0;
+            EditorGUILayout.LabelField("Появление текста", EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
-            int nextFontIndex = EditorGUILayout.Popup("Шрифт", fontIndex, new[] { "Без засечек", "С засечками" });
-            float nextFontSize = EditorGUILayout.Slider("Размер текста", typography.DialogueFontSize, 8f, 96f);
-            float nextSpeed = EditorGUILayout.Slider(new GUIContent("Скорость текста", "Скорость появления символов во время реплики."), typewriter.CharactersPerSecond, 1f, 240f);
+            float nextSpeed = EditorGUILayout.Slider(
+                new GUIContent("Скорость текста", "Скорость появления символов во время реплики."),
+                typewriter.CharactersPerSecond, 1f, 240f);
             if (EditorGUI.EndChangeCheck())
-            {
-                VnWorkshopFontPreset nextFont = nextFontIndex == 1 ? VnWorkshopFontPreset.ProjectSerif : VnWorkshopFontPreset.ProjectSans;
-                SetSceneComposerBasicTextStyle(nextFont, nextFontSize, nextSpeed);
-            }
+                SetSceneComposerTypewriterSpeed(nextSpeed);
 
             DrawSceneComposerDialoguePanelVisualControls(scene);
         }
@@ -1412,23 +1407,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 EditorGUILayout.HelpBox(warning, MessageType.Warning);
         }
 
-        private void SetSceneComposerBasicTextStyle(VnWorkshopFontPreset dialogueFontPreset, float dialogueFontSize, float charactersPerSecond)
+        private void SetSceneComposerTypewriterSpeed(float charactersPerSecond)
         {
             EnsureSceneComposerProject();
             VnPresentationWorkshopPreset inheritedPreset = _sceneComposerPresentationProjectDefaults
                 ? new VnPresentationWorkshopPreset()
                 : (_sceneComposerProject.defaultPresentation ?? new VnPresentationWorkshopPreset());
-            VnWorkshopTypographyValues inheritedTypography = VnPresentationWorkshopVn10Resolver.ResolveTypography(inheritedPreset);
-            VnWorkshopTypewriterValues inheritedTypewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(inheritedPreset);
-            MutateComposerPresentation("Edit VN Scene Basic Text Style", preset =>
+            VnWorkshopTypewriterValues inheritedTypewriter =
+                VnPresentationWorkshopVn10Resolver.ResolveTypewriter(inheritedPreset);
+            MutateComposerPresentation("Edit VN Scene Typewriter Speed", preset =>
             {
-                if (preset.typography == null) preset.typography = new VnWorkshopTypographyOverride();
                 if (preset.typewriter == null) preset.typewriter = new VnWorkshopTypewriterOverride();
-                preset.typography.hasDialogueFontPreset = dialogueFontPreset != inheritedTypography.DialogueFontPreset;
-                preset.typography.dialogueFontPreset = dialogueFontPreset;
-                preset.typography.hasDialogueFontSize = !Mathf.Approximately(dialogueFontSize, inheritedTypography.DialogueFontSize);
-                preset.typography.dialogueFontSize = dialogueFontSize;
-                preset.typewriter.hasCharactersPerSecond = !Mathf.Approximately(charactersPerSecond, inheritedTypewriter.CharactersPerSecond);
+                preset.typewriter.hasCharactersPerSecond =
+                    !Mathf.Approximately(charactersPerSecond, inheritedTypewriter.CharactersPerSecond);
                 preset.typewriter.charactersPerSecond = charactersPerSecond;
             });
         }

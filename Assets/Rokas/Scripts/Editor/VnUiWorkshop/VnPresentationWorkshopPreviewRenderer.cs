@@ -45,9 +45,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 new VnWorkshopTypographyValues
                 {
                     DialogueFontPreset = VnWorkshopFontPreset.ProjectSans,
+                    DialogueFontAssetGuid = string.Empty,
+                    DialogueColor = Color.white,
                     DialogueFontSize = 22f,
                     DialogueAlignment = VnWorkshopTextAlignment.Left,
                     SpeakerFontPreset = VnWorkshopFontPreset.ProjectSans,
+                    SpeakerFontAssetGuid = string.Empty,
+                    SpeakerColor = Color.white,
+                    SpeakerAlignment = VnWorkshopTextAlignment.Left,
                     SpeakerFontSize = 26f
                 },
                 minaTexture, minaUv, keikoTexture, keikoUv, dialoguePanel, minaBody, keikoBody, speakerName,
@@ -144,8 +149,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; } = Array.Empty<VnWorkshopPreviewCharacter>();
         public VnWorkshopPreviewDecoration[] ComposerDecorations { get; internal set; } = Array.Empty<VnWorkshopPreviewDecoration>();
         public string[] ComposerDecorationWarnings { get; internal set; } = Array.Empty<string>();
-        public VnWorkshopPreviewText[] ComposerTexts { get; internal set; } = Array.Empty<VnWorkshopPreviewText>();
-        public string[] ComposerTextWarnings { get; internal set; } = Array.Empty<string>();
+        public string DialogueFontWarning { get; internal set; } = string.Empty;
+        public string SpeakerFontWarning { get; internal set; } = string.Empty;
 
         public Rect GetElementRect(VnWorkshopElement element)
         {
@@ -227,8 +232,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnCharacterVisualState keikoState = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
             VnWorkshopFocusValues focus = VnPresentationWorkshopResolver.ResolveFocus(preset);
             VnWorkshopTypographyValues typography = VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
-            Font dialogueFont = ResolveFont(assets, typography.DialogueFontPreset);
-            Font speakerFont = ResolveFont(assets, typography.SpeakerFontPreset);
+            Font dialogueFont = ResolveAuthoredFont(
+                assets, typography.DialogueFontAssetGuid, typography.DialogueFontPreset,
+                out string dialogueFontWarning);
+            Font speakerFont = ResolveAuthoredFont(
+                assets, typography.SpeakerFontAssetGuid, typography.SpeakerFontPreset,
+                out string speakerFontWarning);
 
             Rect minaBody = BuildCharacterRect(assets.vnMinaCharacterSheet, minaState.BodyUv, virtualCanvas, 0f);
             Rect keikoBody = BuildCharacterRect(assets.vnKeikoCharacterSheet, keikoState.BodyUv, virtualCanvas, 0f);
@@ -249,6 +258,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 panel, minaBody, keikoBody, speakerName, dialogueText, mute, pause, skip, back, next,
                 speaker, dialogue, showMina, showKeiko, focus);
             frame.DialoguePanelWarning = dialoguePanelWarning;
+            frame.DialogueFontWarning = dialogueFontWarning;
+            frame.SpeakerFontWarning = speakerFontWarning;
             return frame;
         }
 
@@ -306,7 +317,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
-                DrawComposerTexts(localCanvas, frame, VnSceneComposerTextLayer.BehindCharacters);
                 if (frame.ComposerCharacters != null)
                 {
                     for (int i = 0; i < frame.ComposerCharacters.Length; i++)
@@ -328,18 +338,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
 
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters);
-                DrawComposerTexts(localCanvas, frame, VnSceneComposerTextLayer.FrontCharacters);
 
                 if (ShouldDrawRegisteredPlaybackDialogue(frame))
                 {
                     GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
                         ScaleMode.StretchToFill, true);
 
+                    FontStyle speakerStyle = string.IsNullOrWhiteSpace(frame.Typography.SpeakerFontAssetGuid)
+                        ? FontStyle.Bold
+                        : FontStyle.Normal;
                     DrawText(LogicalToPreview(localCanvas, frame.SpeakerName, frame), frame.Speaker,
-                        frame.SpeakerFont, Mathf.RoundToInt(frame.Typography.SpeakerFontSize), FontStyle.Bold);
+                        frame.SpeakerFont, Mathf.RoundToInt(frame.Typography.SpeakerFontSize), speakerStyle,
+                        ToTextAnchor(frame.Typography.SpeakerAlignment), frame.Typography.SpeakerColor, 1f);
                     DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue,
                         frame.DialogueFont, Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
-                        ToTextAnchor(frame.Typography.DialogueAlignment));
+                        ToTextAnchor(frame.Typography.DialogueAlignment), frame.Typography.DialogueColor, 1f);
 
                     bool replaceBack = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
                         ShouldReplaceIndependentUiFeedbackControl(
@@ -442,6 +455,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private static Font ResolveAuthoredFont(
+            RokasAssets assets, string projectFontAssetGuid, VnWorkshopFontPreset fallbackPreset,
+            out string warning)
+        {
+            if (!string.IsNullOrWhiteSpace(projectFontAssetGuid))
+            {
+                if (VnSceneComposerTextFontResolver.TryResolvePreviewFont(
+                        projectFontAssetGuid, out Font authored, out warning) && authored != null)
+                    return authored;
+
+                if (string.IsNullOrEmpty(warning))
+                    warning = "font asset не найден; используется RokasSans/default font.";
+                return ResolveFont(assets, fallbackPreset);
+            }
+
+            warning = string.Empty;
+            return ResolveFont(assets, fallbackPreset);
+        }
+
         private static Font ResolveFont(RokasAssets assets, VnWorkshopFontPreset preset)
         {
             switch (preset)
@@ -537,23 +569,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 GUI.DrawTexture(LogicalToPreview(canvasRect, decoration.Body, frame),
                     decoration.Texture, ScaleMode.StretchToFill, true);
                 GUI.color = previous;
-            }
-        }
-
-        private static void DrawComposerTexts(
-            Rect canvasRect, VnWorkshopPreviewFrame frame, VnSceneComposerTextLayer layer)
-        {
-            if (frame == null || frame.ComposerTexts == null) return;
-            for (int i = 0; i < frame.ComposerTexts.Length; i++)
-            {
-                VnWorkshopPreviewText text = frame.ComposerTexts[i];
-                if (text == null || text.Font == null || text.Layer != layer) continue;
-                Rect rect = LogicalToPreview(canvasRect, text.Body, frame);
-                TextAnchor alignment = TextAnchor.MiddleLeft;
-                if (text.Alignment == VnSceneComposerTextAlignment.Center) alignment = TextAnchor.MiddleCenter;
-                else if (text.Alignment == VnSceneComposerTextAlignment.Right) alignment = TextAnchor.MiddleRight;
-                DrawText(rect, text.Text, text.Font, Mathf.RoundToInt(text.FontSize), FontStyle.Normal,
-                    alignment, text.Color, text.Alpha);
             }
         }
 

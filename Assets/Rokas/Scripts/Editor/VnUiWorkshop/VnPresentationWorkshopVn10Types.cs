@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace Rokas.EditorTools.VnUiWorkshop
 {
@@ -20,6 +21,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public bool hasDialogueFontPreset;
         public VnWorkshopFontPreset dialogueFontPreset;
+        public bool hasDialogueFontAssetGuid;
+        public string dialogueFontAssetGuid = string.Empty;
+        public bool hasDialogueColor;
+        public Color dialogueColor = Color.white;
         public bool hasDialogueFontSize;
         public float dialogueFontSize;
         public bool hasDialogueCharacterSpacing;
@@ -33,6 +38,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public bool hasSpeakerFontPreset;
         public VnWorkshopFontPreset speakerFontPreset;
+        public bool hasSpeakerFontAssetGuid;
+        public string speakerFontAssetGuid = string.Empty;
+        public bool hasSpeakerColor;
+        public Color speakerColor = Color.white;
+        public bool hasSpeakerAlignment;
+        public VnWorkshopTextAlignment speakerAlignment;
         public bool hasSpeakerFontSize;
         public float speakerFontSize;
         public bool hasSpeakerCharacterSpacing;
@@ -42,11 +53,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             get
             {
-                return hasDialogueFontPreset || hasDialogueFontSize ||
+                return hasDialogueFontPreset || hasDialogueFontAssetGuid || hasDialogueColor || hasDialogueFontSize ||
                        hasDialogueCharacterSpacing || hasDialogueLineSpacing ||
                        hasDialogueParagraphSpacing || hasDialogueAlignment ||
-                       hasSpeakerFontPreset || hasSpeakerFontSize ||
-                       hasSpeakerCharacterSpacing;
+                       hasSpeakerFontPreset || hasSpeakerFontAssetGuid || hasSpeakerColor || hasSpeakerAlignment ||
+                       hasSpeakerFontSize || hasSpeakerCharacterSpacing;
             }
         }
 
@@ -54,6 +65,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             hasDialogueFontPreset = false;
             dialogueFontPreset = VnWorkshopFontPreset.ProjectSans;
+            hasDialogueFontAssetGuid = false;
+            dialogueFontAssetGuid = string.Empty;
+            hasDialogueColor = false;
+            dialogueColor = Color.white;
             hasDialogueFontSize = false;
             dialogueFontSize = 0f;
             hasDialogueCharacterSpacing = false;
@@ -67,6 +82,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             hasSpeakerFontPreset = false;
             speakerFontPreset = VnWorkshopFontPreset.ProjectSans;
+            hasSpeakerFontAssetGuid = false;
+            speakerFontAssetGuid = string.Empty;
+            hasSpeakerColor = false;
+            speakerColor = Color.white;
+            hasSpeakerAlignment = false;
+            speakerAlignment = VnWorkshopTextAlignment.Left;
             hasSpeakerFontSize = false;
             speakerFontSize = 0f;
             hasSpeakerCharacterSpacing = false;
@@ -77,12 +98,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public struct VnWorkshopTypographyValues
     {
         public VnWorkshopFontPreset DialogueFontPreset;
+        public string DialogueFontAssetGuid;
+        public Color DialogueColor;
         public float DialogueFontSize;
         public float DialogueCharacterSpacing;
         public float DialogueLineSpacing;
         public float DialogueParagraphSpacing;
         public VnWorkshopTextAlignment DialogueAlignment;
         public VnWorkshopFontPreset SpeakerFontPreset;
+        public string SpeakerFontAssetGuid;
+        public Color SpeakerColor;
+        public VnWorkshopTextAlignment SpeakerAlignment;
         public float SpeakerFontSize;
         public float SpeakerCharacterSpacing;
     }

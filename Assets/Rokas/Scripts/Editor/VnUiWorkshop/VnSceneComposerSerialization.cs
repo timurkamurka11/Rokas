@@ -186,6 +186,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 warnings = diagnostics.ToArray();
                 return false;
             }
+            AppendTypographyFontWarnings(project.defaultPresentation, "shared dialogue typography", diagnostics);
             if (project.scenes == null)
             {
                 error = "Scene Composer ordered scene list is missing.";
@@ -555,6 +556,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnPresentationWorkshopPreset resolved = VnSceneComposerComposition.ResolvePresentation(project, scene);
                 if (!ValidatePresentation(resolved, out error)) return false;
+                AppendTypographyFontWarnings(resolved, "scene " + scene.sceneId + " dialogue typography", diagnostics);
             }
             catch (Exception exception)
             {
@@ -771,6 +773,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             error = string.Empty;
             return true;
+        }
+
+        private static void AppendTypographyFontWarnings(
+            VnPresentationWorkshopPreset preset, string context, List<string> diagnostics)
+        {
+            if (preset == null || preset.typography == null || diagnostics == null) return;
+            AppendFontWarning(preset.typography.hasSpeakerFontAssetGuid
+                    ? preset.typography.speakerFontAssetGuid : string.Empty,
+                context + " speaker font", diagnostics);
+            AppendFontWarning(preset.typography.hasDialogueFontAssetGuid
+                    ? preset.typography.dialogueFontAssetGuid : string.Empty,
+                context + " dialogue font", diagnostics);
+        }
+
+        private static void AppendFontWarning(string guid, string label, List<string> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(guid)) return;
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(assetPath) &&
+                VnSceneComposerTextFontResolver.ResolveAsset(guid) != null) return;
+            string warning = label + ": project font asset is missing; authored GUID is preserved and RokasSans will be used.";
+            if (!diagnostics.Contains(warning)) diagnostics.Add(warning);
         }
 
         private static bool ValidatePresentation(VnPresentationWorkshopPreset preset, out string error)

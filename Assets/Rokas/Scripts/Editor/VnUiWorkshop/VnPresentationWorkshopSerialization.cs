@@ -222,6 +222,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (preset.skipHitRegion == null) preset.skipHitRegion = new VnWorkshopElementOverride();
             if (preset.focus == null) preset.focus = new VnWorkshopFocusOverride();
             if (preset.typography == null) preset.typography = new VnWorkshopTypographyOverride();
+            if (preset.typography.dialogueFontAssetGuid == null)
+                preset.typography.dialogueFontAssetGuid = string.Empty;
+            if (preset.typography.speakerFontAssetGuid == null)
+                preset.typography.speakerFontAssetGuid = string.Empty;
             if (preset.typewriter == null) preset.typewriter = new VnWorkshopTypewriterOverride();
             if (preset.timing == null) preset.timing = new VnWorkshopTimingOverride();
             if (preset.expressionTransition == null) preset.expressionTransition = new VnWorkshopExpressionTransitionOverride();

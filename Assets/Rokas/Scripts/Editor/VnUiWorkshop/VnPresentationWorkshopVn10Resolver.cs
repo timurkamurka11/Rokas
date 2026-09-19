@@ -9,12 +9,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static readonly VnWorkshopTypographyValues TypographyBaseline = new VnWorkshopTypographyValues
         {
             DialogueFontPreset = VnWorkshopFontPreset.ProjectSans,
+            DialogueFontAssetGuid = string.Empty,
+            DialogueColor = Color.white,
             DialogueFontSize = 22f,
             DialogueCharacterSpacing = 0f,
             DialogueLineSpacing = 0f,
             DialogueParagraphSpacing = 0f,
             DialogueAlignment = VnWorkshopTextAlignment.Left,
             SpeakerFontPreset = VnWorkshopFontPreset.ProjectSans,
+            SpeakerFontAssetGuid = string.Empty,
+            SpeakerColor = Color.white,
+            SpeakerAlignment = VnWorkshopTextAlignment.Left,
             SpeakerFontSize = 26f,
             SpeakerCharacterSpacing = 0f
         };
@@ -84,12 +89,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopTypographyValues values = TypographyBaseline;
 
             if (source.hasDialogueFontPreset) values.DialogueFontPreset = source.dialogueFontPreset;
+            if (source.hasDialogueFontAssetGuid) values.DialogueFontAssetGuid = source.dialogueFontAssetGuid ?? string.Empty;
+            if (source.hasDialogueColor) values.DialogueColor = source.dialogueColor;
             if (source.hasDialogueFontSize) values.DialogueFontSize = source.dialogueFontSize;
             if (source.hasDialogueCharacterSpacing) values.DialogueCharacterSpacing = source.dialogueCharacterSpacing;
             if (source.hasDialogueLineSpacing) values.DialogueLineSpacing = source.dialogueLineSpacing;
             if (source.hasDialogueParagraphSpacing) values.DialogueParagraphSpacing = source.dialogueParagraphSpacing;
             if (source.hasDialogueAlignment) values.DialogueAlignment = source.dialogueAlignment;
             if (source.hasSpeakerFontPreset) values.SpeakerFontPreset = source.speakerFontPreset;
+            if (source.hasSpeakerFontAssetGuid) values.SpeakerFontAssetGuid = source.speakerFontAssetGuid ?? string.Empty;
+            if (source.hasSpeakerColor) values.SpeakerColor = source.speakerColor;
+            if (source.hasSpeakerAlignment) values.SpeakerAlignment = source.speakerAlignment;
             if (source.hasSpeakerFontSize) values.SpeakerFontSize = source.speakerFontSize;
             if (source.hasSpeakerCharacterSpacing) values.SpeakerCharacterSpacing = source.speakerCharacterSpacing;
             return values;

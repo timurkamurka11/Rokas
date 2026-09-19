@@ -136,7 +136,7 @@ jobs:
           checkName: Scene Composer M-AUDIO BGM EditMode
           artifactsPath: artifacts-vn-scene-composer-maudio
 
-      - name: Run M-TEXT arbitrary scene text fixture
+      - name: Run M-TEXT shared dialogue typography fixture
         id: mtext-tests
         uses: game-ci/unity-test-runner@v4
         env:

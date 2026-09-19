@@ -6,377 +6,316 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public sealed partial class VnPresentationWorkshopWindow
     {
+        // Retained only so legacy serialized editor-window state and unrelated selection-clearing code stay harmless.
+        // Arbitrary scene-text authoring itself is intentionally retired.
         [SerializeField] private string _sceneComposerSelectedTextId = string.Empty;
+        [SerializeField] private bool _sceneComposerSpeakerTypographyExpanded;
+        [SerializeField] private bool _sceneComposerDialogueTypographyExpanded;
 
-        public string ComposerGetSelectedTextId() => _sceneComposerSelectedTextId ?? string.Empty;
-
-        public string ComposerAddText()
+        public VnWorkshopTypographyValues ComposerGetSharedTypography()
         {
-            VnSceneComposerScene scene = RequireSelectedScene();
-            ComposerEnsureTextElements(scene);
-            RecordSceneComposerUndo("Add VN Scene Text");
-            string defaultGuid = VnSceneComposerTextFontResolver.GetDefaultFontAssetGuid();
-            UnityEngine.Object defaultAsset = VnSceneComposerTextFontResolver.ResolveAsset(defaultGuid);
-            var element = new VnSceneComposerTextElement
+            return VnPresentationWorkshopVn10Resolver.ResolveTypography(GetSharedDialoguePresentation());
+        }
+
+        public void ComposerSetSharedSpeakerTypography(
+            string fontAssetGuid,
+            float fontSize,
+            Color color,
+            VnWorkshopTextAlignment alignment,
+            Vector2 positionDelta,
+            Vector2 sizeDelta)
+        {
+            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, positionDelta, sizeDelta);
+            RecordSceneComposerUndo("Edit Shared VN Speaker Typography");
+            VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
+            VnWorkshopTypographyValues baseline =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(new VnPresentationWorkshopPreset());
+            if (preset.typography == null) preset.typography = new VnWorkshopTypographyOverride();
+
+            preset.typography.hasSpeakerFontAssetGuid = !string.IsNullOrWhiteSpace(fontAssetGuid);
+            preset.typography.speakerFontAssetGuid = fontAssetGuid ?? string.Empty;
+            preset.typography.hasSpeakerFontSize = !Mathf.Approximately(fontSize, baseline.SpeakerFontSize);
+            preset.typography.speakerFontSize = fontSize;
+            preset.typography.hasSpeakerColor = !Approximately(color, baseline.SpeakerColor);
+            preset.typography.speakerColor = color;
+            preset.typography.hasSpeakerAlignment = alignment != baseline.SpeakerAlignment;
+            preset.typography.speakerAlignment = alignment;
+
+            ApplySharedTextRect(preset.speakerName, positionDelta, sizeDelta);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerSetSharedDialogueTypography(
+            string fontAssetGuid,
+            float fontSize,
+            Color color,
+            VnWorkshopTextAlignment alignment,
+            Vector2 positionDelta,
+            Vector2 sizeDelta)
+        {
+            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, positionDelta, sizeDelta);
+            RecordSceneComposerUndo("Edit Shared VN Dialogue Typography");
+            VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
+            VnWorkshopTypographyValues baseline =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(new VnPresentationWorkshopPreset());
+            if (preset.typography == null) preset.typography = new VnWorkshopTypographyOverride();
+
+            preset.typography.hasDialogueFontAssetGuid = !string.IsNullOrWhiteSpace(fontAssetGuid);
+            preset.typography.dialogueFontAssetGuid = fontAssetGuid ?? string.Empty;
+            preset.typography.hasDialogueFontSize = !Mathf.Approximately(fontSize, baseline.DialogueFontSize);
+            preset.typography.dialogueFontSize = fontSize;
+            preset.typography.hasDialogueColor = !Approximately(color, baseline.DialogueColor);
+            preset.typography.dialogueColor = color;
+            preset.typography.hasDialogueAlignment = alignment != baseline.DialogueAlignment;
+            preset.typography.dialogueAlignment = alignment;
+
+            ApplySharedTextRect(preset.dialogueText, positionDelta, sizeDelta);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public string ComposerGetSharedTypographyWarning()
+        {
+            VnWorkshopTypographyValues typography = ComposerGetSharedTypography();
+            string dialogue = ResolveProjectFontWarning(typography.DialogueFontAssetGuid, "Текст реплики");
+            string speaker = ResolveProjectFontWarning(typography.SpeakerFontAssetGuid, "Текст говорящего");
+            if (string.IsNullOrEmpty(dialogue)) return speaker;
+            if (string.IsNullOrEmpty(speaker)) return dialogue;
+            return dialogue + "\n" + speaker;
+        }
+
+        private VnPresentationWorkshopPreset GetSharedDialoguePresentation()
+        {
+            EnsureSceneComposerProject();
+            if (_sceneComposerProject.defaultPresentation == null)
+                _sceneComposerProject.defaultPresentation = new VnPresentationWorkshopPreset();
+            return _sceneComposerProject.defaultPresentation;
+        }
+
+        private static void ApplySharedTextRect(
+            VnWorkshopElementOverride target, Vector2 positionDelta, Vector2 sizeDelta)
+        {
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            target.hasPositionDelta = positionDelta != Vector2.zero;
+            target.positionDelta = positionDelta;
+            target.hasSizeDelta = sizeDelta != Vector2.zero;
+            target.sizeDelta = sizeDelta;
+        }
+
+        private static void ValidateSharedTypography(
+            string fontAssetGuid,
+            float fontSize,
+            Color color,
+            VnWorkshopTextAlignment alignment,
+            Vector2 positionDelta,
+            Vector2 sizeDelta)
+        {
+            if (!Enum.IsDefined(typeof(VnWorkshopTextAlignment), alignment))
+                throw new ArgumentOutOfRangeException(nameof(alignment));
+            if (!IsFinite(fontSize) || fontSize < 8f || fontSize > 160f)
+                throw new ArgumentOutOfRangeException(nameof(fontSize));
+            if (!IsFinite(positionDelta) || !IsFinite(sizeDelta))
+                throw new ArgumentException("Dialogue typography layout must be finite.");
+            if (!IsFinite(color.r) || !IsFinite(color.g) || !IsFinite(color.b) || !IsFinite(color.a))
+                throw new ArgumentException("Dialogue typography color must be finite.");
+            if (!string.IsNullOrWhiteSpace(fontAssetGuid))
             {
-                textElementId = VnSceneComposerScene.NewStableId(),
-                text = "Новый текст",
-                fontAssetGuid = defaultGuid,
-                fontDisplayName = VnSceneComposerTextFontResolver.GetDisplayName(defaultAsset),
-                fontSize = 48f,
-                position = new Vector2(960f, 360f),
-                size = new Vector2(720f, 160f),
-                color = Color.white,
-                opacity = 1f,
-                alignment = VnSceneComposerTextAlignment.Center,
-                visible = true,
-                layer = VnSceneComposerTextLayer.FrontCharacters
-            };
-            scene.textElements.Add(element);
-            _sceneComposerSelectedTextId = element.textElementId;
-            _sceneComposerSelectedDecorationId = string.Empty;
-            _sceneComposerSelectedCharacterIndex = -1;
-            MarkSceneComposerChanged();
-            return element.textElementId;
-        }
-
-        public void ComposerSelectText(string textElementId)
-        {
-            VnSceneComposerScene scene = RequireSelectedScene();
-            ComposerEnsureTextElements(scene);
-            int index = FindTextIndex(scene, textElementId);
-            if (index < 0)
-                throw new ArgumentException("Text element is not part of the selected Scene.", nameof(textElementId));
-            _sceneComposerSelectedTextId = scene.textElements[index].textElementId;
-            _sceneComposerSelectedDecorationId = string.Empty;
-            _sceneComposerSelectedCharacterIndex = -1;
-            Repaint();
-        }
-
-        public string ComposerDuplicateSelectedText()
-        {
-            VnSceneComposerScene scene = RequireSelectedScene();
-            VnSceneComposerTextElement source = ComposerGetSelectedTextElement();
-            if (source == null) return string.Empty;
-            RecordSceneComposerUndo("Duplicate VN Scene Text");
-            VnSceneComposerTextElement copy =
-                JsonUtility.FromJson<VnSceneComposerTextElement>(JsonUtility.ToJson(source));
-            if (copy == null) throw new InvalidOperationException("Could not duplicate Scene text.");
-            copy.textElementId = VnSceneComposerScene.NewStableId();
-            copy.position += new Vector2(24f, 24f);
-            scene.textElements.Add(copy);
-            _sceneComposerSelectedTextId = copy.textElementId;
-            _sceneComposerSelectedDecorationId = string.Empty;
-            _sceneComposerSelectedCharacterIndex = -1;
-            MarkSceneComposerChanged();
-            return copy.textElementId;
-        }
-
-        public void ComposerSetSelectedTextContent(string value)
-        {
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Edit VN Scene Text");
-            element.text = value ?? string.Empty;
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextFontAsset(UnityEngine.Object asset)
-        {
-            if (asset != null && !VnSceneComposerTextFontResolver.IsSupportedAsset(asset))
-                throw new ArgumentException("Scene text font must be a TMP Font Asset or project Font.", nameof(asset));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Change VN Scene Text Font");
-            element.fontAssetGuid = VnSceneComposerTextFontResolver.GetAssetGuid(asset);
-            element.fontDisplayName = VnSceneComposerTextFontResolver.GetDisplayName(asset);
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextFontSize(float fontSize)
-        {
-            if (!IsFiniteTextValue(fontSize))
-                throw new ArgumentException("Text font size must be finite.", nameof(fontSize));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Resize VN Scene Text");
-            element.fontSize = Mathf.Clamp(fontSize, 1f, 512f);
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextPosition(Vector2 position)
-        {
-            if (!IsFinite(position)) throw new ArgumentException("Text position must be finite.", nameof(position));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Move VN Scene Text");
-            element.position = position;
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextSize(Vector2 size)
-        {
-            if (!IsFinite(size)) throw new ArgumentException("Text size must be finite.", nameof(size));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Resize VN Scene Text Box");
-            element.size = new Vector2(Mathf.Clamp(size.x, 1f, 10000f), Mathf.Clamp(size.y, 1f, 10000f));
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextColor(Color color)
-        {
-            if (!IsFiniteTextValue(color.r) || !IsFiniteTextValue(color.g) ||
-                !IsFiniteTextValue(color.b) || !IsFiniteTextValue(color.a))
-                throw new ArgumentException("Text color must contain finite values.", nameof(color));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Change VN Scene Text Color");
-            element.color = color;
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextOpacity(float opacity)
-        {
-            if (!IsFiniteTextValue(opacity))
-                throw new ArgumentException("Text opacity must be finite.", nameof(opacity));
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Change VN Scene Text Opacity");
-            element.opacity = Mathf.Clamp01(opacity);
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextAlignment(VnSceneComposerTextAlignment alignment)
-        {
-            if (!Enum.IsDefined(typeof(VnSceneComposerTextAlignment), alignment))
-                throw new ArgumentOutOfRangeException(nameof(alignment), alignment, null);
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Align VN Scene Text");
-            element.alignment = alignment;
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextVisible(bool visible)
-        {
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Toggle VN Scene Text Visibility");
-            element.visible = visible;
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerSetSelectedTextLayer(VnSceneComposerTextLayer layer)
-        {
-            if (!Enum.IsDefined(typeof(VnSceneComposerTextLayer), layer))
-                throw new ArgumentOutOfRangeException(nameof(layer), layer, null);
-            VnSceneComposerTextElement element = RequireSelectedTextElement();
-            RecordSceneComposerUndo("Change VN Scene Text Layer");
-            element.layer = layer;
-            MarkSceneComposerChanged();
-        }
-
-        public bool ComposerDeleteSelectedText()
-        {
-            VnSceneComposerScene scene = GetSelectedScene();
-            if (scene == null || scene.textElements == null || string.IsNullOrEmpty(_sceneComposerSelectedTextId))
-                return false;
-            int index = FindTextIndex(scene, _sceneComposerSelectedTextId);
-            if (index < 0)
-            {
-                _sceneComposerSelectedTextId = string.Empty;
-                return false;
+                UnityEngine.Object asset = VnSceneComposerTextFontResolver.ResolveAsset(fontAssetGuid);
+                if (asset != null && !VnSceneComposerTextFontResolver.IsSupportedAsset(asset))
+                    throw new ArgumentException("Dialogue typography font reference is not a supported project font.");
             }
-            RecordSceneComposerUndo("Delete VN Scene Text");
-            scene.textElements.RemoveAt(index);
-            _sceneComposerSelectedTextId = string.Empty;
-            MarkSceneComposerChanged();
-            return true;
         }
 
-        internal VnSceneComposerTextElement ComposerGetSelectedTextElement()
-        {
-            VnSceneComposerScene scene = GetSelectedScene();
-            if (scene == null || scene.textElements == null) return null;
-            int index = FindTextIndex(scene, _sceneComposerSelectedTextId);
-            return index >= 0 ? scene.textElements[index] : null;
-        }
-
-        internal void ComposerEnsureTextElements(VnSceneComposerScene scene)
-        {
-            if (scene != null && scene.textElements == null)
-                scene.textElements = new System.Collections.Generic.List<VnSceneComposerTextElement>();
-        }
-
-        private VnSceneComposerTextElement RequireSelectedTextElement()
-        {
-            VnSceneComposerTextElement element = ComposerGetSelectedTextElement();
-            if (element == null) throw new InvalidOperationException("No Scene text is selected.");
-            return element;
-        }
-
-        private static int FindTextIndex(VnSceneComposerScene scene, string textElementId)
-        {
-            if (scene == null || scene.textElements == null || string.IsNullOrEmpty(textElementId)) return -1;
-            for (int i = 0; i < scene.textElements.Count; i++)
-            {
-                VnSceneComposerTextElement element = scene.textElements[i];
-                if (element != null &&
-                    string.Equals(element.textElementId, textElementId, StringComparison.Ordinal))
-                    return i;
-            }
-            return -1;
-        }
-
-        private bool ComposerSelectPreviewTextAt(
-            VnWorkshopPreviewFrame frame, Vector2 logicalPoint, VnSceneComposerTextLayer layer)
-        {
-            if (frame == null || frame.ComposerTexts == null) return false;
-            for (int i = frame.ComposerTexts.Length - 1; i >= 0; i--)
-            {
-                VnWorkshopPreviewText element = frame.ComposerTexts[i];
-                if (element == null || element.Layer != layer || !element.Body.Contains(logicalPoint)) continue;
-                _sceneComposerSelectedTextId = element.TextElementId ?? string.Empty;
-                _sceneComposerSelectedDecorationId = string.Empty;
-                _sceneComposerSelectedCharacterIndex = -1;
-                Repaint();
-                return true;
-            }
-            return false;
-        }
-
-        private VnWorkshopPreviewText ComposerGetSelectedPreviewText(VnWorkshopPreviewFrame frame)
-        {
-            if (frame == null || frame.ComposerTexts == null || string.IsNullOrEmpty(_sceneComposerSelectedTextId))
-                return null;
-            for (int i = 0; i < frame.ComposerTexts.Length; i++)
-            {
-                VnWorkshopPreviewText element = frame.ComposerTexts[i];
-                if (element != null &&
-                    string.Equals(element.TextElementId, _sceneComposerSelectedTextId, StringComparison.Ordinal))
-                    return element;
-            }
-            return null;
-        }
-
-        private void ApplySceneComposerTextDrag(Vector2 logicalDelta)
-        {
-            if (!IsFinite(logicalDelta)) return;
-            VnSceneComposerTextElement element = ComposerGetSelectedTextElement();
-            if (element == null) return;
-            element.position += logicalDelta;
-            MarkSceneComposerChanged();
-        }
-
-        private string ComposerGetTextWarning(VnSceneComposerTextElement element)
-        {
-            if (element == null) return string.Empty;
-            VnSceneComposerTextFontResolver.TryResolvePreviewFont(
-                element.fontAssetGuid, out _, out string warning);
-            return warning;
-        }
-
-        private void DrawSceneComposerArbitraryTextInspector(VnSceneComposerScene scene)
-        {
-            ComposerEnsureTextElements(scene);
-            EditorGUILayout.LabelField("Текст сцены", EditorStyles.miniBoldLabel);
-            EditorGUILayout.HelpBox(
-                "Отдельные надписи сцены: заголовки, дата/время, вывески, интерфейс и декоративный текст. " +
-                "Они не заменяют реплики и не меняют dialogue-систему.",
-                MessageType.None);
-
-            if (GUILayout.Button("+ Добавить текст", GUILayout.Height(26f)))
-                ComposerAddText();
-
-            if (scene.textElements.Count == 0)
-            {
-                EditorGUILayout.HelpBox("В этой сцене пока нет отдельных текстовых элементов.", MessageType.Info);
-                return;
-            }
-
-            for (int i = 0; i < scene.textElements.Count; i++)
-            {
-                VnSceneComposerTextElement item = scene.textElements[i];
-                if (item == null) continue;
-                bool selected = string.Equals(item.textElementId, _sceneComposerSelectedTextId, StringComparison.Ordinal);
-                string label = (item.text ?? string.Empty).Replace('\n', ' ').Trim();
-                if (label.Length == 0) label = "Текст " + (i + 1);
-                if (label.Length > 28) label = label.Substring(0, 28) + "…";
-                if (!item.visible) label += " (скрыт)";
-                if (GUILayout.Button(label, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
-                    ComposerSelectText(item.textElementId);
-            }
-
-            VnSceneComposerTextElement element = ComposerGetSelectedTextElement();
-            if (element == null)
-            {
-                EditorGUILayout.HelpBox("Выберите текст в списке или прямо в предпросмотре.", MessageType.None);
-                return;
-            }
-
-            EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Содержимое");
-            EditorGUI.BeginChangeCheck();
-            string nextText = EditorGUILayout.TextArea(element.text ?? string.Empty, GUILayout.MinHeight(58f));
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextContent(nextText);
-
-            UnityEngine.Object currentFont = VnSceneComposerTextFontResolver.ResolveAsset(element.fontAssetGuid);
-            EditorGUI.BeginChangeCheck();
-            UnityEngine.Object nextFont = EditorGUILayout.ObjectField(
-                "Шрифт", currentFont, typeof(UnityEngine.Object), false);
-            if (EditorGUI.EndChangeCheck())
-            {
-                try { ComposerSetSelectedTextFontAsset(nextFont); }
-                catch (Exception exception) { SetSceneComposerStatus(exception.Message, MessageType.Error); }
-            }
-
-            string fallbackInfo = VnSceneComposerTextFontResolver.DescribeFallbacks(currentFont);
-            if (!string.IsNullOrEmpty(fallbackInfo))
-                EditorGUILayout.LabelField(fallbackInfo, EditorStyles.miniLabel);
-
-            EditorGUI.BeginChangeCheck();
-            float fontSize = EditorGUILayout.Slider("Размер шрифта", element.fontSize, 8f, 256f);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextFontSize(fontSize);
-
-            EditorGUI.BeginChangeCheck();
-            float x = EditorGUILayout.FloatField("X", element.position.x);
-            float y = EditorGUILayout.FloatField("Y", element.position.y);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextPosition(new Vector2(x, y));
-
-            EditorGUI.BeginChangeCheck();
-            float width = EditorGUILayout.FloatField("Ширина", element.size.x);
-            float height = EditorGUILayout.FloatField("Высота", element.size.y);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextSize(new Vector2(width, height));
-
-            EditorGUI.BeginChangeCheck();
-            Color color = EditorGUILayout.ColorField("Цвет", element.color);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextColor(color);
-
-            EditorGUI.BeginChangeCheck();
-            float opacity = EditorGUILayout.Slider("Прозрачность", element.opacity, 0f, 1f);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextOpacity(opacity);
-
-            string[] alignmentLabels = { "Слева", "По центру", "Справа" };
-            EditorGUI.BeginChangeCheck();
-            int alignment = EditorGUILayout.Popup("Выравнивание", (int)element.alignment, alignmentLabels);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetSelectedTextAlignment((VnSceneComposerTextAlignment)alignment);
-
-            EditorGUI.BeginChangeCheck();
-            bool visible = EditorGUILayout.Toggle("Показывать", element.visible);
-            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedTextVisible(visible);
-
-            string[] layerLabels = { "За персонажами", "Перед персонажами" };
-            EditorGUI.BeginChangeCheck();
-            int layer = EditorGUILayout.Popup("Слой", (int)element.layer, layerLabels);
-            if (EditorGUI.EndChangeCheck())
-                ComposerSetSelectedTextLayer((VnSceneComposerTextLayer)layer);
-
-            string warning = ComposerGetTextWarning(element);
-            if (!string.IsNullOrEmpty(warning))
-                EditorGUILayout.HelpBox(warning, MessageType.Warning);
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Дублировать текст")) ComposerDuplicateSelectedText();
-            if (GUILayout.Button("Удалить текст")) ComposerDeleteSelectedText();
-            EditorGUILayout.EndHorizontal();
-        }
-
-        private static bool IsFiniteTextValue(float value)
+        private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
+        }
+
+        private static bool Approximately(Color a, Color b)
+        {
+            return Mathf.Approximately(a.r, b.r) && Mathf.Approximately(a.g, b.g) &&
+                   Mathf.Approximately(a.b, b.b) && Mathf.Approximately(a.a, b.a);
+        }
+
+        private static string ResolveProjectFontWarning(string guid, string label)
+        {
+            if (string.IsNullOrWhiteSpace(guid)) return string.Empty;
+            if (VnSceneComposerTextFontResolver.TryResolvePreviewFont(guid, out Font _, out string warning))
+                return warning;
+            return label + ": " + (string.IsNullOrEmpty(warning)
+                ? "font asset не найден; будет использован RokasSans."
+                : warning);
+        }
+
+        private void DrawSceneComposerDialogueTypographyInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Оформление диалога", EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox(
+                "Настройки ниже относятся к существующим полям «Говорящий» и «Текст реплики». " +
+                "Они общие для последующих реплик: содержание меняется по Beat, оформление остаётся тем же.",
+                MessageType.Info);
+
+            if (GUILayout.Button("Изменить текст говорящего", GUILayout.Height(25f)))
+                _sceneComposerSpeakerTypographyExpanded = !_sceneComposerSpeakerTypographyExpanded;
+            if (_sceneComposerSpeakerTypographyExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSharedTypographyControls(true);
+                EditorGUI.indentLevel--;
+            }
+
+            if (GUILayout.Button("Изменить текст реплики", GUILayout.Height(25f)))
+                _sceneComposerDialogueTypographyExpanded = !_sceneComposerDialogueTypographyExpanded;
+            if (_sceneComposerDialogueTypographyExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSharedTypographyControls(false);
+                EditorGUI.indentLevel--;
+            }
+
+            string warning = ComposerGetSharedTypographyWarning();
+            if (!string.IsNullOrEmpty(warning))
+                EditorGUILayout.HelpBox(warning, MessageType.Warning);
+        }
+
+        private void DrawSharedTypographyControls(bool speaker)
+        {
+            VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
+            VnWorkshopTypographyValues values = VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
+            VnWorkshopElementOverride layout = speaker ? preset.speakerName : preset.dialogueText;
+            string guid = speaker ? values.SpeakerFontAssetGuid : values.DialogueFontAssetGuid;
+            float fontSize = speaker ? values.SpeakerFontSize : values.DialogueFontSize;
+            Color color = speaker ? values.SpeakerColor : values.DialogueColor;
+            VnWorkshopTextAlignment alignment = speaker ? values.SpeakerAlignment : values.DialogueAlignment;
+            Vector2 position = layout != null && layout.hasPositionDelta ? layout.positionDelta : Vector2.zero;
+            Vector2 size = layout != null && layout.hasSizeDelta ? layout.sizeDelta : Vector2.zero;
+
+            UnityEngine.Object currentFont = VnSceneComposerTextFontResolver.ResolveAsset(guid);
+            EditorGUILayout.LabelField("Текущий шрифт",
+                currentFont != null ? currentFont.name : "RokasSans (по умолчанию)");
+
+            VnSceneComposerInstalledFontFace[] faces = VnSceneComposerTextFontResolver.GetInstalledWindowsFonts();
+            string[] options = new string[faces.Length + 1];
+            options[0] = faces.Length == 0
+                ? "Установленные Windows-шрифты не найдены"
+                : "Выбрать установленный Windows-шрифт…";
+            for (int i = 0; i < faces.Length; i++) options[i + 1] = faces[i].DisplayName;
+
+            using (new EditorGUI.DisabledScope(faces.Length == 0))
+            {
+                int selected = EditorGUILayout.Popup("Шрифт Windows", 0, options);
+                if (selected > 0)
+                {
+                    VnSceneComposerFontImportResult imported =
+                        VnSceneComposerTextFontResolver.ImportWindowsFont(faces[selected - 1]);
+                    if (!imported.Success)
+                    {
+                        SetSceneComposerStatus(imported.Error, MessageType.Error);
+                    }
+                    else
+                    {
+                        guid = imported.TmpFontAssetGuid;
+                        ApplyTypographyValues(speaker, guid, fontSize, color, alignment, position, size);
+                        SetSceneComposerStatus(
+                            "Шрифт импортирован в проект и связан с TMP: " + imported.TmpFontAssetPath,
+                            MessageType.Info);
+                    }
+                }
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("RokasSans по умолчанию"))
+            {
+                guid = string.Empty;
+                ApplyTypographyValues(speaker, guid, fontSize, color, alignment, position, size);
+            }
+            if (GUILayout.Button("Обновить список Windows"))
+            {
+                VnSceneComposerTextFontResolver.RefreshInstalledWindowsFonts();
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUI.BeginChangeCheck();
+            float nextFontSize = EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
+            Color nextColor = EditorGUILayout.ColorField("Цвет", color);
+            float nextOpacity = EditorGUILayout.Slider("Прозрачность", color.a, 0f, 1f);
+            nextColor.a = nextOpacity;
+            VnWorkshopTextAlignment nextAlignment = (VnWorkshopTextAlignment)EditorGUILayout.EnumPopup(
+                "Выравнивание", alignment);
+            float x = EditorGUILayout.FloatField("Позиция X", position.x);
+            float y = EditorGUILayout.FloatField("Позиция Y", position.y);
+            float width = EditorGUILayout.FloatField("Ширина", size.x);
+            float height = EditorGUILayout.FloatField("Высота", size.y);
+            if (EditorGUI.EndChangeCheck())
+            {
+                ApplyTypographyValues(
+                    speaker, guid, nextFontSize, nextColor, nextAlignment,
+                    new Vector2(x, y), new Vector2(width, height));
+                fontSize = nextFontSize;
+                color = nextColor;
+                alignment = nextAlignment;
+                position = new Vector2(x, y);
+                size = new Vector2(width, height);
+            }
+
+            DrawSharedFallbackPicker(guid);
+
+            EditorGUILayout.HelpBox(
+                "Windows используется только как источник при выборе. После импорта сохраняется GUID " +
+                "TMP Font Asset внутри Assets; абсолютный путь Windows в данных сцены не сохраняется.",
+                MessageType.None);
+        }
+
+        private void DrawSharedFallbackPicker(string primaryGuid)
+        {
+            VnSceneComposerInstalledFontFace[] faces = VnSceneComposerTextFontResolver.GetInstalledWindowsFonts();
+            if (faces.Length == 0) return;
+
+            string[] options = new string[faces.Length + 1];
+            options[0] = "Добавить TMP fallback (например, CJK)…";
+            for (int i = 0; i < faces.Length; i++) options[i + 1] = faces[i].DisplayName;
+            int selected = EditorGUILayout.Popup("Fallback", 0, options);
+            if (selected <= 0) return;
+
+            VnSceneComposerFontImportResult imported =
+                VnSceneComposerTextFontResolver.ImportWindowsFont(faces[selected - 1]);
+            if (!imported.Success)
+            {
+                SetSceneComposerStatus(imported.Error, MessageType.Error);
+                return;
+            }
+
+            string effectivePrimary = string.IsNullOrWhiteSpace(primaryGuid)
+                ? VnSceneComposerTextFontResolver.GetDefaultFontAssetGuid()
+                : primaryGuid;
+            if (!VnSceneComposerTextFontResolver.ConfigureFallback(
+                    effectivePrimary, imported.TmpFontAssetGuid, out string error))
+            {
+                SetSceneComposerStatus(error, MessageType.Error);
+                return;
+            }
+
+            SetSceneComposerStatus(
+                "TMP fallback добавлен: " + faces[selected - 1].DisplayName,
+                MessageType.Info);
+        }
+
+        private void ApplyTypographyValues(
+            bool speaker,
+            string guid,
+            float fontSize,
+            Color color,
+            VnWorkshopTextAlignment alignment,
+            Vector2 position,
+            Vector2 size)
+        {
+            if (speaker)
+                ComposerSetSharedSpeakerTypography(guid, fontSize, color, alignment, position, size);
+            else
+                ComposerSetSharedDialogueTypography(guid, fontSize, color, alignment, position, size);
         }
     }
 }
