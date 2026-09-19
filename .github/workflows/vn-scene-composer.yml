@@ -82,6 +82,24 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
+      - name: Run M-F2 dialogue panel visual customization fixture
+        id: mf2-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerMf2Tests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer M-F2 Dialogue Panel EditMode
+          artifactsPath: artifacts-vn-scene-composer-mf2
+
       - name: Run M-F1 beat-linked character state fixture
         id: mf1-tests
         uses: game-ci/unity-test-runner@v4
@@ -292,6 +310,7 @@ jobs:
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
           path: |
+            artifacts-vn-scene-composer-mf2
             artifacts-vn-scene-composer-mf1
             artifacts-vn-scene-composer-me
             artifacts-vn-scene-composer-core
