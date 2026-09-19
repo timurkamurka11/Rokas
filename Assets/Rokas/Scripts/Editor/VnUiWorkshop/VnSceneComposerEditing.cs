@@ -53,6 +53,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             copy.sceneId = VnSceneComposerScene.NewStableId();
             if (copy.media == null) copy.media = new VnSceneComposerMediaReference();
+            if (copy.music == null) copy.music = new VnSceneComposerMusic();
             if (copy.characters == null) copy.characters = new System.Collections.Generic.List<VnSceneComposerCharacter>();
             if (copy.decorations == null) copy.decorations = new System.Collections.Generic.List<VnSceneComposerDecoration>();
             for (int i = 0; i < copy.decorations.Count; i++)

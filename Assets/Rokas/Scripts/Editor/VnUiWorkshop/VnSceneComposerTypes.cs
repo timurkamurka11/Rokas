@@ -44,6 +44,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
         FrontCharacters
     }
 
+    public enum VnSceneComposerMusicMode
+    {
+        Silence,
+        Track,
+        KeepPrevious
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerMusic
+    {
+        public VnSceneComposerMusicMode mode = VnSceneComposerMusicMode.Silence;
+        public string assetGuid = string.Empty;
+        public string displayName = string.Empty;
+        public float volume = 1f;
+        public bool loop = true;
+        public float fadeInSeconds;
+        public float fadeOutSeconds;
+    }
+
     [Serializable]
     public sealed class VnSceneComposerDecoration
     {
@@ -118,6 +137,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string sceneId = NewStableId();
         public string label = "Scene";
         public VnSceneComposerMediaReference media = new VnSceneComposerMediaReference();
+        public VnSceneComposerMusic music = new VnSceneComposerMusic();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();
         public List<VnSceneComposerDecoration> decorations = new List<VnSceneComposerDecoration>();
         public List<VnSceneComposerDialogueBeat> dialogueBeats =

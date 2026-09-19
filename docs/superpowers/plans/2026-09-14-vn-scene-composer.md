@@ -170,3 +170,21 @@ Current continuation state on `feature/vn-scene-composer`:
 - **M-F3 — IN PROGRESS.** Arbitrary scene-local static image/decorative elements are the only active M-F slice.
 
 M-F3 keeps Scene Composer as the single editor architecture, reuses the existing `UiOverlay` onboarding/GUID asset identity, keeps schema 3 additive/backward-compatible, and must not reset/reprepare scene video for ordinary decoration edits. M-F3 is not CLOSED until focused/relevant regressions are green and the user passes the exact Unity manual gate.
+
+
+---
+
+## M-AUDIO milestone status
+
+- **M-F1 — CLOSED.**
+- **M-F2 — CLOSED.**
+- **M-F3 — CLOSED / user accepted.**
+- **M-F — CLOSED.**
+- **M-AUDIO — IN PROGRESS.**
+
+M-AUDIO is an additive Scene Composer BGM authoring slice. It keeps schema 3,
+reuses Unity AudioClip assets and the existing Composer Asset Library, preserves
+the editor-only source guard, and owns one persistent Scene Composer music source
+so dialogue Beat advancement does not restart unchanged music. Production
+RokasAudio remains the shipping audio authority and is not duplicated or rewritten
+by this editor-only milestone.

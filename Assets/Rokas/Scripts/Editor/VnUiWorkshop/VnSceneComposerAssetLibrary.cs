@@ -15,7 +15,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         Background,
         ImageStill,
         UiOverlay,
-        ReferenceImage
+        ReferenceImage,
+        Music
     }
 
     [Serializable]
@@ -58,6 +59,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public const int CatalogSchemaVersion = 1;
 
         private static readonly string[] SupportedStillExtensions = { ".png", ".jpg", ".jpeg" };
+        private static readonly string[] SupportedMusicExtensions = { ".mp3", ".wav" };
 
         public static VnSceneComposerAssetOnboardResult Onboard(
             string projectRoot,
@@ -74,7 +76,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     return Failure("Source asset does not exist: " + (sourcePath ?? string.Empty));
 
                 string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
-                if (!SupportedStillExtensions.Contains(extension))
+                bool musicAsset = purpose == VnSceneComposerAssetPurpose.Music;
+                if (musicAsset)
+                {
+                    if (!SupportedMusicExtensions.Contains(extension))
+                        return Failure("Unsupported music extension: " + extension + ". Use MP3 or WAV.");
+                }
+                else if (!SupportedStillExtensions.Contains(extension))
                     return Failure("Unsupported still-image extension: " + extension + ".");
                 if (purpose == VnSceneComposerAssetPurpose.CharacterState && extension != ".png")
                     return Failure("Character full-body states must use PNG so alpha can be preserved.");
@@ -121,7 +129,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
                 if (!File.Exists(destinationAbsolute)) File.Copy(sourcePath, destinationAbsolute, false);
                 AssetDatabase.ImportAsset(destinationPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-                ConfigureStillImporter(destinationPath, purpose);
+                if (musicAsset)
+                {
+                    if (AssetDatabase.LoadAssetAtPath<AudioClip>(destinationPath) == null)
+                        return Failure("Imported music file is not a readable AudioClip: " + destinationPath);
+                }
+                else ConfigureStillImporter(destinationPath, purpose);
 
                 VnSceneComposerAssetEntry entry = BuildEntry(
                     purpose,
@@ -161,6 +174,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (purpose == VnSceneComposerAssetPurpose.CharacterState &&
                     (string.IsNullOrWhiteSpace(character) || string.IsNullOrWhiteSpace(stateName)))
                     return Failure("Character State registration requires Character and State / Pose name.");
+                if (purpose == VnSceneComposerAssetPurpose.Music)
+                {
+                    string extension = Path.GetExtension(assetPath).ToLowerInvariant();
+                    if (!SupportedMusicExtensions.Contains(extension))
+                        return Failure("Existing music asset must use MP3 or WAV.");
+                    AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                    if (AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath) == null)
+                        return Failure("Existing music asset is not a readable AudioClip: " + assetPath);
+                }
 
                 VnSceneComposerAssetCatalog catalog = LoadCatalog(projectRoot);
                 VnSceneComposerAssetEntry byPath = catalog.entries.FirstOrDefault(entry =>
@@ -233,15 +255,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     StringComparer.OrdinalIgnoreCase);
 
                 foreach (string absolutePath in Directory.GetFiles(managedAbsolute, "*.*", SearchOption.AllDirectories)
-                             .Where(path => SupportedStillExtensions.Contains(Path.GetExtension(path).ToLowerInvariant())))
+                             .Where(path =>
+                             {
+                                 string extension = Path.GetExtension(path).ToLowerInvariant();
+                                 return SupportedStillExtensions.Contains(extension) ||
+                                        SupportedMusicExtensions.Contains(extension);
+                             }))
                 {
                     string assetPath = ToProjectRelative(projectRoot, absolutePath);
                     if (knownPaths.Contains(assetPath)) continue;
                     string hash = Sha256File(absolutePath);
                     if (knownHashes.Contains(hash)) continue;
                     AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                    bool musicAsset = SupportedMusicExtensions.Contains(Path.GetExtension(assetPath).ToLowerInvariant()) ||
+                                      assetPath.StartsWith(ManagedRootRelative + "/Music/", StringComparison.OrdinalIgnoreCase);
+                    if (musicAsset && AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath) == null) continue;
                     VnSceneComposerAssetEntry discovered = BuildEntry(
-                        VnSceneComposerAssetPurpose.ReferenceImage,
+                        musicAsset ? VnSceneComposerAssetPurpose.Music : VnSceneComposerAssetPurpose.ReferenceImage,
                         Path.GetFileNameWithoutExtension(assetPath),
                         assetPath,
                         hash,
@@ -249,7 +279,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         string.Empty,
                         true,
                         false);
-                    discovered.warning = "Auto-discovered as Reference Image. Use Onboard Asset to assign a more specific purpose.";
+                    discovered.warning = musicAsset
+                        ? string.Empty
+                        : "Auto-discovered as Reference Image. Use Onboard Asset to assign a more specific purpose.";
                     catalog.entries.Add(discovered);
                     knownPaths.Add(assetPath);
                     knownHashes.Add(hash);
@@ -393,6 +425,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 entry.warning = "Project asset is missing: " + entry.assetPath;
                 return;
             }
+            if (entry.purpose == VnSceneComposerAssetPurpose.Music &&
+                AssetDatabase.LoadAssetAtPath<AudioClip>(entry.assetPath) == null)
+            {
+                entry.missing = true;
+                entry.warning = "Music asset is not a readable AudioClip: " + entry.assetPath;
+                return;
+            }
             entry.warning = string.Empty;
             string guid = AssetDatabase.AssetPathToGUID(entry.assetPath);
             if (!string.IsNullOrWhiteSpace(guid)) entry.assetGuid = guid;
@@ -532,6 +571,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case VnSceneComposerAssetPurpose.ImageStill: return "ImageStill";
                 case VnSceneComposerAssetPurpose.UiOverlay: return "UiOverlay";
                 case VnSceneComposerAssetPurpose.ReferenceImage: return "ReferenceImage";
+                case VnSceneComposerAssetPurpose.Music: return "Music";
                 default: throw new ArgumentOutOfRangeException(nameof(purpose), purpose, null);
             }
         }

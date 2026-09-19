@@ -72,10 +72,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerScene currentSourceScene;
         private bool suppressCurrentBackgroundTransition;
         private string openedVideoSignature = string.Empty;
+        private readonly VnSceneComposerMusicPlayback musicPlayback;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
         {
             this.project = project ?? throw new ArgumentNullException(nameof(project));
+            musicPlayback = new VnSceneComposerMusicPlayback();
             if (this.project.scenes == null) this.project.scenes = new List<VnSceneComposerScene>();
             CurrentSceneIndex = this.project.scenes.Count > 0 ? 0 : -1;
             rangeStart = CurrentSceneIndex;
@@ -92,6 +94,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Texture CurrentMediaTexture { get; private set; }
         public VnSceneComposerTransitionSnapshot CurrentSnapshot { get; private set; }
         public VnSceneComposerPlaybackFrame CurrentFrame { get; private set; }
+        public string CurrentMusicAssetGuid { get { return musicPlayback.CurrentAssetGuid; } }
+        public float CurrentMusicVolume { get { return musicPlayback.ConfiguredVolume; } }
+        public int MusicStartCount { get { return musicPlayback.StartCount; } }
+        public int ActiveMusicSourceCount { get { return musicPlayback.ActiveSourceCount; } }
+
+        public void RefreshCurrentMusic()
+        {
+            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count) return;
+            musicPlayback.Apply(VnSceneComposerMusicResolver.Resolve(project, CurrentSceneIndex), IsPlaying, false);
+        }
 
         public void PlayScene(int sceneIndex)
         {
@@ -149,6 +161,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             IsPlaying = false;
             if (videoPreview != null) videoPreview.Pause();
+            musicPlayback.Pause();
         }
 
         public void Restart()
@@ -165,6 +178,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 videoPreview.Restart();
                 videoPreview.Play();
             }
+            musicPlayback.Restart(VnSceneComposerMusicResolver.Resolve(project, CurrentSceneIndex));
             RefreshMediaTexture();
             RebuildFrame(0f);
         }
@@ -185,6 +199,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 IsPlaying = false;
                 if (videoPreview != null) videoPreview.Pause();
+                musicPlayback.Pause();
                 return;
             }
             ResetScene(target, IsPlaying);
@@ -200,6 +215,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SceneElapsedSeconds += deltaSeconds;
             BeatElapsedSeconds += deltaSeconds;
             MediaTimeSeconds += deltaSeconds;
+            musicPlayback.Advance(deltaSeconds);
             if (gifPreview != null) gifPreview.Advance(deltaSeconds);
             if (videoPreview != null && !videoPreview.IsPlaying) videoPreview.Play();
             RefreshMediaTexture();
@@ -233,6 +249,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             IsPlaying = false;
             if (videoPreview != null) videoPreview.Pause();
+            musicPlayback.Pause();
             RebuildFrame(1f);
         }
 
@@ -259,6 +276,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             IsPlaying = false;
             if (videoPreview != null) videoPreview.Pause();
+            musicPlayback.Pause();
             RebuildFrame(1f);
         }
 
@@ -269,6 +287,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             IsPlaying = false;
             ReleaseMedia();
             ReleaseSourceMedia();
+            musicPlayback.Dispose();
             currentSourceScene = null;
             suppressCurrentBackgroundTransition = false;
             CurrentMediaTexture = null;
@@ -283,11 +302,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetSceneFromNeutralStart(int sceneIndex, bool playMedia)
         {
-            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true);
+            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true, false, true);
         }
 
         private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
-            bool suppressBackgroundTransition, bool preserveCompatibleVideoTimeline = false)
+            bool suppressBackgroundTransition, bool preserveCompatibleVideoTimeline = false,
+            bool forceMusicRestart = false)
         {
             RequireSceneIndex(sceneIndex);
             VnSceneComposerScene targetScene = project.scenes[sceneIndex];
@@ -314,6 +334,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
             MediaTimeSeconds = continuedMediaTime;
+            musicPlayback.Apply(
+                VnSceneComposerMusicResolver.Resolve(project, sceneIndex), playMedia, forceMusicRestart);
             if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
             else if (!retainOutgoingVideo) OpenSourceMedia(currentSourceScene);
             if (!reuseVideoPreview) OpenMedia(targetScene);
@@ -704,6 +726,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MediaTimeSeconds = 0f;
             ReleaseMedia();
             ReleaseSourceMedia();
+            musicPlayback.StopImmediate();
             currentSourceScene = null;
             suppressCurrentBackgroundTransition = false;
             CurrentMediaTexture = null;

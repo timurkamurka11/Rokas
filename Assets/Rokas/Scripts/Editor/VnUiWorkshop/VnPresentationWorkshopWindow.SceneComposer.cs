@@ -37,7 +37,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             "Медиа",
             "Настройки сцены",
             "Дополнительно",
-            "Декорации"
+            "Декорации",
+            "Музыка"
         };
 
         private const float SceneComposerStoryboardWidth = 224f;
@@ -426,6 +427,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerPlayScene()
         {
+            ComposerStopMusicPreview();
             int index = GetSelectedSceneIndexOrThrow();
             EnsureSceneComposerPlayback().PlaySceneFromNeutralStart(index);
             BeginSceneComposerPlaybackTick();
@@ -433,6 +435,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerPlayFromHere()
         {
+            ComposerStopMusicPreview();
             int index = GetSelectedSceneIndexOrThrow();
             EnsureSceneComposerPlayback().PlayFromHereFromNeutralStart(index);
             BeginSceneComposerPlaybackTick();
@@ -440,6 +443,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerPlayAll()
         {
+            ComposerStopMusicPreview();
             EnsureSceneComposerPlayback().PlayAll();
             SyncSceneComposerSelectionFromPlayback();
             BeginSceneComposerPlaybackTick();
@@ -775,7 +779,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case 5: DrawSceneComposerMediaInspector(scene); break;
                 case 6: DrawSceneComposerSceneSettings(scene); break;
                 case 7: DrawSceneComposerAdditionalInspector(scene); break;
-                default: DrawSceneComposerDecorationInspector(scene); break;
+                case 8: DrawSceneComposerDecorationInspector(scene); break;
+                default: DrawSceneComposerMusicInspector(scene); break;
             }
 
             EditorGUILayout.EndVertical();
@@ -850,6 +855,82 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (GUILayout.Button("Выбрать фон"))
                 TrySceneComposerMediaAction(() => ComposerSetLibraryBackground(backgroundIds[_sceneComposerBackgroundAssetIndex]));
+        }
+
+        private void DrawSceneComposerMusicInspector(VnSceneComposerScene scene)
+        {
+            ComposerEnsureSceneMusic(scene);
+            EditorGUILayout.LabelField("Музыка", EditorStyles.boldLabel);
+            string[] modeLabels = { "Без музыки", "Трек", "Оставить предыдущую" };
+            int modeIndex = scene.music.mode == VnSceneComposerMusicMode.Track ? 1 :
+                (scene.music.mode == VnSceneComposerMusicMode.KeepPrevious ? 2 : 0);
+            EditorGUILayout.LabelField("Режим", modeLabels[modeIndex]);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Без музыки")) ComposerClearSelectedSceneMusic();
+            if (GUILayout.Button("Оставить предыдущую")) ComposerKeepPreviousSceneMusic();
+            EditorGUILayout.EndHorizontal();
+
+            AudioClip current = ComposerResolveSelectedSceneMusicClip();
+            EditorGUI.BeginChangeCheck();
+            AudioClip next = (AudioClip)EditorGUILayout.ObjectField(
+                "Трек", current, typeof(AudioClip), false);
+            if (EditorGUI.EndChangeCheck() && next != null)
+                ComposerSetSelectedSceneMusicTrack(next);
+
+            VnSceneComposerAssetEntry[] musicAssets = VnSceneComposerAssetLibrary.FindByPurpose(
+                GetProjectRoot(), VnSceneComposerAssetPurpose.Music);
+            if (musicAssets.Length > 0)
+            {
+                _sceneComposerMusicLibraryIndex = Mathf.Clamp(
+                    _sceneComposerMusicLibraryIndex, 0, musicAssets.Length - 1);
+                string[] names = new string[musicAssets.Length];
+                for (int i = 0; i < musicAssets.Length; i++)
+                    names[i] = string.IsNullOrWhiteSpace(musicAssets[i].displayName)
+                        ? "Музыка " + (i + 1)
+                        : musicAssets[i].displayName;
+                _sceneComposerMusicLibraryIndex = EditorGUILayout.Popup(
+                    "Из библиотеки", _sceneComposerMusicLibraryIndex, names);
+                if (GUILayout.Button("Выбрать из библиотеки"))
+                    ComposerSetSelectedSceneMusicAsset(musicAssets[_sceneComposerMusicLibraryIndex]);
+            }
+
+            if (GUILayout.Button("Добавить аудиофайл"))
+            {
+                string path = EditorUtility.OpenFilePanel("Добавить музыку", string.Empty, "mp3,wav");
+                if (!string.IsNullOrEmpty(path))
+                    TrySceneComposerMusicAction(() => ComposerAddExternalMusic(path));
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Предпрослушать")) ComposerPreviewSelectedSceneMusic();
+            if (GUILayout.Button("Стоп")) ComposerStopMusicPreview();
+            EditorGUILayout.EndHorizontal();
+
+            if (scene.music.mode == VnSceneComposerMusicMode.Track)
+            {
+                EditorGUI.BeginChangeCheck();
+                float volume = EditorGUILayout.Slider("Громкость", scene.music.volume, 0f, 1f);
+                if (EditorGUI.EndChangeCheck()) ComposerSetSelectedSceneMusicVolume(volume);
+
+                EditorGUI.BeginChangeCheck();
+                bool loop = EditorGUILayout.Toggle("Зациклить", scene.music.loop);
+                if (EditorGUI.EndChangeCheck()) ComposerSetSelectedSceneMusicLoop(loop);
+
+                EditorGUI.BeginChangeCheck();
+                float fadeIn = Mathf.Max(0f, EditorGUILayout.FloatField("Fade In", scene.music.fadeInSeconds));
+                float fadeOut = Mathf.Max(0f, EditorGUILayout.FloatField("Fade Out", scene.music.fadeOutSeconds));
+                if (EditorGUI.EndChangeCheck()) ComposerSetSelectedSceneMusicFades(fadeIn, fadeOut);
+            }
+            else if (scene.music.mode == VnSceneComposerMusicMode.KeepPrevious)
+            {
+                EditorGUILayout.HelpBox(
+                    "Оставить предыдущую: эффективный трек продолжается без лишнего перезапуска.",
+                    MessageType.Info);
+            }
+
+            string warning = ComposerGetSelectedSceneMusicWarning();
+            if (!string.IsNullOrEmpty(warning)) EditorGUILayout.HelpBox(warning, MessageType.Warning);
         }
 
         private void DrawSceneComposerMediaInspector(VnSceneComposerScene scene)
@@ -1731,6 +1812,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DisposeSceneComposerRuntimeResources()
         {
+            ComposerStopMusicPreview();
             if (_sceneComposerUpdateRegistered)
             {
                 EditorApplication.update -= SceneComposerEditorUpdate; _sceneComposerUpdateRegistered = false;

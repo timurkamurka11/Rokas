@@ -316,6 +316,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return false;
             }
             if (!ValidateMedia(scene, diagnostics, out error)) return false;
+            if (!ValidateMusic(scene, diagnostics, out error)) return false;
 
             if (scene.characters == null)
             {
@@ -576,6 +577,57 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
+        private static bool ValidateMusic(
+            VnSceneComposerScene scene, List<string> diagnostics, out string error)
+        {
+            VnSceneComposerMusic music = scene.music;
+            if (music == null)
+            {
+                error = string.Empty;
+                return true;
+            }
+            if (!Enum.IsDefined(typeof(VnSceneComposerMusicMode), music.mode))
+            {
+                error = "Invalid Scene Composer music mode in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!IsFinite(music.volume) || music.volume < 0f || music.volume > 1f)
+            {
+                error = "Scene Composer music volume must be between 0 and 1 in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!IsFinite(music.fadeInSeconds) || music.fadeInSeconds < 0f ||
+                !IsFinite(music.fadeOutSeconds) || music.fadeOutSeconds < 0f)
+            {
+                error = "Scene Composer music fades must be finite and non-negative in scene " + scene.sceneId + ".";
+                return false;
+            }
+
+            if (music.mode == VnSceneComposerMusicMode.Track)
+            {
+                if (!IsStableId(music.assetGuid))
+                {
+                    error = "Scene Composer music asset GUID is missing or invalid in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                string path = AssetDatabase.GUIDToAssetPath(music.assetGuid);
+                if (string.IsNullOrEmpty(path))
+                {
+                    diagnostics.Add("Music asset is missing in scene '" +
+                                    (scene.label ?? scene.sceneId) + "': " +
+                                    (string.IsNullOrWhiteSpace(music.displayName) ? music.assetGuid : music.displayName) + ".");
+                }
+                else if (AssetDatabase.LoadAssetAtPath<AudioClip>(path) == null)
+                {
+                    error = "Scene Composer music reference is not an AudioClip in scene " + scene.sceneId + ".";
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         private static bool ValidateMedia(VnSceneComposerScene scene, List<string> diagnostics, out string error)
         {
             VnSceneComposerMediaReference media = scene.media;
@@ -706,6 +758,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (!IsFinite(beat.effectDuration) || beat.effectDuration <= 0f) beat.effectDuration = .28f;
                 }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
+                if (scene.music == null) scene.music = new VnSceneComposerMusic();
+                if (scene.music.assetGuid == null) scene.music.assetGuid = string.Empty;
+                if (scene.music.displayName == null) scene.music.displayName = string.Empty;
+                if (!Enum.IsDefined(typeof(VnSceneComposerMusicMode), scene.music.mode))
+                    scene.music.mode = VnSceneComposerMusicMode.Silence;
+                if (!IsFinite(scene.music.volume)) scene.music.volume = 1f;
+                scene.music.volume = Mathf.Clamp01(scene.music.volume);
+                if (!IsFinite(scene.music.fadeInSeconds) || scene.music.fadeInSeconds < 0f)
+                    scene.music.fadeInSeconds = 0f;
+                if (!IsFinite(scene.music.fadeOutSeconds) || scene.music.fadeOutSeconds < 0f)
+                    scene.music.fadeOutSeconds = 0f;
                 if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
                 if (scene.decorations == null) scene.decorations = new List<VnSceneComposerDecoration>();
                 for (int d = 0; d < scene.decorations.Count; d++)
