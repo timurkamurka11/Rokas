@@ -22,10 +22,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float fontSize,
             Color color,
             VnWorkshopTextAlignment alignment,
-            Vector2 positionDelta,
-            Vector2 sizeDelta)
+            Vector2 position,
+            Vector2 size)
         {
-            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, positionDelta, sizeDelta);
+            ValidateSharedTypography(fontAssetGuid, fontSize, color, alignment, position, size);
             RecordSceneComposerUndo("Edit Shared VN Speaker Typography");
             VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
             VnWorkshopTypographyValues baseline =
@@ -41,7 +41,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             preset.typography.hasSpeakerAlignment = alignment != baseline.SpeakerAlignment;
             preset.typography.speakerAlignment = alignment;
 
-            ApplySharedTextRect(preset.speakerName, positionDelta, sizeDelta);
+            ApplySharedTextRect(
+                preset.speakerName, VnWorkshopElement.SpeakerName, position, size);
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -70,7 +71,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             preset.typography.hasDialogueAlignment = alignment != baseline.DialogueAlignment;
             preset.typography.dialogueAlignment = alignment;
 
-            ApplySharedTextRect(preset.dialogueText, positionDelta, sizeDelta);
+            ApplySharedTextRect(
+                preset.dialogueText, VnWorkshopElement.DialogueText, position, size);
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -94,13 +96,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private static void ApplySharedTextRect(
-            VnWorkshopElementOverride target, Vector2 positionDelta, Vector2 sizeDelta)
+            VnWorkshopElementOverride target,
+            VnWorkshopElement element,
+            Vector2 position,
+            Vector2 size)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));
+            Rect baseline = VnPresentationWorkshopPreviewRenderer.GetReferenceTextRect(element);
+            Rect panel = VnPresentationWorkshopPreviewRenderer.GetReferenceTextRect(
+                VnWorkshopElement.DialoguePanel);
+            Rect authored = VnPresentationWorkshopPreviewRenderer.ConstrainTextRectToPanel(
+                new Rect(position, size), panel);
+
+            Vector2 positionDelta = authored.center - baseline.center;
+            Vector2 sizeDelta = authored.size - baseline.size;
             target.hasPositionDelta = positionDelta != Vector2.zero;
             target.positionDelta = positionDelta;
             target.hasSizeDelta = sizeDelta != Vector2.zero;
             target.sizeDelta = sizeDelta;
+            target.hasScaleMultiplier = false;
+            target.scaleMultiplier = 1f;
         }
 
         private static void ValidateSharedTypography(
@@ -117,6 +132,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentOutOfRangeException(nameof(fontSize));
             if (!IsFinite(positionDelta) || !IsFinite(sizeDelta))
                 throw new ArgumentException("Dialogue typography layout must be finite.");
+            if (sizeDelta.x < 1f || sizeDelta.y < 1f)
+                throw new ArgumentOutOfRangeException(nameof(sizeDelta),
+                    "Dialogue typography Width and Height must be at least 1.");
             if (!IsFinite(color.r) || !IsFinite(color.g) || !IsFinite(color.b) || !IsFinite(color.a))
                 throw new ArgumentException("Dialogue typography color must be finite.");
             if (!string.IsNullOrWhiteSpace(fontAssetGuid))
@@ -178,19 +196,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string warning = ComposerGetSharedTypographyWarning();
             if (!string.IsNullOrEmpty(warning))
                 EditorGUILayout.HelpBox(warning, MessageType.Warning);
+
+            string layoutWarning = ComposerGetDialogueOverflowWarning(scene);
+            if (!string.IsNullOrEmpty(layoutWarning))
+                EditorGUILayout.HelpBox(layoutWarning, MessageType.Warning);
         }
 
         private void DrawSharedTypographyControls(bool speaker)
         {
             VnPresentationWorkshopPreset preset = GetSharedDialoguePresentation();
             VnWorkshopTypographyValues values = VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
-            VnWorkshopElementOverride layout = speaker ? preset.speakerName : preset.dialogueText;
             string guid = speaker ? values.SpeakerFontAssetGuid : values.DialogueFontAssetGuid;
             float fontSize = speaker ? values.SpeakerFontSize : values.DialogueFontSize;
             Color color = speaker ? values.SpeakerColor : values.DialogueColor;
             VnWorkshopTextAlignment alignment = speaker ? values.SpeakerAlignment : values.DialogueAlignment;
-            Vector2 position = layout != null && layout.hasPositionDelta ? layout.positionDelta : Vector2.zero;
-            Vector2 size = layout != null && layout.hasSizeDelta ? layout.sizeDelta : Vector2.zero;
+            VnWorkshopPreviewFrame layoutFrame = VnPresentationWorkshopPreviewRenderer.BuildFrame(
+                preset, VnWorkshopResolution.Reference1920x1080, VnWorkshopPreviewScene.BusStopKeiko);
+            Rect resolvedRect = speaker ? layoutFrame.SpeakerName : layoutFrame.DialogueText;
+            Vector2 position = resolvedRect.position;
+            Vector2 size = resolvedRect.size;
 
             UnityEngine.Object currentFont = VnSceneComposerTextFontResolver.ResolveAsset(guid);
             EditorGUILayout.LabelField("Текущий шрифт",
@@ -245,10 +269,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             nextColor.a = nextOpacity;
             VnWorkshopTextAlignment nextAlignment = (VnWorkshopTextAlignment)EditorGUILayout.EnumPopup(
                 "Выравнивание", alignment);
-            float x = EditorGUILayout.FloatField("Позиция X", position.x);
-            float y = EditorGUILayout.FloatField("Позиция Y", position.y);
-            float width = EditorGUILayout.FloatField("Ширина", size.x);
-            float height = EditorGUILayout.FloatField("Высота", size.y);
+            float x = EditorGUILayout.FloatField("X", position.x);
+            float y = EditorGUILayout.FloatField("Y", position.y);
+            float width = EditorGUILayout.FloatField("Width", size.x);
+            float height = EditorGUILayout.FloatField("Height", size.y);
             if (EditorGUI.EndChangeCheck())
             {
                 ApplyTypographyValues(
@@ -264,9 +288,39 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawSharedFallbackPicker(guid);
 
             EditorGUILayout.HelpBox(
+                "X / Y / Width / Height — реальный общий Rect текста на reference-canvas. " +
+                "Width является границей переноса; длина реплики не меняет этот Rect.",
+                MessageType.None);
+            EditorGUILayout.HelpBox(
                 "Windows используется только как источник при выборе. После импорта сохраняется GUID " +
                 "TMP Font Asset внутри Assets; абсолютный путь Windows в данных сцены не сохраняется.",
                 MessageType.None);
+        }
+
+        private string ComposerGetDialogueOverflowWarning(VnSceneComposerScene scene)
+        {
+            if (scene == null) return string.Empty;
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0)
+                beat = scene.dialogueBeats[0];
+            if (beat == null) return string.Empty;
+
+            VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
+                _sceneComposerProject, scene, beat,
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+            float requiredHeight = VnPresentationWorkshopPreviewRenderer.MeasureWrappedTextHeight(
+                frame.DialogueText,
+                frame.Dialogue,
+                frame.DialogueFont,
+                Mathf.RoundToInt(frame.Typography.DialogueFontSize),
+                FontStyle.Normal,
+                frame.Typography.DialogueAlignment);
+            if (requiredHeight <= frame.DialogueText.height + .5f) return string.Empty;
+
+            return "Текст переносится внутри заданного Width, но по высоте требует примерно " +
+                   Mathf.CeilToInt(requiredHeight) + " px при доступных " +
+                   Mathf.CeilToInt(frame.DialogueText.height) +
+                   " px. Увеличьте Height, уменьшите размер шрифта или сократите реплику.";
         }
 
         private void DrawSharedFallbackPicker(string primaryGuid)
