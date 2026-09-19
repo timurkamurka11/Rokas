@@ -732,6 +732,124 @@ namespace Rokas.EditorTools.Tests
             Assert.That(actual.height, Is.EqualTo(expected.height).Within(.01f));
         }
 
+
+        [Test]
+        public void MText_AuthoringDialogueEditorUsesAdaptiveWrappedScrollableMultilineControl()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+
+            Assert.That(source, Does.Contain("DrawSceneComposerDialogueBodyEditor"));
+            Assert.That(source, Does.Contain("wordWrap = true"));
+            Assert.That(source, Does.Contain("EditorGUILayout.BeginScrollView"));
+            Assert.That(source, Does.Contain("SceneComposerDialogueEditorMinVisibleLines"));
+            Assert.That(source, Does.Contain("SceneComposerDialogueEditorMaxVisibleLines"));
+            Assert.That(source, Does.Not.Contain(
+                "EditorGUILayout.TextArea(selectedBeat.text ?? string.Empty, GUILayout.MinHeight(70f))"));
+        }
+
+        [Test]
+        public void MText_LongDialogueAuthoringRoundTripPreservesCompleteUnicodeContent()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            string longText = string.Join(" ", Enumerable.Range(0, 180)
+                .Select(i => "длинная_реплика_" + i)) +
+                "\nКонец большого русского текста — 中文 — Unicode ✓.";
+            project.scenes[0].dialogueBeats[0].text = longText;
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+
+            Assert.That(loaded.scenes[0].dialogueBeats[0].text, Is.EqualTo(longText));
+            Assert.That(loaded.scenes[0].dialogueBeats[0].text.Length, Is.EqualTo(longText.Length));
+        }
+
+        [Test]
+        public void MText_ManualLineBreaksInDialogueSurviveRoundTrip()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            const string text =
+                "Первая строка.\nВторая строка после ручного переноса.\n\nЧетвертая строка после пустой.";
+            project.scenes[0].dialogueBeats[0].text = text;
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+
+            Assert.That(loaded.scenes[0].dialogueBeats[0].text, Is.EqualTo(text));
+            Assert.That(loaded.scenes[0].dialogueBeats[0].text.Count(c => c == '\n'), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void MText_SwitchingBetweenShortAndLongBeatsDoesNotTruncateDialogue()
+        {
+            VnPresentationWorkshopWindow window =
+                ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                VnSceneComposerProject project = Project(window);
+                VnSceneComposerScene scene = project.scenes[0];
+                scene.dialogueBeats.Clear();
+
+                string longTwo = string.Join(" ", Enumerable.Range(0, 120)
+                    .Select(i => "второй_" + i));
+                string longFour = string.Join(" ", Enumerable.Range(0, 160)
+                    .Select(i => "четвертый_" + i));
+
+                var beat1 = new VnSceneComposerDialogueBeat { text = "Коротко." };
+                var beat2 = new VnSceneComposerDialogueBeat { text = longTwo };
+                var beat3 = new VnSceneComposerDialogueBeat { text = "Средняя реплика из нескольких слов." };
+                var beat4 = new VnSceneComposerDialogueBeat { text = longFour };
+                scene.dialogueBeats.Add(beat1);
+                scene.dialogueBeats.Add(beat2);
+                scene.dialogueBeats.Add(beat3);
+                scene.dialogueBeats.Add(beat4);
+
+                window.ComposerSelectDialogueBeat(beat1.beatId);
+                window.ComposerSelectDialogueBeat(beat2.beatId);
+                window.ComposerSelectDialogueBeat(beat3.beatId);
+                window.ComposerSelectDialogueBeat(beat4.beatId);
+                window.ComposerSelectDialogueBeat(beat2.beatId);
+
+                Assert.That(scene.dialogueBeats[1].text, Is.EqualTo(longTwo));
+                Assert.That(scene.dialogueBeats[3].text, Is.EqualTo(longFour));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void MText_AuthoringTextareaStateDoesNotAffectSharedTypographyOrRuntimeRect()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            Rect expectedRect = new Rect(270f, 26f, 800f, 164f);
+            SetDialogueRect(project, expectedRect);
+            project.defaultPresentation.typography.hasDialogueFontSize = true;
+            project.defaultPresentation.typography.dialogueFontSize = 38f;
+            VnWorkshopPreviewFrame before = Frame(project, 0);
+
+            project.scenes[0].dialogueBeats[0].text = string.Join(" ",
+                Enumerable.Range(0, 150).Select(i => "редактор_" + i));
+            VnWorkshopPreviewFrame after = Frame(project, 0);
+
+            Assert.That(after.DialogueText, Is.EqualTo(before.DialogueText));
+            Assert.That(after.Typography.DialogueFontSize, Is.EqualTo(38f));
+            AssertRect(after.DialogueText, expectedRect);
+        }
+
+        [Test]
+        public void MText_ShortDialogueEditingContractRemainsPresent()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+
+            Assert.That(source, Does.Contain("EditorGUILayout.LabelField(\"Текст реплики\")"));
+            Assert.That(source, Does.Contain("selectedBeat.text"));
+            Assert.That(source, Does.Contain("Edit VN Dialogue Beat"));
+        }
+
         private VnSceneComposerFontImportResult ImportTestFont(string displayName)
         {
             VnSceneComposerFontImportResult result =
