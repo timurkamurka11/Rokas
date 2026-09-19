@@ -1059,6 +1059,79 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnWorkshopFontPreset nextFont = nextFontIndex == 1 ? VnWorkshopFontPreset.ProjectSerif : VnWorkshopFontPreset.ProjectSans;
                 SetSceneComposerBasicTextStyle(nextFont, nextFontSize, nextSpeed);
             }
+
+            DrawSceneComposerDialoguePanelVisualControls(scene);
+        }
+
+        private void DrawSceneComposerDialoguePanelVisualControls(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Плашка диалога", EditorStyles.miniBoldLabel);
+
+            EditorGUILayout.LabelField("Применить:", EditorStyles.miniLabel);
+            int scope = _sceneComposerPresentationProjectDefaults ? 1 : 0;
+            int nextScope = GUILayout.Toolbar(scope, new[] { "Только к этой сцене", "Ко всем сценам" });
+            if (nextScope != scope) ComposerSetPresentationScope(nextScope == 1);
+
+            VnPresentationWorkshopPreset active = ComposerGetActivePresentationPreset();
+            if (active.dialoguePanelVisual == null)
+                active.dialoguePanelVisual = new VnWorkshopDialoguePanelVisualOverride();
+            bool hasCustom = active.dialoguePanelVisual.hasAssetGuid;
+
+            EditorGUI.BeginChangeCheck();
+            int nextMode = EditorGUILayout.Popup("Плашка", hasCustom ? 1 : 0,
+                new[] { "По умолчанию", "Своя PNG" });
+            if (EditorGUI.EndChangeCheck())
+            {
+                if (nextMode == 0)
+                {
+                    ComposerResetDialoguePanelVisual();
+                }
+                else if (!hasCustom)
+                {
+                    string source = EditorUtility.OpenFilePanel(
+                        "Выбрать PNG плашки диалога", string.Empty, "png");
+                    if (!string.IsNullOrEmpty(source))
+                        TrySceneComposerPresentationAction(() => ComposerSetExternalDialoguePanelPng(source));
+                }
+            }
+
+            active = ComposerGetActivePresentationPreset();
+            hasCustom = active.dialoguePanelVisual != null && active.dialoguePanelVisual.hasAssetGuid;
+            Texture2D activeTexture = ComposerGetActiveDialoguePanelVisualAsset();
+            if (hasCustom)
+            {
+                EditorGUI.BeginChangeCheck();
+                Texture2D nextTexture = (Texture2D)EditorGUILayout.ObjectField(
+                    "Ресурс", activeTexture, typeof(Texture2D), false);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (nextTexture != null)
+                        TrySceneComposerPresentationAction(() => ComposerSetDialoguePanelVisualAsset(nextTexture));
+                    else
+                        ComposerResetDialoguePanelVisual();
+                }
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Выбрать PNG"))
+                {
+                    string source = EditorUtility.OpenFilePanel(
+                        "Выбрать PNG плашки диалога", string.Empty, "png");
+                    if (!string.IsNullOrEmpty(source))
+                        TrySceneComposerPresentationAction(() => ComposerSetExternalDialoguePanelPng(source));
+                }
+                if (GUILayout.Button("Сбросить")) ComposerResetDialoguePanelVisual();
+                EditorGUILayout.EndHorizontal();
+            }
+            else if (!_sceneComposerPresentationProjectDefaults &&
+                     ComposerGetEffectiveDialoguePanelVisualAsset(scene) != null)
+            {
+                EditorGUILayout.LabelField("Используется общая плашка проекта.", EditorStyles.miniLabel);
+            }
+
+            string warning = ComposerGetEffectiveDialoguePanelVisualWarning(scene);
+            if (!string.IsNullOrEmpty(warning))
+                EditorGUILayout.HelpBox(warning, MessageType.Warning);
         }
 
         private void SetSceneComposerBasicTextStyle(VnWorkshopFontPreset dialogueFontPreset, float dialogueFontSize, float charactersPerSecond)
