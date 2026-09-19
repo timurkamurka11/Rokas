@@ -141,7 +141,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool ShowMina { get; internal set; }
         public bool ShowKeiko { get; internal set; }
         public VnWorkshopFocusValues Focus { get; }
-        public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; }
+        public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; } = Array.Empty<VnWorkshopPreviewCharacter>();
+        public VnWorkshopPreviewDecoration[] ComposerDecorations { get; internal set; } = Array.Empty<VnWorkshopPreviewDecoration>();
+        public string[] ComposerDecorationWarnings { get; internal set; } = Array.Empty<string>();
 
         public Rect GetElementRect(VnWorkshopElement element)
         {
@@ -301,6 +303,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
+                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
                 if (frame.ComposerCharacters != null)
                 {
                     for (int i = 0; i < frame.ComposerCharacters.Length; i++)
@@ -321,6 +324,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                             frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
                 }
 
+                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters);
                 GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
                     ScaleMode.StretchToFill, true);
 
@@ -509,6 +513,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             float height = available.width / aspect;
             return new Rect(available.x, available.center.y - height * .5f, available.width, height);
+        }
+
+        private static void DrawComposerDecorations(
+            Rect canvasRect, VnWorkshopPreviewFrame frame, VnSceneComposerDecorationLayer layer)
+        {
+            if (frame == null || frame.ComposerDecorations == null) return;
+            for (int i = 0; i < frame.ComposerDecorations.Length; i++)
+            {
+                VnWorkshopPreviewDecoration decoration = frame.ComposerDecorations[i];
+                if (decoration == null || decoration.Texture == null || decoration.Layer != layer) continue;
+                Color previous = GUI.color;
+                GUI.color = new Color(previous.r, previous.g, previous.b, Mathf.Clamp01(decoration.Alpha));
+                GUI.DrawTexture(LogicalToPreview(canvasRect, decoration.Body, frame),
+                    decoration.Texture, ScaleMode.StretchToFill, true);
+                GUI.color = previous;
+            }
         }
 
         private static void DrawCharacter(Rect canvasRect, VnWorkshopPreviewFrame frame, Rect logicalRect,

@@ -157,3 +157,16 @@ No production apply, no Yarn generation/editing, no runtime VN mutation, no pref
 ## Acceptance boundary
 
 Success means the editor can onboard a real asset by purpose, discover it without source/GUID editing, select it in the appropriate Scene Composer field, and visibly play existing VN10/SC-F/SC-G transitions between actual scene visuals. It still does **not** mean ApplyToProduction, Yarn generation, runtime story wiring, save/quest integration, or branch integration.
+
+
+---
+
+## M-F milestone status
+
+Current continuation state on `feature/vn-scene-composer`:
+
+- **M-F1 — CLOSED.**
+- **M-F2 — CLOSED.** Automated checkpoint `72b559095a28838f38209e1a9e7e13285ffda110` / run `35442259447`; manual Unity acceptance passed, including custom transparent dialogue plaque, persistence/reset, click/advance, video continuity and M-F1 regression checks.
+- **M-F3 — IN PROGRESS.** Arbitrary scene-local static image/decorative elements are the only active M-F slice.
+
+M-F3 keeps Scene Composer as the single editor architecture, reuses the existing `UiOverlay` onboarding/GUID asset identity, keeps schema 3 additive/backward-compatible, and must not reset/reprepare scene video for ordinary decoration edits. M-F3 is not CLOSED until focused/relevant regressions are green and the user passes the exact Unity manual gate.

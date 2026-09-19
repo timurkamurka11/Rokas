@@ -366,6 +366,66 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
 
+            if (scene.decorations != null)
+            {
+                var decorationIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int d = 0; d < scene.decorations.Count; d++)
+                {
+                    VnSceneComposerDecoration decoration = scene.decorations[d];
+                    if (decoration == null)
+                    {
+                        error = "Scene Composer decoration entry is null in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsStableId(decoration.decorationId))
+                    {
+                        error = "Scene Composer decoration ID is missing or invalid in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!decorationIds.Add(decoration.decorationId))
+                    {
+                        error = "Duplicate Scene Composer decoration ID: " + decoration.decorationId + ".";
+                        return false;
+                    }
+                    if (!IsStableId(decoration.assetGuid))
+                    {
+                        error = "Scene Composer decoration asset GUID is missing or invalid in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(decoration.position.x) || !IsFinite(decoration.position.y))
+                    {
+                        error = "Scene Composer decoration position must be finite in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(decoration.scale) || decoration.scale <= 0f || decoration.scale > 10f)
+                    {
+                        error = "Scene Composer decoration scale must be finite and greater than zero in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(decoration.opacity) || decoration.opacity < 0f || decoration.opacity > 1f)
+                    {
+                        error = "Scene Composer decoration opacity must be between 0 and 1 in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!Enum.IsDefined(typeof(VnSceneComposerDecorationLayer), decoration.layer))
+                    {
+                        error = "Invalid Scene Composer decoration layer in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+
+                    string decorationPath = AssetDatabase.GUIDToAssetPath(decoration.assetGuid);
+                    if (string.IsNullOrEmpty(decorationPath) ||
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(decorationPath) == null)
+                    {
+                        string label = string.IsNullOrWhiteSpace(decoration.displayName)
+                            ? decoration.decorationId
+                            : decoration.displayName;
+                        diagnostics.Add("Decoration asset is missing in scene '" +
+                                        (scene.label ?? scene.sceneId) + "': " + label + ".");
+                    }
+                }
+            }
+
             for (int b = 0; b < scene.dialogueBeats.Count; b++)
             {
                 VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
@@ -647,6 +707,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
                 if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
+                if (scene.decorations == null) scene.decorations = new List<VnSceneComposerDecoration>();
+                for (int d = 0; d < scene.decorations.Count; d++)
+                {
+                    VnSceneComposerDecoration decoration = scene.decorations[d];
+                    if (decoration == null) continue;
+                    if (decoration.decorationId == null) decoration.decorationId = string.Empty;
+                    if (decoration.assetGuid == null) decoration.assetGuid = string.Empty;
+                    if (decoration.displayName == null) decoration.displayName = string.Empty;
+                }
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
                 if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
                 if (scene.timing == null) scene.timing = new VnSceneComposerTiming();

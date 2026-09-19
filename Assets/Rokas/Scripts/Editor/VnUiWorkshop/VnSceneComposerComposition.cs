@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Rokas.Presentation;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Video;
 
@@ -17,6 +19,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool Active { get; internal set; }
         public float Alpha { get; internal set; }
         public float Brightness { get; internal set; }
+    }
+
+    public sealed class VnWorkshopPreviewDecoration
+    {
+        public string DecorationId { get; internal set; }
+        public Texture2D Texture { get; internal set; }
+        public Rect Body { get; internal set; }
+        public float Alpha { get; internal set; }
+        public VnSceneComposerDecorationLayer Layer { get; internal set; }
     }
 
     public static class VnSceneComposerComposition
@@ -72,6 +83,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             frame.ShowMina = false;
             frame.ShowKeiko = false;
             frame.ComposerCharacters = BuildCharacters(frame, preset, scene, beat);
+            frame.ComposerDecorations = BuildDecorations(scene, out string[] decorationWarnings);
+            frame.ComposerDecorationWarnings = decorationWarnings;
             RegisterStaticExternalVideoContext(scene, frame);
             return frame;
         }
@@ -234,6 +247,50 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 };
             }
             return result;
+        }
+
+        private static VnWorkshopPreviewDecoration[] BuildDecorations(
+            VnSceneComposerScene scene, out string[] warnings)
+        {
+            var visuals = new List<VnWorkshopPreviewDecoration>();
+            var diagnostics = new List<string>();
+            if (scene == null || scene.decorations == null)
+            {
+                warnings = Array.Empty<string>();
+                return Array.Empty<VnWorkshopPreviewDecoration>();
+            }
+
+            for (int i = 0; i < scene.decorations.Count; i++)
+            {
+                VnSceneComposerDecoration source = scene.decorations[i];
+                if (source == null) continue;
+                string path = AssetDatabase.GUIDToAssetPath(source.assetGuid ?? string.Empty);
+                Texture2D texture = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (texture == null)
+                {
+                    string label = string.IsNullOrWhiteSpace(source.displayName)
+                        ? source.decorationId ?? "Decoration"
+                        : source.displayName;
+                    diagnostics.Add("Декорация '" + label +
+                                    "': файл изображения не найден. Элемент сохранён, но не отображается.");
+                    continue;
+                }
+                if (!source.visible) continue;
+
+                float height = 320f * Mathf.Clamp(source.scale, .01f, 10f);
+                float width = texture.height > 0 ? height * ((float)texture.width / texture.height) : height;
+                visuals.Add(new VnWorkshopPreviewDecoration
+                {
+                    DecorationId = source.decorationId ?? string.Empty,
+                    Texture = texture,
+                    Body = RectFromCenter(source.position, new Vector2(width, height)),
+                    Alpha = Mathf.Clamp01(source.opacity),
+                    Layer = source.layer
+                });
+            }
+
+            warnings = diagnostics.ToArray();
+            return visuals.ToArray();
         }
 
         private static int FindActiveIndex(VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)

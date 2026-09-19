@@ -38,6 +38,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
         Accent
     }
 
+    public enum VnSceneComposerDecorationLayer
+    {
+        BehindCharacters,
+        FrontCharacters
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerDecoration
+    {
+        public string decorationId = VnSceneComposerScene.NewStableId();
+        public string assetGuid = string.Empty;
+        public string displayName = string.Empty;
+        public Vector2 position = new Vector2(960f, 540f);
+        public float scale = 1f;
+        public float opacity = 1f;
+        public bool visible = true;
+        public VnSceneComposerDecorationLayer layer = VnSceneComposerDecorationLayer.BehindCharacters;
+    }
+
     [Serializable]
     public sealed class VnSceneComposerMediaReference
     {
@@ -100,6 +119,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string label = "Scene";
         public VnSceneComposerMediaReference media = new VnSceneComposerMediaReference();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();
+        public List<VnSceneComposerDecoration> decorations = new List<VnSceneComposerDecoration>();
         public List<VnSceneComposerDialogueBeat> dialogueBeats =
             new List<VnSceneComposerDialogueBeat> { new VnSceneComposerDialogueBeat() };
         public VnPresentationWorkshopPreset presentationOverrides = new VnPresentationWorkshopPreset();

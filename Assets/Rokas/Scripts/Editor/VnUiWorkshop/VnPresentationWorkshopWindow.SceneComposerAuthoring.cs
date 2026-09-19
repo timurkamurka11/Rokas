@@ -30,6 +30,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         [NonSerialized] private bool _sceneComposerDraggingPreviewObject;
         [NonSerialized] private bool _sceneComposerDraggingCharacter;
+        [NonSerialized] private bool _sceneComposerDraggingDecoration;
         [NonSerialized] private Vector2 _sceneComposerLastDragLogicalPoint;
 
         private bool IsSceneComposerAdvancedLayoutEditingVisible()
@@ -57,6 +58,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentOutOfRangeException(nameof(element));
             selectedElement = element;
             _sceneComposerSelectedCharacterIndex = -1;
+            _sceneComposerSelectedDecorationId = string.Empty;
             Repaint();
         }
 
@@ -116,12 +118,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return true;
             }
 
+            if (!frame.DialoguePanel.Contains(logicalPoint) &&
+                ComposerSelectPreviewDecorationAt(frame, logicalPoint, VnSceneComposerDecorationLayer.FrontCharacters))
+                return true;
             if (ComposerSelectPreviewCharacterAt(frame, logicalPoint)) return true;
+            if (!frame.DialoguePanel.Contains(logicalPoint) &&
+                ComposerSelectPreviewDecorationAt(frame, logicalPoint, VnSceneComposerDecorationLayer.BehindCharacters))
+                return true;
 
             if (frame.DialoguePanel.Contains(logicalPoint))
             {
                 selectedElement = VnWorkshopElement.DialoguePanel;
                 _sceneComposerSelectedCharacterIndex = -1;
+                _sceneComposerSelectedDecorationId = string.Empty;
                 Repaint();
                 return true;
             }
@@ -137,11 +146,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (character != null && character.Body.Contains(logicalPoint))
                 {
                     _sceneComposerSelectedCharacterIndex = i;
+                    _sceneComposerSelectedDecorationId = string.Empty;
                     Repaint();
                     return true;
                 }
             }
             return false;
+        }
+
+        public string ComposerAddExternalDecorationPng(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                throw new ArgumentException("Decoration PNG file does not exist.", nameof(sourcePath));
+            if (!string.Equals(Path.GetExtension(sourcePath), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Decoration image must use PNG.", nameof(sourcePath));
+
+            VnSceneComposerAssetOnboardResult result = VnSceneComposerAssetLibrary.Onboard(
+                GetProjectRoot(), sourcePath, VnSceneComposerAssetPurpose.UiOverlay,
+                Path.GetFileNameWithoutExtension(sourcePath), string.Empty, string.Empty);
+            if (!result.Success || result.Entry == null)
+                throw new InvalidOperationException(result.Error ?? "Could not add decoration PNG.");
+
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(result.Entry.assetPath);
+            if (texture == null)
+                throw new InvalidOperationException("Onboarded decoration PNG could not be loaded: " + result.Entry.assetPath);
+            return ComposerAddDecorationAsset(texture);
         }
 
         public bool ComposerPrepareSelectedVideoForAuthoring()
@@ -229,9 +258,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (selected)
                 {
                     _sceneComposerDraggingPreviewObject = true;
-                    _sceneComposerDraggingCharacter = _sceneComposerSelectedCharacterIndex >= 0;
+                    _sceneComposerDraggingDecoration = !string.IsNullOrEmpty(_sceneComposerSelectedDecorationId);
+                    _sceneComposerDraggingCharacter = !_sceneComposerDraggingDecoration &&
+                                                     _sceneComposerSelectedCharacterIndex >= 0;
                     _sceneComposerLastDragLogicalPoint = logicalPoint;
-                    RecordSceneComposerUndo(_sceneComposerDraggingCharacter ? "Move VN Scene Character" : "Move VN Scene UI Element");
+                    RecordSceneComposerUndo(_sceneComposerDraggingDecoration
+                        ? "Move VN Scene Decoration"
+                        : (_sceneComposerDraggingCharacter ? "Move VN Scene Character" : "Move VN Scene UI Element"));
                     Focus();
                     GUI.FocusControl(null);
                     currentEvent.Use();
@@ -244,7 +277,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(previewRect, currentEvent.mousePosition, frame);
                 Vector2 logicalDelta = logicalPoint - _sceneComposerLastDragLogicalPoint;
                 _sceneComposerLastDragLogicalPoint = logicalPoint;
-                if (_sceneComposerDraggingCharacter) ApplySceneComposerCharacterDrag(logicalDelta);
+                if (_sceneComposerDraggingDecoration) ApplySceneComposerDecorationDrag(logicalDelta);
+                else if (_sceneComposerDraggingCharacter) ApplySceneComposerCharacterDrag(logicalDelta);
                 else ApplySceneComposerElementDrag(logicalDelta);
                 currentEvent.Use();
                 return;
@@ -254,6 +288,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 _sceneComposerDraggingPreviewObject = false;
                 _sceneComposerDraggingCharacter = false;
+                _sceneComposerDraggingDecoration = false;
                 currentEvent.Use();
                 return;
             }
@@ -275,10 +310,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 default: return;
             }
 
-            bool characterSelected = _sceneComposerSelectedCharacterIndex >= 0;
-            RecordSceneComposerUndo(characterSelected ? "Nudge VN Scene Character" : "Nudge VN Scene UI Element");
+            bool decorationSelected = ComposerGetSelectedDecoration() != null;
+            bool characterSelected = !decorationSelected && _sceneComposerSelectedCharacterIndex >= 0;
+            RecordSceneComposerUndo(decorationSelected
+                ? "Nudge VN Scene Decoration"
+                : (characterSelected ? "Nudge VN Scene Character" : "Nudge VN Scene UI Element"));
             float step = currentEvent.shift ? SceneComposerLargeNudgeStep : SceneComposerNudgeStep;
-            if (characterSelected) ApplySceneComposerCharacterDrag(direction * step);
+            if (decorationSelected) ApplySceneComposerDecorationDrag(direction * step);
+            else if (characterSelected) ApplySceneComposerCharacterDrag(direction * step);
             else ApplySceneComposerElementDrag(direction * step);
             currentEvent.Use();
         }
@@ -305,6 +344,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             VnSceneComposerScene scene = GetSelectedScene();
             if (scene == null) return false;
+
+            if (ComposerDeleteSelectedDecoration()) return true;
 
             if (scene.characters != null && _sceneComposerSelectedCharacterIndex >= 0 &&
                 _sceneComposerSelectedCharacterIndex < scene.characters.Count)
@@ -353,7 +394,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (frame == null) return;
             Rect logicalRect;
-            if (_sceneComposerSelectedCharacterIndex >= 0 && frame.ComposerCharacters != null &&
+            VnWorkshopPreviewDecoration selectedDecoration = ComposerGetSelectedPreviewDecoration(frame);
+            if (selectedDecoration != null)
+            {
+                logicalRect = selectedDecoration.Body;
+            }
+            else if (_sceneComposerSelectedCharacterIndex >= 0 && frame.ComposerCharacters != null &&
                 _sceneComposerSelectedCharacterIndex < frame.ComposerCharacters.Length)
             {
                 VnWorkshopPreviewCharacter character = frame.ComposerCharacters[_sceneComposerSelectedCharacterIndex];

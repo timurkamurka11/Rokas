@@ -36,7 +36,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             "Анимация сцены",
             "Медиа",
             "Настройки сцены",
-            "Дополнительно"
+            "Дополнительно",
+            "Декорации"
         };
 
         private const float SceneComposerStoryboardWidth = 224f;
@@ -773,7 +774,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case 4: DrawSceneComposerSceneAnimationInspector(scene); break;
                 case 5: DrawSceneComposerMediaInspector(scene); break;
                 case 6: DrawSceneComposerSceneSettings(scene); break;
-                default: DrawSceneComposerAdditionalInspector(scene); break;
+                case 7: DrawSceneComposerAdditionalInspector(scene); break;
+                default: DrawSceneComposerDecorationInspector(scene); break;
             }
 
             EditorGUILayout.EndVertical();
@@ -1440,6 +1442,103 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 "Пауза между сценами, с", timing.AutoPreviewSequenceGap, 0f, 10f);
             if (EditorGUI.EndChangeCheck())
                 ComposerSetTiming(timing.MinimumBeatSettleDuration, timing.PostTransitionBreathingRoom, sequenceGap);
+        }
+
+        private void DrawSceneComposerDecorationInspector(VnSceneComposerScene scene)
+        {
+            ComposerEnsureDecorations(scene);
+            EditorGUILayout.LabelField("Декорации", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Статичные PNG-элементы этой сцены. Они не сбрасывают фон, видео, реплики или состояния персонажей.",
+                MessageType.None);
+
+            if (GUILayout.Button("Добавить PNG"))
+            {
+                string path = EditorUtility.OpenFilePanel("Добавить PNG-декорацию", string.Empty, "png");
+                if (!string.IsNullOrEmpty(path))
+                    TrySceneComposerDecorationAction(() => ComposerAddExternalDecorationPng(path));
+            }
+
+            VnSceneComposerAssetEntry[] overlays = VnSceneComposerAssetLibrary.FindByPurpose(
+                GetProjectRoot(), VnSceneComposerAssetPurpose.UiOverlay);
+            if (overlays.Length > 0)
+            {
+                _sceneComposerDecorationLibraryIndex = Mathf.Clamp(_sceneComposerDecorationLibraryIndex, 0, overlays.Length - 1);
+                string[] labels = new string[overlays.Length];
+                for (int i = 0; i < overlays.Length; i++)
+                    labels[i] = string.IsNullOrWhiteSpace(overlays[i].displayName) ? "PNG " + (i + 1) : overlays[i].displayName;
+                _sceneComposerDecorationLibraryIndex = EditorGUILayout.Popup(
+                    "Из библиотеки", _sceneComposerDecorationLibraryIndex, labels);
+                if (GUILayout.Button("Добавить выбранное"))
+                {
+                    VnSceneComposerAssetEntry entry = overlays[_sceneComposerDecorationLibraryIndex];
+                    Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(entry.assetPath);
+                    if (texture != null) ComposerAddDecorationAsset(texture);
+                    else SetSceneComposerStatus("Файл выбранной декорации не найден.", MessageType.Warning);
+                }
+            }
+
+            EditorGUILayout.Space();
+            if (scene.decorations.Count == 0)
+            {
+                EditorGUILayout.HelpBox("В этой сцене пока нет декораций.", MessageType.Info);
+                return;
+            }
+
+            EditorGUILayout.LabelField("Элементы сцены", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < scene.decorations.Count; i++)
+            {
+                VnSceneComposerDecoration item = scene.decorations[i];
+                if (item == null) continue;
+                bool selected = string.Equals(item.decorationId, _sceneComposerSelectedDecorationId, StringComparison.Ordinal);
+                string label = string.IsNullOrWhiteSpace(item.displayName) ? "Декорация " + (i + 1) : item.displayName;
+                if (!item.visible) label += " (скрыта)";
+                if (GUILayout.Button(label, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
+                    ComposerSelectDecoration(item.decorationId);
+            }
+
+            VnSceneComposerDecoration decoration = ComposerGetSelectedDecoration();
+            if (decoration == null)
+            {
+                EditorGUILayout.HelpBox("Выберите декорацию в списке или прямо в предпросмотре.", MessageType.None);
+                return;
+            }
+
+            Texture2D currentTexture = ComposerResolveDecorationTexture(decoration);
+            EditorGUI.BeginChangeCheck();
+            Texture2D nextTexture = (Texture2D)EditorGUILayout.ObjectField(
+                "Изображение", currentTexture, typeof(Texture2D), false);
+            if (EditorGUI.EndChangeCheck() && nextTexture != null) ComposerSetSelectedDecorationAsset(nextTexture);
+
+            EditorGUI.BeginChangeCheck();
+            float x = EditorGUILayout.FloatField("X", decoration.position.x);
+            float y = EditorGUILayout.FloatField("Y", decoration.position.y);
+            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedDecorationPosition(new Vector2(x, y));
+
+            EditorGUI.BeginChangeCheck();
+            float scale = EditorGUILayout.Slider("Размер", decoration.scale, .05f, 5f);
+            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedDecorationScale(scale);
+
+            EditorGUI.BeginChangeCheck();
+            float opacity = EditorGUILayout.Slider("Прозрачность", decoration.opacity, 0f, 1f);
+            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedDecorationOpacity(opacity);
+
+            EditorGUI.BeginChangeCheck();
+            bool visible = EditorGUILayout.Toggle("Показывать", decoration.visible);
+            if (EditorGUI.EndChangeCheck()) ComposerSetSelectedDecorationVisible(visible);
+
+            string[] layerLabels = { "За персонажами", "Перед персонажами" };
+            int layer = decoration.layer == VnSceneComposerDecorationLayer.FrontCharacters ? 1 : 0;
+            EditorGUI.BeginChangeCheck();
+            int nextLayer = EditorGUILayout.Popup("Слой", layer, layerLabels);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetSelectedDecorationLayer(nextLayer == 1
+                    ? VnSceneComposerDecorationLayer.FrontCharacters
+                    : VnSceneComposerDecorationLayer.BehindCharacters);
+
+            string warning = ComposerGetDecorationWarning(decoration);
+            if (!string.IsNullOrEmpty(warning)) EditorGUILayout.HelpBox(warning, MessageType.Warning);
+            if (GUILayout.Button("Удалить декорацию")) ComposerDeleteSelectedDecoration();
         }
 
         private void DrawSceneComposerSceneSettings(VnSceneComposerScene scene)
