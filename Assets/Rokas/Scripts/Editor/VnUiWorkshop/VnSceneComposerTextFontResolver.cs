@@ -8,6 +8,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
     internal static class VnSceneComposerTextFontResolver
     {
         internal const string DefaultTmpFontPath = "Assets/Rokas/Resources/RokasSans TMP.asset";
+        internal const string DefaultSourceFontPath = "Assets/Rokas/Art/UI/Fonts/RokasSans.ttf";
 
         internal static string GetDefaultFontAssetGuid()
         {
@@ -61,6 +62,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (tmp != null)
             {
                 font = tmp.sourceFontFile;
+                if (font == null &&
+                    string.Equals(path, DefaultTmpFontPath, StringComparison.Ordinal))
+                {
+                    font = AssetDatabase.LoadAssetAtPath<Font>(DefaultSourceFontPath);
+                    if (font != null)
+                    {
+                        warning =
+                            "RokasSans TMP не хранит sourceFontFile; предпросмотр использует явно связанную " +
+                            "проектную копию RokasSans.ttf.";
+                        return true;
+                    }
+                }
                 if (font == null)
                 {
                     warning = "TMP Font Asset не содержит исходный Font для предпросмотра. Элемент сохранён.";
