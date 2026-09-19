@@ -443,7 +443,8 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MText_ShortDialogueRemainsSingleWrappedLineInsideAuthoredRect()
         {
-            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
             {
                 window.ComposerAddScene();
                 SetDialogueRect(window, new Rect(260f, 30f, 820f, 160f), 28f);
@@ -458,12 +459,17 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(actual, Is.EqualTo(oneLine).Within(.5f));
                 Assert.That(actual, Is.LessThanOrEqualTo(frame.DialogueText.height));
             }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [Test]
         public void MText_LongDialogueWrapsWithinAuthoredWidth()
         {
-            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
             {
                 window.ComposerAddScene();
                 SetDialogueRect(window, new Rect(260f, 30f, 820f, 160f), 28f);
@@ -479,12 +485,17 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(frame.DialogueText.width, Is.EqualTo(820f).Within(.01f));
                 Assert.That(wrapped, Is.GreaterThan(oneLine + .5f));
             }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [Test]
         public void MText_DialogueRectWidthDoesNotChangeWhenTextGetsLonger()
         {
-            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
             {
                 window.ComposerAddScene();
                 SetDialogueRect(window, new Rect(275f, 25f, 780f, 170f), 30f);
@@ -500,12 +511,17 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(longRect.height, Is.EqualTo(shortRect.height).Within(.001f));
                 Assert.That(longRect.width, Is.EqualTo(780f).Within(.01f));
             }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [Test]
         public void MText_VeryLongDialogueNeverIncreasesHorizontalBounds()
         {
-            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
             {
                 window.ComposerAddScene();
                 SetDialogueRect(window, new Rect(300f, 20f, 760f, 180f), 32f);
@@ -518,6 +534,10 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(frame.DialogueText.width, Is.EqualTo(760f).Within(.01f));
                 Assert.That(frame.DialogueText.xMin, Is.GreaterThanOrEqualTo(frame.DialoguePanel.xMin - .01f));
                 Assert.That(frame.DialogueText.xMax, Is.LessThanOrEqualTo(frame.DialoguePanel.xMax + .01f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
             }
         }
 
@@ -624,7 +644,8 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MText_LargeFontLongDialogueRemainsHorizontallyBounded()
         {
-            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
             {
                 window.ComposerAddScene();
                 SetDialogueRect(window, new Rect(290f, 18f, 740f, 190f), 72f);
@@ -638,6 +659,10 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(frame.DialogueText.width, Is.EqualTo(740f).Within(.01f));
                 Assert.That(frame.DialogueText.xMax, Is.LessThanOrEqualTo(frame.DialoguePanel.xMax + .01f));
                 Assert.That(MeasureWrappedHeight(frame, frame.Dialogue), Is.GreaterThan(0f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
             }
         }
 
