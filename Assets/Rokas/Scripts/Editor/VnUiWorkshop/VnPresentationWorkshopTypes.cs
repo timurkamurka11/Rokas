@@ -104,9 +104,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
+    public sealed class VnWorkshopDialoguePanelVisualOverride
+    {
+        public bool hasAssetGuid;
+        public string assetGuid = string.Empty;
+
+        public bool HasAnyOverride
+        {
+            get { return hasAssetGuid; }
+        }
+
+        public void Clear()
+        {
+            hasAssetGuid = false;
+            assetGuid = string.Empty;
+        }
+    }
+
+    [Serializable]
     public sealed class VnPresentationWorkshopPreset
     {
         public VnWorkshopElementOverride dialoguePanel = new VnWorkshopElementOverride();
+        public VnWorkshopDialoguePanelVisualOverride dialoguePanelVisual = new VnWorkshopDialoguePanelVisualOverride();
         public VnWorkshopElementOverride minaBody = new VnWorkshopElementOverride();
         public VnWorkshopElementOverride speakerName = new VnWorkshopElementOverride();
         public VnWorkshopElementOverride dialogueText = new VnWorkshopElementOverride();
@@ -130,7 +149,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             get
             {
-                return dialoguePanel.HasAnyOverride || minaBody.HasAnyOverride ||
+                return dialoguePanel.HasAnyOverride ||
+                       (dialoguePanelVisual != null && dialoguePanelVisual.HasAnyOverride) ||
+                       minaBody.HasAnyOverride ||
                        speakerName.HasAnyOverride || dialogueText.HasAnyOverride ||
                        back.HasAnyOverride || next.HasAnyOverride ||
                        muteHitRegion.HasAnyOverride || pauseHitRegion.HasAnyOverride ||
@@ -172,6 +193,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void ResetAll()
         {
             dialoguePanel.Clear();
+            if (dialoguePanelVisual == null) dialoguePanelVisual = new VnWorkshopDialoguePanelVisualOverride();
+            dialoguePanelVisual.Clear();
             minaBody.Clear();
             speakerName.Clear();
             dialogueText.Clear();
