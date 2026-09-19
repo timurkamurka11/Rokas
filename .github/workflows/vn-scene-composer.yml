@@ -82,6 +82,24 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
+      - name: Run M-TRANSITION cinematic scene boundary fixture
+        id: mtransition-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerMTransitionTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer M-TRANSITION EditMode
+          artifactsPath: artifacts-vn-scene-composer-mtransition
+
       - name: Run M-G visual polish fixture
         id: mg-tests
         uses: game-ci/unity-test-runner@v4
