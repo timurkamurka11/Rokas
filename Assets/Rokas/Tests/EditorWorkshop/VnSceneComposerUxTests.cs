@@ -157,12 +157,16 @@ namespace Rokas.EditorTools.Tests
         public void UxC_BasicTextExposesCanonicalFontSizeAndSpeedControls()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string typographySource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerTextElements.cs");
             string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
 
-            Assert.That(textInspector, Does.Contain("\"Шрифт\""),
-                "Basic text authoring must expose Шрифт without opening Дополнительно.");
-            Assert.That(textInspector, Does.Contain("\"Размер текста\""),
-                "Basic text authoring must expose Размер текста without opening raw Typography controls.");
+            Assert.That(textInspector, Does.Contain("DrawSceneComposerDialogueTypographyInspector(scene)"),
+                "Basic text authoring must expose the corrected existing-dialogue typography surface.");
+            Assert.That(typographySource, Does.Contain("\"Шрифт Windows\"")
+                .And.Contain("\"Размер\"")
+                .And.Contain("\"Изменить текст говорящего\"")
+                .And.Contain("\"Изменить текст реплики\""),
+                "Basic text authoring must expose Windows font selection, size, and both existing dialogue-text controls.");
             Assert.That(textInspector, Does.Contain("\"Скорость текста\""),
                 "Basic text authoring must expose Скорость текста without opening raw Typewriter controls.");
             Assert.That(textInspector, Does.Contain("VnSceneComposerComposition.ResolvePresentation"),
