@@ -224,6 +224,18 @@ namespace Rokas.EditorTools.Tests
                 Undo.FlushUndoRecordObjects();
                 Assert.That(GetDecorations(GetProject(window).scenes[0]).Count, Is.EqualTo(1));
 
+                // Add is independently undoable.
+                Undo.PerformUndo();
+                Assert.That(GetDecorations(GetProject(window).scenes[0]).Count, Is.EqualTo(0));
+
+                // Recreate setup, then isolate each following mutation exactly like the established
+                // Scene Composer Undo fixtures do after setup.
+                id = (string)RequireWindowMethod("ComposerAddDecorationAsset", typeof(Texture2D))
+                    .Invoke(window, new object[] { texture });
+                Undo.FlushUndoRecordObjects();
+                Undo.ClearAll();
+
+                RequireWindowMethod("ComposerSelectDecoration", typeof(string)).Invoke(window, new object[] { id });
                 RequireWindowMethod("ComposerSetSelectedDecorationOpacity", typeof(float))
                     .Invoke(window, new object[] { .25f });
                 Undo.FlushUndoRecordObjects();
@@ -231,12 +243,15 @@ namespace Rokas.EditorTools.Tests
                 Undo.PerformUndo();
                 Assert.That((float)GetField(GetDecorations(GetProject(window).scenes[0])[0], "opacity"), Is.EqualTo(1f).Within(.0001f));
 
+                Undo.ClearAll();
                 RequireWindowMethod("ComposerSelectDecoration", typeof(string)).Invoke(window, new object[] { id });
                 RequireWindowMethod("ComposerSetSelectedDecorationVisible", typeof(bool)).Invoke(window, new object[] { false });
                 Undo.FlushUndoRecordObjects();
+                Assert.That((bool)GetField(GetDecorations(GetProject(window).scenes[0])[0], "visible"), Is.False);
                 Undo.PerformUndo();
                 Assert.That((bool)GetField(GetDecorations(GetProject(window).scenes[0])[0], "visible"), Is.True);
 
+                Undo.ClearAll();
                 RequireWindowMethod("ComposerSelectDecoration", typeof(string)).Invoke(window, new object[] { id });
                 RequireWindowMethod("ComposerDeleteSelectedDecoration").Invoke(window, null);
                 Undo.FlushUndoRecordObjects();
