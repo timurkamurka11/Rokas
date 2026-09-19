@@ -100,10 +100,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float scaleMultiplier = 1f;
     }
 
+    public enum VnSceneComposerSceneTransitionType
+    {
+        None,
+        DarkCurtain
+    }
+
+    public enum VnSceneComposerSceneTransitionDirection
+    {
+        LeftToRight,
+        RightToLeft
+    }
+
     [Serializable]
     public sealed class VnSceneComposerTransition
     {
         public bool triggerActionBounce;
+        // M-TRANSITION belongs to the incoming Scene. None is the serialized zero/default
+        // so historical scenes continue to use the old instant boundary behavior.
+        public VnSceneComposerSceneTransitionType sceneTransitionType = VnSceneComposerSceneTransitionType.None;
+        public VnSceneComposerSceneTransitionDirection sceneTransitionDirection =
+            VnSceneComposerSceneTransitionDirection.LeftToRight;
+        public float sceneTransitionDuration = .7f;
     }
 
     [Serializable]

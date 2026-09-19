@@ -35,6 +35,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
+        private static bool ShouldDrawRegisteredPlaybackDialogue(VnWorkshopPreviewFrame frame)
+        {
+            return frame == null ||
+                   !PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
+                   playbackFrame.ShowDialogueUi;
+        }
+
+        private static void TryDrawRegisteredSceneTransitionOverlay(Rect localCanvas, VnWorkshopPreviewFrame frame)
+        {
+            if (frame == null ||
+                !PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
+                playbackFrame.SceneTransitionOverlay == null ||
+                !playbackFrame.SceneTransitionOverlay.Active)
+                return;
+            DrawSceneTransitionOverlay(localCanvas, playbackFrame.SceneTransitionOverlay);
+        }
+
+        private static void DrawSceneTransitionOverlay(
+            Rect rect, VnSceneComposerSceneTransitionOverlaySample sample)
+        {
+            float coverage = Mathf.Clamp01(sample.Coverage);
+            if (coverage <= .0001f) return;
+            float width = rect.width * coverage;
+            bool reveal = sample.Phase == VnSceneComposerSceneTransitionPhase.Reveal;
+            bool anchorRight =
+                (!reveal && sample.Direction == VnSceneComposerSceneTransitionDirection.RightToLeft) ||
+                (reveal && sample.Direction == VnSceneComposerSceneTransitionDirection.LeftToRight);
+            Rect curtain = anchorRight
+                ? new Rect(rect.xMax - width, rect.y, width, rect.height)
+                : new Rect(rect.x, rect.y, width, rect.height);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(.015f, .015f, .02f, 1f);
+            GUI.DrawTexture(curtain, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+            GUI.color = previous;
+        }
+
         private static void DrawPlaybackBackground(Rect rect, VnSceneComposerPlaybackFrame frame)
         {
             VnWorkshopBackgroundTransitionSample sample = frame.ComposerBackgroundTransition;

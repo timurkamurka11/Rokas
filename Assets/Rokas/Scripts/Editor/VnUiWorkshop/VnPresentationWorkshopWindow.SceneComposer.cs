@@ -497,6 +497,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return VnSceneComposerComposition.BuildFrame(_sceneComposerProject, scene, beat, previewResolution, background);
         }
 
+        public void ComposerSetSelectedSceneBoundaryTransition(
+            VnSceneComposerSceneTransitionType type,
+            VnSceneComposerSceneTransitionDirection direction,
+            float duration)
+        {
+            if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType), type))
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionDirection), direction))
+                throw new ArgumentOutOfRangeException(nameof(direction), direction, null);
+            if (float.IsNaN(duration) || float.IsInfinity(duration))
+                throw new ArgumentOutOfRangeException(nameof(duration), "Transition duration must be finite.");
+
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+            RecordSceneComposerUndo("Edit VN Scene Boundary Transition");
+            scene.transition.sceneTransitionType = type;
+            scene.transition.sceneTransitionDirection = direction;
+            scene.transition.sceneTransitionDuration = Mathf.Clamp(duration, 0f, 10f);
+            MarkSceneComposerChanged();
+        }
+
         public void ComposerPlayScene()
         {
             ComposerStopMusicPreview();
@@ -1624,7 +1645,48 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopBackgroundTransitionValues background = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(effective);
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
-            EditorGUILayout.LabelField(new GUIContent("Переход фона", "Как фон меняется при переходе к этой сцене."), EditorStyles.miniBoldLabel);
+
+            if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+            EditorGUILayout.LabelField(
+                new GUIContent("Переход между сценами", "Кинематографический переход при входе в эту сцену с предыдущей."),
+                EditorStyles.miniBoldLabel);
+            EditorGUILayout.HelpBox(
+                "Настройка входа в эту сцену. Прямой запуск сцены переход не проигрывает.",
+                MessageType.None);
+            string[] sceneTransitionLabels = { "Без перехода", "Тёмная шторка" };
+            string[] sceneTransitionDirectionLabels = { "Слева направо", "Справа налево" };
+            EditorGUI.BeginChangeCheck();
+            int sceneTransitionType = EditorGUILayout.Popup(
+                "Способ",
+                scene.transition.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain ? 1 : 0,
+                sceneTransitionLabels);
+            VnSceneComposerSceneTransitionDirection sceneTransitionDirection =
+                scene.transition.sceneTransitionDirection;
+            float sceneTransitionDuration = scene.transition.sceneTransitionDuration;
+            if (sceneTransitionType == 1)
+            {
+                int directionIndex = sceneTransitionDirection == VnSceneComposerSceneTransitionDirection.RightToLeft ? 1 : 0;
+                directionIndex = EditorGUILayout.Popup("Направление", directionIndex, sceneTransitionDirectionLabels);
+                sceneTransitionDirection = directionIndex == 1
+                    ? VnSceneComposerSceneTransitionDirection.RightToLeft
+                    : VnSceneComposerSceneTransitionDirection.LeftToRight;
+                sceneTransitionDuration = DrawSceneComposerDurationControl(
+                    "Длительность", sceneTransitionDuration, 0f);
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                ComposerSetSelectedSceneBoundaryTransition(
+                    sceneTransitionType == 1
+                        ? VnSceneComposerSceneTransitionType.DarkCurtain
+                        : VnSceneComposerSceneTransitionType.None,
+                    sceneTransitionDirection,
+                    sceneTransitionDuration);
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField(
+                new GUIContent("Переход фона", "Внутренняя анимация смены фона после входа в сцену."),
+                EditorStyles.miniBoldLabel);
             string[] backgroundLabels = { "Без перехода", "Плавный переход", "Шторка" };
             string[] curtainDirectionLabels = { "Справа налево", "Слева направо" };
             EditorGUI.BeginChangeCheck();
@@ -1949,7 +2011,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void SceneComposerEditorUpdate()
         {
             if (this == null) { EditorApplication.update -= SceneComposerEditorUpdate; return; }
-            if (!_sceneComposerWorkspaceActive || _sceneComposerPlayback == null || !_sceneComposerPlayback.IsPlaying)
+            if (!_sceneComposerWorkspaceActive || _sceneComposerPlayback == null || !_sceneComposerPlayback.RequiresTick)
             {
                 _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup; return;
             }

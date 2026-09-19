@@ -70,6 +70,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private const int BeatStateSchemaVersion = 2;
         private const string ExternalReferencePrefix = "external://";
         private const float MaxPreviewDuration = 3600f;
+        private const float MaxSceneTransitionDuration = 10f;
 
         [Serializable]
         private sealed class LegacyDialogueProjectV1
@@ -493,6 +494,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 error = "Scene Composer transition data is missing for scene " + scene.sceneId + ".";
                 return false;
             }
+            if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType), scene.transition.sceneTransitionType))
+            {
+                error = "Invalid Scene Composer scene transition type in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionDirection), scene.transition.sceneTransitionDirection))
+            {
+                error = "Invalid Scene Composer scene transition direction in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!IsFinite(scene.transition.sceneTransitionDuration) ||
+                scene.transition.sceneTransitionDuration < 0f ||
+                scene.transition.sceneTransitionDuration > MaxSceneTransitionDuration)
+            {
+                error = "Scene Composer scene transition duration must be finite and between 0 and " +
+                        MaxSceneTransitionDuration + " seconds in scene " + scene.sceneId + ".";
+                return false;
+            }
             if (scene.timing == null)
             {
                 error = "Scene Composer timing data is missing for scene " + scene.sceneId + ".";
@@ -781,6 +800,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
                 if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+                if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType), scene.transition.sceneTransitionType))
+                    scene.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.None;
+                if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionDirection), scene.transition.sceneTransitionDirection))
+                    scene.transition.sceneTransitionDirection = VnSceneComposerSceneTransitionDirection.LeftToRight;
+                if (!IsFinite(scene.transition.sceneTransitionDuration) || scene.transition.sceneTransitionDuration < 0f)
+                    scene.transition.sceneTransitionDuration = 0f;
+                scene.transition.sceneTransitionDuration =
+                    Mathf.Clamp(scene.transition.sceneTransitionDuration, 0f, MaxSceneTransitionDuration);
                 if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
                 if (scene.media.reference == null) scene.media.reference = string.Empty;
                 if (scene.media.displayName == null) scene.media.displayName = string.Empty;
