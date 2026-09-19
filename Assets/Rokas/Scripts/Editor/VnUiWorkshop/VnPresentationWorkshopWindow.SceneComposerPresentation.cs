@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,7 +16,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 "preview-modes", "element-layout", "character-layout", "variants", "portable-preset", "profiles",
                 "typography", "preview-text", "typewriter", "expression", "character-enter-exit", "bounce",
-                "background-transition", "stage-layout", "speaker-focus", "ui-feedback", "timing", "resolution-preview"
+                "background-transition", "stage-layout", "speaker-focus", "ui-feedback", "timing", "resolution-preview",
+                "dialogue-panel-visual"
             };
         }
 
@@ -41,6 +43,91 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (scene.presentationOverrides == null)
                 scene.presentationOverrides = new VnPresentationWorkshopPreset();
             return scene.presentationOverrides;
+        }
+
+        public void ComposerSetDialoguePanelVisualAsset(Texture2D texture)
+        {
+            if (texture == null) throw new ArgumentNullException(nameof(texture));
+            string assetPath = AssetDatabase.GetAssetPath(texture);
+            if (string.IsNullOrWhiteSpace(assetPath))
+                throw new ArgumentException("Dialogue panel image must be a Unity project asset.", nameof(texture));
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new InvalidOperationException("Dialogue panel image does not have a stable Unity asset GUID.");
+
+            RecordSceneComposerUndo("Choose VN Dialogue Panel Visual");
+            VnPresentationWorkshopPreset preset = ComposerGetActivePresentationPreset();
+            if (preset.dialoguePanelVisual == null)
+                preset.dialoguePanelVisual = new VnWorkshopDialoguePanelVisualOverride();
+            preset.dialoguePanelVisual.hasAssetGuid = true;
+            preset.dialoguePanelVisual.assetGuid = guid;
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerResetDialoguePanelVisual()
+        {
+            VnPresentationWorkshopPreset preset = ComposerGetActivePresentationPreset();
+            if (preset.dialoguePanelVisual == null || !preset.dialoguePanelVisual.HasAnyOverride) return;
+
+            RecordSceneComposerUndo("Reset VN Dialogue Panel Visual");
+            preset.dialoguePanelVisual.Clear();
+            MarkSceneComposerChanged();
+        }
+
+        public Texture2D ComposerGetActiveDialoguePanelVisualAsset()
+        {
+            return ResolveDialoguePanelVisualAsset(ComposerGetActivePresentationPreset());
+        }
+
+        public Texture2D ComposerGetEffectiveDialoguePanelVisualAsset(VnSceneComposerScene scene)
+        {
+            if (scene == null) return null;
+            return ResolveDialoguePanelVisualAsset(VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene));
+        }
+
+        public string ComposerGetEffectiveDialoguePanelVisualWarning(VnSceneComposerScene scene)
+        {
+            if (scene == null) return string.Empty;
+            VnPresentationWorkshopPreset preset = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
+            if (preset == null || preset.dialoguePanelVisual == null || !preset.dialoguePanelVisual.hasAssetGuid)
+                return string.Empty;
+
+            string guid = (preset.dialoguePanelVisual.assetGuid ?? string.Empty).Trim();
+            if (guid.Length == 0)
+                return "Выбранная плашка диалога не содержит корректной ссылки. Будет использована плашка по умолчанию.";
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(assetPath) || AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath) == null)
+                return "Файл выбранной плашки диалога не найден. Будет использована плашка по умолчанию.";
+            return string.Empty;
+        }
+
+        public void ComposerSetExternalDialoguePanelPng(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                throw new ArgumentException("PNG file does not exist.", nameof(sourcePath));
+            if (!string.Equals(Path.GetExtension(sourcePath), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Dialogue panel image must use PNG.", nameof(sourcePath));
+
+            VnSceneComposerAssetOnboardResult result = VnSceneComposerAssetLibrary.Onboard(
+                GetProjectRoot(), sourcePath, VnSceneComposerAssetPurpose.UiOverlay,
+                Path.GetFileNameWithoutExtension(sourcePath), string.Empty, string.Empty);
+            if (!result.Success || result.Entry == null)
+                throw new InvalidOperationException(result.Error ?? "Could not add dialogue panel PNG.");
+
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(result.Entry.assetPath);
+            if (texture == null)
+                throw new InvalidOperationException("Onboarded dialogue panel PNG could not be loaded: " + result.Entry.assetPath);
+            ComposerSetDialoguePanelVisualAsset(texture);
+        }
+
+        private static Texture2D ResolveDialoguePanelVisualAsset(VnPresentationWorkshopPreset preset)
+        {
+            if (preset == null || preset.dialoguePanelVisual == null || !preset.dialoguePanelVisual.hasAssetGuid)
+                return null;
+            string guid = (preset.dialoguePanelVisual.assetGuid ?? string.Empty).Trim();
+            if (guid.Length == 0) return null;
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            return string.IsNullOrEmpty(assetPath) ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
         }
 
         public void ComposerSetElementLayout(VnWorkshopElement element, Vector2 positionDelta, Vector2 sizeDelta, float scaleMultiplier)
