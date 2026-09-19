@@ -19,7 +19,8 @@ namespace Rokas.EditorTools.Tests
             {
                 "preview-modes", "element-layout", "character-layout", "variants", "portable-preset", "profiles",
                 "typography", "preview-text", "typewriter", "expression", "character-enter-exit", "bounce",
-                "background-transition", "stage-layout", "speaker-focus", "ui-feedback", "timing", "resolution-preview"
+                "background-transition", "stage-layout", "speaker-focus", "ui-feedback", "timing", "resolution-preview",
+                "dialogue-panel-visual"
             };
             MethodInfo inventory = RequireWindowMethod(windowType, "ComposerGetPresentationCapabilityIds");
             string[] actual = (string[])inventory.Invoke(null, null);
