@@ -268,6 +268,38 @@ namespace Rokas.EditorTools.Tests
             }
         }
 
+        [Test]
+        public void MF2_CustomPanelAppearsThroughSceneComposerComposition()
+        {
+            var project = new VnSceneComposerProject();
+            var scene = new VnSceneComposerScene();
+            scene.dialogueBeats[0].speaker = "Keiko";
+            project.scenes.Add(scene);
+            SetPanelOverride(scene.presentationOverrides, LightPanelGuid);
+
+            Texture2D expected = AssetDatabase.LoadAssetAtPath<Texture2D>(LightPanelPath);
+            VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(
+                project, scene, VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+
+            Assert.That(frame.DialoguePanelTexture, Is.SameAs(expected),
+                "Authoring/playback composition must resolve the same canonical custom panel texture.");
+        }
+
+        [Test]
+        public void MF2_DuplicateScenePreservesScenePanelOverride()
+        {
+            var project = new VnSceneComposerProject();
+            var source = new VnSceneComposerScene();
+            project.scenes.Add(source);
+            SetPanelOverride(source.presentationOverrides, LightPanelGuid);
+
+            VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(project, source.sceneId);
+
+            Assert.That(copy, Is.Not.Null);
+            Assert.That(copy.sceneId, Is.Not.EqualTo(source.sceneId));
+            Assert.That(GetPanelOverrideGuid(copy.presentationOverrides), Is.EqualTo(LightPanelGuid));
+        }
+
         private static void SetPanelOverride(VnPresentationWorkshopPreset preset, string guid)
         {
             Assert.That(preset, Is.Not.Null);
