@@ -85,11 +85,11 @@ namespace Rokas.EditorTools.Tests
                 BindingFlags.NonPublic | BindingFlags.Static);
             Assert.That(sectionsField, Is.Not.Null);
             string[] sections = (string[])sectionsField.GetValue(null);
-            Assert.That(sections, Has.Length.EqualTo(10));
+            Assert.That(sections, Has.Length.EqualTo(11));
             Assert.That(sections, Does.Contain("Фон").And.Contain("Персонажи").And.Contain("Текст"));
             Assert.That(sections, Does.Contain("Анимация персонажа").And.Contain("Анимация сцены"));
             Assert.That(sections, Does.Contain("Медиа").And.Contain("Настройки сцены").And.Contain("Дополнительно"));
-            Assert.That(sections, Does.Contain("Декорации").And.Contain("Музыка"));
+            Assert.That(sections, Does.Contain("Декорации").And.Contain("Звуки").And.Contain("Музыка"));
             Assert.That(type.GetMethod("DrawSceneComposerInspectorSelector",
                 BindingFlags.NonPublic | BindingFlags.Instance), Is.Not.Null);
         }
