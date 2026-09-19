@@ -38,6 +38,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             "Настройки сцены",
             "Дополнительно",
             "Декорации",
+            "Звуки",
             "Музыка"
         };
 
@@ -985,6 +986,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case 6: DrawSceneComposerSceneSettings(scene); break;
                 case 7: DrawSceneComposerAdditionalInspector(scene); break;
                 case 8: DrawSceneComposerDecorationInspector(scene); break;
+                case 9: DrawSceneComposerAdditionalAudioInspector(scene); break;
                 default: DrawSceneComposerMusicInspector(scene); break;
             }
 

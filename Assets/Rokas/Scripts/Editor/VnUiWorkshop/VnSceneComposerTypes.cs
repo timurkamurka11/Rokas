@@ -64,6 +64,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
         KeepPrevious
     }
 
+    public enum VnSceneComposerAudioCategory
+    {
+        Sfx,
+        Ambience,
+        MusicLayer
+    }
+
+    public enum VnSceneComposerAudioTrigger
+    {
+        SceneStart,
+        BeatStart
+    }
+
+    public enum VnSceneComposerAudioStopMode
+    {
+        Natural,
+        SceneEnd,
+        BeatStart
+    }
+
     [Serializable]
     public sealed class VnSceneComposerMusic
     {
@@ -74,6 +94,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool loop = true;
         public float fadeInSeconds;
         public float fadeOutSeconds;
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerAdditionalAudioCue
+    {
+        public string cueId = VnSceneComposerScene.NewStableId();
+        public string displayName = "Новый звук";
+        public string assetGuid = string.Empty;
+        public bool enabled = true;
+        public VnSceneComposerAudioCategory category = VnSceneComposerAudioCategory.Sfx;
+        public float volume = 1f;
+        public bool loop;
+        public VnSceneComposerAudioTrigger trigger = VnSceneComposerAudioTrigger.SceneStart;
+        public string startBeatId = string.Empty;
+        public float startDelaySeconds;
+        public float fadeInSeconds;
+        public float fadeOutSeconds;
+        public VnSceneComposerAudioStopMode stopMode = VnSceneComposerAudioStopMode.Natural;
+        public string stopBeatId = string.Empty;
     }
 
     [Serializable]
@@ -186,6 +225,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string label = "Scene";
         public VnSceneComposerMediaReference media = new VnSceneComposerMediaReference();
         public VnSceneComposerMusic music = new VnSceneComposerMusic();
+        public List<VnSceneComposerAdditionalAudioCue> additionalAudioCues =
+            new List<VnSceneComposerAdditionalAudioCue>();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();
         public List<VnSceneComposerDecoration> decorations = new List<VnSceneComposerDecoration>();
         public List<VnSceneComposerTextElement> textElements = new List<VnSceneComposerTextElement>();

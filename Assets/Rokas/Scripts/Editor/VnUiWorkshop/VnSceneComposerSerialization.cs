@@ -319,6 +319,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (!ValidateMedia(scene, diagnostics, out error)) return false;
             if (!ValidateMusic(scene, diagnostics, out error)) return false;
+            if (!ValidateAdditionalAudio(scene, diagnostics, out error)) return false;
 
             if (scene.characters == null)
             {
@@ -671,6 +672,100 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
+        private static bool ValidateAdditionalAudio(
+            VnSceneComposerScene scene, List<string> diagnostics, out string error)
+        {
+            if (scene.additionalAudioCues == null)
+            {
+                error = "Scene Composer additional audio cue list is missing for scene " + scene.sceneId + ".";
+                return false;
+            }
+
+            var cueIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < scene.additionalAudioCues.Count; i++)
+            {
+                VnSceneComposerAdditionalAudioCue cue = scene.additionalAudioCues[i];
+                if (cue == null)
+                {
+                    error = "Additional audio cue at index " + i + " is null in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!IsStableId(cue.cueId))
+                {
+                    error = "Additional audio cue ID is missing or invalid at index " + i +
+                            " in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!cueIds.Add(cue.cueId))
+                {
+                    error = "Duplicate additional audio cue ID: " + cue.cueId + ".";
+                    return false;
+                }
+                if (!Enum.IsDefined(typeof(VnSceneComposerAudioCategory), cue.category) ||
+                    !Enum.IsDefined(typeof(VnSceneComposerAudioTrigger), cue.trigger) ||
+                    !Enum.IsDefined(typeof(VnSceneComposerAudioStopMode), cue.stopMode))
+                {
+                    error = "Invalid additional audio cue enum value in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!IsFinite(cue.volume) || cue.volume < 0f || cue.volume > 1f)
+                {
+                    error = "Additional audio cue volume must be between 0 and 1 in scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (!IsFinite(cue.startDelaySeconds) || cue.startDelaySeconds < 0f ||
+                    !IsFinite(cue.fadeInSeconds) || cue.fadeInSeconds < 0f ||
+                    !IsFinite(cue.fadeOutSeconds) || cue.fadeOutSeconds < 0f)
+                {
+                    error = "Additional audio timing values must be finite and non-negative in scene " +
+                            scene.sceneId + ".";
+                    return false;
+                }
+
+                if (cue.trigger == VnSceneComposerAudioTrigger.BeatStart &&
+                    VnSceneComposerDialogue.FindIndex(scene, cue.startBeatId) < 0)
+                {
+                    error = "Additional audio cue start Beat is missing from scene " + scene.sceneId + ".";
+                    return false;
+                }
+                if (cue.stopMode == VnSceneComposerAudioStopMode.BeatStart &&
+                    VnSceneComposerDialogue.FindIndex(scene, cue.stopBeatId) < 0)
+                {
+                    error = "Additional audio cue stop Beat is missing from scene " + scene.sceneId + ".";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(cue.assetGuid))
+                {
+                    diagnostics.Add("Additional audio cue has no AudioClip in scene '" +
+                                    (scene.label ?? scene.sceneId) + "': " +
+                                    (string.IsNullOrWhiteSpace(cue.displayName) ? cue.cueId : cue.displayName) + ".");
+                    continue;
+                }
+                if (!IsStableId(cue.assetGuid))
+                {
+                    error = "Additional audio cue asset GUID is invalid in scene " + scene.sceneId + ".";
+                    return false;
+                }
+
+                string assetPath = AssetDatabase.GUIDToAssetPath(cue.assetGuid);
+                if (string.IsNullOrEmpty(assetPath))
+                {
+                    diagnostics.Add("Additional audio asset is missing in scene '" +
+                                    (scene.label ?? scene.sceneId) + "': " +
+                                    (string.IsNullOrWhiteSpace(cue.displayName) ? cue.assetGuid : cue.displayName) + ".");
+                }
+                else if (AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath) == null)
+                {
+                    error = "Additional audio reference is not an AudioClip in scene " + scene.sceneId + ".";
+                    return false;
+                }
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         private static bool ValidateMusic(
             VnSceneComposerScene scene, List<string> diagnostics, out string error)
         {
@@ -885,6 +980,35 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     scene.music.fadeInSeconds = 0f;
                 if (!IsFinite(scene.music.fadeOutSeconds) || scene.music.fadeOutSeconds < 0f)
                     scene.music.fadeOutSeconds = 0f;
+                if (scene.additionalAudioCues == null)
+                    scene.additionalAudioCues = new List<VnSceneComposerAdditionalAudioCue>();
+                for (int a = 0; a < scene.additionalAudioCues.Count; a++)
+                {
+                    VnSceneComposerAdditionalAudioCue cue = scene.additionalAudioCues[a];
+                    if (cue == null)
+                    {
+                        scene.additionalAudioCues[a] = cue = new VnSceneComposerAdditionalAudioCue();
+                    }
+                    if (cue.cueId == null) cue.cueId = string.Empty;
+                    if (cue.displayName == null) cue.displayName = string.Empty;
+                    if (cue.assetGuid == null) cue.assetGuid = string.Empty;
+                    if (cue.startBeatId == null) cue.startBeatId = string.Empty;
+                    if (cue.stopBeatId == null) cue.stopBeatId = string.Empty;
+                    if (!Enum.IsDefined(typeof(VnSceneComposerAudioCategory), cue.category))
+                        cue.category = VnSceneComposerAudioCategory.Sfx;
+                    if (!Enum.IsDefined(typeof(VnSceneComposerAudioTrigger), cue.trigger))
+                        cue.trigger = VnSceneComposerAudioTrigger.SceneStart;
+                    if (!Enum.IsDefined(typeof(VnSceneComposerAudioStopMode), cue.stopMode))
+                        cue.stopMode = VnSceneComposerAudioStopMode.Natural;
+                    if (!IsFinite(cue.volume)) cue.volume = 1f;
+                    cue.volume = Mathf.Clamp01(cue.volume);
+                    if (!IsFinite(cue.startDelaySeconds) || cue.startDelaySeconds < 0f)
+                        cue.startDelaySeconds = 0f;
+                    if (!IsFinite(cue.fadeInSeconds) || cue.fadeInSeconds < 0f)
+                        cue.fadeInSeconds = 0f;
+                    if (!IsFinite(cue.fadeOutSeconds) || cue.fadeOutSeconds < 0f)
+                        cue.fadeOutSeconds = 0f;
+                }
                 if (scene.characters == null) scene.characters = new List<VnSceneComposerCharacter>();
                 if (scene.decorations == null) scene.decorations = new List<VnSceneComposerDecoration>();
                 for (int d = 0; d < scene.decorations.Count; d++)

@@ -54,6 +54,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             copy.sceneId = VnSceneComposerScene.NewStableId();
             if (copy.media == null) copy.media = new VnSceneComposerMediaReference();
             if (copy.music == null) copy.music = new VnSceneComposerMusic();
+            if (copy.additionalAudioCues == null)
+                copy.additionalAudioCues = new System.Collections.Generic.List<VnSceneComposerAdditionalAudioCue>();
             if (copy.characters == null) copy.characters = new System.Collections.Generic.List<VnSceneComposerCharacter>();
             if (copy.decorations == null) copy.decorations = new System.Collections.Generic.List<VnSceneComposerDecoration>();
             for (int i = 0; i < copy.decorations.Count; i++)
@@ -69,10 +71,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (copy.dialogueBeats == null) copy.dialogueBeats = new System.Collections.Generic.List<VnSceneComposerDialogueBeat>();
             if (copy.dialogueBeats.Count == 0) copy.dialogueBeats.Add(new VnSceneComposerDialogueBeat());
+            var beatIdMap = new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < copy.dialogueBeats.Count; i++)
             {
                 if (copy.dialogueBeats[i] == null) copy.dialogueBeats[i] = new VnSceneComposerDialogueBeat();
-                copy.dialogueBeats[i].beatId = VnSceneComposerScene.NewStableId();
+                string sourceBeatId = copy.dialogueBeats[i].beatId ?? string.Empty;
+                string copiedBeatId = VnSceneComposerScene.NewStableId();
+                copy.dialogueBeats[i].beatId = copiedBeatId;
+                if (!string.IsNullOrEmpty(sourceBeatId)) beatIdMap[sourceBeatId] = copiedBeatId;
+            }
+            for (int i = 0; i < copy.additionalAudioCues.Count; i++)
+            {
+                VnSceneComposerAdditionalAudioCue cue = copy.additionalAudioCues[i];
+                if (cue == null) continue;
+                cue.cueId = VnSceneComposerScene.NewStableId();
+                if (!string.IsNullOrEmpty(cue.startBeatId) &&
+                    beatIdMap.TryGetValue(cue.startBeatId, out string mappedStart))
+                    cue.startBeatId = mappedStart;
+                if (!string.IsNullOrEmpty(cue.stopBeatId) &&
+                    beatIdMap.TryGetValue(cue.stopBeatId, out string mappedStop))
+                    cue.stopBeatId = mappedStop;
             }
             if (copy.presentationOverrides == null) copy.presentationOverrides = new VnPresentationWorkshopPreset();
             if (copy.transition == null) copy.transition = new VnSceneComposerTransition();
