@@ -300,6 +300,34 @@ namespace Rokas.EditorTools.Tests
             Assert.That(GetPanelOverrideGuid(copy.presentationOverrides), Is.EqualTo(LightPanelGuid));
         }
 
+        [Test]
+        public void MF2_BasicUiExposesFriendlyDialoguePanelControls()
+        {
+            string sourcePath = Path.Combine(
+                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs");
+            string source = File.ReadAllText(sourcePath);
+            string signature = "private void DrawSceneComposerDialoguePanelVisualControls(VnSceneComposerScene scene)";
+            int start = source.IndexOf(signature, StringComparison.Ordinal);
+            Assert.That(start, Is.GreaterThanOrEqualTo(0));
+            int end = source.IndexOf("private void SetSceneComposerBasicTextStyle", start, StringComparison.Ordinal);
+            Assert.That(end, Is.GreaterThan(start));
+            string ui = source.Substring(start, end - start);
+
+            Assert.That(ui, Does.Contain("\"Плашка диалога\"")
+                .And.Contain("\"По умолчанию\"")
+                .And.Contain("\"Своя PNG\"")
+                .And.Contain("\"Только к этой сцене\"")
+                .And.Contain("\"Ко всем сценам\"")
+                .And.Contain("\"Выбрать PNG\"")
+                .And.Contain("\"Сбросить\""));
+            Assert.That(ui, Does.Not.Contain("assetGuid")
+                .And.Not.Contain("contentHash")
+                .And.Not.Contain("stableAssetId")
+                .And.Not.Contain("Project Defaults")
+                .And.Not.Contain("Scene Overrides"));
+        }
+
         private static void SetPanelOverride(VnPresentationWorkshopPreset preset, string guid)
         {
             Assert.That(preset, Is.Not.Null);
