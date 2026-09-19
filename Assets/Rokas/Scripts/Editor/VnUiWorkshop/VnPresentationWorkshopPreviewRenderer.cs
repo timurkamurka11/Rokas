@@ -220,8 +220,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (dialogueOverride != null) dialogue = dialogueOverride;
 
             Rect panel = ApplyOverride(BuildPanelRect(virtualCanvas, panelTexture), preset.dialoguePanel);
-            Rect speakerName = ApplyOverride(RelativeRect(panel, .12f, .48f, .42f, .84f), preset.speakerName);
-            Rect dialogueText = ApplyOverride(RelativeRect(panel, .10f, .14f, .90f, .54f), preset.dialogueText);
+            Rect speakerName = ConstrainTextRectToPanel(
+                ApplyOverride(RelativeRect(panel, .12f, .48f, .42f, .84f), preset.speakerName), panel);
+            Rect dialogueText = ConstrainTextRectToPanel(
+                ApplyOverride(RelativeRect(panel, .10f, .14f, .90f, .54f), preset.dialogueText), panel);
             Rect mute = ApplyOverride(CenteredRect(panel, .455f, .735f, 76f), preset.muteHitRegion);
             Rect pause = ApplyOverride(CenteredRect(panel, .560f, .735f, 76f), preset.pauseHitRegion);
             Rect skip = ApplyOverride(CenteredRect(panel, .665f, .735f, 76f), preset.skipHitRegion);
@@ -495,6 +497,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        internal static Rect GetReferenceTextRect(VnWorkshopElement element)
+        {
+            RokasAssets assets = LoadAssets();
+            Vector2 virtualCanvas = VnPresentationWorkshopResolver.CalculateVirtualCanvasSize(1920, 1080);
+            Rect panel = BuildPanelRect(virtualCanvas, assets.vnDialoguePanelKeikoDark);
+            switch (element)
+            {
+                case VnWorkshopElement.DialoguePanel:
+                    return panel;
+                case VnWorkshopElement.SpeakerName:
+                    return RelativeRect(panel, .12f, .48f, .42f, .84f);
+                case VnWorkshopElement.DialogueText:
+                    return RelativeRect(panel, .10f, .14f, .90f, .54f);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(element), element,
+                        "Only dialogue panel, speaker and dialogue text have reference dialogue rects.");
+            }
+        }
+
+        internal static Rect ConstrainTextRectToPanel(Rect rect, Rect panel)
+        {
+            float width = Mathf.Clamp(rect.width, 1f, Mathf.Max(1f, panel.width));
+            float height = Mathf.Clamp(rect.height, 1f, Mathf.Max(1f, panel.height));
+            float x = Mathf.Clamp(rect.x, panel.xMin, panel.xMax - width);
+            float y = Mathf.Clamp(rect.y, panel.yMin, panel.yMax - height);
+            return new Rect(x, y, width, height);
+        }
+
         private static Rect BuildPanelRect(Vector2 virtualCanvas, Texture2D panelTexture)
         {
             float width = virtualCanvas.x * (PanelAnchorMaxX - PanelAnchorMinX);
@@ -588,33 +618,47 @@ namespace Rokas.EditorTools.VnUiWorkshop
             GUI.color = previous;
         }
 
-        private static void DrawText(Rect rect, string text, Font font, int fontSize, FontStyle style,
-            TextAnchor alignment = TextAnchor.MiddleLeft)
+        internal static float MeasureWrappedTextHeight(
+            Rect rect, string text, Font font, int fontSize, FontStyle style,
+            VnWorkshopTextAlignment alignment)
         {
-            var guiStyle = new GUIStyle(GUI.skin.label)
+            GUIStyle guiStyle = CreateBoundedTextStyle(
+                font, fontSize, style, ToTextAnchor(alignment), Color.white, 1f);
+            return guiStyle.CalcHeight(new GUIContent(text ?? string.Empty), Mathf.Max(1f, rect.width));
+        }
+
+        private static GUIStyle CreateBoundedTextStyle(
+            Font font, int fontSize, FontStyle style, TextAnchor alignment, Color color, float alpha)
+        {
+            return new GUIStyle
             {
                 font = font,
                 fontSize = Mathf.Max(1, fontSize),
                 fontStyle = style,
                 alignment = alignment,
                 wordWrap = true,
-                normal = { textColor = Color.white }
+                clipping = TextClipping.Clip,
+                normal =
+                {
+                    textColor = new Color(
+                        color.r, color.g, color.b, Mathf.Clamp01(color.a * alpha))
+                }
             };
+        }
+
+        private static void DrawText(Rect rect, string text, Font font, int fontSize, FontStyle style,
+            TextAnchor alignment = TextAnchor.MiddleLeft)
+        {
+            GUIStyle guiStyle = CreateBoundedTextStyle(
+                font, fontSize, style, alignment, Color.white, 1f);
             GUI.Label(rect, text ?? string.Empty, guiStyle);
         }
 
         private static void DrawText(Rect rect, string text, Font font, int fontSize, FontStyle style,
             TextAnchor alignment, Color color, float alpha)
         {
-            var guiStyle = new GUIStyle(GUI.skin.label)
-            {
-                font = font,
-                fontSize = Mathf.Max(1, fontSize),
-                fontStyle = style,
-                alignment = alignment,
-                wordWrap = true,
-                normal = { textColor = new Color(color.r, color.g, color.b, Mathf.Clamp01(color.a * alpha)) }
-            };
+            GUIStyle guiStyle = CreateBoundedTextStyle(
+                font, fontSize, style, alignment, color, alpha);
             GUI.Label(rect, text ?? string.Empty, guiStyle);
         }
 
