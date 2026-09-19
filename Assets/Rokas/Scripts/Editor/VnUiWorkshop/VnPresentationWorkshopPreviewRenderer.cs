@@ -1,5 +1,6 @@
 using System;
 using Rokas.Presentation;
+using UnityEditor;
 using UnityEngine;
 
 namespace Rokas.EditorTools.VnUiWorkshop
@@ -116,6 +117,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Vector2 VirtualCanvasSize { get; }
         public Texture2D BackgroundTexture { get; internal set; }
         public Texture2D DialoguePanelTexture { get; }
+        public string DialoguePanelWarning { get; internal set; } = string.Empty;
         public Font Font { get; }
         public Font DialogueFont { get; }
         public Font SpeakerFont { get; }
@@ -235,11 +237,48 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             minaBody = ApplyOverride(minaBody, preset.minaBody);
 
-            return new VnWorkshopPreviewFrame(
-                screenSize, virtualCanvas, background, panelTexture, dialogueFont, speakerFont, typography,
+            Texture2D resolvedPanelTexture = ResolveDialoguePanelTexture(
+                preset, panelTexture, out string dialoguePanelWarning);
+            var frame = new VnWorkshopPreviewFrame(
+                screenSize, virtualCanvas, background, resolvedPanelTexture, dialogueFont, speakerFont, typography,
                 assets.vnMinaCharacterSheet, minaState.BodyUv, assets.vnKeikoCharacterSheet, keikoState.BodyUv,
                 panel, minaBody, keikoBody, speakerName, dialogueText, mute, pause, skip, back, next,
                 speaker, dialogue, showMina, showKeiko, focus);
+            frame.DialoguePanelWarning = dialoguePanelWarning;
+            return frame;
+        }
+
+        private static Texture2D ResolveDialoguePanelTexture(
+            VnPresentationWorkshopPreset preset,
+            Texture2D fallback,
+            out string warning)
+        {
+            warning = string.Empty;
+            VnWorkshopDialoguePanelVisualOverride visual = preset != null ? preset.dialoguePanelVisual : null;
+            if (visual == null || !visual.hasAssetGuid) return fallback;
+
+            string guid = (visual.assetGuid ?? string.Empty).Trim();
+            if (guid.Length == 0)
+            {
+                warning = "Выбранная плашка диалога не содержит корректной ссылки на ресурс. Используется плашка по умолчанию.";
+                return fallback;
+            }
+
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                warning = "Файл выбранной плашки диалога не найден. Используется плашка по умолчанию.";
+                return fallback;
+            }
+
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            if (texture == null)
+            {
+                warning = "Выбранный ресурс плашки диалога недоступен как изображение. Используется плашка по умолчанию.";
+                return fallback;
+            }
+
+            return texture;
         }
 
         public static void Draw(Rect previewRect, VnWorkshopPreviewFrame frame,
