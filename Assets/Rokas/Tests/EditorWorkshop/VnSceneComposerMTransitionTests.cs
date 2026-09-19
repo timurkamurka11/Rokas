@@ -297,7 +297,7 @@ namespace Rokas.EditorTools.Tests
             {
                 characterId = "Mina",
                 stateId = "mina_neutral",
-                stageSlot = Rokas.Presentation.VnWorkshopStageSlot.Center
+                stageSlot = VnWorkshopStageSlot.Center
             });
             ConfigureTransition(project.scenes[1], "DarkCurtain", "LeftToRight", 1f);
             using (var controller = new VnSceneComposerPlaybackController(project))
