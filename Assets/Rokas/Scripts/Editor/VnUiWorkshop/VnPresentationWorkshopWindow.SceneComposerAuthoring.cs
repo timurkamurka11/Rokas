@@ -31,6 +31,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [NonSerialized] private bool _sceneComposerDraggingPreviewObject;
         [NonSerialized] private bool _sceneComposerDraggingCharacter;
         [NonSerialized] private bool _sceneComposerDraggingDecoration;
+        [NonSerialized] private bool _sceneComposerDraggingText;
         [NonSerialized] private Vector2 _sceneComposerLastDragLogicalPoint;
 
         private bool IsSceneComposerAdvancedLayoutEditingVisible()
@@ -59,6 +60,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             selectedElement = element;
             _sceneComposerSelectedCharacterIndex = -1;
             _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
             Repaint();
         }
 
@@ -114,14 +116,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 selectedElement = hit.Value;
                 _sceneComposerSelectedCharacterIndex = -1;
+                _sceneComposerSelectedDecorationId = string.Empty;
+                _sceneComposerSelectedTextId = string.Empty;
                 Repaint();
                 return true;
             }
 
             if (!frame.DialoguePanel.Contains(logicalPoint) &&
+                ComposerSelectPreviewTextAt(frame, logicalPoint, VnSceneComposerTextLayer.FrontCharacters))
+                return true;
+            if (!frame.DialoguePanel.Contains(logicalPoint) &&
                 ComposerSelectPreviewDecorationAt(frame, logicalPoint, VnSceneComposerDecorationLayer.FrontCharacters))
                 return true;
             if (ComposerSelectPreviewCharacterAt(frame, logicalPoint)) return true;
+            if (!frame.DialoguePanel.Contains(logicalPoint) &&
+                ComposerSelectPreviewTextAt(frame, logicalPoint, VnSceneComposerTextLayer.BehindCharacters))
+                return true;
             if (!frame.DialoguePanel.Contains(logicalPoint) &&
                 ComposerSelectPreviewDecorationAt(frame, logicalPoint, VnSceneComposerDecorationLayer.BehindCharacters))
                 return true;
@@ -131,6 +141,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 selectedElement = VnWorkshopElement.DialoguePanel;
                 _sceneComposerSelectedCharacterIndex = -1;
                 _sceneComposerSelectedDecorationId = string.Empty;
+                _sceneComposerSelectedTextId = string.Empty;
                 Repaint();
                 return true;
             }
@@ -147,6 +158,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     _sceneComposerSelectedCharacterIndex = i;
                     _sceneComposerSelectedDecorationId = string.Empty;
+                    _sceneComposerSelectedTextId = string.Empty;
                     Repaint();
                     return true;
                 }
@@ -258,13 +270,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (selected)
                 {
                     _sceneComposerDraggingPreviewObject = true;
-                    _sceneComposerDraggingDecoration = !string.IsNullOrEmpty(_sceneComposerSelectedDecorationId);
-                    _sceneComposerDraggingCharacter = !_sceneComposerDraggingDecoration &&
+                    _sceneComposerDraggingText = ComposerGetSelectedTextElement() != null;
+                    _sceneComposerDraggingDecoration = !_sceneComposerDraggingText &&
+                                                      !string.IsNullOrEmpty(_sceneComposerSelectedDecorationId);
+                    _sceneComposerDraggingCharacter = !_sceneComposerDraggingText &&
+                                                     !_sceneComposerDraggingDecoration &&
                                                      _sceneComposerSelectedCharacterIndex >= 0;
                     _sceneComposerLastDragLogicalPoint = logicalPoint;
-                    RecordSceneComposerUndo(_sceneComposerDraggingDecoration
-                        ? "Move VN Scene Decoration"
-                        : (_sceneComposerDraggingCharacter ? "Move VN Scene Character" : "Move VN Scene UI Element"));
+                    RecordSceneComposerUndo(_sceneComposerDraggingText
+                        ? "Move VN Scene Text"
+                        : (_sceneComposerDraggingDecoration
+                            ? "Move VN Scene Decoration"
+                            : (_sceneComposerDraggingCharacter ? "Move VN Scene Character" : "Move VN Scene UI Element")));
                     Focus();
                     GUI.FocusControl(null);
                     currentEvent.Use();
@@ -277,7 +294,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(previewRect, currentEvent.mousePosition, frame);
                 Vector2 logicalDelta = logicalPoint - _sceneComposerLastDragLogicalPoint;
                 _sceneComposerLastDragLogicalPoint = logicalPoint;
-                if (_sceneComposerDraggingDecoration) ApplySceneComposerDecorationDrag(logicalDelta);
+                if (_sceneComposerDraggingText) ApplySceneComposerTextDrag(logicalDelta);
+                else if (_sceneComposerDraggingDecoration) ApplySceneComposerDecorationDrag(logicalDelta);
                 else if (_sceneComposerDraggingCharacter) ApplySceneComposerCharacterDrag(logicalDelta);
                 else ApplySceneComposerElementDrag(logicalDelta);
                 currentEvent.Use();
@@ -289,6 +307,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 _sceneComposerDraggingPreviewObject = false;
                 _sceneComposerDraggingCharacter = false;
                 _sceneComposerDraggingDecoration = false;
+                _sceneComposerDraggingText = false;
                 currentEvent.Use();
                 return;
             }
@@ -310,13 +329,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 default: return;
             }
 
-            bool decorationSelected = ComposerGetSelectedDecoration() != null;
-            bool characterSelected = !decorationSelected && _sceneComposerSelectedCharacterIndex >= 0;
-            RecordSceneComposerUndo(decorationSelected
-                ? "Nudge VN Scene Decoration"
-                : (characterSelected ? "Nudge VN Scene Character" : "Nudge VN Scene UI Element"));
+            bool textSelected = ComposerGetSelectedTextElement() != null;
+            bool decorationSelected = !textSelected && ComposerGetSelectedDecoration() != null;
+            bool characterSelected = !textSelected && !decorationSelected && _sceneComposerSelectedCharacterIndex >= 0;
+            RecordSceneComposerUndo(textSelected
+                ? "Nudge VN Scene Text"
+                : (decorationSelected
+                    ? "Nudge VN Scene Decoration"
+                    : (characterSelected ? "Nudge VN Scene Character" : "Nudge VN Scene UI Element")));
             float step = currentEvent.shift ? SceneComposerLargeNudgeStep : SceneComposerNudgeStep;
-            if (decorationSelected) ApplySceneComposerDecorationDrag(direction * step);
+            if (textSelected) ApplySceneComposerTextDrag(direction * step);
+            else if (decorationSelected) ApplySceneComposerDecorationDrag(direction * step);
             else if (characterSelected) ApplySceneComposerCharacterDrag(direction * step);
             else ApplySceneComposerElementDrag(direction * step);
             currentEvent.Use();
@@ -345,6 +368,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = GetSelectedScene();
             if (scene == null) return false;
 
+            if (ComposerDeleteSelectedText()) return true;
             if (ComposerDeleteSelectedDecoration()) return true;
 
             if (scene.characters != null && _sceneComposerSelectedCharacterIndex >= 0 &&
@@ -394,8 +418,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (frame == null) return;
             Rect logicalRect;
+            VnWorkshopPreviewText selectedText = ComposerGetSelectedPreviewText(frame);
             VnWorkshopPreviewDecoration selectedDecoration = ComposerGetSelectedPreviewDecoration(frame);
-            if (selectedDecoration != null)
+            if (selectedText != null)
+            {
+                logicalRect = selectedText.Body;
+            }
+            else if (selectedDecoration != null)
             {
                 logicalRect = selectedDecoration.Body;
             }

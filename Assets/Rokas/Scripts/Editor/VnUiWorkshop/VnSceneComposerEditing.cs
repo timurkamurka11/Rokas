@@ -61,6 +61,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (copy.decorations[i] == null) continue;
                 copy.decorations[i].decorationId = VnSceneComposerScene.NewStableId();
             }
+            if (copy.textElements == null) copy.textElements = new System.Collections.Generic.List<VnSceneComposerTextElement>();
+            for (int i = 0; i < copy.textElements.Count; i++)
+            {
+                if (copy.textElements[i] == null) continue;
+                copy.textElements[i].textElementId = VnSceneComposerScene.NewStableId();
+            }
             if (copy.dialogueBeats == null) copy.dialogueBeats = new System.Collections.Generic.List<VnSceneComposerDialogueBeat>();
             if (copy.dialogueBeats.Count == 0) copy.dialogueBeats.Add(new VnSceneComposerDialogueBeat());
             for (int i = 0; i < copy.dialogueBeats.Count; i++)

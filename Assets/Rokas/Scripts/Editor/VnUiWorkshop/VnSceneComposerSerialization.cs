@@ -428,6 +428,79 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
 
+            if (scene.textElements != null)
+            {
+                var textIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int t = 0; t < scene.textElements.Count; t++)
+                {
+                    VnSceneComposerTextElement textElement = scene.textElements[t];
+                    if (textElement == null)
+                    {
+                        error = "Scene Composer text entry is null in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsStableId(textElement.textElementId))
+                    {
+                        error = "Scene Composer text element ID is missing or invalid in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!textIds.Add(textElement.textElementId))
+                    {
+                        error = "Duplicate Scene Composer text element ID: " + textElement.textElementId + ".";
+                        return false;
+                    }
+                    if (!string.IsNullOrEmpty(textElement.fontAssetGuid) && !IsStableId(textElement.fontAssetGuid))
+                    {
+                        error = "Scene Composer text font GUID is invalid in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(textElement.fontSize) || textElement.fontSize < 1f || textElement.fontSize > 512f)
+                    {
+                        error = "Scene Composer text font size must be between 1 and 512 in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(textElement.position.x) || !IsFinite(textElement.position.y) ||
+                        !IsFinite(textElement.size.x) || !IsFinite(textElement.size.y) ||
+                        textElement.size.x <= 0f || textElement.size.y <= 0f)
+                    {
+                        error = "Scene Composer text position and size must be finite and positive in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(textElement.opacity) || textElement.opacity < 0f || textElement.opacity > 1f)
+                    {
+                        error = "Scene Composer text opacity must be between 0 and 1 in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    Color textColor = textElement.color;
+                    if (!IsFinite(textColor.r) || !IsFinite(textColor.g) || !IsFinite(textColor.b) || !IsFinite(textColor.a))
+                    {
+                        error = "Scene Composer text color must contain finite values in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!Enum.IsDefined(typeof(VnSceneComposerTextAlignment), textElement.alignment) ||
+                        !Enum.IsDefined(typeof(VnSceneComposerTextLayer), textElement.layer))
+                    {
+                        error = "Invalid Scene Composer text alignment/layer in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+
+                    UnityEngine.Object fontAsset = VnSceneComposerTextFontResolver.ResolveAsset(textElement.fontAssetGuid);
+                    if (fontAsset == null)
+                    {
+                        string label = string.IsNullOrWhiteSpace(textElement.fontDisplayName)
+                            ? textElement.textElementId
+                            : textElement.fontDisplayName;
+                        diagnostics.Add("Text font asset is missing in scene '" +
+                                        (scene.label ?? scene.sceneId) + "': " + label + ".");
+                    }
+                    else if (!VnSceneComposerTextFontResolver.IsSupportedAsset(fontAsset))
+                    {
+                        diagnostics.Add("Text font asset is not a supported TMP/Font asset in scene '" +
+                                        (scene.label ?? scene.sceneId) + "': " + fontAsset.name + ".");
+                    }
+                }
+            }
+
             for (int b = 0; b < scene.dialogueBeats.Count; b++)
             {
                 VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
@@ -797,6 +870,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (decoration.decorationId == null) decoration.decorationId = string.Empty;
                     if (decoration.assetGuid == null) decoration.assetGuid = string.Empty;
                     if (decoration.displayName == null) decoration.displayName = string.Empty;
+                }
+                if (scene.textElements == null) scene.textElements = new List<VnSceneComposerTextElement>();
+                for (int t = 0; t < scene.textElements.Count; t++)
+                {
+                    VnSceneComposerTextElement textElement = scene.textElements[t];
+                    if (textElement == null) continue;
+                    if (textElement.textElementId == null) textElement.textElementId = string.Empty;
+                    if (textElement.text == null) textElement.text = string.Empty;
+                    if (textElement.fontAssetGuid == null) textElement.fontAssetGuid = string.Empty;
+                    if (textElement.fontDisplayName == null) textElement.fontDisplayName = string.Empty;
                 }
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
                 if (scene.transition == null) scene.transition = new VnSceneComposerTransition();

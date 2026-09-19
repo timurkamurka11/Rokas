@@ -144,6 +144,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; } = Array.Empty<VnWorkshopPreviewCharacter>();
         public VnWorkshopPreviewDecoration[] ComposerDecorations { get; internal set; } = Array.Empty<VnWorkshopPreviewDecoration>();
         public string[] ComposerDecorationWarnings { get; internal set; } = Array.Empty<string>();
+        public VnWorkshopPreviewText[] ComposerTexts { get; internal set; } = Array.Empty<VnWorkshopPreviewText>();
+        public string[] ComposerTextWarnings { get; internal set; } = Array.Empty<string>();
 
         public Rect GetElementRect(VnWorkshopElement element)
         {
@@ -304,6 +306,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
+                DrawComposerTexts(localCanvas, frame, VnSceneComposerTextLayer.BehindCharacters);
                 if (frame.ComposerCharacters != null)
                 {
                     for (int i = 0; i < frame.ComposerCharacters.Length; i++)
@@ -325,6 +328,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
 
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters);
+                DrawComposerTexts(localCanvas, frame, VnSceneComposerTextLayer.FrontCharacters);
 
                 if (ShouldDrawRegisteredPlaybackDialogue(frame))
                 {
@@ -536,6 +540,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private static void DrawComposerTexts(
+            Rect canvasRect, VnWorkshopPreviewFrame frame, VnSceneComposerTextLayer layer)
+        {
+            if (frame == null || frame.ComposerTexts == null) return;
+            for (int i = 0; i < frame.ComposerTexts.Length; i++)
+            {
+                VnWorkshopPreviewText text = frame.ComposerTexts[i];
+                if (text == null || text.Font == null || text.Layer != layer) continue;
+                Rect rect = LogicalToPreview(canvasRect, text.Body, frame);
+                TextAnchor alignment = TextAnchor.MiddleLeft;
+                if (text.Alignment == VnSceneComposerTextAlignment.Center) alignment = TextAnchor.MiddleCenter;
+                else if (text.Alignment == VnSceneComposerTextAlignment.Right) alignment = TextAnchor.MiddleRight;
+                DrawText(rect, text.Text, text.Font, Mathf.RoundToInt(text.FontSize), FontStyle.Normal,
+                    alignment, text.Color, text.Alpha);
+            }
+        }
+
         private static void DrawCharacter(Rect canvasRect, VnWorkshopPreviewFrame frame, Rect logicalRect,
             Texture2D texture, Rect uv, float alpha)
         {
@@ -563,6 +584,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 alignment = alignment,
                 wordWrap = true,
                 normal = { textColor = Color.white }
+            };
+            GUI.Label(rect, text ?? string.Empty, guiStyle);
+        }
+
+        private static void DrawText(Rect rect, string text, Font font, int fontSize, FontStyle style,
+            TextAnchor alignment, Color color, float alpha)
+        {
+            var guiStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = font,
+                fontSize = Mathf.Max(1, fontSize),
+                fontStyle = style,
+                alignment = alignment,
+                wordWrap = true,
+                normal = { textColor = new Color(color.r, color.g, color.b, Mathf.Clamp01(color.a * alpha)) }
             };
             GUI.Label(rect, text ?? string.Empty, guiStyle);
         }

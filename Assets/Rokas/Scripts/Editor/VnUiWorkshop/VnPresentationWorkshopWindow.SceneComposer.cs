@@ -212,6 +212,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerSelectedSceneId = scene.sceneId;
             SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
+            _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -237,6 +239,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 SelectFirstSceneComposerDialogueBeat(copy);
             }
             _sceneComposerSelectedCharacterIndex = -1;
+            _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -277,6 +281,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 SelectFirstSceneComposerDialogueBeat(nextScene);
             }
             _sceneComposerSelectedCharacterIndex = -1;
+            _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
@@ -291,6 +297,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerSelectedSceneId = scene.sceneId;
             SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
+            _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
             Repaint();
         }
 
@@ -1168,6 +1176,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
+            DrawSceneComposerArbitraryTextInspector(scene);
+            EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Реплики", EditorStyles.miniBoldLabel);
 
             VnSceneComposerDialogueBeat selectedBeat = ComposerGetSelectedDialogueBeat();

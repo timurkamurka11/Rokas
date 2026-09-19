@@ -18,6 +18,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int index = FindDecorationIndex(scene, decorationId);
             if (index < 0) throw new ArgumentException("Decoration is not part of the selected Scene.", nameof(decorationId));
             _sceneComposerSelectedDecorationId = scene.decorations[index].decorationId;
+            _sceneComposerSelectedTextId = string.Empty;
             _sceneComposerSelectedCharacterIndex = -1;
             Repaint();
         }
@@ -48,6 +49,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             };
             scene.decorations.Add(decoration);
             _sceneComposerSelectedDecorationId = decoration.decorationId;
+            _sceneComposerSelectedTextId = string.Empty;
             _sceneComposerSelectedCharacterIndex = -1;
             MarkSceneComposerChanged();
             return decoration.decorationId;
@@ -182,6 +184,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnWorkshopPreviewDecoration decoration = frame.ComposerDecorations[i];
                 if (decoration == null || decoration.Layer != layer || !decoration.Body.Contains(logicalPoint)) continue;
                 _sceneComposerSelectedDecorationId = decoration.DecorationId ?? string.Empty;
+                _sceneComposerSelectedTextId = string.Empty;
                 _sceneComposerSelectedCharacterIndex = -1;
                 Repaint();
                 return true;

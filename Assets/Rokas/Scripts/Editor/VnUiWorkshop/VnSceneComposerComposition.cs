@@ -30,6 +30,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerDecorationLayer Layer { get; internal set; }
     }
 
+    public sealed class VnWorkshopPreviewText
+    {
+        public string TextElementId { get; internal set; }
+        public string Text { get; internal set; }
+        public Font Font { get; internal set; }
+        public Rect Body { get; internal set; }
+        public float FontSize { get; internal set; }
+        public Color Color { get; internal set; }
+        public float Alpha { get; internal set; }
+        public VnSceneComposerTextAlignment Alignment { get; internal set; }
+        public VnSceneComposerTextLayer Layer { get; internal set; }
+    }
+
     public static class VnSceneComposerComposition
     {
         public static VnPresentationWorkshopPreset ResolvePresentation(
@@ -85,6 +98,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             frame.ComposerCharacters = BuildCharacters(frame, preset, scene, beat);
             frame.ComposerDecorations = BuildDecorations(scene, out string[] decorationWarnings);
             frame.ComposerDecorationWarnings = decorationWarnings;
+            frame.ComposerTexts = BuildTexts(scene, out string[] textWarnings);
+            frame.ComposerTextWarnings = textWarnings;
             RegisterStaticExternalVideoContext(scene, frame);
             return frame;
         }
@@ -285,6 +300,54 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     Texture = texture,
                     Body = RectFromCenter(source.position, new Vector2(width, height)),
                     Alpha = Mathf.Clamp01(source.opacity),
+                    Layer = source.layer
+                });
+            }
+
+            warnings = diagnostics.ToArray();
+            return visuals.ToArray();
+        }
+
+        private static VnWorkshopPreviewText[] BuildTexts(
+            VnSceneComposerScene scene, out string[] warnings)
+        {
+            var visuals = new List<VnWorkshopPreviewText>();
+            var diagnostics = new List<string>();
+            if (scene == null || scene.textElements == null)
+            {
+                warnings = Array.Empty<string>();
+                return Array.Empty<VnWorkshopPreviewText>();
+            }
+
+            for (int i = 0; i < scene.textElements.Count; i++)
+            {
+                VnSceneComposerTextElement source = scene.textElements[i];
+                if (source == null) continue;
+                if (!VnSceneComposerTextFontResolver.TryResolvePreviewFont(
+                        source.fontAssetGuid, out Font font, out string fontWarning))
+                {
+                    string label = string.IsNullOrWhiteSpace(source.fontDisplayName)
+                        ? source.textElementId ?? "Text"
+                        : source.fontDisplayName;
+                    diagnostics.Add("Текст '" + label + "': " + fontWarning);
+                    continue;
+                }
+                if (!string.IsNullOrEmpty(fontWarning))
+                    diagnostics.Add(fontWarning);
+                if (!source.visible) continue;
+
+                Color color = source.color;
+                visuals.Add(new VnWorkshopPreviewText
+                {
+                    TextElementId = source.textElementId ?? string.Empty,
+                    Text = source.text ?? string.Empty,
+                    Font = font,
+                    Body = RectFromCenter(source.position,
+                        new Vector2(Mathf.Max(1f, source.size.x), Mathf.Max(1f, source.size.y))),
+                    FontSize = Mathf.Clamp(source.fontSize, 1f, 512f),
+                    Color = new Color(color.r, color.g, color.b, 1f),
+                    Alpha = Mathf.Clamp01(source.opacity * color.a),
+                    Alignment = source.alignment,
                     Layer = source.layer
                 });
             }

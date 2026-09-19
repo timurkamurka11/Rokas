@@ -44,6 +44,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
         FrontCharacters
     }
 
+    public enum VnSceneComposerTextAlignment
+    {
+        Left,
+        Center,
+        Right
+    }
+
+    public enum VnSceneComposerTextLayer
+    {
+        BehindCharacters,
+        FrontCharacters
+    }
+
     public enum VnSceneComposerMusicMode
     {
         Silence,
@@ -74,6 +87,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float opacity = 1f;
         public bool visible = true;
         public VnSceneComposerDecorationLayer layer = VnSceneComposerDecorationLayer.BehindCharacters;
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerTextElement
+    {
+        public string textElementId = VnSceneComposerScene.NewStableId();
+        [TextArea(3, 10)] public string text = "Новый текст";
+        public string fontAssetGuid = string.Empty;
+        public string fontDisplayName = string.Empty;
+        public float fontSize = 48f;
+        public Vector2 position = new Vector2(960f, 360f);
+        public Vector2 size = new Vector2(720f, 160f);
+        public Color color = Color.white;
+        public float opacity = 1f;
+        public VnSceneComposerTextAlignment alignment = VnSceneComposerTextAlignment.Center;
+        public bool visible = true;
+        public VnSceneComposerTextLayer layer = VnSceneComposerTextLayer.FrontCharacters;
     }
 
     [Serializable]
@@ -158,6 +188,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerMusic music = new VnSceneComposerMusic();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();
         public List<VnSceneComposerDecoration> decorations = new List<VnSceneComposerDecoration>();
+        public List<VnSceneComposerTextElement> textElements = new List<VnSceneComposerTextElement>();
         public List<VnSceneComposerDialogueBeat> dialogueBeats =
             new List<VnSceneComposerDialogueBeat> { new VnSceneComposerDialogueBeat() };
         public VnPresentationWorkshopPreset presentationOverrides = new VnPresentationWorkshopPreset();
