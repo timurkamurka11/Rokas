@@ -311,7 +311,7 @@ namespace Rokas.EditorTools.Tests
             string signature = "private void DrawSceneComposerDialoguePanelVisualControls(VnSceneComposerScene scene)";
             int start = source.IndexOf(signature, StringComparison.Ordinal);
             Assert.That(start, Is.GreaterThanOrEqualTo(0));
-            int end = source.IndexOf("private void SetSceneComposerBasicTextStyle", start, StringComparison.Ordinal);
+            int end = source.IndexOf("private void SetSceneComposerTypewriterSpeed", start, StringComparison.Ordinal);
             Assert.That(end, Is.GreaterThan(start));
             string ui = source.Substring(start, end - start);
 
