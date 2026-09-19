@@ -2011,7 +2011,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void SceneComposerEditorUpdate()
         {
             if (this == null) { EditorApplication.update -= SceneComposerEditorUpdate; return; }
-            if (!_sceneComposerWorkspaceActive || _sceneComposerPlayback == null || !_sceneComposerPlayback.RequiresTick)
+            if (!_sceneComposerWorkspaceActive || _sceneComposerPlayback == null ||
+                (!_sceneComposerPlayback.IsPlaying && !_sceneComposerPlayback.IsSceneTransitionActive))
             {
                 _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup; return;
             }

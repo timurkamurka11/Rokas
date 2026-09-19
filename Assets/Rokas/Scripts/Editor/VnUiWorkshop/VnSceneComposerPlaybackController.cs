@@ -256,7 +256,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (project.scenes.Count == 0 || IsSceneTransitionActive) return;
             int target = Mathf.Clamp(CurrentSceneIndex - 1, 0, project.scenes.Count - 1);
             if (target == CurrentSceneIndex) return;
-            BeginSceneBoundaryTransition(target, IsPlaying, true);
+            BeginSceneBoundaryTransition(target, IsPlaying, false);
         }
 
         public void Next()
@@ -270,7 +270,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 musicPlayback.Pause();
                 return;
             }
-            BeginSceneBoundaryTransition(target, IsPlaying, true);
+            BeginSceneBoundaryTransition(target, IsPlaying, false);
         }
 
         public void Advance(float deltaSeconds)
@@ -668,8 +668,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
-                ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), false,
-                    preserveCompatibleVideoTimeline);
+                if (targetIndex == 0)
+                    ResetSceneFromNeutralStart(targetIndex, playMedia);
+                else
+                    ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), false,
+                        preserveCompatibleVideoTimeline);
                 return;
             }
 
@@ -681,7 +684,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionDuration = Mathf.Clamp(transition.sceneTransitionDuration, .0001f, 10f);
             sceneTransitionDirection = transition.sceneTransitionDirection;
             sceneTransitionPlayMedia = playMedia;
-            sceneTransitionPreserveCompatibleVideoTimeline = preserveCompatibleVideoTimeline;
+            // Animated boundaries always preserve the established compatible-video path so
+            // the destination can prepare under full cover without exposing a stale/black frame.
+            sceneTransitionPreserveCompatibleVideoTimeline = true;
             sceneTransitionHasSwapped = false;
             sceneTransitionVideoPrepareRequested = false;
             sceneTransitionPhaseElapsed = 0f;
