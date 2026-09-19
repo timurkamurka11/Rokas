@@ -51,12 +51,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private const int SceneComposerInspectorColumns = 2;
         private const float SceneComposerSceneThumbnailWidth = 72f;
         private const float SceneComposerSceneThumbnailHeight = 48f;
+        private const int SceneComposerDialogueEditorMinVisibleLines = 4;
+        private const int SceneComposerDialogueEditorMaxVisibleLines = 12;
 
         private static GUIStyle _sceneComposerPrimaryTransportButtonStyle;
         private static GUIStyle _sceneComposerInspectorTabStyle;
         private static GUIStyle _sceneComposerInspectorSelectedTabStyle;
         private static GUIStyle _sceneComposerSceneButtonStyle;
         private static GUIStyle _sceneComposerSelectedSceneButtonStyle;
+        private static GUIStyle _sceneComposerDialogueTextAreaStyle;
 
         private static GUIStyle SceneComposerPrimaryTransportButtonStyle
         {
@@ -134,6 +137,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private static GUIStyle SceneComposerDialogueTextAreaStyle
+        {
+            get
+            {
+                if (_sceneComposerDialogueTextAreaStyle == null)
+                {
+                    _sceneComposerDialogueTextAreaStyle = new GUIStyle(EditorStyles.textArea)
+                    {
+                        wordWrap = true,
+                        stretchWidth = true,
+                        fixedHeight = 0f,
+                        fixedWidth = 0f
+                    };
+                }
+                return _sceneComposerDialogueTextAreaStyle;
+            }
+        }
+
         [SerializeField] private bool _sceneComposerWorkspaceActive;
         [SerializeField] private VnSceneComposerProject _sceneComposerProject = new VnSceneComposerProject();
         [SerializeField] private string _sceneComposerSelectedSceneId = string.Empty;
@@ -150,6 +171,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         [NonSerialized] private VnSceneComposerPlaybackController _sceneComposerPlayback;
         [NonSerialized] private Dictionary<string, SceneComposerThumbnailCacheEntry> _sceneComposerThumbnailCache;
+        [NonSerialized] private Dictionary<string, Vector2> _sceneComposerDialogueEditorScrollByBeat;
         [NonSerialized] private string _sceneComposerStatus = string.Empty;
         [NonSerialized] private MessageType _sceneComposerStatusType = MessageType.None;
         [NonSerialized] private double _sceneComposerLastPlaybackTick;
@@ -1173,6 +1195,58 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 EditorGUILayout.HelpBox("Внешний файл используется только в редакторе и не копируется в игровые ресурсы.", MessageType.Info);
         }
 
+        private string DrawSceneComposerDialogueBodyEditor(VnSceneComposerDialogueBeat beat)
+        {
+            string currentText = beat != null ? beat.text ?? string.Empty : string.Empty;
+            string beatId = beat != null ? beat.beatId ?? string.Empty : string.Empty;
+            GUIStyle style = SceneComposerDialogueTextAreaStyle;
+
+            float lineHeight = Mathf.Max(EditorGUIUtility.singleLineHeight, style.lineHeight);
+            float verticalPadding = style.padding != null ? style.padding.vertical : 0f;
+            float minHeight = lineHeight * SceneComposerDialogueEditorMinVisibleLines + verticalPadding;
+            float maxHeight = lineHeight * SceneComposerDialogueEditorMaxVisibleLines + verticalPadding;
+            float availableWidth = Mathf.Max(
+                lineHeight * 8f,
+                GetSceneComposerInspectorWidth() - lineHeight * 2f);
+
+            GUIContent content = new GUIContent(string.IsNullOrEmpty(currentText) ? " " : currentText);
+            float measuredHeight = Mathf.Max(minHeight, style.CalcHeight(content, availableWidth));
+            float viewportHeight = Mathf.Clamp(measuredHeight, minHeight, maxHeight);
+            bool needsVerticalScroll = measuredHeight > viewportHeight + .5f;
+
+            if (_sceneComposerDialogueEditorScrollByBeat == null)
+                _sceneComposerDialogueEditorScrollByBeat =
+                    new Dictionary<string, Vector2>(StringComparer.Ordinal);
+
+            if (!_sceneComposerDialogueEditorScrollByBeat.TryGetValue(beatId, out Vector2 scroll))
+                scroll = Vector2.zero;
+
+            scroll.x = 0f;
+            scroll.y = needsVerticalScroll
+                ? Mathf.Clamp(scroll.y, 0f, Mathf.Max(0f, measuredHeight - viewportHeight))
+                : 0f;
+
+            scroll = EditorGUILayout.BeginScrollView(
+                scroll,
+                false,
+                needsVerticalScroll,
+                GUILayout.Height(viewportHeight),
+                GUILayout.ExpandWidth(true));
+
+            string nextText = EditorGUILayout.TextArea(
+                currentText,
+                style,
+                GUILayout.Height(measuredHeight),
+                GUILayout.ExpandWidth(true));
+
+            EditorGUILayout.EndScrollView();
+
+            scroll.x = 0f;
+            if (!needsVerticalScroll) scroll.y = 0f;
+            _sceneComposerDialogueEditorScrollByBeat[beatId] = scroll;
+            return nextText;
+        }
+
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
@@ -1231,7 +1305,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 bool narration = EditorGUILayout.Toggle("Текст без персонажа", selectedBeat.narration);
                 string speaker = EditorGUILayout.TextField("Говорящий", selectedBeat.speaker ?? string.Empty);
                 EditorGUILayout.LabelField("Текст реплики");
-                string text = EditorGUILayout.TextArea(selectedBeat.text ?? string.Empty, GUILayout.MinHeight(70f));
+                string text = DrawSceneComposerDialogueBodyEditor(selectedBeat);
                 if (EditorGUI.EndChangeCheck())
                 {
                     RecordSceneComposerUndo("Edit VN Dialogue Beat");
