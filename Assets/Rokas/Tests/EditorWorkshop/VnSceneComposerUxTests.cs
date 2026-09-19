@@ -149,8 +149,17 @@ namespace Rokas.EditorTools.Tests
                 "Task 6 must not bind ordinary authoring permanently to the first-beat compatibility proxy.");
             Assert.That(textInspector, Does.Not.Contain("scene.speaker"),
                 "Task 6 must resolve the selected canonical beat instead of using Scene speaker proxy state.");
-            Assert.That(CountOccurrences(textInspector, "EditorGUILayout.TextArea("), Is.EqualTo(1),
-                "The selected dialogue beat still owns exactly one multiline content editor.");
+            Assert.That(CountOccurrences(
+                    textInspector, "DrawSceneComposerDialogueBodyEditor(selectedBeat)"), Is.EqualTo(1),
+                "The selected canonical dialogue beat must route through exactly one multiline authoring editor.");
+
+            string dialogueEditor = ExtractMethodBody(
+                source, "private string DrawSceneComposerDialogueBodyEditor(VnSceneComposerDialogueBeat beat)");
+            Assert.That(CountOccurrences(dialogueEditor, "EditorGUILayout.TextArea("), Is.EqualTo(1),
+                "The dialogue authoring helper must own exactly one multiline text editor.");
+            Assert.That(dialogueEditor, Does.Contain("wordWrap = true")
+                .Or.Contain("SceneComposerDialogueTextAreaStyle"),
+                "The dialogue authoring helper must use the wrapped Scene Composer textarea style.");
         }
 
         [Test]
