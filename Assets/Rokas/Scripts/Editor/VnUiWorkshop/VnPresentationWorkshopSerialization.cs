@@ -210,6 +210,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (preset == null) return;
 
             if (preset.dialoguePanel == null) preset.dialoguePanel = new VnWorkshopElementOverride();
+            if (preset.dialoguePanelVisual == null) preset.dialoguePanelVisual = new VnWorkshopDialoguePanelVisualOverride();
+            if (preset.dialoguePanelVisual.assetGuid == null) preset.dialoguePanelVisual.assetGuid = string.Empty;
             if (preset.minaBody == null) preset.minaBody = new VnWorkshopElementOverride();
             if (preset.speakerName == null) preset.speakerName = new VnWorkshopElementOverride();
             if (preset.dialogueText == null) preset.dialogueText = new VnWorkshopElementOverride();
