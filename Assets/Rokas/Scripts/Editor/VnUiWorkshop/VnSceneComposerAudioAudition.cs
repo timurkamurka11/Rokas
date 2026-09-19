@@ -7,7 +7,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     internal static class VnSceneComposerAudioAudition
     {
-        private static readonly Type AudioUtilType = typeof(Editor).Assembly.GetType("UnityEditor.AudioUtil");
+        private static readonly Type AudioUtilType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.AudioUtil");
 
         public static bool TryPlay(AudioClip clip, bool loop, out string error)
         {
