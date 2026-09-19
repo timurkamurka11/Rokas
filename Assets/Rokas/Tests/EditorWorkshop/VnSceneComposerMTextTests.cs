@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -436,6 +437,274 @@ namespace Rokas.EditorTools.Tests
                      (f.SourcePath.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
                       f.SourcePath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))));
 #endif
+        }
+
+
+        [Test]
+        public void MText_ShortDialogueRemainsSingleWrappedLineInsideAuthoredRect()
+        {
+            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            {
+                window.ComposerAddScene();
+                SetDialogueRect(window, new Rect(260f, 30f, 820f, 160f), 28f);
+                VnSceneComposerProject project = Project(window);
+                project.scenes[0].dialogueBeats[0].text = "Короткая реплика.";
+
+                VnWorkshopPreviewFrame frame = Frame(project, 0);
+                float oneLine = MeasureWrappedHeight(frame, "A");
+                float actual = MeasureWrappedHeight(frame, frame.Dialogue);
+
+                Assert.That(frame.DialogueText.width, Is.EqualTo(820f).Within(.01f));
+                Assert.That(actual, Is.EqualTo(oneLine).Within(.5f));
+                Assert.That(actual, Is.LessThanOrEqualTo(frame.DialogueText.height));
+            }
+        }
+
+        [Test]
+        public void MText_LongDialogueWrapsWithinAuthoredWidth()
+        {
+            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            {
+                window.ComposerAddScene();
+                SetDialogueRect(window, new Rect(260f, 30f, 820f, 160f), 28f);
+                VnSceneComposerProject project = Project(window);
+                project.scenes[0].dialogueBeats[0].text =
+                    "Это длинная реплика, которая должна естественно переноситься по словам на несколько строк " +
+                    "и при этом никогда не расширять прямоугольник текста вправо за пределы заданной ширины.";
+
+                VnWorkshopPreviewFrame frame = Frame(project, 0);
+                float oneLine = MeasureWrappedHeight(frame, "A");
+                float wrapped = MeasureWrappedHeight(frame, frame.Dialogue);
+
+                Assert.That(frame.DialogueText.width, Is.EqualTo(820f).Within(.01f));
+                Assert.That(wrapped, Is.GreaterThan(oneLine + .5f));
+            }
+        }
+
+        [Test]
+        public void MText_DialogueRectWidthDoesNotChangeWhenTextGetsLonger()
+        {
+            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            {
+                window.ComposerAddScene();
+                SetDialogueRect(window, new Rect(275f, 25f, 780f, 170f), 30f);
+                VnSceneComposerProject project = Project(window);
+
+                project.scenes[0].dialogueBeats[0].text = "Коротко.";
+                Rect shortRect = Frame(project, 0).DialogueText;
+                project.scenes[0].dialogueBeats[0].text = new string('Д', 220) +
+                    " длинная фраза с дополнительными словами для проверки ограничения.";
+                Rect longRect = Frame(project, 0).DialogueText;
+
+                Assert.That(longRect.width, Is.EqualTo(shortRect.width).Within(.001f));
+                Assert.That(longRect.height, Is.EqualTo(shortRect.height).Within(.001f));
+                Assert.That(longRect.width, Is.EqualTo(780f).Within(.01f));
+            }
+        }
+
+        [Test]
+        public void MText_VeryLongDialogueNeverIncreasesHorizontalBounds()
+        {
+            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            {
+                window.ComposerAddScene();
+                SetDialogueRect(window, new Rect(300f, 20f, 760f, 180f), 32f);
+                VnSceneComposerProject project = Project(window);
+                project.scenes[0].dialogueBeats[0].text =
+                    string.Join(" ", new string[120].Select((_, i) => "слово" + i));
+
+                VnWorkshopPreviewFrame frame = Frame(project, 0);
+
+                Assert.That(frame.DialogueText.width, Is.EqualTo(760f).Within(.01f));
+                Assert.That(frame.DialogueText.xMin, Is.GreaterThanOrEqualTo(frame.DialoguePanel.xMin - .01f));
+                Assert.That(frame.DialogueText.xMax, Is.LessThanOrEqualTo(frame.DialoguePanel.xMax + .01f));
+            }
+        }
+
+        [Test]
+        public void MText_BeatNavigationDoesNotMutateDialogueRect()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            SetDialogueRect(project, new Rect(255f, 35f, 800f, 150f));
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Rect first = playback.CurrentFrame.WorkshopFrame.DialogueText;
+                playback.AdvanceDialogue();
+                Rect second = playback.CurrentFrame.WorkshopFrame.DialogueText;
+
+                Assert.That(second, Is.EqualTo(first));
+            }
+        }
+
+        [Test]
+        public void MText_SaveReopenPreservesResolvedDialogueRect()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            Rect expected = new Rect(245f, 28f, 810f, 165f);
+            SetDialogueRect(project, expected);
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+            Rect actual = Frame(loaded, 0).DialogueText;
+
+            AssertRect(actual, expected);
+        }
+
+        [Test]
+        public void MText_SharedLayoutUsesSameDialogueRectAcrossBeats()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            Rect expected = new Rect(280f, 22f, 790f, 175f);
+            SetDialogueRect(project, expected);
+            project.scenes[0].dialogueBeats[0].text = "Short.";
+            project.scenes[0].dialogueBeats[1].text =
+                "A much longer dialogue body that must use precisely the same shared rectangle on the next beat.";
+
+            Rect first = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[0],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture).DialogueText;
+            Rect second = VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[0], project.scenes[0].dialogueBeats[1],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture).DialogueText;
+
+            AssertRect(first, expected);
+            Assert.That(second, Is.EqualTo(first));
+        }
+
+        [Test]
+        public void MText_CustomPlaqueChangeDoesNotResetDialogueRect()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            Rect expected = new Rect(270f, 25f, 805f, 160f);
+            SetDialogueRect(project, expected);
+            Rect before = Frame(project, 0).DialogueText;
+
+            project.defaultPresentation.dialoguePanelVisual.hasAssetGuid = true;
+            project.defaultPresentation.dialoguePanelVisual.assetGuid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+            Rect after = Frame(project, 0).DialogueText;
+
+            Assert.That(after, Is.EqualTo(before));
+            AssertRect(after, expected);
+        }
+
+        [Test]
+        public void MText_PreviewAndPlayResolveIdenticalDialogueBounds()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            Rect expected = new Rect(265f, 32f, 815f, 155f);
+            SetDialogueRect(project, expected);
+            VnWorkshopPreviewFrame preview = Frame(project, 0);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Assert.That(playback.CurrentFrame.WorkshopFrame.DialogueText, Is.EqualTo(preview.DialogueText));
+                AssertRect(preview.DialogueText, expected);
+            }
+        }
+
+        [Test]
+        public void MText_ChangingFontPreservesAuthoredDialogueRect()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            Rect expected = new Rect(250f, 24f, 825f, 168f);
+            SetDialogueRect(project, expected);
+            Rect before = Frame(project, 0).DialogueText;
+
+            project.defaultPresentation.typography.hasDialogueFontAssetGuid = true;
+            project.defaultPresentation.typography.dialogueFontAssetGuid =
+                AssetDatabase.AssetPathToGUID(DefaultTmpPath);
+            Rect after = Frame(project, 0).DialogueText;
+
+            Assert.That(after, Is.EqualTo(before));
+            AssertRect(after, expected);
+        }
+
+        [Test]
+        public void MText_LargeFontLongDialogueRemainsHorizontallyBounded()
+        {
+            using (VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>())
+            {
+                window.ComposerAddScene();
+                SetDialogueRect(window, new Rect(290f, 18f, 740f, 190f), 72f);
+                VnSceneComposerProject project = Project(window);
+                project.scenes[0].dialogueBeats[0].text =
+                    "Очень крупный текст всё равно обязан переноситься внутри заданной ширины, " +
+                    "а не расширять контейнер вправо.";
+
+                VnWorkshopPreviewFrame frame = Frame(project, 0);
+
+                Assert.That(frame.DialogueText.width, Is.EqualTo(740f).Within(.01f));
+                Assert.That(frame.DialogueText.xMax, Is.LessThanOrEqualTo(frame.DialoguePanel.xMax + .01f));
+                Assert.That(MeasureWrappedHeight(frame, frame.Dialogue), Is.GreaterThan(0f));
+            }
+        }
+
+        [Test]
+        public void MText_ExistingShortDialogueDefaultRectRemainsCompatible()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            VnWorkshopPreviewFrame before = Frame(project, 0);
+            Rect defaultRect = before.DialogueText;
+
+            project.scenes[0].dialogueBeats[0].text = "OK";
+            VnWorkshopPreviewFrame after = Frame(project, 0);
+
+            Assert.That(after.DialogueText, Is.EqualTo(defaultRect));
+            Assert.That(after.DialogueText.width, Is.GreaterThan(1f));
+            Assert.That(after.DialogueText.height, Is.GreaterThan(1f));
+        }
+
+        private static VnWorkshopPreviewFrame Frame(VnSceneComposerProject project, int sceneIndex)
+        {
+            return VnSceneComposerComposition.BuildFrame(
+                project, project.scenes[sceneIndex],
+                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
+        }
+
+        private static void SetDialogueRect(
+            VnPresentationWorkshopWindow window, Rect rect, float fontSize)
+        {
+            window.ComposerSetSharedDialogueTypography(
+                string.Empty, fontSize, Color.white, VnWorkshopTextAlignment.Left,
+                rect.position, rect.size);
+        }
+
+        private static void SetDialogueRect(VnSceneComposerProject project, Rect rect)
+        {
+            Rect baseline = Frame(new VnSceneComposerProject
+            {
+                scenes = { new VnSceneComposerScene() }
+            }, 0).DialogueText;
+            VnWorkshopElementOverride layout = project.defaultPresentation.dialogueText;
+            layout.hasPositionDelta = rect.center != baseline.center;
+            layout.positionDelta = rect.center - baseline.center;
+            layout.hasSizeDelta = rect.size != baseline.size;
+            layout.sizeDelta = rect.size - baseline.size;
+        }
+
+        private static float MeasureWrappedHeight(VnWorkshopPreviewFrame frame, string text)
+        {
+            MethodInfo method = typeof(VnPresentationWorkshopPreviewRenderer).GetMethod(
+                "MeasureWrappedTextHeight",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null,
+                "Renderer must expose its actual bounded wrapping measurement helper.");
+            return (float)method.Invoke(null, new object[]
+            {
+                frame.DialogueText, text, frame.DialogueFont,
+                Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
+                VnWorkshopTextAlignment.Left
+            });
+        }
+
+        private static void AssertRect(Rect actual, Rect expected)
+        {
+            Assert.That(actual.x, Is.EqualTo(expected.x).Within(.01f));
+            Assert.That(actual.y, Is.EqualTo(expected.y).Within(.01f));
+            Assert.That(actual.width, Is.EqualTo(expected.width).Within(.01f));
+            Assert.That(actual.height, Is.EqualTo(expected.height).Within(.01f));
         }
 
         private VnSceneComposerFontImportResult ImportTestFont(string displayName)
