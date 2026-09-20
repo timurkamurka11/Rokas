@@ -130,7 +130,7 @@ namespace Rokas.EditorTools.Tests
             {
                 playback.PlayScene(0);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), false);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), true);
             }
         }
@@ -163,7 +163,7 @@ namespace Rokas.EditorTools.Tests
             {
                 playback.PlayScene(0);
                 playback.Advance(.2f);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 playback.Advance(1.2f);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), false);
             }
@@ -180,9 +180,9 @@ namespace Rokas.EditorTools.Tests
             {
                 playback.PlayScene(0);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), true);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), true);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, (string)Field(cue, "cueId"), false);
             }
         }
@@ -486,7 +486,7 @@ namespace Rokas.EditorTools.Tests
             {
                 playback.PlayAll();
                 AssertCueActive(playback, cueId, true);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
                 AssertCueActive(playback, cueId, false);
             }
@@ -640,7 +640,7 @@ namespace Rokas.EditorTools.Tests
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayAll();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, (string)Field(rain, "cueId"), true);
                 AssertCueActive(playback, (string)Field(phone, "cueId"), true);
                 Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(2));
@@ -680,7 +680,7 @@ namespace Rokas.EditorTools.Tests
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayAll();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, cueId, true);
                 playback.Advance(.21f);
                 AssertCueActive(playback, cueId, false);
@@ -704,8 +704,8 @@ namespace Rokas.EditorTools.Tests
             {
                 playback.PlayAll();
                 int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
-                playback.AdvanceDialogue();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
+                AdvanceDialoguePastReveal(playback);
                 Assert.That(playback.CurrentSceneIndex, Is.EqualTo(2));
                 AssertCueActive(playback, cueId, true);
                 Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
@@ -729,9 +729,9 @@ namespace Rokas.EditorTools.Tests
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayAll();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, cueId, true);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 AssertCueActive(playback, cueId, false);
             }
         }
@@ -790,12 +790,12 @@ namespace Rokas.EditorTools.Tests
             using (var playback = new VnSceneComposerPlaybackController(project))
             {
                 playback.PlayAll();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
                 int starts = CueStartCount(playback, cueId);
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 playback.PreviousDialogue();
-                playback.AdvanceDialogue();
+                AdvanceDialoguePastReveal(playback);
                 Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
                 Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
             }
@@ -973,6 +973,19 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
                 Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
             }
+        }
+
+        private static void AdvanceDialoguePastReveal(
+            VnSceneComposerPlaybackController playback)
+        {
+            int sceneIndex = playback.CurrentSceneIndex;
+            int beatIndex = playback.CurrentBeatIndex;
+            playback.AdvanceDialogue();
+
+            if (playback.CurrentSceneIndex == sceneIndex &&
+                playback.CurrentBeatIndex == beatIndex &&
+                !playback.IsSceneTransitionActive)
+                playback.AdvanceDialogue();
         }
 
         private static VnSceneComposerProject ProjectWithBeats(int count)
