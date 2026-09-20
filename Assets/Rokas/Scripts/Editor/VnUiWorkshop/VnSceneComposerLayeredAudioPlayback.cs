@@ -57,6 +57,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return !string.IsNullOrEmpty(cueId) && startCounts.TryGetValue(cueId, out int count) ? count : 0;
         }
 
+        public int GetSourceInstanceId(string cueId)
+        {
+            return !string.IsNullOrEmpty(cueId) &&
+                   active.TryGetValue(cueId, out ActiveCue running) &&
+                   running.source != null
+                ? running.source.GetInstanceID()
+                : 0;
+        }
+
+        public float GetElapsedSeconds(string cueId)
+        {
+            return !string.IsNullOrEmpty(cueId) &&
+                   active.TryGetValue(cueId, out ActiveCue running)
+                ? running.elapsed
+                : 0f;
+        }
+
+        public float GetCurrentVolume(string cueId)
+        {
+            return !string.IsNullOrEmpty(cueId) &&
+                   active.TryGetValue(cueId, out ActiveCue running) &&
+                   running.source != null
+                ? running.source.volume
+                : 0f;
+        }
+
         public void ResetSession()
         {
             if (disposed) return;
@@ -79,8 +105,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ExitCurrentScene(bool allowFade)
         {
+            ExitCurrentScene(allowFade, false, string.Empty);
+        }
+
+        public void ExitCurrentScene(bool allowFade, bool inheritActive, string incomingSceneId)
+        {
             if (disposed || string.IsNullOrEmpty(currentSceneId)) return;
             string leavingScene = currentSceneId;
+            string nextScene = incomingSceneId ?? string.Empty;
+
+            // Pending starts belong to the Scene that authored them. Only already-live
+            // playback instances participate in cross-Scene continuity.
             for (int i = pending.Count - 1; i >= 0; i--)
             {
                 if (string.Equals(pending[i].sceneId, leavingScene, StringComparison.Ordinal))
@@ -90,13 +125,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             var ids = new List<string>();
             foreach (KeyValuePair<string, ActiveCue> pair in active)
             {
-                if (string.Equals(pair.Value.sceneId, leavingScene, StringComparison.Ordinal))
+                ActiveCue running = pair.Value;
+                if (!string.Equals(running.sceneId, leavingScene, StringComparison.Ordinal))
+                    continue;
+
+                if (inheritActive)
+                {
+                    // Preserve the exact AudioSource, logical elapsed position and fade state.
+                    // Ownership moves forward so a later non-inheriting Scene can clean it up.
+                    running.sceneId = nextScene;
+                }
+                else
+                {
                     ids.Add(pair.Key);
+                }
             }
+
             for (int i = 0; i < ids.Count; i++)
                 StopCue(ids[i], allowFade);
 
-            currentSceneId = string.Empty;
+            currentSceneId = inheritActive ? nextScene : string.Empty;
             currentBeatId = string.Empty;
         }
 

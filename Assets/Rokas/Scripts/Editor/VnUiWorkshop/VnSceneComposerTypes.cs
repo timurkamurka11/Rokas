@@ -261,6 +261,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string label = "Scene";
         public VnSceneComposerMediaReference media = new VnSceneComposerMediaReference();
         public VnSceneComposerMusic music = new VnSceneComposerMusic();
+        public bool keepPreviousAdditionalAudio;
         public List<VnSceneComposerAdditionalAudioCue> additionalAudioCues =
             new List<VnSceneComposerAdditionalAudioCue>();
         public List<VnSceneComposerCharacter> characters = new List<VnSceneComposerCharacter>();

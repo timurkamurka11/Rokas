@@ -167,6 +167,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string CurrentVideoWarning { get { return currentVideoWarning ?? string.Empty; } }
         public bool IsAdditionalAudioCueActive(string cueId) { return layeredAudioPlayback.IsActive(cueId); }
         public int GetAdditionalAudioCueStartCount(string cueId) { return layeredAudioPlayback.GetStartCount(cueId); }
+        public int GetAdditionalAudioCueSourceInstanceId(string cueId) { return layeredAudioPlayback.GetSourceInstanceId(cueId); }
+        public float GetAdditionalAudioCueElapsedSeconds(string cueId) { return layeredAudioPlayback.GetElapsedSeconds(cueId); }
+        public float GetAdditionalAudioCueCurrentVolume(string cueId) { return layeredAudioPlayback.GetCurrentVolume(cueId); }
         public bool IsSceneTransitionActive { get { return sceneBoundaryTransitionPhase != SceneBoundaryTransitionPhase.None; } }
         public bool SceneTransitionInputLocked { get { return IsSceneTransitionActive; } }
         public bool SceneTransitionHasSwapped { get { return sceneTransitionHasSwapped; } }
@@ -473,7 +476,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Texture continuedVideoTexture = sameVideoBoundary ? CurrentMediaTexture : null;
 
             if (applyAdditionalAudio && CurrentSceneIndex != sceneIndex)
-                layeredAudioPlayback.ExitCurrentScene(playMedia && IsPlaying);
+            {
+                bool inheritAdditionalAudio =
+                    targetScene != null &&
+                    targetScene.keepPreviousAdditionalAudio &&
+                    sceneIndex > CurrentSceneIndex;
+                layeredAudioPlayback.ExitCurrentScene(
+                    playMedia && IsPlaying,
+                    inheritAdditionalAudio,
+                    inheritAdditionalAudio ? targetScene.sceneId : string.Empty);
+            }
 
             ReleaseSourceMedia();
             if (retainOutgoingVideo) PromoteCurrentVideoToSource();
@@ -786,7 +798,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionVideoPrepareRequested = false;
             sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionPhaseElapsed = 0f;
-            layeredAudioPlayback.ExitCurrentScene(playMedia && IsPlaying);
+            bool inheritAdditionalAudio =
+                target != null &&
+                target.keepPreviousAdditionalAudio &&
+                targetIndex > CurrentSceneIndex;
+            layeredAudioPlayback.ExitCurrentScene(
+                playMedia && IsPlaying,
+                inheritAdditionalAudio,
+                inheritAdditionalAudio ? target.sceneId : string.Empty);
             sceneBoundaryTransitionPhase = SceneBoundaryTransitionPhase.Cover;
             SceneTransitionStartCount++;
             RebuildFrame(SceneElapsedSeconds, true);

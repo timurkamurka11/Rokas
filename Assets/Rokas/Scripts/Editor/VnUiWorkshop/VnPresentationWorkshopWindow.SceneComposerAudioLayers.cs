@@ -10,6 +10,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private string _sceneComposerSelectedAdditionalAudioCueId = string.Empty;
         [SerializeField] private int _sceneComposerAdditionalAudioLibraryIndex;
 
+        public void ComposerSetSelectedSceneKeepPreviousAdditionalAudio(bool keepPrevious)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.keepPreviousAdditionalAudio == keepPrevious) return;
+            RecordSceneComposerUndo("Toggle VN Keep Previous Sounds");
+            scene.keepPreviousAdditionalAudio = keepPrevious;
+            MarkSceneComposerChanged();
+        }
+
         public void ComposerAddAdditionalAudioCue()
         {
             VnSceneComposerScene scene = RequireSelectedScene();
@@ -215,6 +224,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.HelpBox(
                 "Дополнительные SFX / ambience / music layers работают независимо от основной музыки.",
                 MessageType.Info);
+
+            EditorGUI.BeginChangeCheck();
+            bool keepPrevious = EditorGUILayout.Toggle(
+                "Оставить предыдущие звуки", scene.keepPreviousAdditionalAudio);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetSelectedSceneKeepPreviousAdditionalAudio(keepPrevious);
 
             if (GUILayout.Button("+ Добавить звук")) ComposerAddAdditionalAudioCue();
 

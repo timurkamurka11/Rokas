@@ -472,6 +472,450 @@ namespace Rokas.EditorTools.Tests
             Assert.That(library, Does.Contain("\".mp3\"").And.Contain("\".wav\"").And.Contain("AudioClip"));
         }
 
+
+        [Test]
+        public void MSfxContinuity_01_DefaultSceneLocalBehaviorIsUnchanged()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                AssertCueActive(playback, cueId, true);
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                AssertCueActive(playback, cueId, false);
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_02_IncomingSceneInheritsOneActiveLoop()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                int starts = CueStartCount(playback, cueId);
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, cueId, true);
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_03_IncomingSceneInheritsMultipleActiveLoops()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "", "Ambience");
+            object radio = AddCue(project.scenes[0], TrackBGuid, true, "SceneStart", "", "SceneEnd", "", "MusicLayer");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, (string)Field(rain, "cueId"), true);
+                AssertCueActive(playback, (string)Field(radio, "cueId"), true);
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_04_InheritedLoopKeepsPlaybackIdentityAndElapsedState()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.Advance(.25f);
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                float elapsed = playback.GetAdditionalAudioCueElapsedSeconds(cueId);
+                Assert.That(sourceId, Is.Not.EqualTo(0));
+                Assert.That(elapsed, Is.GreaterThan(0f));
+
+                playback.AdvanceDialogue();
+
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+                Assert.That(playback.GetAdditionalAudioCueElapsedSeconds(cueId), Is.EqualTo(elapsed).Within(.0001f));
+                playback.Advance(.1f);
+                Assert.That(playback.GetAdditionalAudioCueElapsedSeconds(cueId), Is.GreaterThan(elapsed));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_05_InheritedLoopDoesNotRestart()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+                playback.AdvanceDialogue();
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_06_InheritedLoopDoesNotReplayFadeIn()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            SetField(rain, "fadeInSeconds", 1f);
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.Advance(.4f);
+                float before = playback.GetAdditionalAudioCueCurrentVolume(cueId);
+                Assert.That(before, Is.GreaterThan(0f).And.LessThan(1f));
+
+                playback.AdvanceDialogue();
+                float afterBoundary = playback.GetAdditionalAudioCueCurrentVolume(cueId);
+                Assert.That(afterBoundary, Is.EqualTo(before).Within(.0001f));
+
+                playback.Advance(.1f);
+                Assert.That(playback.GetAdditionalAudioCueCurrentVolume(cueId), Is.GreaterThan(afterBoundary));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_07_InheritedCueDoesNotDuplicate()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                playback.AdvanceDialogue();
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_08_NewLocalCueCanStartWhileInheritedCueContinues()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "", "Ambience");
+            object phone = AddCue(second, TrackBGuid, true, "SceneStart", "", "SceneEnd", "", "Sfx");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, (string)Field(rain, "cueId"), true);
+                AssertCueActive(playback, (string)Field(phone, "cueId"), true);
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_09_InheritedOneShotIsNotRetriggered()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object cue = AddCue(project.scenes[0], TrackAGuid, false, "SceneStart", "", "Natural", "");
+            string cueId = (string)Field(cue, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                playback.AdvanceDialogue();
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_10_SceneWithoutInheritanceUsesExistingFadeCleanup()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            project.scenes.Add(second);
+            object cue = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            SetField(cue, "fadeOutSeconds", .2f);
+            string cueId = (string)Field(cue, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, cueId, true);
+                playback.Advance(.21f);
+                AssertCueActive(playback, cueId, false);
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_11_ThreeSceneInheritanceChainStaysContinuous()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            var third = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            third.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            project.scenes.Add(third);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(2));
+                AssertCueActive(playback, cueId, true);
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_12_DisablingInheritanceEndsInheritedSceneAudio()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            var third = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            third.keepPreviousAdditionalAudio = false;
+            project.scenes.Add(second);
+            project.scenes.Add(third);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, cueId, true);
+                playback.AdvanceDialogue();
+                AssertCueActive(playback, cueId, false);
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_13_PrimaryBgmKeepPreviousRemainsUnaffected()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            second.music.mode = VnSceneComposerMusicMode.KeepPrevious;
+            project.scenes.Add(second);
+            SetMusic(project.scenes[0], TrackBGuid);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                int musicStarts = playback.MusicStartCount;
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentMusicAssetGuid, Is.EqualTo(TrackBGuid));
+                Assert.That(playback.MusicStartCount, Is.EqualTo(musicStarts));
+                Assert.That(playback.ActiveMusicSourceCount, Is.EqualTo(1));
+                AssertCueActive(playback, (string)Field(rain, "cueId"), true);
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_14_AudioInheritanceFlagDoesNotChangeMediaReference()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            second.media.reference = "sentinel-media-reference";
+            second.media.displayName = "Sentinel Media";
+            second.media.contentHash = "sentinel-hash";
+            project.scenes.Add(second);
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+            Assert.That(loaded.scenes[1].media.kind, Is.EqualTo(VnSceneComposerMediaKind.None));
+            Assert.That(loaded.scenes[1].media.reference, Is.EqualTo("sentinel-media-reference"));
+            Assert.That(loaded.scenes[1].media.displayName, Is.EqualTo("Sentinel Media"));
+            Assert.That(loaded.scenes[1].media.contentHash, Is.EqualTo("sentinel-hash"));
+        }
+
+        [Test]
+        public void MSfxContinuity_15_BeatNavigationDoesNotRestartInheritedLoop()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(3);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                int starts = CueStartCount(playback, cueId);
+                playback.AdvanceDialogue();
+                playback.PreviousDialogue();
+                playback.AdvanceDialogue();
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_16_PlayAllRestartCleansPreviousSessionState()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(1));
+
+                playback.PlayAll();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(2));
+
+                playback.AdvanceDialogue();
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_17_PreviousThenForwardDoesNotAccumulateInheritedSources()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+
+                playback.Previous();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                int startsAfterPrevious = CueStartCount(playback, cueId);
+
+                playback.Next();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(playback.ActiveAdditionalAudioSourceCount, Is.EqualTo(1));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(startsAfterPrevious));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_18_SaveReopenPreservesKeepPreviousSounds()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+
+            VnSceneComposerProject loaded = RoundTrip(project);
+            Assert.That(loaded.scenes[1].keepPreviousAdditionalAudio, Is.True);
+        }
+
+        [Test]
+        public void MSfxContinuity_19_DuplicateSceneCopiesKeepPreviousSoundsSetting()
+        {
+            var project = ProjectWithBeats(1);
+            project.scenes[0].keepPreviousAdditionalAudio = true;
+
+            VnSceneComposerScene copy =
+                VnSceneComposerEditing.DuplicateScene(project, project.scenes[0].sceneId);
+
+            Assert.That(copy, Is.Not.Null);
+            Assert.That(copy.keepPreviousAdditionalAudio, Is.True);
+        }
+
+        [Test]
+        public void MSfxContinuity_20_UndoRestoresKeepPreviousSoundsSetting()
+        {
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                Assert.That(Project(window).scenes[0].keepPreviousAdditionalAudio, Is.False);
+                Undo.ClearAll();
+
+                Invoke(window, "ComposerSetSelectedSceneKeepPreviousAdditionalAudio", true);
+                Undo.FlushUndoRecordObjects();
+                Assert.That(Project(window).scenes[0].keepPreviousAdditionalAudio, Is.True);
+
+                Undo.PerformUndo();
+                Assert.That(Project(window).scenes[0].keepPreviousAdditionalAudio, Is.False);
+            }
+            finally
+            {
+                Undo.ClearAll();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_21_UiExposesRussianKeepPreviousSoundsOption()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerAudioLayers.cs"));
+            Assert.That(source, Does.Contain(""Оставить предыдущие звуки"")
+                .And.Contain("ComposerSetSelectedSceneKeepPreviousAdditionalAudio"));
+        }
+
         private static VnSceneComposerProject ProjectWithBeats(int count)
         {
             var project = new VnSceneComposerProject();
