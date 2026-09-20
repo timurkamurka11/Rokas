@@ -5,171 +5,295 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     internal sealed class VnSceneComposerMusicPlayback : IDisposable
     {
-        private enum FadeState { None, FadeOut, FadeIn }
-
         private readonly GameObject root;
-        private readonly AudioSource source;
-        private VnSceneComposerResolvedMusic current = new VnSceneComposerResolvedMusic
-        {
-            Mode = VnSceneComposerMusicMode.Silence
-        };
-        private VnSceneComposerResolvedMusic pending;
-        private FadeState fadeState;
-        private float fadeElapsed;
-        private float fadeDuration;
-        private float fadeStartVolume;
-        private bool started;
+        private readonly AudioSource sourceA;
+        private readonly AudioSource sourceB;
+
+        private VnSceneComposerResolvedMusic current = Silence();
+        private AudioSource currentSource;
+        private AudioSource outgoingSource;
+
+        private bool incomingFadeActive;
+        private float incomingFadeElapsed;
+        private float incomingFadeDuration;
+
+        private bool outgoingFadeActive;
+        private float outgoingFadeElapsed;
+        private float outgoingFadeDuration;
+        private float outgoingFadeStartVolume;
+
         private bool disposed;
 
         public VnSceneComposerMusicPlayback()
         {
             root = new GameObject("ROKAS Scene Composer BGM");
             root.hideFlags = HideFlags.HideAndDontSave;
-            source = root.AddComponent<AudioSource>();
-            source.playOnAwake = false;
-            source.spatialBlend = 0f;
-            source.volume = 0f;
+            sourceA = CreateSource();
+            sourceB = CreateSource();
         }
 
-        public string CurrentAssetGuid { get { return current != null ? current.AssetGuid ?? string.Empty : string.Empty; } }
-        public float ConfiguredVolume { get { return current != null ? current.Volume : 0f; } }
+        public string CurrentAssetGuid
+        {
+            get { return current != null ? current.AssetGuid ?? string.Empty : string.Empty; }
+        }
+
+        public float ConfiguredVolume
+        {
+            get { return current != null ? current.Volume : 0f; }
+        }
+
         public int StartCount { get; private set; }
-        public int ActiveSourceCount { get { return started && source != null && source.clip != null ? 1 : 0; } }
+
+        public int ActiveSourceCount
+        {
+            get
+            {
+                int count = 0;
+                if (sourceA != null && sourceA.clip != null) count++;
+                if (sourceB != null && sourceB.clip != null) count++;
+                return count;
+            }
+        }
 
         public void Apply(VnSceneComposerResolvedMusic resolved, bool play, bool forceRestart)
         {
             if (disposed) return;
-            resolved = resolved ?? new VnSceneComposerResolvedMusic { Mode = VnSceneComposerMusicMode.Silence };
+            resolved = resolved ?? Silence();
 
+            bool validIncoming = IsPlayableTrack(resolved);
             bool sameTrack = !forceRestart &&
-                             resolved.Mode == VnSceneComposerMusicMode.Track &&
+                             validIncoming &&
                              current != null &&
                              current.Mode == VnSceneComposerMusicMode.Track &&
                              string.Equals(current.AssetGuid, resolved.AssetGuid, StringComparison.Ordinal) &&
-                             resolved.Clip != null;
+                             currentSource != null &&
+                             currentSource.clip != null;
 
             if (sameTrack)
             {
                 current = resolved;
-                source.loop = resolved.Loop;
-                if (fadeState == FadeState.None) source.volume = resolved.Volume;
-                if (play && !started) StartCurrent();
+                currentSource.loop = resolved.Loop;
+                if (!incomingFadeActive)
+                    currentSource.volume = resolved.Volume;
+                if (play && !currentSource.isPlaying)
+                    currentSource.UnPause();
+                return;
+            }
+
+            if (forceRestart)
+            {
+                StopSourcesImmediate();
+                current = resolved;
+                if (validIncoming)
+                    BeginIncoming(resolved, sourceA, play);
                 return;
             }
 
             if (!play)
             {
-                SwitchNow(resolved, false);
+                StopSourcesImmediate();
+                current = resolved;
+                if (validIncoming)
+                    PrepareIncomingWithoutPlay(resolved, sourceA);
                 return;
             }
 
-            if (started && source.clip != null && current != null &&
-                current.FadeOutSeconds > .0001f)
+            // A new authored target owns the logical current state immediately.
+            // Any older third state is discarded so the player remains bounded to two sources.
+            if (outgoingSource != null)
             {
-                pending = resolved;
-                fadeState = FadeState.FadeOut;
-                fadeElapsed = 0f;
-                fadeDuration = current.FadeOutSeconds;
-                fadeStartVolume = source.volume;
+                StopAndClear(outgoingSource);
+                outgoingSource = null;
+                outgoingFadeActive = false;
+            }
+
+            AudioSource previous = currentSource;
+            VnSceneComposerResolvedMusic previousResolved = current;
+
+            if (!validIncoming)
+            {
+                current = resolved;
+                currentSource = null;
+                incomingFadeActive = false;
+                if (previous != null && previous.clip != null)
+                    BeginOutgoing(previous, previousResolved);
                 return;
             }
 
-            SwitchNow(resolved, true);
+            AudioSource incoming = previous == sourceA ? sourceB : sourceA;
+            StopAndClear(incoming);
+
+            current = resolved;
+            currentSource = incoming;
+            BeginIncoming(resolved, incoming, true);
+
+            if (previous != null && previous.clip != null)
+                BeginOutgoing(previous, previousResolved);
         }
 
         public void Advance(float deltaSeconds)
         {
-            if (disposed || deltaSeconds <= 0f || fadeState == FadeState.None) return;
-            fadeElapsed += deltaSeconds;
-            float t = fadeDuration <= .0001f ? 1f : Mathf.Clamp01(fadeElapsed / fadeDuration);
+            if (disposed || deltaSeconds <= 0f) return;
 
-            if (fadeState == FadeState.FadeOut)
+            if (outgoingSource != null && outgoingFadeActive)
             {
-                source.volume = Mathf.Lerp(fadeStartVolume, 0f, t);
+                outgoingFadeElapsed += deltaSeconds;
+                float t = outgoingFadeDuration <= .0001f
+                    ? 1f
+                    : Mathf.Clamp01(outgoingFadeElapsed / outgoingFadeDuration);
+                outgoingSource.volume = Mathf.Lerp(outgoingFadeStartVolume, 0f, t);
                 if (t >= 1f)
                 {
-                    VnSceneComposerResolvedMusic next = pending;
-                    pending = null;
-                    SwitchNow(next, true);
+                    StopAndClear(outgoingSource);
+                    outgoingSource = null;
+                    outgoingFadeActive = false;
                 }
-                return;
             }
 
-            source.volume = Mathf.Lerp(0f, current != null ? current.Volume : 0f, t);
-            if (t >= 1f) fadeState = FadeState.None;
+            if (currentSource != null && incomingFadeActive)
+            {
+                incomingFadeElapsed += deltaSeconds;
+                float t = incomingFadeDuration <= .0001f
+                    ? 1f
+                    : Mathf.Clamp01(incomingFadeElapsed / incomingFadeDuration);
+                currentSource.volume = Mathf.Lerp(0f, current != null ? current.Volume : 0f, t);
+                if (t >= 1f)
+                {
+                    currentSource.volume = current != null ? current.Volume : 0f;
+                    incomingFadeActive = false;
+                }
+            }
         }
 
         public void Pause()
         {
-            if (disposed || !started) return;
-            source.Pause();
+            if (disposed) return;
+            if (currentSource != null && currentSource.clip != null) currentSource.Pause();
+            if (outgoingSource != null && outgoingSource.clip != null) outgoingSource.Pause();
         }
 
         public void Restart(VnSceneComposerResolvedMusic resolved)
         {
             if (disposed) return;
-            SwitchNow(resolved, true);
+            StopSourcesImmediate();
+            current = resolved ?? Silence();
+            if (IsPlayableTrack(current))
+                BeginIncoming(current, sourceA, true);
         }
 
         public void StopImmediate()
         {
             if (disposed) return;
-            source.Stop();
-            source.clip = null;
-            source.volume = 0f;
-            started = false;
-            pending = null;
-            fadeState = FadeState.None;
-            current = new VnSceneComposerResolvedMusic { Mode = VnSceneComposerMusicMode.Silence };
+            StopSourcesImmediate();
+            current = Silence();
         }
 
-        private void SwitchNow(VnSceneComposerResolvedMusic resolved, bool play)
+        private AudioSource CreateSource()
         {
-            source.Stop();
-            started = false;
-            pending = null;
-            fadeState = FadeState.None;
-            current = resolved ?? new VnSceneComposerResolvedMusic { Mode = VnSceneComposerMusicMode.Silence };
+            AudioSource source = root.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.spatialBlend = 0f;
+            source.volume = 0f;
+            return source;
+        }
 
-            if (current.Mode != VnSceneComposerMusicMode.Track || current.Clip == null || current.MissingAsset)
+        private void BeginIncoming(
+            VnSceneComposerResolvedMusic resolved,
+            AudioSource source,
+            bool play)
+        {
+            currentSource = source;
+            source.clip = resolved.Clip;
+            source.loop = resolved.Loop;
+            source.volume = play && resolved.FadeInSeconds > .0001f
+                ? 0f
+                : resolved.Volume;
+
+            incomingFadeActive = play && resolved.FadeInSeconds > .0001f;
+            incomingFadeElapsed = 0f;
+            incomingFadeDuration = Mathf.Max(0f, resolved.FadeInSeconds);
+
+            if (!play) return;
+            source.Play();
+            StartCount++;
+        }
+
+        private void PrepareIncomingWithoutPlay(
+            VnSceneComposerResolvedMusic resolved,
+            AudioSource source)
+        {
+            currentSource = source;
+            source.clip = resolved.Clip;
+            source.loop = resolved.Loop;
+            source.volume = resolved.Volume;
+            incomingFadeActive = false;
+            incomingFadeElapsed = 0f;
+            incomingFadeDuration = 0f;
+        }
+
+        private void BeginOutgoing(
+            AudioSource source,
+            VnSceneComposerResolvedMusic resolved)
+        {
+            float duration = resolved != null
+                ? Mathf.Max(0f, resolved.FadeOutSeconds)
+                : 0f;
+            if (duration <= .0001f)
             {
-                source.clip = null;
-                source.volume = 0f;
+                StopAndClear(source);
                 return;
             }
 
-            source.clip = current.Clip;
-            source.loop = current.Loop;
-            source.volume = current.FadeInSeconds > .0001f && play ? 0f : current.Volume;
-            if (play) StartCurrent();
+            outgoingSource = source;
+            outgoingFadeActive = true;
+            outgoingFadeElapsed = 0f;
+            outgoingFadeDuration = duration;
+            outgoingFadeStartVolume = source.volume;
         }
 
-        private void StartCurrent()
+        private void StopSourcesImmediate()
         {
-            if (current == null || current.Clip == null) return;
-            source.clip = current.Clip;
-            source.loop = current.Loop;
-            source.Play();
-            started = true;
-            StartCount++;
-            if (current.FadeInSeconds > .0001f)
+            StopAndClear(sourceA);
+            StopAndClear(sourceB);
+            currentSource = null;
+            outgoingSource = null;
+            incomingFadeActive = false;
+            outgoingFadeActive = false;
+            incomingFadeElapsed = 0f;
+            outgoingFadeElapsed = 0f;
+            incomingFadeDuration = 0f;
+            outgoingFadeDuration = 0f;
+            outgoingFadeStartVolume = 0f;
+        }
+
+        private static void StopAndClear(AudioSource source)
+        {
+            if (source == null) return;
+            source.Stop();
+            source.clip = null;
+            source.volume = 0f;
+        }
+
+        private static bool IsPlayableTrack(VnSceneComposerResolvedMusic resolved)
+        {
+            return resolved != null &&
+                   resolved.Mode == VnSceneComposerMusicMode.Track &&
+                   resolved.Clip != null &&
+                   !resolved.MissingAsset;
+        }
+
+        private static VnSceneComposerResolvedMusic Silence()
+        {
+            return new VnSceneComposerResolvedMusic
             {
-                source.volume = 0f;
-                fadeState = FadeState.FadeIn;
-                fadeElapsed = 0f;
-                fadeDuration = current.FadeInSeconds;
-            }
-            else
-            {
-                source.volume = current.Volume;
-                fadeState = FadeState.None;
-            }
+                Mode = VnSceneComposerMusicMode.Silence
+            };
         }
 
         public void Dispose()
         {
             if (disposed) return;
-            StopImmediate();
+            StopSourcesImmediate();
             disposed = true;
             if (root != null) UnityEngine.Object.DestroyImmediate(root);
         }
