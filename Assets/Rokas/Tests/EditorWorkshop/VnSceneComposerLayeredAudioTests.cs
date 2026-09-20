@@ -912,7 +912,7 @@ namespace Rokas.EditorTools.Tests
             string source = File.ReadAllText(Path.Combine(
                 Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
                 "VnPresentationWorkshopWindow.SceneComposerAudioLayers.cs"));
-            Assert.That(source, Does.Contain(""Оставить предыдущие звуки"")
+            Assert.That(source, Does.Contain("Оставить предыдущие звуки")
                 .And.Contain("ComposerSetSelectedSceneKeepPreviousAdditionalAudio"));
         }
 
