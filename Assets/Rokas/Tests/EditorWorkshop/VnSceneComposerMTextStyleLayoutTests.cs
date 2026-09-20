@@ -1665,6 +1665,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.SpeakerColor,
                     Is.EqualTo(Resolve(p, scene, 0).SpeakerColor));
                 playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
                 Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.SpeakerColor,
                     Is.EqualTo(Resolve(p, scene, 1).SpeakerColor));
             }
