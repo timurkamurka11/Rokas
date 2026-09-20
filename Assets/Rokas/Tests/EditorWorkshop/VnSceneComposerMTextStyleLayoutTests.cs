@@ -1479,6 +1479,302 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
+        [Test] public void MTextSpeakerInScene_RED_113_ModelExposesThirdScopeAndLocalOverrideMap()
+        {
+            Assert.That(Enum.GetNames(typeof(VnSceneComposerSpeakerColorScope)),
+                Does.Contain("ThisSpeakerInScene"));
+            FieldInfo map = typeof(VnSceneComposerScene).GetField(
+                "speakerColorOverrides", BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo hasScene = typeof(VnSceneComposerScene).GetField(
+                "hasSpeakerColorOverride", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(map, Is.Not.Null);
+            Assert.That(hasScene, Is.Not.Null);
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_114_KeikoWhiteAndMinaOrangeResolveInsideOneScene()
+        {
+            VnSceneComposerScene scene = Scene(Keiko);
+            scene.dialogueBeats.Add(Beat(Mina, "Mina line"));
+            var p = Project(scene);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.white);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[1], new Color(1f, .45f, .1f, 1f));
+
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.white));
+            Assert.That(Resolve(p, scene, 1).SpeakerColor,
+                Is.EqualTo(new Color(1f, .45f, .1f, 1f)));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_115_EditingMinaDoesNotMutateKeiko()
+        {
+            VnSceneComposerScene scene = Scene(Keiko);
+            scene.dialogueBeats.Add(Beat(Mina, "Mina"));
+            var p = Project(scene);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.white);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[1], Color.red);
+            Color keiko = Resolve(p, scene, 0).SpeakerColor;
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[1], Color.yellow);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(keiko));
+            Assert.That(Resolve(p, scene, 1).SpeakerColor, Is.EqualTo(Color.yellow));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_116_SameSpeakerAcrossBeatsUsesSameLocalOverride()
+        {
+            VnSceneComposerScene scene = Scene(Keiko);
+            scene.dialogueBeats.Add(Beat(Mina, "Mina"));
+            scene.dialogueBeats.Add(Beat(Keiko, "Keiko again"));
+            var p = Project(scene);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.cyan);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor,
+                Is.EqualTo(Resolve(p, scene, 2).SpeakerColor));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_117_SameSpeakerInAnotherSceneDoesNotInheritOverride()
+        {
+            VnSceneComposerScene a = Scene(Mina);
+            VnSceneComposerScene b = Scene(Mina);
+            var p = Project(a, b);
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            SetSceneSpeakerOverrideReflect(a, a.dialogueBeats[0], Color.red);
+            Assert.That(Resolve(p, a, 0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(p, b, 0).SpeakerColor, Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_118_TextOnlySpeakerKeyTrimsBoundaryWhitespace()
+        {
+            VnSceneComposerDialogueBeat a = Beat("Mina", "A");
+            VnSceneComposerDialogueBeat b = Beat("  Mina  ", "B");
+            a.targetCharacterId = string.Empty;
+            b.targetCharacterId = string.Empty;
+            Assert.That(ResolveSpeakerKeyReflect(a), Is.EqualTo(ResolveSpeakerKeyReflect(b)));
+            Assert.That(ResolveSpeakerKeyReflect(a), Is.Not.Empty);
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_119_CharacterIdIsPreferredWhenAvailable()
+        {
+            VnSceneComposerDialogueBeat a = Beat("Mina", "A");
+            VnSceneComposerDialogueBeat b = Beat("Different display name", "B");
+            a.targetCharacterId = "character-mina";
+            b.targetCharacterId = "character-mina";
+            Assert.That(ResolveSpeakerKeyReflect(a), Is.EqualTo(ResolveSpeakerKeyReflect(b)));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_120_EmptySpeakerDoesNotCreateLocalIdentity()
+        {
+            VnSceneComposerDialogueBeat beat = Beat("   ", "Narration");
+            beat.targetCharacterId = string.Empty;
+            Assert.That(ResolveSpeakerKeyReflect(beat), Is.Empty);
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_121_RemoveSpeakerThenSceneOverrideFallsBackInOrder()
+        {
+            VnSceneComposerScene scene = Scene(Mina);
+            var p = Project(scene);
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            SetSceneDefaultReflect(scene, Color.yellow);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.red);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.red));
+
+            ClearSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0]);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.yellow));
+
+            SetFieldReflect(scene, "hasSpeakerColorOverride", false);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_122_SaveReopenPreservesSceneSpeakerOverrides()
+        {
+            VnSceneComposerScene scene = Scene(Keiko);
+            scene.dialogueBeats.Add(Beat(Mina, "Mina"));
+            var p = Project(scene);
+            SetSceneDefaultReflect(scene, Color.yellow);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.white);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[1], Color.red);
+
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(Resolve(q, q.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.white));
+            Assert.That(Resolve(q, q.scenes[0], 1).SpeakerColor, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_123_DuplicateSceneOwnsIndependentSpeakerOverrideMap()
+        {
+            VnSceneComposerScene scene = Scene(Mina);
+            var p = Project(scene);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.red);
+            VnSceneComposerScene copy =
+                VnSceneComposerEditing.DuplicateScene(p, scene.sceneId);
+            Assert.That(Resolve(p, copy, 0).SpeakerColor, Is.EqualTo(Color.red));
+
+            SetSceneSpeakerOverrideReflect(copy, copy.dialogueBeats[0], Color.green);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(p, copy, 0).SpeakerColor, Is.EqualTo(Color.green));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_124_AuthoringApiSupportsScopeSetChangeRemoveAndUndo()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                VnSceneComposerScene scene = p.scenes[0];
+                scene.dialogueBeats[0].speaker = Mina;
+
+                object third = Enum.Parse(
+                    typeof(VnSceneComposerSpeakerColorScope), "ThisSpeakerInScene");
+                MethodInfo setScope = typeof(VnPresentationWorkshopWindow).GetMethod(
+                    "ComposerSetSelectedSceneSpeakerColorScope",
+                    BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setColor = typeof(VnPresentationWorkshopWindow).GetMethod(
+                    "ComposerSetSpeakerColor",
+                    BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo clear = typeof(VnPresentationWorkshopWindow).GetMethod(
+                    "ComposerClearSelectedSpeakerColorOverride",
+                    BindingFlags.Public | BindingFlags.Instance);
+                Assert.That(setScope, Is.Not.Null);
+                Assert.That(setColor, Is.Not.Null);
+                Assert.That(clear, Is.Not.Null);
+
+                Undo.ClearAll();
+                setScope.Invoke(w, new[] { third });
+                setColor.Invoke(w, new object[] { Color.red });
+                Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.red));
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.Not.EqualTo(Color.red));
+
+                setScope.Invoke(w, new[] { third });
+                setColor.Invoke(w, new object[] { Color.red });
+                clear.Invoke(w, null);
+                Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.Not.EqualTo(Color.red));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_125_PreviewAndPlayResolveSameBeatSpeakerColor()
+        {
+            VnSceneComposerScene scene = Scene(Keiko);
+            scene.dialogueBeats.Add(Beat(Mina, "Mina line"));
+            var p = Project(scene);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.white);
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[1], Color.red);
+
+            using (var playback = new VnSceneComposerPlaybackController(p))
+            {
+                playback.PlayScene(0);
+                Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.SpeakerColor,
+                    Is.EqualTo(Resolve(p, scene, 0).SpeakerColor));
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentFrame.WorkshopFrame.Typography.SpeakerColor,
+                    Is.EqualTo(Resolve(p, scene, 1).SpeakerColor));
+            }
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_126_ColorEditingDoesNotMutateTypographyOrGeometryContracts()
+        {
+            VnSceneComposerScene scene = Scene(Mina);
+            var p = Project(scene);
+            p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
+            p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
+            p.defaultPresentation.typography.hasSpeakerFontSize = true;
+            p.defaultPresentation.typography.speakerFontSize = 48f;
+            SetProjectGeometry(p, true, new Rect(40f, 50f, 500f, 80f));
+
+            Rect geometry = Frame(p, 0).SpeakerName;
+            string font = Resolve(p, scene, 0).SpeakerFontAssetGuid;
+            float size = Resolve(p, scene, 0).SpeakerFontSize;
+            SetSceneSpeakerOverrideReflect(scene, scene.dialogueBeats[0], Color.red);
+
+            Assert.That(Frame(p, 0).SpeakerName, Is.EqualTo(geometry));
+            Assert.That(Resolve(p, scene, 0).SpeakerFontAssetGuid, Is.EqualTo(font));
+            Assert.That(Resolve(p, scene, 0).SpeakerFontSize, Is.EqualTo(size));
+        }
+
+        [Test] public void MTextSpeakerInScene_RED_127_UiShowsCurrentSpeakerAndThirdColorScope()
+        {
+            string source = TextUiSource();
+            Assert.That(source, Does.Contain("Текущий говорящий:")
+                .And.Contain("Этому говорящему в этой сцене")
+                .And.Contain("Применить цвет:"));
+        }
+
+        private static string ResolveSpeakerKeyReflect(VnSceneComposerDialogueBeat beat)
+        {
+            MethodInfo method = typeof(VnSceneComposerTextStyleResolver).GetMethod(
+                "ResolveSpeakerKey",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null, "Speaker-in-Scene resolver must expose a deterministic key.");
+            return (string)method.Invoke(null, new object[] { beat });
+        }
+
+        private static object SceneSpeakerOverrideListReflect(VnSceneComposerScene scene)
+        {
+            FieldInfo field = typeof(VnSceneComposerScene).GetField(
+                "speakerColorOverrides", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "Scene must own its speaker-local color map.");
+            return field.GetValue(scene);
+        }
+
+        private static void SetSceneSpeakerOverrideReflect(
+            VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat, Color color)
+        {
+            string key = ResolveSpeakerKeyReflect(beat);
+            Assert.That(key, Is.Not.Empty, "Test speaker needs a local key.");
+            object list = SceneSpeakerOverrideListReflect(scene);
+            Type listType = list.GetType();
+            Type entryType = listType.GetGenericArguments()[0];
+            System.Collections.IList items = (System.Collections.IList)list;
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                object existing = items[i];
+                FieldInfo keyField = entryType.GetField("speakerKey");
+                if (existing != null &&
+                    string.Equals((string)keyField.GetValue(existing), key, StringComparison.Ordinal))
+                {
+                    entryType.GetField("color").SetValue(existing, color);
+                    return;
+                }
+            }
+
+            object entry = Activator.CreateInstance(entryType);
+            entryType.GetField("speakerKey").SetValue(entry, key);
+            entryType.GetField("color").SetValue(entry, color);
+            items.Add(entry);
+        }
+
+        private static void ClearSceneSpeakerOverrideReflect(
+            VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
+        {
+            string key = ResolveSpeakerKeyReflect(beat);
+            System.Collections.IList items =
+                (System.Collections.IList)SceneSpeakerOverrideListReflect(scene);
+            if (items.Count == 0) return;
+            Type entryType = items[0].GetType();
+            FieldInfo keyField = entryType.GetField("speakerKey");
+            for (int i = items.Count - 1; i >= 0; i--)
+            {
+                object entry = items[i];
+                if (entry != null &&
+                    string.Equals((string)keyField.GetValue(entry), key, StringComparison.Ordinal))
+                    items.RemoveAt(i);
+            }
+        }
+
+        private static void SetSceneDefaultReflect(VnSceneComposerScene scene, Color color)
+        {
+            SetFieldReflect(scene, "hasSpeakerColorOverride", true);
+            scene.speakerColor = color;
+        }
+
+        private static void SetFieldReflect(object instance, string name, object value)
+        {
+            FieldInfo field = instance.GetType().GetField(
+                name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "Missing field " + name);
+            field.SetValue(instance, value);
+        }
+
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
         {
             var p=new VnSceneComposerProject();
