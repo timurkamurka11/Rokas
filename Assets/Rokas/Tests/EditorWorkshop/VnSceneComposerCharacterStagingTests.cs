@@ -484,6 +484,340 @@ namespace Rokas.EditorTools.Tests
             }
         }
 
+        [Test] public void MCS_DirectDrag_RED_01_FreeBeatDragUpdatesCurrentBeatXY()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            Set(row,"customPositionOffset",new Vector2(10f,20f));
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(5f,-3f));
+                AssertVector(Get<Vector2>(row,"customPositionOffset"),new Vector2(15f,17f));
+                Assert.That(Get<object>(row,"position").ToString(),Is.EqualTo("Custom"));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_02_SceneBaseTransformRemainsUnchanged()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            VnSceneComposerCharacter baseCharacter=scene.characters[0];
+            Vector2 before=baseCharacter.positionOffset;
+            bool hadOffset=baseCharacter.hasPositionOffset;
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(25f,10f));
+                Assert.That(baseCharacter.hasPositionOffset,Is.EqualTo(hadOffset));
+                AssertVector(baseCharacter.positionOffset,before);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_03_PreviousBeatRemainsUnchanged()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            object first=AddStaging(scene.dialogueBeats[0],"Mina","KeepPrevious","Custom",false,"",0f);
+            Set(first,"customPositionOffset",new Vector2(-40f,12f));
+            var second=AddBeat(scene);
+            object current=AddStaging(second,"Mina","KeepPrevious","KeepPrevious",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",current);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(11f,-7f));
+                Assert.That(Get<object>(first,"position").ToString(),Is.EqualTo("Custom"));
+                AssertVector(Get<Vector2>(first,"customPositionOffset"),new Vector2(-40f,12f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_04_KeepPreviousBecomesCurrentBeatCustomFromInheritedPosition()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            object first=AddStaging(scene.dialogueBeats[0],"Mina","KeepPrevious","Custom",false,"",0f);
+            Set(first,"customPositionOffset",new Vector2(30f,10f));
+            var second=AddBeat(scene);
+            object current=AddStaging(second,"Mina","KeepPrevious","KeepPrevious",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",current);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(5f,-2f));
+                Assert.That(Get<object>(current,"position").ToString(),Is.EqualTo("Custom"));
+                AssertVector(Get<Vector2>(current,"customPositionOffset"),new Vector2(35f,8f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [TestCase("Left")]
+        [TestCase("Center")]
+        [TestCase("Right")]
+        public void MCS_DirectDrag_RED_05_07_PresetBecomesCustomWithoutVisualSnap(string preset)
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious",preset,false,"",0f);
+            Rect before=Character(Build(scene,second,0f),"Mina").Body;
+            Vector2 delta=new Vector2(18f,-9f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",delta);
+                Rect after=Character(Build(scene,second,0f),"Mina").Body;
+                Assert.That(Get<object>(row,"position").ToString(),Is.EqualTo("Custom"));
+                AssertVector(after.center,before.center+delta);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_08_NumericCustomXYEqualsDraggedXY()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            Set(row,"customPositionOffset",new Vector2(4f,6f));
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(12f,14f));
+                AssertVector(Get<Vector2>(row,"customPositionOffset"),new Vector2(16f,20f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_09_SecondVisibleCharacterRemainsUnchanged()
+        {
+            var scene=SceneWithCharacters(
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Left),
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Right));
+            var second=AddBeat(scene);
+            object mina=AddStaging(second,"Mina","KeepPrevious","KeepPrevious",false,"",0f);
+            AddStaging(second,"Keiko","KeepPrevious","KeepPrevious",false,"",0f);
+            Rect keikoBefore=Character(Build(scene,second,0f),"Keiko").Body;
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",mina);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(40f,0f));
+                Rect keikoAfter=Character(Build(scene,second,0f),"Keiko").Body;
+                Assert.That(keikoAfter,Is.EqualTo(keikoBefore));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_10_PreviewResizeConvertsToSameReferenceDelta()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            VnWorkshopPreviewFrame frame=Build(scene,scene.dialogueBeats[0],0f);
+            Rect small=new Rect(0f,0f,960f,540f);
+            Rect large=new Rect(0f,0f,1920f,1080f);
+            Vector2 smallA=VnPresentationWorkshopPreviewRenderer.PreviewToLogical(small,new Vector2(100f,100f),frame);
+            Vector2 smallB=VnPresentationWorkshopPreviewRenderer.PreviewToLogical(small,new Vector2(150f,125f),frame);
+            Vector2 largeA=VnPresentationWorkshopPreviewRenderer.PreviewToLogical(large,new Vector2(200f,200f),frame);
+            Vector2 largeB=VnPresentationWorkshopPreviewRenderer.PreviewToLogical(large,new Vector2(300f,250f),frame);
+            AssertVector(smallB-smallA,largeB-largeA);
+        }
+
+        [Test] public void MCS_DirectDrag_RED_11_UndoRestoresPriorModeAndXY()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Left",false,"",0f);
+            string rowId=Get<string>(row,"stagingId");
+            string sceneId=scene.sceneId;
+            string beatId=second.beatId;
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Undo.ClearAll();
+                Invoke(w,"RecordSceneComposerUndo","Move VN Scene Character");
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(20f,5f));
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+
+                VnSceneComposerProject restored=(VnSceneComposerProject)PrivateField(w,"_sceneComposerProject").GetValue(w);
+                VnSceneComposerScene restoredScene=restored.scenes.First(x=>x.sceneId==sceneId);
+                VnSceneComposerDialogueBeat restoredBeat=restoredScene.dialogueBeats.First(x=>x.beatId==beatId);
+                object restoredRow=((IList)Field(restoredBeat,"characterStaging").GetValue(restoredBeat))
+                    .Cast<object>().First(x=>Get<string>(x,"stagingId")==rowId);
+                Assert.That(Get<object>(restoredRow,"position").ToString(),Is.EqualTo("Left"));
+                AssertVector(Get<Vector2>(restoredRow,"customPositionOffset"),Vector2.zero);
+            }
+            finally { Undo.ClearAll(); UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_12_SaveReopenPreservesDraggedBeat()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(21f,-13f));
+                string json=VnSceneComposerSerialization.SerializePortable(
+                    (VnSceneComposerProject)PrivateField(w,"_sceneComposerProject").GetValue(w));
+                VnSceneComposerImportResult loaded=VnSceneComposerSerialization.DeserializePortable(json);
+                Assert.That(loaded.Success,Is.True,loaded.Error);
+                object loadedRow=((IList)Field(loaded.Project.scenes[0].dialogueBeats[1],"characterStaging")
+                    .GetValue(loaded.Project.scenes[0].dialogueBeats[1]))[0];
+                Assert.That(Get<object>(loadedRow,"position").ToString(),Is.EqualTo("Custom"));
+                AssertVector(Get<Vector2>(loadedRow,"customPositionOffset"),new Vector2(21f,-13f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_13_PreviousReconstructsUndraggedPriorBeat()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            object first=AddStaging(scene.dialogueBeats[0],"Mina","KeepPrevious","Left",false,"",0f);
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","KeepPrevious",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(30f,0f));
+                var p=(VnSceneComposerProject)PrivateField(w,"_sceneComposerProject").GetValue(w);
+                using(var playback=new VnSceneComposerPlaybackController(p))
+                {
+                    playback.PlayFromHereFromNeutralStart(0,1);
+                    playback.PreviousDialogue();
+                    Assert.That(playback.CurrentBeatIndex,Is.EqualTo(0));
+                    Assert.That(Character(playback.CurrentFrame.WorkshopFrame,"Mina").Slot,
+                        Is.EqualTo(VnWorkshopStageSlot.Left));
+                }
+                Assert.That(Get<object>(first,"position").ToString(),Is.EqualTo("Left"));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_14_PlayFromHereReconstructsDraggedBeat()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(26f,-8f));
+                Rect expected=Character(Build(scene,second,0f),"Mina").Body;
+                using(var playback=new VnSceneComposerPlaybackController(
+                    (VnSceneComposerProject)PrivateField(w,"_sceneComposerProject").GetValue(w)))
+                {
+                    playback.PlayFromHereFromNeutralStart(0,1);
+                    Assert.That(Character(playback.CurrentFrame.WorkshopFrame,"Mina").Body,
+                        Is.EqualTo(expected));
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_15_StaticPreviewAndPlaybackResolveSameDraggedPosition()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            object row=AddStaging(second,"Mina","KeepPrevious","Custom",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,second,"Mina",row);
+            try
+            {
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(-17f,22f));
+                Rect preview=Character(Build(scene,second,0f),"Mina").Body;
+                using(var playback=new VnSceneComposerPlaybackController(
+                    (VnSceneComposerProject)PrivateField(w,"_sceneComposerProject").GetValue(w)))
+                {
+                    playback.PlayFromHereFromNeutralStart(0,1);
+                    Assert.That(Character(playback.CurrentFrame.WorkshopFrame,"Mina").Body,
+                        Is.EqualTo(preview));
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_16_DragDoesNotRecreatePlaybackOrRestartBgm()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            SetMusic(scene);
+            object row=AddStaging(scene.dialogueBeats[0],"Mina","KeepPrevious","Custom",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,scene.dialogueBeats[0],"Mina",row);
+            try
+            {
+                w.ComposerPlayScene();
+                object before=PrivateField(w,"_sceneComposerPlayback").GetValue(w);
+                Assert.That(before,Is.Not.Null);
+                int starts=((VnSceneComposerPlaybackController)before).MusicStartCount;
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(9f,4f));
+                object after=PrivateField(w,"_sceneComposerPlayback").GetValue(w);
+                Assert.That(after,Is.SameAs(before),
+                    "Direct Beat staging drag must not reset the environment playback object.");
+                Assert.That(((VnSceneComposerPlaybackController)after).MusicStartCount,Is.EqualTo(starts));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_17_SelectedStagingRowWinsOverlappingCharacterHitTest()
+        {
+            var scene=SceneWithCharacters(
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Center),
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Center));
+            object mina=AddStaging(scene.dialogueBeats[0],"Mina","KeepPrevious","Center",false,"",0f);
+            AddStaging(scene.dialogueBeats[0],"Keiko","KeepPrevious","Center",false,"",0f);
+            VnPresentationWorkshopWindow w=DragWindow(scene,scene.dialogueBeats[0],"Mina",mina);
+            try
+            {
+                VnWorkshopPreviewFrame frame=(VnWorkshopPreviewFrame)Invoke(w,"ComposerBuildSelectedPreviewFrame");
+                Rect a=Character(frame,"Mina").Body;
+                Rect b=Character(frame,"Keiko").Body;
+                Rect overlap=Rect.MinMaxRect(
+                    Mathf.Max(a.xMin,b.xMin),Mathf.Max(a.yMin,b.yMin),
+                    Mathf.Min(a.xMax,b.xMax),Mathf.Min(a.yMax,b.yMax));
+                Assert.That(overlap.width,Is.GreaterThan(0f));
+                Assert.That(overlap.height,Is.GreaterThan(0f));
+
+                Assert.That(w.ComposerSelectPreviewObjectAt(overlap.center),Is.True);
+                Assert.That(w.ComposerGetSelectedCharacterIndex(),Is.EqualTo(0),
+                    "When characters overlap, the explicitly selected staging row owns the hit.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_DirectDrag_RED_18_PreviewCharacterDragUsesOneAuthoritativeHotControl()
+        {
+            string path=Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string source=File.ReadAllText(path);
+            Assert.That(source,Does.Contain("GUIUtility.hotControl")
+                .And.Contain("_sceneComposerPreviewDragControlId"));
+        }
+
+        private static VnPresentationWorkshopWindow DragWindow(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            string characterId,
+            object stagingRow)
+        {
+            var w=ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            var project=Project(scene);
+            PrivateField(w,"_sceneComposerProject").SetValue(w,project);
+            PrivateField(w,"_sceneComposerSelectedSceneId").SetValue(w,scene.sceneId);
+            PrivateField(w,"_sceneComposerSelectedDialogueBeatId").SetValue(w,beat.beatId);
+            int index=scene.characters.FindIndex(c=>c!=null&&
+                string.Equals(c.characterId,characterId,StringComparison.OrdinalIgnoreCase));
+            Assert.That(index,Is.GreaterThanOrEqualTo(0));
+            PrivateField(w,"_sceneComposerSelectedCharacterIndex").SetValue(w,index);
+            if(stagingRow!=null)
+                PrivateField(w,"_sceneComposerSelectedCharacterStagingId").SetValue(
+                    w,Get<string>(stagingRow,"stagingId"));
+            return w;
+        }
+
+        private static void AssertVector(Vector2 actual,Vector2 expected)
+        {
+            Assert.That(actual.x,Is.EqualTo(expected.x).Within(.01f));
+            Assert.That(actual.y,Is.EqualTo(expected.y).Within(.01f));
+        }
+
         private static VnSceneComposerDialogueBeat AddBeat(VnSceneComposerScene scene)
         {
             var b=new VnSceneComposerDialogueBeat { text="beat" };
