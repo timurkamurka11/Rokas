@@ -1479,7 +1479,7 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextSpeakerInScene_RED_113_ModelExposesThirdScopeAndLocalOverrideMap()
+        [Test] public void MTextSpeakerInScene_113_ModelExposesThirdScopeAndLocalOverrideMap()
         {
             Assert.That(Enum.GetNames(typeof(VnSceneComposerSpeakerColorScope)),
                 Does.Contain("ThisSpeakerInScene"));
@@ -1491,7 +1491,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(hasScene, Is.Not.Null);
         }
 
-        [Test] public void MTextSpeakerInScene_RED_114_KeikoWhiteAndMinaOrangeResolveInsideOneScene()
+        [Test] public void MTextSpeakerInScene_114_KeikoWhiteAndMinaOrangeResolveInsideOneScene()
         {
             VnSceneComposerScene scene = Scene(Keiko);
             scene.dialogueBeats.Add(Beat(Mina, "Mina line"));
@@ -1504,7 +1504,7 @@ namespace Rokas.EditorTools.Tests
                 Is.EqualTo(new Color(1f, .45f, .1f, 1f)));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_115_EditingMinaDoesNotMutateKeiko()
+        [Test] public void MTextSpeakerInScene_115_EditingMinaDoesNotMutateKeiko()
         {
             VnSceneComposerScene scene = Scene(Keiko);
             scene.dialogueBeats.Add(Beat(Mina, "Mina"));
@@ -1517,7 +1517,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(p, scene, 1).SpeakerColor, Is.EqualTo(Color.yellow));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_116_SameSpeakerAcrossBeatsUsesSameLocalOverride()
+        [Test] public void MTextSpeakerInScene_116_SameSpeakerAcrossBeatsUsesSameLocalOverride()
         {
             VnSceneComposerScene scene = Scene(Keiko);
             scene.dialogueBeats.Add(Beat(Mina, "Mina"));
@@ -1528,7 +1528,7 @@ namespace Rokas.EditorTools.Tests
                 Is.EqualTo(Resolve(p, scene, 2).SpeakerColor));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_117_SameSpeakerInAnotherSceneDoesNotInheritOverride()
+        [Test] public void MTextSpeakerInScene_117_SameSpeakerInAnotherSceneDoesNotInheritOverride()
         {
             VnSceneComposerScene a = Scene(Mina);
             VnSceneComposerScene b = Scene(Mina);
@@ -1540,7 +1540,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(p, b, 0).SpeakerColor, Is.EqualTo(Color.blue));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_118_TextOnlySpeakerKeyTrimsBoundaryWhitespace()
+        [Test] public void MTextSpeakerInScene_118_TextOnlySpeakerKeyTrimsBoundaryWhitespace()
         {
             VnSceneComposerDialogueBeat a = Beat("Mina", "A");
             VnSceneComposerDialogueBeat b = Beat("  Mina  ", "B");
@@ -1550,7 +1550,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(ResolveSpeakerKeyReflect(a), Is.Not.Empty);
         }
 
-        [Test] public void MTextSpeakerInScene_RED_119_CharacterIdIsPreferredWhenAvailable()
+        [Test] public void MTextSpeakerInScene_119_CharacterIdIsPreferredWhenAvailable()
         {
             VnSceneComposerDialogueBeat a = Beat("Mina", "A");
             VnSceneComposerDialogueBeat b = Beat("Different display name", "B");
@@ -1559,14 +1559,14 @@ namespace Rokas.EditorTools.Tests
             Assert.That(ResolveSpeakerKeyReflect(a), Is.EqualTo(ResolveSpeakerKeyReflect(b)));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_120_EmptySpeakerDoesNotCreateLocalIdentity()
+        [Test] public void MTextSpeakerInScene_120_EmptySpeakerDoesNotCreateLocalIdentity()
         {
             VnSceneComposerDialogueBeat beat = Beat("   ", "Narration");
             beat.targetCharacterId = string.Empty;
             Assert.That(ResolveSpeakerKeyReflect(beat), Is.Empty);
         }
 
-        [Test] public void MTextSpeakerInScene_RED_121_RemoveSpeakerThenSceneOverrideFallsBackInOrder()
+        [Test] public void MTextSpeakerInScene_121_RemoveSpeakerThenSceneOverrideFallsBackInOrder()
         {
             VnSceneComposerScene scene = Scene(Mina);
             var p = Project(scene);
@@ -1583,7 +1583,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(p, scene, 0).SpeakerColor, Is.EqualTo(Color.blue));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_122_SaveReopenPreservesSceneSpeakerOverrides()
+        [Test] public void MTextSpeakerInScene_122_SaveReopenPreservesSceneSpeakerOverrides()
         {
             VnSceneComposerScene scene = Scene(Keiko);
             scene.dialogueBeats.Add(Beat(Mina, "Mina"));
@@ -1597,7 +1597,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(q, q.scenes[0], 1).SpeakerColor, Is.EqualTo(Color.red));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_123_DuplicateSceneOwnsIndependentSpeakerOverrideMap()
+        [Test] public void MTextSpeakerInScene_123_DuplicateSceneOwnsIndependentSpeakerOverrideMap()
         {
             VnSceneComposerScene scene = Scene(Mina);
             var p = Project(scene);
@@ -1611,7 +1611,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(p, copy, 0).SpeakerColor, Is.EqualTo(Color.green));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_124_AuthoringApiSupportsScopeSetChangeRemoveAndUndo()
+        [Test] public void MTextSpeakerInScene_124_AuthoringApiSupportsScopeSetChangeRemoveAndUndo()
         {
             VnPresentationWorkshopWindow w = WindowWithScene();
             try
@@ -1651,7 +1651,7 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextSpeakerInScene_RED_125_PreviewAndPlayResolveSameBeatSpeakerColor()
+        [Test] public void MTextSpeakerInScene_125_PreviewAndPlayResolveSameBeatSpeakerColor()
         {
             VnSceneComposerScene scene = Scene(Keiko);
             scene.dialogueBeats.Add(Beat(Mina, "Mina line"));
@@ -1670,7 +1670,7 @@ namespace Rokas.EditorTools.Tests
             }
         }
 
-        [Test] public void MTextSpeakerInScene_RED_126_ColorEditingDoesNotMutateTypographyOrGeometryContracts()
+        [Test] public void MTextSpeakerInScene_126_ColorEditingDoesNotMutateTypographyOrGeometryContracts()
         {
             VnSceneComposerScene scene = Scene(Mina);
             var p = Project(scene);
@@ -1690,7 +1690,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(p, scene, 0).SpeakerFontSize, Is.EqualTo(size));
         }
 
-        [Test] public void MTextSpeakerInScene_RED_127_UiShowsCurrentSpeakerAndThirdColorScope()
+        [Test] public void MTextSpeakerInScene_127_UiShowsCurrentSpeakerAndThirdColorScope()
         {
             string source = TextUiSource();
             Assert.That(source, Does.Contain("Текущий говорящий:")

@@ -82,7 +82,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public enum VnSceneComposerSpeakerColorScope
     {
         AllScenes,
-        ThisScene
+        ThisScene,
+        ThisSpeakerInScene
     }
 
     public enum VnSceneComposerMusicMode
@@ -317,6 +318,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
+    public sealed class VnSceneComposerSpeakerColorOverride
+    {
+        // Local identity only. "character:" keys come from a Beat Character ID;
+        // "speaker:" keys come from trimmed authored speaker text.
+        public string speakerKey = string.Empty;
+        public Color color = Color.white;
+    }
+
+    [Serializable]
     public sealed class VnSceneComposerScene
     {
         public string sceneId = NewStableId();
@@ -336,11 +346,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         // keep the established shared text geometry until an author explicitly opts in.
         public VnSceneComposerTextGeometryScope textGeometryScope =
             VnSceneComposerTextGeometryScope.AllScenes;
-        // Speaker-name color is global by default. Only an explicit ThisScene scope
-        // enables this Scene-local RGB override. Opacity remains part of shared speaker style.
+        // speakerColorScope is the current authoring target. Resolution itself is explicit:
+        // Scene+Speaker override -> Scene default -> Global default.
+        // Serialized zero/default remains AllScenes for backward compatibility.
         public VnSceneComposerSpeakerColorScope speakerColorScope =
             VnSceneComposerSpeakerColorScope.AllScenes;
+        public bool hasSpeakerColorOverride;
         public Color speakerColor = Color.white;
+        public List<VnSceneComposerSpeakerColorOverride> speakerColorOverrides =
+            new List<VnSceneComposerSpeakerColorOverride>();
         public VnSceneComposerTextVisualStyleOverride dialogueBodyStyleOverride =
             new VnSceneComposerTextVisualStyleOverride();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();

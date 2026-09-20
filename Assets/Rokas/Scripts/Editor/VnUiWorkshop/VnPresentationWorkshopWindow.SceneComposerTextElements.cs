@@ -68,18 +68,42 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene = RequireSelectedScene();
             if (scene.speakerColorScope == scope) return;
 
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (scope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene &&
+                string.IsNullOrEmpty(VnSceneComposerTextStyleResolver.ResolveSpeakerKey(beat)))
+                throw new InvalidOperationException(
+                    "Speaker-in-Scene color requires a non-empty current speaker.");
+
             RecordSceneComposerUndo("Change VN Speaker Color Scope");
             CancelSceneComposerPreviewDrag();
 
             if (scope == VnSceneComposerSpeakerColorScope.ThisScene)
             {
-                Color currentGlobal = ComposerGetSharedTypography().SpeakerColor;
-                scene.speakerColor = currentGlobal;
+                if (!scene.hasSpeakerColorOverride)
+                {
+                    scene.speakerColor = ComposerGetSharedTypography().SpeakerColor;
+                    scene.hasSpeakerColorOverride = true;
+                }
+            }
+            else if (scope == VnSceneComposerSpeakerColorScope.AllScenes)
+            {
+                // Returning the Scene default to Global does NOT destroy explicit
+                // Scene+Speaker overrides. Those remain deliberate local entries.
+                scene.hasSpeakerColorOverride = false;
+                scene.speakerColor = Color.white;
             }
             else
             {
-                // AllScenes disables/removes the local authority immediately.
-                scene.speakerColor = Color.white;
+                // Selecting the third scope seeds only the current speaker when needed.
+                // It does not create or change the Scene default.
+                if (!VnSceneComposerTextStyleResolver.HasSpeakerColorOverride(scene, beat))
+                {
+                    Color inherited =
+                        VnSceneComposerTextStyleResolver.Resolve(
+                            _sceneComposerProject, scene, beat).SpeakerColor;
+                    VnSceneComposerTextStyleResolver.SetSpeakerColorOverride(
+                        scene, beat, inherited);
+                }
             }
 
             scene.speakerColorScope = scope;
@@ -99,18 +123,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentException("Speaker color must be finite.", nameof(color));
 
             VnSceneComposerScene scene = RequireSelectedScene();
-            RecordSceneComposerUndo(
-                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            string undoLabel = scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene
+                ? "Edit VN Speaker-in-Scene Color"
+                : scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
                     ? "Edit Scene VN Speaker Color"
-                    : "Edit Shared VN Speaker Color");
+                    : "Edit Shared VN Speaker Color";
+            RecordSceneComposerUndo(undoLabel);
             CancelSceneComposerPreviewDrag();
 
-            if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
+            if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene)
             {
-                // RGB is Scene-local. Opacity remains shared/global.
-                Color local = color;
-                local.a = ComposerGetSharedTypography().SpeakerColor.a;
-                scene.speakerColor = local;
+                Color localSpeaker = color;
+                localSpeaker.a = ComposerGetSharedTypography().SpeakerColor.a;
+                VnSceneComposerTextStyleResolver.SetSpeakerColorOverride(
+                    scene, beat, localSpeaker);
+            }
+            else if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
+            {
+                Color localScene = color;
+                localScene.a = ComposerGetSharedTypography().SpeakerColor.a;
+                scene.hasSpeakerColorOverride = true;
+                scene.speakerColor = localScene;
             }
             else
             {
@@ -131,8 +165,33 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerClearSelectedSceneSpeakerColorOverride()
         {
-            ComposerSetSelectedSceneSpeakerColorScope(
-                VnSceneComposerSpeakerColorScope.AllScenes);
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (!scene.hasSpeakerColorOverride &&
+                scene.speakerColorScope != VnSceneComposerSpeakerColorScope.ThisScene)
+                return;
+
+            RecordSceneComposerUndo("Restore Shared VN Speaker Color");
+            CancelSceneComposerPreviewDrag();
+            scene.hasSpeakerColorOverride = false;
+            scene.speakerColor = Color.white;
+            if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
+                scene.speakerColorScope = VnSceneComposerSpeakerColorScope.AllScenes;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerClearSelectedSpeakerColorOverride()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (!VnSceneComposerTextStyleResolver.HasSpeakerColorOverride(scene, beat))
+                return;
+
+            RecordSceneComposerUndo("Restore VN Speaker-in-Scene Color");
+            CancelSceneComposerPreviewDrag();
+            VnSceneComposerTextStyleResolver.RemoveSpeakerColorOverride(scene, beat);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
         }
 
         public void ComposerSetSelectedSceneDialogueBodyStyle(
@@ -637,43 +696,93 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Цвет имени", EditorStyles.miniBoldLabel);
 
-            int colorScopeIndex =
-                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene ? 1 : 0;
+            VnSceneComposerDialogueBeat currentBeat = ComposerGetSelectedDialogueBeat();
+            string speakerKey = VnSceneComposerTextStyleResolver.ResolveSpeakerKey(currentBeat);
+            string currentSpeaker = currentBeat != null
+                ? (currentBeat.speaker ?? string.Empty).Trim()
+                : string.Empty;
+            EditorGUILayout.LabelField(
+                "Текущий говорящий:",
+                currentSpeaker.Length > 0 ? currentSpeaker : "Без говорящего");
+
+            int colorScopeIndex = scene.speakerColorScope ==
+                                  VnSceneComposerSpeakerColorScope.ThisSpeakerInScene
+                ? 2
+                : scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene ? 1 : 0;
             EditorGUILayout.LabelField("Применить цвет:", EditorStyles.miniLabel);
             int nextColorScopeIndex = GUILayout.Toolbar(
                 colorScopeIndex,
-                new[] { "Ко всем сценам", "Только к этой сцене" });
+                new[]
+                {
+                    "Ко всем сценам",
+                    "Только к этой сцене",
+                    "Этому говорящему в этой сцене"
+                });
             VnSceneComposerSpeakerColorScope nextColorScope =
-                nextColorScopeIndex == 1
-                    ? VnSceneComposerSpeakerColorScope.ThisScene
-                    : VnSceneComposerSpeakerColorScope.AllScenes;
+                nextColorScopeIndex == 2
+                    ? VnSceneComposerSpeakerColorScope.ThisSpeakerInScene
+                    : nextColorScopeIndex == 1
+                        ? VnSceneComposerSpeakerColorScope.ThisScene
+                        : VnSceneComposerSpeakerColorScope.AllScenes;
             if (nextColorScope != scene.speakerColorScope)
-                ComposerSetSelectedSceneSpeakerColorScope(nextColorScope);
+            {
+                if (nextColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene &&
+                    speakerKey.Length == 0)
+                {
+                    SetSceneComposerStatus(
+                        "Для локального цвета говорящего выберите Beat с непустым полем «Говорящий».",
+                        MessageType.Info);
+                }
+                else
+                {
+                    ComposerSetSelectedSceneSpeakerColorScope(nextColorScope);
+                }
+            }
 
-            Color effectiveColor =
-                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
-                    ? scene.speakerColor
-                    : globalColor;
+            Color effectiveColor = currentBeat != null
+                ? VnSceneComposerTextStyleResolver.Resolve(
+                    _sceneComposerProject, scene, currentBeat).SpeakerColor
+                : globalColor;
             effectiveColor.a = globalColor.a;
 
-            EditorGUI.BeginChangeCheck();
-            Color nextSpeakerColor = EditorGUILayout.ColorField(
-                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
-                    ? "Цвет этой сцены"
-                    : "Цвет по умолчанию",
-                effectiveColor);
-            if (EditorGUI.EndChangeCheck())
+            using (new EditorGUI.DisabledScope(
+                       scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene &&
+                       speakerKey.Length == 0))
             {
-                CancelSceneComposerPreviewDrag();
-                nextSpeakerColor.a = globalColor.a;
-                ComposerSetSpeakerColor(nextSpeakerColor);
+                EditorGUI.BeginChangeCheck();
+                string colorLabel = scene.speakerColorScope ==
+                                    VnSceneComposerSpeakerColorScope.ThisSpeakerInScene
+                    ? "Цвет этого говорящего"
+                    : scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                        ? "Цвет этой сцены"
+                        : "Цвет по умолчанию";
+                Color nextSpeakerColor =
+                    EditorGUILayout.ColorField(colorLabel, effectiveColor);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    CancelSceneComposerPreviewDrag();
+                    nextSpeakerColor.a = globalColor.a;
+                    ComposerSetSpeakerColor(nextSpeakerColor);
+                }
+            }
+
+            if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene &&
+                VnSceneComposerTextStyleResolver.HasSpeakerColorOverride(scene, currentBeat))
+            {
+                string inheritLabel = scene.hasSpeakerColorOverride
+                    ? "Использовать цвет сцены"
+                    : "Использовать общий цвет";
+                if (GUILayout.Button(inheritLabel))
+                    ComposerClearSelectedSpeakerColorOverride();
             }
 
             EditorGUILayout.LabelField(
                 "Источник цвета",
-                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
-                    ? "Только к этой сцене"
-                    : "Ко всем сценам");
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisSpeakerInScene
+                    ? "Этому говорящему в этой сцене"
+                    : scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                        ? "Только к этой сцене"
+                        : "Ко всем сценам");
 
             DrawTextGeometryControls(true, scene);
             EditorGUILayout.HelpBox(

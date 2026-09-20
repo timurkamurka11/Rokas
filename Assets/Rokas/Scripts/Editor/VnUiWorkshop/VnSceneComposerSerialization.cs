@@ -1167,9 +1167,40 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     scene.textGeometryScope = VnSceneComposerTextGeometryScope.AllScenes;
                 if (!Enum.IsDefined(typeof(VnSceneComposerSpeakerColorScope), scene.speakerColorScope))
                     scene.speakerColorScope = VnSceneComposerSpeakerColorScope.AllScenes;
+
+                // Before the speaker-in-Scene revision, ThisScene itself was the persisted
+                // proof that a Scene color existed. Promote that legacy state into the new
+                // explicit presence bit without changing the old project's first-load look.
+                if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
+                    scene.hasSpeakerColorOverride = true;
+
                 if (!IsFinite(scene.speakerColor.r) || !IsFinite(scene.speakerColor.g) ||
                     !IsFinite(scene.speakerColor.b) || !IsFinite(scene.speakerColor.a))
                     scene.speakerColor = Color.white;
+
+                if (scene.speakerColorOverrides == null)
+                    scene.speakerColorOverrides = new List<VnSceneComposerSpeakerColorOverride>();
+                var speakerColorKeys = new HashSet<string>(StringComparer.Ordinal);
+                for (int c = scene.speakerColorOverrides.Count - 1; c >= 0; c--)
+                {
+                    VnSceneComposerSpeakerColorOverride entry = scene.speakerColorOverrides[c];
+                    if (entry == null)
+                    {
+                        scene.speakerColorOverrides.RemoveAt(c);
+                        continue;
+                    }
+
+                    entry.speakerKey = (entry.speakerKey ?? string.Empty).Trim();
+                    if (entry.speakerKey.Length == 0 || !speakerColorKeys.Add(entry.speakerKey))
+                    {
+                        scene.speakerColorOverrides.RemoveAt(c);
+                        continue;
+                    }
+
+                    if (!IsFinite(entry.color.r) || !IsFinite(entry.color.g) ||
+                        !IsFinite(entry.color.b) || !IsFinite(entry.color.a))
+                        entry.color = Color.white;
+                }
                 if (scene.dialogueBodyStyleOverride == null)
                     scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
                 NormalizeTextVisualStyle(scene.dialogueBodyStyleOverride);
