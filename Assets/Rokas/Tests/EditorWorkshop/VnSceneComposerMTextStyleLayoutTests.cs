@@ -25,142 +25,136 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextStyleLayout_01_OldProjectUsesDefaultTypography()
         {
-            var p = Project(Scene(Keiko));
+            var p = Project(Scene("Speaker"));
             VnWorkshopTypographyValues v = Resolve(p, p.scenes[0], 0);
             Assert.That(v.SpeakerColor, Is.EqualTo(Color.white));
             Assert.That(v.DialogueColor, Is.EqualTo(Color.white));
         }
 
-        [Test] public void MTextStyleLayout_02_KeikoSpeakerColorOverrideResolves()
+        [Test] public void MTextStyleLayout_02_DefaultSpeakerColorScopeIsAllScenes()
         {
-            var p = Project(SceneWithCharacter(Keiko));
-            p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
-            p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
-            p.defaultPresentation.typography.hasSpeakerFontSize = true;
-            p.defaultPresentation.typography.speakerFontSize = 50f;
-            AddSpeakerStyle(p, Keiko, FontB, 47f, Color.cyan);
-            VnWorkshopTypographyValues v = Resolve(p, p.scenes[0], 0);
-            Assert.That(v.SpeakerColor, Is.EqualTo(Color.cyan));
-            Assert.That(v.SpeakerFontAssetGuid, Is.EqualTo(FontA));
-            Assert.That(v.SpeakerFontSize, Is.EqualTo(50f));
+            Assert.That(new VnSceneComposerScene().speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
         }
 
-        [Test] public void MTextStyleLayout_03_MinaSpeakerColorOverrideResolvesIndependently()
+        [Test] public void MTextStyleLayout_03_GlobalSpeakerColorResolvesAcrossScenes()
         {
-            var p = Project(SceneWithCharacter(Mina));
-            p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
-            p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
-            p.defaultPresentation.typography.hasSpeakerFontSize = true;
-            p.defaultPresentation.typography.speakerFontSize = 50f;
-            Color orange = new Color(1f, .45f, .1f, 1f);
-            AddSpeakerStyle(p, Mina, FontB, 72f, orange);
-            VnWorkshopTypographyValues v = Resolve(p, p.scenes[0], 0);
-            Assert.That(v.SpeakerColor, Is.EqualTo(orange));
-            Assert.That(v.SpeakerFontAssetGuid, Is.EqualTo(FontA));
-            Assert.That(v.SpeakerFontSize, Is.EqualTo(50f));
+            var p = Project(Scene("A"), Scene("B"), Scene("C"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.cyan;
+            for (int i = 0; i < p.scenes.Count; i++)
+                Assert.That(Resolve(p, p.scenes[i], 0).SpeakerColor, Is.EqualTo(Color.cyan));
         }
 
-        [Test] public void MTextStyleLayout_04_KeikoWhiteMinaOrange()
+        [Test] public void MTextStyleLayout_04_SceneLocalSpeakerColorAffectsOnlyThatScene()
         {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            Color orange = new Color(1f, .45f, .1f, 1f);
-            AddSpeakerStyle(p, Mina, FontB, 50f, orange);
+            var p = Project(Scene("Same"), Scene("Same"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.white;
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = new Color(1f, .45f, .1f, 1f);
             Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.white));
-            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor, Is.EqualTo(orange));
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor,
+                Is.EqualTo(new Color(1f, .45f, .1f, 1f)));
         }
 
-        [Test] public void MTextStyleLayout_05_EditingMinaDoesNotChangeKeiko()
+        [Test] public void MTextStyleLayout_05_GlobalEditDoesNotOverwriteSceneLocalSpeakerColor()
         {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
+            var p = Project(Scene("A"), Scene("B"), Scene("C"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.white;
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = Color.red;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.blue));
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(p, p.scenes[2], 0).SpeakerColor, Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextStyleLayout_06_ReturnToGlobalResolvesCurrentGlobalColor()
+        {
+            var p = Project(Scene("A"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.red;
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.AllScenes;
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextStyleLayout_07_SpeakerColorNeedsNoCharacterId()
+        {
+            var p = Project(Scene(string.Empty));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.green;
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.green));
+        }
+
+        [Test] public void MTextStyleLayout_08_SpeakerTextIdentityDoesNotControlColorStorage()
+        {
+            var p = Project(Scene("Keiko"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.magenta;
             Color before = Resolve(p, p.scenes[0], 0).SpeakerColor;
-            VnSceneComposerTextStyleResolver.FindSpeakerStyle(p, Mina).style.color = Color.yellow;
+            p.scenes[0].dialogueBeats[0].speaker = "Mina";
+            p.scenes[0].dialogueBeats[0].targetCharacterId = "anything";
             Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(before));
         }
 
-        [Test] public void MTextStyleLayout_06_EditingKeikoDoesNotChangeMina()
+        [Test] public void MTextStyleLayout_09_SpeakerFontIsSharedAcrossScenes()
         {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
-            Color before = Resolve(p, p.scenes[1], 0).SpeakerColor;
-            VnSceneComposerTextStyleResolver.FindSpeakerStyle(p, Keiko).style.color = Color.green;
-            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor, Is.EqualTo(before));
-        }
-
-        [Test] public void MTextStyleLayout_07_CharactersShareSpeakerFont()
-        {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            var p = Project(Scene("A"), Scene("B"));
             p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
             p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
             Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontAssetGuid, Is.EqualTo(FontA));
             Assert.That(Resolve(p, p.scenes[1], 0).SpeakerFontAssetGuid, Is.EqualTo(FontA));
         }
 
-        [Test] public void MTextStyleLayout_08_CharactersShareSpeakerSize()
+        [Test] public void MTextStyleLayout_10_SpeakerSizeIsSharedAcrossScenes()
         {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            var p = Project(Scene("A"), Scene("B"));
             p.defaultPresentation.typography.hasSpeakerFontSize = true;
             p.defaultPresentation.typography.speakerFontSize = 50f;
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontB, 72f, Color.red);
             Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontSize, Is.EqualTo(50f));
             Assert.That(Resolve(p, p.scenes[1], 0).SpeakerFontSize, Is.EqualTo(50f));
         }
 
-        [Test] public void MTextStyleLayout_09_SameFontGuidIsReusedByOverrides()
+        [Test] public void MTextStyleLayout_11_LocalSpeakerColorPersistsAcrossBeats()
         {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontA, 50f, Color.white);
-            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontAssetGuid,
-                Is.EqualTo(Resolve(p, p.scenes[1], 0).SpeakerFontAssetGuid));
+            VnSceneComposerScene scene = Scene("A");
+            scene.dialogueBeats.Add(Beat("B", "Two"));
+            scene.speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            scene.speakerColor = Color.cyan;
+            var p = Project(scene);
+            Assert.That(Resolve(p, scene, 0).SpeakerColor,
+                Is.EqualTo(Resolve(p, scene, 1).SpeakerColor));
         }
 
-        [Test] public void MTextStyleLayout_10_SpeakerSwitchResolvesCorrectCharacterStyle()
+        [Test] public void MTextStyleLayout_12_DuplicateGlobalColorSceneUsesGlobal()
         {
-            VnSceneComposerScene s = SceneWithCharacters(Keiko, Mina);
-            var p = Project(s);
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
-            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
-            s.dialogueBeats[0].speaker = Keiko;
-            Color a = Resolve(p, s, 0).SpeakerColor;
-            s.dialogueBeats[0].speaker = Mina;
-            Color b = Resolve(p, s, 0).SpeakerColor;
-            Assert.That(a, Is.EqualTo(Color.white));
-            Assert.That(b, Is.EqualTo(Color.red));
-        }
-
-        [Test] public void MTextStyleLayout_11_CharacterOverridePersistsAcrossBeats()
-        {
-            VnSceneComposerScene s = SceneWithCharacter(Keiko);
-            s.dialogueBeats.Add(Beat(Keiko, "Two"));
-            var p = Project(s);
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.cyan);
-            Assert.That(Resolve(p, s, 0).SpeakerColor, Is.EqualTo(Resolve(p, s, 1).SpeakerColor));
-        }
-
-        [Test] public void MTextStyleLayout_12_CharacterOverridePersistsAcrossScenes()
-        {
-            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Keiko));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.cyan);
-            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor,
-                Is.EqualTo(Resolve(p, p.scenes[1], 0).SpeakerColor));
-        }
-
-        [Test] public void MTextStyleLayout_13_NarratorUsesDefaultSpeakerStyle()
-        {
-            VnSceneComposerScene s = SceneWithCharacter(Keiko);
-            s.dialogueBeats[0].narration = true;
-            var p = Project(s);
+            var p = Project(Scene("A"));
             p.defaultPresentation.typography.hasSpeakerColor = true;
-            p.defaultPresentation.typography.speakerColor = Color.magenta;
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.green);
-            Assert.That(Resolve(p, s, 0).SpeakerColor, Is.EqualTo(Color.magenta));
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            VnSceneComposerScene copy =
+                VnSceneComposerEditing.DuplicateScene(p, p.scenes[0].sceneId);
+            Assert.That(copy.speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
+            Assert.That(Resolve(p, copy, copy.dialogueBeats[0]).SpeakerColor,
+                Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextStyleLayout_13_DuplicateLocalColorSceneCopiesIndependentLocalColor()
+        {
+            var p = Project(Scene("A"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.red;
+            VnSceneComposerScene copy =
+                VnSceneComposerEditing.DuplicateScene(p, p.scenes[0].sceneId);
+            Assert.That(copy.speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.ThisScene));
+            Assert.That(copy.speakerColor, Is.EqualTo(Color.red));
+            copy.speakerColor = Color.green;
+            Assert.That(p.scenes[0].speakerColor, Is.EqualTo(Color.red));
         }
 
         [Test] public void MTextStyleLayout_14_SceneBodyOverrideResolves()
@@ -272,15 +266,14 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Frame(p, 0).DialogueText, Is.EqualTo(before));
         }
 
-        [Test] public void MTextStyleLayout_26_SpeakerStyleSetterDoesNotMutateSpeakerGeometry()
+        [Test] public void MTextStyleLayout_26_SpeakerColorSetterDoesNotMutateSpeakerGeometry()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
                 VnWorkshopElementOverride g = Project(w).defaultPresentation.speakerName;
-                Vector2 pos=g.positionDelta, size=g.sizeDelta;
-                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
-                    VnWorkshopTextAlignment.Center);
+                Vector2 pos = g.positionDelta, size = g.sizeDelta;
+                w.ComposerSetSpeakerColor(Color.red);
                 Assert.That(g.positionDelta, Is.EqualTo(pos));
                 Assert.That(g.sizeDelta, Is.EqualTo(size));
             }
@@ -312,12 +305,11 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextStyleLayout_29_ColorStyleMutationCancelsActivePreviewDrag()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
                 SetPrivate(w, "_sceneComposerDraggingPreviewObject", true);
-                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
-                    VnWorkshopTextAlignment.Left);
+                w.ComposerSetSpeakerColor(Color.red);
                 Assert.That((bool)GetPrivate(w, "_sceneComposerDraggingPreviewObject"), Is.False);
             }
             finally { UnityEngine.Object.DestroyImmediate(w); }
@@ -325,12 +317,12 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextStyleLayout_30_FontStyleMutationLeavesGeometryUnchanged()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
                 Rect before = Frame(Project(w), 0).SpeakerName;
-                w.ComposerSetCharacterSpeakerStyle(Keiko, FontA, 48f, Color.white,
-                    VnWorkshopTextAlignment.Left);
+                w.ComposerSetSharedSpeakerStyle(
+                    FontA, 48f, Color.white, VnWorkshopTextAlignment.Left);
                 Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(before));
             }
             finally { UnityEngine.Object.DestroyImmediate(w); }
@@ -422,49 +414,57 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextStyleLayout_37_UndoSpeakerStyleIsStyleOnly()
+        [Test] public void MTextStyleLayout_37_UndoSpeakerColorIsStyleOnly()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
-                w.ComposerSetSharedTextGeometry(true, new Vector2(40f,50f), new Vector2(500f,80f));
+                w.ComposerSetSharedTextGeometry(
+                    true, new Vector2(40f, 50f), new Vector2(500f, 80f));
                 Rect geometry = Frame(Project(w), 0).SpeakerName;
+                Color before = Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor;
                 Undo.ClearAll();
-                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
-                    VnWorkshopTextAlignment.Left);
+                w.ComposerSetSpeakerColor(Color.red);
                 Undo.FlushUndoRecordObjects();
                 Undo.PerformUndo();
                 Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(geometry));
-                Assert.That(VnSceneComposerTextStyleResolver.FindSpeakerStyle(Project(w), Keiko), Is.Null);
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(before));
             }
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
         [Test] public void MTextStyleLayout_38_UndoGeometryIsGeometryOnly()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
-                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
-                    VnWorkshopTextAlignment.Left);
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.red);
                 Color style = Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor;
                 Rect before = Frame(Project(w), 0).SpeakerName;
                 Undo.ClearAll();
-                w.ComposerSetSharedTextGeometry(true, new Vector2(60f,70f), new Vector2(500f,80f));
+                w.ComposerSetSharedTextGeometry(
+                    true, new Vector2(60f,70f), new Vector2(500f,80f));
                 Undo.FlushUndoRecordObjects();
                 Undo.PerformUndo();
                 Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(before));
-                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor, Is.EqualTo(style));
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(style));
             }
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
         [Test] public void MTextStyleLayout_39_SaveReopenPreservesScopedStyles()
         {
-            var p = Project(SceneWithCharacter(Keiko));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.red);
+            var p = Project(Scene("A"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.red;
             SetBodyStyle(p.scenes[0], FontB, 38f, Color.cyan);
             VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(q.scenes[0].speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.ThisScene));
             Assert.That(Resolve(q, q.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.red));
             Assert.That(Resolve(q, q.scenes[0], 0).DialogueColor, Is.EqualTo(Color.cyan));
         }
@@ -488,8 +488,9 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextStyleLayout_42_PreviewAndPlayResolveSameScopedTypography()
         {
-            var p = Project(SceneWithCharacter(Keiko));
-            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.red);
+            var p = Project(Scene("A"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.red;
             SetBodyStyle(p.scenes[0], FontB, 38f, Color.cyan);
             VnWorkshopPreviewFrame preview = Frame(p, 0);
             using (var playback = new VnSceneComposerPlaybackController(p))
@@ -534,14 +535,15 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Resolve(q,q.scenes[0],0).SpeakerColor, Is.EqualTo(Color.green));
         }
 
-        [Test] public void MTextStyleLayout_46_ExplicitCharacterColorWinsPromotedLegacyDefault()
+        [Test] public void MTextStyleLayout_46_ExplicitSceneColorWinsPromotedLegacyDefault()
         {
-            var p=Project(SceneWithCharacter(Keiko));
-            p.scenes[0].presentationOverrides.typography.hasSpeakerColor=true;
-            p.scenes[0].presentationOverrides.typography.speakerColor=Color.green;
-            AddSpeakerStyle(p,Keiko,FontA,47f,Color.red);
-            VnSceneComposerProject q=RoundTrip(p);
-            Assert.That(Resolve(q,q.scenes[0],0).SpeakerColor, Is.EqualTo(Color.red));
+            var p = Project(Scene("A"));
+            p.scenes[0].presentationOverrides.typography.hasSpeakerColor = true;
+            p.scenes[0].presentationOverrides.typography.speakerColor = Color.green;
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.red;
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(Resolve(q, q.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.red));
         }
 
         [Test] public void MTextStyleLayout_47_ExplicitSceneBodyOverrideWinsLegacyBodyStyle()
@@ -703,7 +705,7 @@ namespace Rokas.EditorTools.Tests
         }
 
 
-        [Test] public void MTextSpeakerColor_RED_63_SceneSpeakerColorScopeExistsAndDefaultsAllScenes()
+        [Test] public void MTextSpeakerColorSceneScope_63_SceneSpeakerColorScopeExistsAndDefaultsAllScenes()
         {
             FieldInfo field = typeof(VnSceneComposerScene).GetField(
                 "speakerColorScope", BindingFlags.Public | BindingFlags.Instance);
@@ -772,7 +774,7 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextSpeakerColor_RED_68_SceneColorApisExistWithoutCharacterKey()
+        [Test] public void MTextSpeakerColorSceneScope_68_SceneColorApisExistWithoutCharacterKey()
         {
             MethodInfo setScope = typeof(VnPresentationWorkshopWindow).GetMethod(
                 "ComposerSetSelectedSceneSpeakerColorScope",
@@ -868,12 +870,15 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextColorGeometry_76_SpeakerColorDoesNotChangeGeometryScope()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
-                w.ComposerSetSelectedSceneTextGeometryScope(VnSceneComposerTextGeometryScope.ThisScene);
+                w.ComposerSetSelectedSceneTextGeometryScope(
+                    VnSceneComposerTextGeometryScope.ThisScene);
                 Rect before = Frame(Project(w), 0).SpeakerName;
-                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.red);
                 Assert.That(Project(w).scenes[0].textGeometryScope,
                     Is.EqualTo(VnSceneComposerTextGeometryScope.ThisScene));
                 Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(before));
@@ -1027,7 +1032,7 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextSpeakerColor_RED_86_UiUsesSceneColorScopeNotCharacterColor()
+        [Test] public void MTextSpeakerColorSceneScope_86_UiUsesSceneColorScopeNotCharacterColor()
         {
             string source = TextUiSource();
             Assert.That(source, Does.Contain("Применить цвет:")
@@ -1037,7 +1042,7 @@ namespace Rokas.EditorTools.Tests
                 .And.Not.Contain("Цвет текущего персонажа"));
         }
 
-        [Test] public void MTextSpeakerColor_RED_87_ResolverDoesNotUseCharacterIdentityForSpeakerColor()
+        [Test] public void MTextSpeakerColorSceneScope_87_ResolverDoesNotUseCharacterIdentityForSpeakerColor()
         {
             string source = File.ReadAllText(Path.Combine(
                 Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
@@ -1130,7 +1135,7 @@ namespace Rokas.EditorTools.Tests
         }
 
 
-        [Test] public void MTextSpeakerColor_RED_92_ProjectModelDoesNotOwnCharacterSpeakerColorProfiles()
+        [Test] public void MTextSpeakerColorSceneScope_92_ProjectModelDoesNotOwnCharacterSpeakerColorProfiles()
         {
             FieldInfo field = typeof(VnSceneComposerProject).GetField(
                 "speakerStyleOverrides", BindingFlags.Public | BindingFlags.Instance);
@@ -1180,14 +1185,16 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextColorGeometry_96_SpeakerColorDoesNotMutatePlaqueGeometry()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
                 VnSceneComposerProject p = Project(w);
                 p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
                 p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(22f, 11f);
                 Vector2 before = p.defaultPresentation.dialoguePanel.positionDelta;
-                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.red);
                 Assert.That(p.defaultPresentation.dialoguePanel.positionDelta, Is.EqualTo(before));
             }
             finally { UnityEngine.Object.DestroyImmediate(w); }
@@ -1268,7 +1275,7 @@ namespace Rokas.EditorTools.Tests
             finally { Delete(root); }
         }
 
-        [Test] public void MTextSpeakerColor_RED_100_SceneColorStorageIsIndependentFromSpeakerAndTargetCharacter()
+        [Test] public void MTextSpeakerColorSceneScope_100_SceneColorStorageIsIndependentFromSpeakerAndTargetCharacter()
         {
             FieldInfo scope = typeof(VnSceneComposerScene).GetField(
                 "speakerColorScope", BindingFlags.Public | BindingFlags.Instance);
@@ -1276,6 +1283,184 @@ namespace Rokas.EditorTools.Tests
                 "speakerColor", BindingFlags.Public | BindingFlags.Instance);
             Assert.That(scope, Is.Not.Null);
             Assert.That(color, Is.Not.Null);
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_101_DefaultScopeIsAllScenes()
+        {
+            Assert.That(new VnSceneComposerScene().speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_102_GlobalColorAffectsAllNonOverriddenScenes()
+        {
+            var p = Project(Scene("A"), Scene("B"), Scene("C"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = Color.red;
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.blue));
+            Assert.That(Resolve(p,p.scenes[1],0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(p,p.scenes[2],0).SpeakerColor, Is.EqualTo(Color.blue));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_103_LocalColorAffectsOnlyCurrentScene()
+        {
+            var p = Project(Scene("Same"), Scene("Same"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.green;
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.green));
+            Assert.That(Resolve(p,p.scenes[1],0).SpeakerColor, Is.EqualTo(Color.white));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_104_GlobalEditDoesNotOverwriteLocal()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = Color.red;
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            Assert.That(Resolve(p,p.scenes[1],0).SpeakerColor, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_105_LocalToGlobalResolvesCurrentGlobal()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                w.ComposerSetSpeakerColor(Color.blue);
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.red);
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.AllScenes);
+                Assert.That(Resolve(Project(w),Project(w).scenes[0],0).SpeakerColor,
+                    Is.EqualTo(Color.blue));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_106_SaveReopenPersistsGlobalAndLocal()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.blue;
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = Color.red;
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(Resolve(q,q.scenes[0],0).SpeakerColor, Is.EqualTo(Color.blue));
+            Assert.That(q.scenes[1].speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.ThisScene));
+            Assert.That(Resolve(q,q.scenes[1],0).SpeakerColor, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_107_DuplicateSceneCopiesScopeSemantics()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[1].speakerColor = Color.red;
+            VnSceneComposerScene globalCopy =
+                VnSceneComposerEditing.DuplicateScene(p,p.scenes[0].sceneId);
+            VnSceneComposerScene localCopy =
+                VnSceneComposerEditing.DuplicateScene(p,p.scenes[1].sceneId);
+            Assert.That(globalCopy.speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
+            Assert.That(localCopy.speakerColorScope,
+                Is.EqualTo(VnSceneComposerSpeakerColorScope.ThisScene));
+            Assert.That(localCopy.speakerColor, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_108_UndoRestoresGlobalLocalAndScope()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                Color globalBefore = Resolve(Project(w),Project(w).scenes[0],0).SpeakerColor;
+                Undo.ClearAll();
+                w.ComposerSetSpeakerColor(Color.blue);
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Resolve(Project(w),Project(w).scenes[0],0).SpeakerColor,
+                    Is.EqualTo(globalBefore));
+
+                Undo.ClearAll();
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Project(w).scenes[0].speakerColorScope,
+                    Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
+
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                Color localBefore = Project(w).scenes[0].speakerColor;
+                Undo.ClearAll();
+                w.ComposerSetSpeakerColor(Color.red);
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Project(w).scenes[0].speakerColor, Is.EqualTo(localBefore));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_109_NoCharacterIdRequired()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                Project(w).scenes[0].dialogueBeats[0].targetCharacterId = string.Empty;
+                Project(w).scenes[0].dialogueBeats[0].speaker = string.Empty;
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.cyan);
+                Assert.That(Resolve(Project(w),Project(w).scenes[0],0).SpeakerColor,
+                    Is.EqualTo(Color.cyan));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_110_WorksWithNoDialogueCharacter()
+        {
+            var p = Project(Scene("Без персонажа"));
+            p.scenes[0].characters.Clear();
+            p.scenes[0].dialogueBeats[0].targetCharacterId = string.Empty;
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.yellow;
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.yellow));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_111_SpeakerTextIdentityDoesNotControlStorage()
+        {
+            var p = Project(Scene("Keiko"));
+            p.scenes[0].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
+            p.scenes[0].speakerColor = Color.magenta;
+            p.scenes[0].dialogueBeats[0].speaker = "Mina";
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.magenta));
+        }
+
+        [Test] public void MTextSpeakerColorSceneScope_112_ColorChangeDoesNotMutateGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                w.ComposerSetSelectedSceneTextGeometryScope(
+                    VnSceneComposerTextGeometryScope.ThisScene);
+                Rect speaker = Frame(Project(w),0).SpeakerName;
+                Rect body = Frame(Project(w),0).DialogueText;
+                Vector2 plaque = Project(w).defaultPresentation.dialoguePanel.positionDelta;
+                VnSceneComposerTextGeometryScope geometryScope =
+                    Project(w).scenes[0].textGeometryScope;
+
+                w.ComposerSetSelectedSceneSpeakerColorScope(
+                    VnSceneComposerSpeakerColorScope.ThisScene);
+                w.ComposerSetSpeakerColor(Color.red);
+
+                Assert.That(Frame(Project(w),0).SpeakerName, Is.EqualTo(speaker));
+                Assert.That(Frame(Project(w),0).DialogueText, Is.EqualTo(body));
+                Assert.That(Project(w).defaultPresentation.dialoguePanel.positionDelta,
+                    Is.EqualTo(plaque));
+                Assert.That(Project(w).scenes[0].textGeometryScope, Is.EqualTo(geometryScope));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
@@ -1328,14 +1513,6 @@ namespace Rokas.EditorTools.Tests
         private static VnSceneComposerDialogueBeat Beat(string speaker,string text)
         {
             return new VnSceneComposerDialogueBeat { speaker=speaker,text=text,narration=false };
-        }
-
-        private static void AddSpeakerStyle(VnSceneComposerProject p,string id,string guid,float size,Color color)
-        {
-            var e=new VnSceneComposerSpeakerStyleOverride { characterId=id };
-            VnSceneComposerTextStyleResolver.SetStyle(
-                e.style,guid,size,color,VnWorkshopTextAlignment.Left);
-            p.speakerStyleOverrides.Add(e);
         }
 
         private static void SetBodyStyle(VnSceneComposerScene s,string guid,float size,Color color)

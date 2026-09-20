@@ -1041,22 +1041,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private static void NormalizeProject(VnSceneComposerProject project)
         {
-            if (project.defaultPresentation == null) project.defaultPresentation = new VnPresentationWorkshopPreset();
-            if (project.speakerStyleOverrides == null)
-                project.speakerStyleOverrides = new List<VnSceneComposerSpeakerStyleOverride>();
-            for (int s = project.speakerStyleOverrides.Count - 1; s >= 0; s--)
-            {
-                VnSceneComposerSpeakerStyleOverride speakerStyle = project.speakerStyleOverrides[s];
-                if (speakerStyle == null)
-                {
-                    project.speakerStyleOverrides.RemoveAt(s);
-                    continue;
-                }
-                if (speakerStyle.characterId == null) speakerStyle.characterId = string.Empty;
-                if (speakerStyle.style == null)
-                    speakerStyle.style = new VnSceneComposerTextVisualStyleOverride();
-                NormalizeTextVisualStyle(speakerStyle.style);
-            }
+            if (project.defaultPresentation == null)
+                project.defaultPresentation = new VnPresentationWorkshopPreset();
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
             PromoteLegacySharedSpeakerTypography(project);
             PromoteLegacySharedPlaqueGeometry(project);
@@ -1179,6 +1165,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
                 if (!Enum.IsDefined(typeof(VnSceneComposerTextGeometryScope), scene.textGeometryScope))
                     scene.textGeometryScope = VnSceneComposerTextGeometryScope.AllScenes;
+                if (!Enum.IsDefined(typeof(VnSceneComposerSpeakerColorScope), scene.speakerColorScope))
+                    scene.speakerColorScope = VnSceneComposerSpeakerColorScope.AllScenes;
+                if (!IsFinite(scene.speakerColor.r) || !IsFinite(scene.speakerColor.g) ||
+                    !IsFinite(scene.speakerColor.b) || !IsFinite(scene.speakerColor.a))
+                    scene.speakerColor = Color.white;
                 if (scene.dialogueBodyStyleOverride == null)
                     scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
                 NormalizeTextVisualStyle(scene.dialogueBodyStyleOverride);
@@ -1214,50 +1205,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 project.defaultPresentation.typography = new VnWorkshopTypographyOverride();
 
             VnWorkshopTypographyOverride shared = project.defaultPresentation.typography;
-            bool hasCharacterColor = false;
-
-            if (project.speakerStyleOverrides != null)
-            {
-                for (int i = 0; i < project.speakerStyleOverrides.Count; i++)
-                {
-                    VnSceneComposerSpeakerStyleOverride entry = project.speakerStyleOverrides[i];
-                    VnSceneComposerTextVisualStyleOverride style = entry != null ? entry.style : null;
-                    if (style == null) continue;
-                    if (style.hasColor) hasCharacterColor = true;
-
-                    // The previous revision could persist a complete character style. The new
-                    // contract keeps only color character-specific, so promote the first authored
-                    // font/size/alignment values into the shared speaker style when shared values
-                    // are otherwise absent. The serialized character payload is preserved.
-                    if (!shared.hasSpeakerFontPreset && style.hasFontPreset)
-                    {
-                        shared.hasSpeakerFontPreset = true;
-                        shared.speakerFontPreset = style.fontPreset;
-                    }
-                    if (!shared.hasSpeakerFontAssetGuid && style.hasFontAssetGuid)
-                    {
-                        shared.hasSpeakerFontAssetGuid = true;
-                        shared.speakerFontAssetGuid = style.fontAssetGuid ?? string.Empty;
-                    }
-                    if (!shared.hasSpeakerFontSize && style.hasFontSize)
-                    {
-                        shared.hasSpeakerFontSize = true;
-                        shared.speakerFontSize = style.fontSize;
-                    }
-                    if (!shared.hasSpeakerAlignment && style.hasAlignment)
-                    {
-                        shared.hasSpeakerAlignment = true;
-                        shared.speakerAlignment = style.alignment;
-                    }
-                    if (!shared.hasSpeakerCharacterSpacing && style.hasCharacterSpacing)
-                    {
-                        shared.hasSpeakerCharacterSpacing = true;
-                        shared.speakerCharacterSpacing = style.characterSpacing;
-                    }
-                }
-            }
-
             if (project.scenes == null) return;
+
+            // Pre-revision projects may still carry speaker typography inside Scene
+            // presentation overrides. Promote the first authored value into the shared
+            // speaker style so old projects keep their visual appearance on first load.
             for (int i = 0; i < project.scenes.Count; i++)
             {
                 VnSceneComposerScene scene = project.scenes[i];
@@ -1292,7 +1244,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     shared.hasSpeakerCharacterSpacing = true;
                     shared.speakerCharacterSpacing = legacy.speakerCharacterSpacing;
                 }
-                if (!shared.hasSpeakerColor && !hasCharacterColor && legacy.hasSpeakerColor)
+                if (!shared.hasSpeakerColor && legacy.hasSpeakerColor)
                 {
                     shared.hasSpeakerColor = true;
                     shared.speakerColor = legacy.speakerColor;

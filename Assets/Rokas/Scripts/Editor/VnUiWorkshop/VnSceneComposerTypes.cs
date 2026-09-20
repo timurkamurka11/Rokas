@@ -79,6 +79,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         ThisScene
     }
 
+    public enum VnSceneComposerSpeakerColorScope
+    {
+        AllScenes,
+        ThisScene
+    }
+
     public enum VnSceneComposerMusicMode
     {
         Silence,
@@ -311,13 +317,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
-    public sealed class VnSceneComposerSpeakerStyleOverride
-    {
-        public string characterId = string.Empty;
-        public VnSceneComposerTextVisualStyleOverride style = new VnSceneComposerTextVisualStyleOverride();
-    }
-
-    [Serializable]
     public sealed class VnSceneComposerScene
     {
         public string sceneId = NewStableId();
@@ -337,6 +336,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         // keep the established shared text geometry until an author explicitly opts in.
         public VnSceneComposerTextGeometryScope textGeometryScope =
             VnSceneComposerTextGeometryScope.AllScenes;
+        // Speaker-name color is global by default. Only an explicit ThisScene scope
+        // enables this Scene-local RGB override. Opacity remains part of shared speaker style.
+        public VnSceneComposerSpeakerColorScope speakerColorScope =
+            VnSceneComposerSpeakerColorScope.AllScenes;
+        public Color speakerColor = Color.white;
         public VnSceneComposerTextVisualStyleOverride dialogueBodyStyleOverride =
             new VnSceneComposerTextVisualStyleOverride();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();
@@ -391,8 +395,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string title = "Untitled VN Sequence";
         public string sourceHead = VnSceneComposerContract.SourceHead;
         public VnPresentationWorkshopPreset defaultPresentation = new VnPresentationWorkshopPreset();
-        public List<VnSceneComposerSpeakerStyleOverride> speakerStyleOverrides =
-            new List<VnSceneComposerSpeakerStyleOverride>();
         public List<VnSceneComposerScene> scenes = new List<VnSceneComposerScene>();
     }
 }

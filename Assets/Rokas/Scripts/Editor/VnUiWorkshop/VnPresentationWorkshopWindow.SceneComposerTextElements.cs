@@ -59,89 +59,80 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MarkSceneComposerChanged();
         }
 
-        public void ComposerSetCharacterSpeakerColor(string characterId, Color color)
+        public void ComposerSetSelectedSceneSpeakerColorScope(
+            VnSceneComposerSpeakerColorScope scope)
         {
-            if (string.IsNullOrWhiteSpace(characterId))
-                throw new ArgumentException("Stable character identity is required.", nameof(characterId));
+            if (!Enum.IsDefined(typeof(VnSceneComposerSpeakerColorScope), scope))
+                throw new ArgumentOutOfRangeException(nameof(scope));
+
+            VnSceneComposerScene scene = RequireSelectedScene();
+            if (scene.speakerColorScope == scope) return;
+
+            RecordSceneComposerUndo("Change VN Speaker Color Scope");
+            CancelSceneComposerPreviewDrag();
+
+            if (scope == VnSceneComposerSpeakerColorScope.ThisScene)
+            {
+                Color currentGlobal = ComposerGetSharedTypography().SpeakerColor;
+                scene.speakerColor = currentGlobal;
+            }
+            else
+            {
+                // AllScenes disables/removes the local authority immediately.
+                scene.speakerColor = Color.white;
+            }
+
+            scene.speakerColorScope = scope;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public VnSceneComposerSpeakerColorScope ComposerGetSelectedSceneSpeakerColorScope()
+        {
+            return RequireSelectedScene().speakerColorScope;
+        }
+
+        public void ComposerSetSpeakerColor(Color color)
+        {
             if (!IsFinite(color.r) || !IsFinite(color.g) ||
                 !IsFinite(color.b) || !IsFinite(color.a))
                 throw new ArgumentException("Speaker color must be finite.", nameof(color));
 
-            EnsureSceneComposerProject();
-            RecordSceneComposerUndo("Edit VN Character Speaker Color");
-            CancelSceneComposerPreviewDrag();
-            VnSceneComposerSpeakerStyleOverride entry = GetOrCreateSpeakerColorEntry(characterId);
-            VnSceneComposerTextStyleResolver.SetSpeakerColor(entry.style, color);
-            ResetSceneComposerPlayback();
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerClearCharacterSpeakerColor(string characterId)
-        {
-            EnsureSceneComposerProject();
-            if (_sceneComposerProject.speakerStyleOverrides == null ||
-                string.IsNullOrWhiteSpace(characterId)) return;
-
-            VnSceneComposerSpeakerStyleOverride entry =
-                VnSceneComposerTextStyleResolver.FindSpeakerStyle(_sceneComposerProject, characterId);
-            if (entry == null || entry.style == null || !entry.style.hasColor) return;
-
-            RecordSceneComposerUndo("Restore VN Character Speaker Color");
-            CancelSceneComposerPreviewDrag();
-            entry.style.hasColor = false;
-            entry.style.color = Color.white;
-
-            // Do not delete an old serialized entry if it still carries fields from the previous
-            // revision. They are ignored by the resolver but retained for non-destructive loading.
-            if (!entry.style.HasAnyOverride)
-                _sceneComposerProject.speakerStyleOverrides.Remove(entry);
-
-            ResetSceneComposerPlayback();
-            MarkSceneComposerChanged();
-        }
-
-        // Source-compatible legacy API from the previous revision. Font/size/alignment now update
-        // the one shared speaker style; only the supplied color remains character-specific.
-        public void ComposerSetCharacterSpeakerStyle(
-            string characterId, string fontAssetGuid, float fontSize, Color color,
-            VnWorkshopTextAlignment alignment)
-        {
-            ValidateTypographyStyle(fontAssetGuid, fontSize, color, alignment);
-            EnsureSceneComposerProject();
-            RecordSceneComposerUndo("Edit VN Character Speaker Color");
+            VnSceneComposerScene scene = RequireSelectedScene();
+            RecordSceneComposerUndo(
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                    ? "Edit Scene VN Speaker Color"
+                    : "Edit Shared VN Speaker Color");
             CancelSceneComposerPreviewDrag();
 
-            VnWorkshopTypographyValues shared = ComposerGetSharedTypography();
-            SetDefaultStyle(true, fontAssetGuid, fontSize, shared.SpeakerColor, alignment);
-            VnSceneComposerSpeakerStyleOverride entry = GetOrCreateSpeakerColorEntry(characterId);
-            VnSceneComposerTextStyleResolver.SetSpeakerColor(entry.style, color);
-
-            ResetSceneComposerPlayback();
-            MarkSceneComposerChanged();
-        }
-
-        public void ComposerClearCharacterSpeakerStyle(string characterId)
-        {
-            ComposerClearCharacterSpeakerColor(characterId);
-        }
-
-        private VnSceneComposerSpeakerStyleOverride GetOrCreateSpeakerColorEntry(string characterId)
-        {
-            if (string.IsNullOrWhiteSpace(characterId))
-                throw new ArgumentException("Stable character identity is required.", nameof(characterId));
-            if (_sceneComposerProject.speakerStyleOverrides == null)
-                _sceneComposerProject.speakerStyleOverrides =
-                    new System.Collections.Generic.List<VnSceneComposerSpeakerStyleOverride>();
-
-            VnSceneComposerSpeakerStyleOverride entry =
-                VnSceneComposerTextStyleResolver.FindSpeakerStyle(_sceneComposerProject, characterId);
-            if (entry == null)
+            if (scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
             {
-                entry = new VnSceneComposerSpeakerStyleOverride { characterId = characterId.Trim() };
-                _sceneComposerProject.speakerStyleOverrides.Add(entry);
+                // RGB is Scene-local. Opacity remains shared/global.
+                Color local = color;
+                local.a = ComposerGetSharedTypography().SpeakerColor.a;
+                scene.speakerColor = local;
             }
-            if (entry.style == null) entry.style = new VnSceneComposerTextVisualStyleOverride();
-            return entry;
+            else
+            {
+                VnWorkshopTypographyValues shared = ComposerGetSharedTypography();
+                Color global = color;
+                global.a = shared.SpeakerColor.a;
+                SetDefaultStyle(
+                    true,
+                    shared.SpeakerFontAssetGuid,
+                    shared.SpeakerFontSize,
+                    global,
+                    shared.SpeakerAlignment);
+            }
+
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerClearSelectedSceneSpeakerColorOverride()
+        {
+            ComposerSetSelectedSceneSpeakerColorScope(
+                VnSceneComposerSpeakerColorScope.AllScenes);
         }
 
         public void ComposerSetSelectedSceneDialogueBodyStyle(
@@ -402,8 +393,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Оформление диалога", EditorStyles.miniBoldLabel);
             EditorGUILayout.HelpBox(
-                "Шрифт, размер и выравнивание имени говорящего общие. " +
-                "Только цвет имени можно переопределить для текущего персонажа.",
+                "Шрифт, размер, выравнивание и прозрачность имени говорящего общие. " +
+                "Цвет имени можно оставить общим или переопределить только для текущей Scene.",
                 MessageType.Info);
 
             EditorGUILayout.LabelField("Применить расположение:", EditorStyles.miniBoldLabel);
@@ -457,121 +448,41 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
             if (beat == null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0)
                 beat = scene.dialogueBeats[0];
+
             VnWorkshopTypographyValues values =
                 VnSceneComposerTextStyleResolver.Resolve(_sceneComposerProject, scene, beat);
-            string characterId = speaker
-                ? VnSceneComposerTextStyleResolver.ResolveSpeakerCharacterId(scene, beat)
-                : string.Empty;
-            bool hasScoped = speaker
-                ? VnSceneComposerTextStyleResolver.FindSpeakerStyle(_sceneComposerProject, characterId) != null
-                : scene.dialogueBodyStyleOverride != null && scene.dialogueBodyStyleOverride.HasAnyOverride;
+            bool hasScoped =
+                scene.dialogueBodyStyleOverride != null &&
+                scene.dialogueBodyStyleOverride.HasAnyOverride;
 
-            if (speaker && string.IsNullOrEmpty(characterId))
-                EditorGUILayout.HelpBox("Нет стабильного ID персонажа: используется общий стиль.", MessageType.None);
-            else
+            bool nextScoped = EditorGUILayout.Toggle("Свой стиль этой сцены", hasScoped);
+            if (nextScoped != hasScoped)
             {
-                bool nextScoped = EditorGUILayout.Toggle(
-                    speaker ? "Свой стиль персонажа" : "Свой стиль этой сцены", hasScoped);
-                if (nextScoped != hasScoped)
+                if (nextScoped)
                 {
-                    if (nextScoped)
-                        SetScopedStyle(speaker, characterId,
-                            speaker ? values.SpeakerFontAssetGuid : values.DialogueFontAssetGuid,
-                            speaker ? values.SpeakerFontSize : values.DialogueFontSize,
-                            speaker ? values.SpeakerColor : values.DialogueColor,
-                            speaker ? values.SpeakerAlignment : values.DialogueAlignment);
-                    else if (speaker) ComposerClearCharacterSpeakerStyle(characterId);
-                    else ComposerClearSelectedSceneDialogueBodyStyle();
-                    values = VnSceneComposerTextStyleResolver.Resolve(_sceneComposerProject, scene, beat);
+                    ComposerSetSelectedSceneDialogueBodyStyle(
+                        values.DialogueFontAssetGuid,
+                        values.DialogueFontSize,
+                        values.DialogueColor,
+                        values.DialogueAlignment);
                 }
-            }
-
-            string guid = speaker ? values.SpeakerFontAssetGuid : values.DialogueFontAssetGuid;
-            float fontSize = speaker ? values.SpeakerFontSize : values.DialogueFontSize;
-            Color color = speaker ? values.SpeakerColor : values.DialogueColor;
-            VnWorkshopTextAlignment alignment =
-                speaker ? values.SpeakerAlignment : values.DialogueAlignment;
-
-            UnityEngine.Object currentFont = VnSceneComposerTextFontResolver.ResolveAsset(guid);
-            EditorGUILayout.LabelField("Текущий шрифт",
-                currentFont != null ? currentFont.name : "RokasSans (по умолчанию)");
-
-            VnSceneComposerInstalledFontFace[] faces = VnSceneComposerTextFontResolver.GetInstalledWindowsFonts();
-            string[] options = new string[faces.Length + 1];
-            options[0] = faces.Length == 0 ? "Установленные Windows-шрифты не найдены"
-                : "Выбрать установленный Windows-шрифт…";
-            for (int i = 0; i < faces.Length; i++) options[i + 1] = faces[i].DisplayName;
-            using (new EditorGUI.DisabledScope(faces.Length == 0))
-            {
-                int selected = EditorGUILayout.Popup("Шрифт Windows", 0, options);
-                if (selected > 0)
+                else
                 {
-                    CancelSceneComposerPreviewDrag();
-                    VnSceneComposerFontImportResult imported =
-                        VnSceneComposerTextFontResolver.ImportWindowsFont(faces[selected - 1]);
-                    if (!imported.Success) SetSceneComposerStatus(imported.Error, MessageType.Error);
-                    else
-                    {
-                        guid = imported.TmpFontAssetGuid;
-                        SetScopedStyle(speaker, characterId, guid, fontSize, color, alignment);
-                        SetSceneComposerStatus("Шрифт импортирован в проект и связан с TMP: " +
-                            imported.TmpFontAssetPath, MessageType.Info);
-                    }
+                    ComposerClearSelectedSceneDialogueBodyStyle();
                 }
+                values = VnSceneComposerTextStyleResolver.Resolve(
+                    _sceneComposerProject, scene, beat);
             }
 
-            if (GUILayout.Button("RokasSans по умолчанию"))
-            {
-                CancelSceneComposerPreviewDrag();
-                guid = string.Empty;
-                SetScopedStyle(speaker, characterId, guid, fontSize, color, alignment);
-            }
+            string guid = values.DialogueFontAssetGuid;
+            float fontSize = values.DialogueFontSize;
+            Color color = values.DialogueColor;
+            VnWorkshopTextAlignment alignment = values.DialogueAlignment;
 
-            // STYLE SCOPE: ColorField/font changes never read or write geometry.
-            EditorGUI.BeginChangeCheck();
-            float nextFontSize = EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
-            Color nextColor = EditorGUILayout.ColorField("Цвет", color);
-            float nextOpacity = EditorGUILayout.Slider("Прозрачность", color.a, 0f, 1f);
-            nextColor.a = nextOpacity;
-            VnWorkshopTextAlignment nextAlignment =
-                (VnWorkshopTextAlignment)EditorGUILayout.EnumPopup("Выравнивание", alignment);
-            if (EditorGUI.EndChangeCheck())
-            {
-                CancelSceneComposerPreviewDrag();
-                SetScopedStyle(speaker, characterId, guid, nextFontSize, nextColor, nextAlignment);
-            }
-
-            DrawSharedFallbackPicker(guid);
-
-            DrawTextGeometryControls(speaker, scene);
-
-            EditorGUILayout.HelpBox(
-                "X / Y / Width / Height хранятся в одном reference-canvas. " +
-                "Длина реплики, фон, видео, персонаж и плашка не переписывают координаты.", MessageType.None);
-            EditorGUILayout.HelpBox(
-                "Windows используется только как источник при выборе. После импорта сохраняется GUID " +
-                "TMP Font Asset внутри Assets; абсолютный путь Windows в данных сцены не сохраняется.",
-                MessageType.None);
-        }
-
-        private void DrawSpeakerTypographyControls(VnSceneComposerScene scene)
-        {
-            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
-            if (beat == null && scene.dialogueBeats != null && scene.dialogueBeats.Count > 0)
-                beat = scene.dialogueBeats[0];
-
-            VnWorkshopTypographyValues shared = ComposerGetSharedTypography();
-            string characterId =
-                VnSceneComposerTextStyleResolver.ResolveSpeakerCharacterId(scene, beat);
-
-            string guid = shared.SpeakerFontAssetGuid;
-            float fontSize = shared.SpeakerFontSize;
-            Color defaultColor = shared.SpeakerColor;
-            VnWorkshopTextAlignment alignment = shared.SpeakerAlignment;
-
-            EditorGUILayout.LabelField("Общий стиль имени", EditorStyles.miniBoldLabel);
-            UnityEngine.Object currentFont = VnSceneComposerTextFontResolver.ResolveAsset(guid);
-            EditorGUILayout.LabelField("Текущий шрифт",
+            UnityEngine.Object currentFont =
+                VnSceneComposerTextFontResolver.ResolveAsset(guid);
+            EditorGUILayout.LabelField(
+                "Текущий шрифт",
                 currentFont != null ? currentFont.name : "RokasSans (по умолчанию)");
 
             VnSceneComposerInstalledFontFace[] faces =
@@ -581,6 +492,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ? "Установленные Windows-шрифты не найдены"
                 : "Выбрать установленный Windows-шрифт…";
             for (int i = 0; i < faces.Length; i++) options[i + 1] = faces[i].DisplayName;
+
             using (new EditorGUI.DisabledScope(faces.Length == 0))
             {
                 int selected = EditorGUILayout.Popup("Шрифт Windows", 0, options);
@@ -590,12 +502,100 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     VnSceneComposerFontImportResult imported =
                         VnSceneComposerTextFontResolver.ImportWindowsFont(faces[selected - 1]);
                     if (!imported.Success)
+                    {
                         SetSceneComposerStatus(imported.Error, MessageType.Error);
+                    }
+                    else
+                    {
+                        guid = imported.TmpFontAssetGuid;
+                        ComposerSetSelectedSceneDialogueBodyStyle(
+                            guid, fontSize, color, alignment);
+                        SetSceneComposerStatus(
+                            "Шрифт импортирован в проект и связан с TMP: " +
+                            imported.TmpFontAssetPath, MessageType.Info);
+                    }
+                }
+            }
+
+            if (GUILayout.Button("RokasSans по умолчанию"))
+            {
+                CancelSceneComposerPreviewDrag();
+                guid = string.Empty;
+                ComposerSetSelectedSceneDialogueBodyStyle(
+                    guid, fontSize, color, alignment);
+            }
+
+            EditorGUI.BeginChangeCheck();
+            float nextFontSize =
+                EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
+            Color nextColor = EditorGUILayout.ColorField("Цвет", color);
+            float nextOpacity =
+                EditorGUILayout.Slider("Прозрачность", color.a, 0f, 1f);
+            nextColor.a = nextOpacity;
+            VnWorkshopTextAlignment nextAlignment =
+                (VnWorkshopTextAlignment)EditorGUILayout.EnumPopup(
+                    "Выравнивание", alignment);
+            if (EditorGUI.EndChangeCheck())
+            {
+                CancelSceneComposerPreviewDrag();
+                ComposerSetSelectedSceneDialogueBodyStyle(
+                    guid, nextFontSize, nextColor, nextAlignment);
+            }
+
+            DrawSharedFallbackPicker(guid);
+            DrawTextGeometryControls(false, scene);
+
+            EditorGUILayout.HelpBox(
+                "X / Y / Width / Height хранятся в одном reference-canvas. " +
+                "Длина реплики, фон, видео, персонаж и плашка не переписывают координаты.",
+                MessageType.None);
+            EditorGUILayout.HelpBox(
+                "Windows используется только как источник при выборе. После импорта сохраняется GUID " +
+                "TMP Font Asset внутри Assets; абсолютный путь Windows в данных сцены не сохраняется.",
+                MessageType.None);
+        }
+
+        private void DrawSpeakerTypographyControls(VnSceneComposerScene scene)
+        {
+            VnWorkshopTypographyValues shared = ComposerGetSharedTypography();
+
+            string guid = shared.SpeakerFontAssetGuid;
+            float fontSize = shared.SpeakerFontSize;
+            Color globalColor = shared.SpeakerColor;
+            VnWorkshopTextAlignment alignment = shared.SpeakerAlignment;
+
+            EditorGUILayout.LabelField("Общий стиль имени", EditorStyles.miniBoldLabel);
+            UnityEngine.Object currentFont =
+                VnSceneComposerTextFontResolver.ResolveAsset(guid);
+            EditorGUILayout.LabelField(
+                "Текущий шрифт",
+                currentFont != null ? currentFont.name : "RokasSans (по умолчанию)");
+
+            VnSceneComposerInstalledFontFace[] faces =
+                VnSceneComposerTextFontResolver.GetInstalledWindowsFonts();
+            string[] options = new string[faces.Length + 1];
+            options[0] = faces.Length == 0
+                ? "Установленные Windows-шрифты не найдены"
+                : "Выбрать установленный Windows-шрифт…";
+            for (int i = 0; i < faces.Length; i++) options[i + 1] = faces[i].DisplayName;
+
+            using (new EditorGUI.DisabledScope(faces.Length == 0))
+            {
+                int selected = EditorGUILayout.Popup("Шрифт Windows", 0, options);
+                if (selected > 0)
+                {
+                    CancelSceneComposerPreviewDrag();
+                    VnSceneComposerFontImportResult imported =
+                        VnSceneComposerTextFontResolver.ImportWindowsFont(faces[selected - 1]);
+                    if (!imported.Success)
+                    {
+                        SetSceneComposerStatus(imported.Error, MessageType.Error);
+                    }
                     else
                     {
                         guid = imported.TmpFontAssetGuid;
                         ComposerSetSharedSpeakerStyle(
-                            guid, fontSize, defaultColor, alignment);
+                            guid, fontSize, globalColor, alignment);
                         SetSceneComposerStatus(
                             "Общий шрифт говорящего импортирован в TMP: " +
                             imported.TmpFontAssetPath, MessageType.Info);
@@ -608,94 +608,79 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CancelSceneComposerPreviewDrag();
                 guid = string.Empty;
                 ComposerSetSharedSpeakerStyle(
-                    guid, fontSize, defaultColor, alignment);
+                    guid, fontSize, globalColor, alignment);
             }
 
+            // Font, size, alignment and opacity are always shared/global.
             EditorGUI.BeginChangeCheck();
-            float nextFontSize = EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
-            Color nextDefaultColor =
-                EditorGUILayout.ColorField("Цвет по умолчанию", defaultColor);
+            float nextFontSize =
+                EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
             float nextOpacity =
-                EditorGUILayout.Slider("Общая прозрачность", defaultColor.a, 0f, 1f);
-            nextDefaultColor.a = nextOpacity;
+                EditorGUILayout.Slider("Общая прозрачность", globalColor.a, 0f, 1f);
             VnWorkshopTextAlignment nextAlignment =
                 (VnWorkshopTextAlignment)EditorGUILayout.EnumPopup(
                     "Выравнивание", alignment);
             if (EditorGUI.EndChangeCheck())
             {
                 CancelSceneComposerPreviewDrag();
+                Color nextGlobal = globalColor;
+                nextGlobal.a = nextOpacity;
                 ComposerSetSharedSpeakerStyle(
-                    guid, nextFontSize, nextDefaultColor, nextAlignment);
+                    guid, nextFontSize, nextGlobal, nextAlignment);
                 fontSize = nextFontSize;
-                defaultColor = nextDefaultColor;
+                globalColor = nextGlobal;
                 alignment = nextAlignment;
             }
 
             DrawSharedFallbackPicker(guid);
 
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Цвет текущего персонажа", EditorStyles.miniBoldLabel);
-            if (string.IsNullOrEmpty(characterId))
-            {
-                EditorGUILayout.HelpBox(
-                    "Нет стабильного ID персонажа: используется цвет по умолчанию.",
-                    MessageType.None);
-            }
-            else
-            {
-                VnSceneComposerSpeakerStyleOverride entry =
-                    VnSceneComposerTextStyleResolver.FindSpeakerStyle(
-                        _sceneComposerProject, characterId);
-                bool hasCustom = entry != null && entry.style != null && entry.style.hasColor;
-                bool nextCustom = EditorGUILayout.Toggle(
-                    "Свой цвет персонажа", hasCustom);
-                if (nextCustom != hasCustom)
-                {
-                    if (nextCustom)
-                    {
-                        Color initial = defaultColor;
-                        initial.a = defaultColor.a;
-                        ComposerSetCharacterSpeakerColor(characterId, initial);
-                    }
-                    else
-                    {
-                        ComposerClearCharacterSpeakerColor(characterId);
-                    }
-                    entry = VnSceneComposerTextStyleResolver.FindSpeakerStyle(
-                        _sceneComposerProject, characterId);
-                    hasCustom = nextCustom;
-                }
+            EditorGUILayout.LabelField("Цвет имени", EditorStyles.miniBoldLabel);
 
-                if (hasCustom)
-                {
-                    Color characterColor =
-                        entry != null && entry.style != null
-                            ? entry.style.color
-                            : defaultColor;
-                    characterColor.a = defaultColor.a;
-                    EditorGUI.BeginChangeCheck();
-                    Color nextCharacterColor =
-                        EditorGUILayout.ColorField("Цвет персонажа", characterColor);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        CancelSceneComposerPreviewDrag();
-                        // Opacity belongs to the shared speaker style; custom character color
-                        // contributes RGB only.
-                        nextCharacterColor.a = defaultColor.a;
-                        ComposerSetCharacterSpeakerColor(
-                            characterId, nextCharacterColor);
-                    }
-                }
-                else
-                {
-                    EditorGUILayout.LabelField("Источник цвета", "Default / Inherit");
-                }
+            int colorScopeIndex =
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene ? 1 : 0;
+            EditorGUILayout.LabelField("Применить цвет:", EditorStyles.miniLabel);
+            int nextColorScopeIndex = GUILayout.Toolbar(
+                colorScopeIndex,
+                new[] { "Ко всем сценам", "Только к этой сцене" });
+            VnSceneComposerSpeakerColorScope nextColorScope =
+                nextColorScopeIndex == 1
+                    ? VnSceneComposerSpeakerColorScope.ThisScene
+                    : VnSceneComposerSpeakerColorScope.AllScenes;
+            if (nextColorScope != scene.speakerColorScope)
+                ComposerSetSelectedSceneSpeakerColorScope(nextColorScope);
+
+            Color effectiveColor =
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                    ? scene.speakerColor
+                    : globalColor;
+            effectiveColor.a = globalColor.a;
+
+            EditorGUI.BeginChangeCheck();
+            Color nextSpeakerColor = EditorGUILayout.ColorField(
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                    ? "Цвет этой сцены"
+                    : "Цвет по умолчанию",
+                effectiveColor);
+            if (EditorGUI.EndChangeCheck())
+            {
+                CancelSceneComposerPreviewDrag();
+                nextSpeakerColor.a = globalColor.a;
+                ComposerSetSpeakerColor(nextSpeakerColor);
             }
+
+            EditorGUILayout.LabelField(
+                "Источник цвета",
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene
+                    ? "Только к этой сцене"
+                    : "Ко всем сценам");
 
             DrawTextGeometryControls(true, scene);
             EditorGUILayout.HelpBox(
-                "Шрифт, размер, выравнивание, fallback и прозрачность имени говорящего общие. " +
-                "Персонаж переопределяет только цвет.", MessageType.None);
+                "Цвет имени имеет отдельный scope. " +
+                "Шрифт, размер, выравнивание, fallback и прозрачность остаются общими. " +
+                "Изменение цвета не меняет X / Y / Width / Height и text geometry scope.",
+                MessageType.None);
         }
 
         private void DrawTextGeometryControls(bool speaker, VnSceneComposerScene scene)
@@ -727,24 +712,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     preset, VnWorkshopResolution.Reference1920x1080,
                     VnWorkshopPreviewScene.BusStopKeiko);
             return speaker ? frame.SpeakerName : frame.DialogueText;
-        }
-
-        private void SetScopedStyle(bool speaker, string characterId, string guid, float size,
-            Color color, VnWorkshopTextAlignment alignment)
-        {
-            if (speaker && !string.IsNullOrEmpty(characterId))
-                ComposerSetCharacterSpeakerStyle(characterId, guid, size, color, alignment);
-            else if (!speaker)
-                ComposerSetSelectedSceneDialogueBodyStyle(guid, size, color, alignment);
-            else
-            {
-                ValidateTypographyStyle(guid, size, color, alignment);
-                RecordSceneComposerUndo("Edit Default VN Speaker Style");
-                CancelSceneComposerPreviewDrag();
-                SetDefaultStyle(true, guid, size, color, alignment);
-                ResetSceneComposerPlayback();
-                MarkSceneComposerChanged();
-            }
         }
 
         private string ComposerGetDialogueOverflowWarning(VnSceneComposerScene scene)
