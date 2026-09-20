@@ -850,6 +850,330 @@ namespace Rokas.EditorTools.Tests
             Assert.That(source, Does.Contain("Edit VN Dialogue Beat"));
         }
 
+        [Test]
+        public void MTextReveal_RED_01_FullAuthoredTextExistsBeforeProgressiveVisibility()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(10f);
+            object sample = SampleRevealReflect("Это длинная строка", 0f, values, false);
+            Assert.That(RevealString(sample, "FullText"), Is.EqualTo("Это длинная строка"));
+            Assert.That(RevealInt(sample, "VisibleGlyphCount"), Is.EqualTo(0));
+            Assert.That(RevealBool(sample, "Complete"), Is.False);
+        }
+
+        [Test]
+        public void MTextReveal_RED_02_VisibleGlyphCountIsMonotonic()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(12f);
+            int a = RevealInt(SampleRevealReflect("abcdef", .10f, values, false), "VisibleGlyphCount");
+            int b = RevealInt(SampleRevealReflect("abcdef", .30f, values, false), "VisibleGlyphCount");
+            int c = RevealInt(SampleRevealReflect("abcdef", .60f, values, false), "VisibleGlyphCount");
+            Assert.That(b, Is.GreaterThanOrEqualTo(a));
+            Assert.That(c, Is.GreaterThanOrEqualTo(b));
+        }
+
+        [Test]
+        public void MTextReveal_RED_03_FinalStateShowsEveryVisibleGlyph()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(20f);
+            object sample = SampleRevealReflect("Привет 世界", 10f, values, false);
+            Assert.That(RevealBool(sample, "Complete"), Is.True);
+            Assert.That(RevealInt(sample, "VisibleGlyphCount"),
+                Is.EqualTo(RevealInt(sample, "TotalGlyphCount")));
+            Assert.That(RevealString(sample, "PlainVisibleText"), Is.EqualTo("Привет 世界"));
+        }
+
+        [Test]
+        public void MTextReveal_RED_04_SpeedControlsRevealDuration()
+        {
+            object slow = SampleRevealReflect("abcdefghij", 0f, TypewriterValues(5f), false);
+            object fast = SampleRevealReflect("abcdefghij", 0f, TypewriterValues(40f), false);
+            Assert.That(RevealFloat(slow, "DurationSeconds"),
+                Is.GreaterThan(RevealFloat(fast, "DurationSeconds")));
+        }
+
+        [Test]
+        public void MTextReveal_RED_05_ElapsedSamplingIsFrameRateIndependent()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(17f);
+            object atThirty = SampleRevealReflect("frame independent", 30f / 60f, values, false);
+            object atOneTwenty = SampleRevealReflect("frame independent", 120f / 240f, values, false);
+            Assert.That(RevealInt(atThirty, "VisibleGlyphCount"),
+                Is.EqualTo(RevealInt(atOneTwenty, "VisibleGlyphCount")));
+            Assert.That(RevealFloat(atThirty, "NewestGlyphAlpha"),
+                Is.EqualTo(RevealFloat(atOneTwenty, "NewestGlyphAlpha")).Within(.001f));
+        }
+
+        [Test]
+        public void MTextReveal_RED_06_NewlyExposedGlyphHasShortSmoothAlphaRamp()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(10f);
+            object sample = SampleRevealReflect("AB", .12f, values, false);
+            float alpha = RevealFloat(sample, "NewestGlyphAlpha");
+            Assert.That(RevealInt(sample, "VisibleGlyphCount"), Is.EqualTo(1));
+            Assert.That(alpha, Is.GreaterThan(0f).And.LessThan(1f));
+        }
+
+        [Test]
+        public void MTextReveal_RED_07_RichTextMarkupDoesNotCountAsVisibleGlyphs()
+        {
+            VnWorkshopTypewriterValues values = TypewriterValues(20f);
+            object sample = SampleRevealReflect("<b>A</b><color=#ff0000>B</color>", 10f, values, false);
+            Assert.That(RevealInt(sample, "TotalGlyphCount"), Is.EqualTo(2));
+            Assert.That(RevealString(sample, "PlainVisibleText"), Is.EqualTo("AB"));
+            Assert.That(RevealString(sample, "RenderText"), Does.Contain("<b>").And.Contain("<color=#ff0000>"));
+        }
+
+        [Test]
+        public void MTextReveal_RED_08_CyrillicUsesVisibleTextElements()
+        {
+            object sample = SampleRevealReflect("Привет", 10f, TypewriterValues(20f), false);
+            Assert.That(RevealInt(sample, "TotalGlyphCount"), Is.EqualTo(6));
+            Assert.That(RevealString(sample, "PlainVisibleText"), Is.EqualTo("Привет"));
+        }
+
+        [Test]
+        public void MTextReveal_RED_09_ChineseUsesVisibleGlyphs()
+        {
+            object sample = SampleRevealReflect("你好世界", 10f, TypewriterValues(20f), false);
+            Assert.That(RevealInt(sample, "TotalGlyphCount"), Is.EqualTo(4));
+            Assert.That(RevealString(sample, "PlainVisibleText"), Is.EqualTo("你好世界"));
+        }
+
+        [Test]
+        public void MTextReveal_RED_10_SurrogateAndCombiningSequencesAreNotSplit()
+        {
+            const string text = "A\U0001F642e\u0301";
+            object sample = SampleRevealReflect(text, 10f, TypewriterValues(20f), false);
+            Assert.That(RevealInt(sample, "TotalGlyphCount"), Is.EqualTo(3));
+            Assert.That(RevealString(sample, "PlainVisibleText"), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void MTextReveal_RED_11_LongDialogueKeepsFinalRectStableDuringReveal()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            project.scenes[0].dialogueBeats[0].text =
+                string.Join(" ", Enumerable.Range(0, 90).Select(i => "слово" + i));
+            Rect expected = new Rect(250f, 35f, 820f, 180f);
+            SetDialogueRect(project, expected);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Rect before = playback.CurrentFrame.WorkshopFrame.DialogueText;
+                playback.Advance(.15f);
+                Rect during = playback.CurrentFrame.WorkshopFrame.DialogueText;
+                playback.Advance(10f);
+                Rect after = playback.CurrentFrame.WorkshopFrame.DialogueText;
+                Assert.That(during, Is.EqualTo(before));
+                Assert.That(after, Is.EqualTo(before));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_12_FirstNextWhileRevealingCompletesCurrentBeatOnly()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            EnableTypewriter(project, 4f);
+            project.scenes[0].dialogueBeats[0].text = "Очень длинная первая реплика";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(0));
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(0),
+                    "First Next while revealing must complete the current line, not advance Beat.");
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.EqualTo(project.scenes[0].dialogueBeats[0].text));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_13_SecondNextAfterForcedCompletionAdvancesBeat()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            EnableTypewriter(project, 4f);
+            project.scenes[0].dialogueBeats[0].text = "Очень длинная первая реплика";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_14_NewBeatCancelsForcedCompletionState()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            EnableTypewriter(project, 5f);
+            project.scenes[0].dialogueBeats[0].text = "Первая длинная реплика";
+            project.scenes[0].dialogueBeats[1].text = "Вторая длинная реплика";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(1));
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.Not.EqualTo(project.scenes[0].dialogueBeats[1].text),
+                    "New Beat must start a fresh reveal instead of inheriting force-complete state.");
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_15_RestartAndPlayFromHereStartFreshReveal()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            EnableTypewriter(project, 5f);
+            project.scenes[0].dialogueBeats[0].text = "Первая длинная реплика";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.EqualTo(project.scenes[0].dialogueBeats[0].text));
+                playback.Restart();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(0));
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.Not.EqualTo(project.scenes[0].dialogueBeats[0].text));
+                playback.PlayFromHere(0);
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.Not.EqualTo(project.scenes[0].dialogueBeats[0].text));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_16_PreviousStartsPreviousBeatRevealCleanly()
+        {
+            VnSceneComposerProject project = ProjectWithTwoBeats();
+            EnableTypewriter(project, 5f);
+            project.scenes[0].dialogueBeats[0].text = "Первая длинная реплика";
+            project.scenes[0].dialogueBeats[1].text = "Вторая длинная реплика";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
+                playback.AdvanceDialogue();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(1));
+                playback.PreviousDialogue();
+                Assert.That(playback.CurrentBeatIndex, Is.EqualTo(0));
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.Not.EqualTo(project.scenes[0].dialogueBeats[0].text));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_17_RevealNeverMutatesDialogueGeometryOrPlaque()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            EnableTypewriter(project, 4f);
+            project.scenes[0].dialogueBeats[0].text = "Геометрия должна оставаться полностью неподвижной.";
+            Rect expected = new Rect(260f, 30f, 800f, 170f);
+            SetDialogueRect(project, expected);
+            VnWorkshopPreviewFrame authored = Frame(project, 0);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Rect plaque = playback.CurrentFrame.WorkshopFrame.DialoguePanel;
+                playback.Advance(.5f);
+                Assert.That(playback.CurrentFrame.WorkshopFrame.DialogueText, Is.EqualTo(authored.DialogueText));
+                Assert.That(playback.CurrentFrame.WorkshopFrame.DialoguePanel, Is.EqualTo(plaque));
+            }
+        }
+
+        [Test]
+        public void MTextReveal_RED_18_SpeakerNameIsImmediateWhileDialogueBodyReveals()
+        {
+            VnSceneComposerProject project = ProjectWithScene();
+            EnableTypewriter(project, 4f);
+            project.scenes[0].dialogueBeats[0].speaker = "Mina";
+            project.scenes[0].dialogueBeats[0].text = "Медленно раскрываемый текст";
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayScene(0);
+                Assert.That(playback.CurrentFrame.WorkshopFrame.Speaker, Is.EqualTo("Mina"));
+                Assert.That(playback.CurrentFrame.Dialogue,
+                    Is.Not.EqualTo(project.scenes[0].dialogueBeats[0].text));
+            }
+        }
+
+        private static VnWorkshopTypewriterValues TypewriterValues(float cps)
+        {
+            return new VnWorkshopTypewriterValues
+            {
+                Enabled = true,
+                CharactersPerSecond = cps,
+                BaseCharacterDelay = 0f,
+                CommaPause = 0f,
+                PeriodPause = 0f,
+                EllipsisPause = 0f,
+                QuestionPause = 0f,
+                ExclamationPause = 0f,
+                LineStartDelay = 0f
+            };
+        }
+
+        private static void EnableTypewriter(VnSceneComposerProject project, float cps)
+        {
+            VnPresentationWorkshopVn10Resolver.SetTypewriterPreviewOverrides(
+                project.defaultPresentation, true, cps, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+        }
+
+        private static object SampleRevealReflect(
+            string text, float elapsed, VnWorkshopTypewriterValues values, bool forceComplete)
+        {
+            Type type = typeof(VnSceneComposerTransitionSampler).Assembly.GetType(
+                "Rokas.EditorTools.VnUiWorkshop.VnSceneComposerDialogueReveal");
+            Assert.That(type, Is.Not.Null,
+                "Smooth reveal requires one layout-stable reveal sampler.");
+            MethodInfo method = type.GetMethod(
+                "Sample", BindingFlags.Public | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null);
+            return method.Invoke(null, new object[] { text, elapsed, values, forceComplete });
+        }
+
+        private static object RevealMember(object sample, string name)
+        {
+            Assert.That(sample, Is.Not.Null);
+            Type type = sample.GetType();
+            PropertyInfo property = type.GetProperty(
+                name, BindingFlags.Public | BindingFlags.Instance);
+            if (property != null) return property.GetValue(sample, null);
+            FieldInfo field = type.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "Missing reveal member: " + name);
+            return field.GetValue(sample);
+        }
+
+        private static string RevealString(object sample, string name)
+        {
+            return (string)RevealMember(sample, name);
+        }
+
+        private static int RevealInt(object sample, string name)
+        {
+            return Convert.ToInt32(RevealMember(sample, name));
+        }
+
+        private static float RevealFloat(object sample, string name)
+        {
+            return Convert.ToSingle(RevealMember(sample, name));
+        }
+
+        private static bool RevealBool(object sample, string name)
+        {
+            return Convert.ToBoolean(RevealMember(sample, name));
+        }
+
         private VnSceneComposerFontImportResult ImportTestFont(string displayName)
         {
             VnSceneComposerFontImportResult result =
