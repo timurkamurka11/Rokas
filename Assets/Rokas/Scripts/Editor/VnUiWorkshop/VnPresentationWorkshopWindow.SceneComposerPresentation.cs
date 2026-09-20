@@ -134,7 +134,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (float.IsNaN(scaleMultiplier) || float.IsInfinity(scaleMultiplier) || scaleMultiplier < .05f || scaleMultiplier > 5f)
                 throw new ArgumentOutOfRangeException(nameof(scaleMultiplier));
-            MutateComposerPresentation("Edit VN Scene UI Layout", preset =>
+            MutateComposerElementPresentation("Edit VN Scene UI Layout", element, preset =>
             {
                 VnWorkshopElementOverride target = preset.GetElementOverride(element);
                 target.hasPositionDelta = positionDelta != Vector2.zero;
@@ -148,7 +148,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerResetElement(VnWorkshopElement element)
         {
-            MutateComposerPresentation("Reset VN Scene UI Element", preset => preset.ResetElement(element));
+            MutateComposerElementPresentation("Reset VN Scene UI Element", element, preset => preset.ResetElement(element));
         }
 
         public void ComposerResetAllPresentation()
@@ -404,6 +404,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return previousValue;
             return Mathf.Clamp(value, minimum, ComposerDurationMaximum);
+        }
+
+        private void MutateComposerElementPresentation(
+            string undoLabel, VnWorkshopElement element, Action<VnPresentationWorkshopPreset> mutation)
+        {
+            if (mutation == null) throw new ArgumentNullException(nameof(mutation));
+            RecordSceneComposerUndo(undoLabel);
+            VnPresentationWorkshopPreset target =
+                element == VnWorkshopElement.SpeakerName || element == VnWorkshopElement.DialogueText
+                    ? GetSharedDialoguePresentation()
+                    : ComposerGetActivePresentationPreset();
+            mutation(target);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
         }
 
         private void MutateComposerPresentation(string undoLabel, Action<VnPresentationWorkshopPreset> mutation)
