@@ -3,96 +3,845 @@ using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
+using UnityEditor;
 using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
 {
     public sealed class VnSceneComposerMTextStyleLayoutTests
     {
-        [Test]
-        public void MTextStyleLayout_RED_PerCharacterSpeakerStyleApiExists()
+        private const string Keiko = "Keiko";
+        private const string Mina = "Mina";
+        private const string UserProjectId = "3cc2bc9ec7974ea7a5f4d074683bed61";
+        private const string OtherProjectId = "11111111111111111111111111111111";
+        private const string FontA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        private const string FontB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        [TearDown]
+        public void TearDown()
         {
-            MethodInfo method = typeof(VnPresentationWorkshopWindow).GetMethod(
-                "ComposerSetCharacterSpeakerStyle",
-                BindingFlags.Public | BindingFlags.Instance);
-            Assert.That(method, Is.Not.Null,
-                "Speaker style is currently shared globally; a stable-character keyed style mutation path is required.");
+            Undo.ClearAll();
         }
 
-        [Test]
-        public void MTextStyleLayout_RED_SceneBodyStyleApiExists()
+        [Test] public void MTextStyleLayout_01_OldProjectUsesDefaultTypography()
         {
-            MethodInfo method = typeof(VnPresentationWorkshopWindow).GetMethod(
-                "ComposerSetSelectedSceneDialogueBodyStyle",
-                BindingFlags.Public | BindingFlags.Instance);
-            Assert.That(method, Is.Not.Null,
-                "Dialogue body style needs a Scene-local visual override instead of sharing all typography globally.");
+            var p = Project(Scene(Keiko));
+            VnWorkshopTypographyValues v = Resolve(p, p.scenes[0], 0);
+            Assert.That(v.SpeakerColor, Is.EqualTo(Color.white));
+            Assert.That(v.DialogueColor, Is.EqualTo(Color.white));
         }
 
-        [Test]
-        public void MTextStyleLayout_RED_SpeakerGeometryDoesNotDependOnBaseSpeakerScene()
+        [Test] public void MTextStyleLayout_02_KeikoSpeakerOverrideResolves()
         {
-            var project = new VnSceneComposerProject();
-            var keiko = Scene("Keiko");
-            var mina = Scene("Mina");
-            project.scenes.Add(keiko);
-            project.scenes.Add(mina);
-
-            VnWorkshopPreviewFrame a = VnSceneComposerComposition.BuildFrame(
-                project, keiko, keiko.dialogueBeats[0],
-                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
-            VnWorkshopPreviewFrame b = VnSceneComposerComposition.BuildFrame(
-                project, mina, mina.dialogueBeats[0],
-                VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
-
-            Assert.That(b.SpeakerName, Is.EqualTo(a.SpeakerName),
-                "The same shared authored geometry must not be rebuilt from a speaker-specific plaque.");
-            Assert.That(b.DialogueText, Is.EqualTo(a.DialogueText),
-                "Dialogue geometry must be Scene/speaker independent.");
+            var p = Project(SceneWithCharacter(Keiko));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontSize, Is.EqualTo(47f));
         }
 
-        [Test]
-        public void MTextStyleLayout_RED_AuthoredTextRectIsNotSilentlyClampedToPanel()
+        [Test] public void MTextStyleLayout_03_MinaSpeakerOverrideResolvesIndependently()
+        {
+            var p = Project(SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Mina, FontB, 50f, new Color(1f, .45f, .1f, 1f));
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontSize, Is.EqualTo(50f));
+        }
+
+        [Test] public void MTextStyleLayout_04_KeikoWhiteMinaOrange()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            Color orange = new Color(1f, .45f, .1f, 1f);
+            AddSpeakerStyle(p, Mina, FontB, 50f, orange);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.white));
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor, Is.EqualTo(orange));
+        }
+
+        [Test] public void MTextStyleLayout_05_EditingMinaDoesNotChangeKeiko()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
+            Color before = Resolve(p, p.scenes[0], 0).SpeakerColor;
+            VnSceneComposerTextStyleResolver.FindSpeakerStyle(p, Mina).style.color = Color.yellow;
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor, Is.EqualTo(before));
+        }
+
+        [Test] public void MTextStyleLayout_06_EditingKeikoDoesNotChangeMina()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
+            Color before = Resolve(p, p.scenes[1], 0).SpeakerColor;
+            VnSceneComposerTextStyleResolver.FindSpeakerStyle(p, Keiko).style.color = Color.green;
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerColor, Is.EqualTo(before));
+        }
+
+        [Test] public void MTextStyleLayout_07_CharactersMayUseDifferentFonts()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontB, 50f, Color.white);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontAssetGuid, Is.EqualTo(FontA));
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerFontAssetGuid, Is.EqualTo(FontB));
+        }
+
+        [Test] public void MTextStyleLayout_08_CharactersMayUseDifferentSizes()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontB, 50f, Color.white);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontSize, Is.EqualTo(47f));
+            Assert.That(Resolve(p, p.scenes[1], 0).SpeakerFontSize, Is.EqualTo(50f));
+        }
+
+        [Test] public void MTextStyleLayout_09_SameFontGuidIsReusedByOverrides()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Mina));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontA, 50f, Color.white);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerFontAssetGuid,
+                Is.EqualTo(Resolve(p, p.scenes[1], 0).SpeakerFontAssetGuid));
+        }
+
+        [Test] public void MTextStyleLayout_10_SpeakerSwitchResolvesCorrectCharacterStyle()
+        {
+            VnSceneComposerScene s = SceneWithCharacters(Keiko, Mina);
+            var p = Project(s);
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.white);
+            AddSpeakerStyle(p, Mina, FontB, 50f, Color.red);
+            s.dialogueBeats[0].speaker = Keiko;
+            Color a = Resolve(p, s, 0).SpeakerColor;
+            s.dialogueBeats[0].speaker = Mina;
+            Color b = Resolve(p, s, 0).SpeakerColor;
+            Assert.That(a, Is.EqualTo(Color.white));
+            Assert.That(b, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextStyleLayout_11_CharacterOverridePersistsAcrossBeats()
+        {
+            VnSceneComposerScene s = SceneWithCharacter(Keiko);
+            s.dialogueBeats.Add(Beat(Keiko, "Two"));
+            var p = Project(s);
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.cyan);
+            Assert.That(Resolve(p, s, 0).SpeakerColor, Is.EqualTo(Resolve(p, s, 1).SpeakerColor));
+        }
+
+        [Test] public void MTextStyleLayout_12_CharacterOverridePersistsAcrossScenes()
+        {
+            var p = Project(SceneWithCharacter(Keiko), SceneWithCharacter(Keiko));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.cyan);
+            Assert.That(Resolve(p, p.scenes[0], 0).SpeakerColor,
+                Is.EqualTo(Resolve(p, p.scenes[1], 0).SpeakerColor));
+        }
+
+        [Test] public void MTextStyleLayout_13_NarratorUsesDefaultSpeakerStyle()
+        {
+            VnSceneComposerScene s = SceneWithCharacter(Keiko);
+            s.dialogueBeats[0].narration = true;
+            var p = Project(s);
+            p.defaultPresentation.typography.hasSpeakerColor = true;
+            p.defaultPresentation.typography.speakerColor = Color.magenta;
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.green);
+            Assert.That(Resolve(p, s, 0).SpeakerColor, Is.EqualTo(Color.magenta));
+        }
+
+        [Test] public void MTextStyleLayout_14_SceneBodyOverrideResolves()
+        {
+            var p = Project(Scene("A"));
+            SetBodyStyle(p.scenes[0], FontA, 35f, Color.cyan);
+            Assert.That(Resolve(p, p.scenes[0], 0).DialogueColor, Is.EqualTo(Color.cyan));
+        }
+
+        [Test] public void MTextStyleLayout_15_SceneBBodyEditDoesNotMutateSceneA()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            SetBodyStyle(p.scenes[0], FontA, 33f, Color.white);
+            SetBodyStyle(p.scenes[1], FontB, 38f, Color.cyan);
+            Color before = Resolve(p, p.scenes[0], 0).DialogueColor;
+            p.scenes[1].dialogueBodyStyleOverride.color = Color.yellow;
+            Assert.That(Resolve(p, p.scenes[0], 0).DialogueColor, Is.EqualTo(before));
+        }
+
+        [Test] public void MTextStyleLayout_16_SpeakerGeometryIsSharedAcrossScenes()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            SetProjectGeometry(p, true, new Rect(40f, 50f, 500f, 80f));
+            Assert.That(Frame(p, 0).SpeakerName, Is.EqualTo(Frame(p, 1).SpeakerName));
+        }
+
+        [Test] public void MTextStyleLayout_17_BodyGeometryIsSharedAcrossScenes()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            SetProjectGeometry(p, false, new Rect(80f, 160f, 1400f, 240f));
+            Assert.That(Frame(p, 0).DialogueText, Is.EqualTo(Frame(p, 1).DialogueText));
+        }
+
+        [Test] public void MTextStyleLayout_18_SceneOverrideCannotReplaceSpeakerGeometry()
+        {
+            var p = Project(Scene("A"));
+            SetProjectGeometry(p, true, new Rect(40f, 50f, 500f, 80f));
+            p.scenes[0].presentationOverrides.speakerName.hasPositionDelta = true;
+            p.scenes[0].presentationOverrides.speakerName.positionDelta = new Vector2(300f, 300f);
+            AssertRect(Frame(p, 0).SpeakerName, new Rect(40f, 50f, 500f, 80f));
+        }
+
+        [Test] public void MTextStyleLayout_19_SceneOverrideCannotReplaceBodyGeometry()
+        {
+            var p = Project(Scene("A"));
+            SetProjectGeometry(p, false, new Rect(80f, 160f, 1200f, 220f));
+            p.scenes[0].presentationOverrides.dialogueText.hasPositionDelta = true;
+            p.scenes[0].presentationOverrides.dialogueText.positionDelta = new Vector2(200f, -200f);
+            AssertRect(Frame(p, 0).DialogueText, new Rect(80f, 160f, 1200f, 220f));
+        }
+
+        [Test] public void MTextStyleLayout_20_BeatSwitchDoesNotChangeGeometry()
+        {
+            VnSceneComposerScene s = Scene("A");
+            s.dialogueBeats.Add(Beat("B", "Longer body text"));
+            var p = Project(s);
+            Rect a = Frame(p, s, s.dialogueBeats[0]).DialogueText;
+            Rect b = Frame(p, s, s.dialogueBeats[1]).DialogueText;
+            Assert.That(b, Is.EqualTo(a));
+        }
+
+        [Test] public void MTextStyleLayout_21_ImageBackgroundDoesNotChangeGeometry()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.scenes[1].media.kind = VnSceneComposerMediaKind.ExternalImage;
+            p.scenes[1].media.reference = "missing-image.png";
+            Assert.That(Frame(p, 1).DialogueText, Is.EqualTo(Frame(p, 0).DialogueText));
+        }
+
+        [Test] public void MTextStyleLayout_22_VideoBackgroundDoesNotChangeGeometry()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.scenes[1].media.kind = VnSceneComposerMediaKind.ExternalVideo;
+            p.scenes[1].media.reference = "missing-video.mp4";
+            Assert.That(Frame(p, 1).SpeakerName, Is.EqualTo(Frame(p, 0).SpeakerName));
+        }
+
+        [Test] public void MTextStyleLayout_23_WindowResizeDoesNotMutateStoredGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                w.ComposerSetSharedTextGeometry(false, new Vector2(80f, 160f), new Vector2(900f, 220f));
+                VnWorkshopElementOverride g = Project(w).defaultPresentation.dialogueText;
+                Vector2 pos = g.positionDelta; Vector2 size = g.sizeDelta;
+                w.position = new Rect(20f, 20f, 700f, 500f);
+                w.position = new Rect(20f, 20f, 1400f, 900f);
+                Assert.That(g.positionDelta, Is.EqualTo(pos));
+                Assert.That(g.sizeDelta, Is.EqualTo(size));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_24_PlaqueAssetChangeDoesNotMutateGeometry()
+        {
+            var p = Project(Scene("A"));
+            SetProjectGeometry(p, false, new Rect(80f, 160f, 900f, 220f));
+            Rect before = Frame(p, 0).DialogueText;
+            p.defaultPresentation.dialoguePanelVisual.hasAssetGuid = true;
+            p.defaultPresentation.dialoguePanelVisual.assetGuid = FontB;
+            Assert.That(Frame(p, 0).DialogueText, Is.EqualTo(before));
+        }
+
+        [Test] public void MTextStyleLayout_25_DialogueLengthDoesNotMutateGeometry()
+        {
+            var p = Project(Scene("A"));
+            Rect before = Frame(p, 0).DialogueText;
+            p.scenes[0].dialogueBeats[0].text = new string('X', 1000);
+            Assert.That(Frame(p, 0).DialogueText, Is.EqualTo(before));
+        }
+
+        [Test] public void MTextStyleLayout_26_SpeakerStyleSetterDoesNotMutateSpeakerGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                VnWorkshopElementOverride g = Project(w).defaultPresentation.speakerName;
+                Vector2 pos=g.positionDelta, size=g.sizeDelta;
+                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
+                    VnWorkshopTextAlignment.Center);
+                Assert.That(g.positionDelta, Is.EqualTo(pos));
+                Assert.That(g.sizeDelta, Is.EqualTo(size));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_27_BodyStyleSetterDoesNotMutateBodyGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnWorkshopElementOverride g = Project(w).defaultPresentation.dialogueText;
+                Vector2 pos=g.positionDelta, size=g.sizeDelta;
+                w.ComposerSetSelectedSceneDialogueBodyStyle(string.Empty, 39f, Color.cyan,
+                    VnWorkshopTextAlignment.Left);
+                Assert.That(g.positionDelta, Is.EqualTo(pos));
+                Assert.That(g.sizeDelta, Is.EqualTo(size));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_28_ColorPickerUiHasIndependentStyleChangeScope()
+        {
+            string s = TextUiSource();
+            Assert.That(s, Does.Contain("// STYLE SCOPE: ColorField/font changes never read or write geometry."));
+            Assert.That(s, Does.Contain("EditorGUILayout.ColorField"));
+            Assert.That(s, Does.Not.Contain("ApplyTypographyValues("));
+        }
+
+        [Test] public void MTextStyleLayout_29_ColorStyleMutationCancelsActivePreviewDrag()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                SetPrivate(w, "_sceneComposerDraggingPreviewObject", true);
+                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
+                    VnWorkshopTextAlignment.Left);
+                Assert.That((bool)GetPrivate(w, "_sceneComposerDraggingPreviewObject"), Is.False);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_30_FontStyleMutationLeavesGeometryUnchanged()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                Rect before = Frame(Project(w), 0).SpeakerName;
+                w.ComposerSetCharacterSpeakerStyle(Keiko, FontA, 48f, Color.white,
+                    VnWorkshopTextAlignment.Left);
+                Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(before));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_31_FontSizeMutationLeavesGeometryUnchanged()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                Rect before = Frame(Project(w), 0).DialogueText;
+                w.ComposerSetSelectedSceneDialogueBodyStyle(string.Empty, 72f, Color.white,
+                    VnWorkshopTextAlignment.Left);
+                Assert.That(Frame(Project(w), 0).DialogueText, Is.EqualTo(before));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_32_DirectUpwardDragIsLinear()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                w.ComposerSetSelectedPresentationElement(VnWorkshopElement.SpeakerName);
+                w.ComposerDragPresentationElement(new Vector2(0f, -25f));
+                Assert.That(Project(w).defaultPresentation.speakerName.positionDelta.y,
+                    Is.EqualTo(-25f).Within(.001f));
+                w.ComposerDragPresentationElement(new Vector2(0f, -25f));
+                Assert.That(Project(w).defaultPresentation.speakerName.positionDelta.y,
+                    Is.EqualTo(-50f).Within(.001f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_33_NumericYAndDirectDragYAreEquivalent()
+        {
+            Rect baseline = VnPresentationWorkshopPreviewRenderer.GetReferenceTextRect(
+                VnWorkshopElement.SpeakerName);
+            VnPresentationWorkshopWindow a = WindowWithScene();
+            VnPresentationWorkshopWindow b = WindowWithScene();
+            try
+            {
+                a.ComposerSetSharedTextGeometry(true,
+                    baseline.position + new Vector2(0f, -30f), baseline.size);
+                b.ComposerSetSelectedPresentationElement(VnWorkshopElement.SpeakerName);
+                b.ComposerDragPresentationElement(new Vector2(0f, -30f));
+                Assert.That(Frame(Project(a), 0).SpeakerName,
+                    Is.EqualTo(Frame(Project(b), 0).SpeakerName));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(a);
+                UnityEngine.Object.DestroyImmediate(b);
+            }
+        }
+
+        [Test] public void MTextStyleLayout_34_NoHiddenTopClamp()
         {
             Rect panel = VnPresentationWorkshopPreviewRenderer.GetReferenceTextRect(
                 VnWorkshopElement.DialoguePanel);
-            Rect authored = new Rect(
-                panel.xMin + 40f,
-                panel.yMax + 25f,
-                Mathf.Min(300f, panel.width),
-                60f);
-
-            Rect resolved = VnPresentationWorkshopPreviewRenderer.ConstrainTextRectToPanel(authored, panel);
-
-            Assert.That(resolved, Is.EqualTo(authored),
-                "The current panel clamp creates the reported hidden top barrier/jump.");
+            Rect authored = new Rect(panel.xMin, panel.yMax + 50f, 300f, 60f);
+            Assert.That(VnPresentationWorkshopPreviewRenderer.ConstrainTextRectToPanel(authored, panel),
+                Is.EqualTo(authored));
         }
 
-        [Test]
-        public void MTextStyleLayout_RED_ColorAndGeometryCommitPathsAreSeparated()
+        [Test] public void MTextStyleLayout_35_SpeakerDragDoesNotMoveBody()
         {
-            string source = File.ReadAllText(Path.Combine(
-                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
-                "VnPresentationWorkshopWindow.SceneComposerTextElements.cs"));
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                Rect body = Frame(Project(w), 0).DialogueText;
+                w.ComposerSetSelectedPresentationElement(VnWorkshopElement.SpeakerName);
+                w.ComposerDragPresentationElement(new Vector2(15f, -20f));
+                Assert.That(Frame(Project(w), 0).DialogueText, Is.EqualTo(body));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
 
-            Assert.That(source, Does.Contain("ComposerSetCharacterSpeakerStyle")
-                .And.Contain("ComposerSetSelectedSceneDialogueBodyStyle")
-                .And.Contain("ComposerSetSharedTextGeometry"));
-            Assert.That(source, Does.Not.Contain("ApplyTypographyValues("),
-                "A single style+geometry mutation path lets ColorField events commit stale X/Y/W/H.");
+        [Test] public void MTextStyleLayout_36_BodyDragDoesNotMoveSpeaker()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                Rect speaker = Frame(Project(w), 0).SpeakerName;
+                w.ComposerSetSelectedPresentationElement(VnWorkshopElement.DialogueText);
+                w.ComposerDragPresentationElement(new Vector2(15f, -20f));
+                Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(speaker));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_37_UndoSpeakerStyleIsStyleOnly()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                w.ComposerSetSharedTextGeometry(true, new Vector2(40f,50f), new Vector2(500f,80f));
+                Rect geometry = Frame(Project(w), 0).SpeakerName;
+                Undo.ClearAll();
+                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
+                    VnWorkshopTextAlignment.Left);
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(geometry));
+                Assert.That(VnSceneComposerTextStyleResolver.FindSpeakerStyle(Project(w), Keiko), Is.Null);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_38_UndoGeometryIsGeometryOnly()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                w.ComposerSetCharacterSpeakerStyle(Keiko, string.Empty, 48f, Color.red,
+                    VnWorkshopTextAlignment.Left);
+                Color style = Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor;
+                Rect before = Frame(Project(w), 0).SpeakerName;
+                Undo.ClearAll();
+                w.ComposerSetSharedTextGeometry(true, new Vector2(60f,70f), new Vector2(500f,80f));
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert.That(Frame(Project(w), 0).SpeakerName, Is.EqualTo(before));
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor, Is.EqualTo(style));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextStyleLayout_39_SaveReopenPreservesScopedStyles()
+        {
+            var p = Project(SceneWithCharacter(Keiko));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.red);
+            SetBodyStyle(p.scenes[0], FontB, 38f, Color.cyan);
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(Resolve(q, q.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(q, q.scenes[0], 0).DialogueColor, Is.EqualTo(Color.cyan));
+        }
+
+        [Test] public void MTextStyleLayout_40_SaveReopenPreservesSharedGeometry()
+        {
+            var p = Project(Scene("A"));
+            Rect expected = new Rect(75f, 145f, 1000f, 210f);
+            SetProjectGeometry(p, false, expected);
+            AssertRect(Frame(RoundTrip(p), 0).DialogueText, expected);
+        }
+
+        [Test] public void MTextStyleLayout_41_DuplicateSceneCopiesBodyStyle()
+        {
+            var p = Project(Scene("A"));
+            SetBodyStyle(p.scenes[0], FontB, 38f, Color.cyan);
+            VnSceneComposerScene copy = VnSceneComposerEditing.DuplicateScene(p, p.scenes[0].sceneId);
+            Assert.That(copy.dialogueBodyStyleOverride.color, Is.EqualTo(Color.cyan));
+            Assert.That(copy.dialogueBodyStyleOverride.fontAssetGuid, Is.EqualTo(FontB));
+        }
+
+        [Test] public void MTextStyleLayout_42_PreviewAndPlayResolveSameScopedTypography()
+        {
+            var p = Project(SceneWithCharacter(Keiko));
+            AddSpeakerStyle(p, Keiko, FontA, 47f, Color.red);
+            SetBodyStyle(p.scenes[0], FontB, 38f, Color.cyan);
+            VnWorkshopPreviewFrame preview = Frame(p, 0);
+            using (var playback = new VnSceneComposerPlaybackController(p))
+            {
+                playback.PlayScene(0);
+                VnWorkshopPreviewFrame play = playback.CurrentFrame.WorkshopFrame;
+                Assert.That(play.Typography.SpeakerColor, Is.EqualTo(preview.Typography.SpeakerColor));
+                Assert.That(play.Typography.DialogueColor, Is.EqualTo(preview.Typography.DialogueColor));
+                Assert.That(play.SpeakerName, Is.EqualTo(preview.SpeakerName));
+                Assert.That(play.DialogueText, Is.EqualTo(preview.DialogueText));
+            }
+        }
+
+        [Test] public void MTextStyleLayout_43_OldProjectRoundTripPreservesIdsAndDefaultAppearance()
+        {
+            var p = Project(Scene("A"));
+            string projectId=p.projectId, sceneId=p.scenes[0].sceneId, beatId=p.scenes[0].dialogueBeats[0].beatId;
+            VnWorkshopPreviewFrame before=Frame(p,0);
+            VnSceneComposerProject q=RoundTrip(p);
+            Assert.That(q.projectId, Is.EqualTo(projectId));
+            Assert.That(q.scenes[0].sceneId, Is.EqualTo(sceneId));
+            Assert.That(q.scenes[0].dialogueBeats[0].beatId, Is.EqualTo(beatId));
+            Assert.That(Frame(q,0).SpeakerName, Is.EqualTo(before.SpeakerName));
+            Assert.That(Frame(q,0).DialogueText, Is.EqualTo(before.DialogueText));
+        }
+
+        [Test] public void MTextStyleLayout_44_LegacySceneDialogueStyleStillResolves()
+        {
+            var p=Project(Scene("A"));
+            p.scenes[0].presentationOverrides.typography.hasDialogueColor=true;
+            p.scenes[0].presentationOverrides.typography.dialogueColor=Color.green;
+            Assert.That(Resolve(p,p.scenes[0],0).DialogueColor, Is.EqualTo(Color.green));
+        }
+
+        [Test] public void MTextStyleLayout_45_LegacySceneSpeakerStyleStillResolvesWithoutNewOverride()
+        {
+            var p=Project(SceneWithCharacter(Keiko));
+            p.scenes[0].presentationOverrides.typography.hasSpeakerColor=true;
+            p.scenes[0].presentationOverrides.typography.speakerColor=Color.green;
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.green));
+        }
+
+        [Test] public void MTextStyleLayout_46_ExplicitCharacterOverrideWinsLegacySpeakerStyle()
+        {
+            var p=Project(SceneWithCharacter(Keiko));
+            p.scenes[0].presentationOverrides.typography.hasSpeakerColor=true;
+            p.scenes[0].presentationOverrides.typography.speakerColor=Color.green;
+            AddSpeakerStyle(p,Keiko,FontA,47f,Color.red);
+            Assert.That(Resolve(p,p.scenes[0],0).SpeakerColor, Is.EqualTo(Color.red));
+        }
+
+        [Test] public void MTextStyleLayout_47_ExplicitSceneBodyOverrideWinsLegacyBodyStyle()
+        {
+            var p=Project(Scene("A"));
+            p.scenes[0].presentationOverrides.typography.hasDialogueColor=true;
+            p.scenes[0].presentationOverrides.typography.dialogueColor=Color.green;
+            SetBodyStyle(p.scenes[0],FontA,35f,Color.cyan);
+            Assert.That(Resolve(p,p.scenes[0],0).DialogueColor, Is.EqualTo(Color.cyan));
+        }
+
+        [Test] public void MTextStyleLayout_48_MigrationFindsNewestExactProjectId()
+        {
+            string root=TempRoot();
+            try
+            {
+                string old=CreateSavedProject(root,"old",UserProjectId,"Same",DateTime.UtcNow.AddMinutes(-5));
+                string latest=CreateSavedProject(root,"latest",UserProjectId,"Same",DateTime.UtcNow);
+                Assert.That(VnSceneComposerReviewProjectMigration.FindLatestProjectSource(
+                    root,UserProjectId,string.Empty), Is.EqualTo(latest));
+                Assert.That(File.Exists(VnSceneComposerStorage.GetProjectPath(old,UserProjectId)), Is.True);
+            }
+            finally { Delete(root); }
+        }
+
+        [Test] public void MTextStyleLayout_49_MigrationUsesIdentityNotVisibleTitle()
+        {
+            string root=TempRoot();
+            try
+            {
+                string correct=CreateSavedProject(root,"correct",UserProjectId,"Untitled VN Sequence",DateTime.UtcNow);
+                CreateSavedProject(root,"other",OtherProjectId,"Untitled VN Sequence",DateTime.UtcNow.AddMinutes(1));
+                Assert.That(VnSceneComposerReviewProjectMigration.FindLatestProjectSource(
+                    root,UserProjectId,string.Empty), Is.EqualTo(correct));
+            }
+            finally { Delete(root); }
+        }
+
+        [Test] public void MTextStyleLayout_50_MigrationRejectsMismatchedJsonIdentity()
+        {
+            string root=TempRoot();
+            try
+            {
+                string fake=Path.Combine(root,"fake");
+                string path=VnSceneComposerStorage.GetProjectPath(fake,UserProjectId);
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path,JsonUtility.ToJson(new VnSceneComposerProject
+                { projectId=OtherProjectId, title="Untitled VN Sequence" },true));
+                Assert.That(VnSceneComposerReviewProjectMigration.FindLatestProjectSource(
+                    root,UserProjectId,string.Empty), Is.Empty);
+            }
+            finally { Delete(root); }
+        }
+
+        [Test] public void MTextStyleLayout_51_MigrationExcludesDestinationClone()
+        {
+            string root=TempRoot();
+            try
+            {
+                string a=CreateSavedProject(root,"source",UserProjectId,"A",DateTime.UtcNow.AddMinutes(-2));
+                string b=CreateSavedProject(root,"destination",UserProjectId,"B",DateTime.UtcNow);
+                Assert.That(VnSceneComposerReviewProjectMigration.FindLatestProjectSource(
+                    root,UserProjectId,b), Is.EqualTo(a));
+            }
+            finally { Delete(root); }
+        }
+
+        [Test] public void MTextStyleLayout_52_MigrationContractCopiesMetaAndRefusesConflicts()
+        {
+            string s=MigrationSource();
+            Assert.That(s, Does.Contain(".meta").And.Contain("CopyFileConflictSafe")
+                .And.Contain("Migration conflict; refusing to overwrite"));
+        }
+
+        [Test] public void MTextStyleLayout_53_MigrationContractUsesOnlyKnownUserRootsPlusReferencedGuids()
+        {
+            string s=MigrationSource();
+            Assert.That(s, Does.Contain("OnboardedAssets")
+                .And.Contain("Art/UI/Fonts/Imported")
+                .And.Contain("Resources/Fonts/TMP")
+                .And.Contain("BuildSourceGuidMap"));
+            Assert.That(s, Does.Not.Contain("CopyDirectoryConflictSafe(sourceRoot, destinationProjectRoot)"));
+        }
+
+        [Test] public void MTextStyleLayout_54_MigrationCreatesDurableBackupAndManifest()
+        {
+            string s=MigrationSource();
+            Assert.That(s, Does.Contain("VNProjects").And.Contain("Snapshots")
+                .And.Contain("user-asset-manifest.json"));
+        }
+
+        [Test] public void MTextStyleLayout_55_MigrationCommandLineIsGenericAndProjectIdDriven()
+        {
+            string s=MigrationSource();
+            Assert.That(s, Does.Contain("-vnMigrationRoot").And.Contain("-vnProjectId")
+                .And.Contain("MigrateFromCommandLine"));
+        }
+
+        [Test] public void MTextStyleLayout_56_MTextWrappingRegressionSuiteRemainsPresent()
+        {
+            string s=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Tests","EditorWorkshop",
+                "VnSceneComposerMTextTests.cs"));
+            Assert.That(s, Does.Contain("MText_LongDialogueWrapsWithinAuthoredWidth"));
+        }
+
+        [Test] public void MTextStyleLayout_57_MultilineAuthoringTextareaRegressionRemainsPresent()
+        {
+            string s=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Tests","EditorWorkshop",
+                "VnSceneComposerMTextTests.cs"));
+            Assert.That(s, Does.Contain("MText_AuthoringDialogueEditorUsesAdaptiveWrappedScrollableMultilineControl"));
+        }
+
+        [Test] public void MTextStyleLayout_58_WindowsFontImportRegressionRemainsPresent()
+        {
+            string s=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnSceneComposerTextFontResolver.cs"));
+            Assert.That(s, Does.Contain("ImportWindowsFont").And.Contain("ImportedTmpFolder"));
+        }
+
+        [Test] public void MTextStyleLayout_59_CharacterStagingDataIsUntouchedByStyleResolution()
+        {
+            var p=Project(SceneWithCharacter(Keiko));
+            var staging=new VnSceneComposerBeatCharacterStaging { characterId=Keiko };
+            p.scenes[0].dialogueBeats[0].characterStaging.Add(staging);
+            VnSceneComposerTextStyleResolver.Resolve(p,p.scenes[0],p.scenes[0].dialogueBeats[0]);
+            Assert.That(p.scenes[0].dialogueBeats[0].characterStaging[0], Is.SameAs(staging));
+        }
+
+        [Test] public void MTextStyleLayout_60_MediaMusicAndSfxReferencesAreUntouchedByStyleResolution()
+        {
+            var p=Project(Scene("A"));
+            VnSceneComposerScene s=p.scenes[0];
+            s.media.reference="video-ref";
+            s.music.assetGuid=FontA;
+            s.additionalAudioCues.Add(new VnSceneComposerAdditionalAudioCue { assetGuid=FontB });
+            VnSceneComposerTextStyleResolver.Resolve(p,s,s.dialogueBeats[0]);
+            Assert.That(s.media.reference, Is.EqualTo("video-ref"));
+            Assert.That(s.music.assetGuid, Is.EqualTo(FontA));
+            Assert.That(s.additionalAudioCues[0].assetGuid, Is.EqualTo(FontB));
+        }
+
+        [Test] public void MTextStyleLayout_61_MsfxContinuityFlagIsUntouchedByStyleResolution()
+        {
+            var p=Project(Scene("A"));
+            p.scenes[0].keepPreviousAdditionalAudio=true;
+            VnSceneComposerTextStyleResolver.Resolve(p,p.scenes[0],p.scenes[0].dialogueBeats[0]);
+            Assert.That(p.scenes[0].keepPreviousAdditionalAudio, Is.True);
+        }
+
+        [Test] public void MTextStyleLayout_62_TransitionIsUntouchedByStyleResolution()
+        {
+            var p=Project(Scene("A"));
+            p.scenes[0].transition.sceneTransitionType=VnSceneComposerSceneTransitionType.DarkCurtain;
+            p.scenes[0].transition.sceneTransitionDuration=.7f;
+            VnSceneComposerTextStyleResolver.Resolve(p,p.scenes[0],p.scenes[0].dialogueBeats[0]);
+            Assert.That(p.scenes[0].transition.sceneTransitionType,
+                Is.EqualTo(VnSceneComposerSceneTransitionType.DarkCurtain));
+            Assert.That(p.scenes[0].transition.sceneTransitionDuration, Is.EqualTo(.7f));
+        }
+
+        private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
+        {
+            var p=new VnSceneComposerProject();
+            for(int i=0;i<scenes.Length;i++)p.scenes.Add(scenes[i]);
+            return p;
         }
 
         private static VnSceneComposerScene Scene(string speaker)
         {
-            var scene = new VnSceneComposerScene();
-            scene.dialogueBeats.Clear();
-            scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat
-            {
-                speaker = speaker,
-                text = "Text",
-                narration = false
-            });
-            return scene;
+            var s=new VnSceneComposerScene();
+            s.dialogueBeats.Clear();
+            s.dialogueBeats.Add(Beat(speaker,"Text"));
+            return s;
+        }
+
+        private static VnSceneComposerScene SceneWithCharacter(string id)
+        {
+            VnSceneComposerScene s=Scene(id);
+            s.characters.Add(new VnSceneComposerCharacter { characterId=id });
+            return s;
+        }
+
+        private static VnSceneComposerScene SceneWithCharacters(params string[] ids)
+        {
+            VnSceneComposerScene s=Scene(ids.Length>0?ids[0]:string.Empty);
+            for(int i=0;i<ids.Length;i++)s.characters.Add(new VnSceneComposerCharacter { characterId=ids[i] });
+            return s;
+        }
+
+        private static VnSceneComposerDialogueBeat Beat(string speaker,string text)
+        {
+            return new VnSceneComposerDialogueBeat { speaker=speaker,text=text,narration=false };
+        }
+
+        private static void AddSpeakerStyle(VnSceneComposerProject p,string id,string guid,float size,Color color)
+        {
+            var e=new VnSceneComposerSpeakerStyleOverride { characterId=id };
+            VnSceneComposerTextStyleResolver.SetStyle(
+                e.style,guid,size,color,VnWorkshopTextAlignment.Left);
+            p.speakerStyleOverrides.Add(e);
+        }
+
+        private static void SetBodyStyle(VnSceneComposerScene s,string guid,float size,Color color)
+        {
+            VnSceneComposerTextStyleResolver.SetStyle(
+                s.dialogueBodyStyleOverride,guid,size,color,VnWorkshopTextAlignment.Left);
+        }
+
+        private static VnWorkshopTypographyValues Resolve(
+            VnSceneComposerProject p,VnSceneComposerScene s,int beat)
+        {
+            return VnSceneComposerTextStyleResolver.Resolve(p,s,s.dialogueBeats[beat]);
+        }
+
+        private static VnWorkshopPreviewFrame Frame(VnSceneComposerProject p,int scene)
+        {
+            return Frame(p,p.scenes[scene],p.scenes[scene].dialogueBeats[0]);
+        }
+
+        private static VnWorkshopPreviewFrame Frame(
+            VnSceneComposerProject p,VnSceneComposerScene s,VnSceneComposerDialogueBeat b)
+        {
+            return VnSceneComposerComposition.BuildFrame(
+                p,s,b,VnWorkshopResolution.Reference1920x1080,Texture2D.blackTexture);
+        }
+
+        private static void SetProjectGeometry(VnSceneComposerProject p,bool speaker,Rect rect)
+        {
+            Rect baseline=VnPresentationWorkshopPreviewRenderer.GetReferenceTextRect(
+                speaker?VnWorkshopElement.SpeakerName:VnWorkshopElement.DialogueText);
+            VnWorkshopElementOverride g=speaker?p.defaultPresentation.speakerName:p.defaultPresentation.dialogueText;
+            g.hasPositionDelta=rect.center!=baseline.center;
+            g.positionDelta=rect.center-baseline.center;
+            g.hasSizeDelta=rect.size!=baseline.size;
+            g.sizeDelta=rect.size-baseline.size;
+        }
+
+        private static VnSceneComposerProject RoundTrip(VnSceneComposerProject p)
+        {
+            string json=VnSceneComposerSerialization.SerializePortable(p);
+            VnSceneComposerImportResult r=VnSceneComposerSerialization.DeserializePortable(json);
+            Assert.That(r.Success,Is.True,r.Error);
+            return r.Project;
+        }
+
+        private static VnPresentationWorkshopWindow WindowWithScene()
+        {
+            var w=ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            w.ComposerAddScene();
+            return w;
+        }
+
+        private static VnPresentationWorkshopWindow WindowWithCharacter(string id)
+        {
+            VnPresentationWorkshopWindow w=WindowWithScene();
+            VnSceneComposerProject p=Project(w);
+            p.scenes[0].characters.Add(new VnSceneComposerCharacter { characterId=id });
+            p.scenes[0].dialogueBeats[0].speaker=id;
+            return w;
+        }
+
+        private static VnSceneComposerProject Project(VnPresentationWorkshopWindow w)
+        {
+            return (VnSceneComposerProject)GetPrivate(w,"_sceneComposerProject");
+        }
+
+        private static object GetPrivate(object instance,string name)
+        {
+            FieldInfo f=instance.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic);
+            Assert.That(f,Is.Not.Null,"Missing field "+name);
+            return f.GetValue(instance);
+        }
+
+        private static void SetPrivate(object instance,string name,object value)
+        {
+            FieldInfo f=instance.GetType().GetField(name,BindingFlags.Instance|BindingFlags.NonPublic);
+            Assert.That(f,Is.Not.Null,"Missing field "+name);
+            f.SetValue(instance,value);
+        }
+
+        private static void AssertRect(Rect actual,Rect expected)
+        {
+            Assert.That(actual.x,Is.EqualTo(expected.x).Within(.01f));
+            Assert.That(actual.y,Is.EqualTo(expected.y).Within(.01f));
+            Assert.That(actual.width,Is.EqualTo(expected.width).Within(.01f));
+            Assert.That(actual.height,Is.EqualTo(expected.height).Within(.01f));
+        }
+
+        private static string TextUiSource()
+        {
+            return File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerTextElements.cs"));
+        }
+
+        private static string MigrationSource()
+        {
+            return File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnSceneComposerReviewProjectMigration.cs"));
+        }
+
+        private static string TempRoot()
+        {
+            string p=Path.Combine(Path.GetTempPath(),"rokas-mtext-style-layout-"+Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(p);
+            return p;
+        }
+
+        private static string CreateSavedProject(
+            string root,string folder,string id,string title,DateTime timestamp)
+        {
+            string projectRoot=Path.Combine(root,folder);
+            string path=VnSceneComposerStorage.GetProjectPath(projectRoot,id);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path,JsonUtility.ToJson(new VnSceneComposerProject
+            { projectId=id,title=title },true));
+            File.SetLastWriteTimeUtc(path,timestamp);
+            return Path.GetFullPath(projectRoot);
+        }
+
+        private static void Delete(string path)
+        {
+            if(Directory.Exists(path))Directory.Delete(path,true);
         }
     }
 }
