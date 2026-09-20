@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using Rokas.Presentation;
 using UnityEngine;
 
@@ -29,6 +31,259 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float sequenceGap;
     }
 
+    public sealed class VnSceneComposerDialogueRevealSample
+    {
+        public string FullText { get; internal set; } = string.Empty;
+        public string PlainVisibleText { get; internal set; } = string.Empty;
+        public string RenderText { get; internal set; } = string.Empty;
+        public int VisibleGlyphCount { get; internal set; }
+        public int TotalGlyphCount { get; internal set; }
+        public float NewestGlyphAlpha { get; internal set; }
+        public float DurationSeconds { get; internal set; }
+        public bool Complete { get; internal set; }
+    }
+
+    public static class VnSceneComposerDialogueReveal
+    {
+        private const float GlyphFadeSeconds = .04f;
+
+        private sealed class RevealToken
+        {
+            public string text = string.Empty;
+            public int glyphIndex = -1;
+        }
+
+        public static VnSceneComposerDialogueRevealSample Sample(
+            string text,
+            float elapsedSeconds,
+            VnWorkshopTypewriterValues values,
+            bool forceComplete)
+        {
+            string authored = text ?? string.Empty;
+            if (float.IsNaN(elapsedSeconds) || float.IsInfinity(elapsedSeconds))
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+            elapsedSeconds = Mathf.Max(0f, elapsedSeconds);
+
+            List<string> glyphs;
+            List<RevealToken> tokens = Tokenize(authored, out glyphs);
+            int total = glyphs.Count;
+            float duration = CalculateDuration(glyphs, values);
+
+            if (total == 0)
+            {
+                return new VnSceneComposerDialogueRevealSample
+                {
+                    FullText = authored,
+                    PlainVisibleText = string.Empty,
+                    RenderText = authored,
+                    VisibleGlyphCount = 0,
+                    TotalGlyphCount = 0,
+                    NewestGlyphAlpha = 1f,
+                    DurationSeconds = 0f,
+                    Complete = true
+                };
+            }
+
+            if (forceComplete || !values.Enabled)
+            {
+                return new VnSceneComposerDialogueRevealSample
+                {
+                    FullText = authored,
+                    PlainVisibleText = JoinGlyphs(glyphs, total),
+                    RenderText = authored,
+                    VisibleGlyphCount = total,
+                    TotalGlyphCount = total,
+                    NewestGlyphAlpha = 1f,
+                    DurationSeconds = duration,
+                    Complete = true
+                };
+            }
+
+            float characterDelay =
+                1f / Mathf.Max(.0001f, values.CharactersPerSecond) +
+                Mathf.Max(0f, values.BaseCharacterDelay);
+            float clock = Mathf.Max(0f, values.LineStartDelay);
+            int visible = 0;
+            float newestRevealTime = -1f;
+
+            for (int i = 0; i < total; i++)
+            {
+                clock += characterDelay;
+                if (elapsedSeconds + .00001f < clock) break;
+                visible = i + 1;
+                newestRevealTime = clock;
+                clock += GetPunctuationPause(glyphs, i, values);
+            }
+
+            float newestAlpha = visible <= 0
+                ? 0f
+                : Mathf.Clamp01((elapsedSeconds - newestRevealTime) / GlyphFadeSeconds);
+            bool complete = visible >= total && elapsedSeconds + .00001f >= duration;
+            if (complete) newestAlpha = 1f;
+
+            return new VnSceneComposerDialogueRevealSample
+            {
+                FullText = authored,
+                PlainVisibleText = JoinGlyphs(glyphs, visible),
+                RenderText = BuildRenderText(tokens, visible, newestAlpha, complete),
+                VisibleGlyphCount = visible,
+                TotalGlyphCount = total,
+                NewestGlyphAlpha = newestAlpha,
+                DurationSeconds = duration,
+                Complete = complete
+            };
+        }
+
+        public static float CalculateDuration(
+            string text,
+            VnWorkshopTypewriterValues values)
+        {
+            List<string> glyphs;
+            Tokenize(text ?? string.Empty, out glyphs);
+            return CalculateDuration(glyphs, values);
+        }
+
+        private static float CalculateDuration(
+            List<string> glyphs,
+            VnWorkshopTypewriterValues values)
+        {
+            if (glyphs == null || glyphs.Count == 0 || !values.Enabled) return 0f;
+            float characterDelay =
+                1f / Mathf.Max(.0001f, values.CharactersPerSecond) +
+                Mathf.Max(0f, values.BaseCharacterDelay);
+            float duration = Mathf.Max(0f, values.LineStartDelay);
+            for (int i = 0; i < glyphs.Count; i++)
+                duration += characterDelay + GetPunctuationPause(glyphs, i, values);
+            return duration + GlyphFadeSeconds;
+        }
+
+        private static List<RevealToken> Tokenize(
+            string text,
+            out List<string> glyphs)
+        {
+            glyphs = new List<string>();
+            var tokens = new List<RevealToken>();
+            int cursor = 0;
+
+            while (cursor < text.Length)
+            {
+                if (text[cursor] == '<')
+                {
+                    int close = text.IndexOf('>', cursor + 1);
+                    if (close >= 0)
+                    {
+                        tokens.Add(new RevealToken
+                        {
+                            text = text.Substring(cursor, close - cursor + 1),
+                            glyphIndex = -1
+                        });
+                        cursor = close + 1;
+                        continue;
+                    }
+                }
+
+                int nextTag = text.IndexOf('<', cursor);
+                int segmentEnd = nextTag >= 0 ? nextTag : text.Length;
+                if (segmentEnd <= cursor) segmentEnd = cursor + 1;
+                string segment = text.Substring(cursor, segmentEnd - cursor);
+                int[] elementStarts = StringInfo.ParseCombiningCharacters(segment);
+                for (int i = 0; i < elementStarts.Length; i++)
+                {
+                    int start = elementStarts[i];
+                    int end = i + 1 < elementStarts.Length
+                        ? elementStarts[i + 1]
+                        : segment.Length;
+                    string glyph = segment.Substring(start, end - start);
+                    int index = glyphs.Count;
+                    glyphs.Add(glyph);
+                    tokens.Add(new RevealToken { text = glyph, glyphIndex = index });
+                }
+                cursor = segmentEnd;
+            }
+
+            return tokens;
+        }
+
+        private static string JoinGlyphs(List<string> glyphs, int count)
+        {
+            if (glyphs == null || glyphs.Count == 0 || count <= 0)
+                return string.Empty;
+            int safe = Mathf.Clamp(count, 0, glyphs.Count);
+            var builder = new StringBuilder();
+            for (int i = 0; i < safe; i++) builder.Append(glyphs[i]);
+            return builder.ToString();
+        }
+
+        private static string BuildRenderText(
+            List<RevealToken> tokens,
+            int visible,
+            float newestAlpha,
+            bool complete)
+        {
+            if (tokens == null || tokens.Count == 0) return string.Empty;
+            var builder = new StringBuilder();
+            int newest = visible - 1;
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                RevealToken token = tokens[i];
+                if (token.glyphIndex < 0)
+                {
+                    builder.Append(token.text);
+                    continue;
+                }
+
+                if (complete || token.glyphIndex < newest)
+                {
+                    builder.Append(token.text);
+                    continue;
+                }
+
+                float alpha = token.glyphIndex == newest
+                    ? newestAlpha
+                    : 0f;
+                if (alpha >= .999f)
+                {
+                    builder.Append(token.text);
+                    continue;
+                }
+
+                int alphaByte = Mathf.Clamp(Mathf.RoundToInt(alpha * 255f), 0, 255);
+                builder.Append("<color=#FFFFFF");
+                builder.Append(alphaByte.ToString("X2"));
+                builder.Append(">");
+                builder.Append(token.text);
+                builder.Append("</color>");
+            }
+
+            return builder.ToString();
+        }
+
+        private static float GetPunctuationPause(
+            List<string> glyphs,
+            int index,
+            VnWorkshopTypewriterValues values)
+        {
+            if (glyphs == null || index < 0 || index >= glyphs.Count) return 0f;
+            string glyph = glyphs[index];
+            if (glyph == ",") return Mathf.Max(0f, values.CommaPause);
+            if (glyph == "…") return Mathf.Max(0f, values.EllipsisPause);
+            if (glyph == "?") return Mathf.Max(0f, values.QuestionPause);
+            if (glyph == "!") return Mathf.Max(0f, values.ExclamationPause);
+            if (glyph != ".") return 0f;
+
+            bool previousDot = index > 0 && glyphs[index - 1] == ".";
+            bool nextDot = index + 1 < glyphs.Count && glyphs[index + 1] == ".";
+            if (!previousDot && !nextDot) return Mathf.Max(0f, values.PeriodPause);
+            bool terminalEllipsis =
+                index >= 2 &&
+                glyphs[index - 1] == "." &&
+                glyphs[index - 2] == "." &&
+                !nextDot;
+            return terminalEllipsis ? Mathf.Max(0f, values.EllipsisPause) : 0f;
+        }
+    }
+
     public sealed class VnSceneComposerTransitionSnapshot
     {
         public VnWorkshopBackgroundTransitionSample background;
@@ -40,6 +295,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerExpressionPreview[] expressions = Array.Empty<VnSceneComposerExpressionPreview>();
         public VnWorkshopSpeakerFocusSample[] focus = Array.Empty<VnWorkshopSpeakerFocusSample>();
         public string visibleText = string.Empty;
+        public VnSceneComposerDialogueRevealSample dialogueReveal;
         public VnSceneComposerPreviewTimingPlan timing;
     }
 
@@ -88,11 +344,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
 
             string text = toBeat.text ?? string.Empty;
-            float typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(text, typewriterValues);
-            int visibleCharacters = typewriterDuration <= 0f
-                ? VnPresentationWorkshopVn10Resolver.InstantCompleteVisibleCharacters(text)
-                : VnPresentationWorkshopVn10Resolver.CalculateTypewriterVisibleCharacters(
-                    text, typewriterDuration * progress, typewriterValues);
+            float typewriterDuration =
+                VnSceneComposerDialogueReveal.CalculateDuration(text, typewriterValues);
+            VnSceneComposerDialogueRevealSample dialogueReveal =
+                VnSceneComposerDialogueReveal.Sample(
+                    text, typewriterDuration * progress, typewriterValues, false);
 
             return new VnSceneComposerTransitionSnapshot
             {
@@ -106,7 +362,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 characterMotions = SampleCharacterMotions(fromScene, toScene, progress, characterValues),
                 expressions = SampleExpressions(fromScene, toScene, progress, expressionValues),
                 focus = SampleFocus(toScene, fromBeat, toBeat, progress, focusValues),
-                visibleText = text.Substring(0, Mathf.Clamp(visibleCharacters, 0, text.Length)),
+                visibleText = dialogueReveal.PlainVisibleText,
+                dialogueReveal = dialogueReveal,
                 timing = ResolveTiming(project, toScene, toBeat)
             };
         }
@@ -137,7 +394,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 usesPreviewAutoDuration = auto,
                 previewAutoDuration = auto ? Mathf.Max(0f, scene.timing.previewAutoDuration) : 0f,
-                typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(
+                typewriterDuration = VnSceneComposerDialogueReveal.CalculateDuration(
                     beat.text ?? string.Empty, typewriter),
                 settleDuration = Mathf.Max(0f, timing.MinimumBeatSettleDuration),
                 breathingRoom = Mathf.Max(0f, timing.PostTransitionBreathingRoom),

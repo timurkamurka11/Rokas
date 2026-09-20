@@ -637,6 +637,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 fontStyle = style,
                 alignment = alignment,
                 wordWrap = true,
+                richText = true,
                 clipping = TextClipping.Clip,
                 normal =
                 {

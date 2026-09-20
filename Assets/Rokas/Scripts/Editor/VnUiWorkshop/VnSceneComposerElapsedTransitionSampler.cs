@@ -23,7 +23,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerDialogueBeat previousBeat,
             VnSceneComposerDialogueBeat activeBeat,
             float sceneElapsedSeconds,
-            float beatElapsedSeconds)
+            float beatElapsedSeconds,
+            bool forceDialogueComplete = false)
         {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (fromScene == null) throw new ArgumentNullException(nameof(fromScene));
@@ -48,8 +49,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
             VnWorkshopTypewriterValues typewriter =
                 VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
-            float typewriterDuration = VnPresentationWorkshopVn10Resolver.CalculateTypewriterDuration(
-                activeBeat.text ?? string.Empty, typewriter);
 
             VnSceneComposerTransitionSnapshot result =
                 VnSceneComposerTransitionSampler.Sample(
@@ -72,9 +71,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             result.focus = VnSceneComposerTransitionSampler.Sample(
                 project, fromScene, toScene, previousBeat, activeBeat,
                 Progress(beatElapsedSeconds, focus.TransitionDuration)).focus;
-            result.visibleText = VnSceneComposerTransitionSampler.Sample(
-                project, fromScene, toScene, previousBeat, activeBeat,
-                Progress(beatElapsedSeconds, typewriterDuration)).visibleText;
+            VnSceneComposerDialogueRevealSample dialogueReveal =
+                VnSceneComposerDialogueReveal.Sample(
+                    activeBeat.text ?? string.Empty,
+                    beatElapsedSeconds,
+                    typewriter,
+                    forceDialogueComplete);
+            result.dialogueReveal = dialogueReveal;
+            result.visibleText = dialogueReveal.PlainVisibleText;
 
             result.beatEffectCharacterId = string.Empty;
             result.beatEffect = VnPresentationWorkshopVn10Resolver.SampleActionBounce(

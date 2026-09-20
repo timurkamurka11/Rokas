@@ -63,6 +63,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             TargetScaleMode = targetScaleMode;
             SceneTransitionOverlay = sceneTransitionOverlay ?? new VnSceneComposerSceneTransitionOverlaySample();
             ShowDialogueUi = showDialogueUi;
+            Dialogue = workshopFrame != null ? workshopFrame.Dialogue : string.Empty;
             VnPresentationWorkshopPreviewRenderer.RegisterPlaybackFrame(this);
         }
 
@@ -74,7 +75,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerMediaScaleMode TargetScaleMode { get; }
         public VnSceneComposerSceneTransitionOverlaySample SceneTransitionOverlay { get; }
         public bool ShowDialogueUi { get; }
-        public string Dialogue { get { return WorkshopFrame != null ? WorkshopFrame.Dialogue : string.Empty; } }
+        public string Dialogue { get; internal set; }
+        public VnSceneComposerDialogueRevealSample DialogueReveal { get; internal set; }
         public VnWorkshopPreviewCharacter[] ComposerCharacters
         {
             get { return WorkshopFrame != null ? WorkshopFrame.ComposerCharacters : Array.Empty<VnWorkshopPreviewCharacter>(); }
@@ -124,6 +126,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private string currentVideoWarning = string.Empty;
         private readonly HashSet<string> cancelledCharacterStagingIds =
             new HashSet<string>(StringComparer.Ordinal);
+        private bool forceCompleteCurrentDialogueReveal;
 
         private SceneBoundaryTransitionPhase sceneBoundaryTransitionPhase;
         private int pendingSceneTransitionTargetIndex = -1;
@@ -271,6 +274,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CancelSceneBoundaryTransition();
             IsPlaying = true;
             CurrentBeatIndex = 0;
+            forceCompleteCurrentDialogueReveal = false;
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
@@ -377,6 +381,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (CurrentSceneIndex < 0 || IsSceneTransitionActive) return;
 
             VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
+            VnSceneComposerDialogueBeat activeBeat =
+                ResolveBeat(scene, CurrentBeatIndex);
+            VnPresentationWorkshopPreset activePresentation =
+                VnSceneComposerComposition.ResolvePresentation(project, scene);
+            VnWorkshopTypewriterValues activeTypewriter =
+                VnPresentationWorkshopVn10Resolver.ResolveTypewriter(activePresentation);
+            VnSceneComposerDialogueRevealSample activeReveal =
+                VnSceneComposerDialogueReveal.Sample(
+                    activeBeat.text ?? string.Empty,
+                    BeatElapsedSeconds,
+                    activeTypewriter,
+                    forceCompleteCurrentDialogueReveal);
+
+            if (!activeReveal.Complete)
+            {
+                forceCompleteCurrentDialogueReveal = true;
+                RebuildFrame(SceneElapsedSeconds, true);
+                return;
+            }
+
             int beatCount = BeatCount(scene);
             if (CurrentBeatIndex + 1 < beatCount)
             {
@@ -384,6 +408,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerBeatCharacterStagingResolver.CollectPendingStagingIds(
                     outgoingBeat, BeatElapsedSeconds, cancelledCharacterStagingIds);
                 suppressCurrentSceneEntryPresentation = true;
+                forceCompleteCurrentDialogueReveal = false;
                 CurrentBeatIndex++;
                 BeatElapsedSeconds = 0f;
                 VnSceneComposerDialogueBeat enteredBeat = ResolveBeat(scene, CurrentBeatIndex);
@@ -410,6 +435,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (CurrentSceneIndex < 0 || IsSceneTransitionActive || CurrentBeatIndex <= 0) return;
             suppressCurrentSceneEntryPresentation = true;
+            forceCompleteCurrentDialogueReveal = false;
             CurrentBeatIndex--;
             BeatElapsedSeconds = 0f;
             cancelledCharacterStagingIds.Clear();
@@ -428,6 +454,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentSourceScene = null;
             suppressCurrentBackgroundTransition = false;
             suppressCurrentSceneEntryPresentation = false;
+            forceCompleteCurrentDialogueReveal = false;
             CancelSceneBoundaryTransition();
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
@@ -496,6 +523,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             suppressCurrentSceneEntryPresentation = suppressSceneEntryPresentation;
             CurrentSceneIndex = sceneIndex;
             CurrentBeatIndex = initialBeatIndex;
+            forceCompleteCurrentDialogueReveal = false;
             cancelledCharacterStagingIds.Clear();
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
@@ -549,7 +577,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerTransitionSnapshot sample = useElapsedSeconds
                 ? VnSceneComposerElapsedTransitionSampler.Sample(
                     project, sourceScene, targetScene, previousBeat, targetBeat,
-                    progress, BeatElapsedSeconds)
+                    progress, BeatElapsedSeconds, forceCompleteCurrentDialogueReveal)
                 : VnSceneComposerTransitionSampler.Sample(
                     project, sourceScene, targetScene, previousBeat, targetBeat, progress);
             VnSceneComposerTransitionSnapshot endpoint =
@@ -591,6 +619,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 targetFrame, sample.background, sourceVisual, targetVisual, sourceScaleMode, targetScaleMode,
                 BuildSceneBoundaryOverlaySample(),
                 !IsSceneTransitionActive && IsCurrentVideoPresentationReady());
+            CurrentFrame.Dialogue = sample.visibleText ?? string.Empty;
+            CurrentFrame.DialogueReveal = sample.dialogueReveal;
         }
 
         private VnSceneComposerSceneTransitionOverlaySample BuildSceneBoundaryOverlaySample()
@@ -644,7 +674,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerTransitionSnapshot sample,
             VnSceneComposerTransitionSnapshot endpoint)
         {
-            targetFrame.Dialogue = sample.visibleText ?? string.Empty;
+            targetFrame.Dialogue = sample.dialogueReveal != null
+                ? sample.dialogueReveal.RenderText
+                : sample.visibleText ?? string.Empty;
             VnWorkshopPreviewCharacter[] targetCharacters = targetFrame.ComposerCharacters ?? Array.Empty<VnWorkshopPreviewCharacter>();
             var rendered = new List<VnWorkshopPreviewCharacter>(targetCharacters.Length + 3);
 
@@ -1269,6 +1301,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentSourceScene = null;
             suppressCurrentBackgroundTransition = false;
             suppressCurrentSceneEntryPresentation = false;
+            forceCompleteCurrentDialogueReveal = false;
             CancelSceneBoundaryTransition();
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
