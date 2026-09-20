@@ -335,6 +335,175 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MAudioPolish_RED_01_TrackChangeUsesTrueOverlappingCrossfade()
+        {
+            AudioClip trackA = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackAPath);
+            AudioClip trackB = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackBPath);
+            Assert.That(trackA, Is.Not.Null);
+            Assert.That(trackB, Is.Not.Null);
+
+            var project = new VnSceneComposerProject();
+            var a = new VnSceneComposerScene();
+            var b = new VnSceneComposerScene();
+            project.scenes.Add(a);
+            project.scenes.Add(b);
+            SetTrack(a, TrackAGuid, "Restaurant Prep", .8f, true, 0f, .8f);
+            SetTrack(b, TrackBGuid, "Home Nocturne", .6f, true, .6f, 0f);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                playback.Advance(.2f);
+
+                AudioSource outgoing = FindMusicSource(playback, trackA);
+                AudioSource incoming = FindMusicSource(playback, trackB);
+                Assert.That(outgoing, Is.Not.Null,
+                    "Outgoing BGM must stay alive while its authored Fade Out is running.");
+                Assert.That(incoming, Is.Not.Null,
+                    "Incoming BGM must start immediately so Fade In overlaps the outgoing Fade Out.");
+                Assert.That(outgoing.volume, Is.GreaterThan(0f).And.LessThan(.8f));
+                Assert.That(incoming.volume, Is.GreaterThan(0f).And.LessThan(.6f));
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(2));
+            }
+        }
+
+        [Test]
+        public void MAudioPolish_RED_02_CrossfadeReleasesOutgoingAfterItsOwnFade()
+        {
+            AudioClip trackA = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackAPath);
+            AudioClip trackB = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackBPath);
+            var project = new VnSceneComposerProject();
+            var a = new VnSceneComposerScene();
+            var b = new VnSceneComposerScene();
+            project.scenes.Add(a);
+            project.scenes.Add(b);
+            SetTrack(a, TrackAGuid, "Restaurant Prep", .8f, true, 0f, .2f);
+            SetTrack(b, TrackBGuid, "Home Nocturne", .6f, true, .6f, 0f);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                playback.Advance(.25f);
+
+                Assert.That(FindMusicSource(playback, trackA), Is.Null,
+                    "Outgoing source must be released as soon as its own Fade Out finishes.");
+                AudioSource incoming = FindMusicSource(playback, trackB);
+                Assert.That(incoming, Is.Not.Null);
+                Assert.That(incoming.volume, Is.GreaterThan(0f).And.LessThan(.6f),
+                    "Incoming Fade In continues independently after outgoing cleanup.");
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MAudioPolish_RED_03_TrackToSilenceFadesBeforeRelease()
+        {
+            AudioClip trackA = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackAPath);
+            var project = new VnSceneComposerProject();
+            var a = new VnSceneComposerScene();
+            var silence = new VnSceneComposerScene();
+            project.scenes.Add(a);
+            project.scenes.Add(silence);
+            SetTrack(a, TrackAGuid, "Restaurant Prep", .8f, true, 0f, .4f);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                playback.Advance(.2f);
+                AudioSource fading = FindMusicSource(playback, trackA);
+                Assert.That(fading, Is.Not.Null);
+                Assert.That(fading.volume, Is.GreaterThan(0f).And.LessThan(.8f));
+
+                playback.Advance(.25f);
+                Assert.That(FindMusicSource(playback, trackA), Is.Null);
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(0));
+            }
+        }
+
+        [Test]
+        public void MAudioPolish_RED_04_SilenceToTrackUsesIncomingFadeIn()
+        {
+            AudioClip trackB = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackBPath);
+            var project = new VnSceneComposerProject();
+            var silence = new VnSceneComposerScene();
+            var b = new VnSceneComposerScene();
+            project.scenes.Add(silence);
+            project.scenes.Add(b);
+            SetTrack(b, TrackBGuid, "Home Nocturne", .6f, true, .5f, 0f);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                playback.Advance(.2f);
+                AudioSource incoming = FindMusicSource(playback, trackB);
+                Assert.That(incoming, Is.Not.Null);
+                Assert.That(incoming.volume, Is.GreaterThan(0f).And.LessThan(.6f));
+            }
+        }
+
+        [Test]
+        public void MAudioPolish_RED_05_KeepPreviousPreservesSameLiveSourceWithoutRestart()
+        {
+            AudioClip trackA = AssetDatabase.LoadAssetAtPath<AudioClip>(TrackAPath);
+            var project = new VnSceneComposerProject();
+            var a = new VnSceneComposerScene();
+            var keep = new VnSceneComposerScene();
+            project.scenes.Add(a);
+            project.scenes.Add(keep);
+            SetTrack(a, TrackAGuid, "Restaurant Prep", .6f, true, .3f, .4f);
+            SetMode(keep, "KeepPrevious");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.Advance(.5f);
+                AudioSource before = FindMusicSource(playback, trackA);
+                int starts = ReadIntProperty(playback, "MusicStartCount");
+                Assert.That(before, Is.Not.Null);
+                int instanceId = before.GetInstanceID();
+
+                playback.AdvanceDialogue();
+                AudioSource after = FindMusicSource(playback, trackA);
+                Assert.That(after, Is.Not.Null);
+                Assert.That(after.GetInstanceID(), Is.EqualTo(instanceId));
+                Assert.That(ReadIntProperty(playback, "MusicStartCount"), Is.EqualTo(starts));
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MAudioPolish_RED_06_RepeatedNavigationNeverLeaksMoreThanTwoBgmSources()
+        {
+            var project = new VnSceneComposerProject();
+            var a = new VnSceneComposerScene();
+            var b = new VnSceneComposerScene();
+            project.scenes.Add(a);
+            project.scenes.Add(b);
+            SetTrack(a, TrackAGuid, "Restaurant Prep", .7f, true, .2f, .3f);
+            SetTrack(b, TrackBGuid, "Home Nocturne", .5f, true, .2f, .3f);
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayAll();
+                playback.AdvanceDialogue();
+                playback.Advance(.1f);
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.LessThanOrEqualTo(2));
+                playback.Advance(1f);
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(1));
+
+                playback.Previous();
+                playback.Advance(1f);
+                Assert.That(ReadIntProperty(playback, "ActiveMusicSourceCount"), Is.EqualTo(1));
+                Assert.That(MusicSources(playback).Length, Is.LessThanOrEqualTo(2),
+                    "BGM player must reuse a bounded source pair rather than accumulate ghost sources.");
+            }
+        }
+
+        [Test]
         public void MAudio_BasicUiIsCompactRussianAndExposesPreviewStopAndClear()
         {
             string path = Path.Combine(Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
@@ -350,6 +519,26 @@ namespace Rokas.EditorTools.Tests
                 .And.Contain("\"Без музыки\"")
                 .And.Contain("\"Оставить предыдущую\""));
             Assert.That(source, Does.Not.Contain("AudioMixer"));
+        }
+
+        private static AudioSource[] MusicSources(VnSceneComposerPlaybackController playback)
+        {
+            object musicPlayback = GetPrivateField(playback, "musicPlayback");
+            GameObject root = (GameObject)GetPrivateField(musicPlayback, "root");
+            Assert.That(root, Is.Not.Null);
+            return root.GetComponents<AudioSource>();
+        }
+
+        private static AudioSource FindMusicSource(
+            VnSceneComposerPlaybackController playback, AudioClip clip)
+        {
+            AudioSource[] sources = MusicSources(playback);
+            for (int i = 0; i < sources.Length; i++)
+            {
+                AudioSource source = sources[i];
+                if (source != null && source.clip == clip) return source;
+            }
+            return null;
         }
 
         private static object GetMusic(VnSceneComposerScene scene)
