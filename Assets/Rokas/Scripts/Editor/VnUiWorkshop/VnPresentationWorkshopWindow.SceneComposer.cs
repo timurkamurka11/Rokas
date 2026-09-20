@@ -946,6 +946,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 string state = _sceneComposerPlayback.IsPlaying ? "Воспроизведение" : "Пауза / остановлено";
                 EditorGUILayout.LabelField(state + " · Сцена " + (_sceneComposerPlayback.CurrentSceneIndex + 1) + " · " +
                     _sceneComposerPlayback.SceneElapsedSeconds.ToString("0.00") + " с", EditorStyles.miniLabel);
+                string videoWarning = _sceneComposerPlayback.CurrentVideoWarning;
+                if (!string.IsNullOrEmpty(videoWarning))
+                    EditorGUILayout.HelpBox(videoWarning, MessageType.Warning);
             }
             EditorGUILayout.EndVertical();
         }

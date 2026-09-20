@@ -57,6 +57,69 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
     }
 
+    internal sealed class VnSceneComposerVideoRequestState
+    {
+        private int generation;
+        private string sourceIdentity = string.Empty;
+
+        public int Generation { get { return generation; } }
+        public string SourceIdentity { get { return sourceIdentity; } }
+        public bool Preparing { get; private set; }
+        public bool Prepared { get; private set; }
+        public bool Failed { get; private set; }
+
+        public int Begin(string requestedSourceIdentity)
+        {
+            generation++;
+            sourceIdentity = requestedSourceIdentity ?? string.Empty;
+            Preparing = true;
+            Prepared = false;
+            Failed = false;
+            return generation;
+        }
+
+        public void Invalidate()
+        {
+            generation++;
+            sourceIdentity = string.Empty;
+            Preparing = false;
+            Prepared = false;
+            Failed = false;
+        }
+
+        public bool AcceptPrepared(int candidateGeneration, string candidateSourceIdentity)
+        {
+            if (!IsCurrent(candidateGeneration, candidateSourceIdentity) || Failed) return false;
+            Preparing = false;
+            Prepared = true;
+            return true;
+        }
+
+        public bool AcceptFrame(int candidateGeneration, string candidateSourceIdentity)
+        {
+            if (!IsCurrent(candidateGeneration, candidateSourceIdentity) || Failed) return false;
+            Preparing = false;
+            Prepared = true;
+            return true;
+        }
+
+        public bool AcceptError(int candidateGeneration, string candidateSourceIdentity)
+        {
+            if (!IsCurrent(candidateGeneration, candidateSourceIdentity)) return false;
+            Preparing = false;
+            Prepared = false;
+            Failed = true;
+            return true;
+        }
+
+        private bool IsCurrent(int candidateGeneration, string candidateSourceIdentity)
+        {
+            return candidateGeneration == generation &&
+                   string.Equals(sourceIdentity, candidateSourceIdentity ?? string.Empty,
+                       StringComparison.Ordinal);
+        }
+    }
+
     public class VnSceneComposerVideoPreview : IDisposable
     {
         private const int MaxVideoPreviewDimension = 1920;
@@ -72,11 +135,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private bool prepareRequested;
         private bool previewFrameRequested;
         private bool hasVisibleFrame;
+        private readonly int requestedWidth;
+        private readonly int requestedHeight;
+        private readonly string desiredUrl;
+        private readonly VnSceneComposerVideoRequestState requestState =
+            new VnSceneComposerVideoRequestState();
+        private int requestGeneration;
+        private string sourceIdentity = string.Empty;
+        private VideoPlayer.EventHandler prepareCompletedHandler;
+        private VideoPlayer.FrameReadyEventHandler frameReadyHandler;
+        private VideoPlayer.ErrorEventHandler errorReceivedHandler;
 
         protected internal VnSceneComposerVideoPreview(string path, int width, int height, bool shouldLoop)
         {
             loop = shouldLoop;
             warning = string.Empty;
+            requestedWidth = Mathf.Max(16, width);
+            requestedHeight = Mathf.Max(16, height);
+            desiredUrl = string.IsNullOrEmpty(path) ? string.Empty : ToFileUrl(path);
+            sourceIdentity = BuildSourceIdentity(desiredUrl, shouldLoop);
 
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
@@ -84,16 +161,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
-            width = Mathf.Max(16, width);
-            height = Mathf.Max(16, height);
-            texture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32)
-            {
-                name = "ROKAS_VnSceneComposerVideoPreview",
-                hideFlags = HideFlags.HideAndDontSave,
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            texture.Create();
+            texture = CreateRenderTexture(requestedWidth, requestedHeight);
 
             host = new GameObject("ROKAS_VnSceneComposerVideoPreview", typeof(VideoPlayer))
             {
@@ -104,38 +172,72 @@ namespace Rokas.EditorTools.VnUiWorkshop
             player.waitForFirstFrame = true;
             player.skipOnDrop = true;
             player.renderMode = VideoRenderMode.RenderTexture;
-            // The prepared RenderTexture is resized to the decoded source aspect before the first
-            // visible frame. Fill that source-aspect target here; creator-facing Fit/Fill/Stretch
-            // is applied once by the outer Scene Composer renderer.
             player.aspectRatio = VideoAspectRatio.Stretch;
             player.audioOutputMode = VideoAudioOutputMode.None;
             player.source = VideoSource.Url;
-            player.url = ToFileUrl(path);
+            player.url = desiredUrl;
             player.isLooping = loop;
             player.targetTexture = texture;
             player.sendFrameReadyEvents = true;
-            player.prepareCompleted += OnPrepared;
-            player.frameReady += OnFrameReady;
-            player.errorReceived += OnError;
             VnSceneComposerMotionPreviewRegistry.Register(this);
         }
 
-        public virtual bool IsPrepared { get { return player != null && player.isPrepared; } }
-        public virtual bool IsPreparing { get { return player != null && prepareRequested && !player.isPrepared; } }
+        public virtual bool IsPrepared
+        {
+            get { return player != null && player.isPrepared && requestState.Prepared; }
+        }
+
+        public virtual bool IsPreparing
+        {
+            get
+            {
+                return player != null && prepareRequested && requestState.Preparing &&
+                       !player.isPrepared;
+            }
+        }
+
         public virtual bool IsPlaying { get { return player != null && player.isPlaying; } }
         public virtual bool HasVisibleFrame { get { return hasVisibleFrame; } }
+        public virtual bool HasFailed
+        {
+            get { return requestState.Failed || !string.IsNullOrEmpty(warning); }
+        }
+
+        public virtual bool IsRequestReusable
+        {
+            get
+            {
+                return texture != null && texture.IsCreated() &&
+                       string.IsNullOrEmpty(warning);
+            }
+        }
+
+        public virtual bool IsReadyForCurrentRequest
+        {
+            get
+            {
+                return IsRequestReusable && HasVisibleFrame &&
+                       (IsPrepared || IsPlaying);
+            }
+        }
 
         public virtual void Prepare()
         {
             if (player == null) return;
             playRequested = false;
+            if (!EnsureRenderTargetBound()) return;
+
             if (player.isPrepared)
             {
+                BeginRequest(false, false);
                 prepareRequested = false;
+                requestState.AcceptPrepared(requestGeneration, sourceIdentity);
                 if (!hasVisibleFrame) RequestFirstFrame();
                 return;
             }
+
             if (prepareRequested) return;
+            if (!BeginRequest(false, false)) return;
             prepareRequested = true;
             player.Prepare();
         }
@@ -143,14 +245,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public virtual void Play()
         {
             if (player == null) return;
-            playRequested = true;
+
+            bool supersedePreparing = prepareRequested && !player.isPrepared;
+            if (!BeginRequest(true, supersedePreparing)) return;
+
             previewFrameRequested = false;
             if (player.isPrepared)
             {
                 prepareRequested = false;
+                requestState.AcceptPrepared(requestGeneration, sourceIdentity);
                 player.Play();
             }
-            else if (!prepareRequested)
+            else
             {
                 prepareRequested = true;
                 player.Prepare();
@@ -169,9 +275,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (player == null) return;
             if (!player.isPrepared)
             {
-                // Restart is a transport action, not a decode/probe action. The real authoring
-                // preview owns explicit Prepare(), while deterministic routing tests can safely
-                // exercise Restart against an unprepared/dummy media binding.
                 return;
             }
 
@@ -186,7 +289,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
             prepareRequested = false;
             previewFrameRequested = false;
             hasVisibleFrame = false;
+            requestState.Invalidate();
+            requestGeneration = requestState.Generation;
+            UnbindRequestCallbacks();
             if (player != null) player.Stop();
+        }
+
+        public virtual void AbortCurrentRequest(string message)
+        {
+            warning = string.IsNullOrWhiteSpace(message)
+                ? "External preview video request was cancelled."
+                : message;
+            Stop();
+            Changed?.Invoke();
         }
 
         public virtual void Dispose()
@@ -197,11 +312,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             previewFrameRequested = false;
             hasVisibleFrame = false;
             Changed = null;
+            requestState.Invalidate();
+            requestGeneration = requestState.Generation;
+            UnbindRequestCallbacks();
+
             if (player != null)
             {
-                player.prepareCompleted -= OnPrepared;
-                player.frameReady -= OnFrameReady;
-                player.errorReceived -= OnError;
                 player.Stop();
                 player.targetTexture = null;
                 player.url = string.Empty;
@@ -222,6 +338,145 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        private bool BeginRequest(bool requestedPlay, bool supersedePreparing)
+        {
+            if (player == null) return false;
+
+            if (supersedePreparing)
+            {
+                requestState.Invalidate();
+                requestGeneration = requestState.Generation;
+                UnbindRequestCallbacks();
+                player.Stop();
+                prepareRequested = false;
+                previewFrameRequested = false;
+            }
+
+            if (!EnsureRenderTargetBound()) return false;
+
+            warning = string.Empty;
+            playRequested = requestedPlay;
+            requestGeneration = requestState.Begin(sourceIdentity);
+            BindRequestCallbacks(requestGeneration, sourceIdentity);
+            return true;
+        }
+
+        private bool EnsureRenderTargetBound()
+        {
+            if (player == null) return false;
+
+            if (texture == null)
+                texture = CreateRenderTexture(requestedWidth, requestedHeight);
+            else if (!texture.IsCreated())
+                texture.Create();
+
+            bool sourceChanged =
+                player.source != VideoSource.Url ||
+                !string.Equals(player.url ?? string.Empty, desiredUrl ?? string.Empty,
+                    StringComparison.Ordinal);
+
+            if (sourceChanged)
+            {
+                player.Stop();
+                hasVisibleFrame = false;
+                prepareRequested = false;
+                previewFrameRequested = false;
+                requestState.Invalidate();
+                requestGeneration = requestState.Generation;
+                UnbindRequestCallbacks();
+                player.source = VideoSource.Url;
+                player.url = desiredUrl;
+            }
+
+            player.isLooping = loop;
+            player.sendFrameReadyEvents = true;
+            if (player.targetTexture != texture)
+                player.targetTexture = texture;
+
+            return texture != null && texture.IsCreated() &&
+                   player.targetTexture == texture;
+        }
+
+        private static RenderTexture CreateRenderTexture(int width, int height)
+        {
+            var created = new RenderTexture(
+                Mathf.Max(16, width), Mathf.Max(16, height), 0, RenderTextureFormat.ARGB32)
+            {
+                name = "ROKAS_VnSceneComposerVideoPreview",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            created.Create();
+            return created;
+        }
+
+        private static string BuildSourceIdentity(string url, bool shouldLoop)
+        {
+            return (url ?? string.Empty) + "|" + shouldLoop;
+        }
+
+        private void BindRequestCallbacks(int generation, string identity)
+        {
+            UnbindRequestCallbacks();
+            if (player == null) return;
+
+            prepareCompletedHandler = prepared =>
+                OnPreparedForRequest(prepared, generation, identity);
+            frameReadyHandler = (source, frameIndex) =>
+                OnFrameReadyForRequest(source, frameIndex, generation, identity);
+            errorReceivedHandler = (source, message) =>
+                OnErrorForRequest(source, message, generation, identity);
+
+            player.prepareCompleted += prepareCompletedHandler;
+            player.frameReady += frameReadyHandler;
+            player.errorReceived += errorReceivedHandler;
+        }
+
+        private void UnbindRequestCallbacks()
+        {
+            if (player != null)
+            {
+                if (prepareCompletedHandler != null)
+                    player.prepareCompleted -= prepareCompletedHandler;
+                if (frameReadyHandler != null)
+                    player.frameReady -= frameReadyHandler;
+                if (errorReceivedHandler != null)
+                    player.errorReceived -= errorReceivedHandler;
+            }
+
+            prepareCompletedHandler = null;
+            frameReadyHandler = null;
+            errorReceivedHandler = null;
+        }
+
+        private void OnPreparedForRequest(
+            VideoPlayer prepared, int generation, string identity)
+        {
+            if (prepared != player ||
+                !requestState.AcceptPrepared(generation, identity))
+                return;
+            OnPrepared(prepared);
+        }
+
+        private void OnFrameReadyForRequest(
+            VideoPlayer source, long frameIndex, int generation, string identity)
+        {
+            if (source != player ||
+                !requestState.AcceptFrame(generation, identity))
+                return;
+            OnFrameReady(source, frameIndex);
+        }
+
+        private void OnErrorForRequest(
+            VideoPlayer source, string message, int generation, string identity)
+        {
+            if (source != player ||
+                !requestState.AcceptError(generation, identity))
+                return;
+            OnError(source, message);
+        }
+
         private void OnPrepared(VideoPlayer prepared)
         {
             if (prepared != player) return;
@@ -234,7 +489,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void EnsureRenderTargetMatchesPreparedSource(VideoPlayer prepared)
         {
-            if (prepared == null || prepared != player || texture == null) return;
+            if (prepared == null || prepared != player) return;
+            if (!EnsureRenderTargetBound()) return;
+
             int sourceWidth = (int)prepared.width;
             int sourceHeight = (int)prepared.height;
             if (sourceWidth <= 0 || sourceHeight <= 0) return;

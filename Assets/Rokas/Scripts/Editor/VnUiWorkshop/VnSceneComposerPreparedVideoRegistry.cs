@@ -51,7 +51,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             preview = entry.Preview.Target as VnSceneComposerVideoPreview;
-            if (preview == null || preview.texture == null || !string.IsNullOrEmpty(preview.warning) ||
+            if (preview == null || !preview.IsRequestReusable ||
                 (!preview.IsPrepared && !preview.IsPreparing))
             {
                 entries.Remove(scene.sceneId);

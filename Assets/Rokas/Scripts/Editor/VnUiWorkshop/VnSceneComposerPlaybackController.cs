@@ -118,6 +118,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private string openedVideoSignature = string.Empty;
         private readonly VnSceneComposerMusicPlayback musicPlayback;
         private readonly VnSceneComposerLayeredAudioPlayback layeredAudioPlayback;
+        private const float MaxVideoPreparationHoldSeconds = 8f;
+        private int videoRecoveryAttemptCount;
+        private float sceneTransitionVideoWaitElapsed;
+        private string currentVideoWarning = string.Empty;
 
         private SceneBoundaryTransitionPhase sceneBoundaryTransitionPhase;
         private int pendingSceneTransitionTargetIndex = -1;
@@ -158,6 +162,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public int ActiveMusicSourceCount { get { return musicPlayback.ActiveSourceCount; } }
         public int ActiveAdditionalAudioSourceCount { get { return layeredAudioPlayback.ActiveSourceCount; } }
         public int AdditionalAudioStartCount { get { return layeredAudioPlayback.StartCount; } }
+        public string CurrentVideoWarning { get { return currentVideoWarning ?? string.Empty; } }
         public bool IsAdditionalAudioCueActive(string cueId) { return layeredAudioPlayback.IsActive(cueId); }
         public int GetAdditionalAudioCueStartCount(string cueId) { return layeredAudioPlayback.GetStartCount(cueId); }
         public bool IsSceneTransitionActive { get { return sceneBoundaryTransitionPhase != SceneBoundaryTransitionPhase.None; } }
@@ -308,8 +313,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MediaTimeSeconds += deltaSeconds;
             musicPlayback.Advance(deltaSeconds);
             layeredAudioPlayback.Advance(deltaSeconds);
+            TryRecoverCurrentVideoPlayback();
             if (gifPreview != null) gifPreview.Advance(deltaSeconds);
-            if (videoPreview != null && !videoPreview.IsPlaying) videoPreview.Play();
+            if (videoPreview != null && string.IsNullOrEmpty(videoPreview.warning) &&
+                !videoPreview.IsPlaying && !videoPreview.IsPreparing)
+                videoPreview.Play();
             RefreshMediaTexture();
 
             VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
@@ -401,15 +409,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetSceneFromNeutralStart(int sceneIndex, bool playMedia)
         {
-            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true, false, true);
+            ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true, false, true,
+                false, true, true, true);
         }
 
         private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
             bool suppressBackgroundTransition, bool preserveCompatibleVideoTimeline = false,
             bool forceMusicRestart = false, bool suppressSceneEntryPresentation = false,
-            bool applyMusic = true, bool applyAdditionalAudio = true)
+            bool applyMusic = true, bool applyAdditionalAudio = true, bool forceVideoRestart = false)
         {
             RequireSceneIndex(sceneIndex);
+            videoRecoveryAttemptCount = 0;
+            currentVideoWarning = string.Empty;
             VnSceneComposerScene targetScene = project.scenes[sceneIndex];
             bool sameVideoBoundary = preserveCompatibleVideoTimeline &&
                                      sceneIndex != CurrentSceneIndex &&
@@ -452,7 +463,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
             else if (!retainOutgoingVideo) OpenSourceMedia(currentSourceScene);
             if (!reuseVideoPreview) OpenMedia(targetScene);
-            if (playMedia && videoPreview != null && (!sameVideoBoundary || !videoPreview.IsPlaying)) videoPreview.Play();
+            if (playMedia && videoPreview != null)
+            {
+                if (forceVideoRestart && videoPreview.IsPrepared)
+                    videoPreview.Restart();
+                if (!sameVideoBoundary || !videoPreview.IsPlaying)
+                    videoPreview.Play();
+            }
             RefreshSourceMediaTexture();
             if (sameVideoBoundary) sourceMediaTexture = continuedVideoTexture;
             RefreshMediaTexture();
@@ -519,7 +536,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CurrentSnapshot = sample;
             CurrentFrame = new VnSceneComposerPlaybackFrame(
                 targetFrame, sample.background, sourceVisual, targetVisual, sourceScaleMode, targetScaleMode,
-                BuildSceneBoundaryOverlaySample(), !IsSceneTransitionActive);
+                BuildSceneBoundaryOverlaySample(),
+                !IsSceneTransitionActive && IsCurrentVideoPresentationReady());
         }
 
         private VnSceneComposerSceneTransitionOverlaySample BuildSceneBoundaryOverlaySample()
@@ -725,6 +743,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionPreserveCompatibleVideoTimeline = true;
             sceneTransitionHasSwapped = false;
             sceneTransitionVideoPrepareRequested = false;
+            sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionPhaseElapsed = 0f;
             layeredAudioPlayback.ExitCurrentScene(playMedia && IsPlaying);
             sceneBoundaryTransitionPhase = SceneBoundaryTransitionPhase.Cover;
@@ -737,6 +756,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (!IsSceneTransitionActive) return;
             musicPlayback.Advance(deltaSeconds);
             layeredAudioPlayback.Advance(deltaSeconds);
+            if (sceneTransitionHasSwapped) TryRecoverCurrentVideoPlayback();
             float remaining = Mathf.Max(0f, deltaSeconds);
             int safety = 0;
 
@@ -757,7 +777,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     RebuildFrame(SceneElapsedSeconds, true);
                     PerformCoveredSceneSwap();
                     if (!IsSceneTransitionActive) return;
-                    if (!IsSceneTransitionTargetReady())
+                    if (!IsSceneTransitionTargetReadyOrTimedOut(remaining))
                     {
                         RebuildFrame(SceneElapsedSeconds, true);
                         return;
@@ -774,7 +794,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (sceneBoundaryTransitionPhase == SceneBoundaryTransitionPhase.Hold)
                 {
                     RefreshMediaTexture();
-                    if (!IsSceneTransitionTargetReady())
+                    TryRecoverCurrentVideoPlayback();
+                    if (!IsSceneTransitionTargetReadyOrTimedOut(remaining))
                     {
                         RebuildFrame(SceneElapsedSeconds, true);
                         return;
@@ -835,7 +856,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void PrepareTransitionTargetVideoIfNeeded()
         {
-            if (!sceneTransitionHasSwapped || videoPreview == null || videoPreview.HasVisibleFrame ||
+            if (!sceneTransitionHasSwapped || videoPreview == null ||
+                videoPreview.IsReadyForCurrentRequest ||
                 !string.IsNullOrEmpty(videoPreview.warning))
                 return;
             if (sceneTransitionVideoPrepareRequested) return;
@@ -853,16 +875,37 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 scene.media.kind != VnSceneComposerMediaKind.ExternalVideo)
                 return true;
             if (videoPreview == null || !string.IsNullOrEmpty(videoPreview.warning)) return true;
-            if (videoPreview.HasVisibleFrame) return true;
+            if (videoPreview.IsReadyForCurrentRequest) return true;
             PrepareTransitionTargetVideoIfNeeded();
             return false;
+        }
+
+        private bool IsSceneTransitionTargetReadyOrTimedOut(float elapsedWait)
+        {
+            if (IsSceneTransitionTargetReady())
+            {
+                sceneTransitionVideoWaitElapsed = 0f;
+                return true;
+            }
+
+            sceneTransitionVideoWaitElapsed += Mathf.Max(0f, elapsedWait);
+            if (sceneTransitionVideoWaitElapsed < MaxVideoPreparationHoldSeconds)
+                return false;
+
+            currentVideoWarning =
+                "Подготовка видео не завершилась вовремя. Видеосостояние сброшено; следующая команда сможет повторить попытку.";
+            if (videoPreview != null)
+                videoPreview.AbortCurrentRequest(currentVideoWarning);
+            return true;
         }
 
         private void BeginSceneTransitionReveal()
         {
             sceneBoundaryTransitionPhase = SceneBoundaryTransitionPhase.Reveal;
             sceneTransitionPhaseElapsed = 0f;
-            if (sceneTransitionPlayMedia && IsPlaying && videoPreview != null && !videoPreview.IsPlaying)
+            if (sceneTransitionPlayMedia && IsPlaying && videoPreview != null &&
+                string.IsNullOrEmpty(videoPreview.warning) &&
+                !videoPreview.IsPlaying && !videoPreview.IsPreparing)
                 videoPreview.Play();
             RebuildFrame(SceneElapsedSeconds, true);
         }
@@ -876,6 +919,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionPlayMedia = false;
             sceneTransitionPreserveCompatibleVideoTimeline = false;
             sceneTransitionVideoPrepareRequested = false;
+            sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionSourceScene = null;
             sceneTransitionHasSwapped = false;
             RebuildFrame(SceneElapsedSeconds, true);
@@ -890,6 +934,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionPlayMedia = false;
             sceneTransitionPreserveCompatibleVideoTimeline = false;
             sceneTransitionVideoPrepareRequested = false;
+            sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionSourceScene = null;
             sceneTransitionHasSwapped = false;
         }
@@ -989,7 +1034,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             return scene != null && scene.media != null &&
                    scene.media.kind == VnSceneComposerMediaKind.ExternalVideo &&
-                   videoPreview != null && videoPreview.texture != null &&
+                   videoPreview != null && videoPreview.IsRequestReusable &&
                    string.Equals(openedVideoSignature, BuildVideoSignature(scene.media), StringComparison.Ordinal);
         }
 
@@ -1004,9 +1049,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (gifPreview != null) CurrentMediaTexture = gifPreview.currentTexture;
             else if (videoPreview != null)
             {
-                CurrentMediaTexture = retainedOutgoingVideoSource && !videoPreview.HasVisibleFrame && sourceMediaTexture != null
-                    ? sourceMediaTexture
-                    : videoPreview.texture;
+                if (!string.IsNullOrEmpty(videoPreview.warning))
+                    currentVideoWarning = videoPreview.warning;
+                else if (videoPreview.HasVisibleFrame)
+                    currentVideoWarning = string.Empty;
+
+                if (retainedOutgoingVideoSource && !videoPreview.HasVisibleFrame &&
+                    sourceMediaTexture != null)
+                    CurrentMediaTexture = sourceMediaTexture;
+                else
+                    CurrentMediaTexture = videoPreview.HasVisibleFrame ? videoPreview.texture : null;
             }
             else if (imagePreview != null) CurrentMediaTexture = imagePreview.texture;
             else CurrentMediaTexture = null;
@@ -1015,13 +1067,60 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ReleaseMedia()
         {
             if (imagePreview != null) imagePreview.Dispose();
-            if (videoPreview != null && ownsVideoPreview) videoPreview.Dispose();
+            if (videoPreview != null)
+            {
+                if (ownsVideoPreview) videoPreview.Dispose();
+                else videoPreview.Pause();
+            }
             if (gifPreview != null) gifPreview.Dispose();
             imagePreview = null;
             videoPreview = null;
             ownsVideoPreview = false;
             gifPreview = null;
             openedVideoSignature = string.Empty;
+        }
+
+        private bool TryRecoverCurrentVideoPlayback()
+        {
+            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count ||
+                videoPreview == null)
+                return false;
+
+            VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
+            if (scene == null || scene.media == null ||
+                scene.media.kind != VnSceneComposerMediaKind.ExternalVideo)
+                return false;
+
+            if (!videoPreview.HasFailed && string.IsNullOrEmpty(videoPreview.warning))
+                return false;
+
+            currentVideoWarning = string.IsNullOrEmpty(videoPreview.warning)
+                ? "Видео требует повторной подготовки."
+                : videoPreview.warning;
+
+            if (videoRecoveryAttemptCount >= 1)
+                return false;
+
+            videoRecoveryAttemptCount++;
+            videoPreview.Play();
+            if (string.IsNullOrEmpty(videoPreview.warning))
+                currentVideoWarning = string.Empty;
+            return true;
+        }
+
+        private bool IsCurrentVideoPresentationReady()
+        {
+            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count)
+                return true;
+
+            VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
+            if (scene == null || scene.media == null ||
+                scene.media.kind != VnSceneComposerMediaKind.ExternalVideo)
+                return true;
+
+            if (videoPreview == null) return true;
+            if (!string.IsNullOrEmpty(videoPreview.warning)) return true;
+            return videoPreview.IsReadyForCurrentRequest;
         }
 
         private VnSceneComposerScene ResolveSourceScene(int targetIndex)
@@ -1096,6 +1195,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ReleaseMedia();
             ReleaseSourceMedia();
             musicPlayback.StopImmediate();
+            videoRecoveryAttemptCount = 0;
+            currentVideoWarning = string.Empty;
             currentSourceScene = null;
             suppressCurrentBackgroundTransition = false;
             suppressCurrentSceneEntryPresentation = false;
