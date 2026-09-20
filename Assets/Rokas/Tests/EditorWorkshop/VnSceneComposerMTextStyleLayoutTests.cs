@@ -703,23 +703,14 @@ namespace Rokas.EditorTools.Tests
         }
 
 
-        [Test] public void MTextColorGeometry_RED_63_PerCharacterSpeakerOverrideDoesNotOwnFontOrSize()
+        [Test] public void MTextSpeakerColor_RED_63_SceneSpeakerColorScopeExistsAndDefaultsAllScenes()
         {
-            var p = Project(SceneWithCharacters(Keiko, Mina));
-            p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
-            p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
-            p.defaultPresentation.typography.hasSpeakerFontSize = true;
-            p.defaultPresentation.typography.speakerFontSize = 50f;
-            AddSpeakerStyle(p, Mina, FontB, 72f, Color.red);
-            p.scenes[0].dialogueBeats[0].speaker = Mina;
-
-            VnWorkshopTypographyValues resolved = Resolve(p, p.scenes[0], 0);
-
-            Assert.That(resolved.SpeakerColor, Is.EqualTo(Color.red));
-            Assert.That(resolved.SpeakerFontAssetGuid, Is.EqualTo(FontA),
-                "Character override may change speaker color only; font remains shared.");
-            Assert.That(resolved.SpeakerFontSize, Is.EqualTo(50f),
-                "Character override may change speaker color only; size remains shared.");
+            FieldInfo field = typeof(VnSceneComposerScene).GetField(
+                "speakerColorScope", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null,
+                "Speaker color scope must be stored on Scene, not on Character ID.");
+            Assert.That(field.FieldType.IsEnum, Is.True);
+            Assert.That(field.GetValue(new VnSceneComposerScene()).ToString(), Is.EqualTo("AllScenes"));
         }
 
         [Test] public void MTextColorGeometry_RED_64_TextGeometryScopeModelExistsAndDefaultsGlobal()
@@ -781,16 +772,18 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextColorGeometry_RED_68_CharacterColorOnlyApiExists()
+        [Test] public void MTextSpeakerColor_RED_68_SceneColorApisExistWithoutCharacterKey()
         {
+            MethodInfo setScope = typeof(VnPresentationWorkshopWindow).GetMethod(
+                "ComposerSetSelectedSceneSpeakerColorScope",
+                BindingFlags.Public | BindingFlags.Instance);
             MethodInfo setColor = typeof(VnPresentationWorkshopWindow).GetMethod(
-                "ComposerSetCharacterSpeakerColor",
+                "ComposerSetSpeakerColor",
                 BindingFlags.Public | BindingFlags.Instance);
-            MethodInfo clearColor = typeof(VnPresentationWorkshopWindow).GetMethod(
-                "ComposerClearCharacterSpeakerColor",
-                BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(setScope, Is.Not.Null);
             Assert.That(setColor, Is.Not.Null);
-            Assert.That(clearColor, Is.Not.Null);
+            Assert.That(setColor.GetParameters().Length, Is.EqualTo(1),
+                "Speaker color mutation must not accept Character ID or speaker text.");
         }
 
         [Test] public void MTextColorGeometry_RED_69_TextUiExposesScopeAndGlobalPlaqueLanguage()
@@ -1034,35 +1027,25 @@ namespace Rokas.EditorTools.Tests
             finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
-        [Test] public void MTextColorGeometry_86_RemoveCharacterColorReturnsToDefault()
+        [Test] public void MTextSpeakerColor_RED_86_UiUsesSceneColorScopeNotCharacterColor()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
-            try
-            {
-                w.ComposerSetSharedSpeakerStyle(
-                    string.Empty, 50f, Color.green, VnWorkshopTextAlignment.Left);
-                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
-                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
-                    Is.EqualTo(Color.red));
-                w.ComposerClearCharacterSpeakerColor(Keiko);
-                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
-                    Is.EqualTo(Color.green));
-            }
-            finally { UnityEngine.Object.DestroyImmediate(w); }
+            string source = TextUiSource();
+            Assert.That(source, Does.Contain("Применить цвет:")
+                .And.Contain("Ко всем сценам")
+                .And.Contain("Только к этой сцене"));
+            Assert.That(source, Does.Not.Contain("Свой цвет персонажа")
+                .And.Not.Contain("Цвет текущего персонажа"));
         }
 
-        [Test] public void MTextColorGeometry_87_CharacterColorKeepsSharedOpacity()
+        [Test] public void MTextSpeakerColor_RED_87_ResolverDoesNotUseCharacterIdentityForSpeakerColor()
         {
-            var p = Project(SceneWithCharacter(Keiko));
-            p.defaultPresentation.typography.hasSpeakerColor = true;
-            p.defaultPresentation.typography.speakerColor = new Color(1f, 1f, 1f, .35f);
-            AddSpeakerStyle(p, Keiko, FontB, 72f, new Color(1f, 0f, 0f, .9f));
-            Color resolved = Resolve(p, p.scenes[0], 0).SpeakerColor;
-            Assert.That(resolved.r, Is.EqualTo(1f));
-            Assert.That(resolved.g, Is.EqualTo(0f));
-            Assert.That(resolved.a, Is.EqualTo(.35f).Within(.001f));
+            string source = File.ReadAllText(Path.Combine(
+                Application.dataPath, "Rokas", "Scripts", "Editor", "VnUiWorkshop",
+                "VnSceneComposerTextStyleResolver.cs"));
+            Assert.That(source, Does.Not.Contain("ResolveSpeakerCharacterId")
+                .And.Not.Contain("FindSpeakerStyle")
+                .And.Not.Contain("CanonicalCharacterId"));
         }
-
 
         [Test] public void MTextColorGeometry_88_MigrationCollectsOnlyAssetGuidFields()
         {
@@ -1147,23 +1130,12 @@ namespace Rokas.EditorTools.Tests
         }
 
 
-        [Test] public void MTextColorGeometry_92_UndoCharacterColorOverrideRestoresDefault()
+        [Test] public void MTextSpeakerColor_RED_92_ProjectModelDoesNotOwnCharacterSpeakerColorProfiles()
         {
-            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
-            try
-            {
-                w.ComposerSetSharedSpeakerStyle(
-                    string.Empty, 50f, Color.green, VnWorkshopTextAlignment.Left);
-                Undo.ClearAll();
-                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
-                Undo.FlushUndoRecordObjects();
-                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
-                    Is.EqualTo(Color.red));
-                Undo.PerformUndo();
-                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
-                    Is.EqualTo(Color.green));
-            }
-            finally { UnityEngine.Object.DestroyImmediate(w); }
+            FieldInfo field = typeof(VnSceneComposerProject).GetField(
+                "speakerStyleOverrides", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Null,
+                "Per-character speaker color profiles are cancelled; color authority is global + Scene-local.");
         }
 
         [Test] public void MTextColorGeometry_93_OldProjectRoundTripDefaultsGeometryScopeToAllScenes()
@@ -1294,6 +1266,16 @@ namespace Rokas.EditorTools.Tests
                     "Migration must copy the project and leave the source untouched.");
             }
             finally { Delete(root); }
+        }
+
+        [Test] public void MTextSpeakerColor_RED_100_SceneColorStorageIsIndependentFromSpeakerAndTargetCharacter()
+        {
+            FieldInfo scope = typeof(VnSceneComposerScene).GetField(
+                "speakerColorScope", BindingFlags.Public | BindingFlags.Instance);
+            FieldInfo color = typeof(VnSceneComposerScene).GetField(
+                "speakerColor", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(scope, Is.Not.Null);
+            Assert.That(color, Is.Not.Null);
         }
 
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
