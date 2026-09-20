@@ -916,6 +916,65 @@ namespace Rokas.EditorTools.Tests
                 .And.Contain("ComposerSetSelectedSceneKeepPreviousAdditionalAudio"));
         }
 
+        [Test]
+        public void MSfxContinuity_22_PlayFromHerePreservesInheritedLoopAcrossForwardBoundary()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayFromHere(0);
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                int starts = CueStartCount(playback, cueId);
+
+                playback.Next();
+
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                AssertCueActive(playback, cueId, true);
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
+            }
+        }
+
+        [Test]
+        public void MSfxContinuity_23_AnimatedBoundaryKeepsInheritedLoopLiveWithoutRestart()
+        {
+            var project = ProjectWithBeats(1);
+            var second = NewSceneWithBeats(1);
+            second.keepPreviousAdditionalAudio = true;
+            second.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.DarkCurtain;
+            second.transition.sceneTransitionDuration = .4f;
+            project.scenes.Add(second);
+            object rain = AddCue(project.scenes[0], TrackAGuid, true, "SceneStart", "", "SceneEnd", "");
+            string cueId = (string)Field(rain, "cueId");
+
+            using (var playback = new VnSceneComposerPlaybackController(project))
+            {
+                playback.PlayFromHere(0);
+                int sourceId = playback.GetAdditionalAudioCueSourceInstanceId(cueId);
+                int starts = CueStartCount(playback, cueId);
+
+                playback.Next();
+                Assert.That(playback.IsSceneTransitionActive, Is.True);
+                AssertCueActive(playback, cueId, true);
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
+
+                playback.Advance(.5f);
+
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(playback.IsSceneTransitionActive, Is.False);
+                AssertCueActive(playback, cueId, true);
+                Assert.That(playback.GetAdditionalAudioCueSourceInstanceId(cueId), Is.EqualTo(sourceId));
+                Assert.That(CueStartCount(playback, cueId), Is.EqualTo(starts));
+            }
+        }
+
         private static VnSceneComposerProject ProjectWithBeats(int count)
         {
             var project = new VnSceneComposerProject();
