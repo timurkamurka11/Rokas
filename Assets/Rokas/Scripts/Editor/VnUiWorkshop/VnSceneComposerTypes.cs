@@ -231,8 +231,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerBeatEffect effect = VnSceneComposerBeatEffect.None;
         public float effectStrength = 18f;
         public float effectDuration = .28f;
-        public List<VnSceneComposerBeatCharacterStaging> characterStaging =
-            new List<VnSceneComposerBeatCharacterStaging>();
         public float delaySeconds;
     }
 
@@ -252,6 +250,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerBeatEffect effect = VnSceneComposerBeatEffect.None;
         public float effectStrength = 18f;
         public float effectDuration = .28f;
+        public List<VnSceneComposerBeatCharacterStaging> characterStaging =
+            new List<VnSceneComposerBeatCharacterStaging>();
     }
 
     [Serializable]
