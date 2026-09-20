@@ -255,6 +255,63 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
+    public sealed class VnSceneComposerTextVisualStyleOverride
+    {
+        public bool hasFontPreset;
+        public VnWorkshopFontPreset fontPreset = VnWorkshopFontPreset.ProjectSans;
+        public bool hasFontAssetGuid;
+        public string fontAssetGuid = string.Empty;
+        public bool hasFontSize;
+        public float fontSize;
+        public bool hasColor;
+        public Color color = Color.white;
+        public bool hasAlignment;
+        public VnWorkshopTextAlignment alignment = VnWorkshopTextAlignment.Left;
+        public bool hasCharacterSpacing;
+        public float characterSpacing;
+        public bool hasLineSpacing;
+        public float lineSpacing;
+        public bool hasParagraphSpacing;
+        public float paragraphSpacing;
+
+        public bool HasAnyOverride
+        {
+            get
+            {
+                return hasFontPreset || hasFontAssetGuid || hasFontSize || hasColor || hasAlignment ||
+                       hasCharacterSpacing || hasLineSpacing || hasParagraphSpacing;
+            }
+        }
+
+        public void Clear()
+        {
+            hasFontPreset = false;
+            fontPreset = VnWorkshopFontPreset.ProjectSans;
+            hasFontAssetGuid = false;
+            fontAssetGuid = string.Empty;
+            hasFontSize = false;
+            fontSize = 0f;
+            hasColor = false;
+            color = Color.white;
+            hasAlignment = false;
+            alignment = VnWorkshopTextAlignment.Left;
+            hasCharacterSpacing = false;
+            characterSpacing = 0f;
+            hasLineSpacing = false;
+            lineSpacing = 0f;
+            hasParagraphSpacing = false;
+            paragraphSpacing = 0f;
+        }
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerSpeakerStyleOverride
+    {
+        public string characterId = string.Empty;
+        public VnSceneComposerTextVisualStyleOverride style = new VnSceneComposerTextVisualStyleOverride();
+    }
+
+    [Serializable]
     public sealed class VnSceneComposerScene
     {
         public string sceneId = NewStableId();
@@ -270,6 +327,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public List<VnSceneComposerDialogueBeat> dialogueBeats =
             new List<VnSceneComposerDialogueBeat> { new VnSceneComposerDialogueBeat() };
         public VnPresentationWorkshopPreset presentationOverrides = new VnPresentationWorkshopPreset();
+        public VnSceneComposerTextVisualStyleOverride dialogueBodyStyleOverride =
+            new VnSceneComposerTextVisualStyleOverride();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();
         public VnSceneComposerTiming timing = new VnSceneComposerTiming();
 
@@ -322,6 +381,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string title = "Untitled VN Sequence";
         public string sourceHead = VnSceneComposerContract.SourceHead;
         public VnPresentationWorkshopPreset defaultPresentation = new VnPresentationWorkshopPreset();
+        public List<VnSceneComposerSpeakerStyleOverride> speakerStyleOverrides =
+            new List<VnSceneComposerSpeakerStyleOverride>();
         public List<VnSceneComposerScene> scenes = new List<VnSceneComposerScene>();
     }
 }
