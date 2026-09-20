@@ -1119,6 +1119,33 @@ namespace Rokas.EditorTools.Tests
                 .And.Contain("EnumerateAssetSourceRoots"));
         }
 
+
+        [Test] public void MTextColorGeometry_91_LegacyScenePlaqueGeometryPromotesToSharedAndClearsLocal()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.scenes[0].presentationOverrides.dialoguePanel.hasPositionDelta = true;
+            p.scenes[0].presentationOverrides.dialoguePanel.positionDelta =
+                new Vector2(44f, -33f);
+            p.scenes[0].presentationOverrides.dialoguePanel.hasSizeDelta = true;
+            p.scenes[0].presentationOverrides.dialoguePanel.sizeDelta =
+                new Vector2(100f, 40f);
+            p.scenes[0].presentationOverrides.dialoguePanelVisual.hasAssetGuid = true;
+            p.scenes[0].presentationOverrides.dialoguePanelVisual.assetGuid = FontA;
+
+            VnSceneComposerProject q = RoundTrip(p);
+
+            Assert.That(q.defaultPresentation.dialoguePanel.hasPositionDelta, Is.True);
+            Assert.That(q.defaultPresentation.dialoguePanel.positionDelta,
+                Is.EqualTo(new Vector2(44f, -33f)));
+            Assert.That(q.defaultPresentation.dialoguePanel.hasSizeDelta, Is.True);
+            Assert.That(q.defaultPresentation.dialoguePanel.sizeDelta,
+                Is.EqualTo(new Vector2(100f, 40f)));
+            Assert.That(q.scenes[0].presentationOverrides.dialoguePanel.hasPositionDelta, Is.False);
+            Assert.That(q.scenes[0].presentationOverrides.dialoguePanel.hasSizeDelta, Is.False);
+            Assert.That(q.scenes[0].presentationOverrides.dialoguePanelVisual.hasAssetGuid, Is.True);
+            Assert.That(q.scenes[0].presentationOverrides.dialoguePanelVisual.assetGuid, Is.EqualTo(FontA));
+        }
+
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
         {
             var p=new VnSceneComposerProject();

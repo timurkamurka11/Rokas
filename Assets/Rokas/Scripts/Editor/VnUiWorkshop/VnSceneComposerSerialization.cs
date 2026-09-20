@@ -1059,6 +1059,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
             PromoteLegacySharedSpeakerTypography(project);
+            PromoteLegacySharedPlaqueGeometry(project);
             if (project.title == null) project.title = string.Empty;
             if (project.sourceHead == null) project.sourceHead = string.Empty;
             if (project.projectId == null) project.projectId = string.Empty;
@@ -1295,6 +1296,53 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     shared.hasSpeakerColor = true;
                     shared.speakerColor = legacy.speakerColor;
+                }
+            }
+        }
+
+        private static void PromoteLegacySharedPlaqueGeometry(VnSceneComposerProject project)
+        {
+            if (project == null) return;
+            if (project.defaultPresentation == null)
+                project.defaultPresentation = new VnPresentationWorkshopPreset();
+            VnWorkshopElementOverride shared = project.defaultPresentation.dialoguePanel;
+            if (shared == null) return;
+
+            if (project.scenes != null)
+            {
+                for (int i = 0; i < project.scenes.Count; i++)
+                {
+                    VnSceneComposerScene scene = project.scenes[i];
+                    VnWorkshopElementOverride local =
+                        scene != null && scene.presentationOverrides != null
+                            ? scene.presentationOverrides.dialoguePanel
+                            : null;
+                    if (local == null) continue;
+
+                    if (!shared.hasPositionDelta && local.hasPositionDelta)
+                    {
+                        shared.hasPositionDelta = true;
+                        shared.positionDelta = local.positionDelta;
+                    }
+                    if (!shared.hasSizeDelta && local.hasSizeDelta)
+                    {
+                        shared.hasSizeDelta = true;
+                        shared.sizeDelta = local.sizeDelta;
+                    }
+                    if (!shared.hasScaleMultiplier && local.hasScaleMultiplier)
+                    {
+                        shared.hasScaleMultiplier = true;
+                        shared.scaleMultiplier = local.scaleMultiplier;
+                    }
+                }
+
+                // Physical plaque geometry has one owner after migration. Scene-local PNG
+                // dialoguePanelVisual data is separate and intentionally remains untouched.
+                for (int i = 0; i < project.scenes.Count; i++)
+                {
+                    VnSceneComposerScene scene = project.scenes[i];
+                    if (scene != null && scene.presentationOverrides != null)
+                        scene.presentationOverrides.ResetElement(VnWorkshopElement.DialoguePanel);
                 }
             }
         }
