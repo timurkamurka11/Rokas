@@ -380,6 +380,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerDialogueBeat outgoingBeat = ResolveBeat(scene, CurrentBeatIndex);
                 VnSceneComposerBeatCharacterStagingResolver.CollectPendingStagingIds(
                     outgoingBeat, BeatElapsedSeconds, cancelledCharacterStagingIds);
+                suppressCurrentSceneEntryPresentation = true;
                 CurrentBeatIndex++;
                 BeatElapsedSeconds = 0f;
                 VnSceneComposerDialogueBeat enteredBeat = ResolveBeat(scene, CurrentBeatIndex);
@@ -405,6 +406,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void PreviousDialogue()
         {
             if (CurrentSceneIndex < 0 || IsSceneTransitionActive || CurrentBeatIndex <= 0) return;
+            suppressCurrentSceneEntryPresentation = true;
             CurrentBeatIndex--;
             BeatElapsedSeconds = 0f;
             cancelledCharacterStagingIds.Clear();
@@ -437,14 +439,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ResetScene(int sceneIndex, bool playMedia, int initialBeatIndex)
         {
             ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex), false,
-                false, false, false, true, true, false, initialBeatIndex);
+                false, false, initialBeatIndex > 0, true, true, false, initialBeatIndex);
         }
 
         private void ResetSceneFromNeutralStart(
             int sceneIndex, bool playMedia, int initialBeatIndex = 0)
         {
             ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true, false, true,
-                false, true, true, true, initialBeatIndex);
+                initialBeatIndex > 0, true, true, true, initialBeatIndex);
         }
 
         private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
