@@ -567,6 +567,8 @@ namespace Rokas.EditorTools.Tests
                 });
                 scene.decorations.Add(new VnSceneComposerDecoration { displayName = "Keep Me" });
                 var project = Project(scene);
+                VnPresentationWorkshopVn10Resolver.SetTypewriterPreviewOverrides(
+                    project.defaultPresentation, false, 36f, 0f, .10f, .24f, .36f, .20f, .20f, .04f);
                 using (var controller = new VnSceneComposerPlaybackController(project))
                 {
                     controller.PlayScene(0);

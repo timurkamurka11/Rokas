@@ -1,6 +1,0 @@
-{
-  "name": "Rokas.SerializationTests",
-  "references": ["Rokas.Core", "Rokas.Presentation"],
-  "includePlatforms": ["Editor"],
-  "optionalUnityReferences": ["TestAssemblies"]
-}
