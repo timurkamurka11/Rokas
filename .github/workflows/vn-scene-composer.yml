@@ -118,6 +118,24 @@ jobs:
           checkName: Scene Composer M-VIDEO Reliability EditMode
           artifactsPath: artifacts-vn-scene-composer-mvideo
 
+      - name: Run M-CHARACTER beat-level staging fixture
+        id: mcharacter-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerCharacterStagingTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer M-CHARACTER Staging EditMode
+          artifactsPath: artifacts-vn-scene-composer-mcharacter
+
       - name: Run M-G visual polish fixture
         id: mg-tests
         uses: game-ci/unity-test-runner@v4
@@ -436,6 +454,7 @@ jobs:
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
           path: |
+            artifacts-vn-scene-composer-mcharacter
             artifacts-vn-scene-composer-mvideo
             artifacts-vn-scene-composer-maudio
             artifacts-vn-scene-composer-msfx
