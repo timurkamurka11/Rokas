@@ -162,13 +162,14 @@ namespace Rokas.EditorTools.Tests
                         typeof(Rect), frame.GetType(), typeof(Event))
                     .Invoke(window, new object[] { new Rect(0f, 0f, 1920f, 1080f), frame, key });
 
-                object preset = ManualInvoke(windowType, window, "ComposerGetActivePresentationPreset");
+                object project = ManualGetPrivateField(window, "_sceneComposerProject");
+                object preset = Get(project, "defaultPresentation");
                 MethodInfo getOverride = preset.GetType().GetMethod("GetElementOverride",
                     BindingFlags.Public | BindingFlags.Instance, null, new[] { elementType }, null);
                 Assert.That(getOverride, Is.Not.Null);
                 object elementOverride = getOverride.Invoke(preset, new[] { dialoguePanel });
                 Assert.That((bool)Get(elementOverride, "hasPositionDelta"), Is.True,
-                    "Arrow-key direct manipulation must work in the ordinary editor, not only under Advanced layout tools.");
+                    "Arrow-key direct manipulation must work in the ordinary editor and plaque geometry is project-global.");
                 Assert.That((Vector2)Get(elementOverride, "positionDelta"), Is.EqualTo(Vector2.right));
             }
             finally

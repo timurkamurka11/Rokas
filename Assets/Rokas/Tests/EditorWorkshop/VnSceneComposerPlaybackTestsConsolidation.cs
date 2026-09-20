@@ -223,11 +223,16 @@ namespace Rokas.EditorTools.Tests
                 RequireWindowMethod(windowType, "ComposerSetElementLayout", elementType, typeof(Vector2), typeof(Vector2), typeof(float))
                     .Invoke(window, new object[] { panel, new Vector2(77f, 0f), Vector2.zero, 1f });
                 Undo.FlushUndoRecordObjects();
+                object project = GetPrivateField(window, "_sceneComposerProject");
+                object global = Get(project, "defaultPresentation");
+                Assert.That((Vector2)Get(Get(global, "dialoguePanel"), "positionDelta"), Is.EqualTo(new Vector2(77f, 0f)));
                 active = RequireWindowMethod(windowType, "ComposerGetActivePresentationPreset").Invoke(window, null);
-                Assert.That((Vector2)Get(Get(active, "dialoguePanel"), "positionDelta"), Is.EqualTo(new Vector2(77f, 0f)));
+                Assert.That((bool)Get(Get(active, "dialoguePanel"), "hasPositionDelta"), Is.False,
+                    "Dialogue plaque geometry must remain project-global even when Scene presentation scope is active.");
                 Undo.PerformUndo();
-                active = RequireWindowMethod(windowType, "ComposerGetActivePresentationPreset").Invoke(window, null);
-                Assert.That((bool)Get(Get(active, "dialoguePanel"), "hasPositionDelta"), Is.False);
+                project = GetPrivateField(window, "_sceneComposerProject");
+                global = Get(project, "defaultPresentation");
+                Assert.That((bool)Get(Get(global, "dialoguePanel"), "hasPositionDelta"), Is.False);
             }
             finally { Undo.ClearAll(); UnityEngine.Object.DestroyImmediate(window); }
         }

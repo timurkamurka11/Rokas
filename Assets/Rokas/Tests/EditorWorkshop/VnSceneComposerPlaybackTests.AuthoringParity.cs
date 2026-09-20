@@ -66,8 +66,13 @@ namespace Rokas.EditorTools.Tests
                     .Invoke(window, new object[] { Vector2.right, true });
 
                 object active = RequireWindowMethod(windowType, "ComposerGetActivePresentationPreset").Invoke(window, null);
-                object elementOverride = active.GetType().GetMethod("GetElementOverride").Invoke(active, new[] { panel });
+                object project = GetPrivateField(window, "_sceneComposerProject");
+                object global = Get(project, "defaultPresentation");
+                object elementOverride = global.GetType().GetMethod("GetElementOverride").Invoke(global, new[] { panel });
                 Assert.That((Vector2)Get(elementOverride, "positionDelta"), Is.EqualTo(new Vector2(35f, 10f)));
+                object localOverride = active.GetType().GetMethod("GetElementOverride").Invoke(active, new[] { panel });
+                Assert.That((bool)Get(localOverride, "hasPositionDelta"), Is.False,
+                    "Dialogue plaque geometry must not fork into the selected Scene.");
                 Assert.That((Rect)Get(build.Invoke(window, null), "DialoguePanel"), Is.Not.EqualTo(before));
                 Assert.That(GetPrivateField(window, "currentPreset"), Is.Not.SameAs(active),
                     "Direct Composer manipulation must target canonical Composer state, not legacy currentPreset.");
