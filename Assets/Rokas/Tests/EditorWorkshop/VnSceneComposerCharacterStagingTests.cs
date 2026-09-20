@@ -249,7 +249,9 @@ namespace Rokas.EditorTools.Tests
             var project=Project(scene);
             using(var c=new VnSceneComposerPlaybackController(project))
             {
-                c.PlaySceneFromNeutralStart(0); c.AdvanceDialogue(); c.AdvanceDialogue();
+                c.PlaySceneFromNeutralStart(0);
+                c.Advance(10f); c.AdvanceDialogue();
+                c.Advance(10f); c.AdvanceDialogue();
                 Invoke(c,"PreviousDialogue");
                 Assert.That(c.CurrentBeatIndex,Is.EqualTo(1));
                 Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Slot,Is.EqualTo(VnWorkshopStageSlot.Left));
