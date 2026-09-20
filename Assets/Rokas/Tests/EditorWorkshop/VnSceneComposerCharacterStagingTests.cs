@@ -428,11 +428,12 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MCS_35_CustomPositionUsesExistingOffsetCoordinateSystem()
         {
-            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Left));
             object row=AddStaging(scene.dialogueBeats[0],"Mina","Show","Custom",false,"",0f);
             Set(row,"customPositionOffset",new Vector2(123f,-45f));
             var ch=Character(Build(scene,scene.dialogueBeats[0],0f),"Mina");
-            Assert.That(ch.Slot,Is.EqualTo(VnWorkshopStageSlot.Center));
+            Assert.That(ch.Slot,Is.EqualTo(VnWorkshopStageSlot.Left),
+                "Custom X/Y must extend the existing slot+offset coordinate model.");
         }
 
         [Test] public void MCS_36_DuplicateBeatCopiesStagingWithNewIds()
@@ -446,6 +447,39 @@ namespace Rokas.EditorTools.Tests
             IList rows=(IList)Field(copy,"characterStaging").GetValue(copy);
             Assert.That(rows,Has.Count.EqualTo(1));
             Assert.That(Get<string>(rows[0],"stagingId"),Is.Not.EqualTo(id));
+        }
+
+        [Test] public void MCS_37_PlayFromHereBeatDoesNotTriggerSkippedBeatSfx()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var first=scene.dialogueBeats[0];
+            var second=AddBeat(scene);
+            var third=AddBeat(scene);
+            var skippedCue=new VnSceneComposerAdditionalAudioCue
+            {
+                assetGuid=TrackAGuid, enabled=true, loop=false,
+                trigger=VnSceneComposerAudioTrigger.BeatStart,
+                startBeatId=first.beatId,
+                stopMode=VnSceneComposerAudioStopMode.Natural
+            };
+            var targetCue=new VnSceneComposerAdditionalAudioCue
+            {
+                assetGuid=TrackAGuid, enabled=true, loop=false,
+                trigger=VnSceneComposerAudioTrigger.BeatStart,
+                startBeatId=third.beatId,
+                stopMode=VnSceneComposerAudioStopMode.Natural
+            };
+            scene.additionalAudioCues.Add(skippedCue);
+            scene.additionalAudioCues.Add(targetCue);
+
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlayFromHereFromNeutralStart(0,2);
+                Assert.That(c.CurrentBeatIndex,Is.EqualTo(2));
+                Assert.That(c.GetAdditionalAudioCueStartCount(skippedCue.cueId),Is.EqualTo(0),
+                    "Direct Beat start must not trigger skipped Beat audio.");
+                Assert.That(c.GetAdditionalAudioCueStartCount(targetCue.cueId),Is.EqualTo(1));
+            }
         }
 
         private static VnSceneComposerDialogueBeat AddBeat(VnSceneComposerScene scene)

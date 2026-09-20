@@ -244,7 +244,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     resolved.PositionOffset = Vector2.zero;
                     break;
                 case VnSceneComposerBeatCharacterPosition.Custom:
-                    resolved.StageSlot = VnWorkshopStageSlot.Center;
                     resolved.HasPositionOffset = true;
                     resolved.PositionOffset = staging.customPositionOffset;
                     break;

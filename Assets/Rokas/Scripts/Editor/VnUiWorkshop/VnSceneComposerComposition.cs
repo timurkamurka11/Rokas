@@ -212,6 +212,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int activeSourceIndex = FindActiveIndex(scene, beat);
             var resolvedStaging = new VnSceneComposerResolvedBeatCharacterStaging[count];
             var diagnostics = new List<string>();
+            string[] authoredWarnings =
+                VnSceneComposerBeatCharacterStagingResolver.CollectWarnings(scene, beat);
+            for (int w = 0; w < authoredWarnings.Length; w++)
+            {
+                if (!string.IsNullOrWhiteSpace(authoredWarnings[w]) &&
+                    !diagnostics.Contains(authoredWarnings[w]))
+                    diagnostics.Add(authoredWarnings[w]);
+            }
             var visibleOrder = new int[count];
             int visibleCount = 0;
 

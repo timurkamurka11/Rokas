@@ -217,8 +217,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             rangeEnd = project.scenes.Count - 1;
             IsPlaying = true;
             layeredAudioPlayback.ResetSession();
-            ResetScene(sceneIndex, true);
-            SetCurrentBeatForDirectStart(beatIndex);
+            ResetScene(sceneIndex, true, beatIndex);
         }
 
         internal void PlayFromHereFromNeutralStart(int sceneIndex)
@@ -236,8 +235,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             rangeEnd = project.scenes.Count - 1;
             IsPlaying = true;
             layeredAudioPlayback.ResetSession();
-            ResetSceneFromNeutralStart(sceneIndex, true);
-            SetCurrentBeatForDirectStart(beatIndex);
+            ResetSceneFromNeutralStart(sceneIndex, true, beatIndex);
         }
 
         public void PlayAll()
@@ -433,24 +431,33 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetScene(int sceneIndex, bool playMedia)
         {
-            ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex), false);
+            ResetScene(sceneIndex, playMedia, 0);
         }
 
-        private void ResetSceneFromNeutralStart(int sceneIndex, bool playMedia)
+        private void ResetScene(int sceneIndex, bool playMedia, int initialBeatIndex)
+        {
+            ResetScene(sceneIndex, playMedia, ResolveSourceScene(sceneIndex), false,
+                false, false, false, true, true, false, initialBeatIndex);
+        }
+
+        private void ResetSceneFromNeutralStart(
+            int sceneIndex, bool playMedia, int initialBeatIndex = 0)
         {
             ResetScene(sceneIndex, playMedia, CreatePreviewBaseline(), true, false, true,
-                false, true, true, true);
+                false, true, true, true, initialBeatIndex);
         }
 
         private void ResetScene(int sceneIndex, bool playMedia, VnSceneComposerScene sourceScene,
             bool suppressBackgroundTransition, bool preserveCompatibleVideoTimeline = false,
             bool forceMusicRestart = false, bool suppressSceneEntryPresentation = false,
-            bool applyMusic = true, bool applyAdditionalAudio = true, bool forceVideoRestart = false)
+            bool applyMusic = true, bool applyAdditionalAudio = true, bool forceVideoRestart = false,
+            int initialBeatIndex = 0)
         {
             RequireSceneIndex(sceneIndex);
+            VnSceneComposerScene targetScene = project.scenes[sceneIndex];
+            RequireBeatIndex(targetScene, initialBeatIndex);
             videoRecoveryAttemptCount = 0;
             currentVideoWarning = string.Empty;
-            VnSceneComposerScene targetScene = project.scenes[sceneIndex];
             bool sameVideoBoundary = preserveCompatibleVideoTimeline &&
                                      sceneIndex != CurrentSceneIndex &&
                                      CanReuseVideoPreview(targetScene);
@@ -474,7 +481,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             suppressCurrentBackgroundTransition = suppressBackgroundTransition;
             suppressCurrentSceneEntryPresentation = suppressSceneEntryPresentation;
             CurrentSceneIndex = sceneIndex;
-            CurrentBeatIndex = 0;
+            CurrentBeatIndex = initialBeatIndex;
             cancelledCharacterStagingIds.Clear();
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
@@ -484,7 +491,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     VnSceneComposerMusicResolver.Resolve(project, sceneIndex), playMedia, forceMusicRestart);
             if (applyAdditionalAudio)
             {
-                VnSceneComposerDialogueBeat firstAudioBeat = ResolveBeat(targetScene, 0);
+                VnSceneComposerDialogueBeat firstAudioBeat =
+                    ResolveBeat(targetScene, CurrentBeatIndex);
                 layeredAudioPlayback.EnterScene(
                     targetScene,
                     firstAudioBeat != null ? firstAudioBeat.beatId : string.Empty,
@@ -1207,23 +1215,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (timing.usesPreviewAutoDuration) return Mathf.Max(0f, timing.previewAutoDuration);
             return Mathf.Max(.0001f,
                 timing.typewriterDuration + timing.settleDuration + timing.breathingRoom);
-        }
-
-        private void SetCurrentBeatForDirectStart(int beatIndex)
-        {
-            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count) return;
-            VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
-            RequireBeatIndex(scene, beatIndex);
-            CurrentBeatIndex = beatIndex;
-            BeatElapsedSeconds = 0f;
-            cancelledCharacterStagingIds.Clear();
-            if (beatIndex > 0)
-            {
-                VnSceneComposerDialogueBeat beat = ResolveBeat(scene, beatIndex);
-                layeredAudioPlayback.EnterBeat(
-                    scene, beat != null ? beat.beatId : string.Empty, IsPlaying);
-            }
-            RebuildFrame(SceneElapsedSeconds, true);
         }
 
         private static void RequireBeatIndex(VnSceneComposerScene scene, int beatIndex)
