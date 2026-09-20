@@ -208,6 +208,24 @@ jobs:
           checkName: Scene Composer M-TEXT EditMode
           artifactsPath: artifacts-vn-scene-composer-mtext
 
+      - name: Run M-TEXT style scopes and layout stability fixture
+        id: mtext-style-layout-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerMTextStyleLayoutTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer M-TEXT Style Layout EditMode
+          artifactsPath: artifacts-vn-scene-composer-mtext-style-layout
+
       - name: Run M-F3 arbitrary scene decoration fixture
         id: mf3-tests
         uses: game-ci/unity-test-runner@v4
@@ -459,6 +477,7 @@ jobs:
             artifacts-vn-scene-composer-maudio
             artifacts-vn-scene-composer-msfx
             artifacts-vn-scene-composer-mtext
+            artifacts-vn-scene-composer-mtext-style-layout
             artifacts-vn-scene-composer-mf3
             artifacts-vn-scene-composer-mf2
             artifacts-vn-scene-composer-mf1
