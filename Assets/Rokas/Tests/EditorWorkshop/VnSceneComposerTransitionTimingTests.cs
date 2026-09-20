@@ -158,16 +158,16 @@ namespace Rokas.EditorTools.Tests
                 null,
                 new[]
                 {
-                    projectType, sceneType, sceneType, beatType, beatType, typeof(float), typeof(float)
+                    projectType, sceneType, sceneType, beatType, beatType, typeof(float), typeof(float), typeof(bool)
                 },
                 null);
             Assert.That(sample, Is.Not.Null,
                 "M-DIALOGUE requires separate scene and beat elapsed clocks in elapsed sampling.");
 
             object beatStart = sample.Invoke(null,
-                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)0f });
+                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)0f, (object)false });
             object beatLater = sample.Invoke(null,
-                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)5f });
+                new[] { project, fromScene, toScene, beat0, beat1, (object)5f, (object)5f, (object)false });
 
             Assert.That((bool)Get(Get(beatStart, "background"), "Complete"), Is.True,
                 "Beat change must not restart the completed Scene background transition.");
