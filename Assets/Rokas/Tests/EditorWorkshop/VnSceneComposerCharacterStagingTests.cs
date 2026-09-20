@@ -249,7 +249,7 @@ namespace Rokas.EditorTools.Tests
             var project=Project(scene);
             using(var c=new VnSceneComposerPlaybackController(project))
             {
-                c.PlayScene(0); c.AdvanceDialogue(); c.AdvanceDialogue();
+                c.PlaySceneFromNeutralStart(0); c.AdvanceDialogue(); c.AdvanceDialogue();
                 Invoke(c,"PreviousDialogue");
                 Assert.That(c.CurrentBeatIndex,Is.EqualTo(1));
                 Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Slot,Is.EqualTo(VnWorkshopStageSlot.Left));
@@ -268,7 +268,7 @@ namespace Rokas.EditorTools.Tests
             var project=Project(scene);
             using(var c=new VnSceneComposerPlaybackController(project))
             {
-                Invoke(c,"PlayFromHere",0,2);
+                c.PlayFromHereFromNeutralStart(0,2);
                 Assert.That(c.CurrentBeatIndex,Is.EqualTo(2));
                 Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").StateId,Is.EqualTo("mina_happy"));
                 AssertVisible(c.CurrentFrame.WorkshopFrame,"Keiko",true);
