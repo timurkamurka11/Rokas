@@ -186,6 +186,7 @@ namespace Rokas.EditorTools.Tests
                 float sceneElapsedBeforeBeat = controller.SceneElapsedSeconds;
 
                 advanceDialogue.Invoke(controller, null);
+                advanceDialogue.Invoke(controller, null);
 
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
                     "A non-final Beat must not become a Scene boundary.");
@@ -193,6 +194,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(controller.SceneElapsedSeconds, Is.EqualTo(sceneElapsedBeforeBeat).Within(.0001f));
                 Assert.That((float)beatElapsed.GetValue(controller, null), Is.EqualTo(0f).Within(.0001f));
 
+                advanceDialogue.Invoke(controller, null);
                 advanceDialogue.Invoke(controller, null);
 
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1),
@@ -216,6 +218,7 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayAll();
+                controller.Advance(.21f);
                 controller.Advance(.21f);
 
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
@@ -266,11 +269,11 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayScene(0);
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
                 Assert.That(controller.IsPlaying, Is.True);
 
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
                 Assert.That(controller.IsPlaying, Is.False,
@@ -290,16 +293,16 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayAll();
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((0, 1)));
 
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 0)));
 
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 1)));
 
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 1)));
                 Assert.That(controller.IsPlaying, Is.False);
             }
@@ -316,7 +319,7 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayScene(0);
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
 
                 controller.PlayFromHere(1);
@@ -361,7 +364,7 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayScene(1);
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 controller.Advance(.30f);
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
 
@@ -385,13 +388,13 @@ namespace Rokas.EditorTools.Tests
             using (var controller = new VnSceneComposerPlaybackController(project))
             {
                 controller.PlayScene(0);
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
 
                 controller.Next();
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((1, 0)));
 
-                controller.AdvanceDialogue();
+                AdvanceDialoguePastReveal(controller);
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
                 controller.Previous();
                 Assert.That((controller.CurrentSceneIndex, controller.CurrentBeatIndex), Is.EqualTo((0, 0)));
@@ -455,6 +458,19 @@ namespace Rokas.EditorTools.Tests
             Assert.That((string)Get(beats[0], "text"), Is.EqualTo("Привет 你好 Hello"));
             Assert.That((bool)Get(beats[0], "narration"), Is.False);
         }
+        private static void AdvanceDialoguePastReveal(
+            VnSceneComposerPlaybackController controller)
+        {
+            int sceneIndex = controller.CurrentSceneIndex;
+            int beatIndex = controller.CurrentBeatIndex;
+            controller.AdvanceDialogue();
+
+            if (controller.CurrentSceneIndex == sceneIndex &&
+                controller.CurrentBeatIndex == beatIndex &&
+                !controller.IsSceneTransitionActive)
+                controller.AdvanceDialogue();
+        }
+
         private static VnSceneComposerScene MdScene(
             string label,
             VnSceneComposerPreviewAdvanceMode mode,
