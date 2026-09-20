@@ -794,7 +794,11 @@ namespace Rokas.EditorTools.Tests
         {
             VnPresentationWorkshopWindow w=WindowWithScene();
             VnSceneComposerProject p=Project(w);
-            p.scenes[0].characters.Add(new VnSceneComposerCharacter { characterId=id });
+            p.scenes[0].characters.Add(new VnSceneComposerCharacter
+            {
+                characterId=id,
+                stateId=StateForCharacter(id)
+            });
             p.scenes[0].dialogueBeats[0].speaker=id;
             return w;
         }
