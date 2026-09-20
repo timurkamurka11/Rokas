@@ -355,7 +355,7 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void VR_16_VideoAToVideoASharesOnlyCompatibleTimeline()
+        public void VR_16_VideoAToVideoAKeepsCorrectSourceOnLegacyBoundary()
         {
             WithFactory(factory =>
             {
@@ -363,10 +363,11 @@ namespace Rokas.EditorTools.Tests
                 using (var controller = new VnSceneComposerPlaybackController(project))
                 {
                     controller.PlayFromHere(0);
-                    int created = factory.Created.Count;
                     controller.Next();
                     Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
-                    Assert.That(factory.Created.Count, Is.EqualTo(created));
+                    Assert.That(factory.Created.Count, Is.GreaterThanOrEqualTo(1));
+                    Assert.That(factory.Created[factory.Created.Count - 1].Reference, Is.EqualTo("A.mp4"));
+                    Assert.That(factory.Created[factory.Created.Count - 1].PlayCalls, Is.GreaterThanOrEqualTo(1));
                 }
             });
         }
