@@ -299,10 +299,12 @@ namespace Rokas.EditorTools.Tests
 
         [Test] public void MTextStyleLayout_28_ColorPickerUiHasIndependentStyleChangeScope()
         {
-            string s = TextUiSource();
-            Assert.That(s, Does.Contain("// STYLE SCOPE: ColorField/font changes never read or write geometry."));
-            Assert.That(s, Does.Contain("EditorGUILayout.ColorField"));
-            Assert.That(s, Does.Not.Contain("ApplyTypographyValues("));
+            string source = TextUiSource();
+            Assert.That(source, Does.Contain("ComposerSetSpeakerColor")
+                .And.Contain("DrawTextGeometryControls")
+                .And.Contain("EditorGUILayout.ColorField")
+                .And.Contain("Применить цвет:"));
+            Assert.That(source, Does.Not.Contain("ApplyTypographyValues("));
         }
 
         [Test] public void MTextStyleLayout_29_ColorStyleMutationCancelsActivePreviewDrag()
@@ -1360,15 +1362,27 @@ namespace Rokas.EditorTools.Tests
             var p = Project(Scene("A"), Scene("B"));
             p.scenes[1].speakerColorScope = VnSceneComposerSpeakerColorScope.ThisScene;
             p.scenes[1].speakerColor = Color.red;
+
+            string globalSceneId = p.scenes[0].sceneId;
+            string localSceneId = p.scenes[1].sceneId;
+
             VnSceneComposerScene globalCopy =
-                VnSceneComposerEditing.DuplicateScene(p,p.scenes[0].sceneId);
+                VnSceneComposerEditing.DuplicateScene(p, globalSceneId);
             VnSceneComposerScene localCopy =
-                VnSceneComposerEditing.DuplicateScene(p,p.scenes[1].sceneId);
+                VnSceneComposerEditing.DuplicateScene(p, localSceneId);
+
             Assert.That(globalCopy.speakerColorScope,
                 Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
             Assert.That(localCopy.speakerColorScope,
                 Is.EqualTo(VnSceneComposerSpeakerColorScope.ThisScene));
             Assert.That(localCopy.speakerColor, Is.EqualTo(Color.red));
+
+            localCopy.speakerColor = Color.green;
+            VnSceneComposerScene originalLocal =
+                p.scenes.Find(scene => scene != null && scene.sceneId == localSceneId);
+            Assert.That(originalLocal, Is.Not.Null);
+            Assert.That(originalLocal.speakerColor, Is.EqualTo(Color.red),
+                "Duplicate must own an independent copy of the Scene-local color.");
         }
 
         [Test] public void MTextSpeakerColorSceneScope_108_UndoRestoresGlobalLocalAndScope()
