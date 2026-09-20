@@ -1146,6 +1146,156 @@ namespace Rokas.EditorTools.Tests
             Assert.That(q.scenes[0].presentationOverrides.dialoguePanelVisual.assetGuid, Is.EqualTo(FontA));
         }
 
+
+        [Test] public void MTextColorGeometry_92_UndoCharacterColorOverrideRestoresDefault()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                w.ComposerSetSharedSpeakerStyle(
+                    string.Empty, 50f, Color.green, VnWorkshopTextAlignment.Left);
+                Undo.ClearAll();
+                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
+                Undo.FlushUndoRecordObjects();
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(Color.red));
+                Undo.PerformUndo();
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(Color.green));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextColorGeometry_93_OldProjectRoundTripDefaultsGeometryScopeToAllScenes()
+        {
+            var p = Project(Scene("A"));
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(q.scenes[0].textGeometryScope,
+                Is.EqualTo(VnSceneComposerTextGeometryScope.AllScenes));
+        }
+
+        [Test] public void MTextColorGeometry_94_LocalGeometryPreviewPlayParity()
+        {
+            var p = Project(Scene("A"));
+            p.scenes[0].textGeometryScope = VnSceneComposerTextGeometryScope.ThisScene;
+            SetLocalGeometry(p.scenes[0], true, new Rect(140f, 150f, 550f, 90f));
+            SetLocalGeometry(p.scenes[0], false, new Rect(180f, 260f, 800f, 180f));
+            VnWorkshopPreviewFrame preview = Frame(p, 0);
+            using (var playback = new VnSceneComposerPlaybackController(p))
+            {
+                playback.PlayScene(0);
+                VnWorkshopPreviewFrame play = playback.CurrentFrame.WorkshopFrame;
+                Assert.That(play.SpeakerName, Is.EqualTo(preview.SpeakerName));
+                Assert.That(play.DialogueText, Is.EqualTo(preview.DialogueText));
+            }
+        }
+
+        [Test] public void MTextColorGeometry_95_DuplicateSceneDoesNotForkPlaqueGeometry()
+        {
+            var p = Project(Scene("A"));
+            p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+            p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(35f, -15f);
+            VnSceneComposerScene copy =
+                VnSceneComposerEditing.DuplicateScene(p, p.scenes[0].sceneId);
+            VnPresentationWorkshopPreset original =
+                VnSceneComposerComposition.ResolvePresentation(p, p.scenes[0]);
+            VnPresentationWorkshopPreset duplicate =
+                VnSceneComposerComposition.ResolvePresentation(p, copy);
+            Assert.That(duplicate.dialoguePanel.positionDelta,
+                Is.EqualTo(original.dialoguePanel.positionDelta));
+            Assert.That(copy.presentationOverrides.dialoguePanel.hasPositionDelta, Is.False);
+        }
+
+        [Test] public void MTextColorGeometry_96_SpeakerColorDoesNotMutatePlaqueGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithCharacter(Keiko);
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+                p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(22f, 11f);
+                Vector2 before = p.defaultPresentation.dialoguePanel.positionDelta;
+                w.ComposerSetCharacterSpeakerColor(Keiko, Color.red);
+                Assert.That(p.defaultPresentation.dialoguePanel.positionDelta, Is.EqualTo(before));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextColorGeometry_97_DialogueColorDoesNotMutatePlaqueGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+                p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(22f, 11f);
+                Vector2 before = p.defaultPresentation.dialoguePanel.positionDelta;
+                w.ComposerSetSelectedSceneDialogueBodyStyle(
+                    string.Empty, 38f, Color.cyan, VnWorkshopTextAlignment.Left);
+                Assert.That(p.defaultPresentation.dialoguePanel.positionDelta, Is.EqualTo(before));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextColorGeometry_98_SharedSpeakerFontDoesNotMutatePlaqueGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+                p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(22f, 11f);
+                Vector2 before = p.defaultPresentation.dialoguePanel.positionDelta;
+                w.ComposerSetSharedSpeakerStyle(
+                    string.Empty, 61f, Color.white, VnWorkshopTextAlignment.Center);
+                Assert.That(p.defaultPresentation.dialoguePanel.positionDelta, Is.EqualTo(before));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextColorGeometry_99_MigrationPreservesProjectSceneBeatCountsAndSource()
+        {
+            string root = TempRoot();
+            try
+            {
+                string source = Path.Combine(root, "source");
+                string destination = Path.Combine(root, "destination");
+                Directory.CreateDirectory(Path.Combine(source, "Assets"));
+                Directory.CreateDirectory(Path.Combine(destination, "Assets"));
+
+                var p = new VnSceneComposerProject
+                {
+                    projectId = UserProjectId,
+                    title = "Real Shape"
+                };
+                VnSceneComposerScene a = Scene("A");
+                a.dialogueBeats.Add(Beat("A", "Second beat"));
+                VnSceneComposerScene b = Scene("B");
+                p.scenes.Add(a);
+                p.scenes.Add(b);
+
+                string sourceFile = VnSceneComposerStorage.GetProjectPath(source, UserProjectId);
+                Directory.CreateDirectory(Path.GetDirectoryName(sourceFile));
+                string json = VnSceneComposerSerialization.SerializePortable(p);
+                File.WriteAllText(sourceFile, json);
+                string sourceBefore = File.ReadAllText(sourceFile);
+
+                VnSceneComposerReviewProjectMigration.Migrate(
+                    root, destination, UserProjectId);
+
+                VnSceneComposerImportResult loaded =
+                    VnSceneComposerStorage.LoadProject(destination, UserProjectId);
+                Assert.That(loaded.Success, Is.True, loaded.Error);
+                Assert.That(loaded.Project.projectId, Is.EqualTo(UserProjectId));
+                Assert.That(loaded.Project.scenes.Count, Is.EqualTo(2));
+                Assert.That(loaded.Project.scenes[0].dialogueBeats.Count, Is.EqualTo(2));
+                Assert.That(loaded.Project.scenes[1].dialogueBeats.Count, Is.EqualTo(1));
+                Assert.That(File.ReadAllText(sourceFile), Is.EqualTo(sourceBefore),
+                    "Migration must copy the project and leave the source untouched.");
+            }
+            finally { Delete(root); }
+        }
+
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
         {
             var p=new VnSceneComposerProject();
