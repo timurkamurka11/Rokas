@@ -433,9 +433,11 @@ namespace Rokas.EditorTools.Tests
             {
                 controller.PlayAll();
                 controller.AdvanceDialogue();
+                controller.AdvanceDialogue();
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(1));
 
+                controller.AdvanceDialogue();
                 controller.AdvanceDialogue();
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
                 Assert.That(controller.CurrentBeatIndex, Is.EqualTo(0));
