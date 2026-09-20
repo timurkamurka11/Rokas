@@ -73,6 +73,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
         FrontCharacters
     }
 
+    public enum VnSceneComposerTextGeometryScope
+    {
+        AllScenes,
+        ThisScene
+    }
+
     public enum VnSceneComposerMusicMode
     {
         Silence,
@@ -327,6 +333,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public List<VnSceneComposerDialogueBeat> dialogueBeats =
             new List<VnSceneComposerDialogueBeat> { new VnSceneComposerDialogueBeat() };
         public VnPresentationWorkshopPreset presentationOverrides = new VnPresentationWorkshopPreset();
+        // Additive revision field. Serialized zero/default is AllScenes so old projects
+        // keep the established shared text geometry until an author explicitly opts in.
+        public VnSceneComposerTextGeometryScope textGeometryScope =
+            VnSceneComposerTextGeometryScope.AllScenes;
         public VnSceneComposerTextVisualStyleOverride dialogueBodyStyleOverride =
             new VnSceneComposerTextVisualStyleOverride();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();

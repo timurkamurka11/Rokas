@@ -406,16 +406,37 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return Mathf.Clamp(value, minimum, ComposerDurationMaximum);
         }
 
+        private VnPresentationWorkshopPreset GetComposerElementGeometryPresentation(
+            VnWorkshopElement element)
+        {
+            // Plaque geometry is never Scene-local. The visual asset is intentionally handled
+            // by ComposerSetDialoguePanelVisualAsset and may still differ per Scene.
+            if (element == VnWorkshopElement.DialoguePanel)
+                return GetSharedDialoguePresentation();
+
+            if (element == VnWorkshopElement.SpeakerName ||
+                element == VnWorkshopElement.DialogueText)
+            {
+                VnSceneComposerScene scene = GetSelectedScene();
+                if (scene != null &&
+                    scene.textGeometryScope == VnSceneComposerTextGeometryScope.ThisScene)
+                {
+                    if (scene.presentationOverrides == null)
+                        scene.presentationOverrides = new VnPresentationWorkshopPreset();
+                    return scene.presentationOverrides;
+                }
+                return GetSharedDialoguePresentation();
+            }
+
+            return ComposerGetActivePresentationPreset();
+        }
+
         private void MutateComposerElementPresentation(
             string undoLabel, VnWorkshopElement element, Action<VnPresentationWorkshopPreset> mutation)
         {
             if (mutation == null) throw new ArgumentNullException(nameof(mutation));
             RecordSceneComposerUndo(undoLabel);
-            VnPresentationWorkshopPreset target =
-                element == VnWorkshopElement.SpeakerName || element == VnWorkshopElement.DialogueText
-                    ? GetSharedDialoguePresentation()
-                    : ComposerGetActivePresentationPreset();
-            mutation(target);
+            mutation(GetComposerElementGeometryPresentation(element));
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }

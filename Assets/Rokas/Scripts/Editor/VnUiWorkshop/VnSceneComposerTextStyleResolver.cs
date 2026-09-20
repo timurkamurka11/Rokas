@@ -18,10 +18,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ApplyVisual(scene.dialogueBodyStyleOverride, false, ref v);
             string id = ResolveSpeakerCharacterId(scene, beat);
             VnSceneComposerSpeakerStyleOverride entry = FindSpeakerStyle(project, id);
-            if (entry != null && entry.style != null && entry.style.HasAnyOverride)
-                ApplyVisual(entry.style, true, ref v);
-            else
-                ApplyLegacySpeaker(legacy, ref v);
+            if (entry != null && entry.style != null && entry.style.hasColor)
+            {
+                Color characterColor = entry.style.color;
+                // Opacity belongs to the shared/default speaker style. A character override
+                // contributes RGB only.
+                characterColor.a = v.SpeakerColor.a;
+                v.SpeakerColor = characterColor;
+            }
             return v;
         }
 
@@ -71,6 +75,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 hasSpeakerFontSize=true, speakerFontSize=v.SpeakerFontSize,
                 hasSpeakerCharacterSpacing=true, speakerCharacterSpacing=v.SpeakerCharacterSpacing
             };
+        }
+
+        public static bool HasSpeakerColorOverride(
+            VnSceneComposerProject project, string characterId)
+        {
+            VnSceneComposerSpeakerStyleOverride entry = FindSpeakerStyle(project, characterId);
+            return entry != null && entry.style != null && entry.style.hasColor;
+        }
+
+        internal static void SetSpeakerColor(
+            VnSceneComposerTextVisualStyleOverride style, Color color)
+        {
+            if (style == null) throw new ArgumentNullException(nameof(style));
+            style.hasColor = true;
+            style.color = color;
         }
 
         internal static void SetStyle(VnSceneComposerTextVisualStyleOverride s, string guid,

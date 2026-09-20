@@ -1058,6 +1058,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 NormalizeTextVisualStyle(speakerStyle.style);
             }
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
+            PromoteLegacySharedSpeakerTypography(project);
             if (project.title == null) project.title = string.Empty;
             if (project.sourceHead == null) project.sourceHead = string.Empty;
             if (project.projectId == null) project.projectId = string.Empty;
@@ -1175,6 +1176,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (textElement.fontDisplayName == null) textElement.fontDisplayName = string.Empty;
                 }
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
+                if (!Enum.IsDefined(typeof(VnSceneComposerTextGeometryScope), scene.textGeometryScope))
+                    scene.textGeometryScope = VnSceneComposerTextGeometryScope.AllScenes;
                 if (scene.dialogueBodyStyleOverride == null)
                     scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
                 NormalizeTextVisualStyle(scene.dialogueBodyStyleOverride);
@@ -1197,6 +1200,101 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (character == null) continue;
                     if (character.characterId == null) character.characterId = string.Empty;
                     if (character.stateId == null) character.stateId = string.Empty;
+                }
+            }
+        }
+
+        private static void PromoteLegacySharedSpeakerTypography(VnSceneComposerProject project)
+        {
+            if (project == null) return;
+            if (project.defaultPresentation == null)
+                project.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (project.defaultPresentation.typography == null)
+                project.defaultPresentation.typography = new VnWorkshopTypographyOverride();
+
+            VnWorkshopTypographyOverride shared = project.defaultPresentation.typography;
+            bool hasCharacterColor = false;
+
+            if (project.speakerStyleOverrides != null)
+            {
+                for (int i = 0; i < project.speakerStyleOverrides.Count; i++)
+                {
+                    VnSceneComposerSpeakerStyleOverride entry = project.speakerStyleOverrides[i];
+                    VnSceneComposerTextVisualStyleOverride style = entry != null ? entry.style : null;
+                    if (style == null) continue;
+                    if (style.hasColor) hasCharacterColor = true;
+
+                    // The previous revision could persist a complete character style. The new
+                    // contract keeps only color character-specific, so promote the first authored
+                    // font/size/alignment values into the shared speaker style when shared values
+                    // are otherwise absent. The serialized character payload is preserved.
+                    if (!shared.hasSpeakerFontPreset && style.hasFontPreset)
+                    {
+                        shared.hasSpeakerFontPreset = true;
+                        shared.speakerFontPreset = style.fontPreset;
+                    }
+                    if (!shared.hasSpeakerFontAssetGuid && style.hasFontAssetGuid)
+                    {
+                        shared.hasSpeakerFontAssetGuid = true;
+                        shared.speakerFontAssetGuid = style.fontAssetGuid ?? string.Empty;
+                    }
+                    if (!shared.hasSpeakerFontSize && style.hasFontSize)
+                    {
+                        shared.hasSpeakerFontSize = true;
+                        shared.speakerFontSize = style.fontSize;
+                    }
+                    if (!shared.hasSpeakerAlignment && style.hasAlignment)
+                    {
+                        shared.hasSpeakerAlignment = true;
+                        shared.speakerAlignment = style.alignment;
+                    }
+                    if (!shared.hasSpeakerCharacterSpacing && style.hasCharacterSpacing)
+                    {
+                        shared.hasSpeakerCharacterSpacing = true;
+                        shared.speakerCharacterSpacing = style.characterSpacing;
+                    }
+                }
+            }
+
+            if (project.scenes == null) return;
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                VnWorkshopTypographyOverride legacy =
+                    scene != null && scene.presentationOverrides != null
+                        ? scene.presentationOverrides.typography
+                        : null;
+                if (legacy == null) continue;
+
+                if (!shared.hasSpeakerFontPreset && legacy.hasSpeakerFontPreset)
+                {
+                    shared.hasSpeakerFontPreset = true;
+                    shared.speakerFontPreset = legacy.speakerFontPreset;
+                }
+                if (!shared.hasSpeakerFontAssetGuid && legacy.hasSpeakerFontAssetGuid)
+                {
+                    shared.hasSpeakerFontAssetGuid = true;
+                    shared.speakerFontAssetGuid = legacy.speakerFontAssetGuid ?? string.Empty;
+                }
+                if (!shared.hasSpeakerFontSize && legacy.hasSpeakerFontSize)
+                {
+                    shared.hasSpeakerFontSize = true;
+                    shared.speakerFontSize = legacy.speakerFontSize;
+                }
+                if (!shared.hasSpeakerAlignment && legacy.hasSpeakerAlignment)
+                {
+                    shared.hasSpeakerAlignment = true;
+                    shared.speakerAlignment = legacy.speakerAlignment;
+                }
+                if (!shared.hasSpeakerCharacterSpacing && legacy.hasSpeakerCharacterSpacing)
+                {
+                    shared.hasSpeakerCharacterSpacing = true;
+                    shared.speakerCharacterSpacing = legacy.speakerCharacterSpacing;
+                }
+                if (!shared.hasSpeakerColor && !hasCharacterColor && legacy.hasSpeakerColor)
+                {
+                    shared.hasSpeakerColor = true;
+                    shared.speakerColor = legacy.speakerColor;
                 }
             }
         }

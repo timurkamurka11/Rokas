@@ -364,6 +364,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return true;
             }
 
+            if (selectedElement == VnWorkshopElement.SpeakerName ||
+                selectedElement == VnWorkshopElement.DialogueText ||
+                selectedElement == VnWorkshopElement.DialoguePanel)
+            {
+                ComposerResetElement(selectedElement);
+                return true;
+            }
+
             if (scene.presentationOverrides == null) return false;
             RecordSceneComposerUndo("Restore VN Scene UI Element");
             scene.presentationOverrides.ResetElement(selectedElement);
@@ -384,10 +392,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (!IsFinite(logicalDelta)) return;
             VnPresentationWorkshopPreset preset =
-                selectedElement == VnWorkshopElement.SpeakerName ||
-                selectedElement == VnWorkshopElement.DialogueText
-                    ? GetSharedDialoguePresentation()
-                    : ComposerGetActivePresentationPreset();
+                GetComposerElementGeometryPresentation(selectedElement);
             VnPresentationWorkshopEditing.ApplyDrag(preset, selectedElement, logicalDelta);
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();

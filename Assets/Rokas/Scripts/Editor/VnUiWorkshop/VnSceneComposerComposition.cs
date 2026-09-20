@@ -43,7 +43,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 JsonUtility.ToJson(defaults));
             if (resolved == null) resolved = new VnPresentationWorkshopPreset();
             OverlayPreset(resolved, scene.presentationOverrides);
-            RestoreSharedTextGeometry(resolved, defaults);
+            ApplyGeometryScopes(resolved, defaults, scene);
             return resolved;
         }
 
@@ -415,13 +415,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return new Rect(center - size * .5f, size);
         }
 
-        private static void RestoreSharedTextGeometry(
-            VnPresentationWorkshopPreset target, VnPresentationWorkshopPreset defaults)
+        private static void ApplyGeometryScopes(
+            VnPresentationWorkshopPreset target,
+            VnPresentationWorkshopPreset defaults,
+            VnSceneComposerScene scene)
         {
             if (target == null) return;
             VnPresentationWorkshopPreset source = defaults ?? new VnPresentationWorkshopPreset();
-            CopyElementOverride(target.speakerName, source.speakerName);
-            CopyElementOverride(target.dialogueText, source.dialogueText);
+
+            // Dialogue plaque physical geometry is always project-global. A Scene may still
+            // override dialoguePanelVisual (PNG), but never the plaque rect/scale.
+            CopyElementOverride(target.dialoguePanel, source.dialoguePanel);
+
+            // Text geometry defaults to project-global. Only the explicit new ThisScene scope
+            // permits the Scene speaker/body element overrides to remain in the resolved preset.
+            if (scene == null || scene.textGeometryScope != VnSceneComposerTextGeometryScope.ThisScene)
+            {
+                CopyElementOverride(target.speakerName, source.speakerName);
+                CopyElementOverride(target.dialogueText, source.dialogueText);
+            }
         }
 
         private static void CopyElementOverride(
