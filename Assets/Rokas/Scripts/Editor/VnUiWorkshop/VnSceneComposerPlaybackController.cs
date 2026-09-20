@@ -122,6 +122,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private int videoRecoveryAttemptCount;
         private float sceneTransitionVideoWaitElapsed;
         private string currentVideoWarning = string.Empty;
+        private readonly HashSet<string> cancelledCharacterStagingIds =
+            new HashSet<string>(StringComparer.Ordinal);
 
         private SceneBoundaryTransitionPhase sceneBoundaryTransitionPhase;
         private int pendingSceneTransitionTargetIndex = -1;
@@ -202,7 +204,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PlayFromHere(int sceneIndex)
         {
+            PlayFromHere(sceneIndex, 0);
+        }
+
+        public void PlayFromHere(int sceneIndex, int beatIndex)
+        {
             RequireSceneIndex(sceneIndex);
+            RequireBeatIndex(project.scenes[sceneIndex], beatIndex);
             CancelSceneBoundaryTransition();
             scope = PlaybackScope.OrderedRange;
             rangeStart = sceneIndex;
@@ -210,11 +218,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             IsPlaying = true;
             layeredAudioPlayback.ResetSession();
             ResetScene(sceneIndex, true);
+            SetCurrentBeatForDirectStart(beatIndex);
         }
 
         internal void PlayFromHereFromNeutralStart(int sceneIndex)
         {
+            PlayFromHereFromNeutralStart(sceneIndex, 0);
+        }
+
+        internal void PlayFromHereFromNeutralStart(int sceneIndex, int beatIndex)
+        {
             RequireSceneIndex(sceneIndex);
+            RequireBeatIndex(project.scenes[sceneIndex], beatIndex);
             CancelSceneBoundaryTransition();
             scope = PlaybackScope.OrderedRange;
             rangeStart = sceneIndex;
@@ -222,6 +237,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             IsPlaying = true;
             layeredAudioPlayback.ResetSession();
             ResetSceneFromNeutralStart(sceneIndex, true);
+            SetCurrentBeatForDirectStart(beatIndex);
         }
 
         public void PlayAll()
@@ -257,6 +273,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
+            cancelledCharacterStagingIds.Clear();
             if (gifPreview != null) gifPreview.Restart();
             if (videoPreview != null)
             {
@@ -362,6 +379,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int beatCount = BeatCount(scene);
             if (CurrentBeatIndex + 1 < beatCount)
             {
+                VnSceneComposerDialogueBeat outgoingBeat = ResolveBeat(scene, CurrentBeatIndex);
+                VnSceneComposerBeatCharacterStagingResolver.CollectPendingStagingIds(
+                    outgoingBeat, BeatElapsedSeconds, cancelledCharacterStagingIds);
                 CurrentBeatIndex++;
                 BeatElapsedSeconds = 0f;
                 VnSceneComposerDialogueBeat enteredBeat = ResolveBeat(scene, CurrentBeatIndex);
@@ -382,6 +402,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
             musicPlayback.Pause();
             layeredAudioPlayback.StopAllImmediate();
             RebuildFrame(1f);
+        }
+
+        public void PreviousDialogue()
+        {
+            if (CurrentSceneIndex < 0 || IsSceneTransitionActive || CurrentBeatIndex <= 0) return;
+            CurrentBeatIndex--;
+            BeatElapsedSeconds = 0f;
+            cancelledCharacterStagingIds.Clear();
+            RebuildFrame(SceneElapsedSeconds, true);
         }
 
         public void Dispose()
@@ -446,6 +475,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             suppressCurrentSceneEntryPresentation = suppressSceneEntryPresentation;
             CurrentSceneIndex = sceneIndex;
             CurrentBeatIndex = 0;
+            cancelledCharacterStagingIds.Clear();
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
             MediaTimeSeconds = continuedMediaTime;
@@ -516,7 +546,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             Texture2D targetBackground = CurrentMediaTexture as Texture2D;
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
-                project, targetScene, targetBeat, VnWorkshopResolution.Reference1920x1080, targetBackground);
+                project, targetScene, targetBeat, VnWorkshopResolution.Reference1920x1080,
+                targetBackground, BeatElapsedSeconds, cancelledCharacterStagingIds);
             VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(
                 project, sourceScene, ResolveFirstBeat(sourceScene),
                 VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);
@@ -1178,6 +1209,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 timing.typewriterDuration + timing.settleDuration + timing.breathingRoom);
         }
 
+        private void SetCurrentBeatForDirectStart(int beatIndex)
+        {
+            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count) return;
+            VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
+            RequireBeatIndex(scene, beatIndex);
+            CurrentBeatIndex = beatIndex;
+            BeatElapsedSeconds = 0f;
+            cancelledCharacterStagingIds.Clear();
+            if (beatIndex > 0)
+            {
+                VnSceneComposerDialogueBeat beat = ResolveBeat(scene, beatIndex);
+                layeredAudioPlayback.EnterBeat(
+                    scene, beat != null ? beat.beatId : string.Empty, IsPlaying);
+            }
+            RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        private static void RequireBeatIndex(VnSceneComposerScene scene, int beatIndex)
+        {
+            int count = BeatCount(scene);
+            if (beatIndex < 0 || beatIndex >= count)
+                throw new ArgumentOutOfRangeException(
+                    nameof(beatIndex), beatIndex, "Dialogue Beat index is outside the current Scene.");
+        }
+
         private void RequireSceneIndex(int sceneIndex)
         {
             if (sceneIndex < 0 || sceneIndex >= project.scenes.Count)
@@ -1192,6 +1248,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             SceneElapsedSeconds = 0f;
             BeatElapsedSeconds = 0f;
             MediaTimeSeconds = 0f;
+            cancelledCharacterStagingIds.Clear();
             ReleaseMedia();
             ReleaseSourceMedia();
             musicPlayback.StopImmediate();

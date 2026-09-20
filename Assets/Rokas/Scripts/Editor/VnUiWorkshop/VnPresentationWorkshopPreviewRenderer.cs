@@ -147,6 +147,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool ShowKeiko { get; internal set; }
         public VnWorkshopFocusValues Focus { get; }
         public VnWorkshopPreviewCharacter[] ComposerCharacters { get; internal set; } = Array.Empty<VnWorkshopPreviewCharacter>();
+        public string[] ComposerCharacterWarnings { get; internal set; } = Array.Empty<string>();
         public VnWorkshopPreviewDecoration[] ComposerDecorations { get; internal set; } = Array.Empty<VnWorkshopPreviewDecoration>();
         public string[] ComposerDecorationWarnings { get; internal set; } = Array.Empty<string>();
         public string DialogueFontWarning { get; internal set; } = string.Empty;

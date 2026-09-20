@@ -38,6 +38,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 effectStrength = source.effectStrength,
                 effectDuration = source.effectDuration
             };
+            if (source.characterStaging != null)
+            {
+                for (int i = 0; i < source.characterStaging.Count; i++)
+                {
+                    VnSceneComposerBeatCharacterStaging staging = source.characterStaging[i];
+                    if (staging == null) continue;
+                    VnSceneComposerBeatCharacterStaging stagingCopy =
+                        UnityEngine.JsonUtility.FromJson<VnSceneComposerBeatCharacterStaging>(
+                            UnityEngine.JsonUtility.ToJson(staging));
+                    if (stagingCopy == null) continue;
+                    stagingCopy.stagingId = VnSceneComposerScene.NewStableId();
+                    copy.characterStaging.Add(stagingCopy);
+                }
+            }
             scene.dialogueBeats.Insert(sourceIndex + 1, copy);
             return copy;
         }

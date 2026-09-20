@@ -79,8 +79,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             result.beatEffectCharacterId = string.Empty;
             result.beatEffect = VnPresentationWorkshopVn10Resolver.SampleActionBounce(
                 false, 1f, bounce);
-            if (activeBeat.effect == VnSceneComposerBeatEffect.Accent &&
-                !string.IsNullOrWhiteSpace(activeBeat.targetCharacterId))
+
+            if (VnSceneComposerBeatCharacterStagingResolver.TryResolveAccent(
+                    toScene, activeBeat, beatElapsedSeconds,
+                    out string stagingAccentCharacter,
+                    out float stagingAccentStrength,
+                    out float stagingAccentDuration,
+                    out float stagingAccentElapsed))
+            {
+                VnWorkshopActionBounceValues beatBounce = bounce;
+                beatBounce.Amplitude = stagingAccentStrength;
+                beatBounce.Duration = stagingAccentDuration;
+                result.beatEffectCharacterId = stagingAccentCharacter;
+                result.beatEffect = VnPresentationWorkshopVn10Resolver.SampleActionBounce(
+                    true,
+                    Progress(stagingAccentElapsed, beatBounce.Duration),
+                    beatBounce);
+            }
+            else if (activeBeat.effect == VnSceneComposerBeatEffect.Accent &&
+                     !string.IsNullOrWhiteSpace(activeBeat.targetCharacterId))
             {
                 VnWorkshopActionBounceValues beatBounce = bounce;
                 beatBounce.Amplitude = Mathf.Max(0f, activeBeat.effectStrength);

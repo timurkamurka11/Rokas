@@ -38,6 +38,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
         Accent
     }
 
+    public enum VnSceneComposerBeatCharacterVisibility
+    {
+        KeepPrevious,
+        Show,
+        Hide
+    }
+
+    public enum VnSceneComposerBeatCharacterPosition
+    {
+        KeepPrevious,
+        Left,
+        Center,
+        Right,
+        Custom
+    }
+
     public enum VnSceneComposerDecorationLayer
     {
         BehindCharacters,
@@ -198,6 +214,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public VnSceneComposerPreviewAdvanceMode previewAdvanceMode = VnSceneComposerPreviewAdvanceMode.ManualBeat;
         public float previewAutoDuration = 2f;
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerBeatCharacterStaging
+    {
+        public string stagingId = VnSceneComposerScene.NewStableId();
+        public string characterId = string.Empty;
+        public VnSceneComposerBeatCharacterVisibility visibility =
+            VnSceneComposerBeatCharacterVisibility.KeepPrevious;
+        public VnSceneComposerBeatCharacterPosition position =
+            VnSceneComposerBeatCharacterPosition.KeepPrevious;
+        public Vector2 customPositionOffset;
+        public bool hasStateOverride;
+        public string stateId = string.Empty;
+        public VnSceneComposerBeatEffect effect = VnSceneComposerBeatEffect.None;
+        public float effectStrength = 18f;
+        public float effectDuration = .28f;
+        public List<VnSceneComposerBeatCharacterStaging> characterStaging =
+            new List<VnSceneComposerBeatCharacterStaging>();
+        public float delaySeconds;
     }
 
     [Serializable]

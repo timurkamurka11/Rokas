@@ -63,6 +63,29 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopResolution resolution,
             Texture2D backgroundOverride = null)
         {
+            return BuildFrame(project, scene, beat, resolution, backgroundOverride, float.MaxValue, null);
+        }
+
+        public static VnWorkshopPreviewFrame BuildFrame(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            VnWorkshopResolution resolution,
+            Texture2D backgroundOverride,
+            float beatElapsedSeconds)
+        {
+            return BuildFrame(project, scene, beat, resolution, backgroundOverride, beatElapsedSeconds, null);
+        }
+
+        internal static VnWorkshopPreviewFrame BuildFrame(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            VnWorkshopResolution resolution,
+            Texture2D backgroundOverride,
+            float beatElapsedSeconds,
+            ISet<string> cancelledStagingIds)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (scene == null) throw new ArgumentNullException(nameof(scene));
             if (beat == null) throw new ArgumentNullException(nameof(beat));
@@ -82,7 +105,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             frame.Dialogue = dialogue;
             frame.ShowMina = false;
             frame.ShowKeiko = false;
-            frame.ComposerCharacters = BuildCharacters(frame, preset, scene, beat);
+            frame.ComposerCharacters = BuildCharacters(
+                frame, preset, scene, beat, beatElapsedSeconds, cancelledStagingIds,
+                out string[] characterWarnings);
+            frame.ComposerCharacterWarnings = characterWarnings;
             frame.ComposerDecorations = BuildDecorations(scene, out string[] decorationWarnings);
             frame.ComposerDecorationWarnings = decorationWarnings;
             RegisterStaticExternalVideoContext(scene, frame);
@@ -169,29 +195,75 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopPreviewFrame frame,
             VnPresentationWorkshopPreset preset,
             VnSceneComposerScene scene,
-            VnSceneComposerDialogueBeat beat)
+            VnSceneComposerDialogueBeat beat,
+            float beatElapsedSeconds,
+            ISet<string> cancelledStagingIds,
+            out string[] warnings)
         {
             int count = scene.characters.Count;
-            if (count == 0) return Array.Empty<VnWorkshopPreviewCharacter>();
+            if (count == 0)
+            {
+                warnings = Array.Empty<string>();
+                return Array.Empty<VnWorkshopPreviewCharacter>();
+            }
 
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(preset);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
-            int activeIndex = FindActiveIndex(scene, beat);
+            int activeSourceIndex = FindActiveIndex(scene, beat);
+            var resolvedStaging = new VnSceneComposerResolvedBeatCharacterStaging[count];
+            var diagnostics = new List<string>();
+            var visibleOrder = new int[count];
+            int visibleCount = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                visibleOrder[i] = -1;
+                VnSceneComposerCharacter source = scene.characters[i];
+                if (source == null)
+                    throw new ArgumentException("Scene contains a null authored character entry.", nameof(scene));
+
+                string characterId = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(source);
+                if (string.IsNullOrWhiteSpace(characterId))
+                    throw new ArgumentException("Authored Scene character identity cannot be resolved.", nameof(scene));
+
+                VnSceneComposerResolvedBeatCharacterStaging resolved =
+                    VnSceneComposerBeatCharacterStagingResolver.Resolve(
+                        scene, beat, characterId, beatElapsedSeconds, cancelledStagingIds);
+                resolvedStaging[i] = resolved;
+                if (resolved.Warnings != null)
+                {
+                    for (int w = 0; w < resolved.Warnings.Length; w++)
+                    {
+                        string warning = resolved.Warnings[w];
+                        if (!string.IsNullOrWhiteSpace(warning) && !diagnostics.Contains(warning))
+                            diagnostics.Add(warning);
+                    }
+                }
+
+                if (resolved.Visible)
+                    visibleOrder[i] = visibleCount++;
+            }
+
+            int activeVisibleIndex =
+                activeSourceIndex >= 0 && activeSourceIndex < visibleOrder.Length
+                    ? visibleOrder[activeSourceIndex]
+                    : -1;
             var result = new VnWorkshopPreviewCharacter[count];
 
             for (int i = 0; i < count; i++)
             {
                 VnSceneComposerCharacter source = scene.characters[i];
-                if (source == null) throw new ArgumentException("Scene contains a null authored character entry.", nameof(scene));
-                string characterId = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(source);
-                if (string.IsNullOrWhiteSpace(characterId))
-                    throw new ArgumentException("Authored Scene character identity cannot be resolved.", nameof(scene));
-                string effectiveStateId = VnSceneComposerBeatCharacterStateResolver.ResolveStateId(
-                    scene, beat, characterId);
+                VnSceneComposerResolvedBeatCharacterStaging resolved = resolvedStaging[i];
+                string characterId = resolved.CharacterId;
+
                 if (!VnSceneComposerCharacterStateResolver.TryResolve(
-                        effectiveStateId, out VnSceneComposerResolvedCharacterState state))
-                    throw new ArgumentException(
-                        "Unknown effective VN character state: " + effectiveStateId, nameof(scene));
+                        resolved.StateId, out VnSceneComposerResolvedCharacterState state))
+                {
+                    if (!VnSceneComposerCharacterStateResolver.TryResolve(
+                            source.stateId, out state))
+                        throw new ArgumentException(
+                            "Unknown effective VN character state: " + resolved.StateId, nameof(scene));
+                }
 
                 Texture2D texture = state.Texture;
                 Rect baseline;
@@ -210,25 +282,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     baseline = RectFromCenter(baselineCenter, new Vector2(authoredWidth, authoredHeight));
                 }
 
-                ResolveSlot(source.stageSlot, stage, out float xOffset, out float slotScale);
+                ResolveSlot(resolved.StageSlot, stage, out float xOffset, out float slotScale);
                 Vector2 center = baseline.center;
                 center.x = frame.VirtualCanvasSize.x * .5f + xOffset;
                 center.y += stage.SlotY;
                 float scale = slotScale;
-                float alpha = 1f;
+                float alpha = resolved.Visible ? 1f : 0f;
                 float brightness = 1f;
-                bool active = activeIndex == i;
+                bool active = resolved.Visible && activeSourceIndex == i;
 
-                if (count > 1 && activeIndex >= 0)
+                int currentVisibleIndex = visibleOrder[i];
+                if (resolved.Visible && visibleCount > 1 && activeVisibleIndex >= 0 &&
+                    currentVisibleIndex >= 0)
                 {
                     VnWorkshopSpeakerFocusSample sample = VnPresentationWorkshopVn10Resolver.SampleSpeakerFocus(
-                        count, activeIndex, activeIndex, i, 1f, focus);
+                        visibleCount, activeVisibleIndex, activeVisibleIndex, currentVisibleIndex, 1f, focus);
                     center += sample.PositionOffset;
                     scale *= sample.Scale;
-                    alpha = sample.Alpha;
+                    alpha *= sample.Alpha;
                     brightness = sample.Brightness;
                 }
-                if (source.hasPositionOffset) center += source.positionOffset;
+
+                if (resolved.HasPositionOffset) center += resolved.PositionOffset;
                 if (source.hasScaleMultiplier) scale *= source.scaleMultiplier;
                 scale = Mathf.Max(.01f, scale);
                 Rect body = RectFromCenter(center, baseline.size * scale);
@@ -236,8 +311,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 result[i] = new VnWorkshopPreviewCharacter
                 {
                     CharacterId = characterId,
-                    StateId = effectiveStateId,
-                    Slot = source.stageSlot,
+                    StateId = resolved.StateId,
+                    Slot = resolved.StageSlot,
                     Texture = texture,
                     Uv = state.BodyUv,
                     Body = body,
@@ -246,6 +321,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     Brightness = Mathf.Max(0f, brightness)
                 };
             }
+
+            warnings = diagnostics.ToArray();
             return result;
         }
 

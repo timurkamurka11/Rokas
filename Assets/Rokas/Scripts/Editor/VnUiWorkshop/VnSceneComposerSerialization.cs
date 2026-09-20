@@ -310,7 +310,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static bool ValidateScene(VnSceneComposerProject project, VnSceneComposerScene scene, int index,
             List<string> diagnostics, out string error)
         {
-            if (!ValidateDialogueBeats(scene, out error)) return false;
+            if (!ValidateDialogueBeats(scene, diagnostics, out error)) return false;
 
             if (scene.media == null)
             {
@@ -369,6 +369,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     return false;
                 }
             }
+
+            AppendCharacterStagingWarnings(scene, diagnostics);
 
             if (scene.decorations != null)
             {
@@ -610,7 +612,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
-        private static bool ValidateDialogueBeats(VnSceneComposerScene scene, out string error)
+        private static bool ValidateDialogueBeats(
+            VnSceneComposerScene scene, List<string> diagnostics, out string error)
         {
             if (scene.dialogueBeats == null)
             {
@@ -666,10 +669,108 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     error = "Dialogue Beat Accent parameters are invalid in scene " + scene.sceneId + ".";
                     return false;
                 }
+
+                if (beat.characterStaging == null)
+                {
+                    error = "Dialogue Beat character staging list is missing in scene " + scene.sceneId + ".";
+                    return false;
+                }
+
+                var stagingIds = new HashSet<string>(StringComparer.Ordinal);
+                var stagingCharacters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int accentCount = 0;
+                for (int r = 0; r < beat.characterStaging.Count; r++)
+                {
+                    VnSceneComposerBeatCharacterStaging staging = beat.characterStaging[r];
+                    if (staging == null)
+                    {
+                        error = "Character staging row is null in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsStableId(staging.stagingId))
+                    {
+                        error = "Character staging ID is missing or invalid in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!stagingIds.Add(staging.stagingId))
+                    {
+                        error = "Duplicate character staging ID: " + staging.stagingId + ".";
+                        return false;
+                    }
+                    if (string.IsNullOrWhiteSpace(staging.characterId))
+                    {
+                        error = "Character staging row requires a character in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!stagingCharacters.Add(staging.characterId))
+                    {
+                        error = "Dialogue Beat contains duplicate staging rows for character '" +
+                                staging.characterId + "' in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!Enum.IsDefined(typeof(VnSceneComposerBeatCharacterVisibility), staging.visibility) ||
+                        !Enum.IsDefined(typeof(VnSceneComposerBeatCharacterPosition), staging.position) ||
+                        !Enum.IsDefined(typeof(VnSceneComposerBeatEffect), staging.effect))
+                    {
+                        error = "Invalid character staging enum value in scene " + scene.sceneId + ".";
+                        return false;
+                    }
+                    if (!IsFinite(staging.delaySeconds) || staging.delaySeconds < 0f)
+                    {
+                        error = "Character staging delay must be finite and non-negative in scene " +
+                                scene.sceneId + ".";
+                        return false;
+                    }
+                    if (staging.position == VnSceneComposerBeatCharacterPosition.Custom &&
+                        (!IsFinite(staging.customPositionOffset.x) ||
+                         !IsFinite(staging.customPositionOffset.y)))
+                    {
+                        error = "Character staging custom position must be finite in scene " +
+                                scene.sceneId + ".";
+                        return false;
+                    }
+                    if (staging.effect == VnSceneComposerBeatEffect.Accent)
+                    {
+                        accentCount++;
+                        if (!IsFinite(staging.effectStrength) || staging.effectStrength < 0f ||
+                            !IsFinite(staging.effectDuration) || staging.effectDuration <= 0f ||
+                            staging.effectDuration > 10f)
+                        {
+                            error = "Character staging Accent parameters are invalid in scene " +
+                                    scene.sceneId + ".";
+                            return false;
+                        }
+                    }
+                }
+                if (accentCount > 1)
+                {
+                    error = "Dialogue Beat supports one Accent target at a time in scene " +
+                            scene.sceneId + ".";
+                    return false;
+                }
             }
 
             error = string.Empty;
             return true;
+        }
+
+        private static void AppendCharacterStagingWarnings(
+            VnSceneComposerScene scene, List<string> diagnostics)
+        {
+            if (scene == null || diagnostics == null || scene.dialogueBeats == null) return;
+            for (int i = 0; i < scene.dialogueBeats.Count; i++)
+            {
+                VnSceneComposerDialogueBeat beat = scene.dialogueBeats[i];
+                if (beat == null) continue;
+                string[] warnings =
+                    VnSceneComposerBeatCharacterStagingResolver.CollectWarnings(scene, beat);
+                for (int w = 0; w < warnings.Length; w++)
+                {
+                    string warning = warnings[w];
+                    if (!string.IsNullOrWhiteSpace(warning) && !diagnostics.Contains(warning))
+                        diagnostics.Add(warning);
+                }
+            }
         }
 
         private static bool ValidateAdditionalAudio(
@@ -967,6 +1068,35 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (beat.stateId == null) beat.stateId = string.Empty;
                     if (!IsFinite(beat.effectStrength) || beat.effectStrength < 0f) beat.effectStrength = 18f;
                     if (!IsFinite(beat.effectDuration) || beat.effectDuration <= 0f) beat.effectDuration = .28f;
+                    if (beat.characterStaging == null)
+                        beat.characterStaging = new List<VnSceneComposerBeatCharacterStaging>();
+                    for (int r = 0; r < beat.characterStaging.Count; r++)
+                    {
+                        VnSceneComposerBeatCharacterStaging staging = beat.characterStaging[r];
+                        if (staging == null)
+                        {
+                            beat.characterStaging[r] = staging =
+                                new VnSceneComposerBeatCharacterStaging();
+                        }
+                        if (staging.stagingId == null) staging.stagingId = string.Empty;
+                        if (staging.characterId == null) staging.characterId = string.Empty;
+                        if (staging.stateId == null) staging.stateId = string.Empty;
+                        if (!Enum.IsDefined(typeof(VnSceneComposerBeatCharacterVisibility), staging.visibility))
+                            staging.visibility = VnSceneComposerBeatCharacterVisibility.KeepPrevious;
+                        if (!Enum.IsDefined(typeof(VnSceneComposerBeatCharacterPosition), staging.position))
+                            staging.position = VnSceneComposerBeatCharacterPosition.KeepPrevious;
+                        if (!Enum.IsDefined(typeof(VnSceneComposerBeatEffect), staging.effect))
+                            staging.effect = VnSceneComposerBeatEffect.None;
+                        if (!IsFinite(staging.delaySeconds) || staging.delaySeconds < 0f)
+                            staging.delaySeconds = 0f;
+                        if (!IsFinite(staging.customPositionOffset.x) ||
+                            !IsFinite(staging.customPositionOffset.y))
+                            staging.customPositionOffset = Vector2.zero;
+                        if (!IsFinite(staging.effectStrength) || staging.effectStrength < 0f)
+                            staging.effectStrength = 18f;
+                        if (!IsFinite(staging.effectDuration) || staging.effectDuration <= 0f)
+                            staging.effectDuration = .28f;
+                    }
                 }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
                 if (scene.music == null) scene.music = new VnSceneComposerMusic();

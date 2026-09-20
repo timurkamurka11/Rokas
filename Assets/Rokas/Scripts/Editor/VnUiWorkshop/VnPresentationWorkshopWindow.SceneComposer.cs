@@ -337,6 +337,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (VnSceneComposerDialogue.FindIndex(scene, beatId) < 0)
                 throw new ArgumentException("Dialogue beat is not part of the selected Scene.", nameof(beatId));
             _sceneComposerSelectedDialogueBeatId = beatId;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
             Repaint();
         }
 
@@ -561,7 +562,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             ComposerStopMusicPreview();
             int index = GetSelectedSceneIndexOrThrow();
-            EnsureSceneComposerPlayback().PlayFromHereFromNeutralStart(index);
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            int beatIndex = beat != null ? VnSceneComposerDialogue.FindIndex(scene, beat.beatId) : 0;
+            if (beatIndex < 0) beatIndex = 0;
+            EnsureSceneComposerPlayback().PlayFromHereFromNeutralStart(index, beatIndex);
             BeginSceneComposerPlaybackTick();
         }
 
@@ -610,6 +615,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerPlayback.AdvanceDialogue();
             if (_sceneComposerPlayback.CurrentSceneIndex != previousScene)
                 SyncSceneComposerSelectionFromPlayback();
+            SyncSelectedDialogueBeatFromPlayback();
+            _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
+            Repaint();
+        }
+
+        public void ComposerPreviousDialogue()
+        {
+            if (_sceneComposerPlayback == null) return;
+            _sceneComposerPlayback.PreviousDialogue();
+            SyncSelectedDialogueBeatFromPlayback();
             _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
             Repaint();
         }
@@ -930,6 +945,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (GUILayout.Button(new GUIContent("Сначала", "Перезапустить с начала"), EditorStyles.toolbarButton,
                         GUILayout.Width(68f)))
                     ComposerRestart();
+                if (GUILayout.Button(
+                        new GUIContent(compactTransport ? "◁Р" : "Пред. реп.", "Предыдущая реплика в текущей сцене"),
+                        EditorStyles.toolbarButton, GUILayout.Width(compactTransport ? 40f : 76f)))
+                    ComposerPreviousDialogue();
+                if (GUILayout.Button(
+                        new GUIContent(compactTransport ? "Р▷" : "След. реп.", "Следующая реплика в текущей сцене"),
+                        EditorStyles.toolbarButton, GUILayout.Width(compactTransport ? 40f : 76f)))
+                    ComposerAdvanceDialogue();
                 if (GUILayout.Button(
                         new GUIContent(compactTransport ? "▶" : "Следующая", "Следующая сцена"),
                         EditorStyles.toolbarButton, GUILayout.Width(compactTransport ? 34f : 84f)))
@@ -1398,6 +1421,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                 }
             }
+
+            selectedBeat = ComposerGetSelectedDialogueBeat();
+            if (selectedBeat != null)
+                DrawSceneComposerBeatCharacterStagingInspector(scene, selectedBeat);
 
             DrawSceneComposerDialogueTypographyInspector(scene);
 
@@ -2115,6 +2142,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerSelectedSceneId = scene.sceneId;
             SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
+        }
+
+        private void SyncSelectedDialogueBeatFromPlayback()
+        {
+            if (_sceneComposerPlayback == null) return;
+            int sceneIndex = _sceneComposerPlayback.CurrentSceneIndex;
+            if (sceneIndex < 0 || sceneIndex >= _sceneComposerProject.scenes.Count) return;
+            VnSceneComposerScene scene = _sceneComposerProject.scenes[sceneIndex];
+            int beatIndex = _sceneComposerPlayback.CurrentBeatIndex;
+            if (scene == null || scene.dialogueBeats == null ||
+                beatIndex < 0 || beatIndex >= scene.dialogueBeats.Count)
+                return;
+            VnSceneComposerDialogueBeat beat = scene.dialogueBeats[beatIndex];
+            if (beat == null) return;
+            _sceneComposerSelectedDialogueBeatId = beat.beatId ?? string.Empty;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
         }
 
         private void DisposeSceneComposerRuntimeResources()

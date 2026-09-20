@@ -78,6 +78,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 string sourceBeatId = copy.dialogueBeats[i].beatId ?? string.Empty;
                 string copiedBeatId = VnSceneComposerScene.NewStableId();
                 copy.dialogueBeats[i].beatId = copiedBeatId;
+                if (copy.dialogueBeats[i].characterStaging == null)
+                    copy.dialogueBeats[i].characterStaging =
+                        new System.Collections.Generic.List<VnSceneComposerBeatCharacterStaging>();
+                for (int s = 0; s < copy.dialogueBeats[i].characterStaging.Count; s++)
+                {
+                    VnSceneComposerBeatCharacterStaging staging =
+                        copy.dialogueBeats[i].characterStaging[s];
+                    if (staging == null) continue;
+                    staging.stagingId = VnSceneComposerScene.NewStableId();
+                }
                 if (!string.IsNullOrEmpty(sourceBeatId)) beatIdMap[sourceBeatId] = copiedBeatId;
             }
             for (int i = 0; i < copy.additionalAudioCues.Count; i++)
