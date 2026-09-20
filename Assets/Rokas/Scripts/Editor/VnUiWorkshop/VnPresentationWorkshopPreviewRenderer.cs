@@ -220,11 +220,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 out string speaker, out string dialogue, out bool showMina, out bool showKeiko);
             if (dialogueOverride != null) dialogue = dialogueOverride;
 
-            Rect panel = ApplyOverride(BuildPanelRect(virtualCanvas, panelTexture), preset.dialoguePanel);
-            Rect speakerName = ConstrainTextRectToPanel(
-                ApplyOverride(RelativeRect(panel, .12f, .48f, .42f, .84f), preset.speakerName), panel);
-            Rect dialogueText = ConstrainTextRectToPanel(
-                ApplyOverride(RelativeRect(panel, .10f, .14f, .90f, .54f), preset.dialogueText), panel);
+            // One canonical reference geometry: displayed plaque/media never redefine authored coordinates.
+            Rect panel = ApplyOverride(
+                BuildPanelRect(virtualCanvas, assets.vnDialoguePanelKeikoDark), preset.dialoguePanel);
+            Rect speakerName = ApplyOverride(
+                RelativeRect(panel, .12f, .48f, .42f, .84f), preset.speakerName);
+            Rect dialogueText = ApplyOverride(
+                RelativeRect(panel, .10f, .14f, .90f, .54f), preset.dialogueText);
             Rect mute = ApplyOverride(CenteredRect(panel, .455f, .735f, 76f), preset.muteHitRegion);
             Rect pause = ApplyOverride(CenteredRect(panel, .560f, .735f, 76f), preset.pauseHitRegion);
             Rect skip = ApplyOverride(CenteredRect(panel, .665f, .735f, 76f), preset.skipHitRegion);
@@ -519,11 +521,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         internal static Rect ConstrainTextRectToPanel(Rect rect, Rect panel)
         {
-            float width = Mathf.Clamp(rect.width, 1f, Mathf.Max(1f, panel.width));
-            float height = Mathf.Clamp(rect.height, 1f, Mathf.Max(1f, panel.height));
-            float x = Mathf.Clamp(rect.x, panel.xMin, panel.xMax - width);
-            float y = Mathf.Clamp(rect.y, panel.yMin, panel.yMax - height);
-            return new Rect(x, y, width, height);
+            // Source-compatible helper only. Authored text geometry is not silently clamped to plaque pixels.
+            return rect;
         }
 
         private static Rect BuildPanelRect(Vector2 virtualCanvas, Texture2D panelTexture)

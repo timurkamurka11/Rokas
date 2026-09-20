@@ -1042,6 +1042,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static void NormalizeProject(VnSceneComposerProject project)
         {
             if (project.defaultPresentation == null) project.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (project.speakerStyleOverrides == null)
+                project.speakerStyleOverrides = new List<VnSceneComposerSpeakerStyleOverride>();
+            for (int s = project.speakerStyleOverrides.Count - 1; s >= 0; s--)
+            {
+                VnSceneComposerSpeakerStyleOverride speakerStyle = project.speakerStyleOverrides[s];
+                if (speakerStyle == null)
+                {
+                    project.speakerStyleOverrides.RemoveAt(s);
+                    continue;
+                }
+                if (speakerStyle.characterId == null) speakerStyle.characterId = string.Empty;
+                if (speakerStyle.style == null)
+                    speakerStyle.style = new VnSceneComposerTextVisualStyleOverride();
+                NormalizeTextVisualStyle(speakerStyle.style);
+            }
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
             if (project.title == null) project.title = string.Empty;
             if (project.sourceHead == null) project.sourceHead = string.Empty;
@@ -1160,6 +1175,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (textElement.fontDisplayName == null) textElement.fontDisplayName = string.Empty;
                 }
                 if (scene.presentationOverrides == null) scene.presentationOverrides = new VnPresentationWorkshopPreset();
+                if (scene.dialogueBodyStyleOverride == null)
+                    scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
+                NormalizeTextVisualStyle(scene.dialogueBodyStyleOverride);
                 if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
                 if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType), scene.transition.sceneTransitionType))
                     scene.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.None;
@@ -1181,6 +1199,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (character.stateId == null) character.stateId = string.Empty;
                 }
             }
+        }
+
+        private static void NormalizeTextVisualStyle(VnSceneComposerTextVisualStyleOverride style)
+        {
+            if (style == null) return;
+            if (style.fontAssetGuid == null) style.fontAssetGuid = string.Empty;
+            if (!Enum.IsDefined(typeof(VnWorkshopFontPreset), style.fontPreset))
+                style.fontPreset = VnWorkshopFontPreset.ProjectSans;
+            if (!Enum.IsDefined(typeof(VnWorkshopTextAlignment), style.alignment))
+                style.alignment = VnWorkshopTextAlignment.Left;
+            if (!IsFinite(style.fontSize) || style.fontSize < 0f) style.fontSize = 0f;
+            if (!IsFinite(style.characterSpacing)) style.characterSpacing = 0f;
+            if (!IsFinite(style.lineSpacing)) style.lineSpacing = 0f;
+            if (!IsFinite(style.paragraphSpacing)) style.paragraphSpacing = 0f;
+            if (!IsFinite(style.color.r) || !IsFinite(style.color.g) ||
+                !IsFinite(style.color.b) || !IsFinite(style.color.a))
+                style.color = Color.white;
         }
 
         private static void MakeExternalReferencesPortable(VnSceneComposerProject project)

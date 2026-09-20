@@ -43,6 +43,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 JsonUtility.ToJson(defaults));
             if (resolved == null) resolved = new VnPresentationWorkshopPreset();
             OverlayPreset(resolved, scene.presentationOverrides);
+            RestoreSharedTextGeometry(resolved, defaults);
             return resolved;
         }
 
@@ -95,6 +96,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     "Scene Composer supports zero to three visible authored characters.");
 
             VnPresentationWorkshopPreset preset = ResolvePresentation(project, scene);
+            VnSceneComposerTextStyleResolver.ApplyResolvedTypography(project, scene, beat, preset);
             VnWorkshopPreviewScene baseScene = SelectBaseScene(scene, beat);
             string dialogue = beat.text ?? string.Empty;
             VnWorkshopPreviewFrame frame = VnPresentationWorkshopPreviewRenderer.BuildFrame(
@@ -411,6 +413,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static Rect RectFromCenter(Vector2 center, Vector2 size)
         {
             return new Rect(center - size * .5f, size);
+        }
+
+        private static void RestoreSharedTextGeometry(
+            VnPresentationWorkshopPreset target, VnPresentationWorkshopPreset defaults)
+        {
+            if (target == null) return;
+            VnPresentationWorkshopPreset source = defaults ?? new VnPresentationWorkshopPreset();
+            CopyElementOverride(target.speakerName, source.speakerName);
+            CopyElementOverride(target.dialogueText, source.dialogueText);
+        }
+
+        private static void CopyElementOverride(
+            VnWorkshopElementOverride target, VnWorkshopElementOverride source)
+        {
+            if (target == null || source == null) return;
+            target.hasPositionDelta = source.hasPositionDelta;
+            target.positionDelta = source.positionDelta;
+            target.hasSizeDelta = source.hasSizeDelta;
+            target.sizeDelta = source.sizeDelta;
+            target.hasScaleMultiplier = source.hasScaleMultiplier;
+            target.scaleMultiplier = source.scaleMultiplier;
         }
 
         private static void OverlayPreset(VnPresentationWorkshopPreset target, VnPresentationWorkshopPreset source)

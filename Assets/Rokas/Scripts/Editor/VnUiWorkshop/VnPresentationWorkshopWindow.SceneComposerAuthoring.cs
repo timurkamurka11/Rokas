@@ -372,10 +372,23 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return true;
         }
 
+        private void CancelSceneComposerPreviewDrag()
+        {
+            _sceneComposerDraggingPreviewObject = false;
+            _sceneComposerDraggingCharacter = false;
+            _sceneComposerDraggingDecoration = false;
+            _sceneComposerLastDragLogicalPoint = Vector2.zero;
+        }
+
         private void ApplySceneComposerElementDrag(Vector2 logicalDelta)
         {
             if (!IsFinite(logicalDelta)) return;
-            VnPresentationWorkshopEditing.ApplyDrag(ComposerGetActivePresentationPreset(), selectedElement, logicalDelta);
+            VnPresentationWorkshopPreset preset =
+                selectedElement == VnWorkshopElement.SpeakerName ||
+                selectedElement == VnWorkshopElement.DialogueText
+                    ? GetSharedDialoguePresentation()
+                    : ComposerGetActivePresentationPreset();
+            VnPresentationWorkshopEditing.ApplyDrag(preset, selectedElement, logicalDelta);
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }
