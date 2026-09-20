@@ -680,6 +680,105 @@ namespace Rokas.EditorTools.Tests
             Assert.That(p.scenes[0].transition.sceneTransitionDuration, Is.EqualTo(.7f));
         }
 
+
+        [Test] public void MTextColorGeometry_RED_63_PerCharacterSpeakerOverrideDoesNotOwnFontOrSize()
+        {
+            var p = Project(SceneWithCharacters(Keiko, Mina));
+            p.defaultPresentation.typography.hasSpeakerFontAssetGuid = true;
+            p.defaultPresentation.typography.speakerFontAssetGuid = FontA;
+            p.defaultPresentation.typography.hasSpeakerFontSize = true;
+            p.defaultPresentation.typography.speakerFontSize = 50f;
+            AddSpeakerStyle(p, Mina, FontB, 72f, Color.red);
+            p.scenes[0].dialogueBeats[0].speaker = Mina;
+
+            VnWorkshopTypographyValues resolved = Resolve(p, p.scenes[0], 0);
+
+            Assert.That(resolved.SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(resolved.SpeakerFontAssetGuid, Is.EqualTo(FontA),
+                "Character override may change speaker color only; font remains shared.");
+            Assert.That(resolved.SpeakerFontSize, Is.EqualTo(50f),
+                "Character override may change speaker color only; size remains shared.");
+        }
+
+        [Test] public void MTextColorGeometry_RED_64_TextGeometryScopeModelExistsAndDefaultsGlobal()
+        {
+            FieldInfo field = typeof(VnSceneComposerScene).GetField(
+                "textGeometryScope", BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null,
+                "Scene needs explicit All Scenes / This Scene text geometry scope.");
+            Assert.That(field.FieldType.IsEnum, Is.True);
+            object scene = new VnSceneComposerScene();
+            Assert.That(field.GetValue(scene).ToString(), Is.EqualTo("AllScenes"));
+        }
+
+        [Test] public void MTextColorGeometry_RED_65_TextGeometryScopeAuthoringApiExists()
+        {
+            MethodInfo method = typeof(VnPresentationWorkshopWindow).GetMethod(
+                "ComposerSetSelectedSceneTextGeometryScope",
+                BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(method, Is.Not.Null,
+                "Authoring needs a dedicated scope switch instead of silently writing Scene/shared geometry.");
+        }
+
+        [Test] public void MTextColorGeometry_RED_66_SceneCannotOverrideDialoguePlaqueGeometry()
+        {
+            var p = Project(Scene("A"), Scene("B"));
+            p.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+            p.defaultPresentation.dialoguePanel.positionDelta = new Vector2(12f, 34f);
+            p.scenes[1].presentationOverrides.dialoguePanel.hasPositionDelta = true;
+            p.scenes[1].presentationOverrides.dialoguePanel.positionDelta = new Vector2(333f, -222f);
+
+            VnPresentationWorkshopPreset a = VnSceneComposerComposition.ResolvePresentation(p, p.scenes[0]);
+            VnPresentationWorkshopPreset b = VnSceneComposerComposition.ResolvePresentation(p, p.scenes[1]);
+
+            Assert.That(a.dialoguePanel.positionDelta, Is.EqualTo(new Vector2(12f, 34f)));
+            Assert.That(b.dialoguePanel.positionDelta, Is.EqualTo(new Vector2(12f, 34f)),
+                "Dialogue plaque physical geometry is always project-global.");
+        }
+
+        [Test] public void MTextColorGeometry_RED_67_PlaqueLayoutEditWritesProjectGlobalGeometry()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                w.ComposerSetPresentationScope(false);
+                w.ComposerSetElementLayout(
+                    VnWorkshopElement.DialoguePanel,
+                    new Vector2(80f, -40f),
+                    new Vector2(160f, 60f),
+                    1.15f);
+
+                Assert.That(p.defaultPresentation.dialoguePanel.hasPositionDelta, Is.True,
+                    "Plaque layout edit must write project-global geometry even while Scene scope is selected.");
+                Assert.That(p.defaultPresentation.dialoguePanel.positionDelta,
+                    Is.EqualTo(new Vector2(80f, -40f)));
+                Assert.That(p.scenes[0].presentationOverrides.dialoguePanel.hasPositionDelta, Is.False,
+                    "Scene-local plaque geometry must not exist.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextColorGeometry_RED_68_CharacterColorOnlyApiExists()
+        {
+            MethodInfo setColor = typeof(VnPresentationWorkshopWindow).GetMethod(
+                "ComposerSetCharacterSpeakerColor",
+                BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo clearColor = typeof(VnPresentationWorkshopWindow).GetMethod(
+                "ComposerClearCharacterSpeakerColor",
+                BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(setColor, Is.Not.Null);
+            Assert.That(clearColor, Is.Not.Null);
+        }
+
+        [Test] public void MTextColorGeometry_RED_69_TextUiExposesScopeAndGlobalPlaqueLanguage()
+        {
+            string source = TextUiSource();
+            Assert.That(source, Does.Contain("Ко всем сценам")
+                .And.Contain("Только к этой сцене")
+                .And.Contain("Общее для всех сцен"));
+        }
+
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
         {
             var p=new VnSceneComposerProject();
