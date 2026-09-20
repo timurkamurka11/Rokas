@@ -139,7 +139,9 @@ namespace Rokas.EditorTools.Tests
                 VnSceneComposerEditing.DuplicateScene(p, p.scenes[0].sceneId);
             Assert.That(copy.speakerColorScope,
                 Is.EqualTo(VnSceneComposerSpeakerColorScope.AllScenes));
-            Assert.That(Resolve(p, copy, copy.dialogueBeats[0]).SpeakerColor,
+            Assert.That(
+                VnSceneComposerTextStyleResolver.Resolve(
+                    p, copy, copy.dialogueBeats[0]).SpeakerColor,
                 Is.EqualTo(Color.blue));
         }
 
