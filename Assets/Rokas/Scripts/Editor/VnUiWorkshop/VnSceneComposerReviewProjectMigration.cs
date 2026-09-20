@@ -49,8 +49,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public const string ManifestFileName = "user-asset-manifest.json";
         private const string LocalBindingsFileName = "local-media-bindings.json";
-        private static readonly Regex Hex32 = new Regex(
-            @"\b[0-9a-fA-F]{32}\b", RegexOptions.Compiled);
+        private static readonly Regex AssetGuidValue = new Regex(
+            @"(?i)""(?:assetGuid|[A-Za-z0-9_]*FontAssetGuid)""\s*:\s*""([0-9a-f]{32})""",
+            RegexOptions.Compiled);
         private static readonly Regex MetaGuid = new Regex(
             @"(?m)^guid:\s*([0-9a-fA-F]{32})\s*$", RegexOptions.Compiled);
 
@@ -127,19 +128,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             string projectJson = File.ReadAllText(sourceProjectFile, Encoding.UTF8);
-            HashSet<string> referencedGuids = new HashSet<string>(
-                Hex32.Matches(projectJson).Cast<Match>().Select(m => m.Value),
+            HashSet<string> referencedGuids = CollectReferencedAssetGuids(projectJson);
+            string[] assetSourceRoots = EnumerateAssetSourceRoots(
+                searchRoot, destinationProjectRoot, projectId, sourceRoot);
+            var sourceGuidMaps = new Dictionary<string, Dictionary<string, string>>(
                 StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, string> sourceGuidMap = BuildSourceGuidMap(sourceRoot);
+            for (int rootIndex = 0; rootIndex < assetSourceRoots.Length; rootIndex++)
+                sourceGuidMaps[assetSourceRoots[rootIndex]] =
+                    BuildSourceGuidMap(assetSourceRoots[rootIndex]);
 
+            var unresolved = new List<string>();
             foreach (string guid in referencedGuids)
             {
-                if (!sourceGuidMap.TryGetValue(guid, out string sourceAssetPath)) continue;
                 string currentPath = AssetDatabase.GUIDToAssetPath(guid);
                 if (!string.IsNullOrEmpty(currentPath)) continue;
-                CopyReferencedAsset(sourceRoot, destinationProjectRoot, sourceAssetPath, guid, manifest);
-                CopyReferencedAsset(sourceRoot, backupRoot, sourceAssetPath, guid, null);
+
+                bool recovered = false;
+                for (int rootIndex = 0; rootIndex < assetSourceRoots.Length; rootIndex++)
+                {
+                    string assetRoot = assetSourceRoots[rootIndex];
+                    Dictionary<string, string> guidMap = sourceGuidMaps[assetRoot];
+                    if (!guidMap.TryGetValue(guid, out string sourceAssetPath)) continue;
+
+                    CopyReferencedAsset(
+                        assetRoot, destinationProjectRoot, sourceAssetPath, guid, manifest);
+                    CopyReferencedAsset(
+                        assetRoot, backupRoot, sourceAssetPath, guid, null);
+                    recovered = true;
+                    break;
+                }
+
+                if (!recovered) unresolved.Add(guid);
             }
+
+            if (unresolved.Count > 0)
+                throw new FileNotFoundException(
+                    "Referenced VN user assets could not be recovered by GUID: " +
+                    string.Join(", ", unresolved.ToArray()));
 
             PreserveExternalBindings(
                 searchRoot, projectId, destinationProjectDir, manifest);
@@ -148,7 +173,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             File.WriteAllText(manifestPath, JsonUtility.ToJson(manifest, true), new UTF8Encoding(false));
 
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            ValidateMigratedProject(destinationProjectRoot, projectId, manifest);
+            ValidateMigratedProject(
+                destinationProjectRoot, projectId, manifest, referencedGuids);
             Debug.Log("ROKAS_VN_USER_PROJECT_MIGRATION=PASS source=" + sourceRoot +
                       " project=" + projectId + " assets=" + manifest.assets.Count);
         }
@@ -224,6 +250,76 @@ namespace Rokas.EditorTools.VnUiWorkshop
             });
         }
 
+        private static HashSet<string> CollectReferencedAssetGuids(string projectJson)
+        {
+            var guids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(projectJson)) return guids;
+            MatchCollection matches = AssetGuidValue.Matches(projectJson);
+            for (int i = 0; i < matches.Count; i++)
+            {
+                Match match = matches[i];
+                if (match.Success && match.Groups.Count > 1 &&
+                    !string.IsNullOrWhiteSpace(match.Groups[1].Value))
+                    guids.Add(match.Groups[1].Value);
+            }
+            return guids;
+        }
+
+        private static string[] EnumerateAssetSourceRoots(
+            string searchRoot, string destinationRoot, string projectId, string preferredRoot)
+        {
+            var roots = new List<string>();
+            string excluded = NormalizeRoot(destinationRoot);
+
+            Action<string> addRoot = root =>
+            {
+                if (string.IsNullOrWhiteSpace(root)) return;
+                string normalized;
+                try { normalized = NormalizeRoot(root); }
+                catch { return; }
+                if (string.Equals(normalized, excluded, StringComparison.OrdinalIgnoreCase)) return;
+                if (!Directory.Exists(Path.Combine(normalized, "Assets"))) return;
+                if (!roots.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+                    roots.Add(normalized);
+            };
+
+            addRoot(preferredRoot);
+            addRoot(searchRoot);
+
+            if (Directory.Exists(searchRoot))
+            {
+                string[] direct;
+                try { direct = Directory.GetDirectories(searchRoot); }
+                catch { direct = Array.Empty<string>(); }
+                for (int i = 0; i < direct.Length; i++) addRoot(direct[i]);
+            }
+
+            // Durable review backups are not necessarily full Unity projects. They still preserve
+            // the original Assets/... + .meta pairs and are valid GUID recovery sources.
+            string durableRoot = Path.Combine(searchRoot, "VNProjects", projectId);
+            if (Directory.Exists(durableRoot))
+            {
+                string[] assetFolders;
+                try
+                {
+                    assetFolders = Directory.GetDirectories(
+                        durableRoot, "Assets", SearchOption.AllDirectories);
+                }
+                catch
+                {
+                    assetFolders = Array.Empty<string>();
+                }
+
+                for (int i = 0; i < assetFolders.Length; i++)
+                {
+                    DirectoryInfo parent = Directory.GetParent(assetFolders[i]);
+                    if (parent != null) addRoot(parent.FullName);
+                }
+            }
+
+            return roots.ToArray();
+        }
+
         private static Dictionary<string, string> BuildSourceGuidMap(string sourceRoot)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -292,7 +388,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private static void ValidateMigratedProject(
-            string destinationRoot, string projectId, VnSceneComposerUserAssetManifest manifest)
+            string destinationRoot, string projectId, VnSceneComposerUserAssetManifest manifest,
+            IEnumerable<string> referencedGuids)
         {
             VnSceneComposerImportResult loaded =
                 VnSceneComposerStorage.LoadProject(destinationRoot, projectId);
@@ -316,6 +413,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     throw new InvalidDataException(
                         "Migrated GUID resolved to unexpected path: " + e.guid +
                         " expected=" + e.assetPath + " actual=" + resolved);
+            }
+
+            if (referencedGuids != null)
+            {
+                foreach (string guid in referencedGuids)
+                {
+                    if (string.IsNullOrWhiteSpace(guid)) continue;
+                    string resolved = AssetDatabase.GUIDToAssetPath(guid);
+                    if (string.IsNullOrEmpty(resolved))
+                        throw new InvalidDataException(
+                            "Referenced VN project asset GUID is unresolved after migration: " + guid);
+                }
             }
         }
 

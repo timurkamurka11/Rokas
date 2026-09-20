@@ -1063,6 +1063,62 @@ namespace Rokas.EditorTools.Tests
             Assert.That(resolved.a, Is.EqualTo(.35f).Within(.001f));
         }
 
+
+        [Test] public void MTextColorGeometry_88_MigrationCollectsOnlyAssetGuidFields()
+        {
+            MethodInfo method = typeof(VnSceneComposerReviewProjectMigration).GetMethod(
+                "CollectReferencedAssetGuids",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null);
+
+            string json =
+                "{\"projectId\":\"11111111111111111111111111111111\"," +
+                "\"sceneId\":\"22222222222222222222222222222222\"," +
+                "\"assetGuid\":\"33333333333333333333333333333333\"," +
+                "\"speakerFontAssetGuid\":\"44444444444444444444444444444444\"}";
+            object value = method.Invoke(null, new object[] { json });
+            var guids = value as System.Collections.Generic.HashSet<string>;
+            Assert.That(guids, Is.Not.Null);
+            Assert.That(guids, Does.Contain("33333333333333333333333333333333"));
+            Assert.That(guids, Does.Contain("44444444444444444444444444444444"));
+            Assert.That(guids, Does.Not.Contain("11111111111111111111111111111111"));
+            Assert.That(guids, Does.Not.Contain("22222222222222222222222222222222"));
+        }
+
+        [Test] public void MTextColorGeometry_89_MigrationEnumeratesMultipleAssetRoots()
+        {
+            string root = TempRoot();
+            try
+            {
+                string a = Path.Combine(root, "A");
+                string b = Path.Combine(root, "B");
+                string dest = Path.Combine(root, "Dest");
+                Directory.CreateDirectory(Path.Combine(a, "Assets"));
+                Directory.CreateDirectory(Path.Combine(b, "Assets"));
+                Directory.CreateDirectory(Path.Combine(dest, "Assets"));
+
+                MethodInfo method = typeof(VnSceneComposerReviewProjectMigration).GetMethod(
+                    "EnumerateAssetSourceRoots",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                Assert.That(method, Is.Not.Null);
+                string[] roots = (string[])method.Invoke(
+                    null, new object[] { root, dest, UserProjectId, a });
+
+                Assert.That(roots, Does.Contain(Path.GetFullPath(a)));
+                Assert.That(roots, Does.Contain(Path.GetFullPath(b)));
+                Assert.That(roots, Does.Not.Contain(Path.GetFullPath(dest)));
+            }
+            finally { Delete(root); }
+        }
+
+        [Test] public void MTextColorGeometry_90_MigrationFailsClosedOnUnresolvedGuid()
+        {
+            string source = MigrationSource();
+            Assert.That(source, Does.Contain("Referenced VN user assets could not be recovered by GUID")
+                .And.Contain("Referenced VN project asset GUID is unresolved after migration")
+                .And.Contain("EnumerateAssetSourceRoots"));
+        }
+
         private static VnSceneComposerProject Project(params VnSceneComposerScene[] scenes)
         {
             var p=new VnSceneComposerProject();
