@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0,0731524">
+  <test-suite type="TestSuite" id="1000" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="33" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.073152" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1036" name="Rokas.Core.EditModeTests.dll" fullname="D:/Rokas/Rokas/.worktrees/home-unified-light-toggle/Library/ScriptAssemblies/Rokas.Core.EditModeTests.dll" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.059609" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="44368" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1037" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.058232" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1038" name="Core" fullname="Rokas.Core" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.057640" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1039" name="Tests" fullname="Rokas.Core.Tests" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.057027" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1026" name="FirstLoopDomainTests" fullname="Rokas.Core.Tests.FirstLoopDomainTests" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.052939" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1029" name="CombatReloadPreservesHealthWithoutLegacyAutoDamage" fullname="Rokas.Core.Tests.FirstLoopDomainTests.CombatReloadPreservesHealthWithoutLegacyAutoDamage" methodname="CombatReloadPreservesHealthWithoutLegacyAutoDamage" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="856302737" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.026716" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="ContractRewardCannotBeClaimedTwice" fullname="Rokas.Core.Tests.FirstLoopDomainTests.ContractRewardCannotBeClaimedTwice" methodname="ContractRewardCannotBeClaimedTwice" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="770233332" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.008824" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="HomeCannotSkipPhaseGuardIntoCombat" fullname="Rokas.Core.Tests.FirstLoopDomainTests.HomeCannotSkipPhaseGuardIntoCombat" methodname="HomeCannotSkipPhaseGuardIntoCombat" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="155629368" result="Passed" start-time="2026-09-09 23:24:13Z" end-time="2026-09-09 23:24:13Z" duration="0.001484" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: D:\Rokas\home-light-evidence\domain-boundaries.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

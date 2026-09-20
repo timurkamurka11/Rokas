@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0,1161465">
+  <test-suite type="TestSuite" id="1000" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="33" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.116147" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1043" name="Rokas.SerializationTests.dll" fullname="D:/Rokas/Rokas/.worktrees/home-unified-light-toggle/Library/ScriptAssemblies/Rokas.SerializationTests.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.102476" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="25660" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1044" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.101861" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1045" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.101611" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1040" name="UnitySaveTests" fullname="Rokas.Tests.UnitySaveTests" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.100560" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1042" name="PartialJsonCannotReplaceAValidBackup" fullname="Rokas.Tests.UnitySaveTests.PartialJsonCannotReplaceAValidBackup" methodname="PartialJsonCannotReplaceAValidBackup" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="750744682" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.056472" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="UnityJsonRestoresAcceptedContractAndPendingPayment" fullname="Rokas.Tests.UnitySaveTests.UnityJsonRestoresAcceptedContractAndPendingPayment" methodname="UnityJsonRestoresAcceptedContractAndPendingPayment" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="437468980" result="Passed" start-time="2026-09-09 23:22:27Z" end-time="2026-09-09 23:22:27Z" duration="0.023975" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\home-light-evidence\save-boundaries.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,9 @@
+title: VnIntro
+---
+<<vn_beat bus_stop Keiko dark keiko_neutral>>
+Keiko: Дождь не прекращается.
+<<vn_beat night_sky Keiko dark keiko_neutral>>
+Keiko: Небо сегодня какое-то тяжёлое.
+<<vn_beat phone Mina light mina_neutral>>
+Mina: Я дома, приходи, нужно поговорить.
+===

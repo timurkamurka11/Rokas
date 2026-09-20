@@ -1,0 +1,519 @@
+{
+  "verifiedOn": "2026-09-09",
+  "branch": "integration/rokas-unified",
+  "sources": {
+    "messagesHome": "c68763fb482665ea53cb42c48b2638cc5314c3c0",
+    "combat": "fa4c44d620debae7bf12984a5db9195794c1aa1a"
+  },
+  "merge": "8a3becc243c6d51a59725ae15770cb9f3471c449",
+  "runtimeProofCommit": "48b2d30a3bf80eff0bb01eaffac99eb01afd0c9c",
+  "runtimeFingerprints": {
+    "Assets": "51cf7a2dd516e4bd0bd4bc5ea699bde33c0da3e7",
+    "Tests": "50b2070e12933422898c80aaf3fd0fac83c0e654",
+    "Packages/manifest.json": "b0bb4553d2a88a2154d105dd95460fc79990bb0b"
+  },
+  "unity": "6000.3.19f1 (7689f4515d75)",
+  "dotnet": "8.0.424",
+  "yarn": {
+    "requested": "v3.1.2",
+    "resolved": "e1ba6f471d923270d2a0ba7b4f8ae81dc3f76adb",
+    "manifestChanged": false
+  },
+  "core": {
+    "exitCode": 0,
+    "combatScenariosPassed": 23,
+    "retirementChecksPassed": 4,
+    "allCoreBehaviorSuites": "PASS"
+  },
+  "unityTests": {
+    "unified-final-editmode-2": {
+      "run": {
+        "id": "2",
+        "testcasecount": "33",
+        "result": "Passed",
+        "total": "33",
+        "passed": "33",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-09 13:43:26Z",
+        "end-time": "2026-09-09 13:43:26Z",
+        "duration": "0,3116145"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Combo&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Spam&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;ComboExpiry&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;EarlyCharge&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Charged&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;PerfectCut&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;OverheldCharge&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Dodge&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Deflect&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;DefenseCooldown&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;SealBreak&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualSuccess&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualReleaseFailure&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualOrderFailure&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualTimeout&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Resonance&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;ResonanceExpiry&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Phases&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;CancelCharge&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RetryReset&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;InactiveGuards&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;TickPartition&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;CancelledCombo&quot;)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.CombatReloadPreservesHealthWithoutLegacyAutoDamage",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.ContractRewardCannotBeClaimedTwice",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.HomeCannotSkipPhaseGuardIntoCombat",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.MessagesYarnTests.KaitoDetailsBranchEmitsChoicesAndCoordinates",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.MessagesYarnTests.KaitoProjectImportsAndContainsStartNode",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.MessagesYarnTests.KaitoSkepticBranchContinuesDifferently",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.MessagesYarnTests.ProductionControllerRejectsMissingNodeWithVisibleIdentity",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.MessagesYarnTests.ProductionYarnAdapterExistsAndRejectsMissingNodeVisibly",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.UnitySaveTests.PartialJsonCannotReplaceAValidBackup",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.UnitySaveTests.UnityJsonRestoresAcceptedContractAndPendingPayment",
+          "result": "Passed"
+        }
+      ]
+    },
+    "unified-final-playmode-2": {
+      "run": {
+        "id": "2",
+        "testcasecount": "54",
+        "result": "Passed",
+        "total": "54",
+        "passed": "54",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-09 13:44:03Z",
+        "end-time": "2026-09-09 13:44:23Z",
+        "duration": "19,511464"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.ChargeRingHasRenderableGeometryAndChangesWhileHeld",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.DisabledCombatSurfaceCancelsCharge",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.FightShowsSealChargeAndResonanceInsteadOfWeakPointButton",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.FocusLossCancelsChargeAndFreezesEnemyClock",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.HeldReleaseMakesPerfectCutWithoutDoubleClickDamage",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.HunterDeathClearsHeldInputAndCombatHud",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.LiveCueMatchesDodgeAndBarsMatchActualDamage",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.PauseInterruptsComboBeforeResume",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.PointerExitCancelsChargeWithoutGhostRelease",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.RealPointerTapDamagesOnReleaseAndPauseBlocksIt",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.RitualPointsAreReachableThroughTheRealGraphicRaycaster",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CombatFoundationPlayModeTests.SealBreakCannotReuseTheChargeHeldBeforeDeflect",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ContractAttachmentPlayModeTests.GuildContractButtonAcceptsExistingContractOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CoordinateAttachmentPlayModeTests.CoordinateAttachmentClickActivatesDestinationWithoutDuplicatingHistory",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CriticalResourceSmokeTests.CriticalLaptopAudioBindingsArePresent",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CriticalResourceSmokeTests.MissingTextureProbeProvesGuardCanFail",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.CriticalResourceSmokeTests.ProductionFoodResourcesLoadAsTexture2D",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.FirstLoopTests.IllustratedHomeCanAcceptFightReturnAndClaimExactlyOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.FirstLoopTests.LaptopFoodPreservesConsumeGuardAndReturnsFocus",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLayeredParticleRainAndWindowDepth",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLogical25DPlanesAndReadableDepth",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HomeAtmospherePlayModeTests.HybridParallaxMovesOnlyVisualPlanesAndStaysBounded",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HomeAtmospherePlayModeTests.ProfileIsSerializedAndStormRoutesOneDelayedThunderCue",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HomeAtmospherePlayModeTests.RepeatedTicksReuseTheBoundedWeatherRig",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HunterGuildPlayModeTests.CompletionNotificationDoesNotRepeatForSameCompletedState",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.HunterGuildPlayModeTests.GuildAcceptanceFollowUpPersistsWithoutPopupOrDuplicate",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPlayModeTests.ActiveContactUsesSoftReceiveInsteadOfWorldOrPopup",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPlayModeTests.GuildUsesFormalRequestLauncherAndKeepsContractCard",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPlayModeTests.KaitoLauncherCoexistsWithCoordinateAttachmentAfterBaseDialogue",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPlayModeTests.WorldLaptopUnreadFeedbackTriggersOnceAndHistoricalReloadIsSilent",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPlayModeTests.YumikoLauncherTypingChoicesAndReactionAreLive",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPolishPlayModeTests.AuthoredNpcReactionAppearsOncePersistsAndIsSilentOnReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPolishPlayModeTests.FullYomiLaptopGlowTracksTotalUnreadAcrossContactsAndClearsSmoothly",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPolishPlayModeTests.PerBubblePickerUsesAllTenStickerReactionsAndSupportsChangeRemove",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.LiveMessengerPolishPlayModeTests.UserAudioAssetsDriveIncomingAndReactionRoutesWithoutReplay",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesDialogueResumePlayModeTests.PartiallyProgressedDialogueResumesAtNextChoiceAfterReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesDialogueResumePlayModeTests.RepeatedInitializeIsIdempotentForMessagesState",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.CompletedDialogueDoesNotAutoReplayAfterReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.ConsumedCoordinateAttachmentRemainsDisabledAfterReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.DestroyAndReloadPersistsDirtyMessageHistory",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.HistoricalUnreadDoesNotCreateFreshNotificationAfterReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesNotificationPlayModeTests.ActiveConversationClearsUnreadWithoutNotification",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesNotificationPlayModeTests.IncomingUnreadMessageShowsOneCompactNotification",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesPlayModeTests.KaitoDialogueRunsThroughChoicesToCoordinateAttachment",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesPlayModeTests.LaptopMessagesBuildsRealConversationShell",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.MessagesPlayModeTests.LaptopMessagesInitializesTmpInCleanPlayMode",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.RokasSansFontPlayModeTests.FoodGiftMultiplicationSignIsSupportedByRokasSans",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.YumikoFoodPlayModeTests.ActiveYumikoConversationConsumesPaidTeaUnreadWithoutPopup",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.YumikoFoodPlayModeTests.FoodGiftCardUsesYumikoIdentityClaimsOnceAndPersists",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.YumikoFoodPlayModeTests.PaidTeaReactionCreatesUnreadNotificationButReloadDoesNotReplayIt",
+          "result": "Passed"
+        }
+      ]
+    }
+  },
+  "unityExitCodes": {
+    "EditMode": 0,
+    "PlayMode": 0
+  },
+  "validator": {
+    "exitCode": 1,
+    "baselineFindings": 13,
+    "finalFindings": 13,
+    "added": 0,
+    "removed": 0
+  },
+  "logs": {
+    "unified-final-editmode-2": {
+      "relevantErrors": [],
+      "diagnostics": [
+        "[Licensing::Module] LicensingClient has failed validation; ignoring",
+        "[Licensing::Module] Error: Access token is unavailable; failed to update",
+        "\t\t\tLogAssemblyErrors (0ms)",
+        "Messages dialogue cannot start [contact=kaito, node=Missing_Node]: node was not found in the bound ROKAS Yarn project.",
+        "UnityEngine.Debug:LogWarning (object,UnityEngine.Object)",
+        "Rokas.Core.Tests.MessagesYarnTests/<>c/<<ProductionControllerRejectsMissingNodeWithVisibleIdentity>b__5_0>d:MoveNext () (at Assets/Rokas/Tests/EditMode/MessagesYarnTests.cs:124)",
+        "UnityEngine.Awaitable/AwaitableAsyncMethodBuilder/StateMachineBox`1<Rokas.Core.Tests.MessagesYarnTests/<>c/<<ProductionControllerRejectsMissingNodeWithVisibleIdentity>b__5_0>d>:DoMoveNext ()",
+        "Rokas.Core.Tests.MessagesYarnTests/<>c:<ProductionControllerRejectsMissingNodeWithVisibleIdentity>b__5_0 ()",
+        "Rokas.Core.Tests.MessagesYarnTests:ProductionControllerRejectsMissingNodeWithVisibleIdentity () (at Assets/Rokas/Tests/EditMode/MessagesYarnTests.cs:110)",
+        "abort_threads: Failed aborting id: 000000000000A00C, mono_thread_manage will ignore it",
+        "abort_threads: Failed aborting id: 00000000000082BC, mono_thread_manage will ignore it",
+        "debugger-agent: Unable to listen on 3112"
+      ]
+    },
+    "unified-final-playmode-2": {
+      "relevantErrors": [],
+      "diagnostics": [
+        "[Licensing::Module] LicensingClient has failed validation; ignoring",
+        "[Licensing::Module] Error: Access token is unavailable; failed to update",
+        "d3d12: failed to query info queue interface (0x80004002).",
+        "\t\t\tLogAssemblyErrors (0ms)",
+        "abort_threads: Failed aborting id: 0000000000002144, mono_thread_manage will ignore it",
+        "abort_threads: Failed aborting id: 0000000000004284, mono_thread_manage will ignore it",
+        "debugger-agent: Unable to listen on 4292"
+      ]
+    }
+  },
+  "review": "APPROVE: no important actionable findings",
+  "homeBlobs": {
+    "Assets/Rokas/Scripts/Presentation/WorldEffects.cs": {
+      "base": "d9c0c92dbc99f770ecc77305c18355bb9883b64a",
+      "merged": "d9c0c92dbc99f770ecc77305c18355bb9883b64a"
+    },
+    "Assets/Rokas/Scripts/Presentation/HomeAtmosphereProfile.cs": {
+      "base": "54c428b57b9d7995a762e9f1202ef14f79a578f7",
+      "merged": "54c428b57b9d7995a762e9f1202ef14f79a578f7"
+    },
+    "Assets/Rokas/Resources/HomeAtmosphereProfile.asset": {
+      "base": "a99e10c27b8c302b2bf3196408c189752e3f3c80",
+      "merged": "a99e10c27b8c302b2bf3196408c189752e3f3c80"
+    },
+    "Assets/Rokas/Tests/PlayMode/HomeAtmospherePlayModeTests.cs": {
+      "base": "1c884c459aefa862c7f8d8e2e4c162221cde6705",
+      "merged": "1c884c459aefa862c7f8d8e2e4c162221cde6705"
+    }
+  },
+  "visualEvidenceDirectory": "D:/Rokas/unified-integration-evidence/visuals",
+  "visuals": {
+    "combat-charge.png": {
+      "bytes": 2664090,
+      "sha256": "c55469fa3935b7782af6462faf7eee508ef1b1672c66f4016905f57403dca97f"
+    },
+    "combat-hud.png": {
+      "bytes": 2668197,
+      "sha256": "45d8f853245e8806ee314b13a0ea2e2bb83558f22560f7215d30366817a79d03"
+    },
+    "combat-ritual.png": {
+      "bytes": 2376215,
+      "sha256": "6fd311cc7f36841421955df61dbf01caed6be1653433ccc443cfd90e00e7b54c"
+    },
+    "integration-combat.png": {
+      "bytes": 2668325,
+      "sha256": "d963bb40dbc2f640327b63c208536459affeed6bff8d3312ca1c82ed4c507bf2"
+    },
+    "integration-home.png": {
+      "bytes": 2819681,
+      "sha256": "bac9221573a1d9f7a6dd6c87e510c2fbd85c7f387e29e5a8da903c52de5749b1"
+    },
+    "integration-messages.png": {
+      "bytes": 808991,
+      "sha256": "057e69a42dad5f9be898c383e58e7d5b84a71b33b7b457e6ec86540ba95bfe7e"
+    },
+    "integration-payment.png": {
+      "bytes": 1121764,
+      "sha256": "acae4e941a3e175fed636c403c9a400591235f089c4e432bc962b918d5b1a4b5"
+    }
+  },
+  "commands": {
+    "core": "dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release -p:UseSharedCompilation=false -m:1",
+    "editMode": "Unity.exe -batchmode -projectPath D:/Rokas/unified-integration -runTests -testPlatform EditMode -testResults <evidence>/unified-final-editmode-2.xml -logFile <evidence>/unified-final-editmode-2.log -nographics",
+    "playMode": "Unity.exe -batchmode -projectPath D:/Rokas/unified-integration -runTests -testPlatform PlayMode -testResults <evidence>/unified-final-playmode-2.xml -logFile <evidence>/unified-final-playmode-2.log",
+    "captureEnvironment": "ROKAS_COMBAT_CAPTURE_DIR=D:/Rokas/unified-integration-evidence/visuals",
+    "validator": "python Tools/validate_assets.py",
+    "diff": "git diff --check"
+  },
+  "publicationNote": "This document records pre-publication verification. The following VERIFIED checkpoint has an identical tree to its documentation parent. Exact published SHA, tree, parents and canonical switch evidence are recorded in the final handoff."
+}

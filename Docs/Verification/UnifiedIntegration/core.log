@@ -1,0 +1,28 @@
+PASS Combat2: Combo
+PASS Combat2: Spam
+PASS Combat2: ComboExpiry
+PASS Combat2: EarlyCharge
+PASS Combat2: Charged
+PASS Combat2: PerfectCut
+PASS Combat2: OverheldCharge
+PASS Combat2: Dodge
+PASS Combat2: Deflect
+PASS Combat2: DefenseCooldown
+PASS Combat2: SealBreak
+PASS Combat2: RitualSuccess
+PASS Combat2: RitualReleaseFailure
+PASS Combat2: RitualOrderFailure
+PASS Combat2: RitualTimeout
+PASS Combat2: Resonance
+PASS Combat2: ResonanceExpiry
+PASS Combat2: Phases
+PASS Combat2: CancelCharge
+PASS Combat2: RetryReset
+PASS Combat2: InactiveGuards
+PASS Combat2: TickPartition
+PASS Combat2: CancelledCombo
+PASS: idle attacks removed
+PASS: spam blocked before combo recovery
+PASS: timed third strike rewards combo
+PASS: old timed seal button retired
+PASS: all Rokas.Core behavior tests
