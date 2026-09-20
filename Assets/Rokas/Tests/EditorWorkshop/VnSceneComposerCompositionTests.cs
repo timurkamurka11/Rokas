@@ -16,7 +16,7 @@ namespace Rokas.EditorTools.Tests
         private const string Namespace = "Rokas.EditorTools.VnUiWorkshop.";
 
         [Test]
-        public void PresentationResolutionLayersSceneOverridesOverProjectDefaultsWithoutMutatingInputs()
+        public void PresentationResolutionLayersSceneStyleButKeepsSharedTextGeometryWithoutMutatingInputs()
         {
             Type projectType = RequireType("VnSceneComposerProject");
             Type sceneType = RequireType("VnSceneComposerScene");
@@ -46,8 +46,9 @@ namespace Rokas.EditorTools.Tests
             Assert.That(resolved, Is.Not.Null.And.Not.SameAs(defaults).And.Not.SameAs(sceneOverrides));
             Assert.That((Vector2)Get(Get(resolved, "dialogueText"), "positionDelta"), Is.EqualTo(new Vector2(15f, 4f)));
             Assert.That((bool)Get(Get(resolved, "dialogueText"), "hasPositionDelta"), Is.True);
-            Assert.That((Vector2)Get(Get(resolved, "dialogueText"), "sizeDelta"), Is.EqualTo(new Vector2(30f, 8f)));
-            Assert.That((bool)Get(Get(resolved, "dialogueText"), "hasSizeDelta"), Is.True);
+            Assert.That((Vector2)Get(Get(resolved, "dialogueText"), "sizeDelta"), Is.EqualTo(Vector2.zero),
+                "Dialogue geometry is project-shared and must ignore Scene-local geometry overrides.");
+            Assert.That((bool)Get(Get(resolved, "dialogueText"), "hasSizeDelta"), Is.False);
             Assert.That((float)Get(Get(resolved, "typography"), "dialogueFontSize"), Is.EqualTo(34f));
             Assert.That((float)Get(defaultTypography, "dialogueFontSize"), Is.EqualTo(28f));
             Assert.That((bool)Get(defaultDialogue, "hasSizeDelta"), Is.False);

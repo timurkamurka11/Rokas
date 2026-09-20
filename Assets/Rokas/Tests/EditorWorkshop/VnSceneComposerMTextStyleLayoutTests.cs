@@ -698,15 +698,33 @@ namespace Rokas.EditorTools.Tests
         private static VnSceneComposerScene SceneWithCharacter(string id)
         {
             VnSceneComposerScene s=Scene(id);
-            s.characters.Add(new VnSceneComposerCharacter { characterId=id });
+            s.characters.Add(new VnSceneComposerCharacter
+            {
+                characterId=id,
+                stateId=StateForCharacter(id)
+            });
             return s;
         }
 
         private static VnSceneComposerScene SceneWithCharacters(params string[] ids)
         {
             VnSceneComposerScene s=Scene(ids.Length>0?ids[0]:string.Empty);
-            for(int i=0;i<ids.Length;i++)s.characters.Add(new VnSceneComposerCharacter { characterId=ids[i] });
+            for(int i=0;i<ids.Length;i++)
+            {
+                s.characters.Add(new VnSceneComposerCharacter
+                {
+                    characterId=ids[i],
+                    stateId=StateForCharacter(ids[i])
+                });
+            }
             return s;
+        }
+
+        private static string StateForCharacter(string id)
+        {
+            if (string.Equals(id, Keiko, StringComparison.OrdinalIgnoreCase)) return "keiko_serious";
+            if (string.Equals(id, Mina, StringComparison.OrdinalIgnoreCase)) return "mina_happy";
+            return string.Empty;
         }
 
         private static VnSceneComposerDialogueBeat Beat(string speaker,string text)
