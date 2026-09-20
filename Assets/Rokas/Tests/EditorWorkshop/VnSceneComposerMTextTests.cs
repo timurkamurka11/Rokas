@@ -1124,6 +1124,8 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(renderText, Is.Not.Empty);
                 Assert.That(renderText, Does.Contain("<color=#FFFFFF00>"),
                     "Renderer-facing text must keep hidden glyphs in the layout from frame zero.");
+                Assert.That(renderText.Length, Is.GreaterThan(authored.Length),
+                    "Hidden alpha markup must coexist with the full authored layout text.");
                 Assert.That(renderText, Does.Contain("П").And.Contain("е"),
                     "The renderer-facing string must still contain authored glyphs while hidden.");
             }
