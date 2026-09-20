@@ -586,7 +586,33 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void VR_25_RenderTargetRecoveryUsesRealStateAndNoFakeDelay()
+        public void VR_25_StuckPrepareCannotLockCinematicTransitionForever()
+        {
+            WithFactory(factory =>
+            {
+                factory.NewPreviewsPrepared = false;
+                factory.NewPreviewsVisible = false;
+                var incoming = Video("B", "B.mp4");
+                incoming.transition.sceneTransitionType = VnSceneComposerSceneTransitionType.DarkCurtain;
+                incoming.transition.sceneTransitionDuration = .4f;
+                var project = Project(Plain("A"), incoming);
+                using (var controller = new VnSceneComposerPlaybackController(project))
+                {
+                    controller.PlayFromHere(0);
+                    controller.Next();
+                    controller.Advance(.21f);
+                    Assert.That(controller.IsSceneTransitionActive, Is.True);
+                    controller.Advance(9f);
+                    Assert.That(controller.IsSceneTransitionActive, Is.False,
+                        "A stuck Prepare must fail safe instead of locking the curtain forever.");
+                    Assert.That(controller.SceneTransitionInputLocked, Is.False);
+                    Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                }
+            });
+        }
+
+        [Test]
+        public void VR_26_RenderTargetRecoveryUsesRealStateAndNoFakeDelay()
         {
             string path = Path.Combine(Application.dataPath, "Rokas", "Scripts", "Editor",
                 "VnUiWorkshop", "VnSceneComposerMotionMediaEditing.cs");
