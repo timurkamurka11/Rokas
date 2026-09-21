@@ -253,14 +253,23 @@ namespace Rokas.EditorTools.Tests
             VnSceneComposerDialogueBeat loaded = result.Project.scenes[0].dialogueBeats[0];
 
             Assert.That(loaded.beatId, Is.EqualTo(beatId));
-            Assert.That(GetString(loaded, "targetCharacterId"), Is.EqualTo("Mina"));
-            Assert.That(GetBool(loaded, "hasStateOverride"), Is.True);
-            Assert.That(GetString(loaded, "stateId"), Is.EqualTo("mina_happy"));
-            Assert.That(Get(loaded, "effect").ToString(), Is.EqualTo("Accent"));
-            Assert.That(GetFloat(loaded, "effectStrength"), Is.EqualTo(35f).Within(.0001f));
-            Assert.That(GetFloat(loaded, "effectDuration"), Is.EqualTo(.55f).Within(.0001f));
-            Assert.That(ResolveState(result.Project.scenes[0], loaded, "Mina"), Is.EqualTo("mina_happy"),
-                "Save/load must reproduce the same effective Beat character state.");
+            Assert.That(GetString(loaded, "targetCharacterId"), Is.Empty,
+                "Normalized current projects must not keep a second writable legacy Beat target.");
+            Assert.That(GetBool(loaded, "hasStateOverride"), Is.False);
+            Assert.That(GetString(loaded, "stateId"), Is.Empty);
+            Assert.That(Get(loaded, "effect").ToString(), Is.EqualTo("None"));
+            Assert.That(loaded.characterStaging, Has.Count.EqualTo(1));
+            VnSceneComposerBeatCharacterStaging staging = loaded.characterStaging[0];
+            Assert.That(staging.characterId, Is.EqualTo("Mina"));
+            Assert.That(staging.hasStateOverride, Is.True);
+            Assert.That(staging.stateId, Is.EqualTo("mina_happy"));
+            Assert.That(staging.effect, Is.EqualTo(VnSceneComposerBeatEffect.Accent));
+            Assert.That(staging.effectStrength, Is.EqualTo(35f).Within(.0001f));
+            Assert.That(staging.effectDuration, Is.EqualTo(.55f).Within(.0001f));
+            Assert.That(BuildState(
+                    result.Project, result.Project.scenes[0], loaded, "Mina"),
+                Is.EqualTo("mina_happy"),
+                "Save/load migration must reproduce the same effective visible character state.");
         }
 
         [Test]
@@ -447,16 +456,24 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MF1_AuthoringUiExposesContextualCreatorFacingBeatStateControls()
         {
-            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string source = ReadEditorSource(
+                "VnPresentationWorkshopWindow.SceneComposer.cs");
             string inspector = ExtractMethodBody(source,
                 "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string staging = ReadEditorSource(
+                "VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs");
 
-            Assert.That(inspector, Does.Contain("\"Персонаж реплики\""));
-            Assert.That(inspector, Does.Contain("\"Эмоция / поза\""));
-            Assert.That(inspector, Does.Contain("\"Оставить предыдущее\""));
-            Assert.That(inspector, Does.Contain("\"Анимация реплики\""));
-            Assert.That(inspector, Does.Contain("\"Без анимации\"").And.Contain("\"Акцент\""));
-            Assert.That(inspector, Does.Not.Contain("TextField(\"stateId\"")
+            Assert.That(inspector, Does.Contain("\"Персонажи и постановка\""));
+            Assert.That(inspector, Does.Not.Contain("\"Персонаж реплики\""),
+                "The legacy duplicate M-F1 panel must not return to Text.");
+            Assert.That(staging, Does.Contain("\"Персонаж\""));
+            Assert.That(staging, Does.Contain("\"Эмоция / поза\""));
+            Assert.That(staging, Does.Contain("\"Оставить предыдущую\"")
+                .And.Contain("\"По умолчанию / Базовая\""));
+            Assert.That(staging, Does.Contain("\"Анимация реплики\""));
+            Assert.That(staging, Does.Contain("\"Без анимации\"")
+                .And.Contain("\"Акцент\"").And.Contain("\"Подскок\""));
+            Assert.That(staging, Does.Not.Contain("TextField(\"stateId\"")
                 .And.Not.Contain("TextField(\"State ID\""),
                 "Raw state IDs must not become the normal Basic authoring workflow.");
         }
