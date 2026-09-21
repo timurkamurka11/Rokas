@@ -107,17 +107,25 @@ namespace Rokas.EditorTools.Tests
         public void ME_DialogueBeatEditorRemainsCanonicalTextSurface()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
-            string text = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string text = ExtractMethodBody(
+                source,
+                "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string dialogue = ExtractMethodBody(
+                source,
+                "private void DrawSceneComposerDialogueAuthoringSection(VnSceneComposerScene scene)");
 
-            Assert.That(text, Does.Contain("\"Реплики\"")
+            Assert.That(text, Does.Contain("\"Реплика\"")
+                .And.Contain("DrawSceneComposerDialogueAuthoringSection(scene)"),
+                "Normal Text authoring must expose the canonical dialogue workflow through the Реплика foldout.");
+            Assert.That(dialogue, Does.Contain("\"Реплики\"")
                 .And.Contain("\"+ Реплика\"")
                 .And.Contain("\"Дублировать\"")
                 .And.Contain("\"Удалить\"")
                 .And.Contain("\"Говорящий\"")
                 .And.Contain("\"Текст без персонажа\"")
                 .And.Contain("\"Текст реплики\""),
-                "Normal Text authoring must remain centered on real ordered dialogue Beats.");
-            Assert.That(text, Does.Not.Contain("Тест оформления текста"),
+                "The Реплика section must remain centered on real ordered dialogue Beats.");
+            Assert.That(text + dialogue, Does.Not.Contain("Тест оформления текста"),
                 "Sample typography text must never compete with real dialogue Beats in the normal Text section.");
         }
 
