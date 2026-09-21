@@ -52,18 +52,48 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Repaint();
         }
 
+        public void ComposerSelectDialogueBeatStagingCharacter(string characterId)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null)
+                throw new InvalidOperationException("No dialogue Beat is selected.");
+
+            string canonical = ResolveSceneCharacterId(scene, characterId);
+            if (string.IsNullOrEmpty(canonical))
+                throw new ArgumentException(
+                    "Beat staging selection requires an existing Scene character.",
+                    nameof(characterId));
+
+            int sceneIndex = FindSceneCharacterIndex(scene, canonical);
+            if (sceneIndex < 0)
+                throw new ArgumentException(
+                    "Character is not part of the selected Scene.", nameof(characterId));
+
+            _sceneComposerSelectedCharacterIndex = sceneIndex;
+            VnSceneComposerBeatCharacterStaging row =
+                FindCharacterStagingByCharacter(beat, canonical);
+            _sceneComposerSelectedCharacterStagingId =
+                row != null ? row.stagingId ?? string.Empty : string.Empty;
+            Repaint();
+        }
+
         public void ComposerDeleteSelectedDialogueBeatCharacterStaging()
         {
-            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
-            VnSceneComposerBeatCharacterStaging selected = GetSelectedCharacterStaging(beat);
-            if (beat == null || selected == null || beat.characterStaging == null) return;
+            ComposerResetSelectedDialogueBeatCharacterStaging();
+        }
 
-            RecordSceneComposerUndo("Delete VN Beat Character Staging");
+        public void ComposerResetSelectedDialogueBeatCharacterStaging()
+        {
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            VnSceneComposerBeatCharacterStaging selected =
+                GetSelectedCharacterStaging(beat);
+            if (beat == null || selected == null || beat.characterStaging == null)
+                return;
+
+            RecordSceneComposerUndo("Reset VN Beat Character Staging");
             beat.characterStaging.Remove(selected);
-            _sceneComposerSelectedCharacterStagingId =
-                beat.characterStaging.Count > 0 && beat.characterStaging[0] != null
-                    ? beat.characterStaging[0].stagingId ?? string.Empty
-                    : string.Empty;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
             MarkSceneComposerChanged();
         }
 
@@ -81,26 +111,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             VnSceneComposerScene scene = RequireSelectedScene();
             VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
-            VnSceneComposerBeatCharacterStaging selected = GetSelectedCharacterStaging(beat);
-            if (beat == null || selected == null)
-                throw new InvalidOperationException("No Beat character staging row is selected.");
+            if (beat == null)
+                throw new InvalidOperationException("No dialogue Beat is selected.");
 
             string canonical = ResolveSceneCharacterId(scene, characterId);
             if (string.IsNullOrEmpty(canonical))
                 throw new ArgumentException("Character staging requires an existing Scene character.",
                     nameof(characterId));
 
-            if (beat.characterStaging != null)
-            {
-                for (int i = 0; i < beat.characterStaging.Count; i++)
-                {
-                    VnSceneComposerBeatCharacterStaging candidate = beat.characterStaging[i];
-                    if (candidate == null || ReferenceEquals(candidate, selected)) continue;
-                    if (string.Equals(candidate.characterId, canonical, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException(
-                            "This Beat already has a staging row for " + canonical + ".");
-                }
-            }
+            VnSceneComposerBeatCharacterStaging selected =
+                FindCharacterStaging(beat, _sceneComposerSelectedCharacterStagingId);
+            VnSceneComposerBeatCharacterStaging existingForCharacter =
+                FindCharacterStagingByCharacter(beat, canonical);
+            if (existingForCharacter != null)
+                selected = existingForCharacter;
 
             if (!Enum.IsDefined(typeof(VnSceneComposerBeatCharacterVisibility), visibility))
                 throw new ArgumentOutOfRangeException(nameof(visibility));
@@ -127,6 +151,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             RecordSceneComposerUndo("Edit VN Beat Character Staging");
+            if (selected == null)
+                selected = EnsureCharacterStagingRow(beat, canonical);
+            else if (!string.Equals(
+                         selected.characterId, canonical,
+                         StringComparison.OrdinalIgnoreCase))
+                selected.characterId = canonical;
+            _sceneComposerSelectedCharacterStagingId =
+                selected.stagingId ?? string.Empty;
+            int selectedSceneIndex = FindSceneCharacterIndex(scene, canonical);
+            if (selectedSceneIndex >= 0)
+                _sceneComposerSelectedCharacterIndex = selectedSceneIndex;
+
             selected.characterId = canonical;
             selected.visibility = visibility;
             selected.position = position;
@@ -157,151 +193,161 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (scene == null || beat == null) return;
             if (beat.characterStaging == null)
-                beat.characterStaging = new List<VnSceneComposerBeatCharacterStaging>();
+                beat.characterStaging =
+                    new List<VnSceneComposerBeatCharacterStaging>();
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Персонажи в этой реплике", EditorStyles.miniBoldLabel);
-            EditorGUILayout.HelpBox(
-                "Здесь меняется только постановка персонажей текущей реплики. Фон, видео, музыка и звуки не перезапускаются.",
-                MessageType.Info);
+            EditorGUILayout.LabelField(
+                "Персонажи текущей реплики", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField(
+                "Здесь настраивается постановка персонажей только для текущей реплики. " +
+                "Состав сцены меняется во вкладке «Персонажи».",
+                EditorStyles.wordWrappedMiniLabel);
 
-            string[] sceneCharacters = GetSceneComposerBeatTargetCharacterIds(scene);
-            string addCharacter = FindFirstUnusedCharacter(beat, sceneCharacters);
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(addCharacter)))
+            string[] sceneCharacters =
+                GetSceneComposerBeatTargetCharacterIds(scene);
+            if (sceneCharacters.Length == 0)
             {
-                if (GUILayout.Button("+ Добавить персонажа"))
-                    ComposerAddSelectedDialogueBeatCharacterStaging(addCharacter);
-            }
-
-            VnSceneComposerBeatCharacterStaging selected = GetSelectedCharacterStaging(beat);
-            for (int i = 0; i < beat.characterStaging.Count; i++)
-            {
-                VnSceneComposerBeatCharacterStaging staging = beat.characterStaging[i];
-                if (staging == null) continue;
-                bool isSelected = selected != null &&
-                                  string.Equals(selected.stagingId, staging.stagingId,
-                                      StringComparison.Ordinal);
-                string label = string.IsNullOrWhiteSpace(staging.characterId)
-                    ? "Персонаж"
-                    : staging.characterId;
-                if (GUILayout.Button(
-                        (i + 1) + ". " + label,
-                        isSelected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
-                {
-                    ComposerSelectDialogueBeatCharacterStaging(staging.stagingId);
-                    selected = staging;
-                }
-            }
-
-            selected = GetSelectedCharacterStaging(beat);
-            if (selected == null)
-            {
-                if (sceneCharacters.Length == 0)
-                    EditorGUILayout.HelpBox(
-                        "Сначала добавьте персонажа в список персонажей сцены.",
-                        MessageType.Info);
+                EditorGUILayout.LabelField(
+                    "В сцене пока нет персонажей.",
+                    EditorStyles.wordWrappedMiniLabel);
                 DrawCharacterStagingWarnings(scene, beat);
                 return;
             }
 
-            int characterIndex = 0;
+            string currentCharacter =
+                GetSelectedStagingCharacterId(scene, beat, sceneCharacters);
+            EditorGUILayout.LabelField(
+                "Персонажи и постановка · " +
+                sceneCharacters.Length + " персонажа · " +
+                CountLocalCharacterStagingRows(beat) + " изменён здесь",
+                EditorStyles.miniLabel);
+
             for (int i = 0; i < sceneCharacters.Length; i++)
             {
-                if (string.Equals(
-                        sceneCharacters[i], selected.characterId,
-                        StringComparison.OrdinalIgnoreCase))
+                string characterId = sceneCharacters[i];
+                VnSceneComposerBeatCharacterStaging local =
+                    FindCharacterStagingByCharacter(beat, characterId);
+                bool selected = string.Equals(
+                    currentCharacter, characterId,
+                    StringComparison.OrdinalIgnoreCase);
+                string status = local != null
+                    ? "[изменено здесь]"
+                    : "[наследуется]";
+                if (GUILayout.Button(
+                        characterId + "    " + status,
+                        selected
+                            ? EditorStyles.miniButtonMid
+                            : EditorStyles.miniButton))
                 {
-                    characterIndex = i;
-                    break;
+                    ComposerSelectDialogueBeatStagingCharacter(characterId);
+                    currentCharacter = characterId;
                 }
             }
 
-            string[] visibilityLabels = { "Оставить предыдущее", "Показать", "Скрыть" };
-            string[] positionLabels =
-            {
-                "Оставить предыдущее", "Слева", "Центр", "Справа", "Свободно"
-            };
+            VnSceneComposerBeatCharacterStaging selectedRow =
+                FindCharacterStagingByCharacter(beat, currentCharacter);
+            VnSceneComposerBeatCharacterStaging display =
+                selectedRow ?? new VnSceneComposerBeatCharacterStaging
+                {
+                    characterId = currentCharacter
+                };
 
-            string currentCharacter =
-                sceneCharacters.Length > 0
-                    ? sceneCharacters[Mathf.Clamp(characterIndex, 0, sceneCharacters.Length - 1)]
-                    : selected.characterId ?? string.Empty;
-            string[] stateIds = string.IsNullOrEmpty(currentCharacter)
-                ? Array.Empty<string>()
-                : ComposerGetAuthoredStateIds(currentCharacter);
-            string[] stateLabels = new string[stateIds.Length + 1];
-            stateLabels[0] = "Оставить предыдущее";
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.LabelField("Персонаж", currentCharacter);
+
+            string[] visibilityLabels =
+                { "Оставить предыдущее", "Показать", "Скрыть" };
+            string[] positionLabels =
+                { "Оставить предыдущее", "Слева", "Центр", "Справа", "Свободно" };
+
+            string baseStateId =
+                GetSceneComposerBaseStateId(scene, currentCharacter);
+            string[] authoredStates = ComposerGetAuthoredStateIds(currentCharacter)
+                .Where(id => !string.Equals(
+                    id, baseStateId, StringComparison.Ordinal))
+                .ToArray();
+            string[] stateLabels = new string[authoredStates.Length + 2];
+            stateLabels[0] = "Оставить предыдущую";
+            stateLabels[1] = "По умолчанию / Базовая";
             int stateIndex = 0;
-            for (int i = 0; i < stateIds.Length; i++)
+            if (display.hasStateOverride &&
+                string.Equals(
+                    display.stateId, baseStateId, StringComparison.Ordinal))
+                stateIndex = 1;
+            for (int i = 0; i < authoredStates.Length; i++)
             {
-                stateLabels[i + 1] = GetSceneComposerBeatStateDisplayName(
-                    currentCharacter, stateIds[i]);
-                if (selected.hasStateOverride &&
-                    string.Equals(stateIds[i], selected.stateId, StringComparison.Ordinal))
-                    stateIndex = i + 1;
+                stateLabels[i + 2] =
+                    GetSceneComposerBeatStateDisplayName(
+                        currentCharacter, authoredStates[i]);
+                if (display.hasStateOverride &&
+                    string.Equals(
+                        display.stateId, authoredStates[i],
+                        StringComparison.Ordinal))
+                    stateIndex = i + 2;
             }
 
             EditorGUI.BeginChangeCheck();
-            int nextCharacterIndex = sceneCharacters.Length > 0
-                ? EditorGUILayout.Popup("Персонаж", characterIndex, sceneCharacters)
-                : 0;
-            string nextCharacter = sceneCharacters.Length > 0
-                ? sceneCharacters[nextCharacterIndex]
-                : currentCharacter;
             int nextVisibility = EditorGUILayout.Popup(
-                "Видимость", (int)selected.visibility, visibilityLabels);
+                "Видимость", (int)display.visibility, visibilityLabels);
             int nextPosition = EditorGUILayout.Popup(
-                "Положение", (int)selected.position, positionLabels);
+                "Положение", (int)display.position, positionLabels);
 
-            Vector2 nextCustom = selected.customPositionOffset;
+            Vector2 nextCustom = display.customPositionOffset;
             if ((VnSceneComposerBeatCharacterPosition)nextPosition ==
                 VnSceneComposerBeatCharacterPosition.Custom)
             {
-                nextCustom.x = EditorGUILayout.FloatField("Смещение X", nextCustom.x);
-                nextCustom.y = EditorGUILayout.FloatField("Смещение Y", nextCustom.y);
+                nextCustom.x =
+                    EditorGUILayout.FloatField("Смещение X", nextCustom.x);
+                nextCustom.y =
+                    EditorGUILayout.FloatField("Смещение Y", nextCustom.y);
             }
 
-            if (!string.Equals(nextCharacter, currentCharacter, StringComparison.OrdinalIgnoreCase))
-            {
-                stateIds = ComposerGetAuthoredStateIds(nextCharacter);
-                stateLabels = new string[stateIds.Length + 1];
-                stateLabels[0] = "Оставить предыдущее";
-                for (int i = 0; i < stateIds.Length; i++)
-                    stateLabels[i + 1] =
-                        GetSceneComposerBeatStateDisplayName(nextCharacter, stateIds[i]);
-                stateIndex = 0;
-            }
-
-            int nextStateIndex = EditorGUILayout.Popup("Эмоция / поза", stateIndex, stateLabels);
+            int nextStateIndex =
+                EditorGUILayout.Popup(
+                    "Эмоция / поза", stateIndex, stateLabels);
             bool nextHasState = nextStateIndex > 0;
-            string nextState = nextHasState ? stateIds[nextStateIndex - 1] : string.Empty;
+            string nextState = nextStateIndex == 1
+                ? baseStateId
+                : (nextStateIndex > 1
+                    ? authoredStates[nextStateIndex - 2]
+                    : string.Empty);
 
-            string[] effectLabels = { "Без анимации", "Акцент", "Подскок" };
-            int currentEffect = selected.effect == VnSceneComposerBeatEffect.Accent
-                ? 1
-                : (selected.effect == VnSceneComposerBeatEffect.Hop ? 2 : 0);
+            string[] effectLabels =
+                { "Без анимации", "Акцент", "Подскок" };
+            int currentEffect =
+                display.effect == VnSceneComposerBeatEffect.Accent
+                    ? 1
+                    : (display.effect == VnSceneComposerBeatEffect.Hop
+                        ? 2
+                        : 0);
             int nextEffect = EditorGUILayout.Popup(
                 "Анимация реплики", currentEffect, effectLabels);
-            float nextStrength = selected.effectStrength;
-            float nextDuration = selected.effectDuration;
+            float nextStrength = display.effectStrength;
+            float nextDuration = display.effectDuration;
             if (nextEffect != 0)
             {
-                nextStrength = EditorGUILayout.Slider("Сила", nextStrength, 0f, 100f);
+                nextStrength =
+                    EditorGUILayout.Slider(
+                        "Сила", nextStrength, 0f, 100f);
                 nextDuration = DrawSceneComposerDurationControl(
                     "Длительность", nextDuration, .01f);
             }
 
             float nextDelay = Mathf.Max(
-                0f, EditorGUILayout.FloatField("Задержка, сек", selected.delaySeconds));
+                0f,
+                EditorGUILayout.FloatField(
+                    "Задержка, сек", display.delaySeconds));
 
             if (EditorGUI.EndChangeCheck())
             {
                 try
                 {
                     ComposerSetSelectedDialogueBeatCharacterStaging(
-                        nextCharacter,
-                        (VnSceneComposerBeatCharacterVisibility)Mathf.Clamp(nextVisibility, 0, 2),
-                        (VnSceneComposerBeatCharacterPosition)Mathf.Clamp(nextPosition, 0, 4),
+                        currentCharacter,
+                        (VnSceneComposerBeatCharacterVisibility)
+                            Mathf.Clamp(nextVisibility, 0, 2),
+                        (VnSceneComposerBeatCharacterPosition)
+                            Mathf.Clamp(nextPosition, 0, 4),
                         nextCustom,
                         nextHasState,
                         nextState,
@@ -313,17 +359,47 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         nextStrength,
                         nextDuration,
                         nextDelay);
+                    selectedRow =
+                        FindCharacterStagingByCharacter(
+                            beat, currentCharacter);
                 }
                 catch (Exception exception)
                 {
                     SetSceneComposerStatus(
-                        "Не удалось изменить постановку персонажа: " + exception.Message,
+                        "Не удалось изменить постановку персонажа: " +
+                        exception.Message,
                         MessageType.Warning);
                 }
             }
 
-            if (GUILayout.Button("Удалить постановку персонажа"))
-                ComposerDeleteSelectedDialogueBeatCharacterStaging();
+            if (GUILayout.Button("Выбрать PNG позы / эмоции"))
+            {
+                string source = EditorUtility.OpenFilePanel(
+                    "Выбрать PNG позы / эмоции",
+                    string.Empty,
+                    "png");
+                if (!string.IsNullOrEmpty(source))
+                {
+                    try
+                    {
+                        ComposerImportSelectedDialogueBeatPosePng(source);
+                        selectedRow =
+                            FindCharacterStagingByCharacter(
+                                beat, currentCharacter);
+                    }
+                    catch (Exception exception)
+                    {
+                        SetSceneComposerStatus(
+                            "Не удалось импортировать позу: " +
+                            exception.Message,
+                            MessageType.Error);
+                    }
+                }
+            }
+
+            if (selectedRow != null &&
+                GUILayout.Button("Сбросить изменения этой реплики"))
+                ComposerResetSelectedDialogueBeatCharacterStaging();
 
             DrawCharacterStagingWarnings(scene, beat);
         }
@@ -345,17 +421,118 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return null;
 
             VnSceneComposerBeatCharacterStaging selected =
-                FindCharacterStaging(beat, _sceneComposerSelectedCharacterStagingId);
+                FindCharacterStaging(
+                    beat, _sceneComposerSelectedCharacterStagingId);
             if (selected != null) return selected;
 
-            for (int i = 0; i < beat.characterStaging.Count; i++)
+            VnSceneComposerScene scene = GetSelectedScene();
+            if (scene != null && scene.characters != null &&
+                _sceneComposerSelectedCharacterIndex >= 0 &&
+                _sceneComposerSelectedCharacterIndex < scene.characters.Count)
             {
-                if (beat.characterStaging[i] == null) continue;
-                _sceneComposerSelectedCharacterStagingId =
-                    beat.characterStaging[i].stagingId ?? string.Empty;
-                return beat.characterStaging[i];
+                VnSceneComposerCharacter character =
+                    scene.characters[_sceneComposerSelectedCharacterIndex];
+                string characterId =
+                    VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(
+                        character);
+                return FindCharacterStagingByCharacter(beat, characterId);
             }
+
             return null;
+        }
+
+        private VnSceneComposerBeatCharacterStaging EnsureCharacterStagingRow(
+            VnSceneComposerDialogueBeat beat, string characterId)
+        {
+            if (beat == null || string.IsNullOrWhiteSpace(characterId))
+                return null;
+            if (beat.characterStaging == null)
+                beat.characterStaging =
+                    new List<VnSceneComposerBeatCharacterStaging>();
+
+            VnSceneComposerBeatCharacterStaging existing =
+                FindCharacterStagingByCharacter(beat, characterId);
+            if (existing != null)
+            {
+                _sceneComposerSelectedCharacterStagingId =
+                    existing.stagingId ?? string.Empty;
+                return existing;
+            }
+
+            var created = new VnSceneComposerBeatCharacterStaging
+            {
+                characterId = characterId
+            };
+            beat.characterStaging.Add(created);
+            _sceneComposerSelectedCharacterStagingId =
+                created.stagingId ?? string.Empty;
+            return created;
+        }
+
+        private string GetSelectedStagingCharacterId(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            string[] sceneCharacters)
+        {
+            if (sceneCharacters == null || sceneCharacters.Length == 0)
+                return string.Empty;
+
+            if (scene != null && scene.characters != null &&
+                _sceneComposerSelectedCharacterIndex >= 0 &&
+                _sceneComposerSelectedCharacterIndex < scene.characters.Count)
+            {
+                string selected =
+                    VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(
+                        scene.characters[_sceneComposerSelectedCharacterIndex]);
+                if (sceneCharacters.Any(id => string.Equals(
+                        id, selected, StringComparison.OrdinalIgnoreCase)))
+                    return selected;
+            }
+
+            VnSceneComposerBeatCharacterStaging row =
+                FindCharacterStaging(
+                    beat, _sceneComposerSelectedCharacterStagingId);
+            if (row != null && sceneCharacters.Any(id => string.Equals(
+                    id, row.characterId, StringComparison.OrdinalIgnoreCase)))
+                return row.characterId ?? string.Empty;
+
+            string first = sceneCharacters[0];
+            int index = FindSceneCharacterIndex(scene, first);
+            if (index >= 0)
+                _sceneComposerSelectedCharacterIndex = index;
+            return first;
+        }
+
+        private static int CountLocalCharacterStagingRows(
+            VnSceneComposerDialogueBeat beat)
+        {
+            if (beat == null || beat.characterStaging == null)
+                return 0;
+            int count = 0;
+            for (int i = 0; i < beat.characterStaging.Count; i++)
+                if (beat.characterStaging[i] != null)
+                    count++;
+            return count;
+        }
+
+        private static int FindSceneCharacterIndex(
+            VnSceneComposerScene scene, string characterId)
+        {
+            if (scene == null || scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return -1;
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter character = scene.characters[i];
+                if (character == null) continue;
+                string id =
+                    VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(
+                        character);
+                if (string.Equals(
+                    id, characterId, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+            return -1;
         }
 
         private static VnSceneComposerBeatCharacterStaging FindCharacterStaging(

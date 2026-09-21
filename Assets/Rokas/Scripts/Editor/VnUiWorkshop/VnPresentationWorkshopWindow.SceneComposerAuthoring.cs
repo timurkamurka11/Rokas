@@ -510,6 +510,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 !string.Equals(
                     staging.characterId, characterId, StringComparison.OrdinalIgnoreCase))
                 staging = FindCharacterStagingByCharacter(beat, characterId);
+            if (staging == null)
+                staging = EnsureCharacterStagingRow(beat, characterId);
             if (staging == null) return;
 
             VnWorkshopPreviewFrame beforeFrame = ComposerBuildSelectedPreviewFrame();

@@ -169,6 +169,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerAdvancedAnimationGroupExpanded;
         [SerializeField] private bool _sceneComposerAdvancedPresentationGroupExpanded;
         [SerializeField] private bool _sceneComposerAdvancedTechnicalGroupExpanded;
+        [SerializeField] private bool _sceneComposerTextDialogueExpanded = true;
+        [SerializeField] private bool _sceneComposerTextStagingExpanded = true;
+        [SerializeField] private bool _sceneComposerTextPresentationExpanded;
 
         [NonSerialized] private VnSceneComposerPlaybackController _sceneComposerPlayback;
         [NonSerialized] private Dictionary<string, SceneComposerThumbnailCacheEntry> _sceneComposerThumbnailCache;
@@ -1288,6 +1291,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)
         {
             EditorGUILayout.LabelField("Текст", EditorStyles.boldLabel);
+
+            _sceneComposerTextDialogueExpanded = EditorGUILayout.Foldout(
+                _sceneComposerTextDialogueExpanded, "Реплика", true);
+            if (_sceneComposerTextDialogueExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerDialogueAuthoringSection(scene);
+                EditorGUI.indentLevel--;
+            }
+
+            VnSceneComposerDialogueBeat selectedBeat = ComposerGetSelectedDialogueBeat();
+            _sceneComposerTextStagingExpanded = EditorGUILayout.Foldout(
+                _sceneComposerTextStagingExpanded, "Персонажи и постановка", true);
+            if (_sceneComposerTextStagingExpanded)
+            {
+                EditorGUI.indentLevel++;
+                if (selectedBeat != null)
+                    DrawSceneComposerBeatCharacterStagingInspector(scene, selectedBeat);
+                else
+                    EditorGUILayout.LabelField(
+                        "Выберите реплику, чтобы настроить постановку.",
+                        EditorStyles.wordWrappedMiniLabel);
+                EditorGUI.indentLevel--;
+            }
+
+            _sceneComposerTextPresentationExpanded = EditorGUILayout.Foldout(
+                _sceneComposerTextPresentationExpanded, "Оформление диалога", true);
+            if (_sceneComposerTextPresentationExpanded)
+            {
+                EditorGUI.indentLevel++;
+                DrawSceneComposerDialoguePresentationSection(scene);
+                EditorGUI.indentLevel--;
+            }
+        }
+
+        private void DrawSceneComposerDialogueAuthoringSection(VnSceneComposerScene scene)
+        {
             EditorGUILayout.LabelField("Реплики", EditorStyles.miniBoldLabel);
 
             VnSceneComposerDialogueBeat selectedBeat = ComposerGetSelectedDialogueBeat();
@@ -1298,15 +1338,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     VnSceneComposerDialogueBeat beat = scene.dialogueBeats[i];
                     if (beat == null) continue;
                     bool selected = selectedBeat != null &&
-                                    string.Equals(beat.beatId, selectedBeat.beatId, StringComparison.Ordinal);
+                                    string.Equals(
+                                        beat.beatId, selectedBeat.beatId,
+                                        StringComparison.Ordinal);
                     string speakerLabel = beat.narration
                         ? "Текст без персонажа"
-                        : (string.IsNullOrWhiteSpace(beat.speaker) ? "Без говорящего" : beat.speaker);
-                    string textLabel = (beat.text ?? string.Empty).Replace('\n', ' ').Trim();
-                    if (textLabel.Length > 28) textLabel = textLabel.Substring(0, 28) + "…";
+                        : (string.IsNullOrWhiteSpace(beat.speaker)
+                            ? "Без говорящего"
+                            : beat.speaker);
+                    string textLabel =
+                        (beat.text ?? string.Empty).Replace('\n', ' ').Trim();
+                    if (textLabel.Length > 28)
+                        textLabel = textLabel.Substring(0, 28) + "…";
                     string rowLabel = (i + 1) + ". " + speakerLabel +
-                                      (string.IsNullOrEmpty(textLabel) ? string.Empty : " — " + textLabel);
-                    if (GUILayout.Button(rowLabel, selected ? EditorStyles.miniButtonMid : EditorStyles.miniButton))
+                                      (string.IsNullOrEmpty(textLabel)
+                                          ? string.Empty
+                                          : " — " + textLabel);
+                    if (GUILayout.Button(
+                            rowLabel,
+                            selected
+                                ? EditorStyles.miniButtonMid
+                                : EditorStyles.miniButton))
                         ComposerSelectDialogueBeat(beat.beatId);
                 }
             }
@@ -1316,182 +1368,74 @@ namespace Rokas.EditorTools.VnUiWorkshop
             selectedBeat = ComposerGetSelectedDialogueBeat();
             using (new EditorGUI.DisabledScope(selectedBeat == null))
             {
-                if (GUILayout.Button("Дублировать")) ComposerDuplicateSelectedDialogueBeat();
-                if (GUILayout.Button("Удалить")) ComposerDeleteSelectedDialogueBeat();
+                if (GUILayout.Button("Дублировать"))
+                    ComposerDuplicateSelectedDialogueBeat();
+                if (GUILayout.Button("Удалить"))
+                    ComposerDeleteSelectedDialogueBeat();
             }
             EditorGUILayout.EndHorizontal();
 
             selectedBeat = ComposerGetSelectedDialogueBeat();
-            int selectedIndex = selectedBeat != null ? VnSceneComposerDialogue.FindIndex(scene, selectedBeat.beatId) : -1;
+            int selectedIndex = selectedBeat != null
+                ? VnSceneComposerDialogue.FindIndex(scene, selectedBeat.beatId)
+                : -1;
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(selectedIndex <= 0))
             {
-                if (GUILayout.Button("↑", GUILayout.Width(36f))) ComposerMoveSelectedDialogueBeat(-1);
+                if (GUILayout.Button("↑", GUILayout.Width(36f)))
+                    ComposerMoveSelectedDialogueBeat(-1);
             }
-            using (new EditorGUI.DisabledScope(selectedIndex < 0 || scene.dialogueBeats == null ||
-                                                selectedIndex >= scene.dialogueBeats.Count - 1))
+            using (new EditorGUI.DisabledScope(
+                       selectedIndex < 0 || scene.dialogueBeats == null ||
+                       selectedIndex >= scene.dialogueBeats.Count - 1))
             {
-                if (GUILayout.Button("↓", GUILayout.Width(36f))) ComposerMoveSelectedDialogueBeat(1);
+                if (GUILayout.Button("↓", GUILayout.Width(36f)))
+                    ComposerMoveSelectedDialogueBeat(1);
             }
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
 
             selectedBeat = ComposerGetSelectedDialogueBeat();
-            if (selectedBeat != null)
+            if (selectedBeat == null) return;
+
+            EditorGUI.BeginChangeCheck();
+            bool narration =
+                EditorGUILayout.Toggle(
+                    "Текст без персонажа", selectedBeat.narration);
+            string speaker =
+                EditorGUILayout.TextField(
+                    "Говорящий", selectedBeat.speaker ?? string.Empty);
+            EditorGUILayout.LabelField("Текст реплики");
+            string text = DrawSceneComposerDialogueBodyEditor(selectedBeat);
+            if (EditorGUI.EndChangeCheck())
             {
-                EditorGUI.BeginChangeCheck();
-                bool narration = EditorGUILayout.Toggle("Текст без персонажа", selectedBeat.narration);
-                string speaker = EditorGUILayout.TextField("Говорящий", selectedBeat.speaker ?? string.Empty);
-                EditorGUILayout.LabelField("Текст реплики");
-                string text = DrawSceneComposerDialogueBodyEditor(selectedBeat);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    RecordSceneComposerUndo("Edit VN Dialogue Beat");
-                    selectedBeat.narration = narration;
-                    selectedBeat.speaker = narration ? string.Empty : speaker;
-                    selectedBeat.text = text;
-                    MarkSceneComposerChanged();
-                }
-
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Состояние персонажа в этой реплике", EditorStyles.miniBoldLabel);
-                string[] targetIds = GetSceneComposerBeatTargetCharacterIds(scene);
-                string[] targetLabels = new string[targetIds.Length + 1];
-                targetLabels[0] = "Без персонажа";
-                for (int i = 0; i < targetIds.Length; i++) targetLabels[i + 1] = targetIds[i];
-
-                int targetIndex = 0;
-                for (int i = 0; i < targetIds.Length; i++)
-                {
-                    if (string.Equals(targetIds[i], selectedBeat.targetCharacterId,
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        targetIndex = i + 1;
-                        break;
-                    }
-                }
-
-                EditorGUI.BeginChangeCheck();
-                int nextTargetIndex = EditorGUILayout.Popup("Персонаж реплики", targetIndex, targetLabels);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    string nextTarget = nextTargetIndex > 0 ? targetIds[nextTargetIndex - 1] : string.Empty;
-                    ComposerSetSelectedDialogueBeatCharacterState(nextTarget, false, string.Empty);
-                    selectedBeat = ComposerGetSelectedDialogueBeat();
-                }
-
-                string targetCharacter = selectedBeat != null ? selectedBeat.targetCharacterId ?? string.Empty : string.Empty;
-                using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(targetCharacter)))
-                {
-                    string baseStateId =
-                        GetSceneComposerBaseStateId(scene, targetCharacter);
-                    string[] stateIds = string.IsNullOrEmpty(targetCharacter)
-                        ? Array.Empty<string>()
-                        : ComposerGetAuthoredStateIds(targetCharacter)
-                            .Where(id => !string.Equals(
-                                id, baseStateId, StringComparison.Ordinal))
-                            .ToArray();
-                    string[] stateLabels = new string[stateIds.Length + 2];
-                    stateLabels[0] = "Оставить предыдущее";
-                    stateLabels[1] = "По умолчанию / Базовая";
-                    int stateIndex = 0;
-                    if (selectedBeat.hasStateOverride &&
-                        string.Equals(selectedBeat.stateId, baseStateId, StringComparison.Ordinal))
-                        stateIndex = 1;
-                    for (int i = 0; i < stateIds.Length; i++)
-                    {
-                        stateLabels[i + 2] =
-                            GetSceneComposerBeatStateDisplayName(targetCharacter, stateIds[i]);
-                        if (selectedBeat.hasStateOverride &&
-                            string.Equals(stateIds[i], selectedBeat.stateId, StringComparison.Ordinal))
-                            stateIndex = i + 2;
-                    }
-
-                    EditorGUI.BeginChangeCheck();
-                    int nextStateIndex = EditorGUILayout.Popup(
-                        "Эмоция / поза", stateIndex, stateLabels);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        bool hasOverride = nextStateIndex > 0;
-                        string nextState = nextStateIndex == 1
-                            ? baseStateId
-                            : (nextStateIndex > 1
-                                ? stateIds[nextStateIndex - 2]
-                                : string.Empty);
-                        ComposerSetSelectedDialogueBeatCharacterState(
-                            targetCharacter, hasOverride, nextState);
-                        selectedBeat = ComposerGetSelectedDialogueBeat();
-                    }
-
-                    if (GUILayout.Button("Выбрать PNG позы / эмоции"))
-                    {
-                        string source = EditorUtility.OpenFilePanel(
-                            "Выбрать PNG позы / эмоции", string.Empty, "png");
-                        if (!string.IsNullOrEmpty(source))
-                        {
-                            try
-                            {
-                                ComposerImportSelectedDialogueBeatPosePng(source);
-                                selectedBeat = ComposerGetSelectedDialogueBeat();
-                            }
-                            catch (Exception exception)
-                            {
-                                SetSceneComposerStatus(
-                                    "Не удалось импортировать позу: " + exception.Message,
-                                    MessageType.Error);
-                            }
-                        }
-                    }
-
-                    string[] effectLabels = { "Без анимации", "Акцент", "Подскок" };
-                    int effectIndex = selectedBeat.effect == VnSceneComposerBeatEffect.Accent
-                        ? 1
-                        : (selectedBeat.effect == VnSceneComposerBeatEffect.Hop ? 2 : 0);
-                    EditorGUI.BeginChangeCheck();
-                    int nextEffectIndex = EditorGUILayout.Popup(
-                        "Анимация реплики", effectIndex, effectLabels);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        VnSceneComposerBeatEffect nextEffect =
-                            nextEffectIndex == 1
-                                ? VnSceneComposerBeatEffect.Accent
-                                : (nextEffectIndex == 2
-                                    ? VnSceneComposerBeatEffect.Hop
-                                    : VnSceneComposerBeatEffect.None);
-                        ComposerSetSelectedDialogueBeatEffect(
-                            nextEffect,
-                            selectedBeat.effectStrength,
-                            selectedBeat.effectDuration);
-                        selectedBeat = ComposerGetSelectedDialogueBeat();
-                    }
-
-                    if (selectedBeat.effect != VnSceneComposerBeatEffect.None)
-                    {
-                        EditorGUI.BeginChangeCheck();
-                        float strength = EditorGUILayout.Slider(
-                            "Сила", selectedBeat.effectStrength, 0f, 100f);
-                        float duration = DrawSceneComposerDurationControl(
-                            "Длительность", selectedBeat.effectDuration, .01f);
-                        if (EditorGUI.EndChangeCheck())
-                            ComposerSetSelectedDialogueBeatEffect(
-                                selectedBeat.effect, strength, duration);
-                    }
-                }
+                RecordSceneComposerUndo("Edit VN Dialogue Beat");
+                selectedBeat.narration = narration;
+                selectedBeat.speaker = narration ? string.Empty : speaker;
+                selectedBeat.text = text;
+                MarkSceneComposerChanged();
             }
+        }
 
-            selectedBeat = ComposerGetSelectedDialogueBeat();
-            if (selectedBeat != null)
-                DrawSceneComposerBeatCharacterStagingInspector(scene, selectedBeat);
-
+        private void DrawSceneComposerDialoguePresentationSection(
+            VnSceneComposerScene scene)
+        {
             DrawSceneComposerDialogueTypographyInspector(scene);
 
-            VnPresentationWorkshopPreset effective = VnSceneComposerComposition.ResolvePresentation(_sceneComposerProject, scene);
-            VnWorkshopTypewriterValues typewriter = VnPresentationWorkshopVn10Resolver.ResolveTypewriter(effective);
+            VnPresentationWorkshopPreset effective =
+                VnSceneComposerComposition.ResolvePresentation(
+                    _sceneComposerProject, scene);
+            VnWorkshopTypewriterValues typewriter =
+                VnPresentationWorkshopVn10Resolver.ResolveTypewriter(effective);
+
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Появление текста", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField(
+                "Появление текста", EditorStyles.miniBoldLabel);
             EditorGUI.BeginChangeCheck();
             float nextSpeed = EditorGUILayout.Slider(
-                new GUIContent("Скорость текста", "Скорость появления символов во время реплики."),
+                new GUIContent(
+                    "Скорость текста",
+                    "Скорость появления символов во время реплики."),
                 typewriter.CharactersPerSecond, 1f, 240f);
             if (EditorGUI.EndChangeCheck())
                 SetSceneComposerTypewriterSpeed(nextSpeed);

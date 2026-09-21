@@ -1104,6 +1104,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         if (!IsFinite(staging.effectDuration) || staging.effectDuration <= 0f)
                             staging.effectDuration = .28f;
                     }
+
+                    PromoteLegacyBeatCharacterStateToStaging(beat);
                 }
                 if (scene.media == null) scene.media = new VnSceneComposerMediaReference();
                 if (scene.music == null) scene.music = new VnSceneComposerMusic();
@@ -1402,6 +1404,82 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (scene != null && scene.presentationOverrides != null)
                         scene.presentationOverrides.ResetElement(VnWorkshopElement.DialoguePanel);
                 }
+            }
+        }
+
+        private static void PromoteLegacyBeatCharacterStateToStaging(
+            VnSceneComposerDialogueBeat beat)
+        {
+            if (beat == null) return;
+            if (beat.characterStaging == null)
+                beat.characterStaging =
+                    new List<VnSceneComposerBeatCharacterStaging>();
+
+            string target = (beat.targetCharacterId ?? string.Empty).Trim();
+            bool hasLegacyState =
+                !string.IsNullOrEmpty(target) && beat.hasStateOverride;
+            bool hasLegacyEffect =
+                !string.IsNullOrEmpty(target) &&
+                beat.effect != VnSceneComposerBeatEffect.None;
+
+            if (hasLegacyState || hasLegacyEffect)
+            {
+                VnSceneComposerBeatCharacterStaging row = null;
+                for (int i = 0; i < beat.characterStaging.Count; i++)
+                {
+                    VnSceneComposerBeatCharacterStaging candidate =
+                        beat.characterStaging[i];
+                    if (candidate != null &&
+                        string.Equals(
+                            candidate.characterId ?? string.Empty,
+                            target,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        row = candidate;
+                        break;
+                    }
+                }
+
+                if (row == null)
+                {
+                    row = new VnSceneComposerBeatCharacterStaging
+                    {
+                        characterId = target
+                    };
+                    beat.characterStaging.Add(row);
+                }
+
+                // Newer characterStaging data wins exactly as it did during
+                // pre-migration resolution. Legacy fills only missing behavior.
+                if (hasLegacyState && !row.hasStateOverride)
+                {
+                    row.hasStateOverride = true;
+                    row.stateId = beat.stateId ?? string.Empty;
+                }
+
+                if (hasLegacyEffect &&
+                    row.effect == VnSceneComposerBeatEffect.None)
+                {
+                    row.effect = beat.effect;
+                    row.effectStrength = Mathf.Max(
+                        0f, beat.effectStrength);
+                    row.effectDuration = Mathf.Clamp(
+                        beat.effectDuration, .01f, 10f);
+                }
+            }
+
+            // Keep serialized legacy fields for backward schema compatibility,
+            // but normalized current projects have exactly one writable source.
+            if (!string.IsNullOrEmpty(target) ||
+                (!beat.hasStateOverride &&
+                 beat.effect == VnSceneComposerBeatEffect.None))
+            {
+                beat.targetCharacterId = string.Empty;
+                beat.hasStateOverride = false;
+                beat.stateId = string.Empty;
+                beat.effect = VnSceneComposerBeatEffect.None;
+                beat.effectStrength = 18f;
+                beat.effectDuration = .28f;
             }
         }
 
