@@ -174,22 +174,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             VnSceneComposerSpeakerColorOverride entry = FindSpeakerColorOverride(scene, key);
             if (entry != null)
-            {
-                if (!entry.hasDialogueBodyColor)
-                {
-                    VnWorkshopTypographyValues inherited = ResolveWithoutSpeakerPalette(project, scene, beat);
-                    entry.dialogueBodyColor = inherited.DialogueColor;
-                    entry.hasDialogueBodyColor = true;
-                }
                 return entry;
-            }
 
             VnWorkshopTypographyValues seed = ResolveWithoutSpeakerPalette(project, scene, beat);
             entry = new VnSceneComposerSpeakerColorOverride
             {
                 speakerKey = key,
                 color = seed.SpeakerColor,
-                hasDialogueBodyColor = true,
+                // Name-only authoring must not silently freeze the body fallback.
+                // The body override becomes explicit only when its own color is edited.
+                hasDialogueBodyColor = false,
                 dialogueBodyColor = seed.DialogueColor
             };
             scene.speakerColorOverrides.Add(entry);
@@ -221,6 +215,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
             color.a = inherited.DialogueColor.a;
             entry.dialogueBodyColor = color;
             entry.hasDialogueBodyColor = true;
+        }
+
+        internal static bool ClearSpeakerPaletteDialogueBodyColor(
+            VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
+        {
+            if (scene == null || scene.speakerColorOverrides == null) return false;
+            string key = ResolveSpeakerKey(scene, beat);
+            if (key.Length == 0) return false;
+
+            VnSceneComposerSpeakerColorOverride entry =
+                FindSpeakerColorOverride(scene, key);
+            if (entry == null || !entry.hasDialogueBodyColor) return false;
+
+            entry.hasDialogueBodyColor = false;
+            return true;
         }
 
         internal static bool RemoveSpeakerPaletteEntry(
