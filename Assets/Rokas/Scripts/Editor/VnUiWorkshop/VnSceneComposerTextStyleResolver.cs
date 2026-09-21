@@ -138,7 +138,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat, Color color)
         {
             if (scene == null) throw new ArgumentNullException(nameof(scene));
-            string key = ResolveSpeakerKey(beat);
+            string key = ResolveSpeakerKey(scene, beat);
             if (key.Length == 0)
                 throw new InvalidOperationException(
                     "Speaker-in-Scene color requires a non-empty speaker identity.");
