@@ -6,7 +6,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 {
     public static class VnSceneComposerContract
     {
-        public const int SchemaVersion = 3;
+        public const int SchemaVersion = 4;
         public const string SourceHead = "f58f1db08fc225c2831ff59d50d42e8c07ea15ce";
     }
 
@@ -334,6 +334,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
     }
 
     [Serializable]
+    public sealed class VnSceneComposerProjectSpeakerProfile
+    {
+        // Project/game-wide identity. Only RGB is speaker-specific; opacity remains
+        // part of the shared/legacy typography fallback and is applied at resolve time.
+        public string speakerKey = string.Empty;
+        public bool hasSpeakerNameColor;
+        public Color speakerNameColor = Color.white;
+        public bool hasDialogueBodyColor;
+        public Color dialogueBodyColor = Color.white;
+    }
+
+    [Serializable]
     public sealed class VnSceneComposerScene
     {
         public string sceneId = NewStableId();
@@ -416,6 +428,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string title = "Untitled VN Sequence";
         public string sourceHead = VnSceneComposerContract.SourceHead;
         public VnPresentationWorkshopPreset defaultPresentation = new VnPresentationWorkshopPreset();
+        public List<VnSceneComposerProjectSpeakerProfile> projectSpeakerPalette =
+            new List<VnSceneComposerProjectSpeakerProfile>();
         public List<VnSceneComposerScene> scenes = new List<VnSceneComposerScene>();
     }
 }

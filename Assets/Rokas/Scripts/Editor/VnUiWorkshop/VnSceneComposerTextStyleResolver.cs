@@ -11,6 +11,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (scene == null) throw new ArgumentNullException(nameof(scene));
 
+            VnWorkshopTypographyValues values = ResolveLegacyFallback(project, scene, beat);
+            ApplyProjectSpeakerProfile(
+                FindProjectSpeakerProfile(project, ResolveSpeakerKey(scene, beat)),
+                ref values);
+            return values;
+        }
+
+        // Legacy Scene/default layers remain as compatibility fallback only.
+        // ProjectSpeakerPalette is applied after historical resolution.
+        internal static VnWorkshopTypographyValues ResolveLegacyFallback(
+            VnSceneComposerProject project, VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            if (scene == null) throw new ArgumentNullException(nameof(scene));
+
             VnWorkshopTypographyValues values =
                 VnPresentationWorkshopVn10Resolver.ResolveTypography(
                     project.defaultPresentation ?? new VnPresentationWorkshopPreset());
@@ -30,7 +45,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (speakerOverride != null)
             {
                 Color localSpeaker = speakerOverride.color;
-                // Opacity is not speaker-local. Palette entries contribute RGB only.
                 localSpeaker.a = values.SpeakerColor.a;
                 values.SpeakerColor = localSpeaker;
 
@@ -81,6 +95,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return speaker.Length == 0 ? string.Empty : "speaker:" + speaker;
         }
 
+        public static string ResolveSpeakerKeyForName(string value)
+        {
+            string speaker = NormalizeSpeakerText(value);
+            return speaker.Length == 0 ? string.Empty : "speaker:" + speaker;
+        }
+
         private static string NormalizeSpeakerText(string value)
         {
             // Deterministic and deliberately conservative: trim authoring whitespace only.
@@ -111,6 +131,178 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             return false;
+        }
+
+        public static VnSceneComposerProjectSpeakerProfile FindProjectSpeakerProfile(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            if (project == null || project.projectSpeakerPalette == null ||
+                string.IsNullOrEmpty(speakerKey))
+                return null;
+
+            for (int i = 0; i < project.projectSpeakerPalette.Count; i++)
+            {
+                VnSceneComposerProjectSpeakerProfile profile = project.projectSpeakerPalette[i];
+                if (profile != null &&
+                    string.Equals(profile.speakerKey ?? string.Empty, speakerKey, StringComparison.Ordinal))
+                    return profile;
+            }
+            return null;
+        }
+
+        public static VnWorkshopTypographyValues ResolveProjectSpeakerValues(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            VnWorkshopTypographyValues values = ResolveProjectSpeakerFallback(project, speakerKey);
+            ApplyProjectSpeakerProfile(FindProjectSpeakerProfile(project, speakerKey), ref values);
+            return values;
+        }
+
+        public static void SetProjectSpeakerNameColor(
+            VnSceneComposerProject project, string speakerKey, Color color)
+        {
+            VnSceneComposerProjectSpeakerProfile profile =
+                EnsureProjectSpeakerProfile(project, speakerKey);
+            color.a = 1f;
+            profile.speakerNameColor = color;
+            profile.hasSpeakerNameColor = true;
+        }
+
+        public static void SetProjectSpeakerDialogueBodyColor(
+            VnSceneComposerProject project, string speakerKey, Color color)
+        {
+            VnSceneComposerProjectSpeakerProfile profile =
+                EnsureProjectSpeakerProfile(project, speakerKey);
+            color.a = 1f;
+            profile.dialogueBodyColor = color;
+            profile.hasDialogueBodyColor = true;
+        }
+
+        public static bool ClearProjectSpeakerNameColor(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            VnSceneComposerProjectSpeakerProfile profile =
+                FindProjectSpeakerProfile(project, speakerKey);
+            if (profile == null || !profile.hasSpeakerNameColor) return false;
+            profile.hasSpeakerNameColor = false;
+            RemoveEmptyProjectSpeakerProfile(project, profile);
+            return true;
+        }
+
+        public static bool ClearProjectSpeakerDialogueBodyColor(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            VnSceneComposerProjectSpeakerProfile profile =
+                FindProjectSpeakerProfile(project, speakerKey);
+            if (profile == null || !profile.hasDialogueBodyColor) return false;
+            profile.hasDialogueBodyColor = false;
+            RemoveEmptyProjectSpeakerProfile(project, profile);
+            return true;
+        }
+
+        private static VnSceneComposerProjectSpeakerProfile EnsureProjectSpeakerProfile(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            speakerKey = (speakerKey ?? string.Empty).Trim();
+            if (speakerKey.Length == 0)
+                throw new InvalidOperationException(
+                    "Project speaker palette requires a non-empty speaker identity.");
+
+            if (project.projectSpeakerPalette == null)
+                project.projectSpeakerPalette =
+                    new System.Collections.Generic.List<VnSceneComposerProjectSpeakerProfile>();
+
+            VnSceneComposerProjectSpeakerProfile existing =
+                FindProjectSpeakerProfile(project, speakerKey);
+            if (existing != null) return existing;
+
+            VnWorkshopTypographyValues seed =
+                ResolveProjectSpeakerFallback(project, speakerKey);
+            Color name = seed.SpeakerColor;
+            Color body = seed.DialogueColor;
+            name.a = 1f;
+            body.a = 1f;
+            var profile = new VnSceneComposerProjectSpeakerProfile
+            {
+                speakerKey = speakerKey,
+                hasSpeakerNameColor = false,
+                speakerNameColor = name,
+                hasDialogueBodyColor = false,
+                dialogueBodyColor = body
+            };
+            project.projectSpeakerPalette.Add(profile);
+            return profile;
+        }
+
+        private static void RemoveEmptyProjectSpeakerProfile(
+            VnSceneComposerProject project, VnSceneComposerProjectSpeakerProfile profile)
+        {
+            if (project == null || project.projectSpeakerPalette == null || profile == null ||
+                profile.hasSpeakerNameColor || profile.hasDialogueBodyColor)
+                return;
+            project.projectSpeakerPalette.Remove(profile);
+        }
+
+        private static VnWorkshopTypographyValues ResolveProjectSpeakerFallback(
+            VnSceneComposerProject project, string speakerKey)
+        {
+            if (TryFindProjectSpeakerBeat(project, speakerKey,
+                    out VnSceneComposerScene scene, out VnSceneComposerDialogueBeat beat))
+                return ResolveLegacyFallback(project, scene, beat);
+
+            return VnPresentationWorkshopVn10Resolver.ResolveTypography(
+                project.defaultPresentation ?? new VnPresentationWorkshopPreset());
+        }
+
+        private static bool TryFindProjectSpeakerBeat(
+            VnSceneComposerProject project,
+            string speakerKey,
+            out VnSceneComposerScene matchedScene,
+            out VnSceneComposerDialogueBeat matchedBeat)
+        {
+            matchedScene = null;
+            matchedBeat = null;
+            if (project == null || project.scenes == null || string.IsNullOrEmpty(speakerKey))
+                return false;
+
+            for (int s = 0; s < project.scenes.Count; s++)
+            {
+                VnSceneComposerScene scene = project.scenes[s];
+                if (scene == null || scene.dialogueBeats == null) continue;
+                for (int b = 0; b < scene.dialogueBeats.Count; b++)
+                {
+                    VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
+                    if (beat != null &&
+                        string.Equals(ResolveSpeakerKey(scene, beat), speakerKey, StringComparison.Ordinal))
+                    {
+                        matchedScene = scene;
+                        matchedBeat = beat;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static void ApplyProjectSpeakerProfile(
+            VnSceneComposerProjectSpeakerProfile profile,
+            ref VnWorkshopTypographyValues values)
+        {
+            if (profile == null) return;
+            if (profile.hasSpeakerNameColor)
+            {
+                Color name = profile.speakerNameColor;
+                name.a = values.SpeakerColor.a;
+                values.SpeakerColor = name;
+            }
+            if (profile.hasDialogueBodyColor)
+            {
+                Color body = profile.dialogueBodyColor;
+                body.a = values.DialogueColor.a;
+                values.DialogueColor = body;
+            }
         }
 
         public static VnSceneComposerSpeakerColorOverride FindSpeakerColorOverride(
