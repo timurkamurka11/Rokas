@@ -845,9 +845,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopTypographyValues values =
                 VnSceneComposerTextStyleResolver.Resolve(
                     _sceneComposerProject, scene, beat);
-            bool hasProfile =
+            VnSceneComposerSpeakerColorOverride profile =
                 VnSceneComposerTextStyleResolver.FindSpeakerColorOverride(
-                    scene, speakerKey) != null;
+                    scene, speakerKey);
+            bool hasProfile = profile != null;
+            bool hasBodyOverride = profile != null && profile.hasDialogueBodyColor;
 
             EditorGUI.BeginChangeCheck();
             Color nextName = EditorGUILayout.ColorField(
@@ -859,6 +861,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 values = VnSceneComposerTextStyleResolver.Resolve(
                     _sceneComposerProject, scene, beat);
                 hasProfile = true;
+                profile = VnSceneComposerTextStyleResolver.FindSpeakerColorOverride(
+                    scene, speakerKey);
+                hasBodyOverride = profile != null && profile.hasDialogueBodyColor;
             }
 
             EditorGUI.BeginChangeCheck();
@@ -871,19 +876,35 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 values = VnSceneComposerTextStyleResolver.Resolve(
                     _sceneComposerProject, scene, beat);
                 hasProfile = true;
+                hasBodyOverride = true;
             }
 
             EditorGUILayout.LabelField(
-                "Источник",
+                "Источник имени",
                 hasProfile
                     ? "Профиль говорящего в этой сцене"
                     : "Наследуется из настроек сцены / проекта");
+            EditorGUILayout.LabelField(
+                "Источник реплики",
+                hasBodyOverride
+                    ? "Профиль говорящего в этой сцене"
+                    : "Наследуется из настроек сцены / проекта");
 
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(!hasBodyOverride))
+            {
+                if (GUILayout.Button("Сбросить цвет реплики"))
+                {
+                    ComposerClearCurrentSceneSpeakerDialogueColorOverride();
+                    hasBodyOverride = false;
+                }
+            }
             using (new EditorGUI.DisabledScope(!hasProfile))
             {
                 if (GUILayout.Button("Сбросить цвета говорящего"))
                     ComposerClearCurrentSceneSpeakerPaletteEntry();
             }
+            EditorGUILayout.EndHorizontal();
         }
 
         private void DrawTextGeometryControls(bool speaker, VnSceneComposerScene scene)
