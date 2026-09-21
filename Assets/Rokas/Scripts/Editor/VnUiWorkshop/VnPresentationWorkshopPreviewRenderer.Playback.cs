@@ -37,9 +37,34 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private static bool ShouldDrawRegisteredPlaybackDialogue(VnWorkshopPreviewFrame frame)
         {
+            return ShouldDrawRegisteredPlaybackDialoguePanel(frame);
+        }
+
+        private static bool ShouldDrawRegisteredPlaybackDialoguePanel(
+            VnWorkshopPreviewFrame frame)
+        {
             return frame == null ||
-                   !PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
-                   playbackFrame.ShowDialogueUi;
+                   !PlaybackFrames.TryGetValue(
+                       frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
+                   playbackFrame.ShowDialoguePanel;
+        }
+
+        private static bool ShouldDrawRegisteredPlaybackDialogueText(
+            VnWorkshopPreviewFrame frame)
+        {
+            return frame == null ||
+                   !PlaybackFrames.TryGetValue(
+                       frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
+                   playbackFrame.ShowDialogueText;
+        }
+
+        private static bool ShouldDrawRegisteredPlaybackCharacters(
+            VnWorkshopPreviewFrame frame)
+        {
+            return frame == null ||
+                   !PlaybackFrames.TryGetValue(
+                       frame, out VnSceneComposerPlaybackFrame playbackFrame) ||
+                   playbackFrame.ShowCharacters;
         }
 
         private static void TryDrawRegisteredSceneTransitionOverlay(Rect localCanvas, VnWorkshopPreviewFrame frame)

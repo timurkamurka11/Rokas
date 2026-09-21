@@ -322,33 +322,45 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
-                if (frame.ComposerCharacters != null)
+                if (ShouldDrawRegisteredPlaybackCharacters(frame))
                 {
-                    for (int i = 0; i < frame.ComposerCharacters.Length; i++)
+                    if (frame.ComposerCharacters != null)
                     {
-                        VnWorkshopPreviewCharacter character = frame.ComposerCharacters[i];
-                        if (character == null || character.Texture == null) continue;
-                        DrawCharacter(localCanvas, frame, character.Body, character.Texture, character.Uv,
-                            character.Alpha, character.Brightness);
+                        for (int i = 0; i < frame.ComposerCharacters.Length; i++)
+                        {
+                            VnWorkshopPreviewCharacter character = frame.ComposerCharacters[i];
+                            if (character == null || character.Texture == null) continue;
+                            DrawCharacter(
+                                localCanvas, frame, character.Body, character.Texture,
+                                character.Uv, character.Alpha, character.Brightness);
+                        }
                     }
-                }
-                else
-                {
-                    if (frame.ShowKeiko)
-                        DrawCharacter(localCanvas, frame, frame.KeikoBody, frame.KeikoTexture, frame.KeikoUv,
-                            frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
-                    if (frame.ShowMina)
-                        DrawCharacter(localCanvas, frame, frame.MinaBody, frame.MinaTexture, frame.MinaUv,
-                            frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+                    else
+                    {
+                        if (frame.ShowKeiko)
+                            DrawCharacter(
+                                localCanvas, frame, frame.KeikoBody, frame.KeikoTexture,
+                                frame.KeikoUv,
+                                frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
+                        if (frame.ShowMina)
+                            DrawCharacter(
+                                localCanvas, frame, frame.MinaBody, frame.MinaTexture,
+                                frame.MinaUv,
+                                frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+                    }
                 }
 
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters);
 
                 if (ShouldDrawRegisteredPlaybackDialogue(frame))
                 {
-                    GUI.DrawTexture(LogicalToPreview(localCanvas, frame.DialoguePanel, frame), frame.DialoguePanelTexture,
+                    GUI.DrawTexture(
+                        LogicalToPreview(localCanvas, frame.DialoguePanel, frame),
+                        frame.DialoguePanelTexture,
                         ScaleMode.StretchToFill, true);
 
+                    if (ShouldDrawRegisteredPlaybackDialogueText(frame))
+                    {
                     FontStyle speakerStyle = string.IsNullOrWhiteSpace(frame.Typography.SpeakerFontAssetGuid)
                         ? FontStyle.Bold
                         : FontStyle.Normal;
@@ -379,7 +391,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
 
                     if (uiFeedbackElement.HasValue && uiFeedbackSample.HasValue)
-                        DrawUiFeedbackPreview(localCanvas, frame, uiFeedbackElement.Value, uiFeedbackSample.Value);
+                        DrawUiFeedbackPreview(
+                            localCanvas, frame,
+                            uiFeedbackElement.Value, uiFeedbackSample.Value);
+                    }
                 }
 
                 if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
