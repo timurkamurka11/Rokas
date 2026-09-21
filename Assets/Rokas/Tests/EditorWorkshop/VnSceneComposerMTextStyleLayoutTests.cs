@@ -1978,9 +1978,9 @@ namespace Rokas.EditorTools.Tests
             VnPresentationWorkshopWindow w = WindowWithScene();
             try
             {
-                VnSceneComposerProject p = Project(w);
-                p.scenes[0].dialogueBeats[0].speaker = Keiko;
+                Project(w).scenes[0].dialogueBeats[0].speaker = Keiko;
 
+                // First profile creation is one real authoring action.
                 Undo.ClearAll();
                 w.ComposerSetCurrentSceneSpeakerNameColor(Color.red);
                 Undo.FlushUndoRecordObjects();
@@ -1988,22 +1988,33 @@ namespace Rokas.EditorTools.Tests
                 Undo.PerformUndo();
                 Assert.That(w.ComposerHasCurrentSceneSpeakerPaletteEntry(), Is.False);
 
-                w.ComposerSetCurrentSceneSpeakerNameColor(Color.red);
-                Undo.FlushUndoRecordObjects();
+                // Seed without the authoring API, then verify one name-color edit undo.
+                VnSceneComposerProject p = Project(w);
+                SetSceneSpeakerPalette(
+                    p.scenes[0], p.scenes[0].dialogueBeats[0], Color.red, Color.yellow);
+                Undo.ClearAll();
                 w.ComposerSetCurrentSceneSpeakerNameColor(Color.blue);
                 Undo.FlushUndoRecordObjects();
                 Undo.PerformUndo();
                 Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
                     Is.EqualTo(Color.red));
 
-                w.ComposerSetCurrentSceneSpeakerDialogueColor(Color.yellow);
-                Undo.FlushUndoRecordObjects();
+                // Verify one body-color edit undo independently.
+                p = Project(w);
+                SetSceneSpeakerPalette(
+                    p.scenes[0], p.scenes[0].dialogueBeats[0], Color.red, Color.yellow);
+                Undo.ClearAll();
                 w.ComposerSetCurrentSceneSpeakerDialogueColor(Color.green);
                 Undo.FlushUndoRecordObjects();
                 Undo.PerformUndo();
                 Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).DialogueColor,
                     Is.EqualTo(Color.yellow));
 
+                // Verify whole-profile reset undo independently.
+                p = Project(w);
+                SetSceneSpeakerPalette(
+                    p.scenes[0], p.scenes[0].dialogueBeats[0], Color.red, Color.yellow);
+                Undo.ClearAll();
                 w.ComposerClearCurrentSceneSpeakerPaletteEntry();
                 Undo.FlushUndoRecordObjects();
                 Assert.That(w.ComposerHasCurrentSceneSpeakerPaletteEntry(), Is.False);
@@ -2190,6 +2201,101 @@ namespace Rokas.EditorTools.Tests
             Assert.That(keiko.DialogueFontAssetGuid, Is.EqualTo(mina.DialogueFontAssetGuid));
             Assert.That(keiko.SpeakerFontSize, Is.EqualTo(mina.SpeakerFontSize));
             Assert.That(keiko.DialogueFontSize, Is.EqualTo(mina.DialogueFontSize));
+        }
+
+
+        [Test] public void MTextSpeakerPalette_158_LegacyNameOnlyEntryKeepsBodyFallback()
+        {
+            VnSceneComposerScene s = Scene(Keiko);
+            var p = Project(s);
+            p.defaultPresentation.typography.hasDialogueColor = true;
+            p.defaultPresentation.typography.dialogueColor = Color.green;
+            string key = VnSceneComposerTextStyleResolver.ResolveSpeakerKey(s, s.dialogueBeats[0]);
+            s.speakerColorOverrides.Add(new VnSceneComposerSpeakerColorOverride
+            {
+                speakerKey = key,
+                color = Color.red,
+                hasDialogueBodyColor = false
+            });
+
+            VnSceneComposerProject q = RoundTrip(p);
+            Assert.That(Resolve(q, q.scenes[0], 0).SpeakerColor, Is.EqualTo(Color.red));
+            Assert.That(Resolve(q, q.scenes[0], 0).DialogueColor, Is.EqualTo(Color.green));
+            Assert.That(q.scenes[0].speakerColorOverrides[0].hasDialogueBodyColor, Is.False);
+        }
+
+        [Test] public void MTextSpeakerPalette_159_NameOnlyEditDoesNotCreateBodyOverride()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.scenes[0].dialogueBeats[0].speaker = Keiko;
+                p.defaultPresentation.typography.hasDialogueColor = true;
+                p.defaultPresentation.typography.dialogueColor = Color.green;
+
+                w.ComposerSetCurrentSceneSpeakerNameColor(Color.red);
+
+                Assert.That(w.ComposerHasCurrentSceneSpeakerPaletteEntry(), Is.True);
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.False);
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(Color.red));
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).DialogueColor,
+                    Is.EqualTo(Color.green));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerPalette_160_FirstBodyEditCreatesOverrideAndResetRestoresFallback()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.scenes[0].dialogueBeats[0].speaker = Keiko;
+                p.defaultPresentation.typography.hasDialogueColor = true;
+                p.defaultPresentation.typography.dialogueColor = Color.green;
+                w.ComposerSetCurrentSceneSpeakerNameColor(Color.red);
+
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.False);
+                w.ComposerSetCurrentSceneSpeakerDialogueColor(Color.yellow);
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.True);
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).DialogueColor,
+                    Is.EqualTo(Color.yellow));
+
+                w.ComposerClearCurrentSceneSpeakerDialogueColorOverride();
+                Assert.That(w.ComposerHasCurrentSceneSpeakerPaletteEntry(), Is.True,
+                    "Resetting only the body color must preserve the speaker-name profile.");
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.False);
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).SpeakerColor,
+                    Is.EqualTo(Color.red));
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).DialogueColor,
+                    Is.EqualTo(Color.green));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MTextSpeakerPalette_161_BodyResetUndoRestoresExplicitBodyColor()
+        {
+            VnPresentationWorkshopWindow w = WindowWithScene();
+            try
+            {
+                VnSceneComposerProject p = Project(w);
+                p.scenes[0].dialogueBeats[0].speaker = Keiko;
+                SetSceneSpeakerPalette(
+                    p.scenes[0], p.scenes[0].dialogueBeats[0], Color.red, Color.yellow);
+
+                Undo.ClearAll();
+                w.ComposerClearCurrentSceneSpeakerDialogueColorOverride();
+                Undo.FlushUndoRecordObjects();
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.False);
+                Undo.PerformUndo();
+
+                Assert.That(w.ComposerHasCurrentSceneSpeakerDialogueColorOverride(), Is.True);
+                Assert.That(Resolve(Project(w), Project(w).scenes[0], 0).DialogueColor,
+                    Is.EqualTo(Color.yellow));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
         }
 
         private static string ResolveSpeakerKeyReflect(VnSceneComposerDialogueBeat beat)
