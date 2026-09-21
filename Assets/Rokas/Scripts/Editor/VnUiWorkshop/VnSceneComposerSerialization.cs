@@ -1200,6 +1200,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (!IsFinite(entry.color.r) || !IsFinite(entry.color.g) ||
                         !IsFinite(entry.color.b) || !IsFinite(entry.color.a))
                         entry.color = Color.white;
+
+                    if (!IsFinite(entry.dialogueBodyColor.r) ||
+                        !IsFinite(entry.dialogueBodyColor.g) ||
+                        !IsFinite(entry.dialogueBodyColor.b) ||
+                        !IsFinite(entry.dialogueBodyColor.a))
+                    {
+                        entry.dialogueBodyColor = Color.white;
+                        entry.hasDialogueBodyColor = false;
+                    }
                 }
                 if (scene.dialogueBodyStyleOverride == null)
                     scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
