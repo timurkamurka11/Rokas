@@ -706,9 +706,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CurrentFrame.ShowDialoguePanel = showPanel;
             CurrentFrame.ShowCharacters = showCharacters;
             CurrentFrame.ShowDialogueText = showDialogueText;
-            CurrentFrame.Dialogue = showDialogueText
-                ? sample.visibleText ?? string.Empty
-                : string.Empty;
+            // Keep reveal state/data authoritative even while the renderer gate hides it.
+            // This preserves first-click completion semantics without drawing text before
+            // the Scene-entry character/text phase is allowed to become visible.
+            CurrentFrame.Dialogue = sample.visibleText ?? string.Empty;
             CurrentFrame.DialogueReveal = sample.dialogueReveal;
         }
 
