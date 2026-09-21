@@ -377,8 +377,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float duration = ResolveScenePreviewDuration(timing);
             RebuildFrame(SceneElapsedSeconds, true);
 
-            float dialogueElapsed = GetEffectiveDialogueElapsedSeconds();
-            if (!timing.usesPreviewAutoDuration || dialogueElapsed < duration) return;
+            if (!timing.usesPreviewAutoDuration || BeatElapsedSeconds < duration) return;
 
             if (CurrentBeatIndex + 1 < BeatCount(scene))
             {
@@ -389,7 +388,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (scope == PlaybackScope.OrderedRange && CurrentSceneIndex < rangeEnd)
             {
                 float sequenceGap = Mathf.Max(0f, timing.sequenceGap);
-                if (dialogueElapsed + .00001f < duration + sequenceGap)
+                if (BeatElapsedSeconds + .00001f < duration + sequenceGap)
                 {
                     RebuildFrame(1f);
                     return;
@@ -435,7 +434,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 VnSceneComposerDialogueBeat outgoingBeat = ResolveBeat(scene, CurrentBeatIndex);
                 VnSceneComposerBeatCharacterStagingResolver.CollectPendingStagingIds(
-                    outgoingBeat, GetEffectiveCharacterElapsedSeconds(),
+                    outgoingBeat, BeatElapsedSeconds,
                     cancelledCharacterStagingIds);
                 suppressCurrentSceneEntryPresentation = true;
                 sceneEntryPresentationEnabled = false;
@@ -615,21 +614,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 sceneEntryPresentationEnabled &&
                 !suppressCurrentSceneEntryPresentation &&
                 CurrentBeatIndex == 0;
-            float characterElapsed = entrySequencing
-                ? Mathf.Max(0f,
-                    sceneEntryPresentationElapsedSeconds - SceneEntryPlaqueLeadSeconds)
-                : BeatElapsedSeconds;
             float dialogueElapsed = entrySequencing
-                ? Mathf.Max(0f,
-                    sceneEntryPresentationElapsedSeconds - SceneEntryDialogueLeadSeconds)
+                ? Mathf.Max(
+                    0f,
+                    sceneEntryPresentationElapsedSeconds -
+                    SceneEntryDialogueLeadSeconds)
                 : BeatElapsedSeconds;
 
+            // Preserve the established Scene/Beat transition clock exactly.
+            // Scene-entry polish is an additional visibility/typewriter layer, not a
+            // replacement timing system for background, character, bounce or staging.
             VnSceneComposerTransitionSnapshot sample = useElapsedSeconds
                 ? VnSceneComposerElapsedTransitionSampler.Sample(
                     project, sourceScene, targetScene, previousBeat, targetBeat,
-                    entrySequencing ? characterElapsed : progress,
-                    entrySequencing ? characterElapsed : BeatElapsedSeconds,
-                    forceDialogueComplete: false)
+                    progress, BeatElapsedSeconds,
+                    forceCompleteCurrentDialogueReveal)
                 : VnSceneComposerTransitionSampler.Sample(
                     project, sourceScene, targetScene, previousBeat, targetBeat, progress);
             VnSceneComposerTransitionSnapshot endpoint =
@@ -638,8 +637,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             if (entrySequencing && useElapsedSeconds)
             {
-                // Media is already authoritative before the presentation sequence.
-                sample.background = endpoint.background;
+                // Only dialogue reveal waits until the final entry phase. All legacy
+                // visual transition samples keep their original BeatElapsedSeconds clock.
                 VnWorkshopTypewriterValues typewriter =
                     VnPresentationWorkshopVn10Resolver.ResolveTypewriter(
                         VnSceneComposerComposition.ResolvePresentation(
@@ -667,9 +666,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Texture2D targetBackground = CurrentMediaTexture as Texture2D;
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
                 project, targetScene, targetBeat, VnWorkshopResolution.Reference1920x1080,
-                targetBackground,
-                entrySequencing ? characterElapsed : BeatElapsedSeconds,
-                cancelledCharacterStagingIds);
+                targetBackground, BeatElapsedSeconds, cancelledCharacterStagingIds);
             VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(
                 project, sourceScene, ResolveFirstBeat(sourceScene),
                 VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);
