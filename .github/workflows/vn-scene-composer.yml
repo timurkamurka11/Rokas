@@ -514,6 +514,7 @@ jobs:
             artifacts-vn-scene-composer-msfx
             artifacts-vn-scene-composer-mtext
             artifacts-vn-scene-composer-mtext-style-layout
+            artifacts-vn-project-global-speaker-colors
             artifacts-vn-scene-composer-mf3
             artifacts-vn-scene-composer-mf2
             artifacts-vn-scene-composer-mf1
