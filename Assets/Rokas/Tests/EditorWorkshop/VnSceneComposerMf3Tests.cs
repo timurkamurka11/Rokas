@@ -17,9 +17,9 @@ namespace Rokas.EditorTools.Tests
         private const string DecorationId = "abababababababababababababababab";
 
         [Test]
-        public void MF3_ModelIsSceneLocalCollectionAndKeepsSchemaThree()
+        public void MF3_ModelIsSceneLocalCollectionAndKeepsCurrentSchema()
         {
-            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(3),
+            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(4),
                 "M-F3 is additive editor data and should not require a schema bump.");
 
             Type decorationType = RequireType("VnSceneComposerDecoration");
@@ -63,7 +63,7 @@ namespace Rokas.EditorTools.Tests
             VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(json);
 
             Assert.That(loaded.Success, Is.True, loaded.Error);
-            Assert.That(loaded.Project.schemaVersion, Is.EqualTo(3));
+            Assert.That(loaded.Project.schemaVersion, Is.EqualTo(4));
             IList loadedDecorations = GetDecorations(loaded.Project.scenes[0]);
             Assert.That(loadedDecorations.Count, Is.EqualTo(1));
             object restored = loadedDecorations[0];

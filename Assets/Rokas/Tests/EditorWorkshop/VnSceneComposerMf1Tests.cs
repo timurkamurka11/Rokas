@@ -181,7 +181,7 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MF1_PreviousSchemaTwoMigratesToKeepPreviousWithoutVisualStateChange()
         {
-            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(3),
+            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(4),
                 "Persisted Beat state/effect data requires a new canonical schema.");
             var project = new VnSceneComposerProject();
             var scene = SceneWithCharacter("Mina", "mina_neutral");
@@ -190,12 +190,12 @@ namespace Rokas.EditorTools.Tests
             project.scenes.Add(scene);
 
             string current = VnSceneComposerSerialization.SerializePortable(project);
-            string schemaTwo = current.Replace("\"schemaVersion\": 3", "\"schemaVersion\": 2");
+            string schemaTwo = current.Replace("\"schemaVersion\": 4", "\"schemaVersion\": 2");
             Assert.That(schemaTwo, Is.Not.EqualTo(current));
             VnSceneComposerImportResult result = VnSceneComposerSerialization.DeserializePortable(schemaTwo);
 
             Assert.That(result.Success, Is.True, result.Error);
-            Assert.That(result.Project.schemaVersion, Is.EqualTo(3));
+            Assert.That(result.Project.schemaVersion, Is.EqualTo(4));
             VnSceneComposerDialogueBeat migrated = result.Project.scenes[0].dialogueBeats[0];
             Assert.That(GetBool(migrated, "hasStateOverride"), Is.False);
             Assert.That(GetString(migrated, "targetCharacterId"), Is.Empty);
@@ -220,7 +220,7 @@ namespace Rokas.EditorTools.Tests
 
                 window.ComposerGetSelectedDialogueBeatId();
 
-                Assert.That(project.schemaVersion, Is.EqualTo(3));
+                Assert.That(project.schemaVersion, Is.EqualTo(4));
                 beat = project.scenes[0].dialogueBeats[0];
                 Assert.That(GetString(beat, "targetCharacterId"), Is.Empty);
                 Assert.That(GetBool(beat, "hasStateOverride"), Is.False);

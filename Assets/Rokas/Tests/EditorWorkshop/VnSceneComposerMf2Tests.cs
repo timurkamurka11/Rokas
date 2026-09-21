@@ -121,8 +121,8 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MF2_CustomPanelPersistsThroughPortableSerializationWithoutSchemaBump()
         {
-            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(3),
-                "The additive optional panel visual override should remain compatible with canonical schema 3.");
+            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(4),
+                "The additive optional panel visual override should remain compatible with canonical schema 4.");
 
             var project = new VnSceneComposerProject();
             var scene = new VnSceneComposerScene();
@@ -133,7 +133,7 @@ namespace Rokas.EditorTools.Tests
             VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(json);
 
             Assert.That(loaded.Success, Is.True, loaded.Error);
-            Assert.That(loaded.Project.schemaVersion, Is.EqualTo(3));
+            Assert.That(loaded.Project.schemaVersion, Is.EqualTo(4));
             Assert.That(GetPanelOverrideGuid(loaded.Project.scenes[0].presentationOverrides), Is.EqualTo(LightPanelGuid));
         }
 
