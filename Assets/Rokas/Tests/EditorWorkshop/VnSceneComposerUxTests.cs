@@ -125,7 +125,13 @@ namespace Rokas.EditorTools.Tests
         public void MD_BasicTextUsesSelectedCanonicalDialogueBeatSurface()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
-            string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string textInspector = ExtractMethodBody(
+                source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string authoringSection = ExtractMethodBody(
+                source, "private void DrawSceneComposerDialogueAuthoringSection(VnSceneComposerScene scene)");
+
+            Assert.That(textInspector, Does.Contain("DrawSceneComposerDialogueAuthoringSection(scene)"),
+                "The consolidated Text inspector must route ordinary Beat editing through its dedicated Реплика foldout helper.");
 
             string[] requiredLabels =
             {
@@ -139,19 +145,19 @@ namespace Rokas.EditorTools.Tests
             };
             foreach (string label in requiredLabels)
             {
-                Assert.That(textInspector, Does.Contain("\"" + label + "\""),
+                Assert.That(authoringSection, Does.Contain("\"" + label + "\""),
                     "M-DIALOGUE basic text authoring must expose the creator-facing control: " + label + ".");
             }
 
-            Assert.That(textInspector, Does.Contain("ComposerGetSelectedDialogueBeat"),
-                "The normal text inspector must edit the selected canonical dialogue beat.");
-            Assert.That(textInspector, Does.Not.Contain("scene.previewText"),
-                "Task 6 must not bind ordinary authoring permanently to the first-beat compatibility proxy.");
-            Assert.That(textInspector, Does.Not.Contain("scene.speaker"),
-                "Task 6 must resolve the selected canonical beat instead of using Scene speaker proxy state.");
+            Assert.That(authoringSection, Does.Contain("ComposerGetSelectedDialogueBeat"),
+                "The Реплика section must edit the selected canonical dialogue beat.");
+            Assert.That(authoringSection, Does.Not.Contain("scene.previewText"),
+                "Ordinary authoring must not bind permanently to the first-beat compatibility proxy.");
+            Assert.That(authoringSection, Does.Not.Contain("scene.speaker"),
+                "Ordinary authoring must resolve the selected canonical Beat instead of Scene speaker proxy state.");
             Assert.That(CountOccurrences(
-                    textInspector, "DrawSceneComposerDialogueBodyEditor(selectedBeat)"), Is.EqualTo(1),
-                "The selected canonical dialogue beat must route through exactly one multiline authoring editor.");
+                    authoringSection, "DrawSceneComposerDialogueBodyEditor(selectedBeat)"), Is.EqualTo(1),
+                "The selected canonical dialogue Beat must route through exactly one multiline authoring editor.");
 
             string dialogueEditor = ExtractMethodBody(
                 source, "private string DrawSceneComposerDialogueBodyEditor(VnSceneComposerDialogueBeat beat)");
@@ -167,18 +173,23 @@ namespace Rokas.EditorTools.Tests
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
             string typographySource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerTextElements.cs");
-            string textInspector = ExtractMethodBody(source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string textInspector = ExtractMethodBody(
+                source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            string presentationSection = ExtractMethodBody(
+                source, "private void DrawSceneComposerDialoguePresentationSection(VnSceneComposerScene scene)");
 
-            Assert.That(textInspector, Does.Contain("DrawSceneComposerDialogueTypographyInspector(scene)"),
-                "Basic text authoring must expose the corrected existing-dialogue typography surface.");
+            Assert.That(textInspector, Does.Contain("DrawSceneComposerDialoguePresentationSection(scene)"),
+                "The consolidated Text inspector must expose its Оформление диалога foldout.");
+            Assert.That(presentationSection, Does.Contain("DrawSceneComposerDialogueTypographyInspector(scene)"),
+                "Оформление диалога must expose the corrected existing-dialogue typography surface.");
             Assert.That(typographySource, Does.Contain("\"Шрифт Windows\"")
                 .And.Contain("\"Размер\"")
                 .And.Contain("\"Изменить текст говорящего\"")
                 .And.Contain("\"Изменить текст реплики\""),
                 "Basic text authoring must expose Windows font selection, size, and both existing dialogue-text controls.");
-            Assert.That(textInspector, Does.Contain("\"Скорость текста\""),
-                "Basic text authoring must expose Скорость текста without opening raw Typewriter controls.");
-            Assert.That(textInspector, Does.Contain("VnSceneComposerComposition.ResolvePresentation"),
+            Assert.That(presentationSection, Does.Contain("\"Скорость текста\""),
+                "Оформление диалога must expose Скорость текста without opening raw Typewriter controls.");
+            Assert.That(presentationSection, Does.Contain("VnSceneComposerComposition.ResolvePresentation"),
                 "Basic formatting must read the canonical effective Project Defaults + Scene Overrides presentation.");
         }
 
