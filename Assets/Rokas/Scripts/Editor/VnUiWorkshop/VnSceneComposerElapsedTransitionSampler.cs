@@ -100,6 +100,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     Progress(stagingAccentElapsed, beatBounce.Duration),
                     beatBounce);
             }
+            else if (VnSceneComposerBeatCharacterStagingResolver.TryResolveHop(
+                         toScene, activeBeat, beatElapsedSeconds,
+                         out string stagingHopCharacter,
+                         out float stagingHopStrength,
+                         out float stagingHopDuration,
+                         out float stagingHopElapsed))
+            {
+                result.beatEffectCharacterId = stagingHopCharacter;
+                result.beatEffect = SampleHop(
+                    stagingHopElapsed, stagingHopStrength, stagingHopDuration);
+            }
             else if (activeBeat.effect == VnSceneComposerBeatEffect.Accent &&
                      !string.IsNullOrWhiteSpace(activeBeat.targetCharacterId))
             {
@@ -112,9 +123,32 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     Progress(beatElapsedSeconds, beatBounce.Duration),
                     beatBounce);
             }
+            else if (activeBeat.effect == VnSceneComposerBeatEffect.Hop &&
+                     !string.IsNullOrWhiteSpace(activeBeat.targetCharacterId))
+            {
+                result.beatEffectCharacterId = activeBeat.targetCharacterId;
+                result.beatEffect = SampleHop(
+                    beatElapsedSeconds,
+                    Mathf.Max(0f, activeBeat.effectStrength),
+                    Mathf.Max(.01f, activeBeat.effectDuration));
+            }
 
             result.timing = VnSceneComposerTransitionSampler.ResolveTiming(project, toScene, activeBeat);
             return result;
+        }
+
+        internal static VnWorkshopActionBounceSample SampleHop(
+            float elapsedSeconds, float strength, float duration)
+        {
+            float safeDuration = Mathf.Max(.01f, duration);
+            float t = Mathf.Clamp01(Mathf.Max(0f, elapsedSeconds) / safeDuration);
+            float height = Mathf.Max(0f, strength) * Mathf.Sin(Mathf.PI * t);
+            return new VnWorkshopActionBounceSample
+            {
+                PositionOffset = new Vector2(0f, -height),
+                ScaleMultiplier = 1f,
+                Complete = t >= 1f
+            };
         }
 
         private static void ValidateElapsed(float elapsedSeconds, string parameterName)

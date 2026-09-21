@@ -1448,27 +1448,38 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         }
                     }
 
-                    string[] effectLabels = { "Без анимации", "Акцент" };
-                    int effectIndex = selectedBeat.effect == VnSceneComposerBeatEffect.Accent ? 1 : 0;
+                    string[] effectLabels = { "Без анимации", "Акцент", "Подскок" };
+                    int effectIndex = selectedBeat.effect == VnSceneComposerBeatEffect.Accent
+                        ? 1
+                        : (selectedBeat.effect == VnSceneComposerBeatEffect.Hop ? 2 : 0);
                     EditorGUI.BeginChangeCheck();
-                    int nextEffectIndex = EditorGUILayout.Popup("Анимация реплики", effectIndex, effectLabels);
+                    int nextEffectIndex = EditorGUILayout.Popup(
+                        "Анимация реплики", effectIndex, effectLabels);
                     if (EditorGUI.EndChangeCheck())
                     {
+                        VnSceneComposerBeatEffect nextEffect =
+                            nextEffectIndex == 1
+                                ? VnSceneComposerBeatEffect.Accent
+                                : (nextEffectIndex == 2
+                                    ? VnSceneComposerBeatEffect.Hop
+                                    : VnSceneComposerBeatEffect.None);
                         ComposerSetSelectedDialogueBeatEffect(
-                            nextEffectIndex == 1 ? VnSceneComposerBeatEffect.Accent : VnSceneComposerBeatEffect.None,
-                            selectedBeat.effectStrength, selectedBeat.effectDuration);
+                            nextEffect,
+                            selectedBeat.effectStrength,
+                            selectedBeat.effectDuration);
                         selectedBeat = ComposerGetSelectedDialogueBeat();
                     }
 
-                    if (selectedBeat.effect == VnSceneComposerBeatEffect.Accent)
+                    if (selectedBeat.effect != VnSceneComposerBeatEffect.None)
                     {
                         EditorGUI.BeginChangeCheck();
-                        float strength = EditorGUILayout.Slider("Сила", selectedBeat.effectStrength, 0f, 100f);
+                        float strength = EditorGUILayout.Slider(
+                            "Сила", selectedBeat.effectStrength, 0f, 100f);
                         float duration = DrawSceneComposerDurationControl(
                             "Длительность", selectedBeat.effectDuration, .01f);
                         if (EditorGUI.EndChangeCheck())
                             ComposerSetSelectedDialogueBeatEffect(
-                                VnSceneComposerBeatEffect.Accent, strength, duration);
+                                selectedBeat.effect, strength, duration);
                     }
                 }
             }

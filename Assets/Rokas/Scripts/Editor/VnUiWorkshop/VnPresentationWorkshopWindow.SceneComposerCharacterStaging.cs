@@ -276,17 +276,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
             bool nextHasState = nextStateIndex > 0;
             string nextState = nextHasState ? stateIds[nextStateIndex - 1] : string.Empty;
 
-            string[] effectLabels = { "Без анимации", "Акцент" };
+            string[] effectLabels = { "Без анимации", "Акцент", "Подскок" };
+            int currentEffect = selected.effect == VnSceneComposerBeatEffect.Accent
+                ? 1
+                : (selected.effect == VnSceneComposerBeatEffect.Hop ? 2 : 0);
             int nextEffect = EditorGUILayout.Popup(
-                "Акцент", selected.effect == VnSceneComposerBeatEffect.Accent ? 1 : 0,
-                effectLabels);
+                "Анимация реплики", currentEffect, effectLabels);
             float nextStrength = selected.effectStrength;
             float nextDuration = selected.effectDuration;
-            if (nextEffect == 1)
+            if (nextEffect != 0)
             {
-                nextStrength = EditorGUILayout.Slider("Сила акцента", nextStrength, 0f, 100f);
+                nextStrength = EditorGUILayout.Slider("Сила", nextStrength, 0f, 100f);
                 nextDuration = DrawSceneComposerDurationControl(
-                    "Длительность акцента", nextDuration, .01f);
+                    "Длительность", nextDuration, .01f);
             }
 
             float nextDelay = Mathf.Max(
@@ -305,7 +307,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         nextState,
                         nextEffect == 1
                             ? VnSceneComposerBeatEffect.Accent
-                            : VnSceneComposerBeatEffect.None,
+                            : (nextEffect == 2
+                                ? VnSceneComposerBeatEffect.Hop
+                                : VnSceneComposerBeatEffect.None),
                         nextStrength,
                         nextDuration,
                         nextDelay);

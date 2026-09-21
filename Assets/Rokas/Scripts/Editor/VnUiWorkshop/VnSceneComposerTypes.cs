@@ -35,7 +35,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public enum VnSceneComposerBeatEffect
     {
         None,
-        Accent
+        Accent,
+        Hop
     }
 
     public enum VnSceneComposerBeatCharacterVisibility

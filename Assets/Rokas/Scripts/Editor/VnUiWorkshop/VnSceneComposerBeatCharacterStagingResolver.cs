@@ -173,6 +173,35 @@ namespace Rokas.EditorTools.VnUiWorkshop
             out float duration,
             out float elapsedSinceTrigger)
         {
+            return TryResolveEffect(
+                scene, beat, beatElapsedSeconds, VnSceneComposerBeatEffect.Accent,
+                out characterId, out strength, out duration, out elapsedSinceTrigger);
+        }
+
+        internal static bool TryResolveHop(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            float beatElapsedSeconds,
+            out string characterId,
+            out float strength,
+            out float duration,
+            out float elapsedSinceTrigger)
+        {
+            return TryResolveEffect(
+                scene, beat, beatElapsedSeconds, VnSceneComposerBeatEffect.Hop,
+                out characterId, out strength, out duration, out elapsedSinceTrigger);
+        }
+
+        private static bool TryResolveEffect(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            float beatElapsedSeconds,
+            VnSceneComposerBeatEffect requestedEffect,
+            out string characterId,
+            out float strength,
+            out float duration,
+            out float elapsedSinceTrigger)
+        {
             characterId = string.Empty;
             strength = 0f;
             duration = 0f;
@@ -182,7 +211,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             for (int i = 0; i < beat.characterStaging.Count; i++)
             {
                 VnSceneComposerBeatCharacterStaging staging = beat.characterStaging[i];
-                if (staging == null || staging.effect != VnSceneComposerBeatEffect.Accent ||
+                if (staging == null || staging.effect != requestedEffect ||
                     staging.delaySeconds > beatElapsedSeconds + .00001f)
                     continue;
                 if (FindAuthoredCharacter(scene, staging.characterId) == null) continue;
@@ -190,7 +219,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 characterId = staging.characterId ?? string.Empty;
                 strength = Mathf.Max(0f, staging.effectStrength);
                 duration = Mathf.Clamp(staging.effectDuration, .01f, 10f);
-                elapsedSinceTrigger = Mathf.Max(0f, beatElapsedSeconds - staging.delaySeconds);
+                elapsedSinceTrigger =
+                    Mathf.Max(0f, beatElapsedSeconds - staging.delaySeconds);
                 return !string.IsNullOrWhiteSpace(characterId);
             }
             return false;
