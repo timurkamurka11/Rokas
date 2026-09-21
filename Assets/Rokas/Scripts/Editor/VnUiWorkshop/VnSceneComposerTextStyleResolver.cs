@@ -15,6 +15,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnPresentationWorkshopVn10Resolver.ResolveTypography(
                     project.defaultPresentation ?? new VnPresentationWorkshopPreset());
 
+            float sharedDialogueFontSize = values.DialogueFontSize;
             VnWorkshopTypographyOverride legacy =
                 scene.presentationOverrides != null
                     ? scene.presentationOverrides.typography
@@ -22,6 +23,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             ApplyLegacyDialogue(legacy, ref values);
             ApplyVisual(scene.dialogueBodyStyleOverride, ref values);
+            values.DialogueFontSize = sharedDialogueFontSize;
 
             VnSceneComposerSpeakerColorOverride speakerOverride =
                 FindSpeakerColorOverride(scene, ResolveSpeakerKey(scene, beat));
@@ -261,12 +263,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnPresentationWorkshopVn10Resolver.ResolveTypography(
                     project.defaultPresentation ?? new VnPresentationWorkshopPreset());
 
+            float sharedDialogueFontSize = values.DialogueFontSize;
             VnWorkshopTypographyOverride legacy =
                 scene.presentationOverrides != null
                     ? scene.presentationOverrides.typography
                     : null;
             ApplyLegacyDialogue(legacy, ref values);
             ApplyVisual(scene.dialogueBodyStyleOverride, ref values);
+            values.DialogueFontSize = sharedDialogueFontSize;
 
             if (scene.hasSpeakerColorOverride ||
                 scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
@@ -350,8 +354,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (style == null) throw new ArgumentNullException(nameof(style));
             style.hasFontAssetGuid = true;
             style.fontAssetGuid = fontAssetGuid ?? string.Empty;
-            style.hasFontSize = true;
-            style.fontSize = fontSize;
+            // Font size is sequence-global; Scene-local body style never forks it.
+            style.hasFontSize = false;
+            style.fontSize = 0f;
             style.hasColor = true;
             style.color = color;
             style.hasAlignment = true;

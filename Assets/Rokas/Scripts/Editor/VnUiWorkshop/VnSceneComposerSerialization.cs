@@ -662,11 +662,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     error = "Dialogue Beat effect requires a target character in scene " + scene.sceneId + ".";
                     return false;
                 }
-                if (beat.effect == VnSceneComposerBeatEffect.Accent &&
+                if (beat.effect != VnSceneComposerBeatEffect.None &&
                     (!IsFinite(beat.effectStrength) || beat.effectStrength < 0f ||
-                     !IsFinite(beat.effectDuration) || beat.effectDuration <= 0f || beat.effectDuration > 10f))
+                     !IsFinite(beat.effectDuration) || beat.effectDuration <= 0f ||
+                     beat.effectDuration > 10f))
                 {
-                    error = "Dialogue Beat Accent parameters are invalid in scene " + scene.sceneId + ".";
+                    error = "Dialogue Beat animation parameters are invalid in scene " +
+                            scene.sceneId + ".";
                     return false;
                 }
 
@@ -729,14 +731,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                                 scene.sceneId + ".";
                         return false;
                     }
-                    if (staging.effect == VnSceneComposerBeatEffect.Accent)
+                    if (staging.effect != VnSceneComposerBeatEffect.None)
                     {
-                        accentCount++;
+                        if (staging.effect == VnSceneComposerBeatEffect.Accent)
+                            accentCount++;
                         if (!IsFinite(staging.effectStrength) || staging.effectStrength < 0f ||
                             !IsFinite(staging.effectDuration) || staging.effectDuration <= 0f ||
                             staging.effectDuration > 10f)
                         {
-                            error = "Character staging Accent parameters are invalid in scene " +
+                            error = "Character staging animation parameters are invalid in scene " +
                                     scene.sceneId + ".";
                             return false;
                         }
@@ -1045,6 +1048,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 project.defaultPresentation = new VnPresentationWorkshopPreset();
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
             PromoteLegacySharedSpeakerTypography(project);
+            PromoteLegacySharedDialogueFontSize(project);
             PromoteLegacySharedPlaqueGeometry(project);
             if (project.title == null) project.title = string.Empty;
             if (project.sourceHead == null) project.sourceHead = string.Empty;
@@ -1288,6 +1292,68 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     shared.hasSpeakerColor = true;
                     shared.speakerColor = legacy.speakerColor;
+                }
+            }
+        }
+
+        private static void PromoteLegacySharedDialogueFontSize(
+            VnSceneComposerProject project)
+        {
+            if (project == null) return;
+            if (project.defaultPresentation == null)
+                project.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (project.defaultPresentation.typography == null)
+                project.defaultPresentation.typography =
+                    new VnWorkshopTypographyOverride();
+
+            VnWorkshopTypographyOverride shared =
+                project.defaultPresentation.typography;
+            if (project.scenes == null) return;
+
+            if (!shared.hasDialogueFontSize)
+            {
+                for (int i = 0; i < project.scenes.Count; i++)
+                {
+                    VnSceneComposerScene scene = project.scenes[i];
+                    if (scene == null) continue;
+                    VnWorkshopTypographyOverride legacy =
+                        scene.presentationOverrides != null
+                            ? scene.presentationOverrides.typography
+                            : null;
+                    if (legacy != null && legacy.hasDialogueFontSize)
+                    {
+                        shared.hasDialogueFontSize = true;
+                        shared.dialogueFontSize = legacy.dialogueFontSize;
+                        break;
+                    }
+                    if (scene.dialogueBodyStyleOverride != null &&
+                        scene.dialogueBodyStyleOverride.hasFontSize)
+                    {
+                        shared.hasDialogueFontSize = true;
+                        shared.dialogueFontSize =
+                            scene.dialogueBodyStyleOverride.fontSize;
+                        break;
+                    }
+                }
+            }
+
+            for (int i = 0; i < project.scenes.Count; i++)
+            {
+                VnSceneComposerScene scene = project.scenes[i];
+                if (scene == null) continue;
+                VnWorkshopTypographyOverride legacy =
+                    scene.presentationOverrides != null
+                        ? scene.presentationOverrides.typography
+                        : null;
+                if (legacy != null)
+                {
+                    legacy.hasDialogueFontSize = false;
+                    legacy.dialogueFontSize = 0f;
+                }
+                if (scene.dialogueBodyStyleOverride != null)
+                {
+                    scene.dialogueBodyStyleOverride.hasFontSize = false;
+                    scene.dialogueBodyStyleOverride.fontSize = 0f;
                 }
             }
         }

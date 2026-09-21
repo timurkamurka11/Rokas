@@ -59,6 +59,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MarkSceneComposerChanged();
         }
 
+        public void ComposerSetSharedDialogueFontSize(float fontSize)
+        {
+            if (!IsFinite(fontSize) || fontSize < 8f || fontSize > 160f)
+                throw new ArgumentOutOfRangeException(nameof(fontSize));
+            EnsureSceneComposerProject();
+            RecordSceneComposerUndo("Edit Shared VN Dialogue Font Size");
+            CancelSceneComposerPreviewDrag();
+            SetSharedDialogueFontSizeValue(fontSize);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        private void SetSharedDialogueFontSizeValue(float fontSize)
+        {
+            VnPresentationWorkshopPreset shared = GetSharedDialoguePresentation();
+            if (shared.typography == null)
+                shared.typography = new VnWorkshopTypographyOverride();
+            VnWorkshopTypographyValues baseline =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(
+                    new VnPresentationWorkshopPreset());
+            shared.typography.hasDialogueFontSize =
+                !Mathf.Approximately(fontSize, baseline.DialogueFontSize);
+            shared.typography.dialogueFontSize = fontSize;
+        }
+
         public void ComposerSetSelectedSceneSpeakerColorScope(
             VnSceneComposerSpeakerColorScope scope)
         {
@@ -300,6 +325,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CancelSceneComposerPreviewDrag();
             if (scene.dialogueBodyStyleOverride == null)
                 scene.dialogueBodyStyleOverride = new VnSceneComposerTextVisualStyleOverride();
+            SetSharedDialogueFontSizeValue(fontSize);
             VnSceneComposerTextStyleResolver.SetStyle(
                 scene.dialogueBodyStyleOverride, fontAssetGuid, fontSize, color, alignment);
             ResetSceneComposerPlayback();
@@ -684,8 +710,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             EditorGUI.BeginChangeCheck();
+            EditorGUILayout.LabelField(
+                "Размер", "Общий размер для всех сцен", EditorStyles.miniLabel);
             float nextFontSize =
-                EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
+                EditorGUILayout.Slider("Общий размер", fontSize, 8f, 160f);
             Color nextColor = EditorGUILayout.ColorField("Цвет реплики по умолчанию", color);
             float nextOpacity =
                 EditorGUILayout.Slider("Прозрачность", color.a, 0f, 1f);
@@ -771,8 +799,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             // Font, size, alignment and opacity are always shared/global.
             EditorGUI.BeginChangeCheck();
+            EditorGUILayout.LabelField(
+                "Размер", "Общий размер для всех сцен", EditorStyles.miniLabel);
             float nextFontSize =
-                EditorGUILayout.Slider("Размер", fontSize, 8f, 160f);
+                EditorGUILayout.Slider("Общий размер", fontSize, 8f, 160f);
             float nextOpacity =
                 EditorGUILayout.Slider("Общая прозрачность", globalColor.a, 0f, 1f);
             VnWorkshopTextAlignment nextAlignment =
