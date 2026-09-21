@@ -184,6 +184,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerWorkspaceActive = true;
             comparisonView = VnWorkshopComparisonView.Current;
             EnsureSelectedScene();
+            ComposerPrepareSelectedVideoForAuthoring();
             EnsureSceneComposerEditorUpdateRegistered();
             _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
             Repaint();
@@ -322,6 +323,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             _sceneComposerSelectedCharacterIndex = -1;
             _sceneComposerSelectedDecorationId = string.Empty;
             _sceneComposerSelectedTextId = string.Empty;
+            ComposerPrepareSelectedVideoForAuthoring();
             Repaint();
         }
 
@@ -648,6 +650,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 SelectFirstSceneComposerDialogueBeat(GetSelectedScene());
                 _sceneComposerSelectedCharacterIndex = -1;
                 EnsureSceneComposerEditorUpdateRegistered();
+                ComposerPrepareSelectedVideoForAuthoring();
                 bool hasWarnings = result.Warnings != null && result.Warnings.Length > 0;
                 SetSceneComposerStatus(hasWarnings ? string.Join("\n", result.Warnings) : "Проект загружен.",
                     hasWarnings ? MessageType.Warning : MessageType.Info);
@@ -988,7 +991,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 SceneComposerInspectorSections[_sceneComposerInspectorSection],
                 EditorStyles.miniBoldLabel, GUILayout.MaxWidth(150f));
             EditorGUILayout.EndHorizontal();
-            _sceneComposerInspectorScroll = EditorGUILayout.BeginScrollView(_sceneComposerInspectorScroll, GUILayout.ExpandHeight(true));
+            _sceneComposerInspectorScroll.x = 0f;
+            _sceneComposerInspectorScroll = EditorGUILayout.BeginScrollView(
+                _sceneComposerInspectorScroll,
+                GUILayout.ExpandHeight(true),
+                GUILayout.Width(GetSceneComposerInspectorWidth()));
+            _sceneComposerInspectorScroll.x = 0f;
             VnSceneComposerScene scene = GetSelectedScene();
             if (scene == null)
             {
@@ -999,7 +1007,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.Space(4f);
             DrawSceneComposerInspectorSelector();
             EditorGUILayout.Space(6f);
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            float inspectorContentWidth = Mathf.Max(
+                160f, GetSceneComposerInspectorWidth() - 24f);
+            EditorGUILayout.BeginVertical(
+                EditorStyles.helpBox,
+                GUILayout.Width(inspectorContentWidth),
+                GUILayout.ExpandWidth(false));
 
             switch (_sceneComposerInspectorSection)
             {
@@ -1018,6 +1031,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();
+            _sceneComposerInspectorScroll.x = 0f;
             EditorGUILayout.EndVertical();
         }
 
@@ -1265,7 +1279,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 currentText,
                 style,
                 GUILayout.Height(measuredHeight),
-                GUILayout.ExpandWidth(true));
+                GUILayout.Width(availableWidth),
+                GUILayout.ExpandWidth(false));
 
             EditorGUILayout.EndScrollView();
 
@@ -1373,28 +1388,64 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 string targetCharacter = selectedBeat != null ? selectedBeat.targetCharacterId ?? string.Empty : string.Empty;
                 using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(targetCharacter)))
                 {
+                    string baseStateId =
+                        GetSceneComposerBaseStateId(scene, targetCharacter);
                     string[] stateIds = string.IsNullOrEmpty(targetCharacter)
                         ? Array.Empty<string>()
-                        : ComposerGetAuthoredStateIds(targetCharacter);
-                    string[] stateLabels = new string[stateIds.Length + 1];
+                        : ComposerGetAuthoredStateIds(targetCharacter)
+                            .Where(id => !string.Equals(
+                                id, baseStateId, StringComparison.Ordinal))
+                            .ToArray();
+                    string[] stateLabels = new string[stateIds.Length + 2];
                     stateLabels[0] = "Оставить предыдущее";
+                    stateLabels[1] = "По умолчанию / Базовая";
                     int stateIndex = 0;
+                    if (selectedBeat.hasStateOverride &&
+                        string.Equals(selectedBeat.stateId, baseStateId, StringComparison.Ordinal))
+                        stateIndex = 1;
                     for (int i = 0; i < stateIds.Length; i++)
                     {
-                        stateLabels[i + 1] = GetSceneComposerBeatStateDisplayName(targetCharacter, stateIds[i]);
+                        stateLabels[i + 2] =
+                            GetSceneComposerBeatStateDisplayName(targetCharacter, stateIds[i]);
                         if (selectedBeat.hasStateOverride &&
                             string.Equals(stateIds[i], selectedBeat.stateId, StringComparison.Ordinal))
-                            stateIndex = i + 1;
+                            stateIndex = i + 2;
                     }
 
                     EditorGUI.BeginChangeCheck();
-                    int nextStateIndex = EditorGUILayout.Popup("Эмоция / поза", stateIndex, stateLabels);
+                    int nextStateIndex = EditorGUILayout.Popup(
+                        "Эмоция / поза", stateIndex, stateLabels);
                     if (EditorGUI.EndChangeCheck())
                     {
                         bool hasOverride = nextStateIndex > 0;
-                        string nextState = hasOverride ? stateIds[nextStateIndex - 1] : string.Empty;
-                        ComposerSetSelectedDialogueBeatCharacterState(targetCharacter, hasOverride, nextState);
+                        string nextState = nextStateIndex == 1
+                            ? baseStateId
+                            : (nextStateIndex > 1
+                                ? stateIds[nextStateIndex - 2]
+                                : string.Empty);
+                        ComposerSetSelectedDialogueBeatCharacterState(
+                            targetCharacter, hasOverride, nextState);
                         selectedBeat = ComposerGetSelectedDialogueBeat();
+                    }
+
+                    if (GUILayout.Button("Выбрать PNG позы / эмоции"))
+                    {
+                        string source = EditorUtility.OpenFilePanel(
+                            "Выбрать PNG позы / эмоции", string.Empty, "png");
+                        if (!string.IsNullOrEmpty(source))
+                        {
+                            try
+                            {
+                                ComposerImportSelectedDialogueBeatPosePng(source);
+                                selectedBeat = ComposerGetSelectedDialogueBeat();
+                            }
+                            catch (Exception exception)
+                            {
+                                SetSceneComposerStatus(
+                                    "Не удалось импортировать позу: " + exception.Message,
+                                    MessageType.Error);
+                            }
+                        }
                     }
 
                     string[] effectLabels = { "Без анимации", "Акцент" };
@@ -2189,6 +2240,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (media == null) return "none";
             return media.kind + "|" + (media.reference ?? string.Empty) + "|" + (media.contentHash ?? string.Empty) + "|" + media.loop + "|" + media.scaleMode;
+        }
+
+        private static string GetSceneComposerBaseStateId(
+            VnSceneComposerScene scene, string characterId)
+        {
+            if (scene == null || scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return string.Empty;
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter character = scene.characters[i];
+                if (character == null) continue;
+                string id =
+                    VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(character);
+                if (string.Equals(id, characterId, StringComparison.OrdinalIgnoreCase))
+                    return character.stateId ?? string.Empty;
+            }
+            return string.Empty;
         }
 
         private static string[] GetSceneComposerBeatTargetCharacterIds(VnSceneComposerScene scene)

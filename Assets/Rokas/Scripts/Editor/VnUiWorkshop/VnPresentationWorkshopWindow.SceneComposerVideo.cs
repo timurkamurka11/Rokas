@@ -18,7 +18,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (scene.media != null && scene.media.kind == VnSceneComposerMediaKind.ExternalVideo)
             {
                 VnSceneComposerVideoPreview video = GetSelectedComposerVideoPreview();
-                if (video == null || !video.HasVisibleFrame) media = null;
+                if (video == null || !video.HasVisibleFrame)
+                    media = VnSceneComposerVideoPosterCache.TryLoad(scene.media);
             }
             VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
             VnWorkshopPreviewFrame frame = VnSceneComposerComposition.BuildFrame(

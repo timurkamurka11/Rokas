@@ -265,7 +265,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void OnSceneComposerVideoPreviewChanged()
         {
-            if (this != null) Repaint();
+            if (this == null) return;
+            VnSceneComposerScene scene = GetSelectedScene();
+            VnSceneComposerVideoPreview video = GetSelectedComposerVideoPreview();
+            if (scene != null && scene.media != null &&
+                video != null && video.HasVisibleFrame && video.texture != null)
+                VnSceneComposerVideoPosterCache.CaptureIfMissing(scene.media, video.texture);
+            Repaint();
         }
 
         private VnSceneComposerVideoPreview GetSelectedComposerVideoPreview()
