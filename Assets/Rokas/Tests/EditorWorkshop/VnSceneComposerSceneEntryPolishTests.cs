@@ -181,10 +181,11 @@ namespace Rokas.EditorTools.Tests
             Assert.That(import, Is.Not.Null,
                 "Dialogue authoring needs a direct PNG -> existing M-F1 Character State shortcut.");
 
-            string source = ReadSource("VnPresentationWorkshopWindow.SceneComposer.cs");
-            Assert.That(source, Does.Contain("Выбрать PNG позы / эмоции"));
-            Assert.That(source, Does.Contain("По умолчанию / Базовая"),
-                "Keep Previous and explicit base pose must remain distinct choices.");
+            string staging = ReadSource(
+                "VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs");
+            Assert.That(staging, Does.Contain("Выбрать PNG позы / эмоции"));
+            Assert.That(staging, Does.Contain("По умолчанию / Базовая"),
+                "Keep Previous and explicit base pose must remain distinct choices in the authoritative Beat staging editor.");
         }
 
 
@@ -381,7 +382,8 @@ namespace Rokas.EditorTools.Tests
             Assert.That(source, Does.Contain(
                 "VnSceneComposerAssetPurpose.CharacterState"));
             Assert.That(source, Does.Contain(
-                "ComposerSetSelectedDialogueBeatCharacterState"));
+                "ComposerSetSelectedDialogueBeatCharacterStaging"),
+                "The PNG shortcut must still create an existing M-F1 Character State asset, then assign that state through the authoritative Beat staging row.");
             Assert.That(source, Does.Not.Contain("externalPath")
                 .And.Not.Contain("externalSpritePath"));
         }
