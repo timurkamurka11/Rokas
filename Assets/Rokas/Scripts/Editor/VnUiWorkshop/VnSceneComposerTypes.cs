@@ -320,10 +320,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
     [Serializable]
     public sealed class VnSceneComposerSpeakerColorOverride
     {
-        // Local identity only. "character:" keys come from a Beat Character ID;
-        // "speaker:" keys come from trimmed authored speaker text.
+        // Scene-local speaker palette entry. "character:" keys come from a legitimate
+        // Beat Character ID; "speaker:" keys come from trimmed authored speaker text.
+        // The legacy color field remains the canonical speaker-name color so existing
+        // serialized entries preserve their exact first-load appearance.
         public string speakerKey = string.Empty;
         public Color color = Color.white;
+        // Additive presence bit keeps old one-color projects backward compatible:
+        // missing/false means dialogue body continues through Scene/Global fallback.
+        public bool hasDialogueBodyColor;
+        public Color dialogueBodyColor = Color.white;
     }
 
     [Serializable]
