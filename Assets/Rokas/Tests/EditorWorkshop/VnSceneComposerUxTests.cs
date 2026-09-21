@@ -176,7 +176,7 @@ namespace Rokas.EditorTools.Tests
             string textInspector = ExtractMethodBody(
                 source, "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
             string presentationSection = ExtractMethodBody(
-                source, "private void DrawSceneComposerDialoguePresentationSection(VnSceneComposerScene scene)");
+                source, "private void DrawSceneComposerDialoguePresentationSection(");
 
             Assert.That(textInspector, Does.Contain("DrawSceneComposerDialoguePresentationSection(scene)"),
                 "The consolidated Text inspector must expose its Оформление диалога foldout.");
