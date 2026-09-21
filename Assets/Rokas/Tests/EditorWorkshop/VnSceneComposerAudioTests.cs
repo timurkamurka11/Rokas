@@ -20,7 +20,7 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void MAudio_ModelIsAdditiveSceneLocalAndKeepsSchemaThree()
         {
-            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(3));
+            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(4));
             Type mode = RequireType("VnSceneComposerMusicMode");
             Type music = RequireType("VnSceneComposerMusic");
             Assert.That(mode.IsEnum, Is.True);

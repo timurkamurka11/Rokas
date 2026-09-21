@@ -29,7 +29,7 @@ namespace Rokas.EditorTools.Tests
             AssertField(transitionType, "sceneTransitionDuration");
             object transition = new VnSceneComposerScene().transition;
             Assert.That(Get(transition, "sceneTransitionType").ToString(), Is.EqualTo("None"));
-            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(3));
+            Assert.That(VnSceneComposerContract.SchemaVersion, Is.EqualTo(4));
         }
 
         [Test]
