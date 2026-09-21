@@ -163,6 +163,77 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MarkSceneComposerChanged();
         }
 
+        public bool ComposerHasCurrentSceneSpeakerPaletteEntry()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            string key = VnSceneComposerTextStyleResolver.ResolveSpeakerKey(scene, beat);
+            return key.Length > 0 &&
+                   VnSceneComposerTextStyleResolver.FindSpeakerColorOverride(scene, key) != null;
+        }
+
+        public string ComposerGetCurrentSceneSpeakerPaletteKey()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            return VnSceneComposerTextStyleResolver.ResolveSpeakerKey(
+                scene, ComposerGetSelectedDialogueBeat());
+        }
+
+        public void ComposerSetCurrentSceneSpeakerNameColor(Color color)
+        {
+            ValidatePaletteColor(color, "Speaker-name color");
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (VnSceneComposerTextStyleResolver.ResolveSpeakerKey(scene, beat).Length == 0)
+                throw new InvalidOperationException(
+                    "Speaker palette color requires a non-empty current speaker.");
+
+            RecordSceneComposerUndo("Edit Scene Speaker Palette Name Color");
+            CancelSceneComposerPreviewDrag();
+            VnSceneComposerTextStyleResolver.SetSpeakerPaletteNameColor(
+                _sceneComposerProject, scene, beat, color);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerSetCurrentSceneSpeakerDialogueColor(Color color)
+        {
+            ValidatePaletteColor(color, "Dialogue-body color");
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (VnSceneComposerTextStyleResolver.ResolveSpeakerKey(scene, beat).Length == 0)
+                throw new InvalidOperationException(
+                    "Speaker palette color requires a non-empty current speaker.");
+
+            RecordSceneComposerUndo("Edit Scene Speaker Palette Dialogue Color");
+            CancelSceneComposerPreviewDrag();
+            VnSceneComposerTextStyleResolver.SetSpeakerPaletteDialogueBodyColor(
+                _sceneComposerProject, scene, beat, color);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerClearCurrentSceneSpeakerPaletteEntry()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (!VnSceneComposerTextStyleResolver.HasSpeakerColorOverride(scene, beat))
+                return;
+
+            RecordSceneComposerUndo("Reset Scene Speaker Palette");
+            CancelSceneComposerPreviewDrag();
+            VnSceneComposerTextStyleResolver.RemoveSpeakerPaletteEntry(scene, beat);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        private static void ValidatePaletteColor(Color color, string label)
+        {
+            if (!IsFinite(color.r) || !IsFinite(color.g) ||
+                !IsFinite(color.b) || !IsFinite(color.a))
+                throw new ArgumentException(label + " must be finite.", nameof(color));
+        }
+
         public void ComposerClearSelectedSceneSpeakerColorOverride()
         {
             VnSceneComposerScene scene = RequireSelectedScene();
