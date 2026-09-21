@@ -186,6 +186,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             musicPlayback.Apply(VnSceneComposerMusicResolver.Resolve(project, CurrentSceneIndex), IsPlaying, false);
         }
 
+        public void RefreshCurrentFrame()
+        {
+            if (CurrentSceneIndex < 0 || CurrentSceneIndex >= project.scenes.Count) return;
+            RebuildFrame(SceneElapsedSeconds, true);
+        }
+
         public void PlayScene(int sceneIndex)
         {
             RequireSceneIndex(sceneIndex);

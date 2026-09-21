@@ -32,6 +32,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [NonSerialized] private bool _sceneComposerDraggingCharacter;
         [NonSerialized] private bool _sceneComposerDraggingDecoration;
         [NonSerialized] private Vector2 _sceneComposerLastDragLogicalPoint;
+        [NonSerialized] private int _sceneComposerPreviewDragControlId;
 
         private bool IsSceneComposerAdvancedLayoutEditingVisible()
         {
@@ -144,19 +145,79 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private bool ComposerSelectPreviewCharacterAt(VnWorkshopPreviewFrame frame, Vector2 logicalPoint)
         {
             if (frame == null || frame.ComposerCharacters == null) return false;
+
+            VnSceneComposerScene scene = GetSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            VnSceneComposerBeatCharacterStaging explicitlySelected =
+                FindCharacterStaging(beat, _sceneComposerSelectedCharacterStagingId);
+            if (explicitlySelected != null &&
+                TrySelectPreviewCharacterById(
+                    frame, logicalPoint, scene, beat, explicitlySelected.characterId))
+                return true;
+
             for (int i = frame.ComposerCharacters.Length - 1; i >= 0; i--)
             {
                 VnWorkshopPreviewCharacter character = frame.ComposerCharacters[i];
-                if (character != null && character.Body.Contains(logicalPoint))
-                {
-                    _sceneComposerSelectedCharacterIndex = i;
-                    _sceneComposerSelectedDecorationId = string.Empty;
-                    _sceneComposerSelectedTextId = string.Empty;
-                    Repaint();
+                if (character == null || !character.Body.Contains(logicalPoint)) continue;
+                if (TrySelectPreviewCharacterById(
+                        frame, logicalPoint, scene, beat, character.CharacterId))
                     return true;
-                }
             }
             return false;
+        }
+
+        private bool TrySelectPreviewCharacterById(
+            VnWorkshopPreviewFrame frame,
+            Vector2 logicalPoint,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            string characterId)
+        {
+            if (frame == null || frame.ComposerCharacters == null ||
+                scene == null || scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return false;
+
+            bool hit = false;
+            for (int i = 0; i < frame.ComposerCharacters.Length; i++)
+            {
+                VnWorkshopPreviewCharacter previewCharacter = frame.ComposerCharacters[i];
+                if (previewCharacter == null ||
+                    !string.Equals(
+                        previewCharacter.CharacterId, characterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!previewCharacter.Body.Contains(logicalPoint)) return false;
+                hit = true;
+                break;
+            }
+            if (!hit) return false;
+
+            int sceneCharacterIndex = -1;
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter authored = scene.characters[i];
+                if (authored == null) continue;
+                string authoredId =
+                    VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(authored);
+                if (string.Equals(
+                        authoredId, characterId, StringComparison.OrdinalIgnoreCase))
+                {
+                    sceneCharacterIndex = i;
+                    break;
+                }
+            }
+            if (sceneCharacterIndex < 0) return false;
+
+            _sceneComposerSelectedCharacterIndex = sceneCharacterIndex;
+            VnSceneComposerBeatCharacterStaging matching =
+                FindCharacterStagingByCharacter(beat, characterId);
+            _sceneComposerSelectedCharacterStagingId =
+                matching != null ? matching.stagingId ?? string.Empty : string.Empty;
+            _sceneComposerSelectedDecorationId = string.Empty;
+            _sceneComposerSelectedTextId = string.Empty;
+            Repaint();
+            return true;
         }
 
         public string ComposerAddExternalDecorationPng(string sourcePath)
@@ -262,6 +323,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 bool selected = ComposerSelectPreviewObjectAt(logicalPoint);
                 if (selected)
                 {
+                    _sceneComposerPreviewDragControlId =
+                        GUIUtility.GetControlID(FocusType.Passive);
+                    GUIUtility.hotControl = _sceneComposerPreviewDragControlId;
                     _sceneComposerDraggingPreviewObject = true;
                     _sceneComposerDraggingDecoration =
                         !string.IsNullOrEmpty(_sceneComposerSelectedDecorationId);
@@ -278,7 +342,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
-            if (currentEvent.type == EventType.MouseDrag && currentEvent.button == 0 && _sceneComposerDraggingPreviewObject)
+            if (currentEvent.type == EventType.MouseDrag && currentEvent.button == 0 &&
+                _sceneComposerDraggingPreviewObject &&
+                GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
             {
                 Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(previewRect, currentEvent.mousePosition, frame);
                 Vector2 logicalDelta = logicalPoint - _sceneComposerLastDragLogicalPoint;
@@ -290,8 +356,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
-            if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0 && _sceneComposerDraggingPreviewObject)
+            if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0 &&
+                _sceneComposerDraggingPreviewObject)
             {
+                if (GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
+                    GUIUtility.hotControl = 0;
+                _sceneComposerPreviewDragControlId = 0;
                 _sceneComposerDraggingPreviewObject = false;
                 _sceneComposerDraggingCharacter = false;
                 _sceneComposerDraggingDecoration = false;
@@ -382,6 +452,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void CancelSceneComposerPreviewDrag()
         {
+            if (_sceneComposerPreviewDragControlId != 0 &&
+                GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
+                GUIUtility.hotControl = 0;
+            _sceneComposerPreviewDragControlId = 0;
             _sceneComposerDraggingPreviewObject = false;
             _sceneComposerDraggingCharacter = false;
             _sceneComposerDraggingDecoration = false;
@@ -402,16 +476,83 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (!IsFinite(logicalDelta)) return;
             VnSceneComposerScene scene = RequireSelectedScene();
-            if (scene.characters == null || _sceneComposerSelectedCharacterIndex < 0 ||
-                _sceneComposerSelectedCharacterIndex >= scene.characters.Count) return;
-            VnSceneComposerCharacter character = scene.characters[_sceneComposerSelectedCharacterIndex];
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null || scene.characters == null ||
+                _sceneComposerSelectedCharacterIndex < 0 ||
+                _sceneComposerSelectedCharacterIndex >= scene.characters.Count)
+                return;
+
+            VnSceneComposerCharacter character =
+                scene.characters[_sceneComposerSelectedCharacterIndex];
             if (character == null) return;
-            Vector2 current = character.hasPositionOffset ? character.positionOffset : Vector2.zero;
-            Vector2 next = current + logicalDelta;
-            character.hasPositionOffset = next != Vector2.zero;
-            character.positionOffset = next;
-            ResetSceneComposerPlayback();
+            string characterId =
+                VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(character);
+            if (string.IsNullOrWhiteSpace(characterId)) return;
+
+            VnSceneComposerBeatCharacterStaging staging =
+                FindCharacterStaging(beat, _sceneComposerSelectedCharacterStagingId);
+            if (staging == null ||
+                !string.Equals(
+                    staging.characterId, characterId, StringComparison.OrdinalIgnoreCase))
+                staging = FindCharacterStagingByCharacter(beat, characterId);
+            if (staging == null) return;
+
+            VnWorkshopPreviewFrame beforeFrame = ComposerBuildSelectedPreviewFrame();
+            VnWorkshopPreviewCharacter beforeCharacter =
+                FindPreviewCharacterById(beforeFrame, characterId);
+            if (beforeCharacter == null) return;
+
+            VnSceneComposerBeatCharacterPosition originalPosition = staging.position;
+            Vector2 originalOffset = staging.customPositionOffset;
+            bool keep = false;
+            try
+            {
+                staging.position = VnSceneComposerBeatCharacterPosition.Custom;
+                staging.customPositionOffset = Vector2.zero;
+
+                VnWorkshopPreviewFrame zeroOffsetFrame =
+                    ComposerBuildSelectedPreviewFrame();
+                VnWorkshopPreviewCharacter zeroOffsetCharacter =
+                    FindPreviewCharacterById(zeroOffsetFrame, characterId);
+                if (zeroOffsetCharacter == null) return;
+
+                staging.customPositionOffset =
+                    (beforeCharacter.Body.center - zeroOffsetCharacter.Body.center) +
+                    logicalDelta;
+                _sceneComposerSelectedCharacterStagingId =
+                    staging.stagingId ?? string.Empty;
+                keep = true;
+            }
+            finally
+            {
+                if (!keep)
+                {
+                    staging.position = originalPosition;
+                    staging.customPositionOffset = originalOffset;
+                }
+            }
+
+            if (_sceneComposerPlayback != null)
+                _sceneComposerPlayback.RefreshCurrentFrame();
             MarkSceneComposerChanged();
+        }
+
+        private static VnWorkshopPreviewCharacter FindPreviewCharacterById(
+            VnWorkshopPreviewFrame frame, string characterId)
+        {
+            if (frame == null || frame.ComposerCharacters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return null;
+            for (int i = 0; i < frame.ComposerCharacters.Length; i++)
+            {
+                VnWorkshopPreviewCharacter character = frame.ComposerCharacters[i];
+                if (character != null &&
+                    string.Equals(
+                        character.CharacterId, characterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    return character;
+            }
+            return null;
         }
 
         private void DrawSceneComposerSelectionOverlay(Rect previewRect, VnWorkshopPreviewFrame frame)
