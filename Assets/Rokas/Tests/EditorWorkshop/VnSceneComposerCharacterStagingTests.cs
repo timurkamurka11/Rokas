@@ -407,14 +407,17 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Character(Build(scene,scene.dialogueBeats[0],0f),"Mina").StateId,Is.EqualTo("mina_happy"));
         }
 
-        [Test] public void MCS_33_UiExposesBeatCharacterStagingSection()
+        [Test] public void MCS_33_UiExposesOneAuthoritativeBeatCharacterStagingSection()
         {
             string path=Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop","VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs");
             Assert.That(File.Exists(path),Is.True);
             string source=File.ReadAllText(path);
-            Assert.That(source,Does.Contain("Персонажи в этой реплике"));
-            Assert.That(source,Does.Contain("+ Добавить персонажа"));
-            Assert.That(source,Does.Contain("Оставить предыдущее"));
+            Assert.That(source,Does.Contain("Персонажи текущей реплики"));
+            Assert.That(source,Does.Contain("[наследуется]").And.Contain("[изменено здесь]"));
+            Assert.That(source,Does.Contain("Сбросить изменения этой реплики"));
+            Assert.That(source,Does.Contain("Оставить предыдущую").And.Contain("По умолчанию / Базовая"));
+            Assert.That(source,Does.Not.Contain("+ Добавить персонажа"),
+                "Beat staging must operate on the existing Scene cast rather than create Scene membership.");
         }
 
         [Test] public void MCS_34_MultipleOverridesBelongToOneBeat()
@@ -791,6 +794,259 @@ namespace Rokas.EditorTools.Tests
                 .And.Contain("_sceneComposerPreviewDragControlId"));
         }
 
+
+        [Test] public void MCS_56_TextInspectorUsesThreeCompactFoldoutSections()
+        {
+            string source=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+            Assert.That(source,Does.Contain("_sceneComposerTextDialogueExpanded").And
+                .Contain("_sceneComposerTextStagingExpanded").And
+                .Contain("_sceneComposerTextPresentationExpanded"));
+            Assert.That(source,Does.Contain(""Реплика"").And
+                .Contain(""Персонажи и постановка"").And
+                .Contain(""Оформление диалога""));
+            Assert.That(source,Does.Not.Contain(""Состояние персонажа в этой реплике""));
+        }
+
+        [Test] public void MCS_57_TextContainsOnlyOnePoseAndAnimationEditor()
+        {
+            string main=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+            string staging=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs"));
+            Assert.That(CountOccurrences(main,"\"Эмоция / поза\"")+
+                        CountOccurrences(staging,"\"Эмоция / поза\""),Is.EqualTo(1));
+            Assert.That(CountOccurrences(main,"\"Анимация реплики\"")+
+                        CountOccurrences(staging,"\"Анимация реплики\""),Is.EqualTo(1));
+            Assert.That(main,Does.Not.Contain(""Персонаж реплики""));
+        }
+
+        [Test] public void MCS_58_TextStagingRowsComeFromSceneCastAndSceneCastStillOwnsAdd()
+        {
+            string staging=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs"));
+            string main=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+            Assert.That(staging,Does.Contain("GetSceneComposerBeatTargetCharacterIds(scene)"));
+            Assert.That(staging,Does.Not.Contain(""+ Добавить персонажа""));
+            Assert.That(main,Does.Contain(""+ Добавить персонажа""),
+                "Scene membership remains in the Scene Characters inspector.");
+        }
+
+        [Test] public void MCS_59_LegacyBeatStateMigratesIntoAuthoritativeStagingRow()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var beat=scene.dialogueBeats[0];
+            beat.targetCharacterId="Mina";
+            beat.hasStateOverride=true;
+            beat.stateId="mina_happy";
+            var result=VnSceneComposerSerialization.DeserializePortable(
+                VnSceneComposerSerialization.SerializePortable(Project(scene)));
+            Assert.That(result.Success,Is.True,result.Error);
+            var migrated=result.Project.scenes[0].dialogueBeats[0];
+            Assert.That(migrated.characterStaging,Has.Count.EqualTo(1));
+            Assert.That(migrated.characterStaging[0].characterId,Is.EqualTo("Mina"));
+            Assert.That(migrated.characterStaging[0].hasStateOverride,Is.True);
+            Assert.That(migrated.characterStaging[0].stateId,Is.EqualTo("mina_happy"));
+            Assert.That(migrated.targetCharacterId,Is.Empty);
+            Assert.That(migrated.hasStateOverride,Is.False);
+            Assert.That(migrated.stateId,Is.Empty);
+        }
+
+        [Test] public void MCS_60_LegacyAnimationMigratesWithoutOverwritingNewerStaging()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var beat=scene.dialogueBeats[0];
+            beat.targetCharacterId="Mina";
+            beat.effect=VnSceneComposerBeatEffect.Accent;
+            beat.effectStrength=31f;
+            beat.effectDuration=.7f;
+            object row=AddStaging(beat,"Mina","KeepPrevious","KeepPrevious",false,"",0f);
+            Set(row,"effect",VnSceneComposerBeatEffect.Hop);
+            Set(row,"effectStrength",44f);
+            Set(row,"effectDuration",.4f);
+
+            var result=VnSceneComposerSerialization.DeserializePortable(
+                VnSceneComposerSerialization.SerializePortable(Project(scene)));
+            Assert.That(result.Success,Is.True,result.Error);
+            var migrated=result.Project.scenes[0].dialogueBeats[0];
+            Assert.That(migrated.characterStaging,Has.Count.EqualTo(1));
+            Assert.That(migrated.characterStaging[0].effect,Is.EqualTo(VnSceneComposerBeatEffect.Hop));
+            Assert.That(migrated.characterStaging[0].effectStrength,Is.EqualTo(44f).Within(.001f));
+            Assert.That(migrated.effect,Is.EqualTo(VnSceneComposerBeatEffect.None));
+            Assert.That(migrated.targetCharacterId,Is.Empty);
+        }
+
+        [Test] public void MCS_61_LegacyMigrationPreservesVisibleCharacterState()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var beat=scene.dialogueBeats[0];
+            beat.targetCharacterId="Mina";
+            beat.hasStateOverride=true;
+            beat.stateId="mina_happy";
+            string before=Character(Build(scene,beat,0f),"Mina").StateId;
+
+            var result=VnSceneComposerSerialization.DeserializePortable(
+                VnSceneComposerSerialization.SerializePortable(Project(scene)));
+            Assert.That(result.Success,Is.True,result.Error);
+            var migratedScene=result.Project.scenes[0];
+            string after=Character(Build(migratedScene,migratedScene.dialogueBeats[0],0f),"Mina").StateId;
+            Assert.That(after,Is.EqualTo(before));
+        }
+
+        [Test] public void MCS_62_SilentCharacterCanBeSelectedWithoutChangingSpeaker()
+        {
+            var scene=SceneWithCharacters(
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Left),
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Right));
+            scene.dialogueBeats[0].speaker="Keiko";
+            var w=DragWindow(scene,scene.dialogueBeats[0],"Keiko",null);
+            try
+            {
+                Invoke(w,"ComposerSelectDialogueBeatStagingCharacter","Mina");
+                Assert.That(w.ComposerGetSelectedCharacterIndex(),Is.EqualTo(1));
+                Assert.That(scene.dialogueBeats[0].speaker,Is.EqualTo("Keiko"));
+                Assert.That(scene.dialogueBeats[0].characterStaging,Is.Empty);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_63_FirstEditMaterializesExactlyOneCurrentBeatRow()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var beat=scene.dialogueBeats[0];
+            var w=DragWindow(scene,beat,"Mina",null);
+            try
+            {
+                Invoke(w,"ComposerSelectDialogueBeatStagingCharacter","Mina");
+                w.ComposerSetSelectedDialogueBeatCharacterStaging(
+                    "Mina",VnSceneComposerBeatCharacterVisibility.Show,
+                    VnSceneComposerBeatCharacterPosition.Left,Vector2.zero,
+                    false,string.Empty,VnSceneComposerBeatEffect.None,18f,.28f,.2f);
+                Assert.That(beat.characterStaging,Has.Count.EqualTo(1));
+                Assert.That(beat.characterStaging[0].characterId,Is.EqualTo("Mina"));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_64_FirstEditLeavesPreviousBeatUntouched()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var second=AddBeat(scene);
+            var w=DragWindow(scene,second,"Mina",null);
+            try
+            {
+                Invoke(w,"ComposerSelectDialogueBeatStagingCharacter","Mina");
+                w.ComposerSetSelectedDialogueBeatCharacterStaging(
+                    "Mina",VnSceneComposerBeatCharacterVisibility.KeepPrevious,
+                    VnSceneComposerBeatCharacterPosition.Right,Vector2.zero,
+                    false,string.Empty,VnSceneComposerBeatEffect.None,18f,.28f,0f);
+                Assert.That(scene.dialogueBeats[0].characterStaging,Is.Empty);
+                Assert.That(second.characterStaging,Has.Count.EqualTo(1));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_65_PoseAnimationAndDelayModifyTheSameStagingRow()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            var beat=scene.dialogueBeats[0];
+            var w=DragWindow(scene,beat,"Mina",null);
+            try
+            {
+                Invoke(w,"ComposerSelectDialogueBeatStagingCharacter","Mina");
+                w.ComposerSetSelectedDialogueBeatCharacterStaging(
+                    "Mina",VnSceneComposerBeatCharacterVisibility.Show,
+                    VnSceneComposerBeatCharacterPosition.Left,Vector2.zero,
+                    true,"mina_happy",VnSceneComposerBeatEffect.None,18f,.28f,0f);
+                string id=beat.characterStaging[0].stagingId;
+                w.ComposerSetSelectedDialogueBeatCharacterStaging(
+                    "Mina",VnSceneComposerBeatCharacterVisibility.Show,
+                    VnSceneComposerBeatCharacterPosition.Left,Vector2.zero,
+                    true,"mina_happy",VnSceneComposerBeatEffect.Hop,42f,.5f,.75f);
+                Assert.That(beat.characterStaging,Has.Count.EqualTo(1));
+                Assert.That(beat.characterStaging[0].stagingId,Is.EqualTo(id));
+                Assert.That(beat.characterStaging[0].stateId,Is.EqualTo("mina_happy"));
+                Assert.That(beat.characterStaging[0].effect,Is.EqualTo(VnSceneComposerBeatEffect.Hop));
+                Assert.That(beat.characterStaging[0].delaySeconds,Is.EqualTo(.75f).Within(.001f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_66_PreviewClickSelectsSilentCharacterAndKeepsSpeaker()
+        {
+            var scene=SceneWithCharacters(
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Left),
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Right));
+            scene.dialogueBeats[0].speaker="Keiko";
+            var w=DragWindow(scene,scene.dialogueBeats[0],"Keiko",null);
+            try
+            {
+                VnWorkshopPreviewFrame frame=(VnWorkshopPreviewFrame)Invoke(w,"ComposerBuildSelectedPreviewFrame");
+                Vector2 point=Character(frame,"Mina").Body.center;
+                Assert.That(w.ComposerSelectPreviewObjectAt(point),Is.True);
+                Assert.That(w.ComposerGetSelectedCharacterIndex(),Is.EqualTo(1));
+                Assert.That(scene.dialogueBeats[0].speaker,Is.EqualTo("Keiko"));
+                Assert.That(scene.dialogueBeats[0].characterStaging,Is.Empty);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_67_DraggingInheritedCharacterMaterializesLocalOverride()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            scene.dialogueBeats[0].speaker="Keiko";
+            var beat=scene.dialogueBeats[0];
+            var w=DragWindow(scene,beat,"Mina",null);
+            try
+            {
+                Invoke(w,"ComposerSelectDialogueBeatStagingCharacter","Mina");
+                Invoke(w,"ApplySceneComposerCharacterDrag",new Vector2(24f,-11f));
+                Assert.That(beat.characterStaging,Has.Count.EqualTo(1));
+                Assert.That(beat.characterStaging[0].position,
+                    Is.EqualTo(VnSceneComposerBeatCharacterPosition.Custom));
+                Assert.That(scene.dialogueBeats[0].speaker,Is.EqualTo("Keiko"));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
+        [Test] public void MCS_68_PosePngShortcutWritesTheAuthoritativeStagingRow()
+        {
+            string source=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposerPoseImport.cs"));
+            Assert.That(source,Does.Contain("ComposerSetSelectedDialogueBeatCharacterStaging"));
+            Assert.That(source,Does.Not.Contain("ComposerSetSelectedDialogueBeatCharacterState("));
+        }
+
+        [Test] public void MCS_69_TextFoldoutsAreEditorWindowStateNotProjectData()
+        {
+            string window=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnPresentationWorkshopWindow.SceneComposer.cs"));
+            string types=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
+                "VnSceneComposerTypes.cs"));
+            Assert.That(window,Does.Contain("[SerializeField] private bool _sceneComposerTextDialogueExpanded = true;"));
+            Assert.That(window,Does.Contain("[SerializeField] private bool _sceneComposerTextStagingExpanded = true;"));
+            Assert.That(window,Does.Contain("[SerializeField] private bool _sceneComposerTextPresentationExpanded;"));
+            Assert.That(types,Does.Not.Contain("_sceneComposerTextDialogueExpanded")
+                .And.Not.Contain("_sceneComposerTextStagingExpanded")
+                .And.Not.Contain("_sceneComposerTextPresentationExpanded"));
+        }
+
+        [Test] public void MCS_70_ResetCurrentBeatChangesDoesNotRemoveSceneCharacter()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            object row=AddStaging(scene.dialogueBeats[0],"Mina","Show","Left",false,"",0f);
+            var w=DragWindow(scene,scene.dialogueBeats[0],"Mina",row);
+            try
+            {
+                Invoke(w,"ComposerResetSelectedDialogueBeatCharacterStaging");
+                Assert.That(scene.characters,Has.Count.EqualTo(1));
+                Assert.That(scene.dialogueBeats[0].characterStaging,Is.Empty);
+                Assert.That(w.ComposerGetSelectedCharacterIndex(),Is.EqualTo(0));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(w); }
+        }
+
         private static VnPresentationWorkshopWindow DragWindow(
             VnSceneComposerScene scene,
             VnSceneComposerDialogueBeat beat,
@@ -810,6 +1066,17 @@ namespace Rokas.EditorTools.Tests
                 PrivateField(w,"_sceneComposerSelectedCharacterStagingId").SetValue(
                     w,Get<string>(stagingRow,"stagingId"));
             return w;
+        }
+
+        private static int CountOccurrences(string source,string needle)
+        {
+            if(string.IsNullOrEmpty(source)||string.IsNullOrEmpty(needle)) return 0;
+            int count=0,index=0;
+            while((index=source.IndexOf(needle,index,StringComparison.Ordinal))>=0)
+            {
+                count++; index+=needle.Length;
+            }
+            return count;
         }
 
         private static void AssertVector(Vector2 actual,Vector2 expected)
