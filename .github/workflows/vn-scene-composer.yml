@@ -244,6 +244,24 @@ jobs:
           checkName: Scene Composer M-TEXT Style Layout EditMode
           artifactsPath: artifacts-vn-scene-composer-mtext-style-layout
 
+      - name: Run PROJECT GLOBAL SPEAKER COLOR focused fixture
+        id: project-global-speaker-colors
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerProjectSpeakerColorTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer Project Global Speaker Colors EditMode
+          artifactsPath: artifacts-vn-project-global-speaker-colors
+
       - name: Run M-F3 arbitrary scene decoration fixture
         id: mf3-tests
         uses: game-ci/unity-test-runner@v4
