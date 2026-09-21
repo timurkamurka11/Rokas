@@ -632,6 +632,21 @@ namespace Rokas.EditorTools.Tests
                 "Video reliability must not be implemented with arbitrary fixed sleeps.");
         }
 
+
+        [Test]
+        public void VR_27_PlayDuringSamePrewarmAdoptsRequestWithoutDuplicatePrepare()
+        {
+            string path = Path.Combine(Application.dataPath, "Rokas", "Scripts", "Editor",
+                "VnUiWorkshop", "VnSceneComposerMotionMediaEditing.cs");
+            string source = File.ReadAllText(path);
+            Assert.That(source, Does.Contain(
+                "prepareRequested && !player.isPrepared && requestState.Preparing"));
+            Assert.That(source, Does.Contain("playRequested = true;"));
+            Assert.That(source, Does.Not.Contain(
+                "bool supersedePreparing = prepareRequested && !player.isPrepared;"),
+                "Play must adopt the valid in-flight request instead of invalidating and re-Preparing it.");
+        }
+
         private static object NewRequestState()
         {
             Type type = typeof(VnSceneComposerPlaybackController).Assembly.GetType(

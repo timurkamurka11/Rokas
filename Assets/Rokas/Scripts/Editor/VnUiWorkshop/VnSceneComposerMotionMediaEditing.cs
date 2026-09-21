@@ -246,8 +246,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (player == null) return;
 
-            bool supersedePreparing = prepareRequested && !player.isPrepared;
-            if (!BeginRequest(true, supersedePreparing)) return;
+            // If authoring already prewarmed this exact source, Play adopts the
+            // in-flight request. The existing generation/source token remains
+            // authoritative and Prepare is not issued a second time.
+            if (prepareRequested && !player.isPrepared && requestState.Preparing)
+            {
+                playRequested = true;
+                previewFrameRequested = false;
+                return;
+            }
+
+            if (!BeginRequest(true, false)) return;
 
             previewFrameRequested = false;
             if (player.isPrepared)

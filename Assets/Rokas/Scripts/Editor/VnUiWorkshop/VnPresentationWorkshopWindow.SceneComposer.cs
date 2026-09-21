@@ -1007,12 +1007,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.Space(4f);
             DrawSceneComposerInspectorSelector();
             EditorGUILayout.Space(6f);
-            float inspectorContentWidth = Mathf.Max(
-                160f, GetSceneComposerInspectorWidth() - 24f);
-            EditorGUILayout.BeginVertical(
-                EditorStyles.helpBox,
-                GUILayout.Width(inspectorContentWidth),
-                GUILayout.ExpandWidth(false));
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
             switch (_sceneComposerInspectorSection)
             {
