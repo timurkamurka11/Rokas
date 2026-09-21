@@ -1236,11 +1236,8 @@ namespace Rokas.EditorTools.Tests
                 VnWorkshopTypographyValues minaBefore =
                     VnSceneComposerTextStyleResolver.Resolve(project, scene, mina);
                 window.ComposerSelectDialogueBeat(mina.beatId);
-                window.ComposerSetSelectedSceneDialogueBodyStyle(
-                    minaBefore.DialogueFontAssetGuid,
-                    minaBefore.DialogueFontSize,
-                    new Color(1f, .45f, .1f, minaBefore.DialogueColor.a),
-                    minaBefore.DialogueAlignment);
+                window.ComposerSetCurrentSceneSpeakerDialogueColor(
+                    new Color(1f, .45f, .1f, minaBefore.DialogueColor.a));
 
                 VnWorkshopTypographyValues keikoAfter =
                     VnSceneComposerTextStyleResolver.Resolve(project, scene, keiko);
