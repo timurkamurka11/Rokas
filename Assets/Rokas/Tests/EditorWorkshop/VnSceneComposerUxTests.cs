@@ -308,14 +308,20 @@ namespace Rokas.EditorTools.Tests
             string select = ExtractMethodBody(source, "public bool ComposerSelectPreviewObjectAt(Vector2 logicalPoint)");
             string selectCharacter = ExtractMethodBody(source,
                 "private bool ComposerSelectPreviewCharacterAt(VnWorkshopPreviewFrame frame, Vector2 logicalPoint)");
+            string selectCharacterById = ExtractMethodBody(source,
+                "private bool TrySelectPreviewCharacterById(");
             string input = ExtractMethodBody(source,
                 "private void HandleSceneComposerPreviewInput(Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)");
             string drag = ExtractMethodBody(source, "private void ApplySceneComposerCharacterDrag(Vector2 logicalDelta)");
 
             Assert.That(select, Does.Contain("ComposerSelectPreviewCharacterAt(frame, logicalPoint)"),
                 "The public preview selector must continue delegating character hit-testing to the canonical character-selection path.");
-            Assert.That(selectCharacter, Does.Contain("_sceneComposerSelectedCharacterIndex = i"),
-                "Clicking a character in the central preview must select that same authored character.");
+            Assert.That(selectCharacter, Does.Contain("TrySelectPreviewCharacterById("),
+                "Preview hit-testing must delegate authored-character selection through the stable character-id path.");
+            Assert.That(selectCharacterById, Does.Contain("_sceneComposerSelectedCharacterIndex = sceneCharacterIndex"),
+                "Clicking a character in the central preview must select the matching authored Scene character by stable id.");
+            Assert.That(selectCharacterById, Does.Contain("FindCharacterStagingByCharacter(beat, characterId)"),
+                "Preview selection must preserve the current Beat staging identity for the selected character.");
             Assert.That(input, Does.Contain("ComposerSelectPreviewObjectAt(logicalPoint)"),
                 "Basic preview interaction must delegate click selection to the canonical preview selector.");
             Assert.That(select, Does.Contain("HitTestSceneComposerUi(frame, logicalPoint)"),
@@ -325,9 +331,11 @@ namespace Rokas.EditorTools.Tests
                 "Canonical UI-object hit-testing must run before the character fallback in ordinary authoring.");
             Assert.That(input, Does.Contain("ApplySceneComposerCharacterDrag(logicalDelta);"),
                 "Mouse drag in the preview must continue to route to the character drag path.");
-            Assert.That(drag, Does.Contain("character.positionOffset = next;"));
-            Assert.That(drag, Does.Contain("character.hasPositionOffset = next != Vector2.zero;"),
-                "Direct drag must keep mutating the canonical VnSceneComposerCharacter position offset.");
+            Assert.That(drag, Does.Contain("staging.position = VnSceneComposerBeatCharacterPosition.Custom;"));
+            Assert.That(drag, Does.Contain("staging.customPositionOffset ="),
+                "Direct drag must remain owned by the current Beat staging row instead of mutating Scene-level character base geometry.");
+            Assert.That(drag, Does.Not.Contain("character.positionOffset ="),
+                "Beat-owned Preview drag must not fall back to Scene-level character positionOffset.");
         }
 
         [Test]
