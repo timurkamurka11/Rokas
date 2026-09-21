@@ -808,7 +808,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             DrawTextGeometryControls(true, scene);
             EditorGUILayout.HelpBox(
-                "Цвет имени имеет отдельный scope. " +
+                "Цвета выбранного говорящего редактируются выше в Scene speaker palette. " +
                 "Шрифт, размер, выравнивание, fallback и прозрачность остаются общими. " +
                 "Изменение цвета не меняет X / Y / Width / Height и text geometry scope.",
                 MessageType.None);
