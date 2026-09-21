@@ -24,13 +24,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             ApplyVisual(scene.dialogueBodyStyleOverride, ref values);
 
             VnSceneComposerSpeakerColorOverride speakerOverride =
-                FindSpeakerColorOverride(scene, ResolveSpeakerKey(beat));
+                FindSpeakerColorOverride(scene, ResolveSpeakerKey(scene, beat));
             if (speakerOverride != null)
             {
                 Color localSpeaker = speakerOverride.color;
-                // Opacity remains shared/global. Local authorities contribute RGB only.
+                // Opacity is not speaker-local. Palette entries contribute RGB only.
                 localSpeaker.a = values.SpeakerColor.a;
                 values.SpeakerColor = localSpeaker;
+
+                if (speakerOverride.hasDialogueBodyColor)
+                {
+                    Color localBody = speakerOverride.dialogueBodyColor;
+                    localBody.a = values.DialogueColor.a;
+                    values.DialogueColor = localBody;
+                }
             }
             else if (scene.hasSpeakerColorOverride ||
                      scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
@@ -45,14 +52,63 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public static string ResolveSpeakerKey(VnSceneComposerDialogueBeat beat)
         {
+            // Source-compatible legacy helper. New Scene-aware resolution below is authoritative
+            // because only a character identity that actually belongs to the Scene may outrank
+            // the authored speaker text.
             if (beat == null || beat.narration) return string.Empty;
 
             string characterId = (beat.targetCharacterId ?? string.Empty).Trim();
             if (characterId.Length > 0)
                 return "character:" + characterId;
 
-            string speaker = (beat.speaker ?? string.Empty).Trim();
+            string speaker = NormalizeSpeakerText(beat.speaker);
             return speaker.Length == 0 ? string.Empty : "speaker:" + speaker;
+        }
+
+        public static string ResolveSpeakerKey(
+            VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
+        {
+            if (beat == null || beat.narration) return string.Empty;
+
+            string authoredCharacterId = (beat.targetCharacterId ?? string.Empty).Trim();
+            if (authoredCharacterId.Length > 0 &&
+                TryResolveLegitimateCharacterIdentity(scene, authoredCharacterId, out string stableCharacterId))
+                return "character:" + stableCharacterId;
+
+            string speaker = NormalizeSpeakerText(beat.speaker);
+            return speaker.Length == 0 ? string.Empty : "speaker:" + speaker;
+        }
+
+        private static string NormalizeSpeakerText(string value)
+        {
+            // Deterministic and deliberately conservative: trim authoring whitespace only.
+            // Do not case-fold or otherwise merge genuinely different authored names.
+            return (value ?? string.Empty).Trim();
+        }
+
+        private static bool TryResolveLegitimateCharacterIdentity(
+            VnSceneComposerScene scene, string authoredCharacterId, out string stableCharacterId)
+        {
+            stableCharacterId = string.Empty;
+            if (scene == null || scene.characters == null ||
+                string.IsNullOrWhiteSpace(authoredCharacterId))
+                return false;
+
+            string candidate = authoredCharacterId.Trim();
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter character = scene.characters[i];
+                if (character == null) continue;
+                string existingId = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(character);
+                if (!string.IsNullOrWhiteSpace(existingId) &&
+                    string.Equals(existingId, candidate, StringComparison.OrdinalIgnoreCase))
+                {
+                    stableCharacterId = existingId.Trim();
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static VnSceneComposerSpeakerColorOverride FindSpeakerColorOverride(
@@ -75,7 +131,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static bool HasSpeakerColorOverride(
             VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
         {
-            return FindSpeakerColorOverride(scene, ResolveSpeakerKey(beat)) != null;
+            return FindSpeakerColorOverride(scene, ResolveSpeakerKey(scene, beat)) != null;
         }
 
         internal static void SetSpeakerColorOverride(
@@ -99,11 +155,126 @@ namespace Rokas.EditorTools.VnUiWorkshop
             entry.color = color;
         }
 
+        internal static VnSceneComposerSpeakerColorOverride EnsureSpeakerPaletteEntry(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            if (scene == null) throw new ArgumentNullException(nameof(scene));
+
+            string key = ResolveSpeakerKey(scene, beat);
+            if (key.Length == 0)
+                throw new InvalidOperationException(
+                    "Scene speaker palette requires a non-empty current speaker.");
+
+            if (scene.speakerColorOverrides == null)
+                scene.speakerColorOverrides =
+                    new System.Collections.Generic.List<VnSceneComposerSpeakerColorOverride>();
+
+            VnSceneComposerSpeakerColorOverride entry = FindSpeakerColorOverride(scene, key);
+            if (entry != null)
+            {
+                if (!entry.hasDialogueBodyColor)
+                {
+                    VnWorkshopTypographyValues inherited = ResolveWithoutSpeakerPalette(project, scene, beat);
+                    entry.dialogueBodyColor = inherited.DialogueColor;
+                    entry.hasDialogueBodyColor = true;
+                }
+                return entry;
+            }
+
+            VnWorkshopTypographyValues seed = ResolveWithoutSpeakerPalette(project, scene, beat);
+            entry = new VnSceneComposerSpeakerColorOverride
+            {
+                speakerKey = key,
+                color = seed.SpeakerColor,
+                hasDialogueBodyColor = true,
+                dialogueBodyColor = seed.DialogueColor
+            };
+            scene.speakerColorOverrides.Add(entry);
+            return entry;
+        }
+
+        internal static void SetSpeakerPaletteNameColor(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            Color color)
+        {
+            VnSceneComposerSpeakerColorOverride entry =
+                EnsureSpeakerPaletteEntry(project, scene, beat);
+            VnWorkshopTypographyValues inherited = ResolveWithoutSpeakerPalette(project, scene, beat);
+            color.a = inherited.SpeakerColor.a;
+            entry.color = color;
+        }
+
+        internal static void SetSpeakerPaletteDialogueBodyColor(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            Color color)
+        {
+            VnSceneComposerSpeakerColorOverride entry =
+                EnsureSpeakerPaletteEntry(project, scene, beat);
+            VnWorkshopTypographyValues inherited = ResolveWithoutSpeakerPalette(project, scene, beat);
+            color.a = inherited.DialogueColor.a;
+            entry.dialogueBodyColor = color;
+            entry.hasDialogueBodyColor = true;
+        }
+
+        internal static bool RemoveSpeakerPaletteEntry(
+            VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
+        {
+            if (scene == null || scene.speakerColorOverrides == null) return false;
+            string key = ResolveSpeakerKey(scene, beat);
+            if (key.Length == 0) return false;
+
+            for (int i = scene.speakerColorOverrides.Count - 1; i >= 0; i--)
+            {
+                VnSceneComposerSpeakerColorOverride entry = scene.speakerColorOverrides[i];
+                if (entry != null &&
+                    string.Equals(entry.speakerKey ?? string.Empty, key, StringComparison.Ordinal))
+                {
+                    scene.speakerColorOverrides.RemoveAt(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static VnWorkshopTypographyValues ResolveWithoutSpeakerPalette(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
+        {
+            VnWorkshopTypographyValues values =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(
+                    project.defaultPresentation ?? new VnPresentationWorkshopPreset());
+
+            VnWorkshopTypographyOverride legacy =
+                scene.presentationOverrides != null
+                    ? scene.presentationOverrides.typography
+                    : null;
+            ApplyLegacyDialogue(legacy, ref values);
+            ApplyVisual(scene.dialogueBodyStyleOverride, ref values);
+
+            if (scene.hasSpeakerColorOverride ||
+                scene.speakerColorScope == VnSceneComposerSpeakerColorScope.ThisScene)
+            {
+                Color localScene = scene.speakerColor;
+                localScene.a = values.SpeakerColor.a;
+                values.SpeakerColor = localScene;
+            }
+
+            return values;
+        }
+
         internal static bool RemoveSpeakerColorOverride(
             VnSceneComposerScene scene, VnSceneComposerDialogueBeat beat)
         {
             if (scene == null || scene.speakerColorOverrides == null) return false;
-            string key = ResolveSpeakerKey(beat);
+            string key = ResolveSpeakerKey(scene, beat);
             if (key.Length == 0) return false;
 
             for (int i = scene.speakerColorOverrides.Count - 1; i >= 0; i--)
