@@ -68,6 +68,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public const int SchemaVersion = VnSceneComposerContract.SchemaVersion;
         private const int LegacySchemaVersion = 1;
         private const int BeatStateSchemaVersion = 2;
+        private const int ProjectSpeakerPaletteSchemaVersion = 3;
         private const string ExternalReferencePrefix = "external://";
         private const float MaxPreviewDuration = 3600f;
         private const float MaxSceneTransitionDuration = 10f;
@@ -127,21 +128,30 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (project == null)
                 return VnSceneComposerImportResult.Failed("Scene Composer project JSON did not contain a project.");
 
-            if (project.schemaVersion == LegacySchemaVersion)
+            int importedSchemaVersion = project.schemaVersion;
+            if (importedSchemaVersion == LegacySchemaVersion)
             {
                 VnSceneComposerImportResult migrationFailure = MigrateLegacyDialogueV1(json, project);
                 if (migrationFailure != null) return migrationFailure;
             }
-            else if (project.schemaVersion == BeatStateSchemaVersion)
+            else if (importedSchemaVersion == BeatStateSchemaVersion)
             {
                 MigrateBeatStateSchemaV2(project);
             }
-            else if (project.schemaVersion != SchemaVersion)
+            else if (importedSchemaVersion != ProjectSpeakerPaletteSchemaVersion &&
+                     importedSchemaVersion != SchemaVersion)
             {
                 return VnSceneComposerImportResult.Failed(
-                    "Unsupported Scene Composer schema version: " + project.schemaVersion +
+                    "Unsupported Scene Composer schema version: " + importedSchemaVersion +
                     ". Supported versions are " + LegacySchemaVersion + ", " +
-                    BeatStateSchemaVersion + " and " + SchemaVersion + ".");
+                    BeatStateSchemaVersion + ", " + ProjectSpeakerPaletteSchemaVersion +
+                    " and " + SchemaVersion + ".");
+            }
+
+            if (importedSchemaVersion < SchemaVersion)
+            {
+                MigrateProjectSpeakerPaletteV3(project);
+                project.schemaVersion = SchemaVersion;
             }
 
             NormalizeProject(project);
@@ -232,9 +242,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (project == null) return false;
             if (project.schemaVersion == SchemaVersion) return false;
-            if (project.schemaVersion != BeatStateSchemaVersion) return false;
 
-            MigrateBeatStateSchemaV2(project);
+            int originalVersion = project.schemaVersion;
+            if (originalVersion == BeatStateSchemaVersion)
+                MigrateBeatStateSchemaV2(project);
+            else if (originalVersion != ProjectSpeakerPaletteSchemaVersion)
+                return false;
+
+            MigrateProjectSpeakerPaletteV3(project);
+            project.schemaVersion = SchemaVersion;
             NormalizeProject(project);
             return true;
         }
@@ -1042,6 +1058,59 @@ namespace Rokas.EditorTools.VnUiWorkshop
             project.schemaVersion = SchemaVersion;
         }
 
+        private static void MigrateProjectSpeakerPaletteV3(
+            VnSceneComposerProject project)
+        {
+            if (project == null) return;
+            if (project.projectSpeakerPalette == null)
+                project.projectSpeakerPalette =
+                    new List<VnSceneComposerProjectSpeakerProfile>();
+
+            var migratedKeys = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < project.projectSpeakerPalette.Count; i++)
+            {
+                VnSceneComposerProjectSpeakerProfile existing =
+                    project.projectSpeakerPalette[i];
+                if (existing != null && !string.IsNullOrWhiteSpace(existing.speakerKey))
+                    migratedKeys.Add(existing.speakerKey.Trim());
+            }
+
+            if (project.scenes == null) return;
+
+            // Schema 3 could contain conflicting Scene-local values for one identity.
+            // Deterministic rule: first occurrence in authored Scene/Beat order wins.
+            // Old Scene/default values remain intact as migration evidence and fallback.
+            for (int s = 0; s < project.scenes.Count; s++)
+            {
+                VnSceneComposerScene scene = project.scenes[s];
+                if (scene == null || scene.dialogueBeats == null) continue;
+                for (int b = 0; b < scene.dialogueBeats.Count; b++)
+                {
+                    VnSceneComposerDialogueBeat beat = scene.dialogueBeats[b];
+                    string key =
+                        VnSceneComposerTextStyleResolver.ResolveSpeakerKey(scene, beat);
+                    if (key.Length == 0 || !migratedKeys.Add(key)) continue;
+
+                    VnWorkshopTypographyValues resolved =
+                        VnSceneComposerTextStyleResolver.ResolveLegacyFallback(
+                            project, scene, beat);
+                    Color name = resolved.SpeakerColor;
+                    Color body = resolved.DialogueColor;
+                    name.a = 1f;
+                    body.a = 1f;
+                    project.projectSpeakerPalette.Add(
+                        new VnSceneComposerProjectSpeakerProfile
+                        {
+                            speakerKey = key,
+                            hasSpeakerNameColor = true,
+                            speakerNameColor = name,
+                            hasDialogueBodyColor = true,
+                            dialogueBodyColor = body
+                        });
+                }
+            }
+        }
+
         private static void NormalizeProject(VnSceneComposerProject project)
         {
             if (project.defaultPresentation == null)
@@ -1053,6 +1122,50 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (project.title == null) project.title = string.Empty;
             if (project.sourceHead == null) project.sourceHead = string.Empty;
             if (project.projectId == null) project.projectId = string.Empty;
+
+            if (project.projectSpeakerPalette == null)
+                project.projectSpeakerPalette =
+                    new List<VnSceneComposerProjectSpeakerProfile>();
+            var projectSpeakerKeys = new HashSet<string>(StringComparer.Ordinal);
+            for (int p = 0; p < project.projectSpeakerPalette.Count; p++)
+            {
+                VnSceneComposerProjectSpeakerProfile profile =
+                    project.projectSpeakerPalette[p];
+                if (profile == null)
+                {
+                    project.projectSpeakerPalette.RemoveAt(p--);
+                    continue;
+                }
+
+                profile.speakerKey = (profile.speakerKey ?? string.Empty).Trim();
+                if (profile.speakerKey.Length == 0 ||
+                    !projectSpeakerKeys.Add(profile.speakerKey))
+                {
+                    project.projectSpeakerPalette.RemoveAt(p--);
+                    continue;
+                }
+
+                if (!IsFinite(profile.speakerNameColor.r) ||
+                    !IsFinite(profile.speakerNameColor.g) ||
+                    !IsFinite(profile.speakerNameColor.b) ||
+                    !IsFinite(profile.speakerNameColor.a))
+                {
+                    profile.speakerNameColor = Color.white;
+                    profile.hasSpeakerNameColor = false;
+                }
+                if (!IsFinite(profile.dialogueBodyColor.r) ||
+                    !IsFinite(profile.dialogueBodyColor.g) ||
+                    !IsFinite(profile.dialogueBodyColor.b) ||
+                    !IsFinite(profile.dialogueBodyColor.a))
+                {
+                    profile.dialogueBodyColor = Color.white;
+                    profile.hasDialogueBodyColor = false;
+                }
+                profile.speakerNameColor.a = 1f;
+                profile.dialogueBodyColor.a = 1f;
+                if (!profile.hasSpeakerNameColor && !profile.hasDialogueBodyColor)
+                    project.projectSpeakerPalette.RemoveAt(p--);
+            }
 
             for (int i = 0; i < project.scenes.Count; i++)
             {
