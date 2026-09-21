@@ -802,10 +802,10 @@ namespace Rokas.EditorTools.Tests
             Assert.That(source,Does.Contain("_sceneComposerTextDialogueExpanded").And
                 .Contain("_sceneComposerTextStagingExpanded").And
                 .Contain("_sceneComposerTextPresentationExpanded"));
-            Assert.That(source,Does.Contain(""Реплика"").And
-                .Contain(""Персонажи и постановка"").And
-                .Contain(""Оформление диалога""));
-            Assert.That(source,Does.Not.Contain(""Состояние персонажа в этой реплике""));
+            Assert.That(source,Does.Contain("Реплика").And
+                .Contain("Персонажи и постановка").And
+                .Contain("Оформление диалога"));
+            Assert.That(source,Does.Not.Contain("Состояние персонажа в этой реплике"));
         }
 
         [Test] public void MCS_57_TextContainsOnlyOnePoseAndAnimationEditor()
@@ -818,7 +818,7 @@ namespace Rokas.EditorTools.Tests
                         CountOccurrences(staging,"\"Эмоция / поза\""),Is.EqualTo(1));
             Assert.That(CountOccurrences(main,"\"Анимация реплики\"")+
                         CountOccurrences(staging,"\"Анимация реплики\""),Is.EqualTo(1));
-            Assert.That(main,Does.Not.Contain(""Персонаж реплики""));
+            Assert.That(main,Does.Not.Contain("Персонаж реплики"));
         }
 
         [Test] public void MCS_58_TextStagingRowsComeFromSceneCastAndSceneCastStillOwnsAdd()
@@ -828,8 +828,8 @@ namespace Rokas.EditorTools.Tests
             string main=File.ReadAllText(Path.Combine(Application.dataPath,"Rokas","Scripts","Editor","VnUiWorkshop",
                 "VnPresentationWorkshopWindow.SceneComposer.cs"));
             Assert.That(staging,Does.Contain("GetSceneComposerBeatTargetCharacterIds(scene)"));
-            Assert.That(staging,Does.Not.Contain(""+ Добавить персонажа""));
-            Assert.That(main,Does.Contain(""+ Добавить персонажа""),
+            Assert.That(staging,Does.Not.Contain("+ Добавить персонажа"));
+            Assert.That(main,Does.Contain("+ Добавить персонажа"),
                 "Scene membership remains in the Scene Characters inspector.");
         }
 
