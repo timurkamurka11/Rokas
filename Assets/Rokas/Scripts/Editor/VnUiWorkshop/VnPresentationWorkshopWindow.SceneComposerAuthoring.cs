@@ -323,9 +323,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 bool selected = ComposerSelectPreviewObjectAt(logicalPoint);
                 if (selected)
                 {
-                    _sceneComposerPreviewDragControlId =
-                        GUIUtility.GetControlID(FocusType.Passive);
-                    GUIUtility.hotControl = _sceneComposerPreviewDragControlId;
+                    _sceneComposerPreviewDragControlId = 0;
+                    if (Event.current != null &&
+                        ReferenceEquals(currentEvent, Event.current))
+                    {
+                        _sceneComposerPreviewDragControlId =
+                            GUIUtility.GetControlID(FocusType.Passive);
+                        GUIUtility.hotControl =
+                            _sceneComposerPreviewDragControlId;
+                    }
                     _sceneComposerDraggingPreviewObject = true;
                     _sceneComposerDraggingDecoration =
                         !string.IsNullOrEmpty(_sceneComposerSelectedDecorationId);
@@ -344,7 +350,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             if (currentEvent.type == EventType.MouseDrag && currentEvent.button == 0 &&
                 _sceneComposerDraggingPreviewObject &&
-                GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
+                (_sceneComposerPreviewDragControlId == 0 ||
+                 GUIUtility.hotControl == _sceneComposerPreviewDragControlId))
             {
                 Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(previewRect, currentEvent.mousePosition, frame);
                 Vector2 logicalDelta = logicalPoint - _sceneComposerLastDragLogicalPoint;
@@ -359,7 +366,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0 &&
                 _sceneComposerDraggingPreviewObject)
             {
-                if (GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
+                if (_sceneComposerPreviewDragControlId != 0 &&
+                    GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
                     GUIUtility.hotControl = 0;
                 _sceneComposerPreviewDragControlId = 0;
                 _sceneComposerDraggingPreviewObject = false;
@@ -453,6 +461,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void CancelSceneComposerPreviewDrag()
         {
             if (_sceneComposerPreviewDragControlId != 0 &&
+                Event.current != null &&
                 GUIUtility.hotControl == _sceneComposerPreviewDragControlId)
                 GUIUtility.hotControl = 0;
             _sceneComposerPreviewDragControlId = 0;
