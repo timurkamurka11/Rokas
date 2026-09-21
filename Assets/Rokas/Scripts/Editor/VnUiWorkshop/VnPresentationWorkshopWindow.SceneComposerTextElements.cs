@@ -213,6 +213,31 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MarkSceneComposerChanged();
         }
 
+        public bool ComposerHasCurrentSceneSpeakerDialogueColorOverride()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            string key = VnSceneComposerTextStyleResolver.ResolveSpeakerKey(scene, beat);
+            VnSceneComposerSpeakerColorOverride entry =
+                VnSceneComposerTextStyleResolver.FindSpeakerColorOverride(scene, key);
+            return entry != null && entry.hasDialogueBodyColor;
+        }
+
+        public void ComposerClearCurrentSceneSpeakerDialogueColorOverride()
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (!ComposerHasCurrentSceneSpeakerDialogueColorOverride())
+                return;
+
+            RecordSceneComposerUndo("Reset Scene Speaker Palette Dialogue Color");
+            CancelSceneComposerPreviewDrag();
+            VnSceneComposerTextStyleResolver.ClearSpeakerPaletteDialogueBodyColor(
+                scene, beat);
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
         public void ComposerClearCurrentSceneSpeakerPaletteEntry()
         {
             VnSceneComposerScene scene = RequireSelectedScene();
