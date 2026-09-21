@@ -142,12 +142,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             float safeDuration = Mathf.Max(.01f, duration);
             float t = Mathf.Clamp01(Mathf.Max(0f, elapsedSeconds) / safeDuration);
+            if (t <= 0f || t >= 1f)
+            {
+                return new VnWorkshopActionBounceSample
+                {
+                    PositionOffset = Vector2.zero,
+                    ScaleMultiplier = 1f,
+                    Complete = t >= 1f
+                };
+            }
+
             float height = Mathf.Max(0f, strength) * Mathf.Sin(Mathf.PI * t);
             return new VnWorkshopActionBounceSample
             {
                 PositionOffset = new Vector2(0f, -height),
                 ScaleMultiplier = 1f,
-                Complete = t >= 1f
+                Complete = false
             };
         }
 
