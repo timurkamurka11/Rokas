@@ -1198,6 +1198,66 @@ namespace Rokas.EditorTools.Tests
             return Convert.ToBoolean(RevealMember(sample, name));
         }
 
+
+        [Test]
+        public void MTextSpeakerPalette_RED_ProfileContractOwnsTwoIndependentColors()
+        {
+            Type entryType = typeof(VnSceneComposerSpeakerColorOverride);
+            Assert.That(entryType.GetField("dialogueBodyColor"), Is.Not.Null,
+                "A Scene speaker palette entry must own a dialogue-body color as well as the speaker-name color.");
+            Assert.That(entryType.GetField("hasDialogueBodyColor"), Is.Not.Null,
+                "Legacy one-color entries need an explicit presence bit so body color can fall back safely.");
+        }
+
+        [Test]
+        public void MTextSpeakerPalette_RED_SelectedMinaBodyColorDoesNotBleedIntoKeiko()
+        {
+            VnPresentationWorkshopWindow window =
+                ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                VnSceneComposerProject project = Project(window);
+                VnSceneComposerScene scene = project.scenes[0];
+                scene.dialogueBeats.Clear();
+                var keiko = new VnSceneComposerDialogueBeat
+                {
+                    speaker = "Keiko",
+                    text = "Keiko line"
+                };
+                var mina = new VnSceneComposerDialogueBeat
+                {
+                    speaker = "Mina",
+                    text = "Mina line"
+                };
+                scene.dialogueBeats.Add(keiko);
+                scene.dialogueBeats.Add(mina);
+
+                VnWorkshopTypographyValues minaBefore =
+                    VnSceneComposerTextStyleResolver.Resolve(project, scene, mina);
+                window.ComposerSelectDialogueBeat(mina.beatId);
+                window.ComposerSetSelectedSceneDialogueBodyStyle(
+                    minaBefore.DialogueFontAssetGuid,
+                    minaBefore.DialogueFontSize,
+                    new Color(1f, .45f, .1f, minaBefore.DialogueColor.a),
+                    minaBefore.DialogueAlignment);
+
+                VnWorkshopTypographyValues keikoAfter =
+                    VnSceneComposerTextStyleResolver.Resolve(project, scene, keiko);
+                VnWorkshopTypographyValues minaAfter =
+                    VnSceneComposerTextStyleResolver.Resolve(project, scene, mina);
+
+                Assert.That(keikoAfter.DialogueColor.r, Is.EqualTo(1f).Within(.001f));
+                Assert.That(keikoAfter.DialogueColor.g, Is.EqualTo(1f).Within(.001f),
+                    "Editing Mina's current-speaker body color must not recolor Keiko.");
+                Assert.That(minaAfter.DialogueColor.g, Is.EqualTo(.45f).Within(.001f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
         private VnSceneComposerFontImportResult ImportTestFont(string displayName)
         {
             VnSceneComposerFontImportResult result =
