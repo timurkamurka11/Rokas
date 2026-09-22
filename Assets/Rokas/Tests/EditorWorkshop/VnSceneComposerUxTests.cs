@@ -233,18 +233,23 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MD_PlaybackPreviewNextRoutesDialogueWithoutChangingToolbarSceneNext()
+        public void MD_PlaybackPreviewForwardRoutesDialogueWithoutChangingToolbarSceneNext()
         {
             string sceneSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
             string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string interactionSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPlaqueInteraction.cs");
             string preview = ExtractMethodBody(sceneSource, "private void DrawSceneComposerPreview()");
             string playbackInput = ExtractMethodBody(authoringSource,
                 "private void HandleSceneComposerPlaybackInput(");
+            string plaquePointer = ExtractMethodBody(interactionSource,
+                "private bool TryHandleSceneComposerPlaquePointer(");
 
             Assert.That(preview, Does.Contain("HandleSceneComposerPlaybackInput(previewRect, frame, Event.current);"),
-                "During active playback, the renderer-facing Next hit region must route dialogue progression.");
-            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"));
-            Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
+                "During active playback, the Scene Composer plaque input path must route dialogue progression.");
+            Assert.That(playbackInput, Does.Contain("TryHandleSceneComposerPlaquePointer"));
+            Assert.That(plaquePointer, Does.Contain("VnSceneComposerPlaqueControl.Forward"));
+            Assert.That(plaquePointer, Does.Contain("ComposerAdvanceDialogue();"),
+                "Runtime Forward must use the authoritative dialogue-advance command.");
             Assert.That(playbackInput, Does.Not.Contain("ComposerSelectPreviewObjectAt"),
                 "Playback clicking must not enable authoring selection/drag behavior.");
             Assert.That(playbackInput, Does.Not.Contain("RecordSceneComposerUndo"),
@@ -254,19 +259,24 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MDREG_PlaybackDialoguePanelAndNextBothAdvanceDialogue()
+        public void MDREG_PlaybackDialoguePanelAndForwardBothAdvanceDialogue()
         {
             string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string interactionSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPlaqueInteraction.cs");
             string playbackInput = ExtractMethodBody(authoringSource,
                 "private void HandleSceneComposerPlaybackInput(");
+            string plaquePointer = ExtractMethodBody(interactionSource,
+                "private bool TryHandleSceneComposerPlaquePointer(");
 
             Assert.That(playbackInput, Does.Contain("frame.DialoguePanel"),
                 "Normal playback must treat the visible dialogue panel as a dialogue-advance hit region.");
-            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"),
-                "The explicit round Next control must remain a dialogue-advance hit region.");
+            Assert.That(plaquePointer, Does.Contain("VnSceneComposerPlaqueControl.Forward"),
+                "The runtime Forward control must remain a dialogue-advance hit region.");
             Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
-            Assert.That(playbackInput, Does.Contain("currentEvent.Use();"),
-                "A handled playback click must be consumed exactly as playback input.");
+            Assert.That(plaquePointer, Does.Contain("ComposerAdvanceDialogue();"));
+            Assert.That(playbackInput, Does.Contain("currentEvent.Use();"));
+            Assert.That(plaquePointer, Does.Contain("currentEvent.Use();"),
+                "Handled dialogue-panel and Forward clicks must both be consumed as playback input.");
             Assert.That(playbackInput, Does.Not.Contain("ComposerNext();"),
                 "Preview clicks must advance dialogue beats, not invoke scene-level toolbar navigation.");
         }
