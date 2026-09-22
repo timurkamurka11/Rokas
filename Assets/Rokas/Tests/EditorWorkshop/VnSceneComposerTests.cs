@@ -17,13 +17,13 @@ namespace Rokas.EditorTools.Tests
         private const string ManagedRoot = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets";
 
         [Test]
-        public void ComposerContractPinsVerifiedVn10SourceAndUsesCurrentSchemaThree()
+        public void ComposerContractPinsVerifiedVn10SourceAndUsesCurrentSchemaFour()
         {
             Type contract = RequireType("VnSceneComposerContract");
             FieldInfo schemaVersion = RequirePublicStaticField(contract, "SchemaVersion");
             FieldInfo sourceHead = RequirePublicStaticField(contract, "SourceHead");
 
-            Assert.That(schemaVersion.GetRawConstantValue(), Is.EqualTo(3));
+            Assert.That(schemaVersion.GetRawConstantValue(), Is.EqualTo(4));
             Assert.That(sourceHead.GetRawConstantValue(), Is.EqualTo(ExpectedSourceHead));
         }
 
