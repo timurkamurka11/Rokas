@@ -960,10 +960,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
-                VnSceneComposerScene source =
-                    CurrentSceneIndex >= 0 && CurrentSceneIndex < project.scenes.Count
-                        ? project.scenes[CurrentSceneIndex]
-                        : CreatePreviewBaseline();
+                VnSceneComposerScene source = ResolveSourceScene(targetIndex);
                 ResetScene(targetIndex, playMedia, source, true,
                     preserveCompatibleVideoTimeline);
                 return;
