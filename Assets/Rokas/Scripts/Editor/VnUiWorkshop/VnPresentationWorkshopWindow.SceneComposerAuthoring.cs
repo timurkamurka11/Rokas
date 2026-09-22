@@ -322,6 +322,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void HandleSceneComposerPreviewInput(Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)
         {
             if (currentEvent == null || frame == null || comparisonView != VnWorkshopComparisonView.Current) return;
+            if (TryHandleSceneComposerPlaquePointer(previewRect, frame, currentEvent, false)) return;
 
             if (currentEvent.type == EventType.MouseDown && currentEvent.button == 0 && previewRect.Contains(currentEvent.mousePosition))
             {
@@ -415,16 +416,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void HandleSceneComposerPlaybackInput(
             Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)
         {
-            if (currentEvent == null || frame == null || _sceneComposerPlayback == null ||
-                !_sceneComposerPlayback.IsPlaying || currentEvent.type != EventType.MouseDown ||
+            if (currentEvent == null || frame == null || _sceneComposerPlayback == null) return;
+            if (TryHandleSceneComposerPlaquePointer(previewRect, frame, currentEvent, true)) return;
+            if (_sceneComposerPlayback.IsMenuOpen || !_sceneComposerPlayback.IsPlaying) return;
+            if (currentEvent.type != EventType.MouseUp ||
                 currentEvent.button != 0 || !previewRect.Contains(currentEvent.mousePosition))
                 return;
 
             Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
                 previewRect, currentEvent.mousePosition, frame);
-            bool dialoguePanelHit = frame.DialoguePanel.Contains(logicalPoint);
-            bool nextHit = frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint);
-            if (!dialoguePanelHit && !nextHit) return;
+            if (!frame.DialoguePanel.Contains(logicalPoint)) return;
 
             ComposerAdvanceDialogue();
             currentEvent.Use();

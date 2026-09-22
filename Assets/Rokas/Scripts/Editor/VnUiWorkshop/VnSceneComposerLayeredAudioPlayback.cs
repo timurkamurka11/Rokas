@@ -37,6 +37,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private string currentSceneId = string.Empty;
         private string currentBeatId = string.Empty;
         private bool disposed;
+        private bool muted;
 
         public VnSceneComposerLayeredAudioPlayback()
         {
@@ -46,6 +47,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public int ActiveSourceCount { get { return active.Count; } }
         public int StartCount { get; private set; }
+        public bool IsMuted { get { return muted; } }
 
         public bool IsActive(string cueId)
         {
@@ -239,6 +241,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (running.source != null) running.source.Pause();
         }
 
+        public void Resume()
+        {
+            if (disposed) return;
+            foreach (ActiveCue running in active.Values)
+                if (running.source != null && running.source.clip != null)
+                    running.source.UnPause();
+        }
+
+        public void SetMuted(bool value)
+        {
+            muted = value;
+            for (int i = 0; i < sourcePool.Count; i++)
+                if (sourcePool[i] != null) sourcePool[i].mute = value;
+        }
+
         public void StopAllImmediate()
         {
             if (disposed) return;
@@ -312,6 +329,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             source.loop = cue.Loop;
             source.playOnAwake = false;
             source.spatialBlend = 0f;
+            source.mute = muted;
             source.volume = cue.FadeInSeconds > .0001f ? 0f : cue.Volume;
             source.Play();
 
@@ -356,6 +374,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             created.playOnAwake = false;
             created.spatialBlend = 0f;
             created.volume = 0f;
+            created.mute = muted;
             sourcePool.Add(created);
             return created;
         }

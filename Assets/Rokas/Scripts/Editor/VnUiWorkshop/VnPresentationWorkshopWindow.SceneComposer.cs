@@ -185,6 +185,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             EnsureSceneComposerProject();
             _sceneComposerWorkspaceActive = true;
+            wantsMouseMove = true;
             comparisonView = VnWorkshopComparisonView.Current;
             EnsureSelectedScene();
             ComposerPrepareSelectedVideoForAuthoring();
@@ -880,7 +881,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             VnWorkshopPreviewFrame frame = null;
             bool staticAuthoringPreview = _sceneComposerPlayback == null ||
-                                          !_sceneComposerPlayback.IsPlaying ||
+                                          (!_sceneComposerPlayback.IsPlaying &&
+                                           !_sceneComposerPlayback.IsMenuOpen &&
+                                           !_sceneComposerPlayback.IsSceneTransitionActive) ||
                                           _sceneComposerPlayback.CurrentFrame == null;
             try
             {
@@ -897,6 +900,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Rect previewRect = EditorGUILayout.GetControlRect(false, previewHeight, GUILayout.ExpandWidth(true));
             if (frame != null)
             {
+                ConfigureSceneComposerPlaqueUi(frame, staticAuthoringPreview);
                 bool advancedLayout = staticAuthoringPreview && IsSceneComposerAdvancedLayoutEditingVisible();
                 bool advancedUiFeedback = staticAuthoringPreview && IsSceneComposerAdvancedUiFeedbackPreviewVisible();
                 VnWorkshopElement? selectedUi = advancedLayout && _sceneComposerSelectedCharacterIndex < 0
@@ -931,7 +935,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.Space(2f);
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             bool compactTransport = UseCompactSceneComposerTransport();
-            using (new EditorGUI.DisabledScope(_sceneComposerProject.scenes.Count == 0))
+            bool plaqueMenuOpen = _sceneComposerPlayback != null && _sceneComposerPlayback.IsMenuOpen;
+            using (new EditorGUI.DisabledScope(_sceneComposerProject.scenes.Count == 0 || plaqueMenuOpen))
             {
                 if (GUILayout.Button(
                         new GUIContent(compactTransport ? "◀" : "Предыдущая", "Предыдущая сцена"),

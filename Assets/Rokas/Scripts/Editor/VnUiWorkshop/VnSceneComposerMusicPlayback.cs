@@ -23,6 +23,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private float outgoingFadeStartVolume;
 
         private bool disposed;
+        private bool muted;
 
         public VnSceneComposerMusicPlayback()
         {
@@ -43,6 +44,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         public int StartCount { get; private set; }
+        public bool IsMuted { get { return muted; } }
 
         public int ActiveSourceCount
         {
@@ -172,6 +174,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (outgoingSource != null && outgoingSource.clip != null) outgoingSource.Pause();
         }
 
+        public void Resume()
+        {
+            if (disposed) return;
+            if (currentSource != null && currentSource.clip != null) currentSource.UnPause();
+            if (outgoingSource != null && outgoingSource.clip != null) outgoingSource.UnPause();
+        }
+
+        public void SetMuted(bool value)
+        {
+            muted = value;
+            if (sourceA != null) sourceA.mute = value;
+            if (sourceB != null) sourceB.mute = value;
+        }
+
         public void Restart(VnSceneComposerResolvedMusic resolved)
         {
             if (disposed) return;
@@ -194,6 +210,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             source.playOnAwake = false;
             source.spatialBlend = 0f;
             source.volume = 0f;
+            source.mute = muted;
             return source;
         }
 
@@ -205,6 +222,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentSource = source;
             source.clip = resolved.Clip;
             source.loop = resolved.Loop;
+            source.mute = muted;
             source.volume = play && resolved.FadeInSeconds > .0001f
                 ? 0f
                 : resolved.Volume;
@@ -225,6 +243,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             currentSource = source;
             source.clip = resolved.Clip;
             source.loop = resolved.Loop;
+            source.mute = muted;
             source.volume = resolved.Volume;
             incomingFadeActive = false;
             incomingFadeElapsed = 0f;

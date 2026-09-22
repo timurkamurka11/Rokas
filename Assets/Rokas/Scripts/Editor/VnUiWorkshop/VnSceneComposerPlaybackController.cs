@@ -81,6 +81,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool ShowDialoguePanel { get; internal set; }
         public bool ShowCharacters { get; internal set; }
         public bool ShowDialogueText { get; internal set; }
+        public bool DialogueCompleteIndicatorVisible { get; internal set; }
+        public bool IsMuted { get; internal set; }
+        public bool IsMenuOpen { get; internal set; }
         public string Dialogue { get; internal set; }
         public VnSceneComposerDialogueRevealSample DialogueReveal { get; internal set; }
         public VnWorkshopPreviewCharacter[] ComposerCharacters
@@ -140,6 +143,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private readonly HashSet<string> cancelledCharacterStagingIds =
             new HashSet<string>(StringComparer.Ordinal);
         private bool forceCompleteCurrentDialogueReveal;
+        private bool isMuted;
+        private bool isMenuOpen;
+        private bool resumeAfterMenu;
 
         private SceneBoundaryTransitionPhase sceneBoundaryTransitionPhase;
         private int pendingSceneTransitionTargetIndex = -1;
@@ -191,7 +197,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public bool SceneTransitionHasSwapped { get { return sceneTransitionHasSwapped; } }
         public int PendingSceneTransitionTargetIndex { get { return pendingSceneTransitionTargetIndex; } }
         public int SceneTransitionStartCount { get; private set; }
-        public bool RequiresTick { get { return IsPlaying || IsSceneTransitionActive; } }
+        public bool IsMuted { get { return isMuted; } }
+        public bool IsMenuOpen { get { return isMenuOpen; } }
+        public bool RequiresTick { get { return !isMenuOpen && (IsPlaying || IsSceneTransitionActive); } }
 
         public void RefreshCurrentMusic()
         {
@@ -283,8 +291,54 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             IsPlaying = false;
             if (videoPreview != null) videoPreview.Pause();
+            if (sourceVideoPreview != null) sourceVideoPreview.Pause();
             musicPlayback.Pause();
             layeredAudioPlayback.Pause();
+        }
+
+        public void ToggleMute()
+        {
+            SetMuted(!isMuted);
+        }
+
+        public void SetMuted(bool muted)
+        {
+            isMuted = muted;
+            musicPlayback.SetMuted(muted);
+            layeredAudioPlayback.SetMuted(muted);
+            if (CurrentSceneIndex >= 0) RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        public void OpenMenu()
+        {
+            if (isMenuOpen) return;
+            isMenuOpen = true;
+            resumeAfterMenu = IsPlaying;
+            IsPlaying = false;
+            if (videoPreview != null) videoPreview.Pause();
+            if (sourceVideoPreview != null) sourceVideoPreview.Pause();
+            musicPlayback.Pause();
+            layeredAudioPlayback.Pause();
+            if (CurrentSceneIndex >= 0) RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        public void CloseMenu()
+        {
+            if (!isMenuOpen) return;
+            isMenuOpen = false;
+            bool shouldResume = resumeAfterMenu;
+            resumeAfterMenu = false;
+            if (shouldResume)
+            {
+                IsPlaying = true;
+                if (videoPreview != null && string.IsNullOrEmpty(videoPreview.warning))
+                    videoPreview.Play();
+                if (sourceVideoPreview != null && string.IsNullOrEmpty(sourceVideoPreview.warning))
+                    sourceVideoPreview.Play();
+                musicPlayback.Resume();
+                layeredAudioPlayback.Resume();
+            }
+            if (CurrentSceneIndex >= 0) RebuildFrame(SceneElapsedSeconds, true);
         }
 
         public void Restart()
@@ -345,6 +399,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds))
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds),
                     "Scene Composer playback delta must be finite and non-negative.");
+            if (isMenuOpen) return;
             if (IsSceneTransitionActive)
             {
                 AdvanceSceneBoundaryTransition(deltaSeconds);
@@ -683,15 +738,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ? sourceScaleMode
                 : (targetScene.media != null ? targetScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit);
 
+            bool coveringOutgoingFrame =
+                IsSceneTransitionActive &&
+                !sceneTransitionHasSwapped &&
+                sceneBoundaryTransitionPhase == SceneBoundaryTransitionPhase.Cover;
             bool mediaReady =
-                !IsSceneTransitionActive && IsCurrentVideoPresentationReady();
+                coveringOutgoingFrame ||
+                (!IsSceneTransitionActive && IsCurrentVideoPresentationReady());
             bool showPanel = mediaReady;
             bool showCharacters = mediaReady &&
-                (!entrySequencing ||
+                (coveringOutgoingFrame ||
+                 !entrySequencing ||
                  sceneEntryPresentationElapsedSeconds + .00001f >=
                  SceneEntryPlaqueLeadSeconds);
             bool showDialogueText = mediaReady &&
-                (!entrySequencing ||
+                (coveringOutgoingFrame ||
+                 !entrySequencing ||
                  sceneEntryPresentationElapsedSeconds + .00001f >=
                  SceneEntryDialogueLeadSeconds);
 
@@ -703,6 +765,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CurrentFrame.ShowDialoguePanel = showPanel;
             CurrentFrame.ShowCharacters = showCharacters;
             CurrentFrame.ShowDialogueText = showDialogueText;
+            CurrentFrame.DialogueCompleteIndicatorVisible =
+                showDialogueText && !IsSceneTransitionActive && sample.dialogueReveal.Complete;
+            CurrentFrame.IsMuted = isMuted;
+            CurrentFrame.IsMenuOpen = isMenuOpen;
             // Keep reveal state/data authoritative even while the renderer gate hides it.
             // This preserves first-click completion semantics without drawing text before
             // the Scene-entry character/text phase is allowed to become visible.
@@ -894,11 +960,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
-                if (targetIndex == 0)
-                    ResetSceneFromNeutralStart(targetIndex, playMedia);
-                else
-                    ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), false,
-                        preserveCompatibleVideoTimeline);
+                VnSceneComposerScene source =
+                    CurrentSceneIndex >= 0 && CurrentSceneIndex < project.scenes.Count
+                        ? project.scenes[CurrentSceneIndex]
+                        : CreatePreviewBaseline();
+                ResetScene(targetIndex, playMedia, source, true,
+                    preserveCompatibleVideoTimeline, false, true);
                 return;
             }
 

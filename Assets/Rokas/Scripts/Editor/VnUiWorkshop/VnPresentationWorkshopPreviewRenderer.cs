@@ -123,6 +123,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Texture2D BackgroundTexture { get; internal set; }
         public Texture2D DialoguePanelTexture { get; }
         public string DialoguePanelWarning { get; internal set; } = string.Empty;
+        public bool IsSceneComposer { get; internal set; }
+        public VnSceneComposerPlaqueUiSample PlaqueUi { get; internal set; }
         public Font Font { get; }
         public Font DialogueFont { get; }
         public Font SpeakerFont { get; }
@@ -207,7 +209,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnPresentationWorkshopPreset preset,
             VnWorkshopResolution resolution,
             VnWorkshopPreviewScene scene,
-            string dialogueOverride)
+            string dialogueOverride,
+            bool useCanonicalRokasPlaque = false)
         {
             if (preset == null) throw new ArgumentNullException(nameof(preset));
 
@@ -255,8 +258,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             minaBody = ApplyOverride(minaBody, preset.minaBody);
 
+            Texture2D canonicalFallback = useCanonicalRokasPlaque
+                ? assets.vnDialoguePanelKeikoDark
+                : panelTexture;
             Texture2D resolvedPanelTexture = ResolveDialoguePanelTexture(
-                preset, panelTexture, out string dialoguePanelWarning);
+                preset, canonicalFallback, out string dialoguePanelWarning);
             var frame = new VnWorkshopPreviewFrame(
                 screenSize, virtualCanvas, background, resolvedPanelTexture, dialogueFont, speakerFont, typography,
                 assets.vnMinaCharacterSheet, minaState.BodyUv, assets.vnKeikoCharacterSheet, keikoState.BodyUv,
@@ -371,30 +377,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         frame.DialogueFont, Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
                         ToTextAnchor(frame.Typography.DialogueAlignment), frame.Typography.DialogueColor, 1f);
 
-                    bool replaceBack = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
-                        ShouldReplaceIndependentUiFeedbackControl(
-                            uiFeedbackElement.Value, VnWorkshopElement.Back, uiFeedbackSample.Value);
-                    bool replaceNext = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
-                        ShouldReplaceIndependentUiFeedbackControl(
-                            uiFeedbackElement.Value, VnWorkshopElement.Next, uiFeedbackSample.Value);
-
-                    if (!replaceBack)
-                        DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-                    if (!replaceNext)
-                        DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-
-                    if (showHitRegions)
-                    {
-                        DrawHitRegion(localCanvas, frame, frame.MuteHitRegion, "Mute — Baked into panel");
-                        DrawHitRegion(localCanvas, frame, frame.PauseHitRegion, "Pause — Baked into panel");
-                        DrawHitRegion(localCanvas, frame, frame.SkipHitRegion, "Skip — Baked into panel");
+                    if (!frame.IsSceneComposer)
+                        DrawLegacyWorkshopControls(
+                            localCanvas, frame, showHitRegions,
+                            uiFeedbackElement, uiFeedbackSample);
                     }
 
-                    if (uiFeedbackElement.HasValue && uiFeedbackSample.HasValue)
-                        DrawUiFeedbackPreview(
-                            localCanvas, frame,
-                            uiFeedbackElement.Value, uiFeedbackSample.Value);
-                    }
+                    if (frame.IsSceneComposer)
+                        DrawSceneComposerPlaqueUi(localCanvas, frame);
                 }
 
                 if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
