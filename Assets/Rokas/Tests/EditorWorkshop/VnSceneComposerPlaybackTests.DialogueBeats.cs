@@ -10,13 +10,13 @@ namespace Rokas.EditorTools.Tests
     public sealed partial class VnSceneComposerPlaybackTests
     {
         [Test]
-        public void MD_CanonicalDialogueModelUsesSchemaThreeAndOneInitialBeat()
+        public void MD_CanonicalDialogueModelUsesSchemaFourAndOneInitialBeat()
         {
             Type contractType = RequireType("VnSceneComposerContract");
             FieldInfo schema = contractType.GetField("SchemaVersion", BindingFlags.Public | BindingFlags.Static);
             Assert.That(schema, Is.Not.Null);
-            Assert.That(schema.GetRawConstantValue(), Is.EqualTo(3),
-                "Canonical Scene Composer portable data must use schema v3.");
+            Assert.That(schema.GetRawConstantValue(), Is.EqualTo(4),
+                "Canonical Scene Composer portable data must use schema v4.");
 
             Type sceneType = RequireType("VnSceneComposerScene");
             FieldInfo beatsField = sceneType.GetField("dialogueBeats", BindingFlags.Public | BindingFlags.Instance);
