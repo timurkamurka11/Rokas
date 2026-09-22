@@ -176,7 +176,7 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MT_DialogueUiIsHiddenThroughCoverAndRevealThenRestored()
+        public void MT_OutgoingDialogueUiStaysThroughCoverThenIncomingWaitsForReveal()
         {
             var project = ProjectWithTwoScenes();
             project.scenes[0].previewText = "old";
@@ -186,9 +186,20 @@ namespace Rokas.EditorTools.Tests
             {
                 controller.PlayFromHere(0);
                 controller.Next();
-                Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.False);
-                controller.Advance(.55f);
-                Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.False);
+
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.True,
+                    "Outgoing Scene UI must remain intact while the curtain covers it.");
+
+                controller.Advance(.49f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.True);
+
+                controller.Advance(.06f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.False,
+                    "Incoming Scene UI stays hidden under cover/reveal.");
+
                 controller.Advance(.55f);
                 Assert.That(GetBool(controller, "IsSceneTransitionActive"), Is.False);
                 Assert.That((bool)Get(controller.CurrentFrame, "ShowDialogueUi"), Is.True);
