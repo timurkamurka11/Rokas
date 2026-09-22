@@ -100,6 +100,24 @@ jobs:
           checkName: Scene Composer Scene Entry Polish EditMode
           artifactsPath: artifacts-vn-scene-entry-polish
 
+      - name: Run PRE-RELEASE PLAQUE / TRANSITION UI fixture
+        id: prerelease-plaque-ui-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPrereleasePlaqueUiTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer PRE-RELEASE Plaque UI EditMode
+          artifactsPath: artifacts-vn-prerelease-plaque-ui
+
       - name: Run M-TRANSITION cinematic scene boundary fixture
         id: mtransition-tests
         uses: game-ci/unity-test-runner@v4
@@ -508,6 +526,7 @@ jobs:
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
           path: |
+            artifacts-vn-prerelease-plaque-ui
             artifacts-vn-scene-composer-mcharacter
             artifacts-vn-scene-composer-mvideo
             artifacts-vn-scene-composer-maudio
