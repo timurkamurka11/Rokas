@@ -1,0 +1,359 @@
+{
+  "apRotations": [
+    {
+      "defenseAP": 0,
+      "turns": 12,
+      "skills": 7,
+      "basic": 5,
+      "damage": 436,
+      "rows": [
+        {
+          "turn": 1,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        },
+        {
+          "turn": 2,
+          "apBefore": 2,
+          "command": "Basic",
+          "apAfterDefense": 4,
+          "damage": 20
+        },
+        {
+          "turn": 3,
+          "apBefore": 5,
+          "command": "SealStrike",
+          "apAfterDefense": 2,
+          "damage": 48
+        },
+        {
+          "turn": 4,
+          "apBefore": 3,
+          "command": "SealStrike",
+          "apAfterDefense": 0,
+          "damage": 48
+        },
+        {
+          "turn": 5,
+          "apBefore": 1,
+          "command": "Basic",
+          "apAfterDefense": 3,
+          "damage": 20
+        },
+        {
+          "turn": 6,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        },
+        {
+          "turn": 7,
+          "apBefore": 2,
+          "command": "Basic",
+          "apAfterDefense": 4,
+          "damage": 20
+        },
+        {
+          "turn": 8,
+          "apBefore": 5,
+          "command": "SealStrike",
+          "apAfterDefense": 2,
+          "damage": 48
+        },
+        {
+          "turn": 9,
+          "apBefore": 3,
+          "command": "SealStrike",
+          "apAfterDefense": 0,
+          "damage": 48
+        },
+        {
+          "turn": 10,
+          "apBefore": 1,
+          "command": "Basic",
+          "apAfterDefense": 3,
+          "damage": 20
+        },
+        {
+          "turn": 11,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        },
+        {
+          "turn": 12,
+          "apBefore": 2,
+          "command": "Basic",
+          "apAfterDefense": 4,
+          "damage": 20
+        }
+      ]
+    },
+    {
+      "defenseAP": 1,
+      "turns": 12,
+      "skills": 10,
+      "basic": 2,
+      "damage": 520,
+      "rows": [
+        {
+          "turn": 1,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 2,
+          "damage": 48
+        },
+        {
+          "turn": 2,
+          "apBefore": 3,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        },
+        {
+          "turn": 3,
+          "apBefore": 2,
+          "command": "Basic",
+          "apAfterDefense": 5,
+          "damage": 20
+        },
+        {
+          "turn": 4,
+          "apBefore": 6,
+          "command": "SealStrike",
+          "apAfterDefense": 4,
+          "damage": 48
+        },
+        {
+          "turn": 5,
+          "apBefore": 5,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 6,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 2,
+          "damage": 48
+        },
+        {
+          "turn": 7,
+          "apBefore": 3,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        },
+        {
+          "turn": 8,
+          "apBefore": 2,
+          "command": "Basic",
+          "apAfterDefense": 5,
+          "damage": 20
+        },
+        {
+          "turn": 9,
+          "apBefore": 6,
+          "command": "SealStrike",
+          "apAfterDefense": 4,
+          "damage": 48
+        },
+        {
+          "turn": 10,
+          "apBefore": 5,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 11,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 2,
+          "damage": 48
+        },
+        {
+          "turn": 12,
+          "apBefore": 3,
+          "command": "SealStrike",
+          "apAfterDefense": 1,
+          "damage": 48
+        }
+      ]
+    },
+    {
+      "defenseAP": 2,
+      "turns": 12,
+      "skills": 12,
+      "basic": 0,
+      "damage": 576,
+      "rows": [
+        {
+          "turn": 1,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 2,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 3,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 4,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 5,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 6,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 7,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 8,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 9,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 10,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 11,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        },
+        {
+          "turn": 12,
+          "apBefore": 4,
+          "command": "SealStrike",
+          "apAfterDefense": 3,
+          "damage": 48
+        }
+      ]
+    }
+  ],
+  "durationCases": [
+    {
+      "commands": 24,
+      "decisionSec": 2,
+      "enemyActions": 36,
+      "seconds": 185.6
+    },
+    {
+      "commands": 24,
+      "decisionSec": 4,
+      "enemyActions": 36,
+      "seconds": 233.60000000000002
+    },
+    {
+      "commands": 34,
+      "decisionSec": 2,
+      "enemyActions": 51,
+      "seconds": 257.1
+    },
+    {
+      "commands": 34,
+      "decisionSec": 4,
+      "enemyActions": 51,
+      "seconds": 325.1
+    }
+  ],
+  "wave20": [
+    {
+      "wave": 1,
+      "normal40": 3,
+      "ranged60": 0,
+      "elite120": 0,
+      "count": 3,
+      "hp": 120
+    },
+    {
+      "wave": 2,
+      "normal40": 2,
+      "ranged60": 1,
+      "elite120": 0,
+      "count": 3,
+      "hp": 140
+    },
+    {
+      "wave": 3,
+      "normal40": 3,
+      "ranged60": 0,
+      "elite120": 1,
+      "count": 4,
+      "hp": 240
+    },
+    {
+      "wave": 4,
+      "normal40": 3,
+      "ranged60": 1,
+      "elite120": 0,
+      "count": 4,
+      "hp": 180
+    },
+    {
+      "wave": 5,
+      "normal40": 0,
+      "ranged60": 2,
+      "elite120": 1,
+      "count": 3,
+      "hp": 240
+    },
+    {
+      "wave": 6,
+      "normal40": 0,
+      "ranged60": 2,
+      "elite120": 1,
+      "count": 3,
+      "hp": 240
+    }
+  ]
+}

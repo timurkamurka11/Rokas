@@ -1,0 +1,773 @@
+{
+  "description": "Specification arithmetic only; not Unity or product implementation tests",
+  "vectors": [
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -240000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -110001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 10001,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -110000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 10000,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -40001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": -40000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 0,
+      "outcome": "Dodge",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 25000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 8333,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 25001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 45000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 21667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 45001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 21666,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 60000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Dodge",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -240000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -110001,
+      "outcome": "Fail",
+      "deliveryLagUs": 10001,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -110000,
+      "outcome": "Parry",
+      "deliveryLagUs": 10000,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -40001,
+      "outcome": "Parry",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": -40000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 0,
+      "outcome": "Perfect",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 25000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 8333,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 25001,
+      "outcome": "Parry",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 45000,
+      "outcome": "Parry",
+      "deliveryLagUs": 21667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 45001,
+      "outcome": "Fail",
+      "deliveryLagUs": 21666,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 60000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 30,
+      "kind": "Parry",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -240000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -110001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 10001,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -110000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 10000,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -40001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": -40000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 0,
+      "outcome": "Dodge",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 25000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 8333,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 25001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 45000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 5000,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 45001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 4999,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 60000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Dodge",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -240000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -110001,
+      "outcome": "Fail",
+      "deliveryLagUs": 10001,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -110000,
+      "outcome": "Parry",
+      "deliveryLagUs": 10000,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -40001,
+      "outcome": "Parry",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": -40000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 0,
+      "outcome": "Perfect",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 25000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 8333,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 25001,
+      "outcome": "Parry",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 45000,
+      "outcome": "Parry",
+      "deliveryLagUs": 5000,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 45001,
+      "outcome": "Fail",
+      "deliveryLagUs": 4999,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 60000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 60,
+      "kind": "Parry",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -240000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -110001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 1668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -110000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 1667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -40001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": -40000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 0,
+      "outcome": "Dodge",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 25000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 25001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 45000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 5000,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 45001,
+      "outcome": "Dodge",
+      "deliveryLagUs": 4999,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 60000,
+      "outcome": "Dodge",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Dodge",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -400001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 1,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -400000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -300000,
+      "outcome": "Fail",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -240001,
+      "outcome": "Fail",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -240000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -110001,
+      "outcome": "Fail",
+      "deliveryLagUs": 1668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -110000,
+      "outcome": "Parry",
+      "deliveryLagUs": 1667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -40001,
+      "outcome": "Parry",
+      "deliveryLagUs": 6668,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": -40000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 0,
+      "outcome": "Perfect",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 25000,
+      "outcome": "Perfect",
+      "deliveryLagUs": 0,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 25001,
+      "outcome": "Parry",
+      "deliveryLagUs": 8332,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 45000,
+      "outcome": "Parry",
+      "deliveryLagUs": 5000,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 45001,
+      "outcome": "Fail",
+      "deliveryLagUs": 4999,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 60000,
+      "outcome": "Fail",
+      "deliveryLagUs": 6667,
+      "within40ms": true
+    },
+    {
+      "hz": 120,
+      "kind": "Parry",
+      "offsetUs": 60001,
+      "outcome": "Ignored",
+      "deliveryLagUs": 6666,
+      "within40ms": true
+    }
+  ]
+}

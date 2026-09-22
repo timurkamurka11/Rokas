@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-19",
+  "head": "fd5d99afd0ecb04c20edfdb8ac5916a4be41b139",
+  "command": "C:/Python314/python.exe -B Tools/validate_assets.py",
+  "exitCode": 1,
+  "baselinePath": "Docs/Verification/UnifiedIntegration/validator-baseline.log",
+  "historicalBaselineCount": 13,
+  "currentCount": 33,
+  "added": [
+    "FAIL: Background below HD: ColdSpillMask.png",
+    "FAIL: Background below HD: DistantHaze.png",
+    "FAIL: Background below HD: Keiko_CharacterSheet.png",
+    "FAIL: Background below HD: Mina_CharacterSheet.png",
+    "FAIL: Background below HD: NearMist.png",
+    "FAIL: Background below HD: RainStreakAuthored.png",
+    "FAIL: Background below HD: StartupSkipHint.png",
+    "FAIL: Background below HD: StormCloudMask.png",
+    "FAIL: Background below HD: StormRoomLiftMask.png",
+    "FAIL: Background below HD: VN_DialoguePanel_Keiko_Dark.png",
+    "FAIL: Background below HD: VN_DialoguePanel_Mina_Light.png",
+    "FAIL: Background below HD: VN_Icon_Mute.png",
+    "FAIL: Background below HD: VN_Icon_Pause.png",
+    "FAIL: Background below HD: VN_Icon_Skip.png",
+    "FAIL: Background below HD: WarmPracticalMask.png",
+    "FAIL: Background below HD: WetGlassDroplets.png",
+    "FAIL: Background below HD: WetGlassStreaks.png",
+    "FAIL: Background below HD: WindowGlazingMask.png",
+    "FAIL: Invalid stereo PCM source: EnterGame.wav",
+    "FAIL: Unknown assembly reference: Rokas.Presentation -> UnityEngine.ScreenCaptureModule"
+  ],
+  "removed": [],
+  "classification": "Existing findings at research start; not accepted as a new green baseline."
+}

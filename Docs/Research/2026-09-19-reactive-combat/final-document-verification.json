@@ -1,0 +1,865 @@
+{
+  "date": "2026-09-20",
+  "scope": "Research/design/planning only; no product implementation",
+  "documents": [
+    {
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "characters": 125579,
+      "lines": 1217,
+      "sha256": "4147420970259c0377c42b9993a875593cd273a377e0349048592dcb19751b6f",
+      "fenceCount": 18,
+      "trailingWhitespace": 0
+    },
+    {
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "characters": 10461,
+      "lines": 145,
+      "sha256": "61f6ab74e50525493149fb4f7a4008af5d079e18fd687346a0fd8229031f39a1",
+      "fenceCount": 0,
+      "trailingWhitespace": 0
+    },
+    {
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+      "characters": 13745,
+      "lines": 139,
+      "sha256": "f3231d5bd6600122d7b71707a5c62a911a16b2df47a5294c7c02b154355c9d05",
+      "fenceCount": 0,
+      "trailingWhitespace": 0
+    },
+    {
+      "path": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "characters": 40822,
+      "lines": 507,
+      "sha256": "961cd5ebb6934aedd41bd305c1f3de73ba7a136d14f01e0bb938875cfedfbf11",
+      "fenceCount": 20,
+      "trailingWhitespace": 0
+    },
+    {
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ASTRA-MASTER-IMPLEMENTATION-PROMPT.md",
+      "characters": 15239,
+      "lines": 210,
+      "sha256": "fae793159544b7da421290167f1b1fb2affe938990dc156e8a828046f1e05d20",
+      "fenceCount": 0,
+      "trailingWhitespace": 0
+    }
+  ],
+  "localReferences": [
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ASTRA-MASTER-IMPLEMENTATION-PROMPT.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/ProjectSettings/ProjectVersion.txt",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/Rokas.Core.asmdef",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/Rokas.Presentation.asmdef",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Packages/manifest.json",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/ProjectSettings/GraphicsSettings.asset",
+      "line": 40,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/ProjectSettings/ProjectSettings.asset",
+      "line": 27,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 96,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/ProjectSettings/EditorBuildSettings.asset",
+      "line": 7,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 36,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Editor/RokasBuild.cs",
+      "line": 63,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 102,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Packages/manifest.json",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/AGENTS.md",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractDefinition.cs",
+      "line": 6,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/State.cs",
+      "line": 29,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/GameSession.cs",
+      "line": 109,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractService.cs",
+      "line": 35,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/MissionView.cs",
+      "line": 61,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/CombatHud.cs",
+      "line": 22,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 81,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 112,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 241,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/EconomyService.cs",
+      "line": 17,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 189,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 48,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 234,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 129,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatTuning.cs",
+      "line": 23,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 246,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 147,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 167,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatTuning.cs",
+      "line": 38,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatService.cs",
+      "line": 273,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/MissionView.cs",
+      "line": 135,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 89,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasView.cs",
+      "line": 61,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 415,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/CombatInputSurface.cs",
+      "line": 18,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Resources/FirstContract.json",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/CombatTuning.cs",
+      "line": 4,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/unified-integration-evidence/visuals/integration-combat.png",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Verification/UnifiedIntegration/results.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractService.cs",
+      "line": 7,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/MissionView.cs",
+      "line": 49,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasView.cs",
+      "line": 200,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/EconomyService.cs",
+      "line": 44,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/GameSession.cs",
+      "line": 137,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/SaveStore.cs",
+      "line": 147,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 371,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Editor/Rokas.Editor.asmdef",
+      "line": 1,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Tests/Core/Rokas.Core.Tests.csproj",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/GameSession.cs",
+      "line": 109,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/GameSession.cs",
+      "line": 130,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 415,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/MissionView.cs",
+      "line": 46,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasView.cs",
+      "line": 241,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/State.cs",
+      "line": 29,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/SaveStore.cs",
+      "line": 312,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/SaveJsonShape.cs",
+      "line": 12,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractService.cs",
+      "line": 7,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/FoodService.cs",
+      "line": 63,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractDefinition.cs",
+      "line": 12,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/EconomyService.cs",
+      "line": 44,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/balance-model.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/timing-boundary-model.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/asset-validator-current.log",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/asset-validator-comparison.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/encounter-accounting.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/balance-model.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/timing-boundary-model.json",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/GameSession.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/State.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/ContractDefinition.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/SaveStore.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/SaveJsonShape.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/EconomyService.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Core/FoodService.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs",
+      "line": 415,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/MissionView.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasView.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Presentation/RokasAudio.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Tests/Core/Rokas.Core.Tests.csproj",
+      "line": 24,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Tests/Core/Program.cs",
+      "line": null,
+      "valid": true
+    },
+    {
+      "source": "D:/Rokas/Rokas/Docs/Superpowers/plans/2026-09-19-reactive-combat.md",
+      "path": "D:/Rokas/Rokas/Assets/Rokas/Scripts/Editor/Rokas.Editor.asmdef",
+      "line": 1,
+      "valid": true
+    }
+  ],
+  "math": [
+    {
+      "total": 8,
+      "HPDamage": 660,
+      "expectedHP": 660,
+      "apEquation": 0,
+      "finalAP": 0,
+      "maxEnemyActions": 2,
+      "maxDefenseHits": 6,
+      "playerCommands": 14,
+      "enemyActions": 24,
+      "presses": 44
+    },
+    {
+      "total": 20,
+      "HPDamage": 1160,
+      "expectedHP": 1160,
+      "apEquation": 0,
+      "finalAP": 0,
+      "maxEnemyActions": 2,
+      "maxDefenseHits": 4,
+      "playerCommands": 26,
+      "enemyActions": 42,
+      "presses": 54
+    }
+  ],
+  "preservation": [
+    {
+      "path": "ProjectSettings/ProjectVersion.txt",
+      "sha256": "3e78f3e1fbb6e96c92f36002865a679ff7344056725f11d06922c2b2eab02ff3",
+      "unchanged": true
+    },
+    {
+      "path": "Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4.meta",
+      "sha256": "239d6b8aec5e2b26f37917d8aeb98a10c08cd1014ac3c1f9518e86310d459e15",
+      "unchanged": true
+    },
+    {
+      "path": "Assets/StreamingAssets/RokasVideo/StoryIntro.mp4.meta",
+      "sha256": "482ec167ce85b1411b34a9fbf1eea66e7a963b4a6e45019384f8be93db78bd28",
+      "unchanged": true
+    },
+    {
+      "path": "Combat-3-Future-Implementation-Prompt.md",
+      "sha256": "e3dfa58cf602195e858ab3c0d962127f3b656357fe3a9bcda337e72a46b7afff",
+      "unchanged": true
+    },
+    {
+      "path": "Packages/packages-lock.json",
+      "sha256": "8b836d7997a2a0c1f063f297963455a287d1f17cd2b315bce2af1ba4ef862e6a",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/AudioManager.asset",
+      "sha256": "9543c41dbfc7d3951217c4dd9481ed026eb8e529b85ecf4463969a0fea747729",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/ClusterInputManager.asset",
+      "sha256": "40e65dd214bf254955d2c8829ca8ce2130fd3510485560ce012e9a1ddd93e623",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/DynamicsManager.asset",
+      "sha256": "fb36e677f7de32325bede8462e7e3eaf0be86ca374216d2907886fce7cb1d488",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/EditorSettings.asset",
+      "sha256": "4a87c54b3541c7bd242aad68c3fc28661083db1117ec56149694ee592156415e",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/GraphicsSettings.asset",
+      "sha256": "40de98f4d46d02fb08e268ad3a722a00eed7289f4ef6d2e759984b1b4a85d2af",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/MemorySettings.asset",
+      "sha256": "1e8379a461b10ae09f3f696911088c16875d63e87ed5f2d95df9e1892703f9fd",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/MultiplayerManager.asset",
+      "sha256": "ce4075d7a7dd8ac7ffe55de2427692c63f90dae398208bd80cec0f27cbe09f4b",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/NavMeshAreas.asset",
+      "sha256": "7ebbf8f53b8033104e1878b95ca07a28d0954092d81c220f14196a42f651e658",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/PackageManagerSettings.asset",
+      "sha256": "07b1ef5186b58d540fa1a87c98c4d097f4c136390e0339e0444d09d2e72f017c",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/Packages/dev.yarnspinner/YarnSpinnerProjectSettings.json",
+      "sha256": "03fd854c9f928cc084c5ae3ff3206198f621723ee3a830309497fae045f2c16e",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/Physics2DSettings.asset",
+      "sha256": "1cfc0c8fbceec604fd7cd2a06c04ff05dddee6335b75c92b0f5715ad80ba9490",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/PresetManager.asset",
+      "sha256": "29c125923fe6e29f90190d4fce1c82d660e7051546e2c9d02908d18c9cf2436c",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/QualitySettings.asset",
+      "sha256": "f1f893b1be47ad2442f58338dd7c860dc1986bb317e2f5bb31084454ffabbf4c",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/TagManager.asset",
+      "sha256": "da4b5eefc927f8b91bcf9e56a186d2b852f49d9cbe91d466638d26c79d6a83ce",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/TimeManager.asset",
+      "sha256": "3396f52fdc16d445024e01d7a2d99db6f0a37569d1d73c0302e9ffb857d90287",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/UnityConnectSettings.asset",
+      "sha256": "11251dae0356b6f43dd2c67bb511f6b7ecda4e5de425186bba3297e6f3dc1c6f",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/VFXManager.asset",
+      "sha256": "2973a6af930e142f62cde00076beda8a3cc3a66d9bfcde7a58ba7d4be2251c26",
+      "unchanged": true
+    },
+    {
+      "path": "ProjectSettings/VersionControlSettings.asset",
+      "sha256": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b",
+      "unchanged": true
+    },
+    {
+      "path": "README_V2.txt",
+      "sha256": "934cbe2fdedec2ffbeca6f771d9cd6cc59bc9e489adee1e01ac391d6f31e5a62",
+      "unchanged": true
+    },
+    {
+      "path": "ROKAS-Combat-3-Design-Study.md",
+      "sha256": "2349c9531087d342fc402d3a9c63e7e509163ff1c12da4b0c6aa7682d0babc6b",
+      "unchanged": true
+    },
+    {
+      "path": "ROKAS_ROLLBACK_LAST_UPDATE_V2.bat",
+      "sha256": "4ca70eff44c77d02e9510df904945f01216a944e939f0e17e1519215afcd137a",
+      "unchanged": true
+    },
+    {
+      "path": "ROKAS_UPDATE_MAIN_FOLDER_V2.bat",
+      "sha256": "906ffb717e9f29a5e19ad2e9a11e8c32624f9bd918571dd13ad7ca0358d390ca",
+      "unchanged": true
+    }
+  ],
+  "git": [
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'ProjectSettings/ProjectVersion.txt', LF will be replaced by CRLF the next time Git touches it\n"
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "exitCode": 0,
+      "stdout": "fd5d99afd0ecb04c20edfdb8ac5916a4be41b139\n",
+      "stderr": ""
+    },
+    {
+      "command": "git status --porcelain=v1 -z --untracked-files=all",
+      "exitCode": 0,
+      "stdout": " M ProjectSettings/ProjectVersion.txt\u0000?? Assets/StreamingAssets/RokasVideo/MainMenuLoop.mp4.meta\u0000?? Assets/StreamingAssets/RokasVideo/StoryIntro.mp4.meta\u0000?? Combat-3-Future-Implementation-Prompt.md\u0000?? Docs/Research/2026-09-19-reactive-combat/ASTRA-MASTER-IMPLEMENTATION-PROMPT.md\u0000?? Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md\u0000?? Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md\u0000?? Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md\u0000?? Docs/Research/2026-09-19-reactive-combat/asset-validator-comparison.json\u0000?? Docs/Research/2026-09-19-reactive-combat/asset-validator-current.log\u0000?? Docs/Research/2026-09-19-reactive-combat/balance-model.json\u0000?? Docs/Research/2026-09-19-reactive-combat/code-reference-check.json\u0000?? Docs/Research/2026-09-19-reactive-combat/encounter-accounting.json\u0000?? Docs/Research/2026-09-19-reactive-combat/timing-boundary-model.json\u0000?? Docs/Superpowers/plans/2026-09-19-reactive-combat.md\u0000?? Packages/packages-lock.json\u0000?? ProjectSettings/AudioManager.asset\u0000?? ProjectSettings/ClusterInputManager.asset\u0000?? ProjectSettings/DynamicsManager.asset\u0000?? ProjectSettings/EditorSettings.asset\u0000?? ProjectSettings/GraphicsSettings.asset\u0000?? ProjectSettings/MemorySettings.asset\u0000?? ProjectSettings/MultiplayerManager.asset\u0000?? ProjectSettings/NavMeshAreas.asset\u0000?? ProjectSettings/PackageManagerSettings.asset\u0000?? ProjectSettings/Packages/dev.yarnspinner/YarnSpinnerProjectSettings.json\u0000?? ProjectSettings/Physics2DSettings.asset\u0000?? ProjectSettings/PresetManager.asset\u0000?? ProjectSettings/QualitySettings.asset\u0000?? ProjectSettings/TagManager.asset\u0000?? ProjectSettings/TimeManager.asset\u0000?? ProjectSettings/UnityConnectSettings.asset\u0000?? ProjectSettings/VFXManager.asset\u0000?? ProjectSettings/VersionControlSettings.asset\u0000?? README_V2.txt\u0000?? ROKAS-Combat-3-Design-Study.md\u0000?? ROKAS_ROLLBACK_LAST_UPDATE_V2.bat\u0000?? ROKAS_UPDATE_MAIN_FOLDER_V2.bat\u0000",
+      "stderr": ""
+    }
+  ],
+  "reportSectionCount": 66,
+  "timingArithmetic": {
+    "vectors": 96,
+    "ordinaryFrameDeliveryWithin40ms": true,
+    "notUnityRuntimeTest": true
+  },
+  "duelArithmetic": {
+    "rawEnemyDamage": 201,
+    "effectiveDamage": 180,
+    "overkill": 21,
+    "finalHunterHP": 92,
+    "finalAP": 2,
+    "durationSeconds": [
+      23.65,
+      31.65
+    ]
+  },
+  "bossArithmetic": {
+    "rawBossDamage": 489,
+    "effectiveDamage": 480,
+    "overkill": 9,
+    "finalHunterHP": 87,
+    "finalAP": 3,
+    "defensePresses": 20,
+    "durationSeconds": [
+      69.8,
+      89.8
+    ]
+  },
+  "newFilesBeforeVerificationRecord": [
+    "?? Docs/Research/2026-09-19-reactive-combat/ASTRA-MASTER-IMPLEMENTATION-PROMPT.md",
+    "?? Docs/Research/2026-09-19-reactive-combat/Combat-Rule-Contract.md",
+    "?? Docs/Research/2026-09-19-reactive-combat/Numerical-Consistency-Audit.md",
+    "?? Docs/Research/2026-09-19-reactive-combat/ROKAS-Reactive-Combat-Research.md",
+    "?? Docs/Research/2026-09-19-reactive-combat/asset-validator-comparison.json",
+    "?? Docs/Research/2026-09-19-reactive-combat/asset-validator-current.log",
+    "?? Docs/Research/2026-09-19-reactive-combat/balance-model.json",
+    "?? Docs/Research/2026-09-19-reactive-combat/code-reference-check.json",
+    "?? Docs/Research/2026-09-19-reactive-combat/encounter-accounting.json",
+    "?? Docs/Research/2026-09-19-reactive-combat/timing-boundary-model.json",
+    "?? Docs/Superpowers/plans/2026-09-19-reactive-combat.md"
+  ],
+  "unityTestsRun": false,
+  "productCodeChanged": false,
+  "merged": false,
+  "pushed": false
+}

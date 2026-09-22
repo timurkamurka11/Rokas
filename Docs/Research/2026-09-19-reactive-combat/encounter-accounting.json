@@ -1,0 +1,1995 @@
+{
+  "purpose": "Numerical design audit, not product implementation or Unity tests",
+  "model8": {
+    "assumptions": "Specification-level accounting; no Unity execution; normal/projectile Dodge, elite Parry/Dodge/Perfect; counters declined; enemy recovery100; no food/weakness/status/crit; all defense successful; conservative full sequence duration even when interrupted",
+    "waves": 3,
+    "totalEnemies": 8,
+    "activeMax": 3,
+    "playerCommands": 14,
+    "enemyActions": 24,
+    "defensivePresses": 44,
+    "breakSkips": 3,
+    "breaks": 3,
+    "forcedResponses": 6,
+    "finalAP": 0,
+    "apGenerated": 33,
+    "apSpent": 36,
+    "apOvercap": 0,
+    "playerExecutionSeconds": 22.000000000000004,
+    "enemyExecutionSeconds": 67.65000000000002,
+    "durationAt2SecDecision": 125.65000000000002,
+    "durationAt4SecDecision": 153.65000000000003,
+    "rows": [
+      {
+        "wave": 1,
+        "tick": 0,
+        "type": "Player",
+        "turn": 1,
+        "command": "Sweep",
+        "apBefore": 4,
+        "apAfter": 1,
+        "events": [
+          {
+            "id": "w1e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 48,
+            "broken": false
+          },
+          {
+            "id": "w1e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 48,
+            "broken": false
+          },
+          {
+            "id": "w1e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 48,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 1,
+        "tick": 60,
+        "type": "Enemy",
+        "actor": "w1e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 48,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 90,
+        "type": "Enemy",
+        "actor": "w1e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 48,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 120,
+        "type": "Player",
+        "turn": 2,
+        "command": "Basic",
+        "apBefore": 2,
+        "apAfter": 4,
+        "events": [
+          {
+            "id": "w1e1",
+            "damage": 20,
+            "effective": 20,
+            "hp": 16,
+            "seal": 36,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 1,
+        "tick": 120,
+        "type": "Enemy",
+        "actor": "w1e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 48,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 160,
+        "type": "Enemy",
+        "actor": "w1e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 36,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 190,
+        "type": "Player",
+        "turn": 3,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w1e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w1e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w1e1",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 36,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 1,
+        "tick": 190,
+        "type": "Enemy",
+        "actor": "w1e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 36,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 220,
+        "type": "Enemy",
+        "actor": "w1e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 36,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 290,
+        "type": "Player",
+        "turn": 4,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w1e2",
+            "damage": 24,
+            "effective": 12,
+            "hp": 0,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w1e3",
+            "damage": 24,
+            "effective": 12,
+            "hp": 0,
+            "seal": 36,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 350,
+        "type": "Enemy",
+        "actor": "w2e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 60,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 380,
+        "type": "Enemy",
+        "actor": "w2e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 60,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 410,
+        "type": "Player",
+        "turn": 5,
+        "command": "Basic",
+        "apBefore": 1,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w2e1",
+            "damage": 20,
+            "effective": 20,
+            "hp": 40,
+            "seal": 48,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 410,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 68,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 450,
+        "type": "Enemy",
+        "actor": "w2e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 5,
+        "seal": 48,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 480,
+        "type": "Player",
+        "turn": 6,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w2e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 48,
+            "broken": false
+          },
+          {
+            "id": "w2e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 56,
+            "broken": false
+          },
+          {
+            "id": "w2e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 36,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 480,
+        "type": "Enemy",
+        "actor": "w2e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 48,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 510,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 24,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 550,
+        "type": "Player",
+        "turn": 7,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w2e1",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w2e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w2e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 12,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 580,
+        "type": "Enemy",
+        "actor": "w2e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 36,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 610,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Parry"
+        ],
+        "apAfter": 4,
+        "seal": 0,
+        "broken": true
+      },
+      {
+        "wave": 2,
+        "tick": 680,
+        "type": "Player",
+        "turn": 8,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w2e2",
+            "damage": 24,
+            "effective": 12,
+            "hp": 0,
+            "seal": 36,
+            "broken": false
+          },
+          {
+            "id": "w2e3",
+            "damage": 30,
+            "effective": 30,
+            "hp": 42,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 710,
+        "type": "Skip",
+        "actor": "w2e3"
+      },
+      {
+        "wave": 2,
+        "tick": 810,
+        "type": "Player",
+        "turn": 9,
+        "command": "SealStrike",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w2e3",
+            "damage": 48,
+            "effective": 42,
+            "hp": 0,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 870,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 68,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 900,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 68,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 925,
+        "type": "Player",
+        "turn": 10,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 56,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 56,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 970,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 24,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1000,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 24,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1055,
+        "type": "Player",
+        "turn": 11,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 12,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 12,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 1070,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Parry"
+        ],
+        "apAfter": 1,
+        "seal": 0,
+        "broken": true
+      },
+      {
+        "wave": 3,
+        "tick": 1100,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Parry"
+        ],
+        "apAfter": 2,
+        "seal": 0,
+        "broken": true
+      },
+      {
+        "wave": 3,
+        "tick": 1170,
+        "type": "Skip",
+        "actor": "w3e1"
+      },
+      {
+        "wave": 3,
+        "tick": 1185,
+        "type": "Player",
+        "turn": 12,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e2",
+            "damage": 30,
+            "effective": 30,
+            "hp": 42,
+            "seal": 100,
+            "broken": false
+          },
+          {
+            "id": "w3e1",
+            "damage": 30,
+            "effective": 30,
+            "hp": 42,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 1200,
+        "type": "Skip",
+        "actor": "w3e2"
+      },
+      {
+        "wave": 3,
+        "tick": 1270,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 100,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1300,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 100,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1315,
+        "type": "Player",
+        "turn": 13,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 18,
+            "seal": 88,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 18,
+            "seal": 88,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 1370,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 56,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1400,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 2,
+        "seal": 56,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 1445,
+        "type": "Player",
+        "turn": 14,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 18,
+            "hp": 0,
+            "seal": 56,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 18,
+            "hp": 0,
+            "seal": 56,
+            "broken": false
+          }
+        ]
+      }
+    ]
+  },
+  "model20": {
+    "assumptions": "Specification-level accounting; no Unity execution; normal/projectile Dodge, elite Parry/Dodge/Perfect; counters declined; enemy recovery100; no food/weakness/status/crit; all defense successful; conservative full sequence duration even when interrupted",
+    "waves": 6,
+    "totalEnemies": 20,
+    "activeMax": 4,
+    "playerCommands": 26,
+    "enemyActions": 42,
+    "defensivePresses": 54,
+    "breakSkips": 3,
+    "breaks": 3,
+    "forcedResponses": 10,
+    "finalAP": 0,
+    "apGenerated": 54,
+    "apSpent": 57,
+    "apOvercap": 0,
+    "playerExecutionSeconds": 40.20000000000001,
+    "enemyExecutionSeconds": 91.99999999999999,
+    "durationAt2SecDecision": 198.2,
+    "durationAt4SecDecision": 250.2,
+    "rows": [
+      {
+        "wave": 1,
+        "tick": 0,
+        "type": "Player",
+        "turn": 1,
+        "command": "Sweep",
+        "apBefore": 4,
+        "apAfter": 1,
+        "events": [
+          {
+            "id": "w1e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w1e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w1e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 1,
+        "tick": 60,
+        "type": "Enemy",
+        "actor": "w1e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 90,
+        "type": "Enemy",
+        "actor": "w1e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 120,
+        "type": "Player",
+        "turn": 2,
+        "command": "Basic",
+        "apBefore": 2,
+        "apAfter": 4,
+        "events": [
+          {
+            "id": "w1e1",
+            "damage": 20,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 1,
+        "tick": 120,
+        "type": "Enemy",
+        "actor": "w1e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 190,
+        "type": "Enemy",
+        "actor": "w1e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 1,
+        "tick": 220,
+        "type": "Player",
+        "turn": 3,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w1e3",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w1e2",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 280,
+        "type": "Enemy",
+        "actor": "w2e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 310,
+        "type": "Enemy",
+        "actor": "w2e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 340,
+        "type": "Player",
+        "turn": 4,
+        "command": "Sweep",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w2e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 38,
+            "broken": false
+          },
+          {
+            "id": "w2e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w2e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 340,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 380,
+        "type": "Enemy",
+        "actor": "w2e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 410,
+        "type": "Player",
+        "turn": 5,
+        "command": "Basic",
+        "apBefore": 1,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w2e1",
+            "damage": 20,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 410,
+        "type": "Enemy",
+        "actor": "w2e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 440,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 510,
+        "type": "Player",
+        "turn": 6,
+        "command": "Sweep",
+        "apBefore": 4,
+        "apAfter": 1,
+        "events": [
+          {
+            "id": "w2e2",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w2e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 26,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 2,
+        "tick": 540,
+        "type": "Enemy",
+        "actor": "w2e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 26,
+        "broken": false
+      },
+      {
+        "wave": 2,
+        "tick": 640,
+        "type": "Player",
+        "turn": 7,
+        "command": "Basic",
+        "apBefore": 2,
+        "apAfter": 4,
+        "events": [
+          {
+            "id": "w2e3",
+            "damage": 20,
+            "effective": 12,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 700,
+        "type": "Enemy",
+        "actor": "w3e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 730,
+        "type": "Enemy",
+        "actor": "w3e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 740,
+        "type": "Player",
+        "turn": 8,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w3e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w3e4",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 88,
+            "broken": false
+          },
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 760,
+        "type": "Enemy",
+        "actor": "w3e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 790,
+        "type": "Enemy",
+        "actor": "w3e4",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 4,
+        "seal": 56,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 800,
+        "type": "Player",
+        "turn": 9,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w3e1",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w3e2",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w3e3",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w3e4",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 44,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 890,
+        "type": "Enemy",
+        "actor": "w3e4",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 4,
+        "seal": 12,
+        "broken": false
+      },
+      {
+        "wave": 3,
+        "tick": 930,
+        "type": "Player",
+        "turn": 10,
+        "command": "SealStrike",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w3e4",
+            "damage": 48,
+            "effective": 48,
+            "hp": 24,
+            "seal": -23,
+            "broken": true
+          }
+        ]
+      },
+      {
+        "wave": 3,
+        "tick": 990,
+        "type": "Skip",
+        "actor": "w3e4"
+      },
+      {
+        "wave": 3,
+        "tick": 1045,
+        "type": "Player",
+        "turn": 11,
+        "command": "SealStrike",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w3e4",
+            "damage": 60,
+            "effective": 24,
+            "hp": 0,
+            "seal": -23,
+            "broken": true
+          }
+        ]
+      },
+      {
+        "wave": 4,
+        "tick": 1105,
+        "type": "Enemy",
+        "actor": "w4e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1135,
+        "type": "Enemy",
+        "actor": "w4e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1160,
+        "type": "Player",
+        "turn": 12,
+        "command": "Basic",
+        "apBefore": 1,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w4e1",
+            "damage": 20,
+            "effective": 20,
+            "hp": 20,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 4,
+        "tick": 1165,
+        "type": "Enemy",
+        "actor": "w4e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 40,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1195,
+        "type": "Enemy",
+        "actor": "w4e4",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 50,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1205,
+        "type": "Player",
+        "turn": 13,
+        "command": "Sweep",
+        "apBefore": 4,
+        "apAfter": 1,
+        "events": [
+          {
+            "id": "w4e1",
+            "damage": 24,
+            "effective": 20,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w4e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w4e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 28,
+            "broken": false
+          },
+          {
+            "id": "w4e4",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 38,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 4,
+        "tick": 1235,
+        "type": "Enemy",
+        "actor": "w4e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1265,
+        "type": "Enemy",
+        "actor": "w4e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 1,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1295,
+        "type": "Player",
+        "turn": 14,
+        "command": "Basic",
+        "apBefore": 2,
+        "apAfter": 4,
+        "events": [
+          {
+            "id": "w4e2",
+            "damage": 20,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 4,
+        "tick": 1295,
+        "type": "Enemy",
+        "actor": "w4e4",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1365,
+        "type": "Enemy",
+        "actor": "w4e3",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 4,
+        "seal": 28,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1395,
+        "type": "Player",
+        "turn": 15,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w4e4",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w4e3",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 28,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 4,
+        "tick": 1395,
+        "type": "Enemy",
+        "actor": "w4e4",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 26,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1495,
+        "type": "Enemy",
+        "actor": "w4e4",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 2,
+        "seal": 26,
+        "broken": false
+      },
+      {
+        "wave": 4,
+        "tick": 1525,
+        "type": "Player",
+        "turn": 16,
+        "command": "SealStrike",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w4e4",
+            "damage": 48,
+            "effective": 12,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 5,
+        "tick": 1585,
+        "type": "Enemy",
+        "actor": "w5e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 50,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1615,
+        "type": "Enemy",
+        "actor": "w5e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 50,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1640,
+        "type": "Player",
+        "turn": 17,
+        "command": "Basic",
+        "apBefore": 1,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w5e1",
+            "damage": 20,
+            "effective": 20,
+            "hp": 40,
+            "seal": 38,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 5,
+        "tick": 1645,
+        "type": "Enemy",
+        "actor": "w5e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 68,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1685,
+        "type": "Enemy",
+        "actor": "w5e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 5,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1715,
+        "type": "Player",
+        "turn": 18,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w5e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 38,
+            "broken": false
+          },
+          {
+            "id": "w5e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 56,
+            "broken": false
+          },
+          {
+            "id": "w5e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 26,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 5,
+        "tick": 1715,
+        "type": "Enemy",
+        "actor": "w5e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1745,
+        "type": "Enemy",
+        "actor": "w5e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 24,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1785,
+        "type": "Player",
+        "turn": 19,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w5e1",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w5e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w5e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 12,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 5,
+        "tick": 1815,
+        "type": "Enemy",
+        "actor": "w5e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 26,
+        "broken": false
+      },
+      {
+        "wave": 5,
+        "tick": 1845,
+        "type": "Enemy",
+        "actor": "w5e3",
+        "inputs": [
+          "Parry"
+        ],
+        "apAfter": 4,
+        "seal": 0,
+        "broken": true
+      },
+      {
+        "wave": 5,
+        "tick": 1915,
+        "type": "Player",
+        "turn": 20,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w5e2",
+            "damage": 24,
+            "effective": 12,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w5e3",
+            "damage": 30,
+            "effective": 30,
+            "hp": 42,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 5,
+        "tick": 1945,
+        "type": "Skip",
+        "actor": "w5e3"
+      },
+      {
+        "wave": 5,
+        "tick": 2045,
+        "type": "Player",
+        "turn": 21,
+        "command": "SealStrike",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w5e3",
+            "damage": 48,
+            "effective": 42,
+            "hp": 0,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 6,
+        "tick": 2105,
+        "type": "Enemy",
+        "actor": "w6e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 50,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2135,
+        "type": "Enemy",
+        "actor": "w6e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 0,
+        "seal": 50,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2160,
+        "type": "Player",
+        "turn": 22,
+        "command": "Basic",
+        "apBefore": 1,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w6e1",
+            "damage": 20,
+            "effective": 20,
+            "hp": 40,
+            "seal": 38,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 6,
+        "tick": 2165,
+        "type": "Enemy",
+        "actor": "w6e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 68,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2205,
+        "type": "Enemy",
+        "actor": "w6e1",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 5,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2235,
+        "type": "Player",
+        "turn": 23,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w6e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 36,
+            "seal": 38,
+            "broken": false
+          },
+          {
+            "id": "w6e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 96,
+            "seal": 56,
+            "broken": false
+          },
+          {
+            "id": "w6e1",
+            "damage": 24,
+            "effective": 24,
+            "hp": 16,
+            "seal": 26,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 6,
+        "tick": 2235,
+        "type": "Enemy",
+        "actor": "w6e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 38,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2265,
+        "type": "Enemy",
+        "actor": "w6e3",
+        "inputs": [
+          "Parry",
+          "Dodge",
+          "Perfect"
+        ],
+        "apAfter": 5,
+        "seal": 24,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2305,
+        "type": "Player",
+        "turn": 24,
+        "command": "Sweep",
+        "apBefore": 6,
+        "apAfter": 3,
+        "events": [
+          {
+            "id": "w6e1",
+            "damage": 24,
+            "effective": 16,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w6e2",
+            "damage": 24,
+            "effective": 24,
+            "hp": 12,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w6e3",
+            "damage": 24,
+            "effective": 24,
+            "hp": 72,
+            "seal": 12,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 6,
+        "tick": 2335,
+        "type": "Enemy",
+        "actor": "w6e2",
+        "inputs": [
+          "Dodge"
+        ],
+        "apAfter": 3,
+        "seal": 26,
+        "broken": false
+      },
+      {
+        "wave": 6,
+        "tick": 2365,
+        "type": "Enemy",
+        "actor": "w6e3",
+        "inputs": [
+          "Parry"
+        ],
+        "apAfter": 4,
+        "seal": 0,
+        "broken": true
+      },
+      {
+        "wave": 6,
+        "tick": 2435,
+        "type": "Player",
+        "turn": 25,
+        "command": "Sweep",
+        "apBefore": 5,
+        "apAfter": 2,
+        "events": [
+          {
+            "id": "w6e2",
+            "damage": 24,
+            "effective": 12,
+            "hp": 0,
+            "seal": 26,
+            "broken": false
+          },
+          {
+            "id": "w6e3",
+            "damage": 30,
+            "effective": 30,
+            "hp": 42,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      },
+      {
+        "wave": 6,
+        "tick": 2465,
+        "type": "Skip",
+        "actor": "w6e3"
+      },
+      {
+        "wave": 6,
+        "tick": 2565,
+        "type": "Player",
+        "turn": 26,
+        "command": "SealStrike",
+        "apBefore": 3,
+        "apAfter": 0,
+        "events": [
+          {
+            "id": "w6e3",
+            "damage": 48,
+            "effective": 42,
+            "hp": 0,
+            "seal": 100,
+            "broken": false
+          }
+        ]
+      }
+    ]
+  }
+}
