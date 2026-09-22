@@ -188,8 +188,11 @@ namespace Rokas.EditorTools.Tests
             Assert.That(method, Does.Contain("TryHandleSceneComposerPlaquePointer"));
             Assert.That(pointer, Does.Contain("EventType.MouseDown"));
             Assert.That(pointer, Does.Contain("EventType.MouseUp"));
-            Assert.That(method, Does.Not.Contain("ComposerAdvanceDialogue();\n            currentEvent.Use();"),
-                "Playback must not advance generically on the first plaque MouseDown.");
+            int mouseUpGate = method.IndexOf("currentEvent.type != EventType.MouseUp", StringComparison.Ordinal);
+            int genericAdvance = method.IndexOf("ComposerAdvanceDialogue();", StringComparison.Ordinal);
+            Assert.That(mouseUpGate, Is.GreaterThanOrEqualTo(0));
+            Assert.That(genericAdvance, Is.GreaterThan(mouseUpGate),
+                "Generic panel advance is allowed only after the MouseUp gate; plaque MouseDown is consumed first.");
         }
 
         [Test]
