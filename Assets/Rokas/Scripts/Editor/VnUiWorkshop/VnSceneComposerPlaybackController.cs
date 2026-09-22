@@ -965,7 +965,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         ? project.scenes[CurrentSceneIndex]
                         : CreatePreviewBaseline();
                 ResetScene(targetIndex, playMedia, source, true,
-                    preserveCompatibleVideoTimeline, false, true);
+                    preserveCompatibleVideoTimeline);
                 return;
             }
 

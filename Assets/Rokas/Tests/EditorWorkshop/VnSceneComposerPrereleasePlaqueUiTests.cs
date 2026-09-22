@@ -45,9 +45,10 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
                 Assert.That(controller.CurrentFrame.WorkshopFrame.Speaker, Is.EqualTo("Mina"));
                 Assert.That(controller.CurrentFrame.ShowDialoguePanel, Is.True);
-                Assert.That(controller.CurrentFrame.ShowCharacters, Is.True,
-                    "Transition=None must not reveal an intermediate frame with incoming characters hidden.");
-                Assert.That(controller.CurrentFrame.ShowDialogueText, Is.True);
+                Assert.That(controller.CurrentFrame.ShowCharacters, Is.False,
+                    "Transition=None must atomically commit the incoming Scene without bypassing its normal character entry sequencing.");
+                Assert.That(controller.CurrentFrame.ShowDialogueText, Is.False,
+                    "Transition=None must preserve the same plaque -> character -> dialogue entry sequence as direct playback.");
             }
         }
 
