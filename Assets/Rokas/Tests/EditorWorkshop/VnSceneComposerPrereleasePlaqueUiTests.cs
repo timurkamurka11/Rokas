@@ -180,11 +180,14 @@ namespace Rokas.EditorTools.Tests
         [Test]
         public void PlaybackInput_UsesPressReleaseAndConsumesPlaqueActions()
         {
-            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
-            string method = ExtractMethodBody(source, "private void HandleSceneComposerPlaybackInput");
+            string authoring = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string method = ExtractMethodBody(authoring, "private void HandleSceneComposerPlaybackInput");
+            string interaction = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerPlaqueInteraction.cs");
+            string pointer = ExtractMethodBody(interaction, "private bool TryHandleSceneComposerPlaquePointer");
+
             Assert.That(method, Does.Contain("TryHandleSceneComposerPlaquePointer"));
-            Assert.That(method, Does.Contain("EventType.MouseDown"));
-            Assert.That(method, Does.Contain("EventType.MouseUp"));
+            Assert.That(pointer, Does.Contain("EventType.MouseDown"));
+            Assert.That(pointer, Does.Contain("EventType.MouseUp"));
             Assert.That(method, Does.Not.Contain("ComposerAdvanceDialogue();\n            currentEvent.Use();"),
                 "Playback must not advance generically on the first plaque MouseDown.");
         }
