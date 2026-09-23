@@ -182,9 +182,13 @@ Say ('TREE=' + $Tree)
 Say ('CI_RUN=' + $CiRun)
 if (-not (Test-Path -LiteralPath $Source -PathType Container)) { Stop-With ('Missing fixed source: ' + $Source) }
 if (-not (Test-Path -LiteralPath (Join-Path $Source '.git'))) { Stop-With ('Source is not a Git checkout: ' + $Source) }
-$gitCommand = Get-Command -Name git.exe -CommandType Application -ErrorAction SilentlyContinue
+$gitCommand = Get-Command -Name git.exe -CommandType Application -ErrorAction SilentlyContinue |
+    Select-Object -First 1
 if ($null -eq $gitCommand) { Stop-With 'git.exe was not found on PATH.' }
 $script:GitExecutable = $gitCommand.Source
+if (-not (Test-Path -LiteralPath $script:GitExecutable -PathType Leaf)) {
+    Stop-With ('Resolved git.exe path does not exist: ' + $script:GitExecutable)
+}
 $sourceStatus = Get-GitOutput -Arguments @('-C', $Source, 'status', '--porcelain=v1', '--untracked-files=all')
 Say ('SOURCE_STATUS=' + $(if ($sourceStatus) { 'PRESERVED_WITH_LOCAL_CHANGES' } else { 'CLEAN' }))
 
