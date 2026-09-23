@@ -43,14 +43,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Mute = Center(right - 2 * gap, y, diameter),
                 Forward = Center(right - gap, y, diameter),
                 Menu = Center(right, y, diameter),
-                Triangle = Center(p.x + p.width * .946f, Mathf.Max(24f, p.y + p.height * .23f), diameter * .45f)
+                Triangle = Center(p.x + p.width * .936f, Mathf.Max(24f, p.y + p.height * .23f), diameter * .72f)
             };
         }
         private static Rect Center(float x, float y, float size) { return new Rect(x-size*.5f,y-size*.5f,size,size); }
         public static VnSceneComposerTriangleSample SampleTriangle(float unscaledSeconds)
         {
             float wave = Mathf.Sin(unscaledSeconds * (Mathf.PI * 2f / .75f));
-            return new VnSceneComposerTriangleSample { OffsetY = wave * 4f, Scale = 1f + wave * .10f, Alpha = .85f + wave * .15f };
+            return new VnSceneComposerTriangleSample
+            {
+                OffsetY = wave * 6f,
+                Scale = 1f + wave * .12f,
+                Alpha = .82f + wave * .18f
+            };
+        }
+
+        public static Color CompletionIndicatorColor(float alpha)
+        {
+            return new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
         }
         public static VnSceneComposerButtonSample SampleButton(Rect baseline, bool hover, bool pressed, bool enabled, float progress)
         {
