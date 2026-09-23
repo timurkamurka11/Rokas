@@ -349,7 +349,15 @@ namespace Rokas.EditorTools.Tests
                 {
                     controller.PlayFromHere(0);
                     controller.Next();
-                    Assert.That(factory.Created[factory.Created.Count - 1].Reference, Is.EqualTo("B.mp4"));
+
+                    ReliabilityVideoPreview target =
+                        factory.Created.Find(preview => preview.Reference == "B.mp4");
+                    Assert.That(target, Is.Not.Null,
+                        "The incoming B request must be opened even when outgoing A is retained as the source frame.");
+                    Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                    Assert.That(controller.CurrentMediaTexture, Is.SameAs(target.texture),
+                        "The authoritative target texture must be B; factory creation order may end with retained outgoing A.");
+                    Assert.That(target.PlayCalls, Is.GreaterThanOrEqualTo(1));
                 }
             });
         }
