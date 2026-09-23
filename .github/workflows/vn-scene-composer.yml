@@ -119,6 +119,78 @@ jobs:
           checkName: Scene Composer M-TRANSITION EditMode
           artifactsPath: artifacts-vn-scene-composer-mtransition
 
+      - name: Run PRE-RELEASE plaque transition fixture
+        id: prerelease-ui-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPrereleaseUiTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer PRE-RELEASE UI EditMode
+          artifactsPath: artifacts-vn-prerelease-ui
+
+      - name: Run native plaque controller fixture
+        id: plaque-controls-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPlaqueControlsTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer Plaque Controls EditMode
+          artifactsPath: artifacts-vn-plaque-controls
+
+      - name: Run plaque layout and DialogueComplete visual contract fixture
+        id: plaque-layout-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerPlaqueLayoutTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer Plaque Layout EditMode
+          artifactsPath: artifacts-vn-plaque-layout
+
+      - name: Run atomic video and menu-resume fixture
+        id: atomic-video-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerAtomicVideoTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Scene Composer Atomic Video EditMode
+          artifactsPath: artifacts-vn-atomic-video
+
       - name: Run M-VIDEO reliability fixture
         id: mvideo-tests
         uses: game-ci/unity-test-runner@v4
@@ -509,6 +581,10 @@ jobs:
         with:
           name: vn-scene-composer-editmode-${{ github.sha }}
           path: |
+            artifacts-vn-prerelease-ui
+            artifacts-vn-plaque-controls
+            artifacts-vn-plaque-layout
+            artifacts-vn-atomic-video
             artifacts-vn-scene-composer-mcharacter
             artifacts-vn-scene-composer-mvideo
             artifacts-vn-scene-composer-maudio
