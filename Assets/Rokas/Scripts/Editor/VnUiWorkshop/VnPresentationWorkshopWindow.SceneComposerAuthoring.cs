@@ -423,9 +423,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Vector2 logicalPoint = VnPresentationWorkshopPreviewRenderer.PreviewToLogical(
                 previewRect, currentEvent.mousePosition, frame);
             bool dialoguePanelHit = frame.DialoguePanel.Contains(logicalPoint);
-            bool nextHit = frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint);
-            if (!dialoguePanelHit && !nextHit) return;
+            if (!dialoguePanelHit) return;
 
+            // The old invisible Next rectangle is not a runtime control anymore.
+            // Visible Forward/Triangle controls consume their own IMGUI pointer event;
+            // an ordinary plaque click keeps the existing dialogue-advance behavior.
             _sceneComposerPlayback.RequestAdvance(_sceneComposerPlayback.InputTick);
             SyncSceneComposerSelectionFromPlayback();
             SyncSelectedDialogueBeatFromPlayback();
