@@ -154,6 +154,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private bool sceneTransitionVideoPrepareRequested;
         private VnSceneComposerScene sceneTransitionSourceScene;
         private VnSceneComposerPlaybackFrame outgoingPresentation;
+        private bool sceneTransitionAtomicNoneAwaitingVideo;
+        private VnSceneComposerVideoPreview pendingAtomicNoneVideoPreview;
+        private bool ownsPendingAtomicNoneVideoPreview;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
         {
@@ -188,7 +191,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public int GetAdditionalAudioCueSourceInstanceId(string cueId) { return layeredAudioPlayback.GetSourceInstanceId(cueId); }
         public float GetAdditionalAudioCueElapsedSeconds(string cueId) { return layeredAudioPlayback.GetElapsedSeconds(cueId); }
         public float GetAdditionalAudioCueCurrentVolume(string cueId) { return layeredAudioPlayback.GetCurrentVolume(cueId); }
-        public bool IsSceneTransitionActive { get { return sceneBoundaryTransitionPhase != SceneBoundaryTransitionPhase.None; } }
+        public bool IsSceneTransitionActive
+        {
+            get { return sceneTransitionAtomicNoneAwaitingVideo ||
+                         sceneBoundaryTransitionPhase != SceneBoundaryTransitionPhase.None; }
+        }
         public bool SceneTransitionInputLocked { get { return IsSceneTransitionActive; } }
         public bool SceneTransitionHasSwapped { get { return sceneTransitionHasSwapped; } }
         public int PendingSceneTransitionTargetIndex { get { return pendingSceneTransitionTargetIndex; } }
@@ -739,7 +746,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private VnSceneComposerSceneTransitionOverlaySample BuildSceneBoundaryOverlaySample()
         {
-            if (!IsSceneTransitionActive)
+            // A pending Transition=None video preparation is transport state only:
+            // it must never paint a curtain/black cover over the outgoing frame.
+            if (sceneTransitionAtomicNoneAwaitingVideo || !IsSceneTransitionActive)
                 return new VnSceneComposerSceneTransitionOverlaySample
                 {
                     Active = false,
@@ -921,6 +930,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
+                // Transition=None must remain a coherent same-frame swap. If the
+                // destination is a NEW external video that is not ready yet, prewarm it
+                // without changing CurrentSceneIndex or the outgoing rendered frame.
+                if (TryBeginAtomicNoneVideoWait(
+                        targetIndex, playMedia, preserveCompatibleVideoTimeline))
+                    return;
+
                 ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), true,
                     preserveCompatibleVideoTimeline, suppressSceneEntryPresentation: true);
                 return;
@@ -961,6 +977,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (!IsSceneTransitionActive) return;
             musicPlayback.Advance(deltaSeconds);
             layeredAudioPlayback.Advance(deltaSeconds);
+
+            if (sceneTransitionAtomicNoneAwaitingVideo)
+            {
+                AdvanceAtomicNoneVideoWait(deltaSeconds);
+                return;
+            }
+
             if (sceneTransitionHasSwapped) TryRecoverCurrentVideoPlayback();
             float remaining = Mathf.Max(0f, deltaSeconds);
             int safety = 0;
@@ -1030,6 +1053,152 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CancelSceneBoundaryTransition();
                 return;
             }
+        }
+
+        private bool TryBeginAtomicNoneVideoWait(
+            int targetIndex, bool playMedia, bool preserveCompatibleVideoTimeline)
+        {
+            VnSceneComposerScene target = project.scenes[targetIndex];
+            if (target == null || target.media == null ||
+                target.media.kind != VnSceneComposerMediaKind.ExternalVideo)
+                return false;
+
+            // Same-video continuity already has an authoritative reusable preview.
+            if (CanReuseVideoPreview(target))
+                return false;
+
+            VnSceneComposerVideoPreview pending;
+            bool ownsPending = false;
+            if (!VnSceneComposerPreparedVideoRegistry.TryBorrow(project, target, out pending))
+            {
+                pending = VnSceneComposerMediaEditing.OpenVideoPreview(target.media, 1280, 720);
+                ownsPending = true;
+            }
+
+            if (pending == null)
+                return false;
+
+            if (!string.IsNullOrEmpty(pending.warning))
+            {
+                if (ownsPending) pending.Dispose();
+                return false;
+            }
+
+            outgoingPresentation = CurrentFrame;
+            sceneTransitionSourceScene =
+                CurrentSceneIndex >= 0 && CurrentSceneIndex < project.scenes.Count
+                    ? project.scenes[CurrentSceneIndex]
+                    : CreatePreviewBaseline();
+            pendingSceneTransitionTargetIndex = targetIndex;
+            sceneTransitionPlayMedia = playMedia;
+            sceneTransitionPreserveCompatibleVideoTimeline = preserveCompatibleVideoTimeline;
+            sceneTransitionVideoWaitElapsed = 0f;
+            sceneTransitionVideoPrepareRequested = true;
+            sceneTransitionHasSwapped = false;
+            sceneTransitionAtomicNoneAwaitingVideo = true;
+            pendingAtomicNoneVideoPreview = pending;
+            ownsPendingAtomicNoneVideoPreview = ownsPending;
+
+            // Prepare exactly once. A registry-borrowed in-flight preview simply keeps
+            // its existing request; VnSceneComposerVideoPreview.Prepare is idempotent.
+            pending.Prepare();
+
+            if (pending.IsReadyForCurrentRequest)
+            {
+                CommitAtomicNoneVideoSwap();
+                return true;
+            }
+
+            RebuildFrame(SceneElapsedSeconds, true);
+            return true;
+        }
+
+        private void AdvanceAtomicNoneVideoWait(float deltaSeconds)
+        {
+            VnSceneComposerVideoPreview pending = pendingAtomicNoneVideoPreview;
+            if (pending == null)
+            {
+                CancelSceneBoundaryTransition();
+                RebuildFrame(SceneElapsedSeconds, true);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(pending.warning) || pending.HasFailed)
+            {
+                currentVideoWarning = !string.IsNullOrEmpty(pending.warning)
+                    ? pending.warning
+                    : "Подготовка следующего видео завершилась ошибкой.";
+                CancelSceneBoundaryTransition();
+                RebuildFrame(SceneElapsedSeconds, true);
+                return;
+            }
+
+            if (pending.IsReadyForCurrentRequest)
+            {
+                CommitAtomicNoneVideoSwap();
+                return;
+            }
+
+            sceneTransitionVideoWaitElapsed += Mathf.Max(0f, deltaSeconds);
+            if (sceneTransitionVideoWaitElapsed >= MaxVideoPreparationHoldSeconds)
+            {
+                currentVideoWarning =
+                    "Подготовка следующего видео не завершилась вовремя. Исходящая сцена сохранена.";
+                pending.AbortCurrentRequest(currentVideoWarning);
+                CancelSceneBoundaryTransition();
+                RebuildFrame(SceneElapsedSeconds, true);
+                return;
+            }
+
+            // Keep the exact outgoing Scene/frame authoritative while waiting.
+            RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        private void CommitAtomicNoneVideoSwap()
+        {
+            if (!sceneTransitionAtomicNoneAwaitingVideo ||
+                pendingSceneTransitionTargetIndex < 0 ||
+                pendingAtomicNoneVideoPreview == null)
+                return;
+
+            int targetIndex = pendingSceneTransitionTargetIndex;
+            bool playMedia = sceneTransitionPlayMedia;
+            VnSceneComposerVideoPreview prepared = pendingAtomicNoneVideoPreview;
+            bool transferOwnership = ownsPendingAtomicNoneVideoPreview;
+            VnSceneComposerScene target = project.scenes[targetIndex];
+
+            // Register first so the existing ResetScene/OpenMedia path borrows this exact
+            // prepared request instead of opening/preparing the same target a second time.
+            VnSceneComposerPreparedVideoRegistry.Prime(project, target, prepared);
+
+            pendingAtomicNoneVideoPreview = null;
+            ownsPendingAtomicNoneVideoPreview = false;
+            sceneTransitionAtomicNoneAwaitingVideo = false;
+            sceneBoundaryTransitionPhase = SceneBoundaryTransitionPhase.None;
+            pendingSceneTransitionTargetIndex = -1;
+            sceneTransitionVideoPrepareRequested = false;
+            sceneTransitionVideoWaitElapsed = 0f;
+            sceneTransitionHasSwapped = false;
+            sceneTransitionSourceScene = null;
+            outgoingPresentation = null;
+
+            // The target video is already ready, so no outgoing-video retention is needed
+            // for this atomic commit even when the caller came from auto-advance.
+            ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), true,
+                false, suppressSceneEntryPresentation: true);
+
+            if (ReferenceEquals(videoPreview, prepared))
+                ownsVideoPreview = transferOwnership;
+            else if (transferOwnership)
+                prepared.Dispose();
+        }
+
+        private void ReleasePendingAtomicNoneVideo()
+        {
+            if (pendingAtomicNoneVideoPreview != null && ownsPendingAtomicNoneVideoPreview)
+                pendingAtomicNoneVideoPreview.Dispose();
+            pendingAtomicNoneVideoPreview = null;
+            ownsPendingAtomicNoneVideoPreview = false;
         }
 
         private void PerformCoveredSceneSwap()
@@ -1134,6 +1303,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void CancelSceneBoundaryTransition()
         {
+            ReleasePendingAtomicNoneVideo();
+            sceneTransitionAtomicNoneAwaitingVideo = false;
             sceneBoundaryTransitionPhase = SceneBoundaryTransitionPhase.None;
             pendingSceneTransitionTargetIndex = -1;
             sceneTransitionPhaseElapsed = 0f;
@@ -1143,6 +1314,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionVideoPrepareRequested = false;
             sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionSourceScene = null;
+            outgoingPresentation = null;
             sceneTransitionHasSwapped = false;
         }
 
