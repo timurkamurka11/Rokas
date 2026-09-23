@@ -44,8 +44,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Vector2 size = visual.size * sample.Scale;
             visual = new Rect(visual.center - size * .5f, size);
             Color before = Handles.color;
-            Handles.color = new Color(.55f, .9f, 1f, sample.Alpha);
-            Handles.DrawAAConvexPolygon(new Vector3(visual.x,visual.y),new Vector3(visual.xMax,visual.y),new Vector3(visual.center.x,visual.yMax));
+            // Bright white completion cue with a soft halo; draw after the plaque/text
+            // so it cannot disappear behind either layer.
+            Handles.color = new Color(1f, 1f, 1f, sample.Alpha * .22f);
+            Rect halo = new Rect(visual.center - visual.size * .68f, visual.size * 1.36f);
+            Handles.DrawAAConvexPolygon(
+                new Vector3(halo.x, halo.y),
+                new Vector3(halo.xMax, halo.y),
+                new Vector3(halo.center.x, halo.yMax));
+            Handles.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(sample.Alpha);
+            Handles.DrawAAConvexPolygon(
+                new Vector3(visual.x, visual.y),
+                new Vector3(visual.xMax, visual.y),
+                new Vector3(visual.center.x, visual.yMax));
             Handles.color = before;
             using (new EditorGUI.DisabledScope(!enabled))
                 if (GUI.Button(hit, new GUIContent(string.Empty,"Реплика завершена — далее"), GUIStyle.none)) owner.RequestAdvance(owner.InputTick);
