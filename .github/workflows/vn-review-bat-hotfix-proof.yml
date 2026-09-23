@@ -6,6 +6,7 @@ on:
       - codex/vn-review-bat-hotfix-proof
     paths:
       - .github/workflows/vn-review-bat-hotfix-proof.yml
+      - .ci/vn-review-bat-hotfix/ROKAS_VN_PRERELEASE_UI_ASSETFIX_REVIEW_6598145_CLASSIC_FIXED_V2_HOTFIX.bat
 
 permissions:
   contents: read
