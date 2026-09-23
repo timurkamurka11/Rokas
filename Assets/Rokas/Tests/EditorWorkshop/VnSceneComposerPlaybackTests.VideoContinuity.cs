@@ -179,7 +179,6 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(outgoing.HasVisibleFrame, Is.True,
                     "Scene A must have a real visible outgoing frame before the boundary probe starts.");
 
-                VnSceneComposerPlaybackFrame outgoingFrame = controller.CurrentFrame;
                 controller.Advance(100f);
 
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
@@ -198,8 +197,13 @@ namespace Rokas.EditorTools.Tests
                     "Outgoing A must remain alive while B prepares so its last valid frame can stay visible.");
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(outgoingTexture),
                     "Until B has a visible frame, playback must keep routing A's valid outgoing texture.");
-                Assert.That(controller.CurrentFrame.WorkshopFrame, Is.SameAs(outgoingFrame.WorkshopFrame),
-                    "The exact outgoing rendered composition must remain authoritative while B prepares.");
+
+                VnWorkshopPreviewFrame frozenOutgoing = controller.CurrentFrame.WorkshopFrame;
+                controller.Advance(.5f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(controller.CurrentMediaTexture, Is.SameAs(outgoingTexture));
+                Assert.That(controller.CurrentFrame.WorkshopFrame, Is.SameAs(frozenOutgoing),
+                    "Once the ordered boundary has frozen Scene A, that exact rendered composition must remain authoritative for the entire B preparation wait.");
 
                 target.CompletePreparation();
                 controller.Advance(0f);
