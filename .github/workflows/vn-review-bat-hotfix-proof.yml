@@ -1,0 +1,50 @@
+name: VN review BAT hotfix preparation proof
+
+on:
+  push:
+    branches:
+      - codex/vn-review-bat-hotfix-proof
+    paths:
+      - .github/workflows/vn-review-bat-hotfix-proof.yml
+
+permissions:
+  contents: read
+
+jobs:
+  windows-preparation:
+    name: Windows BAT preparation through migration entry
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Exercise the actual BAT through exact fetch and checkout
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = 'D:\Rokas\Rokas'
+          $bat = Join-Path $env:GITHUB_WORKSPACE '.ci\vn-review-bat-hotfix\ROKAS_VN_PRERELEASE_UI_ASSETFIX_REVIEW_6598145_CLASSIC_FIXED_V2_HOTFIX.bat'
+          if (-not (Test-Path -LiteralPath $bat -PathType Leaf)) { throw "Missing BAT: $bat" }
+          New-Item -ItemType Directory -Force -Path 'D:\Rokas' | Out-Null
+          & git clone --no-hardlinks --no-checkout $env:GITHUB_WORKSPACE $source
+          if ($LASTEXITCODE -ne 0) { throw 'Could not prepare read-only source clone for BAT proof.' }
+          $env:ROKAS_HOTFIX_PROOF = '1'
+          $stdout = Join-Path $env:RUNNER_TEMP 'vn-bat-hotfix-stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'vn-bat-hotfix-stderr.log'
+          $command = 'call "' + $bat + '"'
+          $process = Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/c',$command) -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $output = Get-Content -Raw -LiteralPath $stdout
+          $errors = Get-Content -Raw -LiteralPath $stderr
+          Write-Host $output
+          if ($errors) { Write-Host $errors }
+          foreach ($marker in @('PREP_START','FETCH_PASS','CHECKOUT_PASS','HEAD_PASS','TREE_PASS','MIGRATION_START')) {
+            if ($output -notmatch [regex]::Escape($marker)) { throw "Missing preparation marker: $marker" }
+          }
+          if ($output -match '(?i)call depth overflow|script failed due to call depth overflow') {
+            throw 'Original recursive Git-function error recurred.'
+          }
+          if ($process.ExitCode -ne 1 -or $output -notmatch 'No saved project with ID 3cc2bc9ec7974ea7a5f4d074683bed61') {
+            throw ('Unexpected BAT result; expected fail-closed at real project source absent in CI. Exit=' + $process.ExitCode)
+          }
+          Write-Host 'BAT_PREPARATION_THROUGH_MIGRATION_START=PASS'
+          Write-Host 'CALL_DEPTH_OVERFLOW=ABSENT'
+          Write-Host 'REAL_PROJECT_DATA=NOT_AVAILABLE_ON_WINDOWS_RUNNER'
