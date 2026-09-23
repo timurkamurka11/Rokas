@@ -272,6 +272,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        public virtual void ResumePresentation()
+        {
+            if (player == null || !player.isPrepared) return;
+            playRequested = true;
+            player.Play();
+        }
+
         public virtual void Pause()
         {
             playRequested = false;

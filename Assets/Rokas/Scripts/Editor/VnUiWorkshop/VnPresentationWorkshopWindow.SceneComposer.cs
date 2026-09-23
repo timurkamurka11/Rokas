@@ -913,8 +913,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         _sceneComposerUiFeedbackPreviewState,
                         _sceneComposerUiFeedbackPreviewProgress);
                 }
-                VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, advancedLayout,
-                    uiFeedbackElement, uiFeedbackSample);
+                if (staticAuthoringPreview)
+                {
+                    VnPresentationWorkshopPreviewRenderer.Draw(previewRect, frame, selectedUi, advancedLayout,
+                        uiFeedbackElement, uiFeedbackSample);
+                }
+                else
+                {
+                    // Playback must go through the playback-frame overload so the renderer
+                    // registers the authoritative controller/visibility state before drawing
+                    // plaque controls and the DialogueComplete indicator.
+                    VnPresentationWorkshopPreviewRenderer.Draw(
+                        previewRect, _sceneComposerPlayback.CurrentFrame, selectedUi, advancedLayout);
+                }
                 if (staticAuthoringPreview)
                 {
                     DrawSceneComposerSelectionOverlay(previewRect, frame);

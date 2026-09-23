@@ -121,7 +121,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Vector2 ScreenSize { get; }
         public Vector2 VirtualCanvasSize { get; }
         public Texture2D BackgroundTexture { get; internal set; }
-        public Texture2D DialoguePanelTexture { get; }
+        public Texture2D DialoguePanelTexture { get; internal set; }
+        public bool IsComposerFrame { get; internal set; }
         public string DialoguePanelWarning { get; internal set; } = string.Empty;
         public Font Font { get; }
         public Font DialogueFont { get; }
@@ -378,12 +379,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         ShouldReplaceIndependentUiFeedbackControl(
                             uiFeedbackElement.Value, VnWorkshopElement.Next, uiFeedbackSample.Value);
 
-                    if (!replaceBack)
+                    if (!frame.IsComposerFrame && !replaceBack)
                         DrawText(LogicalToPreview(localCanvas, frame.Back, frame), "‹", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
-                    if (!replaceNext)
+                    if (!frame.IsComposerFrame && !replaceNext)
                         DrawText(LogicalToPreview(localCanvas, frame.Next, frame), "›", frame.DialogueFont, 34, FontStyle.Bold, TextAnchor.MiddleCenter);
 
-                    if (showHitRegions)
+                    if (showHitRegions && !frame.IsComposerFrame)
                     {
                         DrawHitRegion(localCanvas, frame, frame.MuteHitRegion, "Mute — Baked into panel");
                         DrawHitRegion(localCanvas, frame, frame.PauseHitRegion, "Pause — Baked into panel");
@@ -398,7 +399,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
 
                 if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
+                if (ShouldDrawRegisteredPlaybackDialoguePanel(frame)) DrawComposerRuntimeControls(localCanvas, frame);
                 TryDrawRegisteredSceneTransitionOverlay(localCanvas, frame);
+                DrawComposerMenu(localCanvas, frame);
             }
             finally { GUI.EndGroup(); }
         }
