@@ -63,12 +63,8 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MF2_DefaultProjectUsesExistingDialoguePanelVisual()
+        public void MF2_DefaultComposerProjectUsesCanonicalRokasPlaque()
         {
-            VnWorkshopPreviewFrame baseline = VnPresentationWorkshopPreviewRenderer.BuildFrame(
-                new VnPresentationWorkshopPreset(), VnWorkshopResolution.Reference1920x1080,
-                VnWorkshopPreviewScene.BusStopKeiko);
-
             var project = new VnSceneComposerProject();
             var scene = new VnSceneComposerScene();
             scene.dialogueBeats[0].speaker = "Keiko";
@@ -76,8 +72,10 @@ namespace Rokas.EditorTools.Tests
             VnWorkshopPreviewFrame composed = VnSceneComposerComposition.BuildFrame(
                 project, scene, VnWorkshopResolution.Reference1920x1080, Texture2D.blackTexture);
 
-            Assert.That(composed.DialoguePanelTexture, Is.SameAs(baseline.DialoguePanelTexture),
-                "M-F2 must not change projects that have no custom panel visual authored.");
+            string resolvedGuid = AssetDatabase.AssetPathToGUID(
+                AssetDatabase.GetAssetPath(composed.DialoguePanelTexture));
+            Assert.That(resolvedGuid, Is.EqualTo(VnSceneComposerRuntimeUi.DefaultPlaqueGuid),
+                "Uncustomized Scene Composer projects use the canonical blue ROKAS plaque; authored custom PNG panels remain unchanged.");
         }
 
         [Test]
