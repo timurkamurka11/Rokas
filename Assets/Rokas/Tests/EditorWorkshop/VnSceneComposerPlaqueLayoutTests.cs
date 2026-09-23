@@ -51,6 +51,22 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Value<float>(a,"Alpha"), Is.Not.EqualTo(Value<float>(b,"Alpha")));
             Assert.That(Value<float>(a,"OffsetY"), Is.EqualTo(Value<float>(end,"OffsetY")).Within(.001f));
         }
+        [Test] public void CompletionIndicatorIsBrightWhiteAndLargeEnoughToNotice()
+        {
+            var f = Frame();
+            object layout = Static("Layout", f);
+            Rect forward = Value<Rect>(layout, "Forward");
+            Rect triangle = Value<Rect>(layout, "Triangle");
+            Assert.That(triangle.width / forward.width, Is.GreaterThanOrEqualTo(.68f),
+                "DialogueComplete indicator must be large enough to notice beside the plaque controls.");
+
+            Color color = (Color)Static("CompletionIndicatorColor", .9f);
+            Assert.That(color.r, Is.EqualTo(1f).Within(.0001f));
+            Assert.That(color.g, Is.EqualTo(1f).Within(.0001f));
+            Assert.That(color.b, Is.EqualTo(1f).Within(.0001f));
+            Assert.That(color.a, Is.EqualTo(.9f).Within(.0001f));
+        }
+
         [Test] public void PressAndHoverChangeVisualSampleNotAuthoredRect()
         {
             Rect original=new Rect(10,20,60,60);
