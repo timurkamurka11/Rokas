@@ -65,8 +65,11 @@ namespace Rokas.EditorTools.Tests
                 c.PlayFromHere(0); c.Advance(3f); c.Next();
 
                 Assert.That(c.CurrentSceneIndex, Is.EqualTo(1));
-                Assert.That(c.CurrentFrame.ComposerCharacters.Length, Is.EqualTo(1),
-                    "Transition=None must atomically commit the incoming character data in the target frame.");
+                Assert.That(
+                    Array.Exists(c.CurrentFrame.ComposerCharacters,
+                        character => string.Equals(character.StateId, "mina_neutral", StringComparison.Ordinal)),
+                    Is.True,
+                    "Transition=None must atomically commit the incoming Mina character data in the target frame.");
                 Assert.That(c.CurrentFrame.ShowDialoguePanel, Is.True);
                 Assert.That(c.CurrentFrame.ShowCharacters, Is.False,
                     "Transition=None must preserve the canonical plaque-then-characters Scene-entry gate.");
@@ -74,8 +77,12 @@ namespace Rokas.EditorTools.Tests
                 c.Advance(.08f);
 
                 Assert.That(c.CurrentFrame.ShowCharacters, Is.True);
-                Assert.That(c.CurrentFrame.ComposerCharacters.Length, Is.EqualTo(1));
-                Assert.That(c.CurrentFrame.ComposerCharacters[0].Alpha, Is.GreaterThan(.99f));
+                VnWorkshopPreviewCharacter incomingMina = Array.Find(
+                    c.CurrentFrame.ComposerCharacters,
+                    character => string.Equals(character.StateId, "mina_neutral", StringComparison.Ordinal));
+                Assert.That(incomingMina, Is.Not.Null,
+                    "Incoming Mina must remain present when the character gate opens.");
+                Assert.That(incomingMina.Alpha, Is.GreaterThan(.99f));
             }
         }
         [Test]
