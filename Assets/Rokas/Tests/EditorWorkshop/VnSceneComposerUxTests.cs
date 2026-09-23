@@ -233,18 +233,26 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MD_PlaybackPreviewNextRoutesDialogueWithoutChangingToolbarSceneNext()
+        public void MD_PlaybackPreviewForwardRoutesDialogueWithoutChangingToolbarSceneNext()
         {
             string sceneSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
             string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string rendererSource = ReadEditorSource("VnPresentationWorkshopPreviewRenderer.RuntimeUi.cs");
             string preview = ExtractMethodBody(sceneSource, "private void DrawSceneComposerPreview()");
             string playbackInput = ExtractMethodBody(authoringSource,
                 "private void HandleSceneComposerPlaybackInput(");
+            string forwardButton = ExtractMethodBody(rendererSource,
+                "private static void DrawPlaqueButton(");
 
             Assert.That(preview, Does.Contain("HandleSceneComposerPlaybackInput(previewRect, frame, Event.current);"),
-                "During active playback, the renderer-facing Next hit region must route dialogue progression.");
-            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"));
-            Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
+                "During active playback, ordinary plaque clicks must still route dialogue progression.");
+            Assert.That(preview, Does.Contain("previewRect, _sceneComposerPlayback.CurrentFrame, selectedUi, advancedLayout"),
+                "Playback must register the controller with the renderer before drawing native controls.");
+            Assert.That(forwardButton, Does.Contain("GUI.Button(hit,").And.Contain("index == 1) owner.RequestAdvance(owner.InputTick);"),
+                "The visible Forward button must use its own hitbox and authoritative dialogue command.");
+            Assert.That(playbackInput, Does.Contain("_sceneComposerPlayback.RequestAdvance(_sceneComposerPlayback.InputTick);"));
+            Assert.That(playbackInput, Does.Not.Contain("VnWorkshopElement.Next"),
+                "The removed invisible Next rectangle must not handle playback clicks.");
             Assert.That(playbackInput, Does.Not.Contain("ComposerSelectPreviewObjectAt"),
                 "Playback clicking must not enable authoring selection/drag behavior.");
             Assert.That(playbackInput, Does.Not.Contain("RecordSceneComposerUndo"),
@@ -254,17 +262,24 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void MDREG_PlaybackDialoguePanelAndNextBothAdvanceDialogue()
+        public void MDREG_PlaybackDialoguePanelAndForwardBothAdvanceDialogue()
         {
             string authoringSource = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposerAuthoring.cs");
+            string rendererSource = ReadEditorSource("VnPresentationWorkshopPreviewRenderer.RuntimeUi.cs");
             string playbackInput = ExtractMethodBody(authoringSource,
                 "private void HandleSceneComposerPlaybackInput(");
+            string controls = ExtractMethodBody(rendererSource,
+                "private static void DrawComposerRuntimeControls(");
+            string button = ExtractMethodBody(rendererSource,
+                "private static void DrawPlaqueButton(");
 
             Assert.That(playbackInput, Does.Contain("frame.DialoguePanel"),
                 "Normal playback must treat the visible dialogue panel as a dialogue-advance hit region.");
-            Assert.That(playbackInput, Does.Contain("VnWorkshopElement.Next"),
-                "The explicit round Next control must remain a dialogue-advance hit region.");
-            Assert.That(playbackInput, Does.Contain("ComposerAdvanceDialogue();"));
+            Assert.That(controls, Does.Contain("layout.Forward, 1"),
+                "The visible round Forward control must be drawn within the plaque layout.");
+            Assert.That(button, Does.Contain("GUI.Button(hit,").And.Contain("owner.RequestAdvance(owner.InputTick);"),
+                "The Forward hitbox must invoke the same authoritative command as the dialogue panel.");
+            Assert.That(playbackInput, Does.Contain("_sceneComposerPlayback.RequestAdvance(_sceneComposerPlayback.InputTick);"));
             Assert.That(playbackInput, Does.Contain("currentEvent.Use();"),
                 "A handled playback click must be consumed exactly as playback input.");
             Assert.That(playbackInput, Does.Not.Contain("ComposerNext();"),
