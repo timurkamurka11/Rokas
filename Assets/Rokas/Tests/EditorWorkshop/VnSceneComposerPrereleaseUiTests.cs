@@ -56,14 +56,23 @@ namespace Rokas.EditorTools.Tests
             }
         }
         [Test]
-        public void NoneBoundaryCommitsIncomingCharactersWithoutDisappearance()
+        public void NoneBoundaryCommitsIncomingCharactersThenUsesCanonicalEntryGate()
         {
             var p = Project(); p.scenes[1].transition.sceneTransitionType = VnSceneComposerSceneTransitionType.None;
             p.scenes[1].characters.Add(new VnSceneComposerCharacter { characterId = "Mina", stateId = "mina_neutral" });
             using (var c = new VnSceneComposerPlaybackController(p))
             {
                 c.PlayFromHere(0); c.Advance(3f); c.Next();
+
                 Assert.That(c.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(c.CurrentFrame.ComposerCharacters.Length, Is.EqualTo(1),
+                    "Transition=None must atomically commit the incoming character data in the target frame.");
+                Assert.That(c.CurrentFrame.ShowDialoguePanel, Is.True);
+                Assert.That(c.CurrentFrame.ShowCharacters, Is.False,
+                    "Transition=None must preserve the canonical plaque-then-characters Scene-entry gate.");
+
+                c.Advance(.08f);
+
                 Assert.That(c.CurrentFrame.ShowCharacters, Is.True);
                 Assert.That(c.CurrentFrame.ComposerCharacters.Length, Is.EqualTo(1));
                 Assert.That(c.CurrentFrame.ComposerCharacters[0].Alpha, Is.GreaterThan(.99f));
