@@ -118,7 +118,9 @@ namespace Rokas.EditorTools.Tests
                 controller.Next();
                 Assert.That(playing.DisposeCalls, Is.EqualTo(1),
                     "Switching Scene must dispose the previous target video preview.");
-                FakeVideoPreview next = factory.Created[factory.Created.Count - 1];
+                FakeVideoPreview next = factory.Created.Find(preview => preview != null && !preview.loop);
+                Assert.That(next, Is.Not.Null,
+                    "The incoming Scene B preview must be opened even if outgoing Scene A is recreated only as source-frame context.");
                 Assert.That(next.loop, Is.False, "Loop must propagate from the selected Scene media binding.");
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(next.texture));

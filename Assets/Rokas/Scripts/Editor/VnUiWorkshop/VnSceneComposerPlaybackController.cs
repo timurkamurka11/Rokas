@@ -937,8 +937,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         targetIndex, playMedia, preserveCompatibleVideoTimeline))
                     return;
 
+                // Transition=None suppresses only the old/new background blend. The
+                // incoming Scene's own bounce/stage/expression sampling must still start
+                // at Scene time zero so PlayAll matches PlayScene/PlayFromHere.
                 ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), true,
-                    preserveCompatibleVideoTimeline, suppressSceneEntryPresentation: true);
+                    preserveCompatibleVideoTimeline, suppressSceneEntryPresentation: false);
                 return;
             }
 
@@ -1184,8 +1187,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             // The target video is already ready, so no outgoing-video retention is needed
             // for this atomic commit even when the caller came from auto-advance.
+            // Media is ready, so commit atomically, then let the incoming Scene use
+            // its normal scene-local presentation clock. Only the background blend is
+            // suppressed to keep Transition=None a coherent same-frame swap.
             ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), true,
-                false, suppressSceneEntryPresentation: true);
+                false, suppressSceneEntryPresentation: false);
 
             if (ReferenceEquals(videoPreview, prepared))
                 ownsVideoPreview = transferOwnership;

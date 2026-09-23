@@ -179,11 +179,15 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(outgoing.HasVisibleFrame, Is.True,
                     "Scene A must have a real visible outgoing frame before the boundary probe starts.");
 
+                VnSceneComposerPlaybackFrame outgoingFrame = controller.CurrentFrame;
                 controller.Advance(100f);
 
-                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0),
+                    "Transition=None must not expose the incoming Scene identity before target video B is ready.");
+                Assert.That(controller.IsSceneTransitionActive, Is.True,
+                    "The atomic video wait is authoritative transition state even though it draws no curtain.");
                 Assert.That(factory.Created.Count, Is.EqualTo(2),
-                    "Different-video handoff should retain outgoing A and open only target B, not recreate A as a source player.");
+                    "The wait should open target B once while keeping outgoing A authoritative.");
                 Mc2DelayedVideoPreview target = factory.Created[1];
                 Assert.That(target.Reference, Is.EqualTo("B-delayed.mp4"));
                 Assert.That(target.PrepareCalls, Is.EqualTo(1),
@@ -193,17 +197,17 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(outgoing.DisposeCalls, Is.EqualTo(0),
                     "Outgoing A must remain alive while B prepares so its last valid frame can stay visible.");
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(outgoingTexture),
-                    "Until B has a visible frame, playback must keep routing A's valid outgoing texture instead of an empty target RenderTexture.");
-                Assert.That(controller.CurrentFrame.SourceBackground, Is.SameAs(outgoingTexture));
-                Assert.That(controller.CurrentFrame.TargetBackground, Is.SameAs(outgoingTexture),
-                    "The renderer-facing target must fall back to the retained outgoing frame while B is not visible.");
+                    "Until B has a visible frame, playback must keep routing A's valid outgoing texture.");
+                Assert.That(controller.CurrentFrame.WorkshopFrame, Is.SameAs(outgoingFrame.WorkshopFrame),
+                    "The exact outgoing rendered composition must remain authoritative while B prepares.");
 
                 target.CompletePreparation();
                 controller.Advance(0f);
 
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.IsSceneTransitionActive, Is.False);
                 Assert.That(controller.CurrentMediaTexture, Is.SameAs(target.texture),
-                    "Once B exposes a valid frame, the target texture should replace the retained outgoing fallback.");
-                Assert.That(controller.CurrentFrame.SourceBackground, Is.SameAs(outgoingTexture));
+                    "Once B exposes a valid frame, Transition=None must atomically commit the incoming target.");
                 Assert.That(controller.CurrentFrame.TargetBackground, Is.SameAs(target.texture));
             }
             finally
