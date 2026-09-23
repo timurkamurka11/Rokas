@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/vn-scene-composer
+      - codex/vn-prerelease-plaque-ui-revision-clean
   workflow_dispatch:
 
 permissions:
