@@ -416,7 +416,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Rect previewRect, VnWorkshopPreviewFrame frame, Event currentEvent)
         {
             if (currentEvent == null || frame == null || _sceneComposerPlayback == null ||
-                !_sceneComposerPlayback.IsPlaying || currentEvent.type != EventType.MouseDown ||
+                !_sceneComposerPlayback.IsPlaying || _sceneComposerPlayback.IsMenuOpen || currentEvent.type != EventType.MouseDown ||
                 currentEvent.button != 0 || !previewRect.Contains(currentEvent.mousePosition))
                 return;
 
@@ -426,7 +426,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             bool nextHit = frame.GetElementRect(VnWorkshopElement.Next).Contains(logicalPoint);
             if (!dialoguePanelHit && !nextHit) return;
 
-            ComposerAdvanceDialogue();
+            _sceneComposerPlayback.RequestAdvance(_sceneComposerPlayback.InputTick);
+            SyncSceneComposerSelectionFromPlayback();
+            SyncSelectedDialogueBeatFromPlayback();
             currentEvent.Use();
         }
 

@@ -165,6 +165,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
+        public void Resume()
+        {
+            if (disposed) return;
+            if (currentSource != null && currentSource.clip != null) currentSource.UnPause();
+            if (outgoingSource != null && outgoingSource.clip != null) outgoingSource.UnPause();
+        }
+
         public void Pause()
         {
             if (disposed) return;

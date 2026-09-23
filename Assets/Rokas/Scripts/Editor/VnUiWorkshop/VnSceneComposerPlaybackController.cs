@@ -78,6 +78,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerMediaScaleMode TargetScaleMode { get; }
         public VnSceneComposerSceneTransitionOverlaySample SceneTransitionOverlay { get; }
         public bool ShowDialogueUi { get; }
+        public VnSceneComposerPlaybackController Owner { get; internal set; }
         public bool ShowDialoguePanel { get; internal set; }
         public bool ShowCharacters { get; internal set; }
         public bool ShowDialogueText { get; internal set; }
@@ -89,7 +90,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
     }
 
-    public sealed class VnSceneComposerPlaybackController : IDisposable
+    public sealed partial class VnSceneComposerPlaybackController : IDisposable
     {
         // Deterministic presentation staging after media readiness. These are not
         // decoder sleeps: the clock starts only after the requested media is genuinely ready.
@@ -152,6 +153,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private bool sceneTransitionHasSwapped;
         private bool sceneTransitionVideoPrepareRequested;
         private VnSceneComposerScene sceneTransitionSourceScene;
+        private VnSceneComposerPlaybackFrame outgoingPresentation;
 
         public VnSceneComposerPlaybackController(VnSceneComposerProject project)
         {
@@ -319,7 +321,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void Previous()
         {
-            if (project.scenes.Count == 0 || IsSceneTransitionActive) return;
+            if (disposed || IsMenuOpen || project.scenes.Count == 0 || IsSceneTransitionActive) return;
             int target = Mathf.Clamp(CurrentSceneIndex - 1, 0, project.scenes.Count - 1);
             if (target == CurrentSceneIndex) return;
             BeginSceneBoundaryTransition(target, IsPlaying, false);
@@ -327,7 +329,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void Next()
         {
-            if (project.scenes.Count == 0 || IsSceneTransitionActive) return;
+            if (disposed || IsMenuOpen || project.scenes.Count == 0 || IsSceneTransitionActive) return;
             int target = Mathf.Clamp(CurrentSceneIndex + 1, 0, project.scenes.Count - 1);
             if (target == CurrentSceneIndex)
             {
@@ -345,6 +347,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (deltaSeconds < 0f || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds))
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds),
                     "Scene Composer playback delta must be finite and non-negative.");
+            UiElapsedSeconds += deltaSeconds;
+            InputTick++;
+            if (disposed || IsMenuOpen) return;
             if (IsSceneTransitionActive)
             {
                 AdvanceSceneBoundaryTransition(deltaSeconds);
@@ -406,7 +411,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void AdvanceDialogue()
         {
-            if (CurrentSceneIndex < 0 || IsSceneTransitionActive) return;
+            if (disposed || IsMenuOpen || CurrentSceneIndex < 0 || IsSceneTransitionActive) return;
 
             VnSceneComposerScene scene = project.scenes[CurrentSceneIndex];
             VnSceneComposerDialogueBeat activeBeat =
@@ -463,7 +468,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PreviousDialogue()
         {
-            if (CurrentSceneIndex < 0 || IsSceneTransitionActive || CurrentBeatIndex <= 0) return;
+            if (disposed || IsMenuOpen || CurrentSceneIndex < 0 || IsSceneTransitionActive || CurrentBeatIndex <= 0) return;
             suppressCurrentSceneEntryPresentation = true;
             sceneEntryPresentationEnabled = false;
             forceCompleteCurrentDialogueReveal = false;
@@ -476,6 +481,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void Dispose()
         {
             if (disposed) return;
+            SetMuted(false);
+            IsMenuOpen = false;
             disposed = true;
             IsPlaying = false;
             ReleaseMedia();
@@ -601,6 +608,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
+            // Cover owns only the curtain. Keep the exact last visible composition,
+            // including the current Beat's staging/pose, until the safe swap point.
+            if (!sceneTransitionHasSwapped && outgoingPresentation != null && IsSceneTransitionActive)
+            {
+                var frozen = outgoingPresentation;
+                CurrentFrame = new VnSceneComposerPlaybackFrame(
+                    frozen.WorkshopFrame, frozen.ComposerBackgroundTransition,
+                    frozen.SourceBackground, frozen.TargetBackground,
+                    frozen.SourceScaleMode, frozen.TargetScaleMode,
+                    BuildSceneBoundaryOverlaySample(), false);
+                CurrentFrame.Owner = this;
+                CurrentFrame.ShowDialoguePanel = frozen.ShowDialoguePanel;
+                CurrentFrame.ShowCharacters = frozen.ShowCharacters;
+                CurrentFrame.ShowDialogueText = frozen.ShowDialogueText;
+                CurrentFrame.Dialogue = frozen.Dialogue;
+                CurrentFrame.DialogueReveal = frozen.DialogueReveal;
+                return;
+            }
+
             VnSceneComposerScene targetScene = project.scenes[CurrentSceneIndex];
             VnSceneComposerScene sourceScene = currentSourceScene ?? ResolveSourceScene(CurrentSceneIndex);
             VnSceneComposerDialogueBeat targetBeat = ResolveBeat(targetScene, CurrentBeatIndex);
@@ -700,6 +726,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 targetFrame, sample.background, sourceVisual, targetVisual,
                 sourceScaleMode, targetScaleMode,
                 BuildSceneBoundaryOverlaySample(), showPanel);
+            CurrentFrame.Owner = this;
             CurrentFrame.ShowDialoguePanel = showPanel;
             CurrentFrame.ShowCharacters = showCharacters;
             CurrentFrame.ShowDialogueText = showDialogueText;
@@ -894,14 +921,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
-                if (targetIndex == 0)
-                    ResetSceneFromNeutralStart(targetIndex, playMedia);
-                else
-                    ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), false,
-                        preserveCompatibleVideoTimeline);
+                ResetScene(targetIndex, playMedia, ResolveSourceScene(targetIndex), true,
+                    preserveCompatibleVideoTimeline, suppressSceneEntryPresentation: true);
                 return;
             }
 
+            outgoingPresentation = CurrentFrame;
+            if (videoPreview != null) videoPreview.Pause();
             sceneTransitionSourceScene =
                 CurrentSceneIndex >= 0 && CurrentSceneIndex < project.scenes.Count
                     ? project.scenes[CurrentSceneIndex]
@@ -1013,6 +1039,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RequireSceneIndex(targetIndex);
             VnSceneComposerScene source = sceneTransitionSourceScene ?? CreatePreviewBaseline();
 
+            outgoingPresentation = null;
             ResetScene(targetIndex, false, source, true,
                 sceneTransitionPreserveCompatibleVideoTimeline, false, false, false, false);
 
@@ -1100,6 +1127,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneTransitionVideoPrepareRequested = false;
             sceneTransitionVideoWaitElapsed = 0f;
             sceneTransitionSourceScene = null;
+            outgoingPresentation = null;
             sceneTransitionHasSwapped = false;
             RebuildFrame(SceneElapsedSeconds, true);
         }

@@ -232,6 +232,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ReleaseCue(release[i]);
         }
 
+        public void Resume()
+        {
+            if (disposed) return;
+            foreach (ActiveCue running in active.Values)
+                if (running.source != null) running.source.UnPause();
+        }
+
         public void Pause()
         {
             if (disposed) return;

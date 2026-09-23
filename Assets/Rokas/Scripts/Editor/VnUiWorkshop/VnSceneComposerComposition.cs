@@ -102,6 +102,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopPreviewFrame frame = VnPresentationWorkshopPreviewRenderer.BuildFrame(
                 preset, resolution, baseScene, dialogue);
 
+            VnSceneComposerRuntimeUi.ConfigureFrame(frame, preset);
             frame.BackgroundTexture = backgroundOverride != null ? backgroundOverride : Texture2D.blackTexture;
             frame.Speaker = beat.narration ? string.Empty : (beat.speaker ?? string.Empty);
             frame.Dialogue = dialogue;
