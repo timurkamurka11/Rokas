@@ -317,9 +317,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             GUI.Box(previewRect, GUIContent.none);
 
             GUI.BeginGroup(canvasRect);
+            Matrix4x4 originalMatrix = GUI.matrix;
             try
             {
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
+                VnSceneComposerReplicaEffectSample replicaEffect =
+                    GetRegisteredReplicaEffectSample(frame);
+                if (replicaEffect.Active &&
+                    (replicaEffect.Offset.sqrMagnitude > .0001f ||
+                     Mathf.Abs(replicaEffect.Scale - 1f) > .0001f))
+                {
+                    Vector2 offset = new Vector2(
+                        replicaEffect.Offset.x * localCanvas.width / frame.VirtualCanvasSize.x,
+                        replicaEffect.Offset.y * localCanvas.height / frame.VirtualCanvasSize.y);
+                    Vector2 center = localCanvas.center;
+                    GUI.matrix = originalMatrix *
+                        Matrix4x4.Translate(new Vector3(center.x + offset.x, center.y + offset.y, 0f)) *
+                        Matrix4x4.Scale(new Vector3(replicaEffect.Scale, replicaEffect.Scale, 1f)) *
+                        Matrix4x4.Translate(new Vector3(-center.x, -center.y, 0f));
+                }
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
                 DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
@@ -398,12 +414,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                 }
 
-                if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
                 if (ShouldDrawRegisteredPlaybackDialoguePanel(frame)) DrawComposerRuntimeControls(localCanvas, frame);
+                GUI.matrix = originalMatrix;
+                if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
+                if (replicaEffect.Flash.a > .0001f)
+                {
+                    Color previous = GUI.color;
+                    GUI.color = replicaEffect.Flash;
+                    GUI.DrawTexture(localCanvas, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+                    GUI.color = previous;
+                }
                 TryDrawRegisteredSceneTransitionOverlay(localCanvas, frame);
                 DrawComposerMenu(localCanvas, frame);
             }
-            finally { GUI.EndGroup(); }
+            finally { GUI.matrix = originalMatrix; GUI.EndGroup(); }
         }
 
         public static Rect ClipLogicalRectToViewport(Rect logicalRect, Vector2 virtualCanvasSize)

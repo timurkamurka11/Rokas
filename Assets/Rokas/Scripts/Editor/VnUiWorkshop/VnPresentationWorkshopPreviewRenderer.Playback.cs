@@ -77,6 +77,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawSceneTransitionOverlay(localCanvas, playbackFrame.SceneTransitionOverlay);
         }
 
+        private static VnSceneComposerReplicaEffectSample GetRegisteredReplicaEffectSample(
+            VnWorkshopPreviewFrame frame)
+        {
+            return frame != null && PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame)
+                ? playbackFrame.ReplicaEffect
+                : new VnSceneComposerReplicaEffectSample { Scale = 1f };
+        }
+
         private static void DrawSceneTransitionOverlay(
             Rect rect, VnSceneComposerSceneTransitionOverlaySample sample)
         {

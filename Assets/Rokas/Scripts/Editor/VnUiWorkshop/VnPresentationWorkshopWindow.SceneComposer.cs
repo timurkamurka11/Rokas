@@ -39,7 +39,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             "Дополнительно",
             "Декорации",
             "Звуки",
-            "Музыка"
+            "Музыка",
+            "Эффекты"
         };
 
         private const float SceneComposerStoryboardWidth = 224f;
@@ -1132,7 +1133,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case 7: DrawSceneComposerAdditionalInspector(scene); break;
                 case 8: DrawSceneComposerDecorationInspector(scene); break;
                 case 9: DrawSceneComposerAdditionalAudioInspector(scene); break;
-                default: DrawSceneComposerMusicInspector(scene); break;
+                case 10: DrawSceneComposerMusicInspector(scene); break;
+                default: DrawSceneComposerEffectsInspector(scene); break;
             }
 
             EditorGUILayout.EndVertical();

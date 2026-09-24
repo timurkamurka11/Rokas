@@ -78,6 +78,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerMediaScaleMode SourceScaleMode { get; }
         public VnSceneComposerMediaScaleMode TargetScaleMode { get; }
         public VnSceneComposerSceneTransitionOverlaySample SceneTransitionOverlay { get; }
+        public VnSceneComposerReplicaEffectSample ReplicaEffect { get; internal set; }
         public bool ShowDialogueUi { get; }
         public VnSceneComposerPlaybackController Owner { get; internal set; }
         public bool ShowDialoguePanel { get; internal set; }
@@ -633,6 +634,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CurrentFrame.ShowDialogueText = frozen.ShowDialogueText;
                 CurrentFrame.Dialogue = frozen.Dialogue;
                 CurrentFrame.DialogueReveal = frozen.DialogueReveal;
+                CurrentFrame.ReplicaEffect = frozen.ReplicaEffect;
                 return;
             }
 
@@ -758,6 +760,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             // This preserves first-click completion semantics without drawing text before
             // the Scene-entry character/text phase is allowed to become visible.
             CurrentFrame.Dialogue = sample.visibleText ?? string.Empty;
+            CurrentFrame.ReplicaEffect = VnSceneComposerReplicaEffects.Sample(
+                targetBeat != null ? targetBeat.replicaEffect : null, BeatElapsedSeconds);
             CurrentFrame.DialogueReveal = sample.dialogueReveal;
         }
 
