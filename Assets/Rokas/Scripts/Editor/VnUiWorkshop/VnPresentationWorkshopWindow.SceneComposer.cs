@@ -1858,7 +1858,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.LabelField("Анимация сцены", EditorStyles.boldLabel);
             DrawSceneComposerAnimationScope();
             VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
-            VnWorkshopBackgroundTransitionValues background = VnPresentationWorkshopVn10Resolver.ResolveBackgroundTransition(effective);
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
 
@@ -1869,7 +1868,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.HelpBox(
                 "Настройка входа в эту сцену. Прямой запуск сцены переход не проигрывает.",
                 MessageType.None);
-            string[] sceneTransitionLabels = { "Без перехода", "Плавное затемнение", "Тёмная шторка" };
+            string[] sceneTransitionLabels = { "Без перехода", "Плавный переход", "Тёмная шторка" };
             string[] sceneTransitionDirectionLabels = { "Слева направо", "Справа налево" };
             EditorGUI.BeginChangeCheck();
             int sceneTransitionType = EditorGUILayout.Popup(
@@ -1908,23 +1907,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     ComposerPreviewSelectedSceneBoundaryTransition();
             }
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField(
-                new GUIContent("Переход фона", "Внутренняя анимация смены фона после входа в сцену."),
-                EditorStyles.miniBoldLabel);
-            string[] backgroundLabels = { "Без перехода", "Плавный переход", "Шторка" };
-            string[] curtainDirectionLabels = { "Справа налево", "Слева направо" };
-            EditorGUI.BeginChangeCheck();
-            int backgroundMode = EditorGUILayout.Popup("Способ", (int)background.Mode, backgroundLabels);
-            float backgroundDuration = DrawSceneComposerDurationControl("Длительность", background.Duration, 0f);
-            VnWorkshopCurtainDirection curtainDirection = background.Direction;
-            if ((VnWorkshopBackgroundTransitionMode)backgroundMode == VnWorkshopBackgroundTransitionMode.Curtain)
-            {
-                int direction = EditorGUILayout.Popup("Направление", (int)background.Direction, curtainDirectionLabels);
-                curtainDirection = (VnWorkshopCurtainDirection)direction;
-            }
-            if (EditorGUI.EndChangeCheck()) ComposerSetBackgroundTransition((VnWorkshopBackgroundTransitionMode)backgroundMode, backgroundDuration, background.CurtainDarkness, curtainDirection, background.Easing);
-            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.BackgroundTransition);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Расположение персонажей", "Как персонажи располагаются и перестраиваются на сцене."), EditorStyles.miniBoldLabel);
             string[] characterCountLabels = { "Нет персонажей", "1 персонаж", "2 персонажа", "3 персонажа" };

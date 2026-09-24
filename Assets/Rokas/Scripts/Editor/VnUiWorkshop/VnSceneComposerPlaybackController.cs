@@ -689,6 +689,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             if (suppressCurrentBackgroundTransition)
                 sample.background = endpoint.background;
+            if (sceneTransitionHasSwapped && sceneTransitionType == VnSceneComposerSceneTransitionType.Fade)
+            {
+                // The scene boundary owns this blend. Reuse the existing soft background
+                // fade sampler with the boundary's authored duration and transition clock.
+                var smooth = new VnWorkshopBackgroundTransitionValues
+                {
+                    Mode = VnWorkshopBackgroundTransitionMode.Fade,
+                    Duration = sceneTransitionDuration,
+                    Easing = VnWorkshopEasing.EaseInOut
+                };
+                float half = Mathf.Max(.0001f, sceneTransitionDuration * .5f);
+                float reveal = sceneBoundaryTransitionPhase == SceneBoundaryTransitionPhase.Reveal
+                    ? Mathf.Clamp01(sceneTransitionPhaseElapsed / half) : 0f;
+                sample.background = VnPresentationWorkshopVn10Resolver.SampleBackgroundTransition(reveal, smooth);
+            }
             if (suppressCurrentSceneEntryPresentation)
             {
                 sample.background = endpoint.background;
@@ -784,6 +799,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     break;
             }
 
+            if (sceneTransitionType == VnSceneComposerSceneTransitionType.Fade)
+                coverage *= .22f;
             return new VnSceneComposerSceneTransitionOverlaySample
             {
                 Active = phase != VnSceneComposerSceneTransitionPhase.None,
