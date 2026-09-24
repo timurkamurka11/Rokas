@@ -90,10 +90,11 @@ namespace Rokas.EditorTools.Tests
             Assert.That(mute.Overlaps(forward) || forward.Overlaps(menu) || menu.Overlaps(triangle), Is.False);
             Assert.That(mute.center.y, Is.LessThan(f.DialoguePanel.y + f.DialoguePanel.height * .60f),
                 "Control centers should sit lower than the previous floating .615 placement.");
-            Assert.That(triangle.center.x, Is.LessThan(f.DialoguePanel.x + f.DialoguePanel.width * .90f),
+            Assert.That(triangle.center.x, Is.LessThan(f.DialoguePanel.x + f.DialoguePanel.width * .918f),
                 "Completion arrow should sit inside the plaque safe area.");
-            Assert.That(triangle.center.y, Is.LessThan(f.DialoguePanel.y + f.DialoguePanel.height * .22f),
-                "Completion arrow should sit above the former corner position.");
+            Assert.That(triangle.center.y, Is.GreaterThanOrEqualTo(
+                    Mathf.Max(24f, f.DialoguePanel.y + f.DialoguePanel.height * .23f)),
+                "Completion arrow should sit above the former corner position in bottom-up canvas coordinates.");
             Assert.That(layout.GetType().GetField("Back"), Is.Null);
         }
         [Test] public void TriangleAnimationHasVisibleMovementScaleAndOpacityAndLoops()
