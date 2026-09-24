@@ -196,6 +196,30 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 warnings = diagnostics.ToArray();
                 return false;
             }
+            if (project.defaultSceneTransition != null &&
+                (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType),
+                    project.defaultSceneTransition.sceneTransitionType) ||
+                 !Enum.IsDefined(typeof(VnSceneComposerSceneTransitionDirection),
+                    project.defaultSceneTransition.sceneTransitionDirection) ||
+                 !IsFinite(project.defaultSceneTransition.sceneTransitionDuration) ||
+                 project.defaultSceneTransition.sceneTransitionDuration < 0f ||
+                 project.defaultSceneTransition.sceneTransitionDuration > MaxSceneTransitionDuration))
+            {
+                error = "Invalid Scene Composer project scene transition defaults.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
+            if (project.defaultSceneTiming != null &&
+                (!Enum.IsDefined(typeof(VnSceneComposerPreviewAdvanceMode),
+                    project.defaultSceneTiming.previewAdvanceMode) ||
+                 !IsFinite(project.defaultSceneTiming.previewAutoDuration) ||
+                 project.defaultSceneTiming.previewAutoDuration < 0f ||
+                 project.defaultSceneTiming.previewAutoDuration > MaxPreviewDuration))
+            {
+                error = "Invalid Scene Composer project scene timing defaults.";
+                warnings = diagnostics.ToArray();
+                return false;
+            }
             AppendTypographyFontWarnings(project.defaultPresentation, "shared dialogue typography", diagnostics);
             if (project.scenes == null)
             {
@@ -1115,6 +1139,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (project.defaultPresentation == null)
                 project.defaultPresentation = new VnPresentationWorkshopPreset();
+            if (project.defaultSceneTransition != null)
+            {
+                VnSceneComposerTransition boundary = project.defaultSceneTransition;
+                if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionType), boundary.sceneTransitionType))
+                    boundary.sceneTransitionType = VnSceneComposerSceneTransitionType.None;
+                if (!Enum.IsDefined(typeof(VnSceneComposerSceneTransitionDirection), boundary.sceneTransitionDirection))
+                    boundary.sceneTransitionDirection = VnSceneComposerSceneTransitionDirection.LeftToRight;
+                if (!IsFinite(boundary.sceneTransitionDuration) || boundary.sceneTransitionDuration < 0f)
+                    boundary.sceneTransitionDuration = 0f;
+                boundary.sceneTransitionDuration = Mathf.Clamp(boundary.sceneTransitionDuration,
+                    0f, MaxSceneTransitionDuration);
+            }
+            if (project.defaultSceneTiming != null)
+            {
+                VnSceneComposerTiming timing = project.defaultSceneTiming;
+                if (!Enum.IsDefined(typeof(VnSceneComposerPreviewAdvanceMode), timing.previewAdvanceMode))
+                    timing.previewAdvanceMode = VnSceneComposerPreviewAdvanceMode.ManualBeat;
+                if (!IsFinite(timing.previewAutoDuration) || timing.previewAutoDuration < 0f)
+                    timing.previewAutoDuration = 0f;
+                timing.previewAutoDuration = Mathf.Clamp(timing.previewAutoDuration,
+                    0f, MaxPreviewDuration);
+            }
             if (project.scenes == null) project.scenes = new List<VnSceneComposerScene>();
             PromoteLegacySharedSpeakerTypography(project);
             PromoteLegacySharedDialogueFontSize(project);

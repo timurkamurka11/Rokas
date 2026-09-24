@@ -82,6 +82,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             float coverage = Mathf.Clamp01(sample.Coverage);
             if (coverage <= .0001f) return;
+            Color previous = GUI.color;
+            if (sample.Mode == VnSceneComposerSceneTransitionType.Fade)
+            {
+                GUI.color = new Color(.015f, .015f, .02f, coverage);
+                GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+                GUI.color = previous;
+                return;
+            }
+
             float width = rect.width * coverage;
             bool reveal = sample.Phase == VnSceneComposerSceneTransitionPhase.Reveal;
             bool anchorRight =
@@ -91,7 +100,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ? new Rect(rect.xMax - width, rect.y, width, rect.height)
                 : new Rect(rect.x, rect.y, width, rect.height);
 
-            Color previous = GUI.color;
             GUI.color = new Color(.015f, .015f, .02f, 1f);
             GUI.DrawTexture(curtain, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
             GUI.color = previous;

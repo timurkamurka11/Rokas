@@ -132,6 +132,35 @@ namespace Rokas.EditorTools.Tests
             finally { AudioListener.volume = original; }
         }
         [Test]
+        public void MuteIconStateFollowsActualMasterVolumeAcrossControllers()
+        {
+            float original = AudioListener.volume;
+            try
+            {
+                AudioListener.volume = 0f;
+                using (var initial = new VnSceneComposerPlaybackController(Project()))
+                    Assert.That(initial.IsMuted, Is.True);
+                Assert.That(AudioListener.volume, Is.Zero,
+                    "Disposing a controller must not undo a mute it did not apply.");
+
+                using (var first = new VnSceneComposerPlaybackController(Project()))
+                using (var second = new VnSceneComposerPlaybackController(Project()))
+                {
+                    second.SetMuted(false);
+                    Assert.That(AudioListener.volume, Is.GreaterThan(0f));
+                    Assert.That(first.IsMuted, Is.False);
+                    first.SetMuted(true);
+                    Assert.That(AudioListener.volume, Is.Zero);
+                    Assert.That(second.IsMuted, Is.True);
+                    second.SetMuted(false);
+                    Assert.That(first.IsMuted, Is.False);
+                    Assert.That(second.IsMuted, Is.False);
+                }
+                Assert.That(AudioListener.volume, Is.GreaterThan(0f));
+            }
+            finally { AudioListener.volume = original; }
+        }
+        [Test]
         public void UiClockRunsWhileMenuPausesPresentation()
         {
             using (var c = new VnSceneComposerPlaybackController(Project()))

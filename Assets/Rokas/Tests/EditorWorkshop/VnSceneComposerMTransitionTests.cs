@@ -55,6 +55,70 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MT_FadeSettingsRoundTripWithoutChangingLegacyCurtainValue()
+        {
+            Assert.That((int)VnSceneComposerSceneTransitionType.DarkCurtain, Is.EqualTo(1));
+            var project = ProjectWithTwoScenes();
+            ConfigureTransition(project.scenes[1], "Fade", "LeftToRight", .8f);
+            VnSceneComposerImportResult loaded = VnSceneComposerSerialization.DeserializePortable(
+                VnSceneComposerSerialization.SerializePortable(project));
+            Assert.That(loaded.Success, Is.True, loaded.Error);
+            Assert.That(loaded.Project.scenes[1].transition.sceneTransitionType,
+                Is.EqualTo(VnSceneComposerSceneTransitionType.Fade));
+            Assert.That(loaded.Project.scenes[1].transition.sceneTransitionDuration,
+                Is.EqualTo(.8f).Within(.001f));
+        }
+
+        [Test]
+        public void MT_EditorPreviewButtonUsesTheSelectedRuntimeTransitionMode()
+        {
+            VnPresentationWorkshopWindow window = ScriptableObject.CreateInstance<VnPresentationWorkshopWindow>();
+            try
+            {
+                window.ComposerAddScene();
+                window.ComposerAddScene();
+                window.ComposerSelectScene(1);
+                window.ComposerSetPresentationScope(false);
+
+                window.ComposerSetSelectedSceneBoundaryTransition(
+                    VnSceneComposerSceneTransitionType.Fade,
+                    VnSceneComposerSceneTransitionDirection.LeftToRight, 1f);
+                window.ComposerPreviewSelectedSceneBoundaryTransition();
+                var playback = (VnSceneComposerPlaybackController)Get(window, "_sceneComposerPlayback");
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(Get(window, "_sceneComposerSelectedSceneId"),
+                    Is.EqualTo(((VnSceneComposerScene)Scenes(window)[1]).sceneId));
+                Assert.That(GetBool(playback, "IsSceneTransitionActive"), Is.True);
+                Assert.That(Get(playback.CurrentFrame.SceneTransitionOverlay, "Mode"),
+                    Is.EqualTo(VnSceneComposerSceneTransitionType.Fade));
+                playback.Advance(.25f);
+                Assert.That(playback.CurrentFrame.SceneTransitionOverlay.Coverage,
+                    Is.EqualTo(.5f).Within(.01f));
+
+                window.ComposerSetSelectedSceneBoundaryTransition(
+                    VnSceneComposerSceneTransitionType.DarkCurtain,
+                    VnSceneComposerSceneTransitionDirection.RightToLeft, 1f);
+                window.ComposerPreviewSelectedSceneBoundaryTransition();
+                Assert.That(playback.CurrentFrame.SceneTransitionOverlay.Mode,
+                    Is.EqualTo(VnSceneComposerSceneTransitionType.DarkCurtain));
+                Assert.That(playback.CurrentFrame.SceneTransitionOverlay.Direction,
+                    Is.EqualTo(VnSceneComposerSceneTransitionDirection.RightToLeft));
+
+                window.ComposerSetSelectedSceneBoundaryTransition(
+                    VnSceneComposerSceneTransitionType.None,
+                    VnSceneComposerSceneTransitionDirection.LeftToRight, 0f);
+                window.ComposerPreviewSelectedSceneBoundaryTransition();
+                Assert.That(playback.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(GetBool(playback, "IsSceneTransitionActive"), Is.False);
+            }
+            finally
+            {
+                Undo.ClearAll();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void MT_DuplicateScenePreservesIndependentTransitionConfiguration()
         {
             var project = ProjectWithTwoScenes();
@@ -134,6 +198,54 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(GetBool(controller, "IsSceneTransitionActive"), Is.True);
                 Assert.That(GetBool(controller, "SceneTransitionInputLocked"), Is.True);
                 Assert.That((int)Get(controller, "SceneTransitionStartCount"), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void MT_FadeDarkensTheWholeOutgoingSceneBeforeSwappingAndRevealsTheIncomingScene()
+        {
+            var project = ProjectWithTwoScenes();
+            ConfigureTransition(project.scenes[1], "Fade", "RightToLeft", 1f);
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayFromHere(0);
+                controller.Next();
+                controller.Advance(.25f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                object cover = Get(controller.CurrentFrame, "SceneTransitionOverlay");
+                Assert.That(Get(cover, "Mode").ToString(), Is.EqualTo("Fade"));
+                Assert.That((float)Get(cover, "Coverage"), Is.EqualTo(.5f).Within(.01f));
+                Assert.That((bool)Get(cover, "FullCover"), Is.False);
+
+                controller.Advance(.25f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                object fullCover = Get(controller.CurrentFrame, "SceneTransitionOverlay");
+                Assert.That((bool)Get(fullCover, "FullCover"), Is.True);
+
+                controller.Advance(.25f);
+                object reveal = Get(controller.CurrentFrame, "SceneTransitionOverlay");
+                Assert.That(Get(reveal, "Mode").ToString(), Is.EqualTo("Fade"));
+                Assert.That(Get(reveal, "Phase").ToString(), Is.EqualTo("Reveal"));
+                Assert.That((float)Get(reveal, "Coverage"), Is.EqualTo(.5f).Within(.01f));
+
+                controller.Advance(.25f);
+                Assert.That(GetBool(controller, "IsSceneTransitionActive"), Is.False);
+            }
+        }
+
+        [Test]
+        public void MT_DarkCurtainRetainsItsDistinctDirectionalOverlayMode()
+        {
+            var project = ProjectWithTwoScenes();
+            ConfigureTransition(project.scenes[1], "DarkCurtain", "RightToLeft", 1f);
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayFromHere(0);
+                controller.Next();
+                controller.Advance(.25f);
+                object overlay = Get(controller.CurrentFrame, "SceneTransitionOverlay");
+                Assert.That(Get(overlay, "Mode").ToString(), Is.EqualTo("DarkCurtain"));
+                Assert.That(Get(overlay, "Direction").ToString(), Is.EqualTo("RightToLeft"));
             }
         }
 

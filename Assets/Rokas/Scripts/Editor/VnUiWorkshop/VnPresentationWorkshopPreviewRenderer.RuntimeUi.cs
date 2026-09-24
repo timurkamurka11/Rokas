@@ -11,14 +11,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private sealed class ButtonMotion
         {
             public double ChangedAt;
-            public float FromScale = 1f, ToScale = 1f, FromLight = 1f, ToLight = 1f;
+            public float FromScale = .97f, ToScale = .97f, FromLight = .9f, ToLight = .9f;
             public bool Held;
             public float Scale(double now) { return Mathf.Lerp(FromScale, ToScale, Ease(now)); }
             public float Light(double now) { return Mathf.Lerp(FromLight, ToLight, Ease(now)); }
             private float Ease(double now) { return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(now-ChangedAt)/.09f)); }
             public void Target(bool hover, bool pressed, double now)
             {
-                float scale = pressed ? .96f : 1f, light = hover ? 1.25f : 1f;
+                float scale = pressed ? .95f : hover ? 1f : .97f;
+                float light = pressed ? .92f : hover ? .97f : .9f;
                 if (scale == ToScale && light == ToLight) return;
                 FromScale = Scale(now); FromLight = Light(now); ToScale = scale; ToLight = light; ChangedAt = now;
             }
@@ -73,19 +74,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float scale = motion.Scale(now);
             Vector2 size = hit.size * scale;
             Rect rect = new Rect(hit.center - size * .5f, size);
-            float alpha = owner == null || enabled ? (muted ? .65f : 1f) : .42f;
-            Texture2D sheet = VnSceneComposerRuntimeUi.ControlSheet;
-            if (sheet != null)
+            float alpha = owner == null || enabled ? .9f : .42f;
+            Texture2D icon = VnSceneComposerRuntimeUi.ButtonTexture(index, muted);
+            if (icon != null)
             {
                 Color before = GUI.color;
-                GUI.color = new Color(1f, 1f, 1f, alpha);
-                GUI.DrawTextureWithTexCoords(rect, sheet, VnSceneComposerRuntimeUi.ButtonUv(index), true);
+                float light = motion.Light(now);
+                GUI.color = new Color(light, light, light, alpha);
+                GUI.DrawTextureWithTexCoords(rect, icon, VnSceneComposerRuntimeUi.ButtonTextureUv(index, muted), true);
                 GUI.color = before;
             }
             if (hover)
             {
                 Color before = Handles.color;
-                Handles.color = new Color(.35f, .8f, 1f, .24f);
+                Handles.color = new Color(.35f, .8f, 1f, .10f);
                 Handles.DrawWireDisc(rect.center, Vector3.forward, rect.width * .52f);
                 Handles.color = before;
             }

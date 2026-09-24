@@ -22,14 +22,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public const string OriginalPlaqueGuid = "6bbf22755fe125c4482a7fd9e8f351ca";
         public const string DefaultPlaqueGuid = "08ac430bce3843b5a427ff44abe32a12";
         internal const string ControlSheetPath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png";
+        internal const string MutedSpeakerPath = "Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png";
         internal const string CompletionTrianglePath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png";
         internal const float TriangleAspect = 1.25f;
         internal static Texture2D ControlSheet { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(ControlSheetPath); } }
+        internal static Texture2D MutedSpeaker { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(MutedSpeakerPath); } }
         internal static Texture2D CompletionTriangle { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(CompletionTrianglePath); } }
         // Pixel-exact UV crops of the supplied transparent sheet: mute / forward / menu.
         internal static Rect ButtonUv(int index)
         {
             return new Rect((63f + 661f * index) / 2048f, 49f / 682f, 600f / 2048f, 600f / 682f);
+        }
+        internal static Texture2D ButtonTexture(int index, bool muted)
+        {
+            return index == 0 && muted ? MutedSpeaker : ControlSheet;
+        }
+        internal static Rect ButtonTextureUv(int index, bool muted)
+        {
+            return index == 0 && muted ? new Rect(0f, 0f, 1f, 1f) : ButtonUv(index);
         }
         internal static Rect TriangleUv { get { return new Rect(180f / 1254f, 204f / 1254f, 900f / 1254f, 720f / 1254f); } }
         internal static void ConfigureFrame(VnWorkshopPreviewFrame frame, VnPresentationWorkshopPreset preset)
@@ -79,13 +89,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static VnSceneComposerButtonSample SampleButton(Rect baseline, bool hover, bool pressed, bool enabled, float progress)
         {
             float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
-            float scale = Mathf.Lerp(1f, enabled && pressed ? .96f : 1f, t);
+            float scale = Mathf.Lerp(.97f, enabled && pressed ? .95f : enabled && hover ? 1f : .97f, t);
             Vector2 size = baseline.size * scale;
             return new VnSceneComposerButtonSample
             {
                 Rect = new Rect(baseline.center - size * .5f, size),
-                Brightness = enabled ? Mathf.Lerp(1f, hover ? 1.25f : 1f, t) : .7f,
-                Alpha = enabled ? 1f : .42f
+                Brightness = enabled ? Mathf.Lerp(.9f, pressed ? .92f : hover ? .97f : .9f, t) : .55f,
+                Alpha = enabled ? .9f : .42f
             };
         }
     }

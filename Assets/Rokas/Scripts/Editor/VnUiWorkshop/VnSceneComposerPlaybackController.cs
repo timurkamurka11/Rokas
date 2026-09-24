@@ -15,6 +15,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public sealed class VnSceneComposerSceneTransitionOverlaySample
     {
         public bool Active { get; internal set; }
+        public VnSceneComposerSceneTransitionType Mode { get; internal set; }
         public VnSceneComposerSceneTransitionPhase Phase { get; internal set; }
         public VnSceneComposerSceneTransitionDirection Direction { get; internal set; }
         public float Coverage { get; internal set; }
@@ -146,6 +147,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private int pendingSceneTransitionTargetIndex = -1;
         private float sceneTransitionPhaseElapsed;
         private float sceneTransitionDuration;
+        private VnSceneComposerSceneTransitionType sceneTransitionType;
         private VnSceneComposerSceneTransitionDirection sceneTransitionDirection =
             VnSceneComposerSceneTransitionDirection.LeftToRight;
         private bool sceneTransitionPlayMedia;
@@ -488,7 +490,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void Dispose()
         {
             if (disposed) return;
-            SetMuted(false);
+            ReleaseOwnedMute();
             IsMenuOpen = false;
             disposed = true;
             IsPlaying = false;
@@ -752,6 +754,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return new VnSceneComposerSceneTransitionOverlaySample
                 {
                     Active = false,
+                    Mode = VnSceneComposerSceneTransitionType.None,
                     Phase = VnSceneComposerSceneTransitionPhase.None,
                     Direction = sceneTransitionDirection,
                     Coverage = 0f,
@@ -784,6 +787,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return new VnSceneComposerSceneTransitionOverlaySample
             {
                 Active = phase != VnSceneComposerSceneTransitionPhase.None,
+                Mode = sceneTransitionType,
                 Phase = phase,
                 Direction = sceneTransitionDirection,
                 Coverage = coverage,
@@ -926,7 +930,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerScene target = project.scenes[targetIndex];
             VnSceneComposerTransition transition = target != null ? target.transition : null;
             bool animate = transition != null &&
-                           transition.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain &&
+                           (transition.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain ||
+                            transition.sceneTransitionType == VnSceneComposerSceneTransitionType.Fade) &&
                            transition.sceneTransitionDuration > .0001f;
             if (!animate)
             {
@@ -953,6 +958,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     : CreatePreviewBaseline();
             pendingSceneTransitionTargetIndex = targetIndex;
             sceneTransitionDuration = Mathf.Clamp(transition.sceneTransitionDuration, .0001f, 10f);
+            sceneTransitionType = transition.sceneTransitionType;
             sceneTransitionDirection = transition.sceneTransitionDirection;
             sceneTransitionPlayMedia = playMedia;
             // Animated boundaries always preserve the established compatible-video path so
@@ -1297,6 +1303,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             pendingSceneTransitionTargetIndex = -1;
             sceneTransitionPhaseElapsed = 0f;
             sceneTransitionDuration = 0f;
+            sceneTransitionType = VnSceneComposerSceneTransitionType.None;
             sceneTransitionPlayMedia = false;
             sceneTransitionPreserveCompatibleVideoTimeline = false;
             sceneTransitionVideoPrepareRequested = false;
@@ -1315,6 +1322,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             pendingSceneTransitionTargetIndex = -1;
             sceneTransitionPhaseElapsed = 0f;
             sceneTransitionDuration = 0f;
+            sceneTransitionType = VnSceneComposerSceneTransitionType.None;
             sceneTransitionPlayMedia = false;
             sceneTransitionPreserveCompatibleVideoTimeline = false;
             sceneTransitionVideoPrepareRequested = false;

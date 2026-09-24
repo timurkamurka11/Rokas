@@ -265,7 +265,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void ComposerSetBackgroundTransition(VnWorkshopBackgroundTransitionMode mode, float duration,
             float curtainDarkness, VnWorkshopCurtainDirection direction, VnWorkshopEasing easing)
         {
-            MutateComposerPresentation("Edit VN Scene Background Transition", preset =>
+            MutateComposerSceneAnimationPresentation("Edit VN Scene Background Transition", preset =>
             {
                 float safeDuration = SanitizeComposerDuration(duration, preset.backgroundTransition.duration, 0f);
                 VnPresentationWorkshopVn10Resolver.SetBackgroundTransitionPreviewOverrides(
@@ -277,7 +277,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float leftScale, float centerScale, float rightScale, float spacing, float repositionDuration,
             VnWorkshopEasing easing)
         {
-            MutateComposerPresentation("Edit VN Scene Stage Layout", preset =>
+            MutateComposerSceneAnimationPresentation("Edit VN Scene Stage Layout", preset =>
             {
                 float safeDuration = SanitizeComposerDuration(repositionDuration, preset.stageLayout.repositionDuration, 0f);
                 VnPresentationWorkshopVn10Resolver.SetStageLayoutPreviewOverrides(
@@ -290,7 +290,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float inactiveScale, float inactiveBrightness, float inactiveAlpha, float transitionDuration,
             VnWorkshopEasing easing)
         {
-            MutateComposerPresentation("Edit VN Scene Speaker Focus", preset =>
+            MutateComposerSceneAnimationPresentation("Edit VN Scene Speaker Focus", preset =>
             {
                 float safeDuration = SanitizeComposerDuration(transitionDuration, preset.focus.transitionDuration, 0f);
                 VnPresentationWorkshopVn10Resolver.SetSpeakerFocusPreviewOverrides(
@@ -312,7 +312,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void ComposerSetTiming(float minimumBeatSettleDuration, float postTransitionBreathingRoom,
             float autoPreviewSequenceGap)
         {
-            MutateComposerPresentation("Edit VN Scene Timing", preset =>
+            MutateComposerSceneAnimationPresentation("Edit VN Scene Timing", preset =>
                 VnPresentationWorkshopVn10Resolver.SetTimingPreviewOverrides(
                     preset, minimumBeatSettleDuration, postTransitionBreathingRoom, autoPreviewSequenceGap));
         }
@@ -446,6 +446,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (mutation == null) throw new ArgumentNullException(nameof(mutation));
             RecordSceneComposerUndo(undoLabel);
             mutation(ComposerGetActivePresentationPreset());
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        private void MutateComposerSceneAnimationPresentation(string undoLabel,
+            Action<VnPresentationWorkshopPreset> mutation)
+        {
+            if (mutation == null) throw new ArgumentNullException(nameof(mutation));
+            RecordSceneComposerUndo(undoLabel);
+            mutation(ComposerGetActivePresentationPreset());
+            if (_sceneComposerPresentationProjectDefaults && _sceneComposerProject.scenes != null)
+            {
+                foreach (VnSceneComposerScene scene in _sceneComposerProject.scenes)
+                {
+                    if (scene == null) continue;
+                    if (scene.presentationOverrides == null)
+                        scene.presentationOverrides = new VnPresentationWorkshopPreset();
+                    mutation(scene.presentationOverrides);
+                }
+            }
             ResetSceneComposerPlayback();
             MarkSceneComposerChanged();
         }

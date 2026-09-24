@@ -174,6 +174,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         [SerializeField] private bool _sceneComposerTextPresentationExpanded;
 
         [NonSerialized] private VnSceneComposerPlaybackController _sceneComposerPlayback;
+        [NonSerialized] private string _sceneComposerBoundaryPreviewSceneId;
         [NonSerialized] private Dictionary<string, SceneComposerThumbnailCacheEntry> _sceneComposerThumbnailCache;
         [NonSerialized] private Dictionary<string, Vector2> _sceneComposerDialogueEditorScrollByBeat;
         [NonSerialized] private string _sceneComposerStatus = string.Empty;
@@ -547,16 +548,109 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentOutOfRangeException(nameof(duration), "Transition duration must be finite.");
 
             VnSceneComposerScene scene = RequireSelectedScene();
-            if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
             RecordSceneComposerUndo("Edit VN Scene Boundary Transition");
-            scene.transition.sceneTransitionType = type;
-            scene.transition.sceneTransitionDirection = direction;
-            scene.transition.sceneTransitionDuration = Mathf.Clamp(duration, 0f, 10f);
+            float safeDuration = Mathf.Clamp(duration, 0f, 10f);
+            if (_sceneComposerPresentationProjectDefaults)
+            {
+                if (_sceneComposerProject.defaultSceneTransition == null)
+                    _sceneComposerProject.defaultSceneTransition = new VnSceneComposerTransition();
+                SetSceneComposerBoundaryTransition(_sceneComposerProject.defaultSceneTransition,
+                    type, direction, safeDuration);
+                foreach (VnSceneComposerScene existing in _sceneComposerProject.scenes)
+                {
+                    if (existing == null) continue;
+                    if (existing.transition == null) existing.transition = new VnSceneComposerTransition();
+                    SetSceneComposerBoundaryTransition(existing.transition, type, direction, safeDuration);
+                }
+            }
+            else
+            {
+                if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+                SetSceneComposerBoundaryTransition(scene.transition, type, direction, safeDuration);
+            }
             MarkSceneComposerChanged();
+        }
+
+        private static void SetSceneComposerBoundaryTransition(VnSceneComposerTransition target,
+            VnSceneComposerSceneTransitionType type,
+            VnSceneComposerSceneTransitionDirection direction,
+            float duration)
+        {
+            target.sceneTransitionType = type;
+            target.sceneTransitionDirection = direction;
+            target.sceneTransitionDuration = duration;
+        }
+
+        private VnSceneComposerTransition GetSceneComposerBoundaryTransitionForAuthoring(VnSceneComposerScene scene)
+        {
+            if (_sceneComposerPresentationProjectDefaults && _sceneComposerProject.defaultSceneTransition != null)
+                return _sceneComposerProject.defaultSceneTransition;
+            if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+            return scene.transition;
+        }
+
+        public void ComposerSetSelectedSceneAdvanceTiming(VnSceneComposerPreviewAdvanceMode mode,
+            float duration)
+        {
+            if (!Enum.IsDefined(typeof(VnSceneComposerPreviewAdvanceMode), mode))
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+            if (float.IsNaN(duration) || float.IsInfinity(duration))
+                throw new ArgumentOutOfRangeException(nameof(duration), "Scene duration must be finite.");
+
+            VnSceneComposerScene scene = RequireSelectedScene();
+            RecordSceneComposerUndo("Edit VN Scene Advance Timing");
+            float safeDuration = Mathf.Max(0f, duration);
+            if (_sceneComposerPresentationProjectDefaults)
+            {
+                if (_sceneComposerProject.defaultSceneTiming == null)
+                    _sceneComposerProject.defaultSceneTiming = new VnSceneComposerTiming();
+                SetSceneComposerAdvanceTiming(_sceneComposerProject.defaultSceneTiming, mode, safeDuration);
+                foreach (VnSceneComposerScene existing in _sceneComposerProject.scenes)
+                {
+                    if (existing == null) continue;
+                    if (existing.timing == null) existing.timing = new VnSceneComposerTiming();
+                    SetSceneComposerAdvanceTiming(existing.timing, mode, safeDuration);
+                }
+            }
+            else
+            {
+                if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+                SetSceneComposerAdvanceTiming(scene.timing, mode, safeDuration);
+            }
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        private static void SetSceneComposerAdvanceTiming(VnSceneComposerTiming target,
+            VnSceneComposerPreviewAdvanceMode mode, float duration)
+        {
+            target.previewAdvanceMode = mode;
+            target.previewAutoDuration = duration;
+        }
+
+        private VnSceneComposerTiming GetSceneComposerAdvanceTimingForAuthoring(VnSceneComposerScene scene)
+        {
+            if (_sceneComposerPresentationProjectDefaults && _sceneComposerProject.defaultSceneTiming != null)
+                return _sceneComposerProject.defaultSceneTiming;
+            if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+            return scene.timing;
+        }
+
+        public void ComposerPreviewSelectedSceneBoundaryTransition()
+        {
+            int incomingIndex = GetSelectedSceneIndexOrThrow();
+            if (incomingIndex == 0) return;
+            _sceneComposerBoundaryPreviewSceneId = _sceneComposerProject.scenes[incomingIndex].sceneId;
+            ComposerStopMusicPreview();
+            VnSceneComposerPlaybackController playback = EnsureSceneComposerPlayback();
+            playback.PlayFromHere(incomingIndex - 1);
+            playback.Next();
+            BeginSceneComposerPlaybackTick();
         }
 
         public void ComposerPlayScene()
         {
+            _sceneComposerBoundaryPreviewSceneId = null;
             ComposerStopMusicPreview();
             int index = GetSelectedSceneIndexOrThrow();
             EnsureSceneComposerPlayback().PlaySceneFromNeutralStart(index);
@@ -565,6 +659,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerPlayFromHere()
         {
+            _sceneComposerBoundaryPreviewSceneId = null;
             ComposerStopMusicPreview();
             int index = GetSelectedSceneIndexOrThrow();
             VnSceneComposerScene scene = RequireSelectedScene();
@@ -577,6 +672,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void ComposerPlayAll()
         {
+            _sceneComposerBoundaryPreviewSceneId = null;
             ComposerStopMusicPreview();
             EnsureSceneComposerPlayback().PlayAll();
             SyncSceneComposerSelectionFromPlayback();
@@ -594,6 +690,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void ComposerRestart()
         {
             if (_sceneComposerPlayback == null) return;
+            _sceneComposerBoundaryPreviewSceneId = null;
             _sceneComposerPlayback.Restart();
             SyncSceneComposerSelectionFromPlayback();
             BeginSceneComposerPlaybackTick();
@@ -1662,7 +1759,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void DrawSceneComposerAnimationScope()
         {
-            EditorGUILayout.LabelField("Применить:", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Применить к:", EditorStyles.miniBoldLabel);
             int current = _sceneComposerPresentationProjectDefaults ? 1 : 0;
             int next = GUILayout.Toolbar(current, new[] { "Только к этой сцене", "Ко всем сценам" });
             if (next != current) ComposerSetPresentationScope(next == 1);
@@ -1765,41 +1862,50 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
 
-            if (scene.transition == null) scene.transition = new VnSceneComposerTransition();
+            VnSceneComposerTransition boundary = GetSceneComposerBoundaryTransitionForAuthoring(scene);
             EditorGUILayout.LabelField(
                 new GUIContent("Переход между сценами", "Кинематографический переход при входе в эту сцену с предыдущей."),
                 EditorStyles.miniBoldLabel);
             EditorGUILayout.HelpBox(
                 "Настройка входа в эту сцену. Прямой запуск сцены переход не проигрывает.",
                 MessageType.None);
-            string[] sceneTransitionLabels = { "Без перехода", "Тёмная шторка" };
+            string[] sceneTransitionLabels = { "Без перехода", "Плавное затемнение", "Тёмная шторка" };
             string[] sceneTransitionDirectionLabels = { "Слева направо", "Справа налево" };
             EditorGUI.BeginChangeCheck();
             int sceneTransitionType = EditorGUILayout.Popup(
                 "Способ",
-                scene.transition.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain ? 1 : 0,
+                boundary.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain ? 2 :
+                    boundary.sceneTransitionType == VnSceneComposerSceneTransitionType.Fade ? 1 : 0,
                 sceneTransitionLabels);
             VnSceneComposerSceneTransitionDirection sceneTransitionDirection =
-                scene.transition.sceneTransitionDirection;
-            float sceneTransitionDuration = scene.transition.sceneTransitionDuration;
-            if (sceneTransitionType == 1)
+                boundary.sceneTransitionDirection;
+            float sceneTransitionDuration = boundary.sceneTransitionDuration;
+            if (sceneTransitionType == 2)
             {
                 int directionIndex = sceneTransitionDirection == VnSceneComposerSceneTransitionDirection.RightToLeft ? 1 : 0;
                 directionIndex = EditorGUILayout.Popup("Направление", directionIndex, sceneTransitionDirectionLabels);
                 sceneTransitionDirection = directionIndex == 1
                     ? VnSceneComposerSceneTransitionDirection.RightToLeft
                     : VnSceneComposerSceneTransitionDirection.LeftToRight;
+            }
+            if (sceneTransitionType != 0)
+            {
                 sceneTransitionDuration = DrawSceneComposerDurationControl(
                     "Длительность", sceneTransitionDuration, 0f);
             }
             if (EditorGUI.EndChangeCheck())
             {
                 ComposerSetSelectedSceneBoundaryTransition(
-                    sceneTransitionType == 1
-                        ? VnSceneComposerSceneTransitionType.DarkCurtain
-                        : VnSceneComposerSceneTransitionType.None,
+                    sceneTransitionType == 2 ? VnSceneComposerSceneTransitionType.DarkCurtain :
+                        sceneTransitionType == 1 ? VnSceneComposerSceneTransitionType.Fade :
+                            VnSceneComposerSceneTransitionType.None,
                     sceneTransitionDirection,
                     sceneTransitionDuration);
+            }
+            using (new EditorGUI.DisabledScope(GetSelectedSceneIndexOrThrow() == 0))
+            {
+                if (GUILayout.Button("▶ Проверить переход"))
+                    ComposerPreviewSelectedSceneBoundaryTransition();
             }
 
             EditorGUILayout.Space();
@@ -1839,20 +1945,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Тайминг сцены", "Продолжительность сцены и переход к следующей сцене."), EditorStyles.miniBoldLabel);
-            if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+            VnSceneComposerTiming advanceTiming = GetSceneComposerAdvanceTimingForAuthoring(scene);
             string[] advanceLabels = { "Вручную", "Автоматически" };
-            int currentAdvance = scene.timing.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;
+            int currentAdvance = advanceTiming.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;
             EditorGUI.BeginChangeCheck();
             int nextAdvance = EditorGUILayout.Popup(new GUIContent("Переход к следующей сцене", "Как продолжается воспроизведение после этой сцены."), currentAdvance, advanceLabels);
-            float nextAutoDuration = scene.timing.previewAutoDuration;
+            float nextAutoDuration = advanceTiming.previewAutoDuration;
             if (nextAdvance == 1) nextAutoDuration = EditorGUILayout.FloatField("Длительность сцены, с", Mathf.Max(0f, nextAutoDuration));
             if (EditorGUI.EndChangeCheck())
-            {
-                RecordSceneComposerUndo("Edit VN Scene Advance Timing");
-                scene.timing.previewAdvanceMode = nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration : VnSceneComposerPreviewAdvanceMode.ManualBeat;
-                scene.timing.previewAutoDuration = Mathf.Max(0f, nextAutoDuration);
-                ResetSceneComposerPlayback(); MarkSceneComposerChanged();
-            }
+                ComposerSetSelectedSceneAdvanceTiming(
+                    nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration :
+                        VnSceneComposerPreviewAdvanceMode.ManualBeat,
+                    nextAutoDuration);
         }
 
         private void DrawSceneComposerAdvancedTimingControls(VnSceneComposerScene scene)
@@ -2111,6 +2215,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private void ResetSceneComposerPlayback()
         {
+            _sceneComposerBoundaryPreviewSceneId = null;
             if (_sceneComposerPlayback != null) { _sceneComposerPlayback.Dispose(); _sceneComposerPlayback = null; }
             _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
         }
@@ -2150,6 +2255,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             int index = _sceneComposerPlayback.CurrentSceneIndex;
             if (index < 0 || index >= _sceneComposerProject.scenes.Count) return;
             VnSceneComposerScene scene = _sceneComposerProject.scenes[index];
+            if (!string.IsNullOrEmpty(_sceneComposerBoundaryPreviewSceneId))
+            {
+                if (scene == null || !string.Equals(scene.sceneId,
+                    _sceneComposerBoundaryPreviewSceneId, StringComparison.Ordinal)) return;
+                _sceneComposerBoundaryPreviewSceneId = null;
+            }
             if (scene == null || string.Equals(scene.sceneId, _sceneComposerSelectedSceneId, StringComparison.Ordinal)) return;
             _sceneComposerSelectedSceneId = scene.sceneId;
             SelectFirstSceneComposerDialogueBeat(scene);

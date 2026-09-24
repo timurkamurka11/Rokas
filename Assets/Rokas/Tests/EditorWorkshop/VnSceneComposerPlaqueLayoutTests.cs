@@ -12,7 +12,7 @@ namespace Rokas.EditorTools.Tests
     public sealed class VnSceneComposerPlaqueLayoutTests
     {
         private static Type Ui { get { var t = typeof(VnSceneComposerProject).Assembly.GetType("Rokas.EditorTools.VnUiWorkshop.VnSceneComposerRuntimeUi"); Assert.That(t, Is.Not.Null, "Missing runtime plaque layout"); return t; } }
-        private static object Static(string method, params object[] args) { var m = Ui.GetMethod(method); Assert.That(m, Is.Not.Null); return m.Invoke(null, args); }
+        private static object Static(string method, params object[] args) { var m = Ui.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static); Assert.That(m, Is.Not.Null); return m.Invoke(null, args); }
         private static T Value<T>(object obj, string field) { return (T)obj.GetType().GetField(field).GetValue(obj); }
         private static VnWorkshopPreviewFrame Frame(VnWorkshopResolution resolution = VnWorkshopResolution.Reference1920x1080, string guid = null)
         {
@@ -47,6 +47,22 @@ namespace Rokas.EditorTools.Tests
             using (SHA256 hash = SHA256.Create())
             using (var file = File.OpenRead(Path.Combine(VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), assetPath)))
                 Assert.That(BitConverter.ToString(hash.ComputeHash(file)).Replace("-", "").ToLowerInvariant(), Is.EqualTo(expectedSha));
+        }
+        [Test] public void MuteSwitchesProjectOwnedArtworkAndOtherControlsKeepTheirCrops()
+        {
+            var sheet = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png");
+            var crossed = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png");
+            Assert.That(crossed, Is.Not.Null);
+            Assert.That(Static("ButtonTexture", 0, false), Is.SameAs(sheet));
+            Assert.That(Static("ButtonTexture", 0, true), Is.SameAs(crossed));
+            Assert.That((Rect)Static("ButtonTextureUv", 0, true), Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
+            foreach (int index in new[] { 1, 2 })
+            {
+                Assert.That(Static("ButtonTexture", index, true), Is.SameAs(sheet));
+                Assert.That(Static("ButtonTextureUv", index, true), Is.EqualTo(Static("ButtonUv", index)));
+            }
         }
         [Test] public void IdentifiedOriginalMapsToSafeCanonicalVariantWithoutRewritingProject() { Assert.That(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(Frame(guid: "6bbf22755fe125c4482a7fd9e8f351ca").DialoguePanelTexture)), Is.EqualTo("08ac430bce3843b5a427ff44abe32a12")); }
         [Test] public void CustomPngStillOverridesCanonicalPlaque()
@@ -108,6 +124,8 @@ namespace Rokas.EditorTools.Tests
             object pressed=Static("SampleButton",original,true,true,true,1f);
             object disabled=Static("SampleButton",original,false,false,false,1f);
             Assert.That(Value<float>(hover,"Brightness"), Is.GreaterThan(Value<float>(normal,"Brightness")));
+            Assert.That(Value<float>(normal,"Brightness"), Is.LessThan(1f));
+            Assert.That(Value<float>(normal,"Alpha"), Is.LessThan(1f));
             Assert.That(Value<Rect>(pressed,"Rect").width / original.width, Is.InRange(.94f,.98f));
             Assert.That(Value<float>(disabled,"Alpha"), Is.LessThan(Value<float>(normal,"Alpha")));
             Assert.That(original, Is.EqualTo(new Rect(10,20,60,60)));

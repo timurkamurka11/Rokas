@@ -202,7 +202,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
     public enum VnSceneComposerSceneTransitionType
     {
         None,
-        DarkCurtain
+        DarkCurtain,
+        Fade
     }
 
     public enum VnSceneComposerSceneTransitionDirection
@@ -428,6 +429,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public string title = "Untitled VN Sequence";
         public string sourceHead = VnSceneComposerContract.SourceHead;
         public VnPresentationWorkshopPreset defaultPresentation = new VnPresentationWorkshopPreset();
+        // A project-wide baseline; existing scene transitions remain independent until
+        // an author applies a transition to all scenes.
+        public VnSceneComposerTransition defaultSceneTransition;
+        // A baseline for new scenes; global edits also update existing scene timing.
+        public VnSceneComposerTiming defaultSceneTiming;
         public List<VnSceneComposerProjectSpeakerProfile> projectSpeakerPalette =
             new List<VnSceneComposerProjectSpeakerProfile>();
         public List<VnSceneComposerScene> scenes = new List<VnSceneComposerScene>();

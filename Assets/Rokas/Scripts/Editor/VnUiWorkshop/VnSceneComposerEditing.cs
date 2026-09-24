@@ -10,6 +10,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RequireProject(project);
             VnSceneComposerScene scene = new VnSceneComposerScene();
             scene.label = label ?? string.Empty;
+            if (project.defaultSceneTransition != null)
+            {
+                scene.transition.sceneTransitionType = project.defaultSceneTransition.sceneTransitionType;
+                scene.transition.sceneTransitionDirection = project.defaultSceneTransition.sceneTransitionDirection;
+                scene.transition.sceneTransitionDuration = project.defaultSceneTransition.sceneTransitionDuration;
+            }
+            if (project.defaultSceneTiming != null)
+            {
+                scene.timing.previewAdvanceMode = project.defaultSceneTiming.previewAdvanceMode;
+                scene.timing.previewAutoDuration = project.defaultSceneTiming.previewAutoDuration;
+            }
             project.scenes.Add(scene);
             return scene;
         }
