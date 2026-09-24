@@ -137,9 +137,11 @@ namespace Rokas.EditorTools.Tests
                     typeof(VnPresentationWorkshopWindow).GetField(
                         "_sceneComposerPlayback", BindingFlags.Instance | BindingFlags.NonPublic)
                     .GetValue(window);
-                playback.Advance(.3f);
+                playback.Advance(.14f);
+                Assert.That(playback.CurrentFrame.ReplicaEffect.Active, Is.False);
+                playback.Advance(.16f);
                 VnSceneComposerReplicaEffectSample expected =
-                    VnSceneComposerReplicaEffects.Sample(beat.replicaEffect, playback.BeatElapsedSeconds);
+                    VnSceneComposerReplicaEffects.Sample(beat.replicaEffect, .14f);
                 Assert.That(playback.CurrentFrame.ReplicaEffect.Scale,
                     Is.EqualTo(expected.Scale).Within(.0001f));
                 Assert.That(playback.CurrentFrame.ReplicaEffect.Active, Is.True);
