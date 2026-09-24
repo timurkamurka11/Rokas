@@ -1,5 +1,7 @@
 using System;
 using System.Reflection;
+using System.IO;
+using System.Security.Cryptography;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
 using UnityEditor;
@@ -19,6 +21,33 @@ namespace Rokas.EditorTools.Tests
             return VnSceneComposerComposition.BuildFrame(p, s, resolution, null);
         }
         [Test] public void DefaultResolvesApprovedBluePlaqueVariant() { Assert.That(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(Frame().DialoguePanelTexture)), Is.EqualTo("08ac430bce3843b5a427ff44abe32a12")); }
+        [Test] public void ProvidedControlSheetAndTriangleAreUnmodifiedProjectAssets()
+        {
+            AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png",
+                "dcd32b0ce503f929732a9983c32b7d0f38fd4d1375b0ad797fcac01d255c2e59");
+            AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png",
+                "28f687aa4e531eed1ee55edc4a742e318355c56bb213ab5741f26f67d7f89d16");
+            AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalPlaqueReference.png",
+                "d8bf4918089b7a237e00f3355a6e9c53b14db77b111ce63f17ac93de3ccb327f");
+            var sheet = Ui.GetProperty("ControlSheet", BindingFlags.NonPublic | BindingFlags.Static);
+            var triangle = Ui.GetProperty("CompletionTriangle", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(sheet, Is.Not.Null);
+            Assert.That(triangle, Is.Not.Null);
+            Assert.That(sheet.GetValue(null), Is.SameAs(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png")));
+            Assert.That(triangle.GetValue(null), Is.SameAs(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png")));
+        }
+        private static void AssertAsset(string assetPath, string expectedSha)
+        {
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath), Is.Not.Null);
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            Assert.That(guid, Has.Length.EqualTo(32));
+            Assert.That(AssetDatabase.GUIDToAssetPath(guid), Is.EqualTo(assetPath));
+            using (SHA256 hash = SHA256.Create())
+            using (var file = File.OpenRead(Path.Combine(VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), assetPath)))
+                Assert.That(BitConverter.ToString(hash.ComputeHash(file)).Replace("-", "").ToLowerInvariant(), Is.EqualTo(expectedSha));
+        }
         [Test] public void IdentifiedOriginalMapsToSafeCanonicalVariantWithoutRewritingProject() { Assert.That(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(Frame(guid: "6bbf22755fe125c4482a7fd9e8f351ca").DialoguePanelTexture)), Is.EqualTo("08ac430bce3843b5a427ff44abe32a12")); }
         [Test] public void CustomPngStillOverridesCanonicalPlaque()
         {
@@ -41,6 +70,10 @@ namespace Rokas.EditorTools.Tests
             }
             Assert.That(forward.center.x-mute.center.x, Is.EqualTo(menu.center.x-forward.center.x).Within(.01f));
             Assert.That(mute.Overlaps(forward) || forward.Overlaps(menu) || menu.Overlaps(triangle), Is.False);
+            Assert.That(mute.center.y, Is.LessThan(f.DialoguePanel.y + f.DialoguePanel.height * .60f),
+                "Control centers should sit lower than the previous floating .615 placement.");
+            Assert.That(triangle.center.x, Is.LessThan(f.DialoguePanel.x + f.DialoguePanel.width * .93f),
+                "DialogueComplete should move inward from the outer edge.");
             Assert.That(layout.GetType().GetField("Back"), Is.Null);
         }
         [Test] public void TriangleAnimationHasVisibleMovementScaleAndOpacityAndLoops()

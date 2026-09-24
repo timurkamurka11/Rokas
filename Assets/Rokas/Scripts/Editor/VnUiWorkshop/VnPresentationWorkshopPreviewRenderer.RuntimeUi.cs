@@ -43,21 +43,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
             visual.position += new Vector2(0f, sample.OffsetY * canvas.height / frame.VirtualCanvasSize.y);
             Vector2 size = visual.size * sample.Scale;
             visual = new Rect(visual.center - size * .5f, size);
-            Color before = Handles.color;
-            // Bright white completion cue with a soft halo; draw after the plaque/text
-            // so it cannot disappear behind either layer.
-            Handles.color = new Color(1f, 1f, 1f, sample.Alpha * .22f);
-            Rect halo = new Rect(visual.center - visual.size * .68f, visual.size * 1.36f);
-            Handles.DrawAAConvexPolygon(
-                new Vector3(halo.x, halo.y),
-                new Vector3(halo.xMax, halo.y),
-                new Vector3(halo.center.x, halo.yMax));
-            Handles.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(sample.Alpha);
-            Handles.DrawAAConvexPolygon(
-                new Vector3(visual.x, visual.y),
-                new Vector3(visual.xMax, visual.y),
-                new Vector3(visual.center.x, visual.yMax));
-            Handles.color = before;
+            Texture2D triangle = VnSceneComposerRuntimeUi.CompletionTriangle;
+            if (triangle != null)
+            {
+                Color before = GUI.color;
+                GUI.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(sample.Alpha);
+                GUI.DrawTextureWithTexCoords(visual, triangle, VnSceneComposerRuntimeUi.TriangleUv, true);
+                GUI.color = before;
+            }
             using (new EditorGUI.DisabledScope(!enabled))
                 if (GUI.Button(hit, new GUIContent(string.Empty,"Реплика завершена — далее"), GUIStyle.none)) owner.RequestAdvance(owner.InputTick);
         }
@@ -77,33 +70,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (Event.current.rawType == EventType.MouseUp || !enabled) motion.Held = false;
                 motion.Target(hover, hover && motion.Held, now);
             }
-            float scale = motion.Scale(now), light = motion.Light(now);
+            float scale = motion.Scale(now);
             Vector2 size = hit.size * scale;
             Rect rect = new Rect(hit.center - size * .5f, size);
-            float alpha = owner == null || enabled ? 1f : .42f;
-            Color old = Handles.color;
-            Handles.color = new Color(.10f * light,.23f * light,.34f * light,.95f*alpha);
-            Handles.DrawSolidDisc(rect.center, Vector3.forward, rect.width*.5f);
-            Handles.color = new Color(.40f*light,.74f*light,.94f,alpha);
-            Handles.DrawWireDisc(rect.center,Vector3.forward,rect.width*.49f);
+            float alpha = owner == null || enabled ? (muted ? .65f : 1f) : .42f;
+            Texture2D sheet = VnSceneComposerRuntimeUi.ControlSheet;
+            if (sheet != null)
+            {
+                Color before = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, alpha);
+                GUI.DrawTextureWithTexCoords(rect, sheet, VnSceneComposerRuntimeUi.ButtonUv(index), true);
+                GUI.color = before;
+            }
             if (hover)
             {
-                Handles.color = new Color(.35f,.8f,1f,.24f);
-                Handles.DrawWireDisc(rect.center,Vector3.forward,rect.width*.54f);
+                Color before = Handles.color;
+                Handles.color = new Color(.35f, .8f, 1f, .24f);
+                Handles.DrawWireDisc(rect.center, Vector3.forward, rect.width * .52f);
+                Handles.color = before;
             }
-            Handles.color = new Color(.88f,.96f,1f,alpha);
-            float x=rect.center.x, y=rect.center.y, r=rect.width*.21f;
-            if (index == 1)
-                Handles.DrawAAConvexPolygon(new Vector3(x-r*.65f,y-r),new Vector3(x+r,y),new Vector3(x-r*.65f,y+r));
-            else if (index == 2)
-                for (int line=-1;line<=1;line++) Handles.DrawAAPolyLine(2f,new Vector3(x-r,y+line*r*.75f),new Vector3(x+r,y+line*r*.75f));
-            else
-            {
-                Handles.DrawAAConvexPolygon(new Vector3(x-r,y-r*.4f),new Vector3(x-r*.35f,y-r*.4f),new Vector3(x+r*.25f,y-r),new Vector3(x+r*.25f,y+r),new Vector3(x-r*.35f,y+r*.4f),new Vector3(x-r,y+r*.4f));
-                if (muted) Handles.DrawAAPolyLine(2f,new Vector3(x-r*1.2f,y-r*1.2f),new Vector3(x+r*1.2f,y+r*1.2f));
-                else Handles.DrawAAPolyLine(2f,new Vector3(x+r*.65f,y-r*.65f),new Vector3(x+r,y),new Vector3(x+r*.65f,y+r*.65f));
-            }
-            Handles.color = old;
             using (new EditorGUI.DisabledScope(!enabled))
             {
                 if (!GUI.Button(hit, new GUIContent(string.Empty, tooltip), GUIStyle.none) || owner == null) return;

@@ -21,6 +21,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
     {
         public const string OriginalPlaqueGuid = "6bbf22755fe125c4482a7fd9e8f351ca";
         public const string DefaultPlaqueGuid = "08ac430bce3843b5a427ff44abe32a12";
+        internal const string ControlSheetPath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png";
+        internal const string CompletionTrianglePath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png";
+        internal const float TriangleAspect = 1.25f;
+        internal static Texture2D ControlSheet { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(ControlSheetPath); } }
+        internal static Texture2D CompletionTriangle { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(CompletionTrianglePath); } }
+        // Pixel-exact UV crops of the supplied transparent sheet: mute / forward / menu.
+        internal static Rect ButtonUv(int index)
+        {
+            return new Rect((63f + 661f * index) / 2048f, 49f / 682f, 600f / 2048f, 600f / 682f);
+        }
+        internal static Rect TriangleUv { get { return new Rect(180f / 1254f, 204f / 1254f, 900f / 1254f, 720f / 1254f); } }
         internal static void ConfigureFrame(VnWorkshopPreviewFrame frame, VnPresentationWorkshopPreset preset)
         {
             frame.IsComposerFrame = true;
@@ -34,16 +45,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public static VnSceneComposerPlaqueLayout Layout(VnWorkshopPreviewFrame frame)
         {
             Rect p = frame.DialoguePanel;
-            float diameter = Mathf.Min(p.width * .043f, p.height * .12f);
-            float y = p.y + p.height * .615f;
-            float gap = Mathf.Max(diameter * 1.27f, p.width * .053f);
+            float diameter = Mathf.Min(p.width * .038f, p.height * .10f);
+            float y = p.y + p.height * .595f;
+            float gap = diameter * 1.32f;
             float right = p.xMax - p.width * .06f;
             return new VnSceneComposerPlaqueLayout
             {
                 Mute = Center(right - 2 * gap, y, diameter),
                 Forward = Center(right - gap, y, diameter),
                 Menu = Center(right, y, diameter),
-                Triangle = Center(p.x + p.width * .936f, Mathf.Max(24f, p.y + p.height * .23f), diameter * .72f)
+                Triangle = new Rect(
+                    p.x + p.width * .918f - diameter * .36f,
+                    Mathf.Max(24f, p.y + p.height * .23f) - diameter * .36f / TriangleAspect,
+                    diameter * .72f, diameter * .72f / TriangleAspect)
             };
         }
         private static Rect Center(float x, float y, float size) { return new Rect(x-size*.5f,y-size*.5f,size,size); }

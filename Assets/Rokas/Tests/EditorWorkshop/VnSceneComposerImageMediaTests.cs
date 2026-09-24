@@ -51,7 +51,7 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
-        public void ExternalPngSelectionIsLocalPreviewDependencyAndMissingFileWarns()
+        public void ExternalPngSelectionPersistsProjectOwnedImageAfterSourceIsDeleted()
         {
             Type sceneType = RequireType("VnSceneComposerScene");
             Type mediaType = RequireType("VnSceneComposerMediaReference");
@@ -61,6 +61,8 @@ namespace Rokas.EditorTools.Tests
             object scene = Activator.CreateInstance(sceneType);
             string path = Path.Combine(Path.GetTempPath(), "rokas-vn-composer-sc-c-" + Guid.NewGuid().ToString("N") + ".png");
             Texture2D generated = new Texture2D(4, 2, TextureFormat.RGBA32, false);
+            string importedPath = null;
+            string stableId = null;
             try
             {
                 generated.SetPixels(Enumerable.Repeat(Color.magenta, 8).ToArray());
@@ -74,12 +76,18 @@ namespace Rokas.EditorTools.Tests
                 select.Invoke(null, new[] { scene, path, fill });
                 object media = Get(scene, "media");
 
-                Assert.That(Get(media, "kind").ToString(), Is.EqualTo("ExternalImage"));
-                Assert.That(GetString(media, "reference"), Is.EqualTo(Path.GetFullPath(path)));
-                Assert.That((bool)Get(media, "localPreviewDependency"), Is.True);
+                Assert.That(Get(media, "kind").ToString(), Is.EqualTo("ExistingRokasAsset"));
+                string guid = GetString(media, "reference");
+                importedPath = AssetDatabase.GUIDToAssetPath(guid);
+                Assert.That(importedPath, Does.StartWith(VnSceneComposerAssetLibrary.ManagedRootRelative + "/"));
+                Assert.That(File.Exists(Path.Combine(VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), importedPath + ".meta")), Is.True);
+                Assert.That((bool)Get(media, "localPreviewDependency"), Is.False);
                 Assert.That(GetString(media, "contentHash"), Is.Not.Empty);
                 Assert.That(Get(media, "scaleMode").ToString(), Is.EqualTo("Fill"));
                 Assert.That(AssetDatabase.AssetPathToGUID(path), Is.Empty);
+                stableId = VnSceneComposerAssetLibrary.FindByPurpose(
+                    VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), VnSceneComposerAssetPurpose.Background)
+                    .Single(entry => entry.assetGuid == guid).stableAssetId;
 
                 MethodInfo open = RequireStatic(editingType, "OpenImagePreview", mediaType);
                 object preview = open.Invoke(null, new[] { media });
@@ -88,19 +96,22 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(texture.width, Is.EqualTo(4));
                 Assert.That(texture.height, Is.EqualTo(2));
                 Assert.That(GetString(preview, "warning"), Is.Empty);
-                Assert.That((bool)Get(preview, "ownsTexture"), Is.True);
+                Assert.That((bool)Get(preview, "ownsTexture"), Is.False);
                 RequireInstance(previewType, "Dispose").Invoke(preview, null);
 
                 File.Delete(path);
                 object missing = open.Invoke(null, new[] { media });
-                Assert.That(Get(missing, "texture"), Is.Null);
-                Assert.That(GetString(missing, "warning"), Does.Contain("missing").IgnoreCase);
+                Assert.That(Get(missing, "texture"), Is.SameAs(texture));
+                Assert.That(GetString(missing, "warning"), Is.Empty);
                 RequireInstance(previewType, "Dispose").Invoke(missing, null);
             }
             finally
             {
                 if (generated != null) UnityEngine.Object.DestroyImmediate(generated);
                 if (File.Exists(path)) File.Delete(path);
+                if (!string.IsNullOrEmpty(stableId))
+                    VnSceneComposerAssetLibrary.Unregister(VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), stableId);
+                if (!string.IsNullOrEmpty(importedPath)) AssetDatabase.DeleteAsset(importedPath);
             }
         }
 

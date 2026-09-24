@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 
@@ -62,15 +61,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("Image path is required.", nameof(path));
             string fullPath = Path.GetFullPath(path);
             RequireImageExtension(fullPath);
-            if (!File.Exists(fullPath)) throw new FileNotFoundException("External preview image is missing.", fullPath);
+            if (!File.Exists(fullPath)) throw new FileNotFoundException("Selected image is missing.", fullPath);
+
+            VnSceneComposerAssetOnboardResult imported = VnSceneComposerAssetLibrary.Onboard(
+                VnSceneComposerAssetLibrary.GetDefaultProjectRoot(), fullPath,
+                VnSceneComposerAssetPurpose.Background, Path.GetFileNameWithoutExtension(fullPath),
+                string.Empty, string.Empty);
+            if (!imported.Success || imported.Entry == null)
+                throw new IOException("Could not import Scene image into Assets: " + imported.Error);
+            VnSceneComposerAssetEntry entry = imported.Entry;
+            string importedPath = AssetDatabase.GUIDToAssetPath(entry.assetGuid);
+            if (string.IsNullOrEmpty(importedPath) ||
+                !string.Equals(importedPath, entry.assetPath, StringComparison.OrdinalIgnoreCase) ||
+                AssetDatabase.LoadAssetAtPath<Texture2D>(importedPath) == null)
+                throw new IOException("Imported Scene image has no readable project asset and GUID: " + entry.assetPath);
 
             scene.media = new VnSceneComposerMediaReference
             {
-                kind = VnSceneComposerMediaKind.ExternalImage,
-                reference = fullPath,
+                kind = VnSceneComposerMediaKind.ExistingRokasAsset,
+                reference = entry.assetGuid,
                 displayName = Path.GetFileName(fullPath),
-                contentHash = ComputeSha256(fullPath),
-                localPreviewDependency = true,
+                contentHash = entry.contentHash,
+                localPreviewDependency = false,
                 scaleMode = scaleMode
             };
         }
@@ -164,14 +176,5 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new ArgumentException("Scene Composer external images must be PNG, JPG or JPEG.", nameof(path));
         }
 
-        private static string ComputeSha256(string path)
-        {
-            using (SHA256 sha = SHA256.Create())
-            using (FileStream stream = File.OpenRead(path))
-            {
-                byte[] hash = sha.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
-            }
-        }
     }
 }
