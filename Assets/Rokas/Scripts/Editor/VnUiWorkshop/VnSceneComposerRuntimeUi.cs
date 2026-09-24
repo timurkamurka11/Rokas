@@ -66,9 +66,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Forward = Center(right - gap, y, diameter),
                 Menu = Center(right, y, diameter),
                 Triangle = new Rect(
-                    p.x + p.width * .912f - diameter * .32f,
-                    Mathf.Max(24f, p.y + p.height * .27f) - diameter * .32f / TriangleAspect,
-                    diameter * .64f, diameter * .64f / TriangleAspect)
+                    p.x + p.width * .913f - diameter * .34f,
+                    Mathf.Max(24f, p.y + p.height * .27f) - diameter * .34f / TriangleAspect,
+                    diameter * .68f, diameter * .68f / TriangleAspect)
             };
         }
         private static Rect Center(float x, float y, float size) { return new Rect(x-size*.5f,y-size*.5f,size,size); }
