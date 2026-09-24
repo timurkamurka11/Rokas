@@ -36,7 +36,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 stateId = source.stateId ?? string.Empty,
                 effect = source.effect,
                 effectStrength = source.effectStrength,
-                effectDuration = source.effectDuration
+                effectDuration = source.effectDuration,
+                replicaEffect = source.replicaEffect != null
+                    ? UnityEngine.JsonUtility.FromJson<VnSceneComposerReplicaEffect>(
+                        UnityEngine.JsonUtility.ToJson(source.replicaEffect))
+                    : new VnSceneComposerReplicaEffect()
             };
             if (source.characterStaging != null)
             {

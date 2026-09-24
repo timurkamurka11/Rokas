@@ -1234,6 +1234,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     if (beat.stateId == null) beat.stateId = string.Empty;
                     if (!IsFinite(beat.effectStrength) || beat.effectStrength < 0f) beat.effectStrength = 18f;
                     if (!IsFinite(beat.effectDuration) || beat.effectDuration <= 0f) beat.effectDuration = .28f;
+                    if (beat.replicaEffect == null)
+                        beat.replicaEffect = new VnSceneComposerReplicaEffect();
+                    if (!Enum.IsDefined(typeof(VnSceneComposerReplicaEffectType), beat.replicaEffect.type))
+                        beat.replicaEffect.type = VnSceneComposerReplicaEffectType.None;
+                    if (!IsFinite(beat.replicaEffect.intensity)) beat.replicaEffect.intensity = .35f;
+                    if (!IsFinite(beat.replicaEffect.duration)) beat.replicaEffect.duration = .45f;
+                    if (!IsFinite(beat.replicaEffect.frequency)) beat.replicaEffect.frequency = 12f;
+                    if (!IsFinite(beat.replicaEffect.decay)) beat.replicaEffect.decay = 1.5f;
+                    beat.replicaEffect.intensity = Mathf.Clamp01(beat.replicaEffect.intensity);
+                    beat.replicaEffect.duration = Mathf.Clamp(beat.replicaEffect.duration, .05f, 5f);
+                    beat.replicaEffect.frequency = Mathf.Clamp(beat.replicaEffect.frequency, 1f, 30f);
+                    beat.replicaEffect.decay = Mathf.Clamp(beat.replicaEffect.decay, .25f, 4f);
+                    if (!IsFinite(beat.replicaEffect.direction.x) ||
+                        !IsFinite(beat.replicaEffect.direction.y))
+                        beat.replicaEffect.direction = Vector2.right;
+                    if (!IsFinite(beat.replicaEffect.flashColor.r) ||
+                        !IsFinite(beat.replicaEffect.flashColor.g) ||
+                        !IsFinite(beat.replicaEffect.flashColor.b) ||
+                        !IsFinite(beat.replicaEffect.flashColor.a))
+                        beat.replicaEffect.flashColor = Color.white;
                     if (beat.characterStaging == null)
                         beat.characterStaging = new List<VnSceneComposerBeatCharacterStaging>();
                     for (int r = 0; r < beat.characterStaging.Count; r++)

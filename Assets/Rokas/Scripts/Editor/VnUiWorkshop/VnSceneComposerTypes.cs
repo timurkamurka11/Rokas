@@ -39,6 +39,27 @@ namespace Rokas.EditorTools.VnUiWorkshop
         Hop
     }
 
+    public enum VnSceneComposerReplicaEffectType
+    {
+        None,
+        Shake,
+        Punch,
+        Flash,
+        Pulse
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerReplicaEffect
+    {
+        public VnSceneComposerReplicaEffectType type = VnSceneComposerReplicaEffectType.None;
+        public float intensity = .35f;
+        public float duration = .45f;
+        public float frequency = 12f;
+        public float decay = 1.5f;
+        public Vector2 direction = Vector2.right;
+        public Color flashColor = Color.white;
+    }
+
     public enum VnSceneComposerBeatCharacterVisibility
     {
         KeepPrevious,
@@ -265,6 +286,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerBeatEffect effect = VnSceneComposerBeatEffect.None;
         public float effectStrength = 18f;
         public float effectDuration = .28f;
+        // Additive per-replica visual effect. Missing data in older projects means None.
+        public VnSceneComposerReplicaEffect replicaEffect = new VnSceneComposerReplicaEffect();
         public List<VnSceneComposerBeatCharacterStaging> characterStaging =
             new List<VnSceneComposerBeatCharacterStaging>();
     }
