@@ -436,13 +436,13 @@ namespace Rokas.EditorTools.Tests
             string[] requiredLabels =
             {
                 "Анимация сцены",
-                "Переход фона",
+                "Переход между сценами",
                 "Расположение персонажей",
                 "Фокус говорящего",
                 "Тайминг сцены",
                 "Без перехода",
                 "Плавный переход",
-                "Шторка",
+                "Тёмная шторка",
                 "Слева направо",
                 "Справа налево",
                 "1 персонаж",
@@ -456,7 +456,8 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(source, Does.Contain("\"" + label + "\""),
                     "Basic scene animation must expose the Russian VN concept: " + label + ".");
 
-            Assert.That(source, Does.Contain("ComposerSetBackgroundTransition("));
+            Assert.That(source, Does.Not.Contain("\"Переход фона\""),
+                "Scene Animation must offer one scene-boundary transition control.");
             Assert.That(source, Does.Contain("ComposerSetStageLayout("));
             Assert.That(source, Does.Contain("ComposerSetSpeakerFocus("));
             Assert.That(source, Does.Contain("ComposerSetTiming("));
