@@ -21,12 +21,14 @@ namespace Rokas.EditorTools.Tests
             return VnSceneComposerComposition.BuildFrame(p, s, resolution, null);
         }
         [Test] public void DefaultResolvesApprovedBluePlaqueVariant() { Assert.That(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(Frame().DialoguePanelTexture)), Is.EqualTo("08ac430bce3843b5a427ff44abe32a12")); }
-        [Test] public void ProvidedControlSheetAndTriangleAreUnmodifiedProjectAssets()
+        [Test] public void ProvidedControlSheetAndCompletionArrowAreProjectAssets()
         {
             AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png",
                 "dcd32b0ce503f929732a9983c32b7d0f38fd4d1375b0ad797fcac01d255c2e59");
             AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png",
                 "28f687aa4e531eed1ee55edc4a742e318355c56bb213ab5741f26f67d7f89d16");
+            AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasCompletionArrow.png",
+                "e2eb9affd4e6607ef94d3236847e7a046604edd5dfd2363af6e5dac76942abe2");
             AssertAsset("Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalPlaqueReference.png",
                 "d8bf4918089b7a237e00f3355a6e9c53b14db77b111ce63f17ac93de3ccb327f");
             var sheet = Ui.GetProperty("ControlSheet", BindingFlags.NonPublic | BindingFlags.Static);
@@ -36,7 +38,7 @@ namespace Rokas.EditorTools.Tests
             Assert.That(sheet.GetValue(null), Is.SameAs(AssetDatabase.LoadAssetAtPath<Texture2D>(
                 "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png")));
             Assert.That(triangle.GetValue(null), Is.SameAs(AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png")));
+                "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasCompletionArrow.png")));
         }
         private static void AssertAsset(string assetPath, string expectedSha)
         {
@@ -88,8 +90,10 @@ namespace Rokas.EditorTools.Tests
             Assert.That(mute.Overlaps(forward) || forward.Overlaps(menu) || menu.Overlaps(triangle), Is.False);
             Assert.That(mute.center.y, Is.LessThan(f.DialoguePanel.y + f.DialoguePanel.height * .60f),
                 "Control centers should sit lower than the previous floating .615 placement.");
-            Assert.That(triangle.center.x, Is.LessThan(f.DialoguePanel.x + f.DialoguePanel.width * .93f),
-                "DialogueComplete should move inward from the outer edge.");
+            Assert.That(triangle.center.x, Is.LessThan(f.DialoguePanel.x + f.DialoguePanel.width * .90f),
+                "Completion arrow should sit inside the plaque safe area.");
+            Assert.That(triangle.center.y, Is.LessThan(f.DialoguePanel.y + f.DialoguePanel.height * .22f),
+                "Completion arrow should sit above the former corner position.");
             Assert.That(layout.GetType().GetField("Back"), Is.Null);
         }
         [Test] public void TriangleAnimationHasVisibleMovementScaleAndOpacityAndLoops()
@@ -98,6 +102,8 @@ namespace Rokas.EditorTools.Tests
             Assert.That(Mathf.Abs(Value<float>(a,"OffsetY")-Value<float>(b,"OffsetY")), Is.GreaterThan(2f));
             Assert.That(Value<float>(a,"Scale"), Is.Not.EqualTo(Value<float>(b,"Scale")));
             Assert.That(Value<float>(a,"Alpha"), Is.Not.EqualTo(Value<float>(b,"Alpha")));
+            Assert.That(Value<float>(b,"Scale"), Is.LessThan(1.04f));
+            Assert.That(Mathf.Abs(Value<float>(b,"OffsetY")), Is.LessThan(3f));
             Assert.That(Value<float>(a,"OffsetY"), Is.EqualTo(Value<float>(end,"OffsetY")).Within(.001f));
         }
         [Test] public void CompletionIndicatorIsBrightWhiteAndLargeEnoughToNotice()

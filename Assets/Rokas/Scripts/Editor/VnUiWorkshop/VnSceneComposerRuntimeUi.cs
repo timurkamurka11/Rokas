@@ -23,8 +23,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public const string DefaultPlaqueGuid = "08ac430bce3843b5a427ff44abe32a12";
         internal const string ControlSheetPath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalControlSheet.png";
         internal const string MutedSpeakerPath = "Assets/Rokas/Art/VN/UI/Controls/VN_Icon_Mute.png";
-        internal const string CompletionTrianglePath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasFinalCompletionTriangle.png";
-        internal const float TriangleAspect = 1.25f;
+        internal const string CompletionTrianglePath = "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RuntimeUi/RokasCompletionArrow.png";
+        internal const float TriangleAspect = .90f;
         internal static Texture2D ControlSheet { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(ControlSheetPath); } }
         internal static Texture2D MutedSpeaker { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(MutedSpeakerPath); } }
         internal static Texture2D CompletionTriangle { get { return AssetDatabase.LoadAssetAtPath<Texture2D>(CompletionTrianglePath); } }
@@ -41,7 +41,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             return index == 0 && muted ? new Rect(0f, 0f, 1f, 1f) : ButtonUv(index);
         }
-        internal static Rect TriangleUv { get { return new Rect(180f / 1254f, 204f / 1254f, 900f / 1254f, 720f / 1254f); } }
+        // Crop only transparent canvas margins; keep the supplied arrow and glow intact.
+        internal static Rect TriangleUv { get { return new Rect(.23f, .17f, .59f, .65f); } }
         internal static void ConfigureFrame(VnWorkshopPreviewFrame frame, VnPresentationWorkshopPreset preset)
         {
             frame.IsComposerFrame = true;
@@ -65,8 +66,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Forward = Center(right - gap, y, diameter),
                 Menu = Center(right, y, diameter),
                 Triangle = new Rect(
-                    p.x + p.width * .918f - diameter * .36f,
-                    Mathf.Max(24f, p.y + p.height * .23f) - diameter * .36f / TriangleAspect,
+                    p.x + p.width * .865f - diameter * .36f,
+                    Mathf.Max(24f, p.y + p.height * .19f) - diameter * .36f / TriangleAspect,
                     diameter * .72f, diameter * .72f / TriangleAspect)
             };
         }
@@ -76,9 +77,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float wave = Mathf.Sin(unscaledSeconds * (Mathf.PI * 2f / .75f));
             return new VnSceneComposerTriangleSample
             {
-                OffsetY = wave * 6f,
-                Scale = 1f + wave * .12f,
-                Alpha = .82f + wave * .18f
+                OffsetY = wave * 2.25f,
+                Scale = 1f + wave * .025f,
+                Alpha = .87f + wave * .10f
             };
         }
 
