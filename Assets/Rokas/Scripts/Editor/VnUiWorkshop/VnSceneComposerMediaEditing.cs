@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 
@@ -174,6 +175,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string extension = Path.GetExtension(path).ToLowerInvariant();
             if (extension != ".png" && extension != ".jpg" && extension != ".jpeg")
                 throw new ArgumentException("Scene Composer external images must be PNG, JPG or JPEG.", nameof(path));
+        }
+
+        private static string ComputeSha256(string path)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream stream = File.OpenRead(path))
+            {
+                byte[] hash = sha.ComputeHash(stream);
+                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            }
         }
 
     }
