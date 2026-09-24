@@ -16,8 +16,6 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
-        private string storyMediaPath;
-        private string hiddenStoryMediaPath;
         private bool previousIgnoreFailingMessages;
 
         [UnityTest]
@@ -84,9 +82,8 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator RealLaunchFallsThroughStoryToMainMenuBeforeHome()
         {
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitFor("RokasMainMenu", 1.5f);
+            yield return AdvanceLaunchMediaToMenu(boot);
 
             Assert.That(Find("HomeTitle"), Is.Null,
                 "Startup Preview and Story Intro must finish into the menu, not directly into Home.");
@@ -135,9 +132,8 @@ namespace Rokas.Tests
         public IEnumerator EnterWorldBuildsExistingHomeExactlyOnce()
         {
             MarkIntroCompleted();
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitFor("RokasMainMenu", 1.5f);
+            yield return AdvanceLaunchMediaToMenu(boot);
 
             Press("EnterWorldButton");
             yield return null;
@@ -185,15 +181,6 @@ namespace Rokas.Tests
             PlayerPrefs.Save();
         }
 
-        private void HideStoryMediaForDeterministicLinuxFallback()
-        {
-            storyMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "StoryIntro.mp4");
-            Assert.That(File.Exists(storyMediaPath), Is.True,
-                "Focused CI verifies the real StoryIntro.mp4 before tests; this helper only hides it from Linux VideoPlayer.");
-            hiddenStoryMediaPath = Path.Combine(Path.GetTempPath(), "rokas-hidden-story-" + Guid.NewGuid().ToString("N") + ".mp4");
-            File.Move(storyMediaPath, hiddenStoryMediaPath);
-        }
-
         private RokasBootstrap CreateRealLaunchIgnoringHostDecoderErrors()
         {
             previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
@@ -202,13 +189,20 @@ namespace Rokas.Tests
             return root.AddComponent<RokasBootstrap>();
         }
 
-        private IEnumerator WaitFor(string objectName, float seconds)
+        private IEnumerator AdvanceLaunchMediaToMenu(RokasBootstrap boot)
         {
-            float deadline = Time.realtimeSinceStartup + seconds;
-            while (Find(objectName) == null && Time.realtimeSinceStartup < deadline)
+            // Decode-capable hosts play the real media; other hosts use the presenter's safe fallback.
+            // Advance only after a decoded first frame, preserving the production skip gate.
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while (Find("RokasMainMenu") == null && Time.realtimeSinceStartup < deadline)
+            {
+                VideoSequencePresenter presenter = boot.VideoPresenter;
+                if (presenter && presenter.IsPlaying && presenter.FirstFramePresented)
+                    presenter.Skip();
                 yield return null;
-            Assert.That(Find(objectName), Is.Not.Null,
-                "Timed out waiting for launch object: " + objectName + ".");
+            }
+            Assert.That(Find("RokasMainMenu"), Is.Not.Null,
+                "Startup Preview and Story Intro must reach the main menu through skip or safe fallback.");
         }
 
         private void Press(string name)
@@ -253,9 +247,6 @@ namespace Rokas.Tests
             PlayerPrefs.Save();
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
-            if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
-                !string.IsNullOrEmpty(storyMediaPath) && !File.Exists(storyMediaPath))
-                File.Move(hiddenStoryMediaPath, storyMediaPath);
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
         }
     }

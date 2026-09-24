@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -15,17 +14,14 @@ namespace Rokas.Tests
     public sealed class VnIntroPlayModeTests
     {
         private GameObject launchRoot;
-        private string storyMediaPath;
-        private string hiddenStoryMediaPath;
         private bool previousIgnoreFailingMessages;
 
         [UnityTest]
         public IEnumerator FirstEnterWorldBuildsVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+            yield return WaitForMainMenuAfterStartupVideos(boot);
 
             Button enter = FindLaunchButton("EnterWorldButton");
             Assert.That(enter, Is.Not.Null);
@@ -57,9 +53,8 @@ namespace Rokas.Tests
         public IEnumerator NaturalCompletionAdvancesOneBeatPerClickThenBuildsHomeBeforeMarkingComplete()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+            yield return WaitForMainMenuAfterStartupVideos(boot);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
             yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
@@ -93,9 +88,8 @@ namespace Rokas.Tests
         {
             PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
             PlayerPrefs.Save();
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+            yield return WaitForMainMenuAfterStartupVideos(boot);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
             yield return WaitForLaunchObject("HomeTitle", 1.5f);
@@ -110,9 +104,8 @@ namespace Rokas.Tests
         public IEnumerator SkipUsesSharedSafeHandoffAndRestoresTransientMute()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
-            HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+            yield return WaitForMainMenuAfterStartupVideos(boot);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
             yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
@@ -142,9 +135,8 @@ namespace Rokas.Tests
         public IEnumerator PauseBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
-            HideStoryMediaForDeterministicLinuxFallback();
-            CreateRealLaunchIgnoringHostDecoderErrors();
-            yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            yield return WaitForMainMenuAfterStartupVideos(boot);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
             yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
@@ -385,13 +377,23 @@ namespace Rokas.Tests
             return field.GetValue(boot) as RokasAudio;
         }
 
-        private void HideStoryMediaForDeterministicLinuxFallback()
+        private IEnumerator WaitForMainMenuAfterStartupVideos(RokasBootstrap boot)
         {
-            storyMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "StoryIntro.mp4");
+            string storyMediaPath = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "StoryIntro.mp4");
             Assert.That(File.Exists(storyMediaPath), Is.True,
-                "Focused CI must contain the real StoryIntro.mp4; this helper only hides it from Linux VideoPlayer.");
-            hiddenStoryMediaPath = Path.Combine(Path.GetTempPath(), "rokas-vn-hidden-story-" + Guid.NewGuid().ToString("N") + ".mp4");
-            File.Move(storyMediaPath, hiddenStoryMediaPath);
+                "The real StoryIntro.mp4 must remain available throughout the launch fixture.");
+
+            // Both videos can use the presenter's eight-second decoder fallback on a headless host.
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while (FindLaunchObject("RokasMainMenu") == null && Time.realtimeSinceStartup < deadline)
+            {
+                if (boot.VideoPresenter && boot.VideoPresenter.FirstFramePresented)
+                    boot.VideoPresenter.Skip();
+                yield return null;
+            }
+
+            Assert.That(FindLaunchObject("RokasMainMenu"), Is.Not.Null,
+                "Timed out waiting for the main menu after startup and story playback.");
         }
 
         private IEnumerator WaitForLaunchObject(string objectName, float seconds)
@@ -465,12 +467,7 @@ namespace Rokas.Tests
             PlayerPrefs.Save();
             if (launchRoot != null) UnityEngine.Object.Destroy(launchRoot);
             yield return null;
-            if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
-                !string.IsNullOrEmpty(storyMediaPath) && !File.Exists(storyMediaPath))
-                File.Move(hiddenStoryMediaPath, storyMediaPath);
             launchRoot = null;
-            storyMediaPath = null;
-            hiddenStoryMediaPath = null;
         }
 
         private static VnIntroArt CreateArt()

@@ -15,6 +15,9 @@ namespace Rokas.Tests
     {
         private GameObject root;
         private string directory;
+        private bool restoreIntroCompletion;
+        private bool hadIntroCompletion;
+        private int previousIntroCompletion;
 
         [UnityTest]
         public IEnumerator RealStartDoesNotBuildHomeBeforeStartupVideoGate()
@@ -94,6 +97,12 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator CommittedStartupAndStoryMediaProduceFramesThenMenuAndHomeOnce()
         {
+            hadIntroCompletion = PlayerPrefs.HasKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            previousIntroCompletion = PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0);
+            restoreIntroCompletion = true;
+            PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
+            PlayerPrefs.Save();
+
             root = new GameObject("StartupActualMediaFixture");
             var boot = root.AddComponent<RokasBootstrap>();
             yield return null;
@@ -125,6 +134,13 @@ namespace Rokas.Tests
 
             Press("EnterWorldButton");
             yield return null;
+            Assert.That(Find("RokasMainMenu"), Is.Not.Null,
+                "The menu remains beneath the existing fade until the full-black handoff.");
+            Assert.That(boot.View, Is.Null);
+
+            float deadline = Time.realtimeSinceStartup + 1.5f;
+            while (Find("HomeTitle") == null && Time.realtimeSinceStartup < deadline)
+                yield return null;
 
             Assert.That(boot.View, Is.Not.Null);
             Assert.That(Find("HomeTitle"), Is.Not.Null);
@@ -216,6 +232,14 @@ namespace Rokas.Tests
             if (root != null) UnityEngine.Object.Destroy(root);
             yield return null;
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) Directory.Delete(directory, true);
+            if (restoreIntroCompletion)
+            {
+                if (hadIntroCompletion)
+                    PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, previousIntroCompletion);
+                else
+                    PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+                PlayerPrefs.Save();
+            }
         }
     }
 }
