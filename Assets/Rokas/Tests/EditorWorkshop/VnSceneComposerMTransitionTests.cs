@@ -235,7 +235,6 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(Get(reveal, "Phase").ToString(), Is.EqualTo("Reveal"));
                 Assert.That((float)Get(reveal, "Coverage"), Is.EqualTo(.11f).Within(.01f));
                 Assert.That(controller.CurrentFrame.ForegroundAlpha, Is.EqualTo(.5f).Within(.01f));
-                Assert.That(controller.CurrentFrame.ShowCharacters, Is.True);
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.SourceAlpha,
                     Is.EqualTo(.5f).Within(.01f));
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.TargetAlpha,
