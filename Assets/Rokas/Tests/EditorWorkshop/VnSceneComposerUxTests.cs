@@ -460,8 +460,10 @@ namespace Rokas.EditorTools.Tests
             Assert.That(source, Does.Contain("ComposerSetStageLayout("));
             Assert.That(source, Does.Contain("ComposerSetSpeakerFocus("));
             Assert.That(source, Does.Contain("ComposerSetTiming("));
-            Assert.That(source, Does.Contain("scene.timing.previewAdvanceMode"),
-                "Manual/automatic scene advance must keep using the canonical scene timing model.");
+            Assert.That(source, Does.Contain("GetSceneComposerAdvanceTimingForAuthoring(scene)"));
+            Assert.That(source, Does.Contain("advanceTiming.previewAdvanceMode"));
+            Assert.That(source, Does.Contain("ComposerSetSelectedSceneAdvanceTiming("),
+                "Manual/automatic scene advance must keep using the scoped canonical scene timing model.");
         }
 
         [Test]
