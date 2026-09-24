@@ -79,6 +79,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerMediaScaleMode TargetScaleMode { get; }
         public VnSceneComposerSceneTransitionOverlaySample SceneTransitionOverlay { get; }
         public VnSceneComposerReplicaEffectSample ReplicaEffect { get; internal set; }
+        public float ForegroundAlpha { get; internal set; } = 1f;
         public bool ShowDialogueUi { get; }
         public VnSceneComposerPlaybackController Owner { get; internal set; }
         public bool ShowDialoguePanel { get; internal set; }
@@ -634,7 +635,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CurrentFrame.ShowDialogueText = frozen.ShowDialogueText;
                 CurrentFrame.Dialogue = frozen.Dialogue;
                 CurrentFrame.DialogueReveal = frozen.DialogueReveal;
-                CurrentFrame.ReplicaEffect = frozen.ReplicaEffect;
+                CurrentFrame.ReplicaEffect = VnSceneComposerReplicaEffects.Sample(null, 0f);
+                CurrentFrame.ForegroundAlpha = SampleSceneBoundaryForegroundAlpha();
                 return;
             }
 
@@ -735,14 +737,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 ? sourceScaleMode
                 : (targetScene.media != null ? targetScene.media.scaleMode : VnSceneComposerMediaScaleMode.Fit);
 
-            bool mediaReady =
-                !IsSceneTransitionActive && IsCurrentVideoPresentationReady();
-            bool showPanel = mediaReady;
-            bool showCharacters = mediaReady &&
+            bool videoReady = IsCurrentVideoPresentationReady();
+            bool mediaReady = !IsSceneTransitionActive && videoReady;
+            bool fadeReveal = videoReady && IsSceneTransitionActive && sceneTransitionHasSwapped &&
+                sceneTransitionType == VnSceneComposerSceneTransitionType.Fade &&
+                sceneBoundaryTransitionPhase == SceneBoundaryTransitionPhase.Reveal;
+            bool showPanel = mediaReady || fadeReveal;
+            bool showCharacters = showPanel &&
                 (!entrySequencing ||
                  sceneEntryPresentationElapsedSeconds + .00001f >=
                  SceneEntryPlaqueLeadSeconds);
-            bool showDialogueText = mediaReady &&
+            bool showDialogueText = showPanel &&
                 (!entrySequencing ||
                  sceneEntryPresentationElapsedSeconds + .00001f >=
                  SceneEntryDialogueLeadSeconds);
@@ -756,13 +761,30 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CurrentFrame.ShowDialoguePanel = showPanel;
             CurrentFrame.ShowCharacters = showCharacters;
             CurrentFrame.ShowDialogueText = showDialogueText;
+            CurrentFrame.ForegroundAlpha = SampleSceneBoundaryForegroundAlpha();
             // Keep reveal state/data authoritative even while the renderer gate hides it.
             // This preserves first-click completion semantics without drawing text before
             // the Scene-entry character/text phase is allowed to become visible.
             CurrentFrame.Dialogue = sample.visibleText ?? string.Empty;
             CurrentFrame.ReplicaEffect = VnSceneComposerReplicaEffects.Sample(
-                targetBeat != null ? targetBeat.replicaEffect : null, BeatElapsedSeconds);
+                mediaReady && showDialogueText && targetBeat != null
+                    ? targetBeat.replicaEffect : null,
+                entrySequencing ? dialogueElapsed : BeatElapsedSeconds);
             CurrentFrame.DialogueReveal = sample.dialogueReveal;
+        }
+
+        private float SampleSceneBoundaryForegroundAlpha()
+        {
+            if (!IsSceneTransitionActive || sceneTransitionType != VnSceneComposerSceneTransitionType.Fade)
+                return 1f;
+            float progress = Mathf.Clamp01(sceneTransitionPhaseElapsed /
+                Mathf.Max(.0001f, sceneTransitionDuration * .5f));
+            switch (sceneBoundaryTransitionPhase)
+            {
+                case SceneBoundaryTransitionPhase.Cover: return 1f - progress;
+                case SceneBoundaryTransitionPhase.Reveal: return progress;
+                default: return 0f;
+            }
         }
 
         private VnSceneComposerSceneTransitionOverlaySample BuildSceneBoundaryOverlaySample()

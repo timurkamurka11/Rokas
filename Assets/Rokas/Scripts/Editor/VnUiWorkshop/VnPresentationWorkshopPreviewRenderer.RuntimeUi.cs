@@ -27,16 +27,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private static readonly ConditionalWeakTable<VnSceneComposerPlaybackController, Dictionary<int, ButtonMotion>> ControlMotion =
             new ConditionalWeakTable<VnSceneComposerPlaybackController, Dictionary<int, ButtonMotion>>();
 
-        private static void DrawComposerRuntimeControls(Rect canvas, VnWorkshopPreviewFrame frame)
+        private static void DrawComposerRuntimeControls(Rect canvas, VnWorkshopPreviewFrame frame,
+            float foregroundAlpha)
         {
             if (!frame.IsComposerFrame) return;
             PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playback);
             var owner = playback != null ? playback.Owner : null;
             var layout = VnSceneComposerRuntimeUi.Layout(frame);
-            bool enabled = owner != null && owner.IsPlaying && !owner.IsMenuOpen;
-            DrawPlaqueButton(canvas, frame, layout.Mute, 0, "Звук", owner, enabled, owner != null && owner.IsMuted);
-            DrawPlaqueButton(canvas, frame, layout.Forward, 1, "Далее", owner, enabled && !owner.IsSceneTransitionActive, false);
-            DrawPlaqueButton(canvas, frame, layout.Menu, 2, "Меню", owner, enabled, false);
+            bool enabled = owner != null && owner.IsPlaying && !owner.IsMenuOpen &&
+                foregroundAlpha >= .99f;
+            DrawPlaqueButton(canvas, frame, layout.Mute, 0, "Звук", owner, enabled,
+                owner != null && owner.IsMuted, foregroundAlpha);
+            DrawPlaqueButton(canvas, frame, layout.Forward, 1, "Далее", owner,
+                enabled && !owner.IsSceneTransitionActive, false, foregroundAlpha);
+            DrawPlaqueButton(canvas, frame, layout.Menu, 2, "Меню", owner, enabled,
+                false, foregroundAlpha);
             if (owner == null || !owner.ShowCompletionIndicator) return;
             var sample = VnSceneComposerRuntimeUi.SampleTriangle(owner.UiElapsedSeconds);
             Rect hit = LogicalToPreview(canvas, layout.Triangle, frame);
@@ -48,7 +53,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (triangle != null)
             {
                 Color before = GUI.color;
-                GUI.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(sample.Alpha);
+                GUI.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(
+                    sample.Alpha * foregroundAlpha);
                 GUI.DrawTextureWithTexCoords(visual, triangle, VnSceneComposerRuntimeUi.TriangleUv, true);
                 GUI.color = before;
             }
@@ -57,7 +63,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private static void DrawPlaqueButton(Rect canvas, VnWorkshopPreviewFrame frame, Rect logical, int index,
-            string tooltip, VnSceneComposerPlaybackController owner, bool enabled, bool muted)
+            string tooltip, VnSceneComposerPlaybackController owner, bool enabled, bool muted,
+            float foregroundAlpha)
         {
             Rect hit = LogicalToPreview(canvas, logical, frame);
             bool hover = enabled && hit.Contains(Event.current.mousePosition);
@@ -74,7 +81,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float scale = motion.Scale(now);
             Vector2 size = hit.size * scale;
             Rect rect = new Rect(hit.center - size * .5f, size);
-            float alpha = owner == null || enabled ? .9f : .42f;
+            float alpha = (owner == null || enabled ? .9f : .42f) * foregroundAlpha;
             Texture2D icon = VnSceneComposerRuntimeUi.ButtonTexture(index, muted);
             if (icon != null)
             {

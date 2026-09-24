@@ -216,12 +216,14 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(Get(cover, "Mode").ToString(), Is.EqualTo("Fade"));
                 Assert.That((float)Get(cover, "Coverage"), Is.EqualTo(.11f).Within(.01f));
                 Assert.That((bool)Get(cover, "FullCover"), Is.False);
+                Assert.That(controller.CurrentFrame.ForegroundAlpha, Is.EqualTo(.5f).Within(.01f));
 
                 controller.Advance(.25f);
                 Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
                 object softCover = Get(controller.CurrentFrame, "SceneTransitionOverlay");
                 Assert.That((float)Get(softCover, "Coverage"), Is.EqualTo(.22f).Within(.01f));
                 Assert.That((bool)Get(softCover, "FullCover"), Is.False);
+                Assert.That(controller.CurrentFrame.ForegroundAlpha, Is.EqualTo(0f).Within(.01f));
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.SourceAlpha,
                     Is.EqualTo(1f).Within(.01f));
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.TargetAlpha,
@@ -232,6 +234,8 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(Get(reveal, "Mode").ToString(), Is.EqualTo("Fade"));
                 Assert.That(Get(reveal, "Phase").ToString(), Is.EqualTo("Reveal"));
                 Assert.That((float)Get(reveal, "Coverage"), Is.EqualTo(.11f).Within(.01f));
+                Assert.That(controller.CurrentFrame.ForegroundAlpha, Is.EqualTo(.5f).Within(.01f));
+                Assert.That(controller.CurrentFrame.ShowCharacters, Is.True);
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.SourceAlpha,
                     Is.EqualTo(.5f).Within(.01f));
                 Assert.That(controller.CurrentFrame.ComposerBackgroundTransition.TargetAlpha,
@@ -239,6 +243,35 @@ namespace Rokas.EditorTools.Tests
 
                 controller.Advance(.25f);
                 Assert.That(GetBool(controller, "IsSceneTransitionActive"), Is.False);
+                Assert.That(controller.CurrentFrame.ForegroundAlpha, Is.EqualTo(1f).Within(.01f));
+            }
+        }
+
+        [Test]
+        public void MT_FadeDefersIncomingReplicaEffectUntilTheReplicaBegins()
+        {
+            var project = ProjectWithTwoScenes();
+            ConfigureTransition(project.scenes[1], "Fade", "RightToLeft", 1f);
+            project.scenes[1].dialogueBeats[0].replicaEffect = new VnSceneComposerReplicaEffect
+            {
+                type = VnSceneComposerReplicaEffectType.Flash,
+                intensity = .5f,
+                duration = .45f,
+                flashColor = Color.white
+            };
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                controller.PlayFromHere(0);
+                controller.Next();
+                controller.Advance(.75f);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(1));
+                Assert.That(controller.CurrentFrame.ReplicaEffect.Active, Is.False);
+                Assert.That(controller.CurrentFrame.ReplicaEffect.Flash.a, Is.EqualTo(0f));
+                controller.Advance(.25f);
+                Assert.That(controller.CurrentFrame.ReplicaEffect.Active, Is.False);
+                controller.Advance(.17f);
+                Assert.That(controller.CurrentFrame.ReplicaEffect.Active, Is.True);
+                Assert.That(controller.CurrentFrame.ReplicaEffect.Flash.a, Is.GreaterThan(.1f));
             }
         }
 

@@ -85,6 +85,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 : new VnSceneComposerReplicaEffectSample { Scale = 1f };
         }
 
+        private static float GetRegisteredForegroundAlpha(VnWorkshopPreviewFrame frame)
+        {
+            return frame != null && PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playbackFrame)
+                ? playbackFrame.ForegroundAlpha : 1f;
+        }
+
         private static void DrawSceneTransitionOverlay(
             Rect rect, VnSceneComposerSceneTransitionOverlaySample sample)
         {
@@ -138,8 +144,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
-            DrawTextureAlpha(rect, source, frame.SourceScaleMode, sample.SourceAlpha);
-            DrawTextureAlpha(rect, target, frame.TargetScaleMode, sample.TargetAlpha);
+            if (frame.SceneTransitionOverlay.Active &&
+                frame.SceneTransitionOverlay.Mode == VnSceneComposerSceneTransitionType.Fade)
+            {
+                // ComposePlaybackBackground uses a normalized two-image blend. Drawing
+                // both textures at half opacity would leave a quarter of the backdrop.
+                float total = sample.SourceAlpha + sample.TargetAlpha;
+                DrawTextureAlpha(rect, source, frame.SourceScaleMode, 1f);
+                DrawTextureAlpha(rect, target, frame.TargetScaleMode,
+                    total <= .0001f ? 1f : sample.TargetAlpha / total);
+            }
+            else
+            {
+                DrawTextureAlpha(rect, source, frame.SourceScaleMode, sample.SourceAlpha);
+                DrawTextureAlpha(rect, target, frame.TargetScaleMode, sample.TargetAlpha);
+            }
         }
 
         private static void DrawTextureAlpha(Rect rect, Texture texture,

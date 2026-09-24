@@ -323,6 +323,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 Rect localCanvas = new Rect(0f, 0f, canvasRect.width, canvasRect.height);
                 VnSceneComposerReplicaEffectSample replicaEffect =
                     GetRegisteredReplicaEffectSample(frame);
+                float foregroundAlpha = GetRegisteredForegroundAlpha(frame);
                 if (replicaEffect.Active &&
                     (replicaEffect.Offset.sqrMagnitude > .0001f ||
                      Mathf.Abs(replicaEffect.Scale - 1f) > .0001f))
@@ -338,7 +339,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
                 if (!TryDrawRegisteredPlaybackBackground(localCanvas, frame))
                     GUI.DrawTexture(localCanvas, frame.BackgroundTexture, ScaleMode.StretchToFill, false);
-                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters);
+                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.BehindCharacters,
+                    foregroundAlpha);
                 if (ShouldDrawRegisteredPlaybackCharacters(frame))
                 {
                     if (frame.ComposerCharacters != null)
@@ -349,7 +351,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                             if (character == null || character.Texture == null) continue;
                             DrawCharacter(
                                 localCanvas, frame, character.Body, character.Texture,
-                                character.Uv, character.Alpha, character.Brightness);
+                                character.Uv, character.Alpha * foregroundAlpha, character.Brightness);
                         }
                     }
                     else
@@ -358,23 +360,28 @@ namespace Rokas.EditorTools.VnUiWorkshop
                             DrawCharacter(
                                 localCanvas, frame, frame.KeikoBody, frame.KeikoTexture,
                                 frame.KeikoUv,
-                                frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha);
+                                (frame.Speaker == "Keiko" ? 1f : frame.Focus.InactiveAlpha) * foregroundAlpha);
                         if (frame.ShowMina)
                             DrawCharacter(
                                 localCanvas, frame, frame.MinaBody, frame.MinaTexture,
                                 frame.MinaUv,
-                                frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha);
+                                (frame.Speaker == "Mina" ? 1f : frame.Focus.InactiveAlpha) * foregroundAlpha);
                     }
                 }
 
-                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters);
+                DrawComposerDecorations(localCanvas, frame, VnSceneComposerDecorationLayer.FrontCharacters,
+                    foregroundAlpha);
 
                 if (ShouldDrawRegisteredPlaybackDialogue(frame))
                 {
+                    Color panelColor = GUI.color;
+                    GUI.color = new Color(panelColor.r, panelColor.g, panelColor.b,
+                        panelColor.a * foregroundAlpha);
                     GUI.DrawTexture(
                         LogicalToPreview(localCanvas, frame.DialoguePanel, frame),
                         frame.DialoguePanelTexture,
                         ScaleMode.StretchToFill, true);
+                    GUI.color = panelColor;
 
                     if (ShouldDrawRegisteredPlaybackDialogueText(frame))
                     {
@@ -383,10 +390,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         : FontStyle.Normal;
                     DrawText(LogicalToPreview(localCanvas, frame.SpeakerName, frame), frame.Speaker,
                         frame.SpeakerFont, Mathf.RoundToInt(frame.Typography.SpeakerFontSize), speakerStyle,
-                        ToTextAnchor(frame.Typography.SpeakerAlignment), frame.Typography.SpeakerColor, 1f);
+                        ToTextAnchor(frame.Typography.SpeakerAlignment), frame.Typography.SpeakerColor, foregroundAlpha);
                     DrawText(LogicalToPreview(localCanvas, frame.DialogueText, frame), frame.Dialogue,
                         frame.DialogueFont, Mathf.RoundToInt(frame.Typography.DialogueFontSize), FontStyle.Normal,
-                        ToTextAnchor(frame.Typography.DialogueAlignment), frame.Typography.DialogueColor, 1f);
+                        ToTextAnchor(frame.Typography.DialogueAlignment), frame.Typography.DialogueColor, foregroundAlpha);
 
                     bool replaceBack = uiFeedbackElement.HasValue && uiFeedbackSample.HasValue &&
                         ShouldReplaceIndependentUiFeedbackControl(
@@ -414,7 +421,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                 }
 
-                if (ShouldDrawRegisteredPlaybackDialoguePanel(frame)) DrawComposerRuntimeControls(localCanvas, frame);
+                if (ShouldDrawRegisteredPlaybackDialoguePanel(frame))
+                    DrawComposerRuntimeControls(localCanvas, frame, foregroundAlpha);
                 GUI.matrix = originalMatrix;
                 if (selected.HasValue) DrawOutline(LogicalToPreview(localCanvas, frame.GetElementRect(selected.Value), frame), 2f);
                 if (replicaEffect.Flash.a > .0001f)
@@ -629,7 +637,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         }
 
         private static void DrawComposerDecorations(
-            Rect canvasRect, VnWorkshopPreviewFrame frame, VnSceneComposerDecorationLayer layer)
+            Rect canvasRect, VnWorkshopPreviewFrame frame, VnSceneComposerDecorationLayer layer,
+            float foregroundAlpha)
         {
             if (frame == null || frame.ComposerDecorations == null) return;
             for (int i = 0; i < frame.ComposerDecorations.Length; i++)
@@ -637,7 +646,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnWorkshopPreviewDecoration decoration = frame.ComposerDecorations[i];
                 if (decoration == null || decoration.Texture == null || decoration.Layer != layer) continue;
                 Color previous = GUI.color;
-                GUI.color = new Color(previous.r, previous.g, previous.b, Mathf.Clamp01(decoration.Alpha));
+                GUI.color = new Color(previous.r, previous.g, previous.b,
+                    Mathf.Clamp01(decoration.Alpha * foregroundAlpha));
                 GUI.DrawTexture(LogicalToPreview(canvasRect, decoration.Body, frame),
                     decoration.Texture, ScaleMode.StretchToFill, true);
                 GUI.color = previous;
