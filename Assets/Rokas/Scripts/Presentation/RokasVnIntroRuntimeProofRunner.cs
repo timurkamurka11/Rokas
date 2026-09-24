@@ -24,6 +24,9 @@ namespace Rokas.Presentation
         private const float StartupTimeoutSeconds = 90f;
         private const float UiTimeoutSeconds = 12f;
         private const string MinaLine = "Я дома, приходи, нужно поговорить.";
+        private const string DarkPanelName = "VN_DialoguePanel_Keiko_Dark";
+        private const string LightPanelName = "VN_DialoguePanel_Mina_Light";
+        private const string MinaSheetName = "Mina_CharacterSheet";
 
         private static bool spawned;
         private Evidence evidence = new Evidence();
@@ -106,14 +109,41 @@ namespace Rokas.Presentation
             return GameObject.Find("EnterWorldCurtain") == null;
         }
 
-        public static bool IsPortraitTransitionSettled(GameObject root)
+        public static bool IsPresentationSettled(GameObject root, string expectedPanelTextureName,
+            string expectedSpeaker, bool expectStagedBody, string expectedStagedTextureName)
         {
-            Transform? currentTransform = FindDescendant(root, "Portrait");
-            Transform? previousTransform = FindDescendant(root, "PortraitPrevious");
-            RawImage? current = currentTransform ? currentTransform.GetComponent<RawImage>() : null;
-            RawImage? previous = previousTransform ? previousTransform.GetComponent<RawImage>() : null;
-            return current && previous && current.texture &&
-                   current.color.a >= .98f && previous.color.a <= .02f;
+            if (!root || !HasRequiredVnUi(root)) return false;
+
+            Transform? panelTransform = FindDescendant(root, "DialoguePanel");
+            RawImage? panel = panelTransform ? panelTransform.GetComponent<RawImage>() : null;
+            if (!panel || !panel.texture ||
+                !string.Equals(panel.texture.name, expectedPanelTextureName, StringComparison.Ordinal) ||
+                !IsFullUv(panel.uvRect))
+                return false;
+
+            if (!string.Equals(DirectText(root, "SpeakerName"), expectedSpeaker, StringComparison.Ordinal) ||
+                !HasNonEmptyLine(root) || !HasTransparentControlComposition(root))
+                return false;
+
+            Transform? primaryTransform = FindDescendant(root, "CharacterPrimary");
+            Transform? secondaryTransform = FindDescendant(root, "CharacterSecondary");
+            if (!primaryTransform || !secondaryTransform) return false;
+
+            GameObject primary = primaryTransform.gameObject;
+            GameObject secondary = secondaryTransform.gameObject;
+            if (!expectStagedBody)
+                return !primary.activeSelf && !secondary.activeSelf;
+
+            if (!primary.activeSelf || secondary.activeSelf) return false;
+            RawImage? stagedBody = primary.GetComponent<RawImage>();
+            if (!stagedBody || !stagedBody.texture ||
+                !string.Equals(stagedBody.texture.name, expectedStagedTextureName, StringComparison.Ordinal))
+                return false;
+
+            Vector3 scale = primaryTransform.localScale;
+            Color color = stagedBody.color;
+            return Mathf.Abs(scale.x - 1f) <= .01f && Mathf.Abs(scale.y - 1f) <= .01f &&
+                   color.r >= .98f && color.g >= .98f && color.b >= .98f && color.a >= .98f;
         }
 
         private IEnumerator Start()
@@ -210,7 +240,7 @@ namespace Rokas.Presentation
             evidence.vnUiPresent = HasRequiredVnUi(vnRoot);
             if (!evidence.busFrame || !evidence.vnUiPresent)
             {
-                evidence.error = "Initial VN bus-stop beat or required VN UI was missing.";
+                evidence.error = "Initial VN bus-stop beat or required portrait-free VN UI was missing.";
                 yield break;
             }
 
@@ -220,10 +250,10 @@ namespace Rokas.Presentation
                 evidence.error = "Initial VN presentation remained obscured by the Enter World transition curtain.";
                 yield break;
             }
-            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            yield return WaitFor(() => IsPresentationSettled(vnRoot, DarkPanelName, "Keiko", false, string.Empty), UiTimeoutSeconds);
             if (!waitSucceeded)
             {
-                evidence.error = "Initial VN portrait transition did not settle before proof capture.";
+                evidence.error = "Initial Keiko full-panel presentation did not settle before proof capture.";
                 yield break;
             }
             yield return Capture("natural-01-bus-stop.png");
@@ -255,10 +285,10 @@ namespace Rokas.Presentation
                 evidence.error = "One continue did not advance from bus stop to night sky.";
                 yield break;
             }
-            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            yield return WaitFor(() => IsPresentationSettled(vnRoot, DarkPanelName, "Keiko", false, string.Empty), UiTimeoutSeconds);
             if (!waitSucceeded)
             {
-                evidence.error = "Night-sky VN portrait transition did not settle before proof capture.";
+                evidence.error = "Night-sky Keiko full-panel presentation did not settle before proof capture.";
                 yield break;
             }
             yield return Capture("natural-02-night-sky.png");
@@ -277,10 +307,24 @@ namespace Rokas.Presentation
                 evidence.error = "Mina phone beat or exact Mina line was not presented.";
                 yield break;
             }
-            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            yield return WaitFor(() => IsPresentationSettled(vnRoot, LightPanelName, "Mina", true, MinaSheetName), UiTimeoutSeconds);
             if (!waitSucceeded)
             {
-                evidence.error = "Mina portrait transition did not settle before proof capture.";
+                evidence.error = "Mina full-panel/body presentation did not settle before proof capture.";
+                yield break;
+            }
+
+            Transform? minaTransform = FindDescendant(vnRoot, "CharacterPrimary");
+            Vector2 minaPosition = minaTransform ? ((RectTransform)minaTransform).anchoredPosition : Vector2.positiveInfinity;
+            Vector3 minaScale = minaTransform ? minaTransform.localScale : Vector3.positiveInfinity;
+            yield return WaitRealtime(.25f);
+            bool minaStable = minaTransform &&
+                              Vector2.Distance(minaPosition, ((RectTransform)minaTransform).anchoredPosition) < .01f &&
+                              Vector3.Distance(minaScale, minaTransform.localScale) < .0002f &&
+                              IsPresentationSettled(vnRoot, LightPanelName, "Mina", true, MinaSheetName);
+            if (!minaStable)
+            {
+                evidence.error = "Solo Mina presentation moved or pulsed before proof capture.";
                 yield break;
             }
             yield return Capture("natural-03-mina-phone.png");
@@ -324,10 +368,10 @@ namespace Rokas.Presentation
                 evidence.error = "Skip proof remained obscured by the Enter World transition curtain.";
                 yield break;
             }
-            yield return WaitFor(() => IsPortraitTransitionSettled(vnRoot), UiTimeoutSeconds);
+            yield return WaitFor(() => IsPresentationSettled(vnRoot, DarkPanelName, "Keiko", false, string.Empty), UiTimeoutSeconds);
             if (!waitSucceeded)
             {
-                evidence.error = "Skip VN portrait transition did not settle before proof capture.";
+                evidence.error = "Skip Keiko full-panel presentation did not settle before proof capture.";
                 yield break;
             }
             yield return Capture("skip-01-before.png");
@@ -425,14 +469,42 @@ namespace Rokas.Presentation
         {
             if (!root) return false;
             return FindDescendant(root, "DialoguePanel") != null &&
-                   FindDescendant(root, "Portrait") != null &&
                    FindDescendant(root, "SpeakerName") != null &&
                    FindDescendant(root, "DialogueText") != null &&
+                   FindDescendant(root, "CharacterPrimary") != null &&
+                   FindDescendant(root, "CharacterSecondary") != null &&
                    FindDescendant(root, "MuteButton") != null &&
                    FindDescendant(root, "PauseButton") != null &&
                    FindDescendant(root, "SkipButton") != null &&
                    FindDescendant(root, "BackButton") != null &&
-                   FindDescendant(root, "NextButton") != null;
+                   FindDescendant(root, "NextButton") != null &&
+                   FindDescendant(root, "Portrait") == null &&
+                   FindDescendant(root, "PortraitPrevious") == null &&
+                   FindDescendant(root, "PortraitMask") == null &&
+                   FindDescendant(root, "PortraitFrame") == null;
+        }
+
+        private static bool HasTransparentControlComposition(GameObject root)
+        {
+            foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton", "BackButton", "NextButton" })
+            {
+                Transform? transform = FindDescendant(root, name);
+                Button? button = transform ? transform.GetComponent<Button>() : null;
+                if (!button || !button.targetGraphic || button.targetGraphic.color.a > .001f)
+                    return false;
+            }
+
+            Transform? backTransform = FindDescendant(root, "BackButton");
+            Transform? nextTransform = FindDescendant(root, "NextButton");
+            Button? back = backTransform ? backTransform.GetComponent<Button>() : null;
+            Button? next = nextTransform ? nextTransform.GetComponent<Button>() : null;
+            return back && next && !back.interactable && next.interactable;
+        }
+
+        private static bool IsFullUv(Rect uv)
+        {
+            return Mathf.Abs(uv.x) <= .001f && Mathf.Abs(uv.y) <= .001f &&
+                   Mathf.Abs(uv.width - 1f) <= .001f && Mathf.Abs(uv.height - 1f) <= .001f;
         }
 
         private static Transform? FindDescendant(GameObject? root, string name)

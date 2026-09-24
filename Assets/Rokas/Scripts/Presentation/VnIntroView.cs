@@ -65,21 +65,17 @@ namespace Rokas.Presentation
 
     public sealed class VnIntroView : IDisposable
     {
-        private const float ExpressionCrossfadeDuration = .18f;
         private const float FocusTransitionDuration = .18f;
         private const float ActiveFocusScale = 1.05f;
         private const float InactiveFocusScale = .94f;
         private const float InactiveBrightness = .76f;
         private const float InactiveAlpha = .84f;
         private const float CharacterBodyHeight = 980f;
+        private const float MinaCharacterBodyHeight = 1240f;
         private const float TwoCharacterOffset = 310f;
-        private const float IdlePeriodSeconds = 2.8f;
-        private const float IdleBobPixels = 3f;
-        private const float IdleScaleAmount = .0045f;
-        private static readonly Rect PanelBodyCrop = new Rect(.225f, .10f, .775f, .80f);
-        private static readonly Rect PanelFrameCrop = new Rect(0f, 0f, .31f, 1f);
+        private const float FullPanelAspect = 2048f / 682f;
         private static readonly Color LightPanelTextColor = new Color(.10f, .12f, .14f, 1f);
-        private static Sprite circleSprite;
+        private static readonly Color TransparentHitTarget = new Color(1f, 1f, 1f, 0f);
 
         private sealed class CharacterStageSlot
         {
@@ -109,20 +105,13 @@ namespace Rokas.Presentation
         private readonly RawImage background;
         private readonly CharacterStageSlot characterPrimary;
         private readonly CharacterStageSlot characterSecondary;
-        private readonly RawImage portraitPrevious;
-        private readonly RawImage portrait;
-        private readonly RawImage portraitFrame;
         private readonly RawImage dialoguePanel;
         private readonly Text speakerName;
         private readonly Text dialogueText;
         private readonly Image pauseButtonBackground;
-        private bool portraitInitialized;
-        private bool expressionTransitionActive;
         private bool focusTransitionActive;
         private bool presentationPaused;
-        private float expressionTransitionElapsed;
         private float focusTransitionElapsed;
-        private float presentationElapsed;
         private bool disposed;
 
         private VnIntroView(Transform parent, Font font, VnIntroArt art,
@@ -166,52 +155,38 @@ namespace Rokas.Presentation
             storyButton.transition = Selectable.Transition.None;
             storyButton.onClick.AddListener(() => continueStory?.Invoke());
 
-            // The approved source panel already contains the premium trim. Use its body and circular
-            // frame as two independently-scaled slices so the long dialogue box can be wide without
-            // flattening the portrait ring.
+            // The latest authored 2048x682 panels are complete compositions. Render the whole asset;
+            // no circular portrait, portrait frame, or panel crop is reconstructed in Unity.
             dialoguePanel = Raw(rootRect, "DialoguePanel", art.DialoguePanelKeikoDark,
-                new Vector2(.045f, 0f), new Vector2(.965f, 0f), new Vector2(0f, 44f), new Vector2(0f, 338f));
-            dialoguePanel.uvRect = PanelBodyCrop;
+                new Vector2(.04f, 0f), new Vector2(.96f, 0f), Vector2.zero, new Vector2(0f, 100f));
+            dialoguePanel.uvRect = new Rect(0f, 0f, 1f, 1f);
             dialoguePanel.raycastTarget = false;
             RectTransform panelRect = (RectTransform)dialoguePanel.transform;
-
-            RectTransform maskRect = Rect(panelRect, "PortraitMask",
-                new Vector2(0f, .5f), new Vector2(0f, .5f), new Vector2(-18f, -114f), new Vector2(210f, 114f));
-            Image maskGraphic = maskRect.gameObject.AddComponent<Image>();
-            maskGraphic.sprite = GetCircleSprite();
-            maskGraphic.color = Color.white;
-            maskGraphic.raycastTarget = false;
-            Mask mask = maskRect.gameObject.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            portraitPrevious = Raw(maskRect, "PortraitPrevious", null,
-                Vector2.zero, Vector2.one, new Vector2(-20f, -20f), new Vector2(20f, 20f));
-            portraitPrevious.raycastTarget = false;
-            SetAlpha(portraitPrevious, 0f);
-
-            portrait = Raw(maskRect, "Portrait", null,
-                Vector2.zero, Vector2.one, new Vector2(-20f, -20f), new Vector2(20f, 20f));
-            portrait.raycastTarget = false;
-
-            portraitFrame = Raw(panelRect, "PortraitFrame", art.DialoguePanelKeikoDark,
-                new Vector2(0f, .5f), new Vector2(0f, .5f), new Vector2(-70f, -158f), new Vector2(246f, 158f));
-            portraitFrame.uvRect = PanelFrameCrop;
-            portraitFrame.raycastTarget = false;
+            panelRect.pivot = new Vector2(.5f, 0f);
+            panelRect.anchoredPosition = new Vector2(0f, -98f);
+            AspectRatioFitter panelAspect = dialoguePanel.gameObject.AddComponent<AspectRatioFitter>();
+            panelAspect.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            panelAspect.aspectRatio = FullPanelAspect;
 
             speakerName = Label(panelRect, "SpeakerName", font, string.Empty,
-                new Vector2(.155f, 1f), new Vector2(.56f, 1f), new Vector2(0f, -80f), new Vector2(0f, -24f),
+                new Vector2(.17f, .69f), new Vector2(.42f, .81f), new Vector2(12f, 0f), new Vector2(-8f, 0f),
                 31, FontStyle.Bold, TextAnchor.MiddleLeft);
             dialogueText = Label(panelRect, "DialogueText", font, string.Empty,
-                new Vector2(.155f, 0f), new Vector2(.67f, 1f), new Vector2(0f, 30f), new Vector2(0f, -94f),
+                new Vector2(.075f, .25f), new Vector2(.86f, .66f), new Vector2(18f, 8f), new Vector2(-18f, -8f),
                 28, FontStyle.Normal, TextAnchor.UpperLeft);
 
             RectTransform controls = Rect(panelRect, "ControlsRow",
-                new Vector2(1f, .5f), new Vector2(1f, .5f), new Vector2(-475f, -48f), new Vector2(-20f, 48f));
-            CreateIconButton(controls, "MuteButton", art.IconMute, 0f, toggleMute, out _);
-            CreateIconButton(controls, "PauseButton", art.IconPause, 91f, togglePause, out pauseButtonBackground);
-            CreateIconButton(controls, "SkipButton", art.IconSkip, 182f, skip, out _);
-            CreateArrowButton(controls, "BackButton", 273f, "‹", false, null);
-            CreateArrowButton(controls, "NextButton", 364f, "›", true, continueStory);
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            CreateTransparentButton(controls, "MuteButton", new Vector2(.962f, .585f), new Vector2(76f, 76f),
+                true, toggleMute, null, font, out _);
+            CreateTransparentButton(controls, "PauseButton", new Vector2(.962f, .440f), new Vector2(76f, 76f),
+                true, togglePause, null, font, out pauseButtonBackground);
+            CreateTransparentButton(controls, "SkipButton", new Vector2(.962f, .297f), new Vector2(76f, 76f),
+                true, skip, null, font, out _);
+            CreateTransparentButton(controls, "BackButton", new Vector2(.900f, .440f), new Vector2(64f, 72f),
+                false, null, "‹", font, out _);
+            CreateTransparentButton(controls, "NextButton", new Vector2(.900f, .297f), new Vector2(64f, 72f),
+                true, continueStory, "›", font, out _);
         }
 
         public static VnIntroView Create(Transform parent, Font font, VnIntroArt art,
@@ -238,29 +213,17 @@ namespace Rokas.Presentation
                     throw new ArgumentException("Unknown VN intro background id: " + state.BackgroundId, nameof(state));
             }
 
-            if (state.PanelStyle == "dark")
-            {
-                dialoguePanel.texture = art.DialoguePanelKeikoDark;
-                portraitFrame.texture = art.DialoguePanelKeikoDark;
-                speakerName.color = Color.white;
-                dialogueText.color = Color.white;
-            }
-            else if (state.PanelStyle == "light")
-            {
-                dialoguePanel.texture = art.DialoguePanelMinaLight;
-                portraitFrame.texture = art.DialoguePanelMinaLight;
-                speakerName.color = LightPanelTextColor;
-                dialogueText.color = LightPanelTextColor;
-            }
-            else
-            {
-                throw new ArgumentException("Unknown VN intro panel style: " + state.PanelStyle, nameof(state));
-            }
-
             VnCharacterVisualState visualState = VnCharacterVisualCatalog.ResolveOrNeutral(state.PortraitId, state.Speaker);
-            SetCharacterStage(visualState, null);
-            ApplyPortraitVisual(visualState);
+            bool protagonist = string.Equals(visualState.Character, "Keiko", StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(state.Speaker, "Keiko", StringComparison.OrdinalIgnoreCase);
+
+            dialoguePanel.texture = protagonist ? art.DialoguePanelKeikoDark : art.DialoguePanelMinaLight;
+            speakerName.color = protagonist ? Color.white : LightPanelTextColor;
+            dialogueText.color = protagonist ? Color.white : LightPanelTextColor;
             speakerName.text = state.Speaker ?? string.Empty;
+
+            // Protagonist narration is text-only. Non-protagonists remain separately staged on screen.
+            SetCharacterStage(protagonist ? (VnCharacterVisualState?)null : visualState, null);
             SetActiveSpeakerFocus(state.Speaker);
         }
 
@@ -297,9 +260,8 @@ namespace Rokas.Presentation
         {
             ThrowIfDisposed();
             presentationPaused = paused;
-            pauseButtonBackground.color = paused
-                ? new Color(.72f, .50f, .24f, .88f)
-                : new Color(.035f, .055f, .06f, .06f);
+            // The authored panel already owns the button artwork. Keep the hit surface invisible in all states.
+            pauseButtonBackground.color = TransparentHitTarget;
         }
 
         public void Dispose()
@@ -314,24 +276,9 @@ namespace Rokas.Presentation
             if (disposed || presentationPaused) return;
 
             float delta = Mathf.Max(0f, unscaledDeltaTime);
-            presentationElapsed += delta;
             UpdateFocusTransition(delta);
-            UpdateCharacterPresentation(characterPrimary, 0f);
-            UpdateCharacterPresentation(characterSecondary, Mathf.PI * .65f);
-
-            if (!expressionTransitionActive) return;
-
-            expressionTransitionElapsed += delta;
-            float progress = ExpressionCrossfadeDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(expressionTransitionElapsed / ExpressionCrossfadeDuration);
-            SetAlpha(portrait, progress);
-            SetAlpha(portraitPrevious, 1f - progress);
-
-            if (progress < 1f) return;
-            expressionTransitionActive = false;
-            SetAlpha(portrait, 1f);
-            SetAlpha(portraitPrevious, 0f);
+            UpdateCharacterPresentation(characterPrimary);
+            UpdateCharacterPresentation(characterSecondary);
         }
 
         private void ConfigureStageSlot(CharacterStageSlot slot, VnCharacterVisualState? state, float x)
@@ -344,9 +291,9 @@ namespace Rokas.Presentation
             }
 
             VnCharacterVisualState visualState = state.Value;
-            Texture2D targetTexture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
-                ? art.MinaCharacterSheet
-                : art.KeikoCharacterSheet;
+            bool mina = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase);
+            Texture2D targetTexture = mina ? art.MinaCharacterSheet : art.KeikoCharacterSheet;
+            float bodyHeight = mina ? MinaCharacterBodyHeight : CharacterBodyHeight;
 
             slot.Character = visualState.Character;
             slot.Image.texture = targetTexture;
@@ -355,9 +302,9 @@ namespace Rokas.Presentation
             float sourceWidth = visualState.BodyUv.width * targetTexture.width;
             float sourceHeight = visualState.BodyUv.height * targetTexture.height;
             float aspect = sourceHeight > 0f ? sourceWidth / sourceHeight : .4f;
-            slot.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, CharacterBodyHeight * aspect);
-            slot.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, CharacterBodyHeight);
-            slot.BasePosition = new Vector2(x, CharacterBodyHeight * .5f);
+            slot.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, bodyHeight * aspect);
+            slot.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, bodyHeight);
+            slot.BasePosition = new Vector2(x, mina ? bodyHeight * .37f : bodyHeight * .5f);
 
             if (!slot.Image.gameObject.activeSelf)
             {
@@ -368,47 +315,53 @@ namespace Rokas.Presentation
 
             slot.Image.gameObject.SetActive(true);
             ApplySlotColor(slot);
-            UpdateCharacterPresentation(slot, 0f);
+            UpdateCharacterPresentation(slot);
         }
 
         private void SetActiveSpeakerFocus(string speaker)
         {
             bool primaryVisible = characterPrimary.Image.gameObject.activeSelf;
             bool secondaryVisible = characterSecondary.Image.gameObject.activeSelf;
-            if (!primaryVisible && !secondaryVisible) return;
+            if (!primaryVisible && !secondaryVisible)
+            {
+                focusTransitionActive = false;
+                return;
+            }
 
-            bool primaryActive;
-            bool secondaryActive;
-            if (primaryVisible && !secondaryVisible)
+            // Zero/one visible body is intentionally stable: no active-speaker pulse or scale pumping.
+            if (!(primaryVisible && secondaryVisible))
+            {
+                BeginNeutralTarget(characterPrimary);
+                BeginNeutralTarget(characterSecondary);
+                focusTransitionElapsed = 0f;
+                focusTransitionActive = true;
+                return;
+            }
+
+            bool primaryActive = string.Equals(speaker, characterPrimary.Character, StringComparison.OrdinalIgnoreCase);
+            bool secondaryActive = string.Equals(speaker, characterSecondary.Character, StringComparison.OrdinalIgnoreCase);
+            if (!primaryActive && !secondaryActive)
             {
                 primaryActive = true;
-                secondaryActive = false;
-            }
-            else if (!primaryVisible && secondaryVisible)
-            {
-                primaryActive = false;
-                secondaryActive = true;
-            }
-            else
-            {
-                primaryActive = string.Equals(speaker, characterPrimary.Character, StringComparison.OrdinalIgnoreCase);
-                secondaryActive = string.Equals(speaker, characterSecondary.Character, StringComparison.OrdinalIgnoreCase);
-                if (!primaryActive && !secondaryActive)
-                {
-                    primaryActive = true;
-                }
             }
 
-            BeginFocusTarget(characterPrimary, primaryVisible && primaryActive);
-            BeginFocusTarget(characterSecondary, secondaryVisible && secondaryActive);
+            BeginFocusTarget(characterPrimary, primaryActive);
+            BeginFocusTarget(characterSecondary, secondaryActive);
             focusTransitionElapsed = 0f;
             focusTransitionActive = true;
 
-            if (primaryVisible && secondaryVisible)
-            {
-                if (primaryActive) BringStageSlotForward(characterPrimary, characterSecondary);
-                else if (secondaryActive) BringStageSlotForward(characterSecondary, characterPrimary);
-            }
+            if (primaryActive) BringStageSlotForward(characterPrimary, characterSecondary);
+            else if (secondaryActive) BringStageSlotForward(characterSecondary, characterPrimary);
+        }
+
+        private static void BeginNeutralTarget(CharacterStageSlot slot)
+        {
+            slot.FocusScaleStart = slot.FocusScale;
+            slot.BrightnessStart = slot.Brightness;
+            slot.AlphaStart = slot.Alpha;
+            slot.FocusScaleTarget = 1f;
+            slot.BrightnessTarget = 1f;
+            slot.AlphaTarget = 1f;
         }
 
         private static void BeginFocusTarget(CharacterStageSlot slot, bool active)
@@ -451,13 +404,11 @@ namespace Rokas.Presentation
             slot.Image.color = new Color(slot.Brightness, slot.Brightness, slot.Brightness, slot.Alpha);
         }
 
-        private void UpdateCharacterPresentation(CharacterStageSlot slot, float phaseOffset)
+        private static void UpdateCharacterPresentation(CharacterStageSlot slot)
         {
             if (!slot.Image.gameObject.activeSelf) return;
-
-            float wave = Mathf.Sin(presentationElapsed * Mathf.PI * 2f / IdlePeriodSeconds + phaseOffset);
-            slot.Rect.anchoredPosition = slot.BasePosition + Vector2.up * (wave * IdleBobPixels);
-            slot.Rect.localScale = Vector3.one * (slot.FocusScale * (1f + wave * IdleScaleAmount));
+            slot.Rect.anchoredPosition = slot.BasePosition;
+            slot.Rect.localScale = new Vector3(slot.FocusScale, slot.FocusScale, 1f);
         }
 
         private static void BringStageSlotForward(CharacterStageSlot active, CharacterStageSlot inactive)
@@ -470,126 +421,29 @@ namespace Rokas.Presentation
             active.Rect.SetSiblingIndex(frontIndex);
         }
 
-        private void ApplyPortraitVisual(VnCharacterVisualState visualState)
+        private static void CreateTransparentButton(RectTransform parent, string name, Vector2 anchor,
+            Vector2 size, bool interactable, Action action, string glyph, Font font, out Image targetImage)
         {
-            Texture targetTexture = visualState.Character.Equals("Mina", StringComparison.OrdinalIgnoreCase)
-                ? art.MinaCharacterSheet
-                : art.KeikoCharacterSheet;
-            Rect targetUv = visualState.PortraitUv;
-
-            if (!portraitInitialized)
-            {
-                portrait.texture = targetTexture;
-                portrait.uvRect = targetUv;
-                SetAlpha(portrait, 1f);
-                SetAlpha(portraitPrevious, 0f);
-                portraitInitialized = true;
-                expressionTransitionActive = false;
-                return;
-            }
-
-            if (portrait.texture == targetTexture && portrait.uvRect == targetUv)
-            {
-                SetAlpha(portrait, 1f);
-                SetAlpha(portraitPrevious, 0f);
-                expressionTransitionActive = false;
-                return;
-            }
-
-            portraitPrevious.texture = portrait.texture;
-            portraitPrevious.uvRect = portrait.uvRect;
-            SetAlpha(portraitPrevious, 1f);
-
-            portrait.texture = targetTexture;
-            portrait.uvRect = targetUv;
-            SetAlpha(portrait, 0f);
-            expressionTransitionElapsed = 0f;
-            expressionTransitionActive = true;
-        }
-
-        private static void SetAlpha(Graphic graphic, float alpha)
-        {
-            Color color = graphic.color;
-            color.a = Mathf.Clamp01(alpha);
-            graphic.color = color;
-        }
-
-        private static void CreateIconButton(RectTransform parent, string name, Texture2D icon,
-            float left, Action action, out Image backgroundImage)
-        {
-            RectTransform rect = Rect(parent, name,
-                new Vector2(0f, .5f), new Vector2(0f, .5f),
-                new Vector2(left, -39f), new Vector2(left + 78f, 39f));
-            backgroundImage = rect.gameObject.AddComponent<Image>();
-            backgroundImage.color = new Color(.035f, .055f, .06f, .06f);
-            backgroundImage.raycastTarget = true;
+            RectTransform rect = Rect(parent, name, anchor, anchor, -size * .5f, size * .5f);
+            targetImage = rect.gameObject.AddComponent<Image>();
+            targetImage.color = TransparentHitTarget;
+            targetImage.raycastTarget = interactable;
             Button button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = backgroundImage;
-            button.transition = Selectable.Transition.ColorTint;
-            button.onClick.AddListener(() => action?.Invoke());
-
-            RawImage iconImage = Raw(rect, "Icon", icon,
-                new Vector2(.02f, .02f), new Vector2(.98f, .98f), Vector2.zero, Vector2.zero);
-            iconImage.raycastTarget = false;
-        }
-
-        private static void CreateArrowButton(RectTransform parent, string name, float left,
-            string glyph, bool interactable, Action action)
-        {
-            RectTransform rect = Rect(parent, name,
-                new Vector2(0f, .5f), new Vector2(0f, .5f),
-                new Vector2(left, -39f), new Vector2(left + 78f, 39f));
-            Image backgroundImage = rect.gameObject.AddComponent<Image>();
-            backgroundImage.sprite = GetCircleSprite();
-            backgroundImage.color = interactable
-                ? new Color(.10f, .12f, .14f, .90f)
-                : new Color(.10f, .12f, .14f, .34f);
-            backgroundImage.raycastTarget = interactable;
-            Button button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = backgroundImage;
-            button.transition = Selectable.Transition.ColorTint;
+            button.targetGraphic = targetImage;
+            button.transition = Selectable.Transition.None;
             button.interactable = interactable;
             if (interactable) button.onClick.AddListener(() => action?.Invoke());
 
+            if (string.IsNullOrEmpty(glyph)) return;
             RectTransform glyphRect = Rect(rect, "Glyph", Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             Text arrow = glyphRect.gameObject.AddComponent<Text>();
-            arrow.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            arrow.font = font;
             arrow.text = glyph;
-            arrow.fontSize = 54;
+            arrow.fontSize = 48;
+            arrow.fontStyle = FontStyle.Bold;
             arrow.alignment = TextAnchor.MiddleCenter;
             arrow.color = interactable ? new Color(1f, .92f, .80f, 1f) : new Color(1f, .92f, .80f, .42f);
             arrow.raycastTarget = false;
-        }
-
-        private static Sprite GetCircleSprite()
-        {
-            if (circleSprite) return circleSprite;
-            const int size = 128;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                name = "VnRuntimeCircleMask",
-                hideFlags = HideFlags.HideAndDontSave,
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var pixels = new Color32[size * size];
-            float center = (size - 1) * .5f;
-            float radius = center - 1f;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float distance = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
-                    float alpha = Mathf.Clamp01(radius + 1f - distance);
-                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
-                }
-            }
-            texture.SetPixels32(pixels);
-            texture.Apply(false, true);
-            circleSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(.5f, .5f), 100f);
-            circleSprite.name = "VnRuntimeCircleMaskSprite";
-            circleSprite.hideFlags = HideFlags.HideAndDontSave;
-            return circleSprite;
         }
 
         private static RawImage Raw(Transform parent, string name, Texture texture,

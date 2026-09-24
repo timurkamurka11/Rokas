@@ -10,48 +10,51 @@ namespace Rokas.Tests
     public sealed class VnIntroVisualLayoutPlayModeTests
     {
         [UnityTest]
-        public IEnumerator DialogueCompositionUsesResponsiveBottomPanelCircularPortraitAndFiveControls()
+        public IEnumerator DialogueCompositionUsesFullAuthoredPanelWithoutCircularPortraitAndTransparentControls()
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
             VnIntroArt art = CreateArt(assets);
-            var host = new GameObject("VnResponsiveLayoutFixture");
+            var host = new GameObject("VnFullPanelLayoutFixture");
             VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
                 () => { }, () => { }, () => { }, () => { });
 
             try
             {
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
+                view.PresentLine("Keiko", "Panel layout proof");
                 yield return null;
                 Canvas.ForceUpdateCanvases();
 
-                RectTransform panel = GameObject.Find("DialoguePanel").GetComponent<RectTransform>();
-                Assert.That(panel.anchorMin.x, Is.LessThanOrEqualTo(.10f),
-                    "The polished panel must use the available width instead of a fixed top-left rectangle.");
-                Assert.That(panel.anchorMax.x, Is.GreaterThanOrEqualTo(.90f));
-                Assert.That(panel.anchorMin.y, Is.LessThanOrEqualTo(.10f),
-                    "The dialogue composition must remain bottom anchored at 16:9 and 4:3 runtimes.");
-                Assert.That(panel.anchorMax.y, Is.LessThanOrEqualTo(.20f));
+                RawImage panel = GameObject.Find("DialoguePanel").GetComponent<RawImage>();
+                Assert.That(panel.texture, Is.SameAs(art.DialoguePanelKeikoDark));
+                Assert.That(panel.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)),
+                    "The authored 2048x682 panel must render whole, without the retired crop composition.");
+                AspectRatioFitter fitter = panel.GetComponent<AspectRatioFitter>();
+                Assert.That(fitter, Is.Not.Null);
+                Assert.That(fitter.aspectRatio, Is.EqualTo(2048f / 682f).Within(.001f));
 
-                GameObject portraitMaskObject = GameObject.Find("PortraitMask");
-                Assert.That(portraitMaskObject, Is.Not.Null,
-                    "Target PNGs require a dedicated circular portrait mask on the lower-left panel edge.");
-                Assert.That(portraitMaskObject.GetComponent<Mask>(), Is.Not.Null,
-                    "Portrait framing must actually clip the sheet art rather than only place it in a square.");
-                GameObject portrait = GameObject.Find("Portrait");
-                Assert.That(portrait, Is.Not.Null);
-                Assert.That(portrait.transform.IsChildOf(portraitMaskObject.transform), Is.True);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitMask"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "Portrait"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitPrevious"), Is.Null);
+                Assert.That(FindDescendantIncludingInactive(host.transform, "PortraitFrame"), Is.Null,
+                    "Circular dialogue portrait composition is removed for every speaker.");
 
                 foreach (string name in new[] { "MuteButton", "PauseButton", "SkipButton", "BackButton", "NextButton" })
                 {
-                    GameObject buttonObject = GameObject.Find(name);
-                    Assert.That(buttonObject, Is.Not.Null, name + " must exist.");
-                    Assert.That(buttonObject.transform.IsChildOf(panel.transform), Is.True,
-                        name + " must live inside the bottom-panel composition so it cannot clip off narrow 4:3 windows.");
+                    GameObject control = GameObject.Find(name);
+                    Assert.That(control, Is.Not.Null, name + " must remain present.");
+                    Assert.That(control.transform.IsChildOf(panel.transform), Is.True,
+                        name + " must stay integrated with the authored panel composition.");
+                    Button button = control.GetComponent<Button>();
+                    Assert.That(button, Is.Not.Null);
+                    Assert.That(button.targetGraphic, Is.Not.Null);
+                    Assert.That(button.targetGraphic.color.a, Is.LessThanOrEqualTo(.001f),
+                        name + " must use a transparent hit target with no black backing rectangle.");
                 }
 
-                Button back = GameObject.Find("BackButton").GetComponent<Button>();
-                Assert.That(back.interactable, Is.False,
-                    "Back is intentionally visible but disabled until a real Yarn rewind design exists.");
+                Assert.That(GameObject.Find("BackButton").GetComponent<Button>().interactable, Is.False);
+                Assert.That(GameObject.Find("NextButton").GetComponent<Button>().interactable, Is.True);
             }
             finally
             {
@@ -117,10 +120,8 @@ namespace Rokas.Tests
                 view.PresentLine("Mina", "Я дома, приходи, нужно поговорить.");
                 yield return null;
 
-                Assert.That(Luminance(speaker.color), Is.LessThan(.35f),
-                    "Mina's light dialogue panel needs dark text with clear contrast.");
-                Assert.That(Luminance(dialogue.color), Is.LessThan(.35f),
-                    "Mina's light dialogue panel needs dark dialogue text with clear contrast.");
+                Assert.That(Luminance(speaker.color), Is.LessThan(.35f));
+                Assert.That(Luminance(dialogue.color), Is.LessThan(.35f));
                 Assert.That(speaker.color.a, Is.EqualTo(1f).Within(.001f));
                 Assert.That(dialogue.color.a, Is.EqualTo(1f).Within(.001f));
             }
@@ -132,33 +133,47 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator ViewUsesAuthoredExpressionAndUnknownStateFallsBackToSpeakerNeutral()
+        public IEnumerator KeikoIsTextOnlyWhileMinaUsesSeparateCloserAuthoredBody()
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
             VnIntroArt art = CreateArt(assets);
-            var host = new GameObject("VnAuthoredExpressionFixture");
+            var host = new GameObject("VnSpeakerPresentationFixture");
             VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
                 () => { }, () => { }, () => { }, () => { });
 
             try
             {
-                VnCharacterVisualState keikoSerious = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_serious", "Keiko");
-                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_serious"));
-                yield return null;
+                GameObject primary = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                GameObject secondary = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
+                Assert.That(primary, Is.Not.Null);
+                Assert.That(secondary, Is.Not.Null);
 
-                RawImage portrait = GameObject.Find("Portrait").GetComponent<RawImage>();
-                Assert.That(portrait.texture, Is.SameAs(art.KeikoCharacterSheet));
-                Assert.That(portrait.uvRect, Is.EqualTo(keikoSerious.PortraitUv),
-                    "The view must use the inspected authored expression UV instead of hard-coding neutral.");
+                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_serious"));
+                view.PresentLine("Keiko", "Inner monologue");
+                yield return null;
+                Assert.That(primary.activeSelf, Is.False, "Keiko protagonist mode must not stage a body.");
+                Assert.That(secondary.activeSelf, Is.False);
+                Assert.That(GameObject.Find("DialoguePanel").GetComponent<RawImage>().texture,
+                    Is.SameAs(art.DialoguePanelKeikoDark));
+                Assert.That(GameObject.Find("SpeakerName").GetComponent<Text>().text, Is.EqualTo("Keiko"));
 
                 VnCharacterVisualState minaNeutral = VnCharacterVisualCatalog.ResolveOrNeutral("mina_not_authored", "Mina");
                 view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_not_authored"));
-                yield return null;
+                view.PresentLine("Mina", "Visible NPC");
+                yield return new WaitForSecondsRealtime(.25f);
 
-                Assert.That(portrait.texture, Is.SameAs(art.MinaCharacterSheet));
-                Assert.That(portrait.uvRect, Is.EqualTo(minaNeutral.PortraitUv),
-                    "Unknown visual tokens must gracefully keep that speaker on authored neutral.");
+                Assert.That(primary.activeSelf, Is.True);
+                Assert.That(secondary.activeSelf, Is.False);
+                RawImage body = primary.GetComponent<RawImage>();
+                RectTransform bodyRect = primary.GetComponent<RectTransform>();
+                Assert.That(body.texture, Is.SameAs(art.MinaCharacterSheet));
+                Assert.That(body.uvRect, Is.EqualTo(minaNeutral.BodyUv),
+                    "Unknown Mina expression tokens must still resolve to authored neutral body state.");
+                Assert.That(bodyRect.rect.height, Is.GreaterThanOrEqualTo(1180f),
+                    "Mina should use the closer thigh-up framing rather than the old distant 980px staging.");
+                Assert.That(GameObject.Find("DialoguePanel").GetComponent<RawImage>().texture,
+                    Is.SameAs(art.DialoguePanelMinaLight));
             }
             finally
             {
@@ -168,120 +183,41 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator ExpressionSwapCrossfadesOnUnscaledTimeAndPauseFreezesPresentationOnly()
+        public IEnumerator SingleVisibleBodyRemainsStableAndPauseNeverChangesGlobalTimeScale()
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
             VnIntroArt art = CreateArt(assets);
-            var host = new GameObject("VnExpressionCrossfadeFixture");
+            var host = new GameObject("VnStableSoloFixture");
             VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
                 () => { }, () => { }, () => { }, () => { });
 
             try
             {
-                VnCharacterVisualState neutral = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
-                VnCharacterVisualState serious = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_serious", "Keiko");
-                VnCharacterVisualState thoughtful = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_thoughtful", "Keiko");
-
-                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
-                yield return null;
-                RawImage current = GameObject.Find("Portrait").GetComponent<RawImage>();
-                GameObject previousObject = GameObject.Find("PortraitPrevious");
-                Assert.That(previousObject, Is.Not.Null,
-                    "Expression switching needs a reusable previous-portrait layer for a short authored-state crossfade.");
-                RawImage previous = previousObject.GetComponent<RawImage>();
-
-                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_serious"));
-                Assert.That(current.uvRect, Is.EqualTo(serious.PortraitUv));
-                Assert.That(previous.uvRect, Is.EqualTo(neutral.PortraitUv));
-                Assert.That(previous.color.a, Is.GreaterThan(.05f));
-
-                yield return new WaitForSecondsRealtime(.25f);
-                Assert.That(current.color.a, Is.EqualTo(1f).Within(.02f));
-                Assert.That(previous.color.a, Is.LessThan(.02f));
-
-                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_thoughtful"));
-                view.SetPausedVisual(true);
-                float pausedCurrentAlpha = current.color.a;
-                float pausedPreviousAlpha = previous.color.a;
-                Rect pausedUv = current.uvRect;
-                float globalTimeScale = Time.timeScale;
-
-                yield return new WaitForSecondsRealtime(.25f);
-                Assert.That(current.color.a, Is.EqualTo(pausedCurrentAlpha).Within(.001f));
-                Assert.That(previous.color.a, Is.EqualTo(pausedPreviousAlpha).Within(.001f));
-                Assert.That(current.uvRect, Is.EqualTo(pausedUv));
-                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale),
-                    "VN presentation pause must remain local and must not touch global Time.timeScale.");
-
-                view.SetPausedVisual(false);
-                yield return new WaitForSecondsRealtime(.25f);
-                Assert.That(current.color.a, Is.EqualTo(1f).Within(.02f));
-                Assert.That(previous.color.a, Is.LessThan(.02f));
-
                 view.ApplyBeat(VnIntroController.MapBeat("phone", "Mina", "light", "mina_neutral"));
-                Rect minaNeutralUv = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina").PortraitUv;
-                yield return new WaitForSecondsRealtime(.35f);
-                Assert.That(current.uvRect, Is.EqualTo(minaNeutralUv),
-                    "With no authored neutral blink, Mina must retain neutral rather than borrowing happy/closed-eyes art.");
-            }
-            finally
-            {
-                view.Dispose();
-                Object.Destroy(host);
-            }
-        }
+                view.PresentLine("Mina", "Stable solo speaker");
+                yield return new WaitForSecondsRealtime(.25f);
 
-        [UnityTest]
-        public IEnumerator FullBodyIdleBreathingUsesUnscaledLocalTimeAndFreezesWhenPaused()
-        {
-            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-            Assert.That(assets, Is.Not.Null);
-            VnIntroArt art = CreateArt(assets);
-            var host = new GameObject("VnIdleBreathingFixture");
-            VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
-                () => { }, () => { }, () => { }, () => { });
-
-            try
-            {
-                VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
-                view.ApplyBeat(VnIntroController.MapBeat("bus_stop", "Keiko", "dark", "keiko_neutral"));
-                yield return null;
-
-                GameObject bodyObject = GameObject.Find("CharacterPrimary");
-                Assert.That(bodyObject, Is.Not.Null,
-                    "The polished VN needs a full-body authored character surface behind the dialogue panel.");
-                RawImage body = bodyObject.GetComponent<RawImage>();
-                RectTransform bodyRect = bodyObject.GetComponent<RectTransform>();
-                Assert.That(body.texture, Is.SameAs(art.KeikoCharacterSheet));
-                Assert.That(body.uvRect, Is.EqualTo(keiko.BodyUv),
-                    "Full-body staging must reuse the inspected authored body crop from the catalog.");
-
-                Vector2 initialPosition = bodyRect.anchoredPosition;
-                Vector3 initialScale = bodyRect.localScale;
+                GameObject primary = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                Assert.That(primary.activeSelf, Is.True);
+                RectTransform rect = primary.GetComponent<RectTransform>();
+                Vector2 initialPosition = rect.anchoredPosition;
+                Vector3 initialScale = rect.localScale;
+                Assert.That(initialScale.x, Is.EqualTo(1f).Within(.01f));
                 float globalTimeScale = Time.timeScale;
-                yield return new WaitForSecondsRealtime(.35f);
 
-                bool moved = Vector2.Distance(initialPosition, bodyRect.anchoredPosition) > .1f ||
-                             Vector3.Distance(initialScale, bodyRect.localScale) > .001f;
-                Assert.That(moved, Is.True,
-                    "Idle breathing should be subtle but measurably presentation-driven on unscaled time.");
-                Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale));
+                yield return new WaitForSecondsRealtime(.35f);
+                Assert.That(Vector2.Distance(initialPosition, rect.anchoredPosition), Is.LessThan(.01f),
+                    "One visible body must not bob vertically.");
+                Assert.That(Vector3.Distance(initialScale, rect.localScale), Is.LessThan(.0002f),
+                    "One visible body must not pulse or pump scale.");
 
                 view.SetPausedVisual(true);
-                Vector2 pausedPosition = bodyRect.anchoredPosition;
-                Vector3 pausedScale = bodyRect.localScale;
-                yield return new WaitForSecondsRealtime(.35f);
-
-                Assert.That(Vector2.Distance(pausedPosition, bodyRect.anchoredPosition), Is.LessThan(.01f));
-                Assert.That(Vector3.Distance(pausedScale, bodyRect.localScale), Is.LessThan(.0001f));
+                yield return new WaitForSecondsRealtime(.20f);
                 Assert.That(Time.timeScale, Is.EqualTo(globalTimeScale),
-                    "VN Pause must freeze only local presentation animation and never global time.");
-
-                view.SetPausedVisual(false);
-                yield return new WaitForSecondsRealtime(.35f);
-                bool resumed = Vector2.Distance(pausedPosition, bodyRect.anchoredPosition) > .1f ||
-                               Vector3.Distance(pausedScale, bodyRect.localScale) > .001f;
-                Assert.That(resumed, Is.True, "Idle breathing should resume from the frozen local phase.");
+                    "VN Pause remains presentation-local and must not touch global time.");
+                Assert.That(rect.anchoredPosition, Is.EqualTo(initialPosition));
+                Assert.That(rect.localScale, Is.EqualTo(initialScale));
             }
             finally
             {
@@ -291,12 +227,12 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator ActiveSpeakerFocusSupportsZeroOneTwoCharactersAndPausesLocally()
+        public IEnumerator ActiveSpeakerFocusOnlyAppliesWhenTwoVisibleBodiesAreStagedAndPausesLocally()
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
             VnIntroArt art = CreateArt(assets);
-            var host = new GameObject("VnSpeakerFocusFixture");
+            var host = new GameObject("VnTwoBodyFocusFixture");
             VnIntroView view = VnIntroView.Create(host.transform, assets.sans, art,
                 () => { }, () => { }, () => { }, () => { });
 
@@ -304,42 +240,35 @@ namespace Rokas.Tests
             {
                 VnCharacterVisualState keiko = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko");
                 VnCharacterVisualState mina = VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina");
+                GameObject primaryObject = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
+                GameObject secondaryObject = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
 
                 view.SetCharacterStage(null, null);
                 yield return null;
-                GameObject primaryObject = FindDescendantIncludingInactive(host.transform, "CharacterPrimary");
-                GameObject secondaryObject = FindDescendantIncludingInactive(host.transform, "CharacterSecondary");
-                Assert.That(primaryObject, Is.Not.Null);
-                Assert.That(secondaryObject, Is.Not.Null,
-                    "The presentation layer needs a reusable secondary slot without adding a new Yarn beat.");
                 Assert.That(primaryObject.activeSelf, Is.False);
                 Assert.That(secondaryObject.activeSelf, Is.False);
 
-                view.SetCharacterStage(keiko, null);
-                view.PresentLine("Keiko", "Single speaker");
+                view.SetCharacterStage(mina, null);
+                view.PresentLine("Mina", "Single visible speaker");
                 yield return new WaitForSecondsRealtime(.25f);
                 Assert.That(primaryObject.activeSelf, Is.True);
                 Assert.That(secondaryObject.activeSelf, Is.False);
-                Assert.That(primaryObject.GetComponent<RawImage>().uvRect, Is.EqualTo(keiko.BodyUv));
-                Assert.That(primaryObject.transform.localScale.x, Is.GreaterThan(1.02f),
-                    "A single speaking character should settle into the active focus scale.");
+                Assert.That(primaryObject.transform.localScale.x, Is.EqualTo(1f).Within(.01f));
+                Assert.That(Luminance(primaryObject.GetComponent<RawImage>().color), Is.EqualTo(1f).Within(.02f));
 
                 view.SetCharacterStage(keiko, mina);
-                view.PresentLine("Keiko", "Keiko active");
+                view.PresentLine("Keiko", "Keiko active in a two-body staging proof");
                 yield return new WaitForSecondsRealtime(.25f);
 
                 RawImage primary = primaryObject.GetComponent<RawImage>();
                 RawImage secondary = secondaryObject.GetComponent<RawImage>();
                 Assert.That(primaryObject.activeSelf, Is.True);
                 Assert.That(secondaryObject.activeSelf, Is.True);
-                Assert.That(primaryObject.GetComponent<RectTransform>().anchoredPosition.x,
-                    Is.LessThan(secondaryObject.GetComponent<RectTransform>().anchoredPosition.x));
                 Assert.That(primaryObject.transform.localScale.x, Is.GreaterThan(1.02f));
                 Assert.That(secondaryObject.transform.localScale.x, Is.LessThan(.98f));
                 Assert.That(Luminance(primary.color), Is.GreaterThan(Luminance(secondary.color)));
                 Assert.That(primary.color.a, Is.GreaterThan(secondary.color.a));
-                Assert.That(primaryObject.transform.GetSiblingIndex(), Is.GreaterThan(secondaryObject.transform.GetSiblingIndex()),
-                    "The active speaker should be visually in front while remaining behind the VN overlay.");
+                Assert.That(primaryObject.transform.GetSiblingIndex(), Is.GreaterThan(secondaryObject.transform.GetSiblingIndex()));
 
                 view.PresentLine("Mina", "Mina active");
                 view.SetPausedVisual(true);
@@ -389,10 +318,8 @@ namespace Rokas.Tests
                 Assert.That(state.BodyUv.height, Is.GreaterThan(0f), id);
             }
 
-            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko").HasBlinkState, Is.False,
-                "Keiko sheet inspection found no dedicated neutral blink cell; do not fake one.");
-            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina").HasBlinkState, Is.False,
-                "Mina's happy closed-eye portrait is a distinct expression, not a neutral blink frame.");
+            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko").HasBlinkState, Is.False);
+            Assert.That(VnCharacterVisualCatalog.ResolveOrNeutral("mina_neutral", "Mina").HasBlinkState, Is.False);
         }
 
         [Test]
@@ -402,8 +329,7 @@ namespace Rokas.Tests
             VnCharacterVisualState minaHappy = VnCharacterVisualCatalog.ResolveOrNeutral("mina_happy", "Mina");
 
             Rect requestedMinaBlink = VnCharacterVisualCatalog.ResolvePortraitUv(minaNeutral, true);
-            Assert.That(requestedMinaBlink, Is.EqualTo(minaNeutral.PortraitUv),
-                "Mina neutral has no authored blink; requesting blink must keep neutral rather than borrow happy closed-eyes art.");
+            Assert.That(requestedMinaBlink, Is.EqualTo(minaNeutral.PortraitUv));
             Assert.That(requestedMinaBlink, Is.Not.EqualTo(minaHappy.PortraitUv));
 
             Rect authoredNeutral = new Rect(.10f, .20f, .30f, .40f);
@@ -412,8 +338,7 @@ namespace Rokas.Tests
                 "future_neutral", "Future", authoredNeutral, authoredNeutral, true, authoredBlink);
 
             Assert.That(VnCharacterVisualCatalog.ResolvePortraitUv(futureAuthoredState, false), Is.EqualTo(authoredNeutral));
-            Assert.That(VnCharacterVisualCatalog.ResolvePortraitUv(futureAuthoredState, true), Is.EqualTo(authoredBlink),
-                "The reusable hook should select a blink UV only when the state explicitly declares authored blink art.");
+            Assert.That(VnCharacterVisualCatalog.ResolvePortraitUv(futureAuthoredState, true), Is.EqualTo(authoredBlink));
         }
 
         [Test]
@@ -427,15 +352,10 @@ namespace Rokas.Tests
 
         private static GameObject FindDescendantIncludingInactive(Transform root, string name)
         {
-            Transform[] descendants = root.GetComponentsInChildren<Transform>(true);
-            foreach (Transform descendant in descendants)
+            foreach (Transform descendant in root.GetComponentsInChildren<Transform>(true))
             {
-                if (descendant.name == name)
-                {
-                    return descendant.gameObject;
-                }
+                if (descendant.name == name) return descendant.gameObject;
             }
-
             return null;
         }
 
