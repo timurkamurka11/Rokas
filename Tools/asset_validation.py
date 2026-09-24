@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 
 _MESSAGES_PREFIX = ('Assets', 'Rokas', 'Resources', 'Messages')
+_VN_EDITOR_UI_PREFIX = ('Assets', 'Rokas', 'Scripts', 'Editor', 'VnUiWorkshop', 'RuntimeUi')
 
 
 def _contains_path_prefix(path, prefix):
@@ -51,6 +52,9 @@ def validate_png_asset(path, width, height, color_type, meta_text):
     if 'Yokai' in path.parts or 'Familiars' in path.parts:
         if color_type != 6:
             errors.append('Character PNG must carry real RGBA: ' + path.name)
+        return errors
+
+    if _contains_path_prefix(path, _VN_EDITOR_UI_PREFIX):
         return errors
 
     if width < 1600 or height < 900:
