@@ -415,7 +415,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string characterId,
             float beatElapsedSeconds,
             VnWorkshopStageLayoutValues stage,
-            float virtualCanvasWidth)
+            float virtualCanvasWidth,
+            ISet<string> cancelledStagingIds)
         {
             if (scene == null) throw new ArgumentNullException(nameof(scene));
             if (beat == null) throw new ArgumentNullException(nameof(beat));
@@ -449,7 +450,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerDialogueBeat current = scene.dialogueBeats[i];
                 if (current == null) continue;
                 float elapsed = i < beatIndex ? float.MaxValue : beatElapsedSeconds;
-                ApplyStaging(current, characterId, elapsed, stage, ref state);
+                ApplyStaging(
+                    current, characterId, elapsed, stage,
+                    cancelledStagingIds, ref state);
                 ApplyMovement(current, characterId, elapsed, stage, virtualCanvasWidth, ref state);
             }
 
@@ -469,6 +472,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string characterId,
             float elapsed,
             VnWorkshopStageLayoutValues stage,
+            ISet<string> cancelledStagingIds,
             ref MovementState state)
         {
             if (beat.characterStaging == null) return;
@@ -478,6 +482,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 if (row == null ||
                     !string.Equals(row.characterId ?? string.Empty, characterId,
                         StringComparison.OrdinalIgnoreCase) ||
+                    (cancelledStagingIds != null &&
+                     !string.IsNullOrEmpty(row.stagingId) &&
+                     cancelledStagingIds.Contains(row.stagingId)) ||
                     row.delaySeconds > elapsed + .00001f)
                     continue;
 

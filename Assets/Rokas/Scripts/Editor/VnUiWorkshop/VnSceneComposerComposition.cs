@@ -272,7 +272,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     resolvedMovement[i] = VnSceneComposerMovementResolver.Sample(
                         scene, beat, characterId, beatElapsedSeconds, stage,
-                        frame.VirtualCanvasSize.x);
+                        frame.VirtualCanvasSize.x, cancelledStagingIds);
                 }
 
                 bool visible = applyMovement
