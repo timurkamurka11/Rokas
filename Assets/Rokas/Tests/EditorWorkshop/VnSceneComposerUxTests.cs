@@ -143,6 +143,25 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MovementInspectorUsesSelectedReplicaAndCompactRussianControls()
+        {
+            string main = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string movement = ReadEditorSource(
+                "VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs");
+
+            Assert.That(main, Does.Contain("\"Движение\""));
+            Assert.That(movement, Does.Contain("ДВИЖЕНИЕ ТЕКУЩЕЙ РЕПЛИКИ"));
+            Assert.That(movement, Does.Contain("Основное действие"));
+            Assert.That(movement, Does.Contain("\"Персонаж\""));
+            Assert.That(movement, Does.Contain("\"Действие\""));
+            Assert.That(movement, Does.Contain("\"Длительность\""));
+            Assert.That(movement, Does.Contain("После основного"));
+            Assert.That(movement, Does.Contain("Одновременно"));
+            Assert.That(movement, Does.Contain("ComposerGetSelectedDialogueBeat"));
+            Assert.That(movement, Does.Contain("ComposerPreviewSelectedMovement"));
+        }
+
+        [Test]
         public void MD_BasicTextUsesSelectedCanonicalDialogueBeatSurface()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
