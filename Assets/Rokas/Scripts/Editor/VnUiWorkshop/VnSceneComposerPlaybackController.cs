@@ -720,7 +720,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             Texture2D targetBackground = CurrentMediaTexture as Texture2D;
             VnWorkshopPreviewFrame targetFrame = VnSceneComposerComposition.BuildFrame(
                 project, targetScene, targetBeat, VnWorkshopResolution.Reference1920x1080,
-                targetBackground, BeatElapsedSeconds, cancelledCharacterStagingIds);
+                targetBackground, BeatElapsedSeconds, cancelledCharacterStagingIds, true);
             VnWorkshopPreviewFrame sourceFrame = VnSceneComposerComposition.BuildFrame(
                 project, sourceScene, ResolveFirstBeat(sourceScene),
                 VnWorkshopResolution.Reference1920x1080, sourceMediaTexture as Texture2D);

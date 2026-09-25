@@ -87,6 +87,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
             float beatElapsedSeconds,
             ISet<string> cancelledStagingIds)
         {
+            return BuildFrame(
+                project, scene, beat, resolution, backgroundOverride,
+                beatElapsedSeconds, cancelledStagingIds, false);
+        }
+
+        internal static VnWorkshopPreviewFrame BuildFrame(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            VnWorkshopResolution resolution,
+            Texture2D backgroundOverride,
+            float beatElapsedSeconds,
+            ISet<string> cancelledStagingIds,
+            bool applyMovement)
+        {
             if (project == null) throw new ArgumentNullException(nameof(project));
             if (scene == null) throw new ArgumentNullException(nameof(scene));
             if (beat == null) throw new ArgumentNullException(nameof(beat));
@@ -110,7 +125,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             frame.ShowKeiko = false;
             frame.ComposerCharacters = BuildCharacters(
                 frame, preset, scene, beat, beatElapsedSeconds, cancelledStagingIds,
-                out string[] characterWarnings);
+                applyMovement, out string[] characterWarnings);
             frame.ComposerCharacterWarnings = characterWarnings;
             frame.ComposerDecorations = BuildDecorations(scene, out string[] decorationWarnings);
             frame.ComposerDecorationWarnings = decorationWarnings;
@@ -201,6 +216,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerDialogueBeat beat,
             float beatElapsedSeconds,
             ISet<string> cancelledStagingIds,
+            bool applyMovement,
             out string[] warnings)
         {
             int count = scene.characters.Count;
@@ -214,6 +230,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
             int activeSourceIndex = FindActiveIndex(scene, beat);
             var resolvedStaging = new VnSceneComposerResolvedBeatCharacterStaging[count];
+            var resolvedMovement = new VnSceneComposerResolvedMovementSample[count];
             var diagnostics = new List<string>();
             string[] authoredWarnings =
                 VnSceneComposerBeatCharacterStagingResolver.CollectWarnings(scene, beat);
@@ -251,7 +268,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     }
                 }
 
-                if (resolved.Visible)
+                if (applyMovement)
+                {
+                    resolvedMovement[i] = VnSceneComposerMovementResolver.Sample(
+                        scene, beat, characterId, beatElapsedSeconds, stage,
+                        frame.VirtualCanvasSize.x);
+                }
+
+                bool visible = applyMovement
+                    ? resolvedMovement[i].Visible && resolvedMovement[i].Alpha > .0001f
+                    : resolved.Visible;
+                if (visible)
                     visibleOrder[i] = visibleCount++;
             }
 
@@ -293,17 +320,38 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     baseline = RectFromCenter(baselineCenter, new Vector2(authoredWidth, authoredHeight));
                 }
 
-                ResolveSlot(resolved.StageSlot, stage, out float xOffset, out float slotScale);
+                VnSceneComposerResolvedMovementSample movement = resolvedMovement[i];
+                VnWorkshopStageSlot effectiveSlot = applyMovement
+                    ? movement.StageSlot
+                    : resolved.StageSlot;
                 Vector2 center = baseline.center;
-                center.x = frame.VirtualCanvasSize.x * .5f + xOffset;
-                center.y += stage.SlotY;
-                float scale = slotScale;
-                float alpha = resolved.Visible ? 1f : 0f;
+                float scale;
+                float alpha;
+                bool visible;
+                if (applyMovement)
+                {
+                    center.x = frame.VirtualCanvasSize.x * .5f + movement.StagePosition.x;
+                    center.y += movement.StagePosition.y;
+                    scale = movement.StageScale;
+                    alpha = movement.Alpha;
+                    visible = movement.Visible && alpha > .0001f;
+                }
+                else
+                {
+                    ResolveSlot(resolved.StageSlot, stage, out float xOffset, out float slotScale);
+                    center.x = frame.VirtualCanvasSize.x * .5f + xOffset;
+                    center.y += stage.SlotY;
+                    if (resolved.HasPositionOffset) center += resolved.PositionOffset;
+                    scale = slotScale;
+                    alpha = resolved.Visible ? 1f : 0f;
+                    visible = resolved.Visible;
+                }
+
                 float brightness = 1f;
-                bool active = resolved.Visible && activeSourceIndex == i;
+                bool active = visible && activeSourceIndex == i;
 
                 int currentVisibleIndex = visibleOrder[i];
-                if (resolved.Visible && visibleCount > 1 && activeVisibleIndex >= 0 &&
+                if (visible && visibleCount > 1 && activeVisibleIndex >= 0 &&
                     currentVisibleIndex >= 0)
                 {
                     VnWorkshopSpeakerFocusSample sample = VnPresentationWorkshopVn10Resolver.SampleSpeakerFocus(
@@ -314,7 +362,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     brightness = sample.Brightness;
                 }
 
-                if (resolved.HasPositionOffset) center += resolved.PositionOffset;
                 if (source.hasScaleMultiplier) scale *= source.scaleMultiplier;
                 scale = Mathf.Max(.01f, scale);
                 Rect body = RectFromCenter(center, baseline.size * scale);
@@ -323,7 +370,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 {
                     CharacterId = characterId,
                     StateId = resolved.StateId,
-                    Slot = resolved.StageSlot,
+                    Slot = effectiveSlot,
                     Texture = texture,
                     Uv = state.BodyUv,
                     Body = body,
