@@ -167,6 +167,47 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void RuntimePackageContainerAcceptsOtherProjectIdsWhenPackageAndSnapshotMatch()
+        {
+            const string otherProjectId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+            var scene = new RokasVnRuntimeSceneSnapshot
+            {
+                sceneId = "ffffffffffffffffffffffffffffffff",
+                isTerminal = true,
+                terminalFadeDuration = .25f
+            };
+            scene.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "abababababababababababababababab",
+                text = "Future episode"
+            });
+            var snapshot = new RokasVnRuntimeIntroSnapshot
+            {
+                projectId = otherProjectId,
+                sourceProjectSha256 = "future-episode-sha",
+                sceneCount = 1,
+                beatCount = 1
+            };
+            snapshot.scenes.Add(scene);
+
+            var package = ScriptableObject.CreateInstance<RokasVnRuntimeIntroPackage>();
+            try
+            {
+                package.ConfigureForTests(
+                    otherProjectId,
+                    "future-episode-sha",
+                    snapshot);
+                string error;
+                Assert.That(package.TryValidate(out error), Is.True, error,
+                    "Runtime package validation must be reusable; only the Intro exporter should own the current Intro Project ID.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(package);
+            }
+        }
+
+        [Test]
         public void RuntimePackageValidationRequiresExactIntroProjectIdAndAtLeastOneTerminalScene()
         {
             var package = UnityEngine.ScriptableObject.CreateInstance<RokasVnRuntimeIntroPackage>();

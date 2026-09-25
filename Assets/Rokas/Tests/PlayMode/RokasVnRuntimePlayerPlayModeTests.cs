@@ -77,6 +77,52 @@ namespace Rokas.Tests
             Assert.That(Find("RokasVnRuntimeRoot"), Is.Null);
         }
 
+        [UnityTest]
+        public IEnumerator AuthoredBgmAndSfxRespectMuteAndDisposeWithRuntime()
+        {
+            package = CreateAudioPackage();
+            host = new GameObject("RuntimeVnAudioFixture");
+
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            GameObject runtimeRoot = Find("RokasVnRuntimeRoot");
+            Assert.That(runtimeRoot, Is.Not.Null);
+            AudioSource[] sources =
+                runtimeRoot.GetComponentsInChildren<AudioSource>(true);
+
+            AudioClip bgm = package.Assets
+                .First(binding => binding.authoredKey == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+                .asset as AudioClip;
+            AudioClip sfx = package.Assets
+                .First(binding => binding.authoredKey == "cccccccccccccccccccccccccccccccc")
+                .asset as AudioClip;
+
+            AudioSource bgmSource = sources.FirstOrDefault(source => source.clip == bgm);
+            AudioSource sfxSource = sources.FirstOrDefault(source => source.clip == sfx);
+            Assert.That(bgmSource, Is.Not.Null,
+                "Scene-authored BGM must be owned by the runtime VN player.");
+            Assert.That(sfxSource, Is.Not.Null,
+                "Scene/Beat-authored SFX must be owned by the runtime VN player.");
+            Assert.That(bgmSource.volume, Is.GreaterThan(0f));
+            Assert.That(sfxSource.volume, Is.GreaterThan(0f));
+
+            player.SetMuted(true);
+            Assert.That(bgmSource.volume, Is.Zero);
+            Assert.That(sfxSource.volume, Is.Zero);
+
+            player.SetMuted(false);
+            player.TickForTests(.02f);
+            Assert.That(bgmSource.volume, Is.GreaterThan(0f));
+            Assert.That(sfxSource.volume, Is.GreaterThan(0f));
+
+            player.Dispose();
+            yield return null;
+            Assert.That(Find("RokasVnRuntimeRoot"), Is.Null,
+                "VN-owned audio and controls must disappear before gameplay owns input/audio.");
+        }
+
         [Test]
         public void RuntimePlayerLivesInPlayerAssemblyWithoutUnityEditorReference()
         {
@@ -166,6 +212,71 @@ namespace Rokas.Tests
                     }
                 },
                 plaque, controls, mute, triangle);
+            return result;
+        }
+
+        private RokasVnRuntimeIntroPackage CreateAudioPackage()
+        {
+            var result = CreatePackage();
+            RokasVnRuntimeSceneSnapshot scene = result.Snapshot.scenes[0];
+
+            AudioClip bgm = AudioClip.Create(
+                "RuntimeBgm", 4410, 1, 44100, false);
+            AudioClip sfx = AudioClip.Create(
+                "RuntimeSfx", 4410, 1, 44100, false);
+            owned.Add(bgm);
+            owned.Add(sfx);
+
+            scene.music = new RokasVnRuntimeMusicSnapshot
+            {
+                mode = 1,
+                assetGuid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                displayName = "Runtime BGM",
+                volume = .65f,
+                loop = true
+            };
+            scene.additionalAudioCues.Add(
+                new RokasVnRuntimeAudioCueSnapshot
+                {
+                    cueId = "dddddddddddddddddddddddddddddddd",
+                    displayName = "Runtime SFX",
+                    assetGuid = "cccccccccccccccccccccccccccccccc",
+                    enabled = true,
+                    category = 0,
+                    volume = .55f,
+                    loop = true,
+                    trigger = 0,
+                    startDelaySeconds = 0f,
+                    stopMode = 1
+                });
+
+            var assets = result.Assets.ToList();
+            assets.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                displayName = "Runtime BGM",
+                kind = RokasVnRuntimeAssetKind.Audio,
+                asset = bgm
+            });
+            assets.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = "cccccccccccccccccccccccccccccccc",
+                displayName = "Runtime SFX",
+                kind = RokasVnRuntimeAssetKind.Audio,
+                asset = sfx
+            });
+
+            result.Configure(
+                result.ProjectId,
+                result.SourceProjectSha256,
+                result.PortableProjectJson,
+                result.Snapshot,
+                assets,
+                result.CharacterStates.ToList(),
+                result.DialoguePlaque,
+                result.ControlSheet,
+                result.MutedSpeaker,
+                result.CompletionTriangle);
             return result;
         }
 
