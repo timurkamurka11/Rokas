@@ -1,0 +1,43 @@
+name: ROKAS VN Main-Game Integration Focused
+
+on:
+  push:
+    branches:
+      - codex/vn-intro-main-game-integration
+    paths:
+      - 'Assets/Rokas/Scripts/Presentation/**'
+      - 'Assets/Rokas/Scripts/Editor/VnUiWorkshop/**'
+      - 'Assets/Rokas/Tests/EditorWorkshop/VnRuntimeIntroPackageTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/VnSceneComposerMainGameIntegrationPlayModeTests.cs'
+      - '.github/workflows/vn-main-game-integration-focused.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  package-contract:
+    name: VN runtime package contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run package/export contract tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnRuntimeIntroPackageTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Runtime Package Contract
+          artifactsPath: artifacts-vn-runtime-package
