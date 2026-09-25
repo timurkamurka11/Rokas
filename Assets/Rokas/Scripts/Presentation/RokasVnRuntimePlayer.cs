@@ -1022,7 +1022,10 @@ namespace Rokas.Presentation
                 // reveals its continuation, then let Unity destroy it normally.
                 root.SetActive(false);
                 root.transform.SetParent(null, false);
-                UnityEngine.Object.Destroy(root);
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(root);
+                else
+                    UnityEngine.Object.DestroyImmediate(root);
             }
         }
 
