@@ -712,6 +712,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     return false;
                 }
 
+                if (!ValidateMovement(scene, beat, out error))
+                    return false;
+
                 if (beat.characterStaging == null)
                 {
                     error = "Dialogue Beat character staging list is missing in scene " + scene.sceneId + ".";
@@ -1721,6 +1724,108 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             string result = new string(chars, 0, count).Trim('.');
             return string.IsNullOrEmpty(result) ? fallback : result;
+        }
+
+        private static bool ValidateMovement(
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat,
+            out string error)
+        {
+            VnSceneComposerBeatMovement movement = beat.movement;
+            if (movement == null)
+            {
+                error = string.Empty;
+                return true;
+            }
+            if (!Enum.IsDefined(
+                    typeof(VnSceneComposerMovementTiming),
+                    movement.secondaryTiming))
+            {
+                error = "Invalid Movement timing in scene " + scene.sceneId + ".";
+                return false;
+            }
+
+            if (!ValidateMovementAction(
+                    scene, movement.primary, false, "primary", out error))
+                return false;
+            if (!ValidateMovementAction(
+                    scene, movement.secondary, true, "secondary", out error))
+                return false;
+
+            if (movement.primary != null && movement.secondary != null &&
+                movement.primary.action != VnSceneComposerMovementActionType.None &&
+                movement.secondary.action != VnSceneComposerMovementActionType.None &&
+                !string.IsNullOrWhiteSpace(movement.primary.characterId) &&
+                string.Equals(
+                    movement.primary.characterId,
+                    movement.secondary.characterId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                error = "Primary and secondary Movement must target different characters in scene " +
+                        scene.sceneId + ".";
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool ValidateMovementAction(
+            VnSceneComposerScene scene,
+            VnSceneComposerCharacterMovementAction action,
+            bool allowStay,
+            string label,
+            out string error)
+        {
+            if (action == null)
+            {
+                error = string.Empty;
+                return true;
+            }
+            if (!Enum.IsDefined(typeof(VnSceneComposerMovementActionType), action.action) ||
+                (!allowStay && action.action == VnSceneComposerMovementActionType.Stay))
+            {
+                error = "Invalid " + label + " Movement action in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (!IsFinite(action.duration) ||
+                action.duration <= 0f ||
+                action.duration > 10f)
+            {
+                error = "Invalid " + label + " Movement duration in scene " + scene.sceneId + ".";
+                return false;
+            }
+            if (action.action == VnSceneComposerMovementActionType.None)
+            {
+                error = string.Empty;
+                return true;
+            }
+            if (string.IsNullOrWhiteSpace(action.characterId) ||
+                !SceneContainsCharacter(scene, action.characterId))
+            {
+                error = label + " Movement references a missing Scene Cast character in scene " +
+                        scene.sceneId + ".";
+                return false;
+            }
+            error = string.Empty;
+            return true;
+        }
+
+        private static bool SceneContainsCharacter(
+            VnSceneComposerScene scene, string characterId)
+        {
+            if (scene == null || scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return false;
+            for (int i = 0; i < scene.characters.Count; i++)
+            {
+                VnSceneComposerCharacter character = scene.characters[i];
+                if (character == null) continue;
+                string id = VnSceneComposerBeatCharacterStateResolver.ResolveCharacterId(character);
+                if (string.Equals(id, characterId, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         private static VnSceneComposerCharacterMovementAction NormalizeMovementAction(

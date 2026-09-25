@@ -40,6 +40,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             "Декорации",
             "Звуки",
             "Музыка",
+            "Движение",
             "Эффекты"
         };
 
@@ -1138,6 +1139,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 case 8: DrawSceneComposerDecorationInspector(scene); break;
                 case 9: DrawSceneComposerAdditionalAudioInspector(scene); break;
                 case 10: DrawSceneComposerMusicInspector(scene); break;
+                case 11: DrawSceneComposerMovementInspector(scene); break;
                 default: DrawSceneComposerEffectsInspector(scene); break;
             }
 
@@ -2197,6 +2199,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void ResetSceneComposerPlayback()
         {
             _sceneComposerBoundaryPreviewSceneId = null;
+            _sceneComposerMovementPreviewEndsAt = 0d;
             if (_sceneComposerPlayback != null) { _sceneComposerPlayback.Dispose(); _sceneComposerPlayback = null; }
             _sceneComposerLastPlaybackTick = EditorApplication.timeSinceStartup;
         }
@@ -2223,7 +2226,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             double now = EditorApplication.timeSinceStartup;
             float delta = Mathf.Max(0f, (float)(now - _sceneComposerLastPlaybackTick)); _sceneComposerLastPlaybackTick = now;
-            try { _sceneComposerPlayback.Advance(delta); SyncSceneComposerSelectionFromPlayback(); Repaint(); }
+            try
+            {
+                _sceneComposerPlayback.Advance(delta);
+                if (TryCompleteSceneComposerMovementPreview(now)) return;
+                SyncSceneComposerSelectionFromPlayback();
+                Repaint();
+            }
             catch (Exception exception)
             {
                 _sceneComposerPlayback.Pause(); SetSceneComposerStatus("Не удалось воспроизвести предпросмотр: " + exception.Message, MessageType.Error);

@@ -504,6 +504,313 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return first;
         }
 
+        [NonSerialized] private double _sceneComposerMovementPreviewEndsAt;
+
+        private static readonly VnSceneComposerMovementActionType[] PrimaryMovementActions =
+        {
+            VnSceneComposerMovementActionType.None,
+            VnSceneComposerMovementActionType.ExitLeft,
+            VnSceneComposerMovementActionType.ExitRight,
+            VnSceneComposerMovementActionType.Disappear,
+            VnSceneComposerMovementActionType.MoveLeft,
+            VnSceneComposerMovementActionType.MoveCenter,
+            VnSceneComposerMovementActionType.MoveRight
+        };
+
+        private static readonly string[] PrimaryMovementLabels =
+        {
+            "Нет",
+            "Уйти влево",
+            "Уйти вправо",
+            "Исчезнуть на месте",
+            "Перейти влево",
+            "Перейти в центр",
+            "Перейти вправо"
+        };
+
+        private static readonly VnSceneComposerMovementActionType[] SecondaryMovementActions =
+        {
+            VnSceneComposerMovementActionType.None,
+            VnSceneComposerMovementActionType.Stay,
+            VnSceneComposerMovementActionType.MoveLeft,
+            VnSceneComposerMovementActionType.MoveCenter,
+            VnSceneComposerMovementActionType.MoveRight,
+            VnSceneComposerMovementActionType.ExitLeft,
+            VnSceneComposerMovementActionType.ExitRight,
+            VnSceneComposerMovementActionType.Disappear
+        };
+
+        private static readonly string[] SecondaryMovementLabels =
+        {
+            "Нет",
+            "Остаться",
+            "Перейти влево",
+            "Перейти в центр",
+            "Перейти вправо",
+            "Уйти влево",
+            "Уйти вправо",
+            "Исчезнуть на месте"
+        };
+
+        private void DrawSceneComposerMovementInspector(VnSceneComposerScene scene)
+        {
+            EditorGUILayout.LabelField("ДВИЖЕНИЕ ТЕКУЩЕЙ РЕПЛИКИ", EditorStyles.boldLabel);
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null)
+            {
+                EditorGUILayout.HelpBox("Выберите реплику в списке справа.", MessageType.Info);
+                return;
+            }
+
+            if (beat.movement == null)
+                beat.movement = new VnSceneComposerBeatMovement();
+
+            string[] characters = GetSceneComposerBeatTargetCharacterIds(scene);
+            if (characters.Length == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Добавьте персонажа в состав сцены, чтобы настроить движение.",
+                    MessageType.Info);
+                return;
+            }
+
+            VnSceneComposerCharacterMovementAction primary =
+                beat.movement.primary ?? new VnSceneComposerCharacterMovementAction();
+            VnSceneComposerCharacterMovementAction secondary =
+                beat.movement.secondary ?? new VnSceneComposerCharacterMovementAction();
+
+            EditorGUILayout.LabelField("Основное действие", EditorStyles.miniBoldLabel);
+            string primaryCharacter = ResolveMovementDisplayCharacter(
+                characters, primary.characterId, string.Empty);
+            int primaryCharacterIndex = Mathf.Max(0, Array.IndexOf(characters, primaryCharacter));
+            int primaryActionIndex = Mathf.Max(0, Array.IndexOf(PrimaryMovementActions, primary.action));
+
+            EditorGUI.BeginChangeCheck();
+            primaryCharacterIndex = EditorGUILayout.Popup(
+                "Персонаж", primaryCharacterIndex, characters);
+            primaryActionIndex = EditorGUILayout.Popup(
+                "Действие", primaryActionIndex, PrimaryMovementLabels);
+            VnSceneComposerMovementActionType nextPrimaryAction =
+                PrimaryMovementActions[Mathf.Clamp(
+                    primaryActionIndex, 0, PrimaryMovementActions.Length - 1)];
+            float primaryDuration = primary.duration;
+            if (MovementUsesDuration(nextPrimaryAction))
+                primaryDuration = DrawSceneComposerDurationControl(
+                    "Длительность", primaryDuration, .05f);
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Дополнительное действие", EditorStyles.miniBoldLabel);
+            string secondaryCharacter = ResolveMovementDisplayCharacter(
+                characters, secondary.characterId,
+                characters.Length > 1 ? characters[1] : characters[0]);
+            int secondaryCharacterIndex = Mathf.Max(
+                0, Array.IndexOf(characters, secondaryCharacter));
+            int secondaryActionIndex = Mathf.Max(
+                0, Array.IndexOf(SecondaryMovementActions, secondary.action));
+            secondaryCharacterIndex = EditorGUILayout.Popup(
+                "Персонаж", secondaryCharacterIndex, characters);
+            secondaryActionIndex = EditorGUILayout.Popup(
+                "Действие", secondaryActionIndex, SecondaryMovementLabels);
+            VnSceneComposerMovementActionType nextSecondaryAction =
+                SecondaryMovementActions[Mathf.Clamp(
+                    secondaryActionIndex, 0, SecondaryMovementActions.Length - 1)];
+            float secondaryDuration = secondary.duration;
+            if (MovementUsesDuration(nextSecondaryAction))
+                secondaryDuration = DrawSceneComposerDurationControl(
+                    "Длительность", secondaryDuration, .05f);
+
+            VnSceneComposerMovementTiming timing = beat.movement.secondaryTiming;
+            if (nextSecondaryAction != VnSceneComposerMovementActionType.None)
+            {
+                int timingIndex =
+                    timing == VnSceneComposerMovementTiming.Simultaneous ? 1 : 0;
+                timingIndex = EditorGUILayout.Popup(
+                    "Тайминг", timingIndex,
+                    new[] { "После основного", "Одновременно" });
+                timing = timingIndex == 1
+                    ? VnSceneComposerMovementTiming.Simultaneous
+                    : VnSceneComposerMovementTiming.AfterPrimary;
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                try
+                {
+                    ComposerSetSelectedDialogueBeatMovement(
+                        characters[Mathf.Clamp(
+                            primaryCharacterIndex, 0, characters.Length - 1)],
+                        nextPrimaryAction,
+                        primaryDuration,
+                        characters[Mathf.Clamp(
+                            secondaryCharacterIndex, 0, characters.Length - 1)],
+                        nextSecondaryAction,
+                        secondaryDuration,
+                        timing);
+                }
+                catch (Exception exception)
+                {
+                    SetSceneComposerStatus(
+                        "Не удалось изменить движение: " + exception.Message,
+                        MessageType.Warning);
+                }
+            }
+
+            bool hasPreview =
+                nextPrimaryAction != VnSceneComposerMovementActionType.None ||
+                nextSecondaryAction != VnSceneComposerMovementActionType.None;
+            using (new EditorGUI.DisabledScope(!hasPreview))
+            {
+                if (GUILayout.Button("▶ Проверить"))
+                    ComposerPreviewSelectedMovement();
+            }
+        }
+
+        public void ComposerSetSelectedDialogueBeatMovement(
+            string primaryCharacterId,
+            VnSceneComposerMovementActionType primaryAction,
+            float primaryDuration,
+            string secondaryCharacterId,
+            VnSceneComposerMovementActionType secondaryAction,
+            float secondaryDuration,
+            VnSceneComposerMovementTiming secondaryTiming)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            if (beat == null)
+                throw new InvalidOperationException("No dialogue Beat is selected.");
+            if (!Enum.IsDefined(typeof(VnSceneComposerMovementActionType), primaryAction) ||
+                primaryAction == VnSceneComposerMovementActionType.Stay)
+                throw new ArgumentOutOfRangeException(nameof(primaryAction));
+            if (!Enum.IsDefined(typeof(VnSceneComposerMovementActionType), secondaryAction))
+                throw new ArgumentOutOfRangeException(nameof(secondaryAction));
+            if (!Enum.IsDefined(typeof(VnSceneComposerMovementTiming), secondaryTiming))
+                throw new ArgumentOutOfRangeException(nameof(secondaryTiming));
+
+            string primaryCharacter = primaryAction == VnSceneComposerMovementActionType.None
+                ? string.Empty
+                : ResolveSceneCharacterId(scene, primaryCharacterId);
+            string secondaryCharacter = secondaryAction == VnSceneComposerMovementActionType.None
+                ? string.Empty
+                : ResolveSceneCharacterId(scene, secondaryCharacterId);
+            if (primaryAction != VnSceneComposerMovementActionType.None &&
+                string.IsNullOrEmpty(primaryCharacter))
+                throw new ArgumentException(
+                    "Primary movement requires a Scene Cast character.",
+                    nameof(primaryCharacterId));
+            if (secondaryAction != VnSceneComposerMovementActionType.None &&
+                string.IsNullOrEmpty(secondaryCharacter))
+                throw new ArgumentException(
+                    "Secondary movement requires a Scene Cast character.",
+                    nameof(secondaryCharacterId));
+            if (!string.IsNullOrEmpty(primaryCharacter) &&
+                !string.IsNullOrEmpty(secondaryCharacter) &&
+                string.Equals(
+                    primaryCharacter, secondaryCharacter,
+                    StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    "Primary and secondary Movement must target different characters.");
+
+            RecordSceneComposerUndo("Edit VN Beat Movement");
+            if (beat.movement == null)
+                beat.movement = new VnSceneComposerBeatMovement();
+            beat.movement.primary = new VnSceneComposerCharacterMovementAction
+            {
+                characterId = primaryCharacter,
+                action = primaryAction,
+                duration = Mathf.Clamp(primaryDuration, .05f, 10f)
+            };
+            beat.movement.secondary = new VnSceneComposerCharacterMovementAction
+            {
+                characterId = secondaryCharacter,
+                action = secondaryAction,
+                duration = Mathf.Clamp(secondaryDuration, .05f, 10f)
+            };
+            beat.movement.secondaryTiming = secondaryTiming;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
+        public void ComposerPreviewSelectedMovement()
+        {
+            int sceneIndex = GetSelectedSceneIndexOrThrow();
+            VnSceneComposerScene scene = _sceneComposerProject.scenes[sceneIndex];
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
+            int beatIndex = VnSceneComposerDialogue.FindIndex(
+                scene, beat != null ? beat.beatId : string.Empty);
+            if (beatIndex < 0)
+                throw new InvalidOperationException("No dialogue Beat is selected.");
+
+            float duration = ResolveMovementPreviewDuration(beat.movement);
+            if (duration <= 0f) return;
+
+            ResetSceneComposerPlayback();
+            VnSceneComposerPlaybackController playback = EnsureSceneComposerPlayback();
+            playback.PlayFromHereFromNeutralStart(sceneIndex, beatIndex);
+            _sceneComposerMovementPreviewEndsAt =
+                EditorApplication.timeSinceStartup + duration + .12f;
+            BeginSceneComposerPlaybackTick();
+        }
+
+        private bool TryCompleteSceneComposerMovementPreview(double now)
+        {
+            if (_sceneComposerMovementPreviewEndsAt <= 0d ||
+                now + .00001d < _sceneComposerMovementPreviewEndsAt)
+                return false;
+            _sceneComposerMovementPreviewEndsAt = 0d;
+            ResetSceneComposerPlayback();
+            Repaint();
+            return true;
+        }
+
+        private static float ResolveMovementPreviewDuration(
+            VnSceneComposerBeatMovement movement)
+        {
+            if (movement == null) return 0f;
+            float primary = MovementActionDuration(movement.primary);
+            float secondary = MovementActionDuration(movement.secondary);
+            if (movement.secondaryTiming == VnSceneComposerMovementTiming.Simultaneous)
+                return Mathf.Max(primary, secondary);
+            return primary + secondary;
+        }
+
+        private static float MovementActionDuration(
+            VnSceneComposerCharacterMovementAction action)
+        {
+            if (action == null ||
+                action.action == VnSceneComposerMovementActionType.None ||
+                action.action == VnSceneComposerMovementActionType.Stay)
+                return 0f;
+            return Mathf.Clamp(action.duration, .05f, 10f);
+        }
+
+        private static bool MovementUsesDuration(
+            VnSceneComposerMovementActionType action)
+        {
+            return action != VnSceneComposerMovementActionType.None &&
+                   action != VnSceneComposerMovementActionType.Stay;
+        }
+
+        private static string ResolveMovementDisplayCharacter(
+            string[] characters, string requested, string fallback)
+        {
+            if (characters == null || characters.Length == 0) return string.Empty;
+            for (int i = 0; i < characters.Length; i++)
+            {
+                if (string.Equals(
+                        characters[i], requested,
+                        StringComparison.OrdinalIgnoreCase))
+                    return characters[i];
+            }
+            for (int i = 0; i < characters.Length; i++)
+            {
+                if (string.Equals(
+                        characters[i], fallback,
+                        StringComparison.OrdinalIgnoreCase))
+                    return characters[i];
+            }
+            return characters[0];
+        }
+
         private static int CountLocalCharacterStagingRows(
             VnSceneComposerDialogueBeat beat)
         {
