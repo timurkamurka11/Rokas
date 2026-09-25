@@ -187,6 +187,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     media = MapMedia(scene.media),
                     music = MapMusic(scene.music),
                     keepPreviousAdditionalAudio = scene.keepPreviousAdditionalAudio,
+                    presentation = MapPresentation(project, scene),
                     sceneTransitionType = scene.transition != null
                         ? (int)scene.transition.sceneTransitionType : 0,
                     sceneTransitionDirection = scene.transition != null
@@ -238,6 +239,70 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             return result;
+        }
+
+        private static RokasVnRuntimePresentationSnapshot MapPresentation(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene)
+        {
+            VnPresentationWorkshopPreset preset =
+                VnSceneComposerComposition.ResolvePresentation(project, scene);
+            VnWorkshopStageLayoutValues stage =
+                VnPresentationWorkshopVn10Resolver.ResolveStageLayout(preset);
+            VnWorkshopSpeakerFocusValues focus =
+                VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
+            VnWorkshopTypewriterValues typewriter =
+                VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
+            VnWorkshopTypographyValues typography =
+                VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
+
+            return new RokasVnRuntimePresentationSnapshot
+            {
+                leftX = stage.LeftX,
+                centerX = stage.CenterX,
+                rightX = stage.RightX,
+                slotY = stage.SlotY,
+                leftScale = stage.LeftScale,
+                centerScale = stage.CenterScale,
+                rightScale = stage.RightScale,
+                stageRepositionDuration = stage.RepositionDuration,
+                stageEasing = (int)stage.Easing,
+
+                speakerActiveScale = focus.ActiveScale,
+                speakerActiveBrightness = focus.ActiveBrightness,
+                speakerActiveForwardOffset = focus.ActiveForwardOffset,
+                speakerInactiveScale = focus.InactiveScale,
+                speakerInactiveBrightness = focus.InactiveBrightness,
+                speakerInactiveAlpha = focus.InactiveAlpha,
+                speakerFocusTransitionDuration = focus.TransitionDuration,
+                speakerFocusEasing = (int)focus.Easing,
+
+                typewriterEnabled = typewriter.Enabled,
+                typewriterCharactersPerSecond = typewriter.CharactersPerSecond,
+                typewriterBaseCharacterDelay = typewriter.BaseCharacterDelay,
+                typewriterCommaPause = typewriter.CommaPause,
+                typewriterPeriodPause = typewriter.PeriodPause,
+                typewriterEllipsisPause = typewriter.EllipsisPause,
+                typewriterQuestionPause = typewriter.QuestionPause,
+                typewriterExclamationPause = typewriter.ExclamationPause,
+                typewriterLineStartDelay = typewriter.LineStartDelay,
+
+                dialogueFontPreset = (int)typography.DialogueFontPreset,
+                dialogueFontAssetGuid = typography.DialogueFontAssetGuid ?? string.Empty,
+                dialogueColor = typography.DialogueColor,
+                dialogueFontSize = typography.DialogueFontSize,
+                dialogueCharacterSpacing = typography.DialogueCharacterSpacing,
+                dialogueLineSpacing = typography.DialogueLineSpacing,
+                dialogueParagraphSpacing = typography.DialogueParagraphSpacing,
+                dialogueAlignment = (int)typography.DialogueAlignment,
+
+                speakerFontPreset = (int)typography.SpeakerFontPreset,
+                speakerFontAssetGuid = typography.SpeakerFontAssetGuid ?? string.Empty,
+                speakerColor = typography.SpeakerColor,
+                speakerFontSize = typography.SpeakerFontSize,
+                speakerCharacterSpacing = typography.SpeakerCharacterSpacing,
+                speakerAlignment = (int)typography.SpeakerAlignment
+            };
         }
 
         private static RokasVnRuntimeMediaSnapshot MapMedia(VnSceneComposerMediaReference media)

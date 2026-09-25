@@ -127,6 +127,55 @@ namespace Rokas.Presentation
     }
 
     [Serializable]
+    public sealed class RokasVnRuntimePresentationSnapshot
+    {
+        public float leftX = -360f;
+        public float centerX;
+        public float rightX = 360f;
+        public float slotY;
+        public float leftScale = 1f;
+        public float centerScale = 1f;
+        public float rightScale = 1f;
+        public float stageRepositionDuration = .35f;
+        public int stageEasing = 3;
+
+        public float speakerActiveScale = 1.05f;
+        public float speakerActiveBrightness = 1f;
+        public float speakerActiveForwardOffset = 12f;
+        public float speakerInactiveScale = .94f;
+        public float speakerInactiveBrightness = .76f;
+        public float speakerInactiveAlpha = .84f;
+        public float speakerFocusTransitionDuration = .22f;
+        public int speakerFocusEasing = 3;
+
+        public bool typewriterEnabled = true;
+        public float typewriterCharactersPerSecond = 36f;
+        public float typewriterBaseCharacterDelay;
+        public float typewriterCommaPause;
+        public float typewriterPeriodPause;
+        public float typewriterEllipsisPause;
+        public float typewriterQuestionPause;
+        public float typewriterExclamationPause;
+        public float typewriterLineStartDelay;
+
+        public int dialogueFontPreset;
+        public string dialogueFontAssetGuid = string.Empty;
+        public Color dialogueColor = Color.white;
+        public float dialogueFontSize = 22f;
+        public float dialogueCharacterSpacing;
+        public float dialogueLineSpacing;
+        public float dialogueParagraphSpacing;
+        public int dialogueAlignment;
+
+        public int speakerFontPreset;
+        public string speakerFontAssetGuid = string.Empty;
+        public Color speakerColor = Color.white;
+        public float speakerFontSize = 26f;
+        public float speakerCharacterSpacing;
+        public int speakerAlignment;
+    }
+
+    [Serializable]
     public sealed class RokasVnRuntimeSceneSnapshot
     {
         public string sceneId = string.Empty;
@@ -140,6 +189,8 @@ namespace Rokas.Presentation
             new List<RokasVnRuntimeCharacterSnapshot>();
         public List<RokasVnRuntimeBeatSnapshot> dialogueBeats =
             new List<RokasVnRuntimeBeatSnapshot>();
+        public RokasVnRuntimePresentationSnapshot presentation =
+            new RokasVnRuntimePresentationSnapshot();
         public int sceneTransitionType;
         public int sceneTransitionDirection;
         public float sceneTransitionDuration = .7f;
