@@ -78,6 +78,7 @@ namespace Rokas.Presentation
         public string reference = string.Empty;
         public string displayName = string.Empty;
         public string contentHash = string.Empty;
+        public string runtimeAssetKey = string.Empty;
         public int scaleMode;
         public bool loop;
     }
