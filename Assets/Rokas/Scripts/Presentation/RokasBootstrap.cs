@@ -206,7 +206,6 @@ namespace Rokas.Presentation
             DisposeVnIntroRuntime();
             startupPending = false;
             BuildPresentation();
-            yield return null;
 
             if (View == null)
             {
@@ -214,7 +213,10 @@ namespace Rokas.Presentation
                 throw new InvalidOperationException("ROKAS could not create Home after the VN intro. Intro completion was not persisted.");
             }
 
+            // Home is now alive synchronously. Persist completion in the same
+            // handoff frame so observers can never see Home with an unfinished intro.
             vnIntroProgress?.MarkCompleted();
+            yield return null;
 
             yield return FadeCurtain(curtain, 1f, 0f, .28f);
             if (curtain) Destroy(curtain.gameObject);
