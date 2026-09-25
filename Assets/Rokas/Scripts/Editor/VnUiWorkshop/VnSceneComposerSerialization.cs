@@ -1254,6 +1254,13 @@ namespace Rokas.EditorTools.VnUiWorkshop
                         !IsFinite(beat.replicaEffect.flashColor.b) ||
                         !IsFinite(beat.replicaEffect.flashColor.a))
                         beat.replicaEffect.flashColor = Color.white;
+                    if (beat.movement == null)
+                        beat.movement = new VnSceneComposerBeatMovement();
+                    beat.movement.primary = NormalizeMovementAction(beat.movement.primary);
+                    beat.movement.secondary = NormalizeMovementAction(beat.movement.secondary);
+                    if (!Enum.IsDefined(typeof(VnSceneComposerMovementTiming),
+                        beat.movement.secondaryTiming))
+                        beat.movement.secondaryTiming = VnSceneComposerMovementTiming.AfterPrimary;
                     if (beat.characterStaging == null)
                         beat.characterStaging = new List<VnSceneComposerBeatCharacterStaging>();
                     for (int r = 0; r < beat.characterStaging.Count; r++)
@@ -1714,6 +1721,21 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
             string result = new string(chars, 0, count).Trim('.');
             return string.IsNullOrEmpty(result) ? fallback : result;
+        }
+
+        private static VnSceneComposerCharacterMovementAction NormalizeMovementAction(
+            VnSceneComposerCharacterMovementAction action)
+        {
+            if (action == null)
+                action = new VnSceneComposerCharacterMovementAction();
+            if (action.characterId == null)
+                action.characterId = string.Empty;
+            if (!Enum.IsDefined(typeof(VnSceneComposerMovementActionType), action.action))
+                action.action = VnSceneComposerMovementActionType.None;
+            if (!IsFinite(action.duration) || action.duration <= 0f)
+                action.duration = 1.2f;
+            action.duration = Mathf.Clamp(action.duration, .05f, 10f);
+            return action;
         }
 
         private static bool IsFinite(float value)

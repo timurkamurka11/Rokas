@@ -40,7 +40,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 replicaEffect = source.replicaEffect != null
                     ? UnityEngine.JsonUtility.FromJson<VnSceneComposerReplicaEffect>(
                         UnityEngine.JsonUtility.ToJson(source.replicaEffect))
-                    : new VnSceneComposerReplicaEffect()
+                    : new VnSceneComposerReplicaEffect(),
+                movement = source.movement != null
+                    ? UnityEngine.JsonUtility.FromJson<VnSceneComposerBeatMovement>(
+                        UnityEngine.JsonUtility.ToJson(source.movement))
+                    : new VnSceneComposerBeatMovement()
             };
             if (source.characterStaging != null)
             {

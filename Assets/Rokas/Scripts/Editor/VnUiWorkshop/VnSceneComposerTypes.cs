@@ -60,6 +60,43 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public Color flashColor = Color.white;
     }
 
+    public enum VnSceneComposerMovementActionType
+    {
+        None,
+        Stay,
+        ExitLeft,
+        ExitRight,
+        Disappear,
+        MoveLeft,
+        MoveCenter,
+        MoveRight
+    }
+
+    public enum VnSceneComposerMovementTiming
+    {
+        AfterPrimary,
+        Simultaneous
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerCharacterMovementAction
+    {
+        public string characterId = string.Empty;
+        public VnSceneComposerMovementActionType action = VnSceneComposerMovementActionType.None;
+        public float duration = 1.2f;
+    }
+
+    [Serializable]
+    public sealed class VnSceneComposerBeatMovement
+    {
+        public VnSceneComposerCharacterMovementAction primary =
+            new VnSceneComposerCharacterMovementAction();
+        public VnSceneComposerCharacterMovementAction secondary =
+            new VnSceneComposerCharacterMovementAction();
+        public VnSceneComposerMovementTiming secondaryTiming =
+            VnSceneComposerMovementTiming.AfterPrimary;
+    }
+
     public enum VnSceneComposerBeatCharacterVisibility
     {
         KeepPrevious,
@@ -288,6 +325,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float effectDuration = .28f;
         // Additive per-replica visual effect. Missing data in older projects means None.
         public VnSceneComposerReplicaEffect replicaEffect = new VnSceneComposerReplicaEffect();
+        // Explicit per-replica movement; old staging is never treated as an animation.
+        public VnSceneComposerBeatMovement movement = new VnSceneComposerBeatMovement();
         public List<VnSceneComposerBeatCharacterStaging> characterStaging =
             new List<VnSceneComposerBeatCharacterStaging>();
     }
