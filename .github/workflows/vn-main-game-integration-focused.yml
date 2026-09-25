@@ -9,6 +9,7 @@ on:
       - 'Assets/Rokas/Scripts/Editor/VnUiWorkshop/**'
       - 'Assets/Rokas/Tests/EditorWorkshop/VnRuntimeIntroPackageTests.cs'
       - 'Assets/Rokas/Tests/EditMode/RokasVnRuntimePlaybackTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/RokasVnRuntimePlayerPlayModeTests.cs'
       - 'Assets/Rokas/Tests/PlayMode/VnSceneComposerMainGameIntegrationPlayModeTests.cs'
       - '.github/workflows/vn-main-game-integration-focused.yml'
 
@@ -59,3 +60,26 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: VN Runtime Playback Semantics
           artifactsPath: artifacts-vn-runtime-playback
+
+  runtime-player:
+    name: VN reusable runtime player
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run reusable runtime player PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.RokasVnRuntimePlayerPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Reusable Runtime Player
+          artifactsPath: artifacts-vn-runtime-player
