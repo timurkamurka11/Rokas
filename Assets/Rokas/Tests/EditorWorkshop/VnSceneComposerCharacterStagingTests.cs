@@ -1068,6 +1068,164 @@ namespace Rokas.EditorTools.Tests
             return w;
         }
 
+        [Test] public void MOV_01_ExitRightMovesAndFadesWithoutTeleport()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            VnSceneComposerDialogueBeat beat=scene.dialogueBeats[0];
+            beat.movement.primary.characterId="Mina";
+            beat.movement.primary.action=VnSceneComposerMovementActionType.ExitRight;
+            beat.movement.primary.duration=1f;
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                VnWorkshopPreviewCharacter start=Character(c.CurrentFrame.WorkshopFrame,"Mina");
+                float startX=start.Body.center.x;
+                c.Advance(.5f);
+                VnWorkshopPreviewCharacter mid=Character(c.CurrentFrame.WorkshopFrame,"Mina");
+                Assert.That(mid.Body.center.x,Is.GreaterThan(startX));
+                Assert.That(mid.Alpha,Is.GreaterThan(0f).And.LessThan(1f));
+                c.Advance(.6f);
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Alpha,Is.EqualTo(0f).Within(.001f));
+            }
+        }
+
+        [Test] public void MOV_02_DisappearFadesWithoutTranslation()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            VnSceneComposerDialogueBeat beat=scene.dialogueBeats[0];
+            beat.movement.primary.characterId="Mina";
+            beat.movement.primary.action=VnSceneComposerMovementActionType.Disappear;
+            beat.movement.primary.duration=1f;
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                Vector2 start=Character(c.CurrentFrame.WorkshopFrame,"Mina").Body.center;
+                c.Advance(.5f);
+                VnWorkshopPreviewCharacter mid=Character(c.CurrentFrame.WorkshopFrame,"Mina");
+                AssertVector(mid.Body.center,start);
+                Assert.That(mid.Alpha,Is.GreaterThan(0f).And.LessThan(1f));
+            }
+        }
+
+        [Test] public void MOV_03_MoveCenterPersistsIntoFollowingBeat()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Left));
+            VnSceneComposerDialogueBeat first=scene.dialogueBeats[0];
+            first.movement.primary.characterId="Mina";
+            first.movement.primary.action=VnSceneComposerMovementActionType.MoveCenter;
+            first.movement.primary.duration=.5f;
+            AddBeat(scene);
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                c.Advance(10f);
+                float settled=Character(c.CurrentFrame.WorkshopFrame,"Mina").Body.center.x;
+                c.AdvanceDialogue();
+                Assert.That(c.CurrentBeatIndex,Is.EqualTo(1));
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Body.center.x,
+                    Is.EqualTo(settled).Within(.01f));
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Slot,
+                    Is.EqualTo(VnWorkshopStageSlot.Center));
+            }
+        }
+
+        [Test] public void MOV_04_ExitPersistsAbsentUntilExplicitRestore()
+        {
+            var scene=SceneWithCharacters(("Mina","mina_neutral",VnWorkshopStageSlot.Center));
+            VnSceneComposerDialogueBeat first=scene.dialogueBeats[0];
+            first.movement.primary.characterId="Mina";
+            first.movement.primary.action=VnSceneComposerMovementActionType.ExitLeft;
+            first.movement.primary.duration=.5f;
+            VnSceneComposerDialogueBeat second=AddBeat(scene);
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                c.Advance(10f);
+                c.AdvanceDialogue();
+                Assert.That(c.CurrentBeatIndex,Is.EqualTo(1));
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Alpha,Is.EqualTo(0f).Within(.001f));
+
+                second.movement.primary.characterId="Mina";
+                second.movement.primary.action=VnSceneComposerMovementActionType.MoveCenter;
+                second.movement.primary.duration=.5f;
+                c.RefreshCurrentFrame();
+                c.Advance(.6f);
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Alpha,Is.EqualTo(1f).Within(.001f));
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Slot,
+                    Is.EqualTo(VnWorkshopStageSlot.Center));
+            }
+        }
+
+        [Test] public void MOV_05_SecondarySimultaneousMovesBothCharacters()
+        {
+            var scene=SceneWithCharacters(
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Left),
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Right));
+            VnSceneComposerDialogueBeat beat=scene.dialogueBeats[0];
+            beat.movement.primary.characterId="Mina";
+            beat.movement.primary.action=VnSceneComposerMovementActionType.MoveCenter;
+            beat.movement.primary.duration=1f;
+            beat.movement.secondary.characterId="Keiko";
+            beat.movement.secondary.action=VnSceneComposerMovementActionType.MoveCenter;
+            beat.movement.secondary.duration=1f;
+            beat.movement.secondaryTiming=VnSceneComposerMovementTiming.Simultaneous;
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                float minaStart=Character(c.CurrentFrame.WorkshopFrame,"Mina").Body.center.x;
+                float keikoStart=Character(c.CurrentFrame.WorkshopFrame,"Keiko").Body.center.x;
+                c.Advance(.5f);
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Mina").Body.center.x,Is.GreaterThan(minaStart));
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Keiko").Body.center.x,Is.LessThan(keikoStart));
+            }
+        }
+
+        [Test] public void MOV_06_SecondaryAfterPrimaryWaitsForPrimaryDuration()
+        {
+            var scene=SceneWithCharacters(
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Left),
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Right));
+            VnSceneComposerDialogueBeat beat=scene.dialogueBeats[0];
+            beat.movement.primary.characterId="Mina";
+            beat.movement.primary.action=VnSceneComposerMovementActionType.MoveCenter;
+            beat.movement.primary.duration=1f;
+            beat.movement.secondary.characterId="Keiko";
+            beat.movement.secondary.action=VnSceneComposerMovementActionType.MoveCenter;
+            beat.movement.secondary.duration=1f;
+            beat.movement.secondaryTiming=VnSceneComposerMovementTiming.AfterPrimary;
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                float keikoStart=Character(c.CurrentFrame.WorkshopFrame,"Keiko").Body.center.x;
+                c.Advance(.5f);
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Keiko").Body.center.x,
+                    Is.EqualTo(keikoStart).Within(.01f));
+                c.Advance(1f);
+                Assert.That(Character(c.CurrentFrame.WorkshopFrame,"Keiko").Body.center.x,
+                    Is.LessThan(keikoStart));
+            }
+        }
+
+        [Test] public void MOV_07_SpeakerFocusStillOwnsBrightnessDuringMovement()
+        {
+            var scene=SceneWithCharacters(
+                ("Mina","mina_neutral",VnWorkshopStageSlot.Left),
+                ("Keiko","keiko_neutral",VnWorkshopStageSlot.Right));
+            VnSceneComposerDialogueBeat beat=scene.dialogueBeats[0];
+            beat.speaker="Mina";
+            beat.movement.primary.characterId="Mina";
+            beat.movement.primary.action=VnSceneComposerMovementActionType.MoveCenter;
+            beat.movement.primary.duration=1f;
+            using(var c=new VnSceneComposerPlaybackController(Project(scene)))
+            {
+                c.PlaySceneFromNeutralStart(0);
+                c.Advance(.5f);
+                VnWorkshopPreviewCharacter mina=Character(c.CurrentFrame.WorkshopFrame,"Mina");
+                VnWorkshopPreviewCharacter keiko=Character(c.CurrentFrame.WorkshopFrame,"Keiko");
+                Assert.That(mina.Brightness,Is.GreaterThan(keiko.Brightness));
+            }
+        }
+
         private static int CountOccurrences(string source,string needle)
         {
             if(string.IsNullOrEmpty(source)||string.IsNullOrEmpty(needle)) return 0;
