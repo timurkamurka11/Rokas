@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,13 +19,15 @@ namespace Rokas.Tests
         private string storyMediaPath;
         private string hiddenStoryMediaPath;
         private bool previousIgnoreFailingMessages;
+        private readonly List<UnityEngine.Object> runtimeOwned = new List<UnityEngine.Object>();
 
         [UnityTest]
-        public IEnumerator FirstEnterWorldBuildsVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete()
+        public IEnumerator FirstEnterWorldBuildsPackagedVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            RokasVnRuntimeIntroPackage package = InstallRuntimePackageOverride(boot);
             yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
 
             Button enter = FindLaunchButton("EnterWorldButton");
@@ -37,55 +40,59 @@ namespace Rokas.Tests
             Assert.That(FindLaunchObject("HomeTitle"), Is.Null,
                 "Home must not be constructed during the initial partial fade.");
 
-            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+            yield return WaitForLaunchObject("RokasVnRuntimeRoot", 1.25f);
 
             Assert.That(FindLaunchObject("RokasMainMenu"), Is.Null,
                 "The menu must be disposed at the full-black handoff.");
             Assert.That(FindLaunchObject("HomeTitle"), Is.Null,
-                "First-time Enter World must not build Home behind the VN intro.");
+                "First-time Enter World must not build Home behind the packaged VN.");
             Assert.That(boot.View, Is.Null);
             Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero,
-                "The intro completion flag must remain unset while the VN is still active.");
+                "The intro completion flag must remain unset while the packaged VN is active.");
 
-            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-            RawImage background = FindLaunchObject("Background").GetComponent<RawImage>();
-            Assert.That(background.texture, Is.SameAs(assets.vnBusStopRainNight),
-                "The first revealed VN beat must be the approved rainy bus-stop art.");
+            RawImage background = FindLaunchObject("VnBackground").GetComponent<RawImage>();
+            Assert.That(background.texture, Is.SameAs(package.Assets[0].asset),
+                "The first packaged VN Scene must render its project-owned background.");
         }
 
         [UnityTest]
-        public IEnumerator NaturalCompletionAdvancesOneBeatPerClickThenBuildsHomeBeforeMarkingComplete()
+        public IEnumerator NaturalCompletionUsesPackagedBeatsThenBuildsHomeBeforeMarkingComplete()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            InstallRuntimePackageOverride(boot);
             yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
-            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+            yield return WaitForLaunchObject("RokasVnRuntimeRoot", 1.25f);
 
-            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-            Button story = FindLaunchButton("StoryClickSurface");
-            Assert.That(story, Is.Not.Null);
+            Button forward = FindLaunchButton("VnForwardButton");
+            Assert.That(forward, Is.Not.Null);
 
-            story.onClick.Invoke();
-            yield return WaitForLaunchBackground(assets.vnNightSkyRain, .75f);
+            forward.onClick.Invoke();
+            Assert.That(FindLaunchObject("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo("Первый кадр"),
+                "First input completes the authored typewriter only.");
             Assert.That(FindLaunchObject("HomeTitle"), Is.Null);
             Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero);
 
-            story.onClick.Invoke();
-            yield return WaitForLaunchBackground(assets.vnBusStopPhoneMessageMina, .75f);
-            Assert.That(FindLaunchObject("HomeTitle"), Is.Null);
-            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero);
+            forward.onClick.Invoke();
+            Assert.That("Финал".StartsWith(
+                FindLaunchObject("VnDialogue").GetComponent<Text>().text), Is.True,
+                "Second input advances exactly one authored Beat.");
 
-            story.onClick.Invoke();
+            forward.onClick.Invoke();
+            Assert.That(FindLaunchObject("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo("Финал"));
+            forward.onClick.Invoke();
+
             yield return WaitForLaunchObject("HomeTitle", 1.5f);
-
             Assert.That(boot.View, Is.Not.Null,
                 "The existing Home/RokasView must be constructed before intro completion is persisted.");
             yield return WaitForCompletionFlag(.5f);
-            Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null,
-                "The VN must be disposed during the shared Home handoff.");
+            Assert.That(FindLaunchObject("RokasVnRuntimeRoot"), Is.Null,
+                "The packaged VN must be disposed during the shared Home handoff.");
         }
 
         [UnityTest]
@@ -107,69 +114,79 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator SkipUsesSharedSafeHandoffAndRestoresTransientMute()
+        public IEnumerator PackagedMuteIsVnLocalAndCleanupReturnsAudioOwnershipToGameplay()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
             HideStoryMediaForDeterministicLinuxFallback();
             RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            InstallRuntimePackageOverride(boot);
             yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
-            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+            yield return WaitForLaunchObject("RokasVnRuntimeRoot", 1.25f);
 
-            RokasAudio audio = GetBootstrapAudio(boot);
-            Assert.That(audio, Is.Not.Null);
-            Button mute = FindLaunchButton("MuteButton");
-            Button skip = FindLaunchButton("SkipButton");
+            RokasAudio globalAudio = GetBootstrapAudio(boot);
+            RokasVnRuntimePlayer player = GetRuntimePlayer(boot);
+            Button mute = FindLaunchButton("VnMuteButton");
+            Button forward = FindLaunchButton("VnForwardButton");
+            Assert.That(globalAudio, Is.Not.Null);
+            Assert.That(player, Is.Not.Null);
             Assert.That(mute, Is.Not.Null);
-            Assert.That(skip, Is.Not.Null);
+            Assert.That(forward, Is.Not.Null);
 
             mute.onClick.Invoke();
-            Assert.That(audio.VnMuted, Is.True,
-                "Mute must be transient VN state before the shared handoff starts.");
+            Assert.That(player.IsMuted, Is.True,
+                "Mute must affect the packaged VN's own audio lifecycle.");
+            Assert.That(globalAudio.VnMuted, Is.False,
+                "Packaged VN mute must not mutate unrelated global ROKAS audio state.");
 
-            skip.onClick.Invoke();
+            forward.onClick.Invoke();
+            forward.onClick.Invoke();
+            forward.onClick.Invoke();
+            forward.onClick.Invoke();
             yield return WaitForLaunchObject("HomeTitle", 1.5f);
-            Assert.That(boot.View, Is.Not.Null);
             yield return WaitForCompletionFlag(.5f);
 
-            Assert.That(FindLaunchObject("VnIntroRoot"), Is.Null);
-            Assert.That(audio.VnMuted, Is.False,
-                "The shared Home handoff must restore transient VN mute before leaving the intro.");
+            Assert.That(FindLaunchObject("RokasVnRuntimeRoot"), Is.Null);
+            Assert.That(globalAudio.VnMuted, Is.False,
+                "Gameplay audio ownership must be clean after VN disposal.");
         }
 
         [UnityTest]
-        public IEnumerator PauseBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale()
+        public IEnumerator RuntimeMenuBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
             HideStoryMediaForDeterministicLinuxFallback();
-            CreateRealLaunchIgnoringHostDecoderErrors();
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            InstallRuntimePackageOverride(boot);
             yield return WaitForLaunchObject("RokasMainMenu", 1.5f);
 
             FindLaunchButton("EnterWorldButton").onClick.Invoke();
-            yield return WaitForLaunchObject("VnIntroRoot", 1.25f);
+            yield return WaitForLaunchObject("RokasVnRuntimeRoot", 1.25f);
 
-            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-            Button story = FindLaunchButton("StoryClickSurface");
-            Button pause = FindLaunchButton("PauseButton");
-            Assert.That(story, Is.Not.Null);
-            Assert.That(pause, Is.Not.Null);
+            Button forward = FindLaunchButton("VnForwardButton");
+            Button menu = FindLaunchButton("VnMenuButton");
+            Assert.That(forward, Is.Not.Null);
+            Assert.That(menu, Is.Not.Null);
             float originalTimeScale = Time.timeScale;
+            string before = FindLaunchObject("VnDialogue").GetComponent<Text>().text;
 
-            pause.onClick.Invoke();
+            menu.onClick.Invoke();
             Assert.That(Time.timeScale, Is.EqualTo(originalTimeScale),
-                "VN pause must not pause the entire game through Time.timeScale.");
-            story.onClick.Invoke();
-            yield return null;
-            yield return null;
-            RawImage background = FindLaunchObject("Background").GetComponent<RawImage>();
-            Assert.That(background.texture, Is.SameAs(assets.vnBusStopRainNight),
-                "A paused VN must reject story advance.");
+                "VN menu must not pause the whole game through Time.timeScale.");
+            Assert.That(FindLaunchObject("VnRuntimeMenu").activeSelf, Is.True);
 
-            pause.onClick.Invoke();
+            forward.onClick.Invoke();
+            yield return null;
+            Assert.That(FindLaunchObject("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo(before),
+                "An open VN menu must reject story advance.");
+
+            FindLaunchButton("VnResumeButton").onClick.Invoke();
             Assert.That(Time.timeScale, Is.EqualTo(originalTimeScale));
-            story.onClick.Invoke();
-            yield return WaitForLaunchBackground(assets.vnNightSkyRain, .75f);
+            forward.onClick.Invoke();
+            Assert.That(FindLaunchObject("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo("Первый кадр"));
         }
 
         [UnityTest]
@@ -370,6 +387,102 @@ namespace Rokas.Tests
             Assert.That(assets.IsComplete(), Is.True);
         }
 
+        private RokasVnRuntimeIntroPackage InstallRuntimePackageOverride(RokasBootstrap boot)
+        {
+            RokasVnRuntimeIntroPackage package = CreateRuntimePackage();
+            FieldInfo field = typeof(RokasBootstrap).GetField(
+                "runtimeVnIntroPackageOverride",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            field.SetValue(boot, package);
+            return package;
+        }
+
+        private RokasVnRuntimePlayer GetRuntimePlayer(RokasBootstrap boot)
+        {
+            FieldInfo field = typeof(RokasBootstrap).GetField(
+                "runtimeVnLauncher",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            RokasVnRuntimeLauncher launcher = field.GetValue(boot) as RokasVnRuntimeLauncher;
+            return launcher != null ? launcher.ActivePlayer : null;
+        }
+
+        private RokasVnRuntimeIntroPackage CreateRuntimePackage()
+        {
+            Texture2D background = MakeRuntimeTexture("LegacyRouteRuntimeBackground");
+            Texture2D plaque = MakeRuntimeTexture("LegacyRouteRuntimePlaque");
+            Texture2D controls = MakeRuntimeTexture("LegacyRouteRuntimeControls");
+            Texture2D muted = MakeRuntimeTexture("LegacyRouteRuntimeMuted");
+            Texture2D triangle = MakeRuntimeTexture("LegacyRouteRuntimeTriangle");
+
+            var scene = new RokasVnRuntimeSceneSnapshot
+            {
+                sceneId = "11111111111111111111111111111111",
+                label = "Legacy Route Final",
+                isTerminal = true,
+                terminalFadeDuration = .12f,
+                media = new RokasVnRuntimeMediaSnapshot
+                {
+                    kind = 1,
+                    reference = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    runtimeAssetKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    scaleMode = 1
+                }
+            };
+            scene.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "22222222222222222222222222222222",
+                speaker = "Mina",
+                text = "Первый кадр"
+            });
+            scene.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "33333333333333333333333333333333",
+                speaker = "Mina",
+                text = "Финал"
+            });
+
+            var snapshot = new RokasVnRuntimeIntroSnapshot
+            {
+                projectId = RokasVnRuntimeIntroPackage.ExpectedProjectId,
+                sourceProjectSha256 = "legacy-route-runtime-fixture",
+                sceneCount = 1,
+                beatCount = 2
+            };
+            snapshot.scenes.Add(scene);
+
+            var package = ScriptableObject.CreateInstance<RokasVnRuntimeIntroPackage>();
+            runtimeOwned.Add(package);
+            package.Configure(
+                RokasVnRuntimeIntroPackage.ExpectedProjectId,
+                "legacy-route-runtime-fixture",
+                "{}",
+                snapshot,
+                new[]
+                {
+                    new RokasVnRuntimeAssetBinding
+                    {
+                        authoredKey = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        displayName = "LegacyRouteRuntimeBackground",
+                        kind = RokasVnRuntimeAssetKind.Texture,
+                        asset = background
+                    }
+                },
+                new RokasVnRuntimeCharacterStateBinding[0],
+                plaque, controls, muted, triangle);
+            return package;
+        }
+
+        private Texture2D MakeRuntimeTexture(string name)
+        {
+            var texture = new Texture2D(8, 8) { name = name };
+            texture.SetPixel(0, 0, Color.white);
+            texture.Apply();
+            runtimeOwned.Add(texture);
+            return texture;
+        }
+
         private RokasBootstrap CreateRealLaunchIgnoringHostDecoderErrors()
         {
             previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
@@ -468,6 +581,9 @@ namespace Rokas.Tests
             if (!string.IsNullOrEmpty(hiddenStoryMediaPath) && File.Exists(hiddenStoryMediaPath) &&
                 !string.IsNullOrEmpty(storyMediaPath) && !File.Exists(storyMediaPath))
                 File.Move(hiddenStoryMediaPath, storyMediaPath);
+            for (int i = runtimeOwned.Count - 1; i >= 0; i--)
+                if (runtimeOwned[i] != null) UnityEngine.Object.DestroyImmediate(runtimeOwned[i]);
+            runtimeOwned.Clear();
             launchRoot = null;
             storyMediaPath = null;
             hiddenStoryMediaPath = null;
