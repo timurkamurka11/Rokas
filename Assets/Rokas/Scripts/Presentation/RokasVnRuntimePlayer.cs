@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 namespace Rokas.Presentation
 {
@@ -44,6 +45,8 @@ namespace Rokas.Presentation
 
         private readonly GameObject root;
         private readonly RawImage background;
+        private readonly AspectRatioFitter backgroundAspect;
+        private readonly VideoPlayer videoPlayer;
         private readonly RectTransform characterLayer;
         private readonly RawImage dialoguePlaque;
         private readonly Text speakerText;
@@ -54,6 +57,8 @@ namespace Rokas.Presentation
         private readonly RawImage completionTriangle;
         private readonly CanvasGroup terminalFade;
         private readonly GameObject menuOverlay;
+        private readonly Image sceneTransitionImage;
+        private readonly CanvasGroup sceneTransitionOverlay;
 
         private bool disposed;
         private bool completionDelivered;
@@ -63,10 +68,27 @@ namespace Rokas.Presentation
         private int renderedSceneIndex = -1;
         private int renderedBeatIndex = -1;
 
+        private bool sceneTransitionActive;
+        private bool sceneTransitionSwapped;
+        private int sceneTransitionTargetIndex = -1;
+        private int sceneTransitionType;
+        private int sceneTransitionDirection;
+        private float sceneTransitionElapsed;
+        private float sceneTransitionDuration;
+
+        private readonly List<Texture2D> gifFrames = new List<Texture2D>();
+        private readonly List<float> gifDelays = new List<float>();
+        private int gifFrameIndex;
+        private float gifFrameElapsed;
+        private bool gifLoop;
+        private bool videoActive;
+        private int currentMediaScaleMode = 2;
+
         public bool IsPlaying =>
             !disposed && !playback.IsSequenceCompleted;
         public bool IsMenuOpen => menuOpen;
         public bool IsMuted => muted;
+        public bool IsSceneTransitionActive => sceneTransitionActive;
         public RokasVnRuntimePlaybackState Playback => playback;
 
         private RokasVnRuntimePlayer(
@@ -118,6 +140,15 @@ namespace Rokas.Presentation
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
             background.raycastTarget = false;
+            backgroundAspect =
+                background.gameObject.AddComponent<AspectRatioFitter>();
+            backgroundAspect.enabled = false;
+
+            videoPlayer = root.AddComponent<VideoPlayer>();
+            videoPlayer.playOnAwake = false;
+            videoPlayer.renderMode = VideoRenderMode.APIOnly;
+            videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+            videoPlayer.waitForFirstFrame = true;
 
             characterLayer = CreateRect(
                 rootRect, "VnCharacters",
@@ -195,6 +226,18 @@ namespace Rokas.Presentation
 
             menuOverlay = BuildMenuOverlay(rootRect, fallbackFont);
 
+            sceneTransitionImage = CreateImage(
+                rootRect, "VnSceneTransitionOverlay",
+                new Color(.015f, .015f, .02f, 1f),
+                Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero);
+            sceneTransitionImage.raycastTarget = true;
+            sceneTransitionOverlay =
+                sceneTransitionImage.gameObject.AddComponent<CanvasGroup>();
+            sceneTransitionOverlay.alpha = 0f;
+            sceneTransitionOverlay.blocksRaycasts = false;
+            sceneTransitionOverlay.interactable = false;
+
             Image terminalImage = CreateImage(
                 rootRect, "VnTerminalFadeImage",
                 Color.black,
@@ -226,9 +269,17 @@ namespace Rokas.Presentation
         public bool RequestAdvance()
         {
             ThrowIfDisposed();
-            if (menuOpen || playback.IsTerminalFadeActive ||
+            if (menuOpen || sceneTransitionActive ||
+                playback.IsTerminalFadeActive ||
                 playback.IsSequenceCompleted)
                 return false;
+
+            if (ShouldBeginSceneTransition())
+            {
+                BeginSceneTransition();
+                RefreshControlVisuals();
+                return true;
+            }
 
             bool advanced = playback.RequestAdvance();
             RefreshPresentation(false);
@@ -260,8 +311,13 @@ namespace Rokas.Presentation
             uiElapsedSeconds += unscaledDeltaTime;
             if (!menuOpen)
             {
-                playback.AdvanceTime(unscaledDeltaTime);
+                if (sceneTransitionActive)
+                    AdvanceSceneTransition(unscaledDeltaTime);
+                else
+                    playback.AdvanceTime(unscaledDeltaTime);
+
                 audioPlayback.Advance(unscaledDeltaTime);
+                AdvanceMotionMedia(unscaledDeltaTime);
             }
             RefreshPresentation(false);
         }
@@ -310,8 +366,14 @@ namespace Rokas.Presentation
         private void RefreshSceneMedia(
             RokasVnRuntimeSceneSnapshot scene)
         {
+            StopMotionMedia();
             Texture texture = null;
-            if (scene.media != null)
+            currentMediaScaleMode =
+                scene != null && scene.media != null
+                    ? scene.media.scaleMode
+                    : 2;
+
+            if (scene != null && scene.media != null)
             {
                 string key = !string.IsNullOrWhiteSpace(
                     scene.media.runtimeAssetKey)
@@ -320,10 +382,312 @@ namespace Rokas.Presentation
                 RokasVnRuntimeAssetBinding binding;
                 if (package.TryGetAsset(key, out binding) &&
                     binding != null)
-                    texture = ResolveTexture(binding.asset);
+                {
+                    if (binding.kind == RokasVnRuntimeAssetKind.Video &&
+                        binding.asset is VideoClip)
+                    {
+                        videoPlayer.clip = (VideoClip)binding.asset;
+                        videoPlayer.isLooping = scene.media.loop;
+                        videoPlayer.Play();
+                        videoActive = true;
+                        texture = videoPlayer.texture;
+                    }
+                    else if (binding.kind == RokasVnRuntimeAssetKind.Bytes &&
+                             binding.asset is TextAsset)
+                    {
+                        TextAsset bytes = (TextAsset)binding.asset;
+                        try
+                        {
+                            RokasVnRuntimeGifDecoder.Decode(
+                                bytes.bytes, gifFrames, gifDelays);
+                            gifLoop = scene.media.loop;
+                            gifFrameIndex = 0;
+                            gifFrameElapsed = 0f;
+                            if (gifFrames.Count > 0)
+                                texture = gifFrames[0];
+                        }
+                        catch (Exception exception)
+                        {
+                            ClearGifFrames();
+                            Debug.LogWarning(
+                                "ROKAS runtime VN GIF decode failed: " +
+                                exception.Message);
+                        }
+                    }
+                    else
+                    {
+                        texture = ResolveTexture(binding.asset);
+                    }
+                }
             }
+
             background.texture = texture;
             background.uvRect = new Rect(0f, 0f, 1f, 1f);
+            ApplyBackgroundScaleMode(texture, currentMediaScaleMode);
+        }
+
+        private void AdvanceMotionMedia(float deltaSeconds)
+        {
+            if (videoActive)
+            {
+                Texture videoTexture = videoPlayer.texture;
+                if (videoTexture != null &&
+                    !ReferenceEquals(background.texture, videoTexture))
+                {
+                    background.texture = videoTexture;
+                    ApplyBackgroundScaleMode(
+                        videoTexture, currentMediaScaleMode);
+                }
+            }
+
+            if (gifFrames.Count <= 1 || deltaSeconds <= 0f)
+                return;
+
+            gifFrameElapsed += deltaSeconds;
+            int safety = 0;
+            while (safety++ < gifFrames.Count + 2)
+            {
+                float delay = gifFrameIndex < gifDelays.Count
+                    ? Mathf.Max(.02f, gifDelays[gifFrameIndex])
+                    : .1f;
+                if (gifFrameElapsed + .00001f < delay) break;
+                gifFrameElapsed -= delay;
+
+                if (gifFrameIndex + 1 < gifFrames.Count)
+                {
+                    gifFrameIndex++;
+                }
+                else if (gifLoop)
+                {
+                    gifFrameIndex = 0;
+                }
+                else
+                {
+                    gifFrameElapsed = 0f;
+                    break;
+                }
+
+                background.texture = gifFrames[gifFrameIndex];
+                ApplyBackgroundScaleMode(
+                    background.texture, currentMediaScaleMode);
+            }
+        }
+
+        private void StopMotionMedia()
+        {
+            if (videoPlayer != null)
+            {
+                videoPlayer.Stop();
+                videoPlayer.clip = null;
+            }
+            videoActive = false;
+            ClearGifFrames();
+        }
+
+        private void ClearGifFrames()
+        {
+            for (int i = 0; i < gifFrames.Count; i++)
+            {
+                Texture2D frame = gifFrames[i];
+                if (!frame) continue;
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(frame);
+                else
+                    UnityEngine.Object.DestroyImmediate(frame);
+            }
+            gifFrames.Clear();
+            gifDelays.Clear();
+            gifFrameIndex = 0;
+            gifFrameElapsed = 0f;
+            gifLoop = false;
+        }
+
+        private void ApplyBackgroundScaleMode(
+            Texture texture,
+            int scaleMode)
+        {
+            if (backgroundAspect == null) return;
+
+            if (scaleMode == 2 || texture == null ||
+                texture.height <= 0)
+            {
+                backgroundAspect.enabled = false;
+                return;
+            }
+
+            backgroundAspect.enabled = true;
+            backgroundAspect.aspectRatio =
+                Mathf.Max(.0001f,
+                    (float)texture.width / texture.height);
+            backgroundAspect.aspectMode =
+                scaleMode == 0
+                    ? AspectRatioFitter.AspectMode.FitInParent
+                    : AspectRatioFitter.AspectMode.EnvelopeParent;
+        }
+
+        private bool ShouldBeginSceneTransition()
+        {
+            if (sceneTransitionActive ||
+                !playback.IsDialogueRevealComplete)
+                return false;
+
+            RokasVnRuntimeSceneSnapshot current =
+                playback.CurrentScene;
+            if (current == null || current.isTerminal ||
+                current.dialogueBeats == null ||
+                playback.CurrentBeatIndex <
+                    current.dialogueBeats.Count - 1)
+                return false;
+
+            int targetIndex = playback.CurrentSceneIndex + 1;
+            if (package.Snapshot == null ||
+                package.Snapshot.scenes == null ||
+                targetIndex < 0 ||
+                targetIndex >= package.Snapshot.scenes.Count)
+                return false;
+
+            RokasVnRuntimeSceneSnapshot target =
+                package.Snapshot.scenes[targetIndex];
+            return target != null &&
+                   (target.sceneTransitionType == 1 ||
+                    target.sceneTransitionType == 2) &&
+                   target.sceneTransitionDuration > .0001f;
+        }
+
+        private void BeginSceneTransition()
+        {
+            int targetIndex = playback.CurrentSceneIndex + 1;
+            RokasVnRuntimeSceneSnapshot target =
+                package.Snapshot.scenes[targetIndex];
+
+            sceneTransitionActive = true;
+            sceneTransitionSwapped = false;
+            sceneTransitionTargetIndex = targetIndex;
+            sceneTransitionType = target.sceneTransitionType;
+            sceneTransitionDirection =
+                target.sceneTransitionDirection;
+            sceneTransitionElapsed = 0f;
+            sceneTransitionDuration = Mathf.Clamp(
+                target.sceneTransitionDuration,
+                .0001f, 10f);
+
+            sceneTransitionImage.gameObject.SetActive(true);
+            sceneTransitionOverlay.blocksRaycasts = true;
+            sceneTransitionOverlay.interactable = true;
+            UpdateSceneTransitionVisual();
+        }
+
+        private void AdvanceSceneTransition(float deltaSeconds)
+        {
+            if (!sceneTransitionActive) return;
+
+            sceneTransitionElapsed += Mathf.Max(0f, deltaSeconds);
+            float half = Mathf.Max(
+                .0001f, sceneTransitionDuration * .5f);
+
+            if (!sceneTransitionSwapped &&
+                sceneTransitionElapsed + .000001f >= half)
+            {
+                sceneTransitionSwapped = true;
+                if (!playback.AdvanceDialogue() ||
+                    playback.CurrentSceneIndex !=
+                        sceneTransitionTargetIndex)
+                {
+                    CancelSceneTransition();
+                    throw new InvalidOperationException(
+                        "Runtime VN Scene transition could not commit its target Scene.");
+                }
+            }
+
+            if (sceneTransitionElapsed + .000001f >=
+                sceneTransitionDuration)
+            {
+                CompleteSceneTransition();
+                return;
+            }
+
+            UpdateSceneTransitionVisual();
+        }
+
+        private void UpdateSceneTransitionVisual()
+        {
+            if (!sceneTransitionActive)
+            {
+                sceneTransitionOverlay.alpha = 0f;
+                sceneTransitionOverlay.blocksRaycasts = false;
+                sceneTransitionOverlay.interactable = false;
+                return;
+            }
+
+            float half = Mathf.Max(
+                .0001f, sceneTransitionDuration * .5f);
+            bool reveal = sceneTransitionElapsed >= half;
+            float phaseProgress = reveal
+                ? Mathf.Clamp01(
+                    (sceneTransitionElapsed - half) / half)
+                : Mathf.Clamp01(
+                    sceneTransitionElapsed / half);
+            float coverage = reveal
+                ? 1f - phaseProgress
+                : phaseProgress;
+
+            RectTransform rect =
+                (RectTransform)sceneTransitionImage.transform;
+            sceneTransitionOverlay.alpha = coverage;
+            sceneTransitionOverlay.blocksRaycasts = true;
+            sceneTransitionOverlay.interactable = true;
+
+            if (sceneTransitionType == 1)
+            {
+                bool anchorRight =
+                    (!reveal && sceneTransitionDirection == 1) ||
+                    (reveal && sceneTransitionDirection == 0);
+                rect.anchorMin = anchorRight
+                    ? new Vector2(1f - coverage, 0f)
+                    : Vector2.zero;
+                rect.anchorMax = anchorRight
+                    ? Vector2.one
+                    : new Vector2(coverage, 1f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+        }
+
+        private void CompleteSceneTransition()
+        {
+            sceneTransitionActive = false;
+            sceneTransitionSwapped = false;
+            sceneTransitionTargetIndex = -1;
+            sceneTransitionElapsed = 0f;
+            sceneTransitionDuration = 0f;
+            sceneTransitionType = 0;
+            sceneTransitionOverlay.alpha = 0f;
+            sceneTransitionOverlay.blocksRaycasts = false;
+            sceneTransitionOverlay.interactable = false;
+            sceneTransitionImage.gameObject.SetActive(false);
+            RefreshControlVisuals();
+        }
+
+        private void CancelSceneTransition()
+        {
+            sceneTransitionActive = false;
+            sceneTransitionSwapped = false;
+            sceneTransitionTargetIndex = -1;
+            sceneTransitionElapsed = 0f;
+            sceneTransitionDuration = 0f;
+            sceneTransitionType = 0;
+            sceneTransitionOverlay.alpha = 0f;
+            sceneTransitionOverlay.blocksRaycasts = false;
+            sceneTransitionOverlay.interactable = false;
+            sceneTransitionImage.gameObject.SetActive(false);
+            RefreshControlVisuals();
         }
 
         private void RebuildCharacterViews(
@@ -530,11 +894,14 @@ namespace Rokas.Presentation
         {
             forwardButton.interactable =
                 !menuOpen &&
+                !sceneTransitionActive &&
                 !playback.IsTerminalFadeActive &&
                 !playback.IsSequenceCompleted;
             muteButton.interactable =
+                !sceneTransitionActive &&
                 !playback.IsSequenceCompleted;
             menuButton.interactable =
+                !sceneTransitionActive &&
                 !playback.IsSequenceCompleted;
 
             RawImage muteGraphic =
@@ -622,6 +989,7 @@ namespace Rokas.Presentation
         private void ToggleMenu()
         {
             if (disposed ||
+                sceneTransitionActive ||
                 playback.IsTerminalFadeActive ||
                 playback.IsSequenceCompleted)
                 return;
@@ -645,6 +1013,7 @@ namespace Rokas.Presentation
             disposed = true;
             playback.VnSequenceCompleted -=
                 HandleSequenceCompleted;
+            StopMotionMedia();
             audioPlayback.Dispose();
             if (root)
             {
