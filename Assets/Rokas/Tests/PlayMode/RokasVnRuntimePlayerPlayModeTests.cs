@@ -123,6 +123,54 @@ namespace Rokas.Tests
                 "VN-owned audio and controls must disappear before gameplay owns input/audio.");
         }
 
+        [UnityTest]
+        public IEnumerator AuthoredDarkCurtainCoversSceneSwapAndLocksAdvance()
+        {
+            package = CreateTransitionPackage();
+            host = new GameObject("RuntimeVnTransitionFixture");
+
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            RawImage background = Find("VnBackground").GetComponent<RawImage>();
+            Texture firstBackground = package.Assets
+                .First(binding => binding.authoredKey == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                .asset as Texture;
+            Texture secondBackground = package.Assets
+                .First(binding => binding.authoredKey == "ffffffffffffffffffffffffffffffff")
+                .asset as Texture;
+            Assert.That(background.texture, Is.SameAs(firstBackground));
+
+            Assert.That(player.RequestAdvance(), Is.True);
+            Assert.That(player.IsSceneTransitionActive, Is.True);
+            Assert.That(player.Playback.CurrentSceneIndex, Is.Zero,
+                "Incoming Scene must not become interactive before the cover midpoint.");
+
+            CanvasGroup overlay =
+                Find("VnSceneTransitionOverlay").GetComponent<CanvasGroup>();
+            Assert.That(overlay.blocksRaycasts, Is.True);
+
+            player.TickForTests(.10f);
+            Assert.That(overlay.alpha, Is.GreaterThan(0f).And.LessThan(1f));
+            Assert.That(player.Playback.CurrentSceneIndex, Is.Zero);
+            Assert.That(player.RequestAdvance(), Is.False,
+                "Dialogue input must be locked during the authored Scene boundary.");
+
+            player.TickForTests(.11f);
+            Assert.That(player.Playback.CurrentSceneIndex, Is.EqualTo(1));
+            Assert.That(background.texture, Is.SameAs(secondBackground),
+                "Background swap must happen under the authored dark cover.");
+
+            player.TickForTests(.21f);
+            Assert.That(player.IsSceneTransitionActive, Is.False);
+            Assert.That(overlay.alpha, Is.Zero.Within(.001f));
+            Assert.That(overlay.blocksRaycasts, Is.False);
+
+            player.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void RuntimePlayerLivesInPlayerAssemblyWithoutUnityEditorReference()
         {
@@ -212,6 +260,74 @@ namespace Rokas.Tests
                     }
                 },
                 plaque, controls, mute, triangle);
+            return result;
+        }
+
+        private RokasVnRuntimeIntroPackage CreateTransitionPackage()
+        {
+            RokasVnRuntimeIntroPackage result = CreatePackage();
+            Texture2D secondBackground = MakeTexture("RuntimeBackgroundTwo");
+
+            RokasVnRuntimeSceneSnapshot first = result.Snapshot.scenes[0];
+            first.label = "Before Transition";
+            first.isTerminal = false;
+            first.dialogueBeats.Clear();
+            first.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "44444444444444444444444444444444",
+                speaker = "Mina",
+                text = string.Empty
+            });
+
+            var second = new RokasVnRuntimeSceneSnapshot
+            {
+                sceneId = "55555555555555555555555555555555",
+                label = "After Transition",
+                isTerminal = true,
+                terminalFadeDuration = .4f,
+                sceneTransitionType = 1,
+                sceneTransitionDirection = 0,
+                sceneTransitionDuration = .4f,
+                media = new RokasVnRuntimeMediaSnapshot
+                {
+                    kind = 1,
+                    reference = "ffffffffffffffffffffffffffffffff",
+                    runtimeAssetKey = "ffffffffffffffffffffffffffffffff",
+                    scaleMode = 1
+                }
+            };
+            second.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "66666666666666666666666666666666",
+                speaker = "Mina",
+                text = string.Empty
+            });
+
+            result.Snapshot.scenes.Clear();
+            result.Snapshot.scenes.Add(first);
+            result.Snapshot.scenes.Add(second);
+            result.Snapshot.sceneCount = 2;
+            result.Snapshot.beatCount = 2;
+
+            var assets = result.Assets.ToList();
+            assets.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = "ffffffffffffffffffffffffffffffff",
+                displayName = "RuntimeBackgroundTwo",
+                kind = RokasVnRuntimeAssetKind.Texture,
+                asset = secondBackground
+            });
+            result.Configure(
+                result.ProjectId,
+                result.SourceProjectSha256,
+                result.PortableProjectJson,
+                result.Snapshot,
+                assets,
+                result.CharacterStates.ToList(),
+                result.DialoguePlaque,
+                result.ControlSheet,
+                result.MutedSpeaker,
+                result.CompletionTriangle);
             return result;
         }
 

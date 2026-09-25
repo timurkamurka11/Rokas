@@ -1,9 +1,11 @@
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Rokas.EditorTools.VnUiWorkshop;
 using Rokas.Presentation;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Rokas.EditorTools.Tests
 {
@@ -161,6 +163,98 @@ namespace Rokas.EditorTools.Tests
             }
             finally
             {
+                AssetDatabase.DeleteAsset(root);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        [Test]
+        public void RuntimePlayerDecodesPackagedGifBytesIntoBackgroundTexture()
+        {
+            const string root =
+                "Assets/Rokas/Tests/EditorWorkshop/__RuntimeGifFixture";
+            const string gifPath = root + "/Tiny.gif.bytes";
+            AssetDatabase.DeleteAsset(root);
+            Directory.CreateDirectory(root);
+            File.WriteAllBytes(
+                gifPath,
+                System.Convert.FromBase64String(
+                    "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="));
+            AssetDatabase.ImportAsset(
+                gifPath,
+                ImportAssetOptions.ForceSynchronousImport);
+            TextAsset gif = AssetDatabase.LoadAssetAtPath<TextAsset>(gifPath);
+            Assert.That(gif, Is.Not.Null);
+
+            var scene = new RokasVnRuntimeSceneSnapshot
+            {
+                sceneId = "77777777777777777777777777777777",
+                isTerminal = true,
+                terminalFadeDuration = .25f,
+                media = new RokasVnRuntimeMediaSnapshot
+                {
+                    kind = 4,
+                    runtimeAssetKey =
+                        "scene-media:77777777777777777777777777777777",
+                    loop = true,
+                    scaleMode = 1
+                }
+            };
+            scene.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
+            {
+                beatId = "88888888888888888888888888888888",
+                text = string.Empty
+            });
+            var snapshot = new RokasVnRuntimeIntroSnapshot
+            {
+                projectId = ProjectId,
+                sourceProjectSha256 = "gif-fixture-sha",
+                sceneCount = 1,
+                beatCount = 1
+            };
+            snapshot.scenes.Add(scene);
+
+            var package =
+                ScriptableObject.CreateInstance<RokasVnRuntimeIntroPackage>();
+            var host = new GameObject("RuntimeGifHost");
+            RokasVnRuntimePlayer player = null;
+            try
+            {
+                package.Configure(
+                    ProjectId,
+                    "gif-fixture-sha",
+                    "{}",
+                    snapshot,
+                    new[]
+                    {
+                        new RokasVnRuntimeAssetBinding
+                        {
+                            authoredKey =
+                                "scene-media:77777777777777777777777777777777",
+                            displayName = "Tiny.gif",
+                            kind = RokasVnRuntimeAssetKind.Bytes,
+                            asset = gif
+                        }
+                    },
+                    null,
+                    null, null, null, null);
+
+                player =
+                    RokasVnRuntimePlayer.Create(
+                        host.transform,
+                        package,
+                        null);
+                RawImage image = host
+                    .GetComponentsInChildren<RawImage>(true)
+                    .First(item => item.name == "VnBackground");
+                Assert.That(image.texture, Is.TypeOf<Texture2D>(),
+                    "Packaged GIF bytes must decode inside the player assembly rather than depend on Editor preview state.");
+            }
+            finally
+            {
+                if (player != null) player.Dispose();
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(package);
                 AssetDatabase.DeleteAsset(root);
                 AssetDatabase.Refresh();
             }
