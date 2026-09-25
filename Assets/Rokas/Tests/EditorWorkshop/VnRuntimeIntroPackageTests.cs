@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Rokas.EditorTools.VnUiWorkshop;
 using Rokas.Presentation;
 
 namespace Rokas.EditorTools.Tests
