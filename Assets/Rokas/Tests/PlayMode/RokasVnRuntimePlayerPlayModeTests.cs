@@ -37,7 +37,9 @@ namespace Rokas.Tests
             RawImage plaque = Find("VnDialoguePlaque").GetComponent<RawImage>();
             Assert.That(plaque.texture, Is.SameAs(package.DialoguePlaque));
             Assert.That(Find("VnSpeaker").GetComponent<Text>().text, Is.EqualTo("Mina"));
-            Assert.That(Find("VnDialogue").GetComponent<Text>().text, Is.EqualTo("Первый кадр"));
+            string initialDialogue = Find("VnDialogue").GetComponent<Text>().text;
+            Assert.That("Первый кадр".StartsWith(initialDialogue), Is.True,
+                "Initial runtime dialogue must be the authored typewriter prefix.");
 
             Assert.That(FindButton("VnForwardButton"), Is.Not.Null);
             Assert.That(FindButton("VnMuteButton"), Is.Not.Null);
@@ -45,6 +47,8 @@ namespace Rokas.Tests
 
             Assert.That(player.RequestAdvance(), Is.False,
                 "First advance while typewriter is incomplete must reveal the line only.");
+            Assert.That(Find("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo("Первый кадр"));
             Assert.That(player.RequestAdvance(), Is.True,
                 "Second advance must move to the next Beat.");
             Assert.That(Find("VnDialogue").GetComponent<Text>().text, Is.EqualTo("Финал"));
