@@ -488,7 +488,6 @@ namespace Rokas.EditorTools.Tests
             {
                 "Анимация сцены",
                 "Переход между сценами",
-                "Расположение персонажей",
                 "Фокус говорящего",
                 "Тайминг сцены",
                 "Без перехода",
@@ -496,9 +495,6 @@ namespace Rokas.EditorTools.Tests
                 "Тёмная шторка",
                 "Слева направо",
                 "Справа налево",
-                "1 персонаж",
-                "2 персонажа",
-                "3 персонажа",
                 "Переход к следующей сцене",
                 "Вручную",
                 "Автоматически"
@@ -509,7 +505,10 @@ namespace Rokas.EditorTools.Tests
 
             Assert.That(source, Does.Not.Contain("\"Переход фона\""),
                 "Scene Animation must offer one scene-boundary transition control.");
-            Assert.That(source, Does.Contain("ComposerSetStageLayout("));
+            Assert.That(source, Does.Not.Contain("\"Расположение персонажей\""),
+                "Automatic Character Rearrangement must remain removed from ordinary authoring.");
+            Assert.That(source, Does.Not.Contain("ComposerSetStageLayout("),
+                "Scene Animation must not reintroduce the removed automatic rearrangement control.");
             Assert.That(source, Does.Contain("ComposerSetSpeakerFocus("));
             Assert.That(source, Does.Contain("ComposerSetTiming("));
             Assert.That(source, Does.Contain("GetSceneComposerAdvanceTimingForAuthoring(scene)"));
