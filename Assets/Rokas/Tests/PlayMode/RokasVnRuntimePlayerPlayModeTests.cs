@@ -51,10 +51,14 @@ namespace Rokas.Tests
                 Is.EqualTo("Первый кадр"));
             Assert.That(player.RequestAdvance(), Is.True,
                 "Second advance must move to the next Beat.");
-            Assert.That(Find("VnDialogue").GetComponent<Text>().text, Is.EqualTo("Финал"));
+            string terminalPrefix = Find("VnDialogue").GetComponent<Text>().text;
+            Assert.That("Финал".StartsWith(terminalPrefix), Is.True,
+                "Entering the terminal Beat must restart its authored typewriter.");
 
             Assert.That(player.RequestAdvance(), Is.False,
                 "The terminal Beat still completes its typewriter before advancing.");
+            Assert.That(Find("VnDialogue").GetComponent<Text>().text,
+                Is.EqualTo("Финал"));
             Assert.That(player.RequestAdvance(), Is.True,
                 "The next advance must enter the authored terminal fade.");
             player.TickForTests(.2f);
