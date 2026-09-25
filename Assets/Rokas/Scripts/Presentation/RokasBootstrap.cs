@@ -5,7 +5,6 @@ using Rokas.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using Yarn.Unity;
 
 namespace Rokas.Presentation
 {
@@ -20,10 +19,8 @@ namespace Rokas.Presentation
         private SaveLoadResult initialLoad;
         private MainMenuView mainMenu;
         private IVnIntroProgress vnIntroProgress;
-        private GameObject vnIntroRuntime;
-        private VnIntroView vnIntroView;
-        private VnIntroController vnIntroController;
-        private bool vnIntroPaused;
+        private RokasVnRuntimeLauncher runtimeVnLauncher;
+        private RokasVnRuntimeIntroPackage runtimeVnIntroPackageOverride;
         private bool vnIntroHomeTransition;
         private bool dirty;
         private bool saveBlocked;
@@ -156,73 +153,34 @@ namespace Rokas.Presentation
 
         private void BuildVnIntro()
         {
-            if (vnIntroRuntime != null || vnIntroView != null)
+            if (runtimeVnLauncher != null && runtimeVnLauncher.HasActivePlayer)
             {
                 return;
             }
 
-            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
-            YarnProject project = Resources.Load<YarnProject>("VN/Intro/VnIntro");
-            if (!project)
+            RokasVnRuntimeIntroPackage package = runtimeVnIntroPackageOverride;
+            if (!package)
             {
-                throw new InvalidOperationException("ROKAS VN intro Yarn project is missing.");
+                package = Resources.Load<RokasVnRuntimeIntroPackage>(
+                    RokasVnRuntimeIntroPackage.ResourcesPath);
+            }
+            if (!package)
+            {
+                throw new InvalidOperationException(
+                    "ROKAS packaged runtime VN intro is missing. " +
+                    "Export the authored Scene Composer project with " +
+                    "ROKAS/VN Scene Composer/Обновить runtime intro.");
             }
 
-            vnIntroRuntime = new GameObject("VnIntroDialogueRuntime");
-            vnIntroRuntime.transform.SetParent(transform, false);
-            DialogueRunner runner = vnIntroRuntime.AddComponent<DialogueRunner>();
-            VnIntroDialoguePresenter presenter = vnIntroRuntime.AddComponent<VnIntroDialoguePresenter>();
-            vnIntroController = vnIntroRuntime.AddComponent<VnIntroController>();
-            vnIntroController.Configure(project, runner, presenter);
-
-            var art = new VnIntroArt(
-                assets.vnKeikoCharacterSheet,
-                assets.vnMinaCharacterSheet,
-                assets.vnBusStopRainNight,
-                assets.vnNightSkyRain,
-                assets.vnBusStopPhoneMessageMina,
-                assets.vnDialoguePanelKeikoDark,
-                assets.vnDialoguePanelMinaLight,
-                assets.vnIconMute,
-                assets.vnIconPause,
-                assets.vnIconSkip);
-
-            vnIntroView = VnIntroView.Create(transform, assets.sans, art,
-                () => { vnIntroController?.Continue(); },
-                ToggleVnMute,
-                ToggleVnPause,
-                () => { vnIntroController?.Skip(); });
-            vnIntroController.BeatChanged += HandleVnBeatChanged;
-            vnIntroController.LinePresented += HandleVnLinePresented;
-            vnIntroController.DialogueCompleted += CompleteIntroAndGoHome;
-            vnIntroPaused = false;
-            _ = vnIntroController.StartIntro();
-        }
-
-        private void HandleVnBeatChanged(VnIntroBeatState beat)
-        {
-            vnIntroView?.ApplyBeat(beat);
-        }
-
-        private void HandleVnLinePresented(string speaker, string text)
-        {
-            vnIntroView?.PresentLine(speaker, text);
-        }
-
-        private void ToggleVnMute()
-        {
-            if (sound == null)
+            if (runtimeVnLauncher == null)
             {
-                return;
+                runtimeVnLauncher = new RokasVnRuntimeLauncher(transform);
             }
-            sound.SetVnMuted(!sound.VnMuted);
-        }
-
-        private void ToggleVnPause()
-        {
-            vnIntroPaused = !vnIntroPaused;
-            vnIntroController?.SetPaused(vnIntroPaused);
-            vnIntroView?.SetPausedVisual(vnIntroPaused);
+            if (!runtimeVnLauncher.TryPlay(package, CompleteIntroAndGoHome))
+            {
+                throw new InvalidOperationException(
+                    "ROKAS runtime VN launcher refused duplicate intro playback.");
+            }
         }
 
         private void CompleteIntroAndGoHome()
@@ -269,24 +227,11 @@ namespace Rokas.Presentation
             {
                 sound.SetVnMuted(false);
             }
-            if (vnIntroController != null)
+            if (runtimeVnLauncher != null)
             {
-                vnIntroController.BeatChanged -= HandleVnBeatChanged;
-                vnIntroController.LinePresented -= HandleVnLinePresented;
-                vnIntroController.DialogueCompleted -= CompleteIntroAndGoHome;
+                runtimeVnLauncher.Dispose();
+                runtimeVnLauncher = null;
             }
-            if (vnIntroView != null)
-            {
-                vnIntroView.Dispose();
-                vnIntroView = null;
-            }
-            if (vnIntroRuntime != null)
-            {
-                Destroy(vnIntroRuntime);
-                vnIntroRuntime = null;
-            }
-            vnIntroController = null;
-            vnIntroPaused = false;
         }
 
         private CanvasGroup CreateEnterWorldCurtain()
