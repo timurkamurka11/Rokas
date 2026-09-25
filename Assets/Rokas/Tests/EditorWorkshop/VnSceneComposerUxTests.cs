@@ -122,6 +122,27 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void SceneAnimationHidesAutomaticRearrangementButKeepsSpeakerFocus()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string animation = ExtractMethodBody(source,
+                "private void DrawSceneComposerSceneAnimationInspector(VnSceneComposerScene scene)");
+
+            Assert.That(animation, Does.Not.Contain("Расположение персонажей"));
+            Assert.That(animation, Does.Not.Contain("Длительность перестановки"));
+            Assert.That(animation, Does.Not.Contain("ComposerSetStageLayout"));
+            Assert.That(animation, Does.Contain("Фокус говорящего"));
+            Assert.That(animation, Does.Contain("Яркость остальных"));
+            Assert.That(animation, Does.Contain("Длительность фокуса"));
+            Assert.That(animation, Does.Contain("ComposerSetSpeakerFocus"));
+
+            string text = ExtractMethodBody(source,
+                "private void DrawSceneComposerTextInspector(VnSceneComposerScene scene)");
+            Assert.That(text, Does.Contain("DrawSceneComposerBeatCharacterStagingInspector"),
+                "Static Beat staging remains available in Text authoring.");
+        }
+
+        [Test]
         public void MD_BasicTextUsesSelectedCanonicalDialogueBeatSurface()
         {
             string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");

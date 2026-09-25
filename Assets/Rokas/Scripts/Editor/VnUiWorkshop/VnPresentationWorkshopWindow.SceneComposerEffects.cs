@@ -96,8 +96,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             int sceneIndex = GetSelectedSceneIndexOrThrow();
             VnSceneComposerScene scene = _sceneComposerProject.scenes[sceneIndex];
+            VnSceneComposerDialogueBeat beat = ComposerGetSelectedDialogueBeat();
             int beatIndex = VnSceneComposerDialogue.FindIndex(
-                scene, _sceneComposerSelectedDialogueBeatId);
+                scene, beat != null ? beat.beatId : string.Empty);
             if (beatIndex < 0) throw new InvalidOperationException("No dialogue Beat is selected.");
             EnsureSceneComposerPlayback().PlayFromHere(sceneIndex, beatIndex);
             BeginSceneComposerPlaybackTick();

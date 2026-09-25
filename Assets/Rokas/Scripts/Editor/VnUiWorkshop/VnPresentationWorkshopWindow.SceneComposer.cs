@@ -431,6 +431,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             VnSceneComposerDialogueBeat added = VnSceneComposerDialogue.AddBeat(
                 scene, selected != null ? selected.beatId : string.Empty);
             _sceneComposerSelectedDialogueBeatId = added != null ? added.beatId ?? string.Empty : string.Empty;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
             MarkSceneComposerChanged();
         }
 
@@ -442,6 +443,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             RecordSceneComposerUndo("Duplicate VN Dialogue Beat");
             VnSceneComposerDialogueBeat copy = VnSceneComposerDialogue.DuplicateBeat(scene, selected.beatId);
             if (copy != null) _sceneComposerSelectedDialogueBeatId = copy.beatId ?? string.Empty;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
             MarkSceneComposerChanged();
         }
 
@@ -452,6 +454,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (selected == null) return;
             RecordSceneComposerUndo("Delete VN Dialogue Beat");
             _sceneComposerSelectedDialogueBeatId = VnSceneComposerDialogue.DeleteBeat(scene, selected.beatId);
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
+            ReconcileSelectedDialogueBeat(scene);
             MarkSceneComposerChanged();
         }
 
@@ -1860,7 +1864,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUILayout.LabelField("Анимация сцены", EditorStyles.boldLabel);
             DrawSceneComposerAnimationScope();
             VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);
-            VnWorkshopStageLayoutValues stage = VnPresentationWorkshopVn10Resolver.ResolveStageLayout(effective);
             VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);
 
             VnSceneComposerTransition boundary = GetSceneComposerBoundaryTransitionForAuthoring(scene);
@@ -1909,16 +1912,6 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     ComposerPreviewSelectedSceneBoundaryTransition();
             }
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField(new GUIContent("Расположение персонажей", "Как персонажи располагаются и перестраиваются на сцене."), EditorStyles.miniBoldLabel);
-            string[] characterCountLabels = { "Нет персонажей", "1 персонаж", "2 персонажа", "3 персонажа" };
-            string[] characterSlotLabels = { "", "Центр", "Слева / Справа", "Слева / Центр / Справа" };
-            int characterCount = Mathf.Clamp(scene.characters != null ? scene.characters.Count : 0, 0, 3);
-            EditorGUILayout.LabelField("Схема", characterCountLabels[characterCount] + (characterCount > 0 ? " · " + characterSlotLabels[characterCount] : string.Empty));
-            EditorGUI.BeginChangeCheck();
-            float repositionDuration = DrawSceneComposerDurationControl("Длительность перестановки", stage.RepositionDuration, 0f);
-            if (EditorGUI.EndChangeCheck()) ComposerSetStageLayout(stage.LeftX, stage.CenterX, stage.RightX, stage.SlotY, stage.LeftScale, stage.CenterScale, stage.RightScale, stage.Spacing, repositionDuration, stage.Easing);
-            if (GUILayout.Button("▶ Проверить")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.StageOneTwo);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField(new GUIContent("Фокус говорящего", "Выделяет говорящего персонажа и приглушает остальных."), EditorStyles.miniBoldLabel);
             EditorGUILayout.HelpBox("Фокус автоматически следует за полем «Говорящий» при нескольких персонажах.", MessageType.None);
@@ -2114,7 +2107,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private VnSceneComposerScene GetSelectedScene()
         {
             EnsureSceneComposerProject(); int index = FindSceneIndex(_sceneComposerSelectedSceneId);
-            return index >= 0 ? _sceneComposerProject.scenes[index] : null;
+            VnSceneComposerScene scene = index >= 0 ? _sceneComposerProject.scenes[index] : null;
+            ReconcileSelectedDialogueBeat(scene);
+            return scene;
         }
 
         private VnSceneComposerScene RequireSelectedScene()
@@ -2126,16 +2121,17 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         private VnSceneComposerDialogueBeat ComposerGetSelectedDialogueBeat()
         {
-            VnSceneComposerScene scene = GetSelectedScene();
-            if (scene == null) return null;
+            return ReconcileSelectedDialogueBeat(GetSelectedScene());
+        }
+
+        private VnSceneComposerDialogueBeat ReconcileSelectedDialogueBeat(VnSceneComposerScene scene)
+        {
             VnSceneComposerDialogueBeat selected = ResolveSceneComposerDialogueBeat(
                 scene, _sceneComposerSelectedDialogueBeatId);
-            if (selected == null)
-            {
-                _sceneComposerSelectedDialogueBeatId = string.Empty;
-                return null;
-            }
-            _sceneComposerSelectedDialogueBeatId = selected.beatId ?? string.Empty;
+            string nextId = selected != null ? selected.beatId ?? string.Empty : string.Empty;
+            if (!string.Equals(_sceneComposerSelectedDialogueBeatId, nextId, StringComparison.Ordinal))
+                _sceneComposerSelectedCharacterStagingId = string.Empty;
+            _sceneComposerSelectedDialogueBeatId = nextId;
             return selected;
         }
 
@@ -2156,6 +2152,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             VnSceneComposerDialogueBeat beat = ResolveSceneComposerDialogueBeat(scene, string.Empty);
             _sceneComposerSelectedDialogueBeatId = beat != null ? beat.beatId ?? string.Empty : string.Empty;
+            _sceneComposerSelectedCharacterStagingId = string.Empty;
         }
 
         private void EnsureSelectedScene()
@@ -2245,7 +2242,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     _sceneComposerBoundaryPreviewSceneId, StringComparison.Ordinal)) return;
                 _sceneComposerBoundaryPreviewSceneId = null;
             }
-            if (scene == null || string.Equals(scene.sceneId, _sceneComposerSelectedSceneId, StringComparison.Ordinal)) return;
+            if (scene == null) return;
+            if (string.Equals(scene.sceneId, _sceneComposerSelectedSceneId, StringComparison.Ordinal))
+            {
+                ReconcileSelectedDialogueBeat(scene);
+                return;
+            }
             _sceneComposerSelectedSceneId = scene.sceneId;
             SelectFirstSceneComposerDialogueBeat(scene);
             _sceneComposerSelectedCharacterIndex = -1;
@@ -2254,11 +2256,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private void SyncSelectedDialogueBeatFromPlayback()
         {
             if (_sceneComposerPlayback == null) return;
+            SyncSceneComposerSelectionFromPlayback();
             int sceneIndex = _sceneComposerPlayback.CurrentSceneIndex;
             if (sceneIndex < 0 || sceneIndex >= _sceneComposerProject.scenes.Count) return;
             VnSceneComposerScene scene = _sceneComposerProject.scenes[sceneIndex];
+            if (scene == null || !string.Equals(scene.sceneId,
+                    _sceneComposerSelectedSceneId, StringComparison.Ordinal)) return;
             int beatIndex = _sceneComposerPlayback.CurrentBeatIndex;
-            if (scene == null || scene.dialogueBeats == null ||
+            if (scene.dialogueBeats == null ||
                 beatIndex < 0 || beatIndex >= scene.dialogueBeats.Count)
                 return;
             VnSceneComposerDialogueBeat beat = scene.dialogueBeats[beatIndex];

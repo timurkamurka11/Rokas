@@ -229,6 +229,93 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void SelectedBeatRemainsInCurrentSceneAcrossSceneAndBeatChanges()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            try
+            {
+                MethodInfo addScene = RequireInstance(windowType, "ComposerAddScene");
+                MethodInfo selectScene = RequireInstance(windowType, "ComposerSelectScene", typeof(int));
+                MethodInfo selectedId = RequireInstance(windowType, "ComposerGetSelectedDialogueBeatId");
+                addScene.Invoke(window, null);
+                VnSceneComposerScene first = (VnSceneComposerScene)Scenes(window)[0];
+                RequireInstance(windowType, "ComposerAddDialogueBeat").Invoke(window, null);
+                string laterFirstSceneBeatId = (string)selectedId.Invoke(window, null);
+                addScene.Invoke(window, null);
+                VnSceneComposerScene second = (VnSceneComposerScene)Scenes(window)[1];
+
+                selectScene.Invoke(window, new object[] { 0 });
+                RequireInstance(windowType, "ComposerSelectDialogueBeat", typeof(string))
+                    .Invoke(window, new object[] { laterFirstSceneBeatId });
+                selectScene.Invoke(window, new object[] { 1 });
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(second.dialogueBeats[0].beatId));
+
+                // Simulate an editor reload/Undo restoring a Beat ID from another Scene.
+                SetField(window, "_sceneComposerSelectedDialogueBeatId", laterFirstSceneBeatId);
+                RequireInstance(windowType, "ComposerBuildSelectedPreviewFrame").Invoke(window, null);
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(second.dialogueBeats[0].beatId));
+                Assert.That(first.dialogueBeats.Any(beat => beat.beatId == laterFirstSceneBeatId), Is.True);
+
+                RequireInstance(windowType, "ComposerPreviewSelectedReplicaEffect").Invoke(window, null);
+                Assert.That((string)selectedId.Invoke(window, null), Is.EqualTo(second.dialogueBeats[0].beatId));
+
+                RequireInstance(windowType, "ComposerDuplicateSelectedScene").Invoke(window, null);
+                VnSceneComposerScene duplicate = (VnSceneComposerScene)Scenes(window)[2];
+                Assert.That(duplicate.dialogueBeats.Any(beat =>
+                    beat.beatId == (string)selectedId.Invoke(window, null)), Is.True);
+                RequireInstance(windowType, "ComposerDeleteSelectedScene").Invoke(window, null);
+                VnSceneComposerScene selected = (VnSceneComposerScene)Scenes(window)[1];
+                Assert.That(selected.dialogueBeats.Any(beat =>
+                    beat.beatId == (string)selectedId.Invoke(window, null)), Is.True);
+
+                selectScene.Invoke(window, new object[] { 0 });
+                RequireInstance(windowType, "ComposerSelectDialogueBeat", typeof(string))
+                    .Invoke(window, new object[] { laterFirstSceneBeatId });
+                RequireInstance(windowType, "ComposerDeleteSelectedDialogueBeat").Invoke(window, null);
+                Assert.That(first.dialogueBeats.Any(beat =>
+                    beat.beatId == (string)selectedId.Invoke(window, null)), Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void LoadingProjectSelectsBeatFromLoadedScene()
+        {
+            Type windowType = RequireType("VnPresentationWorkshopWindow");
+            UnityEngine.Object window = CreateWindow(windowType);
+            string root = Path.Combine(Path.GetTempPath(), "rokas-sc-beat-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                VnSceneComposerScene savedScene = (VnSceneComposerScene)Scenes(window)[0];
+                string savedBeatId = savedScene.dialogueBeats[0].beatId;
+                string projectId = GetString(GetField(window, "_sceneComposerProject"), "projectId");
+                RequireInstance(windowType, "ComposerSaveProject", typeof(string))
+                    .Invoke(window, new object[] { root });
+
+                RequireInstance(windowType, "ComposerAddScene").Invoke(window, null);
+                string otherBeatId = ((VnSceneComposerScene)Scenes(window)[1]).dialogueBeats[0].beatId;
+                SetField(window, "_sceneComposerSelectedDialogueBeatId", otherBeatId);
+                object result = RequireInstance(windowType, "ComposerLoadProject", typeof(string), typeof(string))
+                    .Invoke(window, new object[] { root, projectId });
+                Assert.That(GetProperty(result, "Success"), Is.True);
+                Assert.That((string)RequireInstance(windowType, "ComposerGetSelectedDialogueBeatId")
+                    .Invoke(window, null), Is.EqualTo(savedBeatId));
+                Assert.That(Scenes(window).Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        [Test]
         public void AuthoredCharacterPickerOnlyReturnsCatalogStatesAndAddCharacterUsesSelectedState()
         {
             Type windowType = RequireType("VnPresentationWorkshopWindow");
