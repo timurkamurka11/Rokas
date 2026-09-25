@@ -143,6 +143,17 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void StoryboardExposesCompactTerminalSceneMarkerAndAction()
+        {
+            string source = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");
+            string storyboard = ExtractMethodBody(
+                source, "private void DrawSceneComposerStoryboard()");
+            Assert.That(source, Does.Contain("[ФИНАЛ]"));
+            Assert.That(storyboard, Does.Contain("Конечный кадр"));
+            Assert.That(source, Does.Contain("terminalFadeDuration"));
+        }
+
+        [Test]
         public void MovementInspectorUsesSelectedReplicaAndCompactRussianControls()
         {
             string main = ReadEditorSource("VnPresentationWorkshopWindow.SceneComposer.cs");

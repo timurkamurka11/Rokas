@@ -625,6 +625,72 @@ namespace Rokas.EditorTools.Tests
             Assert.That(forbiddenMethodNames, Is.Empty);
         }
 
+        [Test]
+        public void TerminalSceneFadesToBlackStopsRangeAndSignalsExactlyOnce()
+        {
+            var project = new VnSceneComposerProject();
+            project.scenes.Clear();
+            var terminal = new VnSceneComposerScene
+            {
+                label = "Terminal",
+                isTerminal = true,
+                terminalFadeDuration = .2f
+            };
+            terminal.dialogueBeats[0].text = string.Empty;
+            var unreachable = new VnSceneComposerScene { label = "After" };
+            unreachable.dialogueBeats[0].text = string.Empty;
+            project.scenes.Add(terminal);
+            project.scenes.Add(unreachable);
+
+            using (var controller = new VnSceneComposerPlaybackController(project))
+            {
+                int completed = 0;
+                controller.VnSequenceCompleted += () => completed++;
+                controller.PlayAll();
+                controller.AdvanceDialogue();
+
+                Assert.That(controller.IsTerminalFadeActive, Is.True);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+
+                controller.Advance(.1f);
+                Assert.That(controller.CurrentFrame.TerminalFadeAlpha,
+                    Is.GreaterThan(0f).And.LessThan(1f));
+
+                controller.Advance(.2f);
+                Assert.That(controller.IsSequenceCompleted, Is.True);
+                Assert.That(controller.IsPlaying, Is.False);
+                Assert.That(controller.CurrentSceneIndex, Is.EqualTo(0));
+                Assert.That(controller.CurrentFrame.TerminalFadeAlpha,
+                    Is.EqualTo(1f).Within(.001f));
+                Assert.That(completed, Is.EqualTo(1));
+
+                controller.Advance(1f);
+                Assert.That(completed, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void TerminalSceneFlagAndFadeDurationRoundTripAndDefaultOff()
+        {
+            var project = new VnSceneComposerProject();
+            var scene = new VnSceneComposerScene
+            {
+                isTerminal = true,
+                terminalFadeDuration = 1.7f
+            };
+            project.scenes.Add(scene);
+
+            string json = VnSceneComposerSerialization.SerializePortable(project);
+            VnSceneComposerImportResult loaded =
+                VnSceneComposerSerialization.DeserializePortable(json);
+
+            Assert.That(loaded.Success, Is.True, loaded.Error);
+            Assert.That(loaded.Project.scenes[0].isTerminal, Is.True);
+            Assert.That(loaded.Project.scenes[0].terminalFadeDuration,
+                Is.EqualTo(1.7f).Within(.001f));
+            Assert.That(new VnSceneComposerScene().isTerminal, Is.False);
+        }
+
         private sealed class WindowBeatVideoPreview : VnSceneComposerVideoPreview
         {
             public int PrepareCalls;
