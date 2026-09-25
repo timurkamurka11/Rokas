@@ -66,6 +66,53 @@ namespace Rokas.Tests
             Assert.That(boot.View, Is.Null);
         }
 
+        [UnityTest]
+        public IEnumerator TerminalCompletionUsesExistingHomeContinuationExactlyOnce()
+        {
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.Save();
+            HideStoryMediaForDeterministicLinuxFallback();
+
+            RokasBootstrap boot = CreateRealLaunchIgnoringHostDecoderErrors();
+            RokasVnRuntimeIntroPackage package = CreateIntroPackage();
+            FieldInfo packageOverride = typeof(RokasBootstrap).GetField(
+                "runtimeVnIntroPackageOverride",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(packageOverride, Is.Not.Null);
+            packageOverride.SetValue(boot, package);
+
+            yield return WaitFor("RokasMainMenu", 1.5f);
+            FindButton("EnterWorldButton").onClick.Invoke();
+            yield return WaitFor("RokasVnRuntimeRoot", 1.5f);
+
+            Button forward = FindButton("VnForwardButton");
+            Assert.That(forward, Is.Not.Null);
+            forward.onClick.Invoke();
+            forward.onClick.Invoke();
+
+            Assert.That(Find("HomeTitle"), Is.Null,
+                "Home must not load before the authored terminal fade completes.");
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.Zero,
+                "Completion persistence must wait for successful Home construction.");
+
+            yield return WaitFor("HomeTitle", 2f);
+
+            Assert.That(Find("RokasVnRuntimeRoot"), Is.Null,
+                "VN runtime must be disposed before gameplay/Home input is revealed.");
+            Assert.That(Find("RokasMainMenu"), Is.Null);
+            Assert.That(Count("HomeTitle"), Is.EqualTo(1),
+                "The existing post-Start continuation must construct Home exactly once.");
+            Assert.That(boot.View, Is.Not.Null);
+            Assert.That(PlayerPrefs.GetInt(PlayerPrefsVnIntroProgress.CompletedKey, 0), Is.EqualTo(1),
+                "Intro completion may be persisted only after existing Home is alive.");
+
+            yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(Count("HomeTitle"), Is.EqualTo(1),
+                "Repeated ticks after VN completion must not invoke the gameplay continuation again.");
+            Assert.That(FindButton("VnForwardButton"), Is.Null,
+                "Disposed VN controls must not intercept gameplay input.");
+        }
+
         private RokasVnRuntimeIntroPackage CreateIntroPackage()
         {
             Texture2D background = MakeTexture("IntegrationBackground");
