@@ -621,7 +621,14 @@ namespace Rokas.Presentation
             playback.VnSequenceCompleted -=
                 HandleSequenceCompleted;
             if (root)
+            {
+                // Destroy is deferred until the end of the frame. Remove the VN
+                // synchronously from input/render ownership before the caller
+                // reveals its continuation, then let Unity destroy it normally.
+                root.SetActive(false);
+                root.transform.SetParent(null, false);
                 UnityEngine.Object.Destroy(root);
+            }
         }
 
         private Font ResolveFallbackFont()
