@@ -434,6 +434,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
                 TryDrawRegisteredSceneTransitionOverlay(localCanvas, frame);
                 DrawComposerMenu(localCanvas, frame);
+                TryDrawRegisteredTerminalFadeOverlay(localCanvas, frame);
             }
             finally { GUI.matrix = originalMatrix; GUI.EndGroup(); }
         }

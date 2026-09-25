@@ -77,6 +77,25 @@ namespace Rokas.EditorTools.VnUiWorkshop
             DrawSceneTransitionOverlay(localCanvas, playbackFrame.SceneTransitionOverlay);
         }
 
+        private static void TryDrawRegisteredTerminalFadeOverlay(
+            Rect localCanvas, VnWorkshopPreviewFrame frame)
+        {
+            if (frame == null ||
+                !PlaybackFrames.TryGetValue(
+                    frame, out VnSceneComposerPlaybackFrame playbackFrame))
+                return;
+
+            float alpha = Mathf.Clamp01(playbackFrame.TerminalFadeAlpha);
+            if (alpha <= .0001f) return;
+
+            Color previous = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, alpha);
+            GUI.DrawTexture(
+                localCanvas, Texture2D.whiteTexture,
+                ScaleMode.StretchToFill, false);
+            GUI.color = previous;
+        }
+
         private static VnSceneComposerReplicaEffectSample GetRegisteredReplicaEffectSample(
             VnWorkshopPreviewFrame frame)
         {

@@ -248,6 +248,18 @@ namespace Rokas.EditorTools.VnUiWorkshop
             MarkSceneComposerChanged();
         }
 
+        public void ComposerSetSelectedSceneTerminal(
+            bool terminal, float fadeDuration)
+        {
+            VnSceneComposerScene scene = RequireSelectedScene();
+            float safeDuration = Mathf.Clamp(fadeDuration, .05f, 10f);
+            RecordSceneComposerUndo("Edit VN Terminal Scene");
+            scene.isTerminal = terminal;
+            scene.terminalFadeDuration = safeDuration;
+            ResetSceneComposerPlayback();
+            MarkSceneComposerChanged();
+        }
+
         public void ComposerRenameSelectedScene(string label)
         {
             VnSceneComposerScene scene = GetSelectedScene();
@@ -926,7 +938,8 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
                 EditorGUILayout.BeginVertical();
                 string label = GetSceneComposerDisplayLabel(scene, i);
-                string numberedLabel = (i + 1).ToString("00") + "  " + label;
+                string numberedLabel = (i + 1).ToString("00") + "  " + label +
+                    (scene.isTerminal ? " [ФИНАЛ]" : string.Empty);
                 GUIStyle sceneButtonStyle = selected ? SceneComposerSelectedSceneButtonStyle : SceneComposerSceneButtonStyle;
                 if (GUILayout.Button(numberedLabel, sceneButtonStyle, GUILayout.Height(22f))) ComposerSelectScene(i);
                 string media = GetSceneComposerMediaKindLabel(scene.media != null ? scene.media.kind : VnSceneComposerMediaKind.None);
@@ -949,6 +962,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     EditorGUILayout.BeginHorizontal();
                     if (GUILayout.Button("Дублировать", EditorStyles.miniButtonLeft)) ComposerDuplicateSelectedScene();
                     if (GUILayout.Button("Удалить", EditorStyles.miniButtonMid)) ComposerDeleteSelectedScene();
+                    if (GUILayout.Button(
+                            scene.isTerminal ? "✓ Конечный кадр" : "Конечный кадр",
+                            EditorStyles.miniButtonMid))
+                        ComposerSetSelectedSceneTerminal(
+                            !scene.isTerminal, scene.terminalFadeDuration);
                     using (new EditorGUI.DisabledScope(i == 0))
                     {
                         if (GUILayout.Button("↑", EditorStyles.miniButtonMid, GUILayout.Width(26f))) ComposerMoveSelectedScene(-1);
@@ -2056,6 +2074,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             EditorGUI.BeginChangeCheck();
             string label = EditorGUILayout.TextField("Название сцены", scene.label ?? string.Empty);
             if (EditorGUI.EndChangeCheck()) ComposerRenameSelectedScene(label);
+
+            EditorGUI.BeginChangeCheck();
+            bool terminal = EditorGUILayout.Toggle("Конечный кадр", scene.isTerminal);
+            float terminalFadeDuration = scene.terminalFadeDuration;
+            if (terminal)
+                terminalFadeDuration = DrawSceneComposerDurationControl(
+                    "Затемнение до чёрного, с", terminalFadeDuration, .05f);
+            if (EditorGUI.EndChangeCheck())
+                ComposerSetSelectedSceneTerminal(terminal, terminalFadeDuration);
+
             EditorGUILayout.HelpBox("Расширенные параметры переходов, тайминга и оформления находятся в «Дополнительно».", MessageType.None);
         }
 
