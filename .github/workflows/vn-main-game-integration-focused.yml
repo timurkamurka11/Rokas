@@ -83,3 +83,26 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: VN Reusable Runtime Player
           artifactsPath: artifacts-vn-runtime-player
+
+  main-game-integration:
+    name: VN Main Menu Start integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Main Menu Start to packaged VN integration
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnSceneComposerMainGameIntegrationPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Main Game Integration
+          artifactsPath: artifacts-vn-main-game-integration
