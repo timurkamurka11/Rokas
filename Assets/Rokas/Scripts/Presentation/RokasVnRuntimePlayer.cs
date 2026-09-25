@@ -38,6 +38,7 @@ namespace Rokas.Presentation
         private readonly RokasVnRuntimeIntroPackage package;
         private readonly RokasVnRuntimePlaybackState playback;
         private readonly Action onCompleted;
+        private readonly RokasVnRuntimeAudioPlayback audioPlayback;
         private readonly Dictionary<string, CharacterView> characterViews =
             new Dictionary<string, CharacterView>(StringComparer.OrdinalIgnoreCase);
 
@@ -60,6 +61,7 @@ namespace Rokas.Presentation
         private bool menuOpen;
         private float uiElapsedSeconds;
         private int renderedSceneIndex = -1;
+        private int renderedBeatIndex = -1;
 
         public bool IsPlaying =>
             !disposed && !playback.IsSequenceCompleted;
@@ -98,6 +100,9 @@ namespace Rokas.Presentation
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 1200;
+
+            audioPlayback =
+                new RokasVnRuntimeAudioPlayback(root.transform, package);
 
             CanvasScaler scaler = root.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -234,6 +239,7 @@ namespace Rokas.Presentation
         {
             ThrowIfDisposed();
             muted = value;
+            audioPlayback.SetMuted(value);
             RefreshControlVisuals();
         }
 
@@ -253,7 +259,10 @@ namespace Rokas.Presentation
 
             uiElapsedSeconds += unscaledDeltaTime;
             if (!menuOpen)
+            {
                 playback.AdvanceTime(unscaledDeltaTime);
+                audioPlayback.Advance(unscaledDeltaTime);
+            }
             RefreshPresentation(false);
         }
 
@@ -267,8 +276,23 @@ namespace Rokas.Presentation
                 renderedSceneIndex != playback.CurrentSceneIndex)
             {
                 renderedSceneIndex = playback.CurrentSceneIndex;
+                renderedBeatIndex = playback.CurrentBeatIndex;
                 RefreshSceneMedia(scene);
                 RebuildCharacterViews(scene);
+                audioPlayback.EnterScene(
+                    scene,
+                    playback.CurrentBeat != null
+                        ? playback.CurrentBeat.beatId
+                        : string.Empty);
+            }
+            else if (renderedBeatIndex != playback.CurrentBeatIndex)
+            {
+                renderedBeatIndex = playback.CurrentBeatIndex;
+                audioPlayback.EnterBeat(
+                    scene,
+                    playback.CurrentBeat != null
+                        ? playback.CurrentBeat.beatId
+                        : string.Empty);
             }
 
             RefreshCharacters(scene);
@@ -603,6 +627,7 @@ namespace Rokas.Presentation
                 return;
             menuOpen = !menuOpen;
             menuOverlay.SetActive(menuOpen);
+            audioPlayback.SetPaused(menuOpen);
             RefreshControlVisuals();
         }
 
@@ -620,6 +645,7 @@ namespace Rokas.Presentation
             disposed = true;
             playback.VnSequenceCompleted -=
                 HandleSequenceCompleted;
+            audioPlayback.Dispose();
             if (root)
             {
                 // Destroy is deferred until the end of the frame. Remove the VN

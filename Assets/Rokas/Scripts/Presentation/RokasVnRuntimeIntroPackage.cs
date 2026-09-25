@@ -315,15 +315,16 @@ namespace Rokas.Presentation
 
         public bool TryValidate(out string error)
         {
-            if (!string.Equals(projectId, ExpectedProjectId, StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(projectId))
             {
-                error = "Runtime intro package Project ID does not match the authoritative intro.";
+                error = "Runtime VN package Project ID is missing.";
                 return false;
             }
             if (snapshot == null ||
-                !string.Equals(snapshot.projectId, ExpectedProjectId, StringComparison.Ordinal))
+                string.IsNullOrWhiteSpace(snapshot.projectId) ||
+                !string.Equals(snapshot.projectId, projectId, StringComparison.Ordinal))
             {
-                error = "Runtime intro snapshot Project ID does not match the package.";
+                error = "Runtime VN snapshot Project ID does not match the package.";
                 return false;
             }
             if (string.IsNullOrWhiteSpace(sourceProjectSha256) ||
