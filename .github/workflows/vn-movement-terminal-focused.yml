@@ -1,0 +1,76 @@
+name: ROKAS VN Focused Movement Terminal Verify
+
+on:
+  push:
+    branches:
+      - codex/vn-arrow-effects
+    paths:
+      - 'Assets/Rokas/Scripts/Editor/VnUiWorkshop/**'
+      - 'Assets/Rokas/Tests/EditorWorkshop/**'
+      - '.github/workflows/vn-movement-terminal-focused.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  focused-vn:
+    name: Focused VN Movement + Terminal
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Character staging and Movement runtime
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerCharacterStagingTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Focused VN Character Staging Movement
+          artifactsPath: artifacts-vn-movement
+
+      - name: Scene Composer Window and Terminal runtime
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerWindowTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Focused VN Window Terminal
+          artifactsPath: artifacts-vn-window-terminal
+
+      - name: Scene Composer UX contracts
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnSceneComposerUxTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Focused VN UX
+          artifactsPath: artifacts-vn-ux
