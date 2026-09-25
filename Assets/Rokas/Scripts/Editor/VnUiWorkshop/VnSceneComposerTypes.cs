@@ -441,6 +441,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
             new VnSceneComposerTextVisualStyleOverride();
         public VnSceneComposerTransition transition = new VnSceneComposerTransition();
         public VnSceneComposerTiming timing = new VnSceneComposerTiming();
+        // Additive terminal marker. Historical Scene data remains non-terminal.
+        public bool isTerminal;
+        public float terminalFadeDuration = 1.5f;
 
         // Transitional source-compatible accessors. JsonUtility serializes fields rather than
         // properties, so the canonical persisted authority remains dialogueBeats only while the

@@ -16,14 +16,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public float UiElapsedSeconds { get; private set; }
         public bool ShowCompletionIndicator
         {
-            get { return !disposed && IsPlaying && !IsSceneTransitionActive && CurrentFrame != null &&
-                CurrentFrame.ShowDialogueText && CurrentFrame.DialogueReveal != null && CurrentFrame.DialogueReveal.Complete; }
+            get { return !disposed && IsPlaying && !IsSceneTransitionActive && !IsTerminalFadeActive &&
+                CurrentFrame != null && CurrentFrame.ShowDialogueText &&
+                CurrentFrame.DialogueReveal != null && CurrentFrame.DialogueReveal.Complete; }
         }
 
         // Every visible advance affordance shares this command and the editor update token.
         public bool RequestAdvance(long inputTick)
         {
-            if (disposed || IsMenuOpen || !IsPlaying || IsSceneTransitionActive || inputTick == lastAdvanceInputTick) return false;
+            if (disposed || IsMenuOpen || !IsPlaying || IsSceneTransitionActive ||
+                IsTerminalFadeActive || inputTick == lastAdvanceInputTick) return false;
             lastAdvanceInputTick = inputTick;
             AdvanceDialogue();
             return true;

@@ -80,6 +80,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public VnSceneComposerSceneTransitionOverlaySample SceneTransitionOverlay { get; }
         public VnSceneComposerReplicaEffectSample ReplicaEffect { get; internal set; }
         public float ForegroundAlpha { get; internal set; } = 1f;
+        public float TerminalFadeAlpha { get; internal set; }
         public bool ShowDialogueUi { get; }
         public VnSceneComposerPlaybackController Owner { get; internal set; }
         public bool ShowDialoguePanel { get; internal set; }
@@ -144,6 +145,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
         private readonly HashSet<string> cancelledCharacterStagingIds =
             new HashSet<string>(StringComparer.Ordinal);
         private bool forceCompleteCurrentDialogueReveal;
+        private bool terminalFadeActive;
+        private float terminalFadeElapsed;
+        private float terminalFadeDuration = 1.5f;
+        private float terminalFadeAlpha;
+        private bool completionSignalRaised;
 
         private SceneBoundaryTransitionPhase sceneBoundaryTransitionPhase;
         private int pendingSceneTransitionTargetIndex = -1;
@@ -177,6 +183,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public int CurrentSceneIndex { get; private set; }
         public int CurrentBeatIndex { get; private set; }
         public bool IsPlaying { get; private set; }
+        public bool IsTerminalFadeActive { get { return terminalFadeActive; } }
+        public bool IsSequenceCompleted { get; private set; }
+        public event Action VnSequenceCompleted;
         public float SceneElapsedSeconds { get; private set; }
         public float BeatElapsedSeconds { get; private set; }
         public float MediaTimeSeconds { get; private set; }
@@ -200,7 +209,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             get { return sceneTransitionAtomicNoneAwaitingVideo ||
                          sceneBoundaryTransitionPhase != SceneBoundaryTransitionPhase.None; }
         }
-        public bool SceneTransitionInputLocked { get { return IsSceneTransitionActive; } }
+        public bool SceneTransitionInputLocked
+        {
+            get { return IsSceneTransitionActive || terminalFadeActive; }
+        }
         public bool SceneTransitionHasSwapped { get { return sceneTransitionHasSwapped; } }
         public int PendingSceneTransitionTargetIndex { get { return pendingSceneTransitionTargetIndex; } }
         public int SceneTransitionStartCount { get; private set; }
@@ -220,6 +232,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PlayScene(int sceneIndex)
         {
+            ResetTerminalCompletionState();
             RequireSceneIndex(sceneIndex);
             CancelSceneBoundaryTransition();
             scope = PlaybackScope.SingleScene;
@@ -231,6 +244,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         internal void PlaySceneFromNeutralStart(int sceneIndex)
         {
+            ResetTerminalCompletionState();
             RequireSceneIndex(sceneIndex);
             CancelSceneBoundaryTransition();
             scope = PlaybackScope.SingleScene;
@@ -247,6 +261,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PlayFromHere(int sceneIndex, int beatIndex)
         {
+            ResetTerminalCompletionState();
             RequireSceneIndex(sceneIndex);
             RequireBeatIndex(project.scenes[sceneIndex], beatIndex);
             CancelSceneBoundaryTransition();
@@ -265,6 +280,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         internal void PlayFromHereFromNeutralStart(int sceneIndex, int beatIndex)
         {
+            ResetTerminalCompletionState();
             RequireSceneIndex(sceneIndex);
             RequireBeatIndex(project.scenes[sceneIndex], beatIndex);
             CancelSceneBoundaryTransition();
@@ -278,6 +294,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
         public void PlayAll()
         {
+            ResetTerminalCompletionState();
             CancelSceneBoundaryTransition();
             if (project.scenes.Count == 0)
             {
@@ -303,6 +320,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
         public void Restart()
         {
             if (CurrentSceneIndex < 0) return;
+            ResetTerminalCompletionState();
             CancelSceneBoundaryTransition();
             IsPlaying = true;
             CurrentBeatIndex = 0;
@@ -361,6 +379,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             UiElapsedSeconds += deltaSeconds;
             InputTick++;
             if (disposed || IsMenuOpen) return;
+            if (terminalFadeActive)
+            {
+                AdvanceTerminalFade(deltaSeconds);
+                return;
+            }
             if (IsSceneTransitionActive)
             {
                 AdvanceSceneBoundaryTransition(deltaSeconds);
@@ -398,6 +421,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
             if (CurrentBeatIndex + 1 < BeatCount(scene))
             {
                 AdvanceDialogue();
+                return;
+            }
+
+            if (scene.isTerminal)
+            {
+                BeginTerminalFade(scene);
                 return;
             }
 
@@ -464,6 +493,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 return;
             }
 
+            if (scene.isTerminal)
+            {
+                BeginTerminalFade(scene);
+                return;
+            }
+
             if (scope == PlaybackScope.OrderedRange && CurrentSceneIndex < rangeEnd)
             {
                 BeginSceneBoundaryTransition(CurrentSceneIndex + 1, true, true);
@@ -506,6 +541,11 @@ namespace Rokas.EditorTools.VnUiWorkshop
             sceneEntryPresentationEnabled = false;
             sceneEntryPresentationElapsedSeconds = 0f;
             forceCompleteCurrentDialogueReveal = false;
+            terminalFadeActive = false;
+            terminalFadeElapsed = 0f;
+            terminalFadeAlpha = 0f;
+            IsSequenceCompleted = false;
+            completionSignalRaised = false;
             CancelSceneBoundaryTransition();
             CurrentMediaTexture = null;
             CurrentSnapshot = null;
@@ -637,6 +677,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 CurrentFrame.DialogueReveal = frozen.DialogueReveal;
                 CurrentFrame.ReplicaEffect = VnSceneComposerReplicaEffects.Sample(null, 0f);
                 CurrentFrame.ForegroundAlpha = SampleSceneBoundaryForegroundAlpha();
+                CurrentFrame.TerminalFadeAlpha = terminalFadeAlpha;
                 return;
             }
 
@@ -762,6 +803,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             CurrentFrame.ShowCharacters = showCharacters;
             CurrentFrame.ShowDialogueText = showDialogueText;
             CurrentFrame.ForegroundAlpha = SampleSceneBoundaryForegroundAlpha();
+            CurrentFrame.TerminalFadeAlpha = terminalFadeAlpha;
             // Keep reveal state/data authoritative even while the renderer gate hides it.
             // This preserves first-click completion semantics without drawing text before
             // the Scene-entry character/text phase is allowed to become visible.
@@ -1650,6 +1692,51 @@ namespace Rokas.EditorTools.VnUiWorkshop
         {
             if (sceneIndex < 0 || sceneIndex >= project.scenes.Count)
                 throw new ArgumentOutOfRangeException(nameof(sceneIndex), sceneIndex, "Scene index is outside the Composer project.");
+        }
+
+        private void BeginTerminalFade(VnSceneComposerScene scene)
+        {
+            if (scene == null || terminalFadeActive || IsSequenceCompleted) return;
+            terminalFadeActive = true;
+            terminalFadeElapsed = 0f;
+            terminalFadeDuration = Mathf.Clamp(scene.terminalFadeDuration, .05f, 10f);
+            terminalFadeAlpha = 0f;
+            RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        private void AdvanceTerminalFade(float deltaSeconds)
+        {
+            if (!terminalFadeActive) return;
+            terminalFadeElapsed += Mathf.Max(0f, deltaSeconds);
+            float raw = Mathf.Clamp01(
+                terminalFadeElapsed / Mathf.Max(.05f, terminalFadeDuration));
+            terminalFadeAlpha = raw * raw * (3f - (2f * raw));
+            RebuildFrame(SceneElapsedSeconds, true);
+            if (raw < 1f) return;
+
+            terminalFadeActive = false;
+            terminalFadeAlpha = 1f;
+            IsPlaying = false;
+            if (videoPreview != null) videoPreview.Pause();
+            musicPlayback.Pause();
+            layeredAudioPlayback.StopAllImmediate();
+            IsSequenceCompleted = true;
+            if (!completionSignalRaised)
+            {
+                completionSignalRaised = true;
+                VnSequenceCompleted?.Invoke();
+            }
+            RebuildFrame(SceneElapsedSeconds, true);
+        }
+
+        private void ResetTerminalCompletionState()
+        {
+            terminalFadeActive = false;
+            terminalFadeElapsed = 0f;
+            terminalFadeDuration = 1.5f;
+            terminalFadeAlpha = 0f;
+            IsSequenceCompleted = false;
+            completionSignalRaised = false;
         }
 
         private void StopEmpty()

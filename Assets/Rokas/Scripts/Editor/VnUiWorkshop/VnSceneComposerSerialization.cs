@@ -412,6 +412,15 @@ namespace Rokas.EditorTools.VnUiWorkshop
 
             AppendCharacterStagingWarnings(scene, diagnostics);
 
+            if (scene.isTerminal &&
+                (!IsFinite(scene.terminalFadeDuration) ||
+                 scene.terminalFadeDuration <= 0f ||
+                 scene.terminalFadeDuration > 10f))
+            {
+                error = "Invalid terminal Scene fade duration in scene " + scene.sceneId + ".";
+                return false;
+            }
+
             if (scene.decorations != null)
             {
                 var decorationIds = new HashSet<string>(StringComparer.Ordinal);
@@ -1418,6 +1427,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 scene.transition.sceneTransitionDuration =
                     Mathf.Clamp(scene.transition.sceneTransitionDuration, 0f, MaxSceneTransitionDuration);
                 if (scene.timing == null) scene.timing = new VnSceneComposerTiming();
+                if (!IsFinite(scene.terminalFadeDuration) ||
+                    scene.terminalFadeDuration <= 0f ||
+                    scene.terminalFadeDuration > 10f)
+                    scene.terminalFadeDuration = 1.5f;
                 if (scene.media.reference == null) scene.media.reference = string.Empty;
                 if (scene.media.displayName == null) scene.media.displayName = string.Empty;
                 if (scene.media.contentHash == null) scene.media.contentHash = string.Empty;
