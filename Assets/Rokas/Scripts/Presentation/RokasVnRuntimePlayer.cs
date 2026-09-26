@@ -714,6 +714,7 @@ namespace Rokas.Presentation
             {
                 renderedSceneIndex = playback.CurrentSceneIndex;
                 renderedBeatIndex = playback.CurrentBeatIndex;
+                ApplyPresentationGeometry(scene.presentation);
                 RefreshSceneMedia(scene);
                 RebuildCharacterViews(scene);
                 audioPlayback.EnterScene(
@@ -742,6 +743,58 @@ namespace Rokas.Presentation
                 !playback.IsSequenceCompleted;
             terminalFade.interactable =
                 terminalFade.blocksRaycasts;
+        }
+
+        private void ApplyPresentationGeometry(
+            RokasVnRuntimePresentationSnapshot presentation)
+        {
+            if (presentation == null ||
+                !presentation.hasResolvedOracleGeometry ||
+                presentation.dialoguePanelRect.width <= 0f ||
+                presentation.dialoguePanelRect.height <= 0f)
+                return;
+
+            Rect plaqueLogical = presentation.dialoguePanelRect;
+            RectTransform plaqueRect =
+                (RectTransform)dialoguePlaque.transform;
+            plaqueRect.sizeDelta = plaqueLogical.size;
+            plaqueRect.anchoredPosition =
+                new Vector2(
+                    plaqueLogical.center.x -
+                    (ReferenceWidth * .5f),
+                    plaqueLogical.y);
+
+            ApplyPlaqueLogicalRect(
+                speakerText.rectTransform,
+                presentation.speakerNameRect,
+                plaqueLogical);
+            ApplyPlaqueLogicalRect(
+                dialogueText.rectTransform,
+                presentation.dialogueTextRect,
+                plaqueLogical);
+
+            RokasVnPlaqueUiLayout layout =
+                RokasVnRuntimeUiSemantics.Layout(
+                    plaqueLogical);
+            ApplyPlaqueLogicalRect(
+                muteButton.GetComponent<RectTransform>(),
+                layout.Mute,
+                plaqueLogical);
+            ApplyPlaqueLogicalRect(
+                forwardButton.GetComponent<RectTransform>(),
+                layout.Forward,
+                plaqueLogical);
+            ApplyPlaqueLogicalRect(
+                menuButton.GetComponent<RectTransform>(),
+                layout.Menu,
+                plaqueLogical);
+            ApplyPlaqueLogicalRect(
+                (RectTransform)completionTriangle.transform,
+                layout.Triangle,
+                plaqueLogical);
+            completionTriangleBasePosition =
+                ((RectTransform)completionTriangle.transform)
+                .anchoredPosition;
         }
 
         private void RefreshSceneMedia(
@@ -1234,7 +1287,10 @@ namespace Rokas.Presentation
                 return;
             }
 
-            speakerText.text = beat.speaker ?? string.Empty;
+            speakerText.text =
+                beat.narration
+                    ? string.Empty
+                    : (beat.speaker ?? string.Empty);
             string full = beat.text ?? string.Empty;
             int visible = Mathf.Clamp(
                 playback.VisibleDialogueCharacters,
@@ -1245,22 +1301,72 @@ namespace Rokas.Presentation
                     ? full
                     : full.Substring(0, visible);
 
+            RokasVnRuntimeTypographySnapshot typography =
+                beat.typography;
+            bool hasBeatTypography =
+                typography != null && typography.resolved;
+
+            string speakerFontGuid =
+                hasBeatTypography
+                    ? typography.speakerFontAssetGuid
+                    : presentation.speakerFontAssetGuid;
+            string dialogueFontGuid =
+                hasBeatTypography
+                    ? typography.dialogueFontAssetGuid
+                    : presentation.dialogueFontAssetGuid;
+            int speakerFontPreset =
+                hasBeatTypography
+                    ? typography.speakerFontPreset
+                    : presentation.speakerFontPreset;
+            int dialogueFontPreset =
+                hasBeatTypography
+                    ? typography.dialogueFontPreset
+                    : presentation.dialogueFontPreset;
+
+            speakerText.font =
+                ResolveRuntimeFont(
+                    speakerFontGuid,
+                    speakerFontPreset);
+            dialogueText.font =
+                ResolveRuntimeFont(
+                    dialogueFontGuid,
+                    dialogueFontPreset);
+            speakerText.fontStyle =
+                string.IsNullOrWhiteSpace(speakerFontGuid)
+                    ? FontStyle.Bold
+                    : FontStyle.Normal;
+            dialogueText.fontStyle = FontStyle.Normal;
+
             speakerText.fontSize = Mathf.Max(
                 1, Mathf.RoundToInt(
-                    presentation.speakerFontSize));
+                    hasBeatTypography
+                        ? typography.speakerFontSize
+                        : presentation.speakerFontSize));
             dialogueText.fontSize = Mathf.Max(
                 1, Mathf.RoundToInt(
-                    presentation.dialogueFontSize));
-            speakerText.color = presentation.speakerColor;
-            dialogueText.color = presentation.dialogueColor;
+                    hasBeatTypography
+                        ? typography.dialogueFontSize
+                        : presentation.dialogueFontSize));
+            speakerText.color =
+                hasBeatTypography
+                    ? typography.speakerColor
+                    : presentation.speakerColor;
+            dialogueText.color =
+                hasBeatTypography
+                    ? typography.dialogueColor
+                    : presentation.dialogueColor;
             speakerText.alignment =
                 ToTextAnchor(
-                    presentation.speakerAlignment,
+                    hasBeatTypography
+                        ? typography.speakerAlignment
+                        : presentation.speakerAlignment,
                     TextAnchor.MiddleLeft);
             dialogueText.alignment =
                 ToTextAnchor(
-                    presentation.dialogueAlignment,
-                    TextAnchor.UpperLeft);
+                    hasBeatTypography
+                        ? typography.dialogueAlignment
+                        : presentation.dialogueAlignment,
+                    TextAnchor.MiddleLeft);
 
             bool showTriangle =
                 playback.IsDialogueRevealComplete &&
@@ -1617,10 +1723,38 @@ namespace Rokas.Presentation
 
         private Font ResolveFallbackFont()
         {
+            return ResolveRuntimeFont(string.Empty, 0);
+        }
+
+        private Font ResolveRuntimeFont(
+            string authoredGuid,
+            int fontPreset)
+        {
+            if (!string.IsNullOrWhiteSpace(authoredGuid))
+            {
+                RokasVnRuntimeAssetBinding binding;
+                if (package.TryGetAsset(
+                        authoredGuid.Trim(),
+                        out binding) &&
+                    binding != null)
+                {
+                    Font authored = binding.asset as Font;
+                    if (authored != null)
+                        return authored;
+                }
+            }
+
             RokasAssets assets =
                 Resources.Load<RokasAssets>("RokasAssets");
-            if (assets != null && assets.sans != null)
-                return assets.sans;
+            if (assets != null)
+            {
+                if (fontPreset == 1 &&
+                    assets.serif != null)
+                    return assets.serif;
+                if (assets.sans != null)
+                    return assets.sans;
+            }
+
             return Resources.GetBuiltinResource<Font>(
                 "LegacyRuntime.ttf");
         }
@@ -1722,6 +1856,7 @@ namespace Rokas.Presentation
                 HorizontalWrapMode.Wrap;
             text.verticalOverflow =
                 VerticalWrapMode.Truncate;
+            text.supportRichText = true;
             text.raycastTarget = false;
             return text;
         }
