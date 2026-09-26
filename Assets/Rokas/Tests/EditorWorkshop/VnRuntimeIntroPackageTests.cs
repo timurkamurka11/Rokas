@@ -205,6 +205,52 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void ExportSnapshotPreservesEffectiveAuthoredPlaqueVisualFromOracle()
+        {
+            const string customPlaqueGuid =
+                "1234567890abcdef1234567890abcdef";
+            var project = new VnSceneComposerProject
+            {
+                projectId = ProjectId,
+                title = "Oracle Plaque Fixture",
+                defaultPresentation = new VnPresentationWorkshopPreset()
+            };
+            project.scenes.Clear();
+            project.defaultPresentation.dialoguePanelVisual.hasAssetGuid = true;
+            project.defaultPresentation.dialoguePanelVisual.assetGuid =
+                customPlaqueGuid;
+
+            var scene = new VnSceneComposerScene { label = "Plaque" };
+            scene.dialogueBeats.Clear();
+            scene.dialogueBeats.Add(
+                new VnSceneComposerDialogueBeat
+                {
+                    speaker = "Mina",
+                    text = "Plaque"
+                });
+            project.scenes.Add(scene);
+
+            RokasVnRuntimeIntroSnapshot snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "oracle-plaque");
+            Assert.That(
+                snapshot.scenes[0].presentation.dialoguePlaqueAssetGuid,
+                Is.EqualTo(customPlaqueGuid));
+
+            project.defaultPresentation.dialoguePanelVisual.assetGuid =
+                VnSceneComposerRuntimeUi.OriginalPlaqueGuid;
+            snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "oracle-default-plaque");
+            Assert.That(
+                snapshot.scenes[0].presentation.dialoguePlaqueAssetGuid,
+                Is.EqualTo(VnSceneComposerRuntimeUi.DefaultPlaqueGuid),
+                "The immutable Preview replaces its legacy/original plaque with the approved default plaque.");
+        }
+
+        [Test]
         public void SpeakerFocusSamplesMatchAuthoritativePreviewResolverAcrossSwitch()
         {
             var project = new VnSceneComposerProject
