@@ -216,6 +216,77 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator BackgroundFitFillAndStretchUsePreviewEquivalentAspectPolicies()
+        {
+            int[] modes = { 0, 1, 2 };
+            AspectRatioFitter.AspectMode[] expected =
+            {
+                AspectRatioFitter.AspectMode.FitInParent,
+                AspectRatioFitter.AspectMode.EnvelopeParent,
+                AspectRatioFitter.AspectMode.None
+            };
+
+            for (int i = 0; i < modes.Length; i++)
+            {
+                package = CreatePackage();
+                package.Snapshot.scenes[0].media.scaleMode =
+                    modes[i];
+                host = new GameObject(
+                    "RuntimeVnMediaScaleMode" + modes[i]);
+
+                RokasVnRuntimePlayer player =
+                    RokasVnRuntimePlayer.Create(
+                        host.transform,
+                        package,
+                        null);
+                yield return null;
+
+                RawImage background =
+                    Find("VnBackground")
+                    .GetComponent<RawImage>();
+                AspectRatioFitter fitter =
+                    background.GetComponent<
+                        AspectRatioFitter>();
+                Assert.That(fitter, Is.Not.Null);
+                Assert.That(
+                    background.uvRect,
+                    Is.EqualTo(
+                        new Rect(0f, 0f, 1f, 1f)));
+
+                if (modes[i] == 2)
+                {
+                    Assert.That(
+                        fitter.enabled,
+                        Is.False,
+                        "Stretch alone may break authored source aspect.");
+                }
+                else
+                {
+                    Assert.That(
+                        fitter.enabled,
+                        Is.True);
+                    Assert.That(
+                        fitter.aspectMode,
+                        Is.EqualTo(expected[i]),
+                        modes[i] == 0
+                            ? "Fit must match Preview ScaleToFit."
+                            : "Fill must match Preview ScaleAndCrop.");
+                    Assert.That(
+                        fitter.aspectRatio,
+                        Is.EqualTo(
+                            (float)background.texture.width /
+                            background.texture.height)
+                            .Within(.0001f));
+                }
+
+                player.Dispose();
+                Object.Destroy(host);
+                host = null;
+                yield return null;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator AuthoredBgmAndSfxRespectMuteAndDisposeWithRuntime()
         {
             package = CreateAudioPackage();
