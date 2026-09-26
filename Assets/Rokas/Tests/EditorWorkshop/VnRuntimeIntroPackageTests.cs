@@ -14,6 +14,35 @@ namespace Rokas.EditorTools.Tests
         private const string ProjectId = "3cc2bc9ec7974ea7a5f4d074683bed61";
 
         [Test]
+        public void RuntimePresentationContractCarriesOracleBounceCharacterAndExpressionTimings()
+        {
+            string[] required =
+            {
+                "actionBounceAmplitude",
+                "actionBounceDuration",
+                "actionBounceScaleEmphasis",
+                "actionBounceOvershoot",
+                "actionBounceEasing",
+                "characterTransitionMode",
+                "characterTransitionDuration",
+                "characterTransitionFadeDuration",
+                "characterTransitionSlideDistance",
+                "characterTransitionSlideDirection",
+                "characterTransitionEasing",
+                "expressionTransitionDuration",
+                "expressionTransitionEasing"
+            };
+
+            for (int i = 0; i < required.Length; i++)
+                Assert.That(
+                    typeof(RokasVnRuntimePresentationSnapshot)
+                        .GetField(required[i]),
+                    Is.Not.Null,
+                    "Runtime must carry immutable Preview timing/curve semantics instead of inventing fallback animation values: " +
+                    required[i]);
+        }
+
+        [Test]
         public void ExportSnapshotPreservesIdentityMovementAndTerminalWithoutHardcodedCounts()
         {
             var project = new VnSceneComposerProject
