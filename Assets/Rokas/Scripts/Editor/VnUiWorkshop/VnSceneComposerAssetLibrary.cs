@@ -438,19 +438,55 @@ namespace Rokas.EditorTools.VnUiWorkshop
             entry.contentHash = Sha256File(absolute);
         }
 
-        private static void ConfigureStillImporter(string assetPath, VnSceneComposerAssetPurpose purpose)
+        private static void ConfigureStillImporter(
+            string assetPath,
+            VnSceneComposerAssetPurpose purpose)
         {
-            TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            ConfigureStillImporterForNativeQuality(assetPath);
+        }
+
+        internal static void ConfigureStillImporterForNativeQuality(
+            string assetPath)
+        {
+            TextureImporter importer =
+                AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (importer == null) return;
-            importer.textureType = TextureImporterType.Default;
-            importer.mipmapEnabled = false;
-            importer.npotScale = TextureImporterNPOTScale.None;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.filterMode = FilterMode.Bilinear;
-            if (string.Equals(Path.GetExtension(assetPath), ".png", StringComparison.OrdinalIgnoreCase))
+
+            importer.GetSourceTextureWidthAndHeight(
+                out int sourceWidth,
+                out int sourceHeight);
+            int sourceLongest =
+                Mathf.Max(sourceWidth, sourceHeight);
+            if (sourceLongest > 0)
             {
-                importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                int requiredMaxSize = Mathf.Clamp(
+                    Mathf.NextPowerOfTwo(sourceLongest),
+                    32,
+                    16384);
+                if (importer.maxTextureSize <
+                    requiredMaxSize)
+                    importer.maxTextureSize =
+                        requiredMaxSize;
+            }
+
+            importer.textureType =
+                TextureImporterType.Default;
+            importer.mipmapEnabled = false;
+            importer.npotScale =
+                TextureImporterNPOTScale.None;
+            importer.textureCompression =
+                TextureImporterCompression.Uncompressed;
+            importer.wrapMode =
+                TextureWrapMode.Clamp;
+            importer.filterMode =
+                FilterMode.Bilinear;
+            if (string.Equals(
+                    Path.GetExtension(assetPath),
+                    ".png",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                importer.alphaSource =
+                    TextureImporterAlphaSource.FromInput;
                 importer.alphaIsTransparency = true;
             }
             importer.SaveAndReimport();
