@@ -3,7 +3,8 @@
   "rootNamespace": "Rokas.EditorTools.Tests",
   "references": [
     "Rokas.Editor",
-    "Rokas.Presentation"
+    "Rokas.Presentation",
+    "Rokas.WorkshopComponents"
   ],
   "includePlatforms": [
     "Editor"
