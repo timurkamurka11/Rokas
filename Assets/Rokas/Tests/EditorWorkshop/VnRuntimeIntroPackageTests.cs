@@ -79,6 +79,27 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void RuntimeContractCarriesImmutableOracleGeometryAndPerBeatTypography()
+        {
+            Assert.That(
+                typeof(RokasVnRuntimePresentationSnapshot).GetField("dialoguePanelRect"),
+                Is.Not.Null,
+                "Immutable 3db14827 oracle geometry must be exported instead of reconstructed by Runtime.");
+            Assert.That(
+                typeof(RokasVnRuntimePresentationSnapshot).GetField("speakerNameRect"),
+                Is.Not.Null,
+                "Speaker rect must be the resolved authored Preview rect.");
+            Assert.That(
+                typeof(RokasVnRuntimePresentationSnapshot).GetField("dialogueTextRect"),
+                Is.Not.Null,
+                "Dialogue rect must be the resolved authored Preview rect.");
+            Assert.That(
+                typeof(RokasVnRuntimeBeatSnapshot).GetField("typography"),
+                Is.Not.Null,
+                "Typography can vary by authored speaker/Beat and must not be collapsed to one Scene-level style.");
+        }
+
+        [Test]
         public void SpeakerFocusSamplesMatchAuthoritativePreviewResolverAcrossSwitch()
         {
             var project = new VnSceneComposerProject
