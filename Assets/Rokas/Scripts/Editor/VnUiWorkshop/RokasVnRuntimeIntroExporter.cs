@@ -229,7 +229,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     {
                         VnSceneComposerDialogueBeat beat = scene.dialogueBeats[i];
                         if (beat == null) continue;
-                        mapped.dialogueBeats.Add(MapBeat(beat));
+                        mapped.dialogueBeats.Add(MapBeat(project, scene, beat));
                         result.beatCount++;
                     }
                 }
@@ -255,9 +255,30 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnPresentationWorkshopVn10Resolver.ResolveTypewriter(preset);
             VnWorkshopTypographyValues typography =
                 VnPresentationWorkshopVn10Resolver.ResolveTypography(preset);
+            VnSceneComposerDialogueBeat geometryBeat = null;
+            if (scene != null && scene.dialogueBeats != null)
+            {
+                for (int i = 0; i < scene.dialogueBeats.Count; i++)
+                {
+                    if (scene.dialogueBeats[i] == null) continue;
+                    geometryBeat = scene.dialogueBeats[i];
+                    break;
+                }
+            }
+            VnWorkshopPreviewFrame oracleFrame =
+                VnSceneComposerComposition.BuildFrame(
+                    project,
+                    scene,
+                    geometryBeat,
+                    VnWorkshopResolution.Reference1920x1080,
+                    null);
 
             return new RokasVnRuntimePresentationSnapshot
             {
+                hasResolvedOracleGeometry = true,
+                dialoguePanelRect = oracleFrame.DialoguePanel,
+                speakerNameRect = oracleFrame.SpeakerName,
+                dialogueTextRect = oracleFrame.DialogueText,
                 leftX = stage.LeftX,
                 centerX = stage.CenterX,
                 rightX = stage.RightX,
@@ -374,7 +395,10 @@ namespace Rokas.EditorTools.VnUiWorkshop
             };
         }
 
-        private static RokasVnRuntimeBeatSnapshot MapBeat(VnSceneComposerDialogueBeat beat)
+        private static RokasVnRuntimeBeatSnapshot MapBeat(
+            VnSceneComposerProject project,
+            VnSceneComposerScene scene,
+            VnSceneComposerDialogueBeat beat)
         {
             var mapped = new RokasVnRuntimeBeatSnapshot
             {
@@ -389,7 +413,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 effectStrength = beat.effectStrength,
                 effectDuration = beat.effectDuration,
                 replicaEffect = MapReplicaEffect(beat.replicaEffect),
-                movement = MapMovement(beat.movement)
+                movement = MapMovement(beat.movement),
+                typography = MapTypography(
+                    VnSceneComposerTextStyleResolver.Resolve(
+                        project,
+                        scene,
+                        beat))
             };
 
             if (beat.characterStaging != null)
@@ -401,6 +430,29 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 }
             }
             return mapped;
+        }
+
+        private static RokasVnRuntimeTypographySnapshot MapTypography(
+            VnWorkshopTypographyValues typography)
+        {
+            return new RokasVnRuntimeTypographySnapshot
+            {
+                resolved = true,
+                dialogueFontPreset = (int)typography.DialogueFontPreset,
+                dialogueFontAssetGuid = typography.DialogueFontAssetGuid ?? string.Empty,
+                dialogueColor = typography.DialogueColor,
+                dialogueFontSize = typography.DialogueFontSize,
+                dialogueCharacterSpacing = typography.DialogueCharacterSpacing,
+                dialogueLineSpacing = typography.DialogueLineSpacing,
+                dialogueParagraphSpacing = typography.DialogueParagraphSpacing,
+                dialogueAlignment = (int)typography.DialogueAlignment,
+                speakerFontPreset = (int)typography.SpeakerFontPreset,
+                speakerFontAssetGuid = typography.SpeakerFontAssetGuid ?? string.Empty,
+                speakerColor = typography.SpeakerColor,
+                speakerFontSize = typography.SpeakerFontSize,
+                speakerCharacterSpacing = typography.SpeakerCharacterSpacing,
+                speakerAlignment = (int)typography.SpeakerAlignment
+            };
         }
 
         private static RokasVnRuntimeReplicaEffectSnapshot MapReplicaEffect(
@@ -496,11 +548,24 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 throw new FileNotFoundException(
                     "Authored VN asset GUID is missing from the project: " + guid);
 
-            string extension = Path.GetExtension(sourcePath);
+            string bindingSourcePath = sourcePath;
+            if (VnSceneComposerTextFontResolver.TryResolvePreviewFont(
+                    guid,
+                    out Font resolvedPreviewFont,
+                    out string _) &&
+                resolvedPreviewFont != null)
+            {
+                string resolvedFontPath =
+                    AssetDatabase.GetAssetPath(resolvedPreviewFont);
+                if (!string.IsNullOrEmpty(resolvedFontPath))
+                    bindingSourcePath = resolvedFontPath;
+            }
+
+            string extension = Path.GetExtension(bindingSourcePath);
             if (string.IsNullOrEmpty(extension)) extension = ".asset";
             string destination =
                 runtimeRoot + "/Assets/" + guid.ToLowerInvariant() + extension.ToLowerInvariant();
-            UnityEngine.Object copied = CopyAssetObject(sourcePath, destination);
+            UnityEngine.Object copied = CopyAssetObject(bindingSourcePath, destination);
             if (IsManagedComposerStill(sourcePath) &&
                 (copied is Texture2D || copied is Sprite))
             {
@@ -515,7 +580,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
             {
                 authoredKey = guid.ToLowerInvariant(),
                 displayName = copied != null ? copied.name : Path.GetFileNameWithoutExtension(sourcePath),
-                contentHash = AssetDatabase.GetAssetDependencyHash(sourcePath).ToString(),
+                contentHash = AssetDatabase.GetAssetDependencyHash(bindingSourcePath).ToString(),
                 kind = Classify(copied),
                 asset = copied
             });
