@@ -167,6 +167,22 @@ namespace Rokas.Presentation
         public float stageRepositionDuration = .35f;
         public int stageEasing = 3;
 
+        public float actionBounceAmplitude = 18f;
+        public float actionBounceDuration = .28f;
+        public float actionBounceScaleEmphasis = .03f;
+        public float actionBounceOvershoot = .15f;
+        public int actionBounceEasing = 3;
+
+        public int characterTransitionMode = 1;
+        public float characterTransitionDuration = .30f;
+        public float characterTransitionFadeDuration = .30f;
+        public float characterTransitionSlideDistance = 64f;
+        public int characterTransitionSlideDirection;
+        public int characterTransitionEasing = 3;
+
+        public float expressionTransitionDuration = .24f;
+        public int expressionTransitionEasing = 3;
+
         public float speakerActiveScale = 1.05f;
         public float speakerActiveBrightness = 1f;
         public float speakerActiveForwardOffset = 12f;
