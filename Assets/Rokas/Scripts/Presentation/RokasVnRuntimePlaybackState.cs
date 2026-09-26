@@ -706,14 +706,15 @@ namespace Rokas.Presentation
 
             string activeId = ResolveBeatCharacterId(
                 CurrentBeat, visibleIds);
+            if (string.IsNullOrEmpty(activeId))
+                return;
+
             string previousId = CurrentBeatIndex > 0 &&
                                 scene.dialogueBeats != null
                 ? ResolveBeatCharacterId(
                     scene.dialogueBeats[CurrentBeatIndex - 1],
                     visibleIds)
                 : activeId;
-            if (string.IsNullOrEmpty(activeId))
-                activeId = visibleIds[0];
             if (string.IsNullOrEmpty(previousId))
                 previousId = activeId;
 
