@@ -231,6 +231,101 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void NarrationWithTwoVisibleCharactersDoesNotInventSpeakerFocus()
+        {
+            var project = new VnSceneComposerProject
+            {
+                projectId = ProjectId,
+                title = "Narration Focus Parity Fixture",
+                defaultPresentation = new VnPresentationWorkshopPreset()
+            };
+            project.scenes.Clear();
+
+            VnPresentationWorkshopVn10Resolver.SetSpeakerFocusPreviewOverrides(
+                project.defaultPresentation,
+                1.08f,
+                1.10f,
+                14f,
+                .90f,
+                .65f,
+                .70f,
+                .50f,
+                VnWorkshopEasing.Linear);
+
+            var scene = new VnSceneComposerScene
+            {
+                label = "Narration"
+            };
+            scene.characters.Clear();
+            scene.characters.Add(new VnSceneComposerCharacter
+            {
+                characterId = "Mina",
+                stateId = "mina_neutral",
+                stageSlot = VnWorkshopStageSlot.Left
+            });
+            scene.characters.Add(new VnSceneComposerCharacter
+            {
+                characterId = "Keiko",
+                stateId = "keiko_neutral",
+                stageSlot = VnWorkshopStageSlot.Right
+            });
+            scene.dialogueBeats.Clear();
+            var beat = new VnSceneComposerDialogueBeat
+            {
+                narration = true,
+                speaker = string.Empty,
+                text = string.Empty
+            };
+            scene.dialogueBeats.Add(beat);
+            project.scenes.Add(scene);
+
+            VnWorkshopPreviewFrame preview =
+                VnSceneComposerComposition.BuildFrame(
+                    project,
+                    scene,
+                    beat,
+                    VnWorkshopResolution.Reference1920x1080,
+                    null,
+                    1f);
+            VnWorkshopPreviewCharacter previewMina =
+                preview.ComposerCharacters.First(
+                    item => item != null &&
+                        item.CharacterId == "Mina");
+            VnWorkshopPreviewCharacter previewKeiko =
+                preview.ComposerCharacters.First(
+                    item => item != null &&
+                        item.CharacterId == "Keiko");
+
+            RokasVnRuntimeIntroSnapshot snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "narration-focus-parity");
+            var runtime =
+                new RokasVnRuntimePlaybackState(snapshot);
+            runtime.StartFromBeginning();
+
+            RokasVnRuntimeCharacterSample runtimeMina =
+                runtime.SampleCharacter("Mina");
+            RokasVnRuntimeCharacterSample runtimeKeiko =
+                runtime.SampleCharacter("Keiko");
+
+            Assert.That(runtimeMina.brightness,
+                Is.EqualTo(previewMina.Brightness).Within(.0001f));
+            Assert.That(runtimeKeiko.brightness,
+                Is.EqualTo(previewKeiko.Brightness).Within(.0001f));
+            Assert.That(runtimeMina.alpha,
+                Is.EqualTo(previewMina.Alpha).Within(.0001f));
+            Assert.That(runtimeKeiko.alpha,
+                Is.EqualTo(previewKeiko.Alpha).Within(.0001f));
+            Assert.That(runtimeMina.brightness,
+                Is.EqualTo(1f).Within(.0001f),
+                "Narration must not invent an active first character.");
+            Assert.That(runtimeKeiko.brightness,
+                Is.EqualTo(1f).Within(.0001f),
+                "Narration must leave all visible characters unfocused exactly like Preview.");
+        }
+
+        [Test]
         public void ProjectOwnedExportCopiesAuthoredGuidAssetsAndRuntimeUiOutsideEditor()
         {
             const string root =
