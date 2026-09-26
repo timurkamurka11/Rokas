@@ -272,6 +272,20 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     geometryBeat,
                     VnWorkshopResolution.Reference1920x1080,
                     null);
+            string plaqueAssetGuid = string.Empty;
+            VnWorkshopDialoguePanelVisualOverride plaqueVisual =
+                preset.dialoguePanelVisual;
+            if (plaqueVisual != null &&
+                plaqueVisual.hasAssetGuid)
+                plaqueAssetGuid =
+                    (plaqueVisual.assetGuid ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(plaqueAssetGuid) ||
+                string.Equals(
+                    plaqueAssetGuid,
+                    VnSceneComposerRuntimeUi.OriginalPlaqueGuid,
+                    StringComparison.OrdinalIgnoreCase))
+                plaqueAssetGuid =
+                    VnSceneComposerRuntimeUi.DefaultPlaqueGuid;
 
             return new RokasVnRuntimePresentationSnapshot
             {
@@ -279,6 +293,7 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 dialoguePanelRect = oracleFrame.DialoguePanel,
                 speakerNameRect = oracleFrame.SpeakerName,
                 dialogueTextRect = oracleFrame.DialogueText,
+                dialoguePlaqueAssetGuid = plaqueAssetGuid,
                 leftX = stage.LeftX,
                 centerX = stage.CenterX,
                 rightX = stage.RightX,
