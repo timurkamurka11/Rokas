@@ -685,6 +685,106 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator AuthoredFadeUsesOracleSoftForegroundAndBackgroundComposition()
+        {
+            package = CreateTransitionPackage();
+            package.Snapshot.scenes[1].sceneTransitionType = 2;
+            host = new GameObject("RuntimeVnFadeTransitionFixture");
+
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            RawImage background =
+                Find("VnBackground").GetComponent<RawImage>();
+            Texture firstBackground = package.Assets
+                .First(binding =>
+                    binding.authoredKey ==
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                .asset as Texture;
+            Texture secondBackground = package.Assets
+                .First(binding =>
+                    binding.authoredKey ==
+                    "ffffffffffffffffffffffffffffffff")
+                .asset as Texture;
+
+            Assert.That(background.texture, Is.SameAs(firstBackground));
+            Assert.That(player.RequestAdvance(), Is.True);
+
+            CanvasGroup overlay =
+                Find("VnSceneTransitionOverlay")
+                    .GetComponent<CanvasGroup>();
+            CanvasGroup characterForeground =
+                Find("VnCharacters")
+                    .GetComponent<CanvasGroup>();
+            CanvasGroup plaqueForeground =
+                Find("VnDialoguePlaque")
+                    .GetComponent<CanvasGroup>();
+            RawImage sourceBackground =
+                Find("VnTransitionSourceBackground")
+                    .GetComponent<RawImage>();
+
+            player.TickForTests(.10f);
+            Assert.That(
+                overlay.alpha,
+                Is.EqualTo(.11f).Within(.005f),
+                "Immutable Preview Fade uses only the .22 max dark overlay, not a near-black fullscreen fade.");
+            Assert.That(
+                characterForeground.alpha,
+                Is.EqualTo(.5f).Within(.01f));
+            Assert.That(
+                plaqueForeground.alpha,
+                Is.EqualTo(.5f).Within(.01f));
+            Assert.That(
+                player.Playback.CurrentSceneIndex,
+                Is.Zero);
+
+            player.TickForTests(.10f);
+            Assert.That(
+                player.Playback.CurrentSceneIndex,
+                Is.EqualTo(1));
+            Assert.That(
+                sourceBackground.texture,
+                Is.SameAs(firstBackground),
+                "Outgoing background must stay available under the incoming image during Fade reveal.");
+            Assert.That(
+                sourceBackground.gameObject.activeSelf,
+                Is.True);
+            Assert.That(
+                background.texture,
+                Is.SameAs(secondBackground));
+            Assert.That(
+                background.color.a,
+                Is.Zero.Within(.01f),
+                "Incoming background begins the reveal fully transparent, matching Preview composition.");
+
+            player.TickForTests(.10f);
+            Assert.That(
+                background.color.a,
+                Is.EqualTo(.5f).Within(.03f),
+                "Incoming background must crossfade over the retained outgoing frame.");
+            Assert.That(
+                overlay.alpha,
+                Is.EqualTo(.11f).Within(.005f));
+            Assert.That(
+                characterForeground.alpha,
+                Is.EqualTo(.5f).Within(.01f));
+            Assert.That(
+                plaqueForeground.alpha,
+                Is.EqualTo(.5f).Within(.01f));
+
+            player.TickForTests(.10f);
+            Assert.That(player.IsSceneTransitionActive, Is.False);
+            Assert.That(background.color.a, Is.EqualTo(1f).Within(.001f));
+            Assert.That(sourceBackground.gameObject.activeSelf, Is.False);
+            Assert.That(characterForeground.alpha, Is.EqualTo(1f).Within(.001f));
+            Assert.That(plaqueForeground.alpha, Is.EqualTo(1f).Within(.001f));
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AuthoredDarkCurtainCoversSceneSwapAndLocksAdvance()
         {
             package = CreateTransitionPackage();
