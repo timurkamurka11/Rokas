@@ -633,7 +633,13 @@ namespace Rokas.Presentation
 
             RectTransform rect =
                 (RectTransform)sceneTransitionImage.transform;
-            sceneTransitionOverlay.alpha = coverage;
+            // Wipe coverage is represented by the overlay RectTransform itself.
+            // Keep every covered pixel opaque; fading the wipe re-exposes the
+            // outgoing frame and creates a visible half-transparent transition.
+            sceneTransitionOverlay.alpha =
+                sceneTransitionType == 1
+                    ? (coverage > .0001f ? 1f : 0f)
+                    : coverage;
             sceneTransitionOverlay.blocksRaycasts = true;
             sceneTransitionOverlay.interactable = true;
 
@@ -695,8 +701,18 @@ namespace Rokas.Presentation
         {
             foreach (CharacterView view in characterViews.Values)
             {
-                if (view != null && view.Image != null)
-                    UnityEngine.Object.Destroy(view.Image.gameObject);
+                if (view == null || view.Image == null) continue;
+
+                // Destroy is deferred in PlayMode. Remove outgoing characters
+                // from render ownership synchronously at the covered Scene swap
+                // so old and incoming render trees can never overlap for a frame.
+                GameObject characterObject = view.Image.gameObject;
+                characterObject.SetActive(false);
+                characterObject.transform.SetParent(null, false);
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(characterObject);
+                else
+                    UnityEngine.Object.DestroyImmediate(characterObject);
             }
             characterViews.Clear();
 

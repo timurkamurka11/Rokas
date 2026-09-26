@@ -134,6 +134,8 @@ namespace Rokas.Tests
             yield return null;
 
             RawImage background = Find("VnBackground").GetComponent<RawImage>();
+            GameObject outgoingCharacter = Find("VnCharacter_Mina");
+            Assert.That(outgoingCharacter, Is.Not.Null);
             Texture firstBackground = package.Assets
                 .First(binding => binding.authoredKey == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
                 .asset as Texture;
@@ -152,17 +154,37 @@ namespace Rokas.Tests
             Assert.That(overlay.blocksRaycasts, Is.True);
 
             player.TickForTests(.10f);
-            Assert.That(overlay.alpha, Is.GreaterThan(0f).And.LessThan(1f));
+            Assert.That(overlay.alpha, Is.EqualTo(1f).Within(.001f),
+                "The authored wipe must be opaque everywhere it covers the outgoing frame.");
             Assert.That(player.Playback.CurrentSceneIndex, Is.Zero);
+            Assert.That(Find("VnCharacter_Mina"), Is.SameAs(outgoingCharacter),
+                "Outgoing character render state must remain intact until the covered swap point.");
             Assert.That(player.RequestAdvance(), Is.False,
                 "Dialogue input must be locked during the authored Scene boundary.");
 
-            player.TickForTests(.11f);
+            player.TickForTests(.10f);
             Assert.That(player.Playback.CurrentSceneIndex, Is.EqualTo(1));
             Assert.That(background.texture, Is.SameAs(secondBackground),
                 "Background swap must happen under the authored dark cover.");
+            Assert.That(overlay.alpha, Is.EqualTo(1f).Within(.001f),
+                "The Scene swap must commit while the authored curtain is fully closed.");
+            Assert.That(outgoingCharacter.activeSelf, Is.False,
+                "Outgoing character GameObjects must stop rendering synchronously at the swap.");
+            Assert.That(outgoingCharacter.transform.parent, Is.Null,
+                "Outgoing character GameObjects must leave the runtime render tree synchronously.");
+            Assert.That(Find("VnCharacter_Mina"), Is.Null,
+                "No outgoing character render entry may survive into the incoming Scene tree.");
 
-            player.TickForTests(.21f);
+            GameObject incomingCharacter = Find("VnCharacter_Keiko");
+            Assert.That(incomingCharacter, Is.Not.Null,
+                "Incoming character render state must already be prepared under the closed curtain.");
+            Assert.That(incomingCharacter.activeSelf, Is.True);
+            RawImage incomingImage = incomingCharacter.GetComponent<RawImage>();
+            Texture incomingTexture = package.CharacterStates
+                .First(binding => binding.stateId == "keiko_runtime").texture;
+            Assert.That(incomingImage.texture, Is.SameAs(incomingTexture));
+
+            player.TickForTests(.20f);
             Assert.That(player.IsSceneTransitionActive, Is.False);
             Assert.That(overlay.alpha, Is.Zero.Within(.001f));
             Assert.That(overlay.blocksRaycasts, Is.False);
@@ -267,6 +289,7 @@ namespace Rokas.Tests
         {
             RokasVnRuntimeIntroPackage result = CreatePackage();
             Texture2D secondBackground = MakeTexture("RuntimeBackgroundTwo");
+            Texture2D secondCharacter = MakeTexture("RuntimeKeiko");
 
             RokasVnRuntimeSceneSnapshot first = result.Snapshot.scenes[0];
             first.label = "Before Transition";
@@ -296,10 +319,16 @@ namespace Rokas.Tests
                     scaleMode = 1
                 }
             };
+            second.characters.Add(new RokasVnRuntimeCharacterSnapshot
+            {
+                characterId = "Keiko",
+                stateId = "keiko_runtime",
+                stageSlot = 1
+            });
             second.dialogueBeats.Add(new RokasVnRuntimeBeatSnapshot
             {
                 beatId = "66666666666666666666666666666666",
-                speaker = "Mina",
+                speaker = "Keiko",
                 text = string.Empty
             });
 
@@ -317,13 +346,21 @@ namespace Rokas.Tests
                 kind = RokasVnRuntimeAssetKind.Texture,
                 asset = secondBackground
             });
+            var characterStates = result.CharacterStates.ToList();
+            characterStates.Add(new RokasVnRuntimeCharacterStateBinding
+            {
+                stateId = "keiko_runtime",
+                characterId = "Keiko",
+                texture = secondCharacter,
+                bodyUv = new Rect(0f, 0f, 1f, 1f)
+            });
             result.Configure(
                 result.ProjectId,
                 result.SourceProjectSha256,
                 result.PortableProjectJson,
                 result.Snapshot,
                 assets,
-                result.CharacterStates.ToList(),
+                characterStates,
                 result.DialoguePlaque,
                 result.ControlSheet,
                 result.MutedSpeaker,

@@ -168,6 +168,93 @@ namespace Rokas.EditorTools.Tests
             }
         }
 
+
+        [Test]
+        public void ExternalPngExportPreservesNativeWidthAboveUnityDefaultMaxSize()
+        {
+            const string root =
+                "Assets/Rokas/Tests/EditorWorkshop/__RuntimeNativeImageFixture";
+            const string runtimeRoot = root + "/Runtime";
+            const string packagePath =
+                runtimeRoot + "/RokasVnRuntimeIntroPackage.asset";
+            string externalPath = Path.Combine(
+                Path.GetTempPath(),
+                "RokasVnRuntimeNative2305.png");
+
+            AssetDatabase.DeleteAsset(root);
+            Directory.CreateDirectory(root);
+            if (File.Exists(externalPath)) File.Delete(externalPath);
+
+            var sourceTexture =
+                new Texture2D(2305, 7, TextureFormat.RGBA32, false);
+            try
+            {
+                sourceTexture.SetPixel(0, 0, Color.cyan);
+                sourceTexture.Apply(false, false);
+                File.WriteAllBytes(
+                    externalPath,
+                    sourceTexture.EncodeToPNG());
+            }
+            finally
+            {
+                Object.DestroyImmediate(sourceTexture);
+            }
+
+            try
+            {
+                var project = new VnSceneComposerProject
+                {
+                    projectId = ProjectId,
+                    title = "Native External Image Fixture"
+                };
+                project.scenes.Clear();
+                var scene = new VnSceneComposerScene
+                {
+                    label = "Terminal",
+                    isTerminal = true,
+                    terminalFadeDuration = .4f,
+                    media = new VnSceneComposerMediaReference
+                    {
+                        kind = VnSceneComposerMediaKind.ExternalImage,
+                        reference = externalPath,
+                        displayName = "Native2305.png",
+                        scaleMode = VnSceneComposerMediaScaleMode.Fit
+                    }
+                };
+                scene.dialogueBeats[0].text = "Native image";
+                project.scenes.Add(scene);
+
+                RokasVnRuntimeIntroPackage package =
+                    RokasVnRuntimeIntroExporter.ExportProjectOwnedPackage(
+                        project,
+                        JsonUtility.ToJson(project),
+                        "native-image-fixture-sha256",
+                        packagePath,
+                        runtimeRoot);
+
+                string key = "scene-media:" + scene.sceneId;
+                Assert.That(
+                    package.TryGetAsset(
+                        key,
+                        out RokasVnRuntimeAssetBinding binding),
+                    Is.True);
+                Texture2D exported = binding.asset as Texture2D;
+                Assert.That(exported, Is.Not.Null);
+                Assert.That(
+                    exported.width,
+                    Is.EqualTo(2305),
+                    "Runtime packaging must not silently reduce authored 2305 px PNG media to Unity's 2048 px default import limit.");
+                Assert.That(exported.height, Is.EqualTo(7));
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(root);
+                AssetDatabase.Refresh();
+                if (File.Exists(externalPath))
+                    File.Delete(externalPath);
+            }
+        }
+
         [Test]
         public void RuntimePlayerDecodesPackagedGifBytesIntoBackgroundTexture()
         {
