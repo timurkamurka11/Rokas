@@ -77,7 +77,7 @@ namespace Rokas.Tests
             {
                 RectTransform rect = FindRect(legacyChrome);
                 Assert.That(rect, Is.Not.Null, legacyChrome + " must still exist for non-Home screens.");
-                Assert.That(rect.gameObject.activeSelf, Is.False,
+                Assert.That(rect.gameObject.activeInHierarchy, Is.False,
                     legacyChrome + " must be hidden while Home uses the scan-mode oracle.");
             }
 
