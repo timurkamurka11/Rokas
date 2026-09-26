@@ -19,6 +19,7 @@ namespace Rokas.Presentation
         private readonly RectTransform stage;
         private readonly RectTransform scene;
         private readonly CanvasGroup sceneInput;
+        private readonly RectTransform globalChrome;
         private readonly Button settingsButton;
         private readonly RectTransform panels;
         private readonly RectTransform transitions;
@@ -71,16 +72,17 @@ namespace Rokas.Presentation
             scene = ui.Rect(stage, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
-            ui.Box(stage, "HeaderShade", 0, 0, 1920, 100, new Color(.025f, .045f, .05f, .86f));
-            ui.Box(stage, "HeaderRule", 56, 99, 1808, 1, new Color(.5f, .6f, .55f, .3f));
-            ui.Label(stage, "Logo", "R O K A S", 58, 15, 305, 66, 36, UiKit.Paper, true);
-            ui.Label(stage, "BrandTag", "YOKAI CONTRACT HUNTER", 370, 23, 320, 25, 14, UiKit.Muted);
-            status = ui.Label(stage, "LocationStatus", "ТВОЙ ДОМ", 370, 47, 520, 26, 17, UiKit.Gold);
-            wallet = ui.Label(stage, "Wallet", "", 1155, 18, 475, 58, 22, UiKit.Paper, false, TextAnchor.MiddleRight);
-            settingsButton = ui.Button(stage, "Settings", "Настройки", 1675, 23, 185, 52, () => OpenPanel("settings"));
-            ui.Box(stage, "FooterShade", 0, 1006, 1920, 74, new Color(.025f, .045f, .05f, .88f));
-            ui.Label(stage, "Controls", "TAB  выбрать предмет    ENTER  взаимодействовать    ESC  пауза / назад", 58, 1018, 1220, 37, 17, UiKit.Muted);
-            saved = ui.Label(stage, "SaveStatus", "ПРОФИЛЬ СОХРАНЁН", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
+            globalChrome = ui.Rect(stage, "GlobalChrome", 0, 0, 1920, 1080);
+            ui.Box(globalChrome, "HeaderShade", 0, 0, 1920, 100, new Color(.025f, .045f, .05f, .86f));
+            ui.Box(globalChrome, "HeaderRule", 56, 99, 1808, 1, new Color(.5f, .6f, .55f, .3f));
+            ui.Label(globalChrome, "Logo", "R O K A S", 58, 15, 305, 66, 36, UiKit.Paper, true);
+            ui.Label(globalChrome, "BrandTag", "YOKAI CONTRACT HUNTER", 370, 23, 320, 25, 14, UiKit.Muted);
+            status = ui.Label(globalChrome, "LocationStatus", "ТВОЙ ДОМ", 370, 47, 520, 26, 17, UiKit.Gold);
+            wallet = ui.Label(globalChrome, "Wallet", "", 1155, 18, 475, 58, 22, UiKit.Paper, false, TextAnchor.MiddleRight);
+            settingsButton = ui.Button(globalChrome, "Settings", "Настройки", 1675, 23, 185, 52, () => OpenPanel("settings"));
+            ui.Box(globalChrome, "FooterShade", 0, 1006, 1920, 74, new Color(.025f, .045f, .05f, .88f));
+            ui.Label(globalChrome, "Controls", "TAB  выбрать предмет    ENTER  взаимодействовать    ESC  пауза / назад", 58, 1018, 1220, 37, 17, UiKit.Muted);
+            saved = ui.Label(globalChrome, "SaveStatus", "ПРОФИЛЬ СОХРАНЁН", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
             panels = ui.Rect(stage, "Panels", 0, 0, 1920, 1080);
             toast = ui.Label(stage, "Toast", "", 310, 925, 1300, 60, 23, UiKit.Paper, false, TextAnchor.MiddleCenter);
             var toastOutline = toast.gameObject.AddComponent<Outline>();
@@ -244,6 +246,8 @@ namespace Rokas.Presentation
             home.ClearReferences();
             mission.ClearReferences();
             bool otherSide = phase == RunPhase.Combat || phase == RunPhase.Sealed || phase == RunPhase.Failed;
+            bool homeLocation = !otherSide && phase != RunPhase.Portal;
+            globalChrome.gameObject.SetActive(!homeLocation);
             background.texture = otherSide ? assets.subway : phase == RunPhase.Portal ? assets.portal : assets.home;
             audio.SetLocation(otherSide || phase == RunPhase.Portal);
             effects.SetLocation(!otherSide && phase != RunPhase.Portal, phase == RunPhase.Portal);

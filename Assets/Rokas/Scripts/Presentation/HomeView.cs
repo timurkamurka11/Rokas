@@ -27,6 +27,7 @@ namespace Rokas.Presentation
         private Text prepared;
         private CanvasGroup laptopUnreadIndicator;
         private CanvasGroup laptopUnreadGlow;
+        private HomeScanMarkerFeedback laptopMarkerFeedback;
         private float time;
         private float mameReaction;
 
@@ -39,42 +40,53 @@ namespace Rokas.Presentation
 
         public void Build(RectTransform parent)
         {
-            ui.Label(parent, "HomeChapter", "МЕЖДУ ДВУМЯ МИРАМИ", 65, 138, 680, 37, 18, UiKit.Gold);
-            ui.Label(parent, "HomeTitle", "С возвращением.", 61, 177, 820, 90, 52, UiKit.Paper, true);
-            objective = ui.Label(parent, "HomeObjective", "", 65, 267, 820, 80, 23, UiKit.Paper);
-            prepared = ui.Label(parent, "PreparationStatus", "", 1360, 137, 480, 60, 19, UiKit.Jade, false, TextAnchor.MiddleRight);
             mame = ui.Art(parent, "Mame", assets.familiar, 150, 772, 218, 218);
-            weaponWard = ui.Box(parent, "WardedBlade", 1202, 344, 13, 71, UiKit.Paper);
-            weaponWard.rectTransform.localRotation = Quaternion.Euler(0, 0, -12);
-            ui.Box(weaponWard.transform, "WardInk", 5, 12, 3, 40, UiKit.Red);
 
-            ActionButton(parent, "LampHotspot", "Свет", HomeActionGlyph.Lamp, 62, 620, 252,
-                () => act(() => { session.SetLamp(!session.State.lampOn); return true; },
-                    session.State.lampOn ? "За окном кто-то есть?.." : "Комната снова наполнилась теплом."));
+            var contourObject = ui.Rect(parent, "HomeScanOutlineOverlay", 0, 0, 1920, 1080).gameObject;
+            contourObject.AddComponent<CanvasRenderer>();
+            var contours = contourObject.AddComponent<HomeScanOutlineGraphic>();
+            contours.color = Color.white;
+            contours.raycastTarget = false;
 
-            ActionButton(parent, "WindowHotspot", "За окном", HomeActionGlyph.Torii, 470, 410, 315,
+            var title = ui.Label(parent, "HomeScanTitle", "Variant 4 — scan mode reveal",
+                44, 24, 520, 50, 29, new Color(.96f, .93f, .84f, 1f), true, TextAnchor.MiddleLeft);
+            var titleShadow = title.gameObject.AddComponent<Outline>();
+            titleShadow.effectColor = new Color(.05f, .025f, .01f, .82f);
+            titleShadow.effectDistance = new Vector2(1.4f, -1.4f);
+
+            var ruleObject = ui.Rect(parent, "HomeScanHeaderRule", 44, 73, 360, 3).gameObject;
+            ruleObject.AddComponent<CanvasRenderer>();
+            var rule = ruleObject.AddComponent<HomeScanRuleGraphic>();
+            rule.color = Color.white;
+            rule.raycastTarget = false;
+
+            Action toggleLamp = () => act(() =>
+            {
+                session.SetLamp(!session.State.lampOn);
+                return true;
+            }, session.State.lampOn
+                ? "За окном кто-то есть?.."
+                : "Комната снова наполнилась теплом.");
+
+            ScanActionMarker(parent, "LampHotspot", HomeScanGlyph.LightBulb,
+                138.5f, 400.1f, 48f, toggleLamp);
+            ScanActionMarker(parent, "WindowHotspot", HomeScanGlyph.Window,
+                696.6f, 128.8f, 56f,
                 () => toast("Поезд проходит без остановки. На этот раз — настоящий."));
+            ScanActionMarker(parent, "DeskLampHotspot", HomeScanGlyph.DeskLamp,
+                1151.3f, 194.9f, 52f, toggleLamp);
+            ScanActionMarker(parent, "WorkbenchHotspot", HomeScanGlyph.Swords,
+                1403.5f, 296.8f, 46f, () => open("workbench"));
 
-            ActionButton(parent, "WorkbenchHotspot", "Снаряжение", HomeActionGlyph.Equipment, 1110, 392, 356,
-                () => open("workbench"));
+            Button laptopButton = ScanActionMarker(parent, "LaptopHotspot", HomeScanGlyph.Laptop,
+                1093.4f, 489.6f, 50f, () => open("laptop"));
+            laptopMarkerFeedback = laptopButton.GetComponent<HomeScanMarkerFeedback>();
 
-            RectTransform glow = ui.Rect(parent, "HomeLaptopUnreadGlow", 938, 626, 414, 106);
-            laptopUnreadGlow = glow.gameObject.AddComponent<CanvasGroup>();
-            laptopUnreadGlow.alpha = 0f;
-            LaptopSurface glowSurface = Surface(glow, "GlowSurface", 0, 0, 414, 106, 53, new Color(.12f, .82f, .72f, .30f));
-            glowSurface.raycastTarget = false;
-            ActionButton(parent, "LaptopHotspot", "YOMI  /  Ноутбук", HomeActionGlyph.Laptop, 950, 638, 390,
-                () => open("laptop"));
-            RectTransform unread = ui.Rect(parent, "HomeLaptopUnreadIndicator", 1260, 628, 34, 34);
-            laptopUnreadIndicator = unread.gameObject.AddComponent<CanvasGroup>();
-            Surface(unread, "UnreadGlow", 0, 0, 34, 34, 17, new Color(.18f, .86f, .90f, .86f));
-            Surface(unread, "UnreadCore", 10, 10, 14, 14, 7, new Color(.90f, .98f, 1f, .95f));
-            UpdateLaptopUnreadIndicator();
+            ScanActionMarker(parent, "TeaHotspot", HomeScanGlyph.Tea,
+                831.2f, 592.9f, 40f, () => open("tea"));
 
-            ActionButton(parent, "TeaHotspot", "Заварить чай", HomeActionGlyph.Tea, 638, 727, 318,
-                () => open("tea"));
-
-            ActionButton(parent, "MameHotspot", "Мамэ", HomeActionGlyph.Mame, 88, 895, 260,
+            ScanActionMarker(parent, "MameHotspot", HomeScanGlyph.Cat,
+                297f, 781.6f, 50f,
                 () =>
                 {
                     act(() => { session.PetMame(); return true; }, "");
@@ -85,17 +97,75 @@ namespace Rokas.Presentation
                         : "Мамэ довольно щурится. Почти как обычный питомец.");
                 });
 
-            ActionButton(parent, "DoorHotspot", "Выйти из дома", HomeActionGlyph.Exit, 1582, 648, 310,
+            ScanActionMarker(parent, "DoorHotspot", HomeScanGlyph.Exit,
+                1748f, 132.9f, 58f,
                 () =>
                 {
                     if (session.State.phase == RunPhase.Accepted)
                         travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
                     else if (session.State.phase == RunPhase.Payment)
                         toast("На ноутбук пришло подтверждение оплаты.");
-                    else { open("laptop"); toast("Сначала выберите контракт в YOMI."); }
+                    else
+                    {
+                        open("laptop");
+                        toast("Сначала выберите контракт в YOMI.");
+                    }
                 });
 
             Refresh();
+        }
+
+        private Button ScanActionMarker(RectTransform parent, string name, HomeScanGlyph glyph,
+            float centerX, float centerY, float connectorLength, Action action)
+        {
+            const float markerSize = 72f;
+            var root = ui.Rect(parent, name,
+                centerX - markerSize * .5f, centerY - markerSize * .5f,
+                markerSize, markerSize);
+
+            var glowRoot = ui.Rect(root, "ScanGlow", -7, -7, 86, 86);
+            var glowGroup = glowRoot.gameObject.AddComponent<CanvasGroup>();
+            glowGroup.alpha = 1f;
+            var glow = Surface(glowRoot, "GlowSurface", 0, 0, 86, 86, 43,
+                new Color(.92f, .70f, .36f, .13f));
+
+            var border = Surface(root, "ScanBadge", 0, 0, markerSize, markerSize, markerSize * .5f,
+                new Color(.92f, .70f, .36f, .98f));
+            var face = Surface(root, "ScanFace", 3, 3, markerSize - 6, markerSize - 6,
+                (markerSize - 6) * .5f, new Color(.025f, .018f, .014f, .88f), true);
+
+            var glyphObject = ui.Rect(root, "ScanGlyph", 17, 17, 38, 38).gameObject;
+            glyphObject.AddComponent<CanvasRenderer>();
+            var glyphGraphic = glyphObject.AddComponent<HomeScanGlyphGraphic>();
+            glyphGraphic.Glyph = glyph;
+            glyphGraphic.color = new Color(.98f, .80f, .43f, 1f);
+            glyphGraphic.raycastTarget = false;
+
+            RectTransform connector = ui.Rect(root, "ScanConnector", 33, 75, 6, connectorLength);
+            CanvasGroup connectorGroup = connector.gameObject.AddComponent<CanvasGroup>();
+            connectorGroup.alpha = .96f;
+            int dots = Mathf.Max(3, Mathf.FloorToInt((connectorLength - 2f) / 13f) + 1);
+            for (int index = 0; index < dots; index++)
+            {
+                float y = index * 13f;
+                if (y + 6f > connectorLength) break;
+                Surface(connector, "Dot" + index, 0, y, 6, 6, 3,
+                    new Color(.96f, .72f, .36f, .96f));
+            }
+
+            var button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.transition = Selectable.Transition.None;
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+            button.onClick.AddListener(() =>
+            {
+                audio.Play(assets.click);
+                action?.Invoke();
+            });
+
+            root.gameObject.AddComponent<HomeScanMarkerFeedback>()
+                .Initialize(root, button, glow, glowGroup, border, face, glyphGraphic, connectorGroup);
+            return button;
         }
 
         private Button ActionButton(RectTransform parent, string name, string title, HomeActionGlyph glyph,
@@ -184,31 +254,32 @@ namespace Rokas.Presentation
 
         public void Refresh()
         {
-            if (!objective) return;
-            objective.text = session.State.phase == RunPhase.Accepted
-                ? "Контракт принят. Чашка чая — и можно выходить."
-                : session.State.phase == RunPhase.Payment
-                    ? "Вы снова дома. В YOMI вас ждёт оплата контракта."
-                    : session.State.completedRuns > 0
-                        ? "За окном всё ещё дождь. Может, ещё один контракт?"
-                        : "Ночной город спит. В YOMI появился первый заказ.";
-            prepared.text = string.IsNullOrEmpty(session.State.preparedFoodId) ? "" : "ЗЕЛЁНЫЙ ЧАЙ  /  +5% АВТОАТАКА";
-            if (weaponWard) weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);
+            if (objective)
+                objective.text = session.State.phase == RunPhase.Accepted
+                    ? "Контракт принят. Чашка чая — и можно выходить."
+                    : session.State.phase == RunPhase.Payment
+                        ? "Вы снова дома. В YOMI вас ждёт оплата контракта."
+                        : session.State.completedRuns > 0
+                            ? "За окном всё ещё дождь. Может, ещё один контракт?"
+                            : "Ночной город спит. В YOMI появился первый заказ.";
+            if (prepared)
+                prepared.text = string.IsNullOrEmpty(session.State.preparedFoodId)
+                    ? ""
+                    : "ЗЕЛЁНЫЙ ЧАЙ  /  +5% АВТОАТАКА";
+            if (weaponWard)
+                weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);
             UpdateLaptopUnreadIndicator();
         }
 
         private void UpdateLaptopUnreadIndicator()
         {
             bool unread = session.Messages.TotalUnread > 0;
+            laptopMarkerFeedback?.SetAttention(unread);
+
             if (laptopUnreadIndicator != null)
-                laptopUnreadIndicator.alpha = unread ? .68f + .22f * (.5f + .5f * Mathf.Sin(time * 3.2f)) : 0f;
+                laptopUnreadIndicator.alpha = 0f;
             if (laptopUnreadGlow != null)
-            {
-                if (unread)
-                    laptopUnreadGlow.alpha = .20f + .18f * (.5f + .5f * Mathf.Sin(time * 2.35f));
-                else
-                    laptopUnreadGlow.alpha = Mathf.MoveTowards(laptopUnreadGlow.alpha, 0f, .08f);
-            }
+                laptopUnreadGlow.alpha = 0f;
         }
 
         public void Tick(float dt)
@@ -225,7 +296,7 @@ namespace Rokas.Presentation
 
         public void ClearReferences()
         {
-            mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null; laptopUnreadGlow = null;
+            mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null; laptopUnreadGlow = null; laptopMarkerFeedback = null;
         }
     }
 
