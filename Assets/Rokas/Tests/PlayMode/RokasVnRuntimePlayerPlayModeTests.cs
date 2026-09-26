@@ -78,6 +78,56 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator RuntimeUsesAuthoredFontBindingInsteadOfFallbackSans()
+        {
+            package = CreatePackage();
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            Assert.That(assets.sans, Is.Not.Null);
+            Assert.That(assets.serif, Is.Not.Null);
+            Assert.That(assets.serif, Is.Not.SameAs(assets.sans));
+
+            const string speakerFontGuid = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+            package.Snapshot.scenes[0].presentation.speakerFontAssetGuid =
+                speakerFontGuid;
+            package.Snapshot.scenes[0].presentation.speakerFontPreset = 1;
+
+            var bindings = package.Assets.ToList();
+            bindings.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = speakerFontGuid,
+                displayName = assets.serif.name,
+                kind = RokasVnRuntimeAssetKind.Font,
+                asset = assets.serif
+            });
+            package.Configure(
+                package.ProjectId,
+                package.SourceProjectSha256,
+                package.PortableProjectJson,
+                package.Snapshot,
+                bindings,
+                package.CharacterStates.ToList(),
+                package.DialoguePlaque,
+                package.ControlSheet,
+                package.MutedSpeaker,
+                package.CompletionTriangle);
+
+            host = new GameObject("RuntimeVnAuthoredFontFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            Text speaker = Find("VnSpeaker").GetComponent<Text>();
+            Assert.That(
+                speaker.font,
+                Is.SameAs(assets.serif),
+                "Runtime must resolve the same authored project Font as the immutable Preview oracle instead of reusing fallback sans.");
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator PlaqueControlsAndCompletionIndicatorUseSharedPreviewSemantics()
         {
             package = CreatePackage();
