@@ -340,6 +340,9 @@ namespace Rokas.Presentation
             public RawImage Image;
             public RectTransform ExpressionSourceRect;
             public RawImage ExpressionSourceImage;
+            public Vector2 ExitBasePosition;
+            public Vector3 ExitBaseScale;
+            public Color ExitBaseColor;
         }
 
         private sealed class ControlMotion
@@ -403,6 +406,8 @@ namespace Rokas.Presentation
         private readonly RokasVnRuntimeAudioPlayback audioPlayback;
         private readonly Dictionary<string, CharacterView> characterViews =
             new Dictionary<string, CharacterView>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<CharacterView> exitingCharacterViews =
+            new List<CharacterView>();
         private readonly Dictionary<Button, ControlMotion> controlMotions =
             new Dictionary<Button, ControlMotion>();
 
@@ -1263,18 +1268,62 @@ namespace Rokas.Presentation
         private void RebuildCharacterViews(
             RokasVnRuntimeSceneSnapshot scene)
         {
+            for (int i = 0;
+                 i < exitingCharacterViews.Count;
+                 i++)
+            {
+                CharacterView exiting =
+                    exitingCharacterViews[i];
+                if (exiting != null)
+                    DestroyCharacterRenderObject(
+                        exiting.Image);
+            }
+            exitingCharacterViews.Clear();
+
+            bool keepExitSources =
+                scene != null &&
+                scene.presentation != null &&
+                scene.presentation.characterTransitionMode != 0;
+
             foreach (CharacterView view in characterViews.Values)
             {
                 if (view == null) continue;
 
                 DestroyCharacterRenderObject(
                     view.ExpressionSourceImage);
-                DestroyCharacterRenderObject(
-                    view.Image);
+                view.ExpressionSourceImage = null;
+                view.ExpressionSourceRect = null;
+
+                bool exiting =
+                    keepExitSources &&
+                    view.Image != null &&
+                    view.Image.gameObject.activeSelf &&
+                    !SceneContainsCharacter(
+                        scene,
+                        view.CharacterId);
+                if (exiting)
+                {
+                    view.Image.gameObject.name =
+                        "VnCharacterExit_" +
+                        view.CharacterId;
+                    view.ExitBasePosition =
+                        view.Rect.anchoredPosition;
+                    view.ExitBaseScale =
+                        view.Rect.localScale;
+                    view.ExitBaseColor =
+                        view.Image.color;
+                    exitingCharacterViews.Add(view);
+                }
+                else
+                {
+                    DestroyCharacterRenderObject(
+                        view.Image);
+                }
             }
             characterViews.Clear();
 
-            if (scene.characters == null) return;
+            if (scene == null ||
+                scene.characters == null) return;
             for (int i = 0; i < scene.characters.Count; i++)
             {
                 RokasVnRuntimeCharacterSnapshot character =
@@ -1326,6 +1375,160 @@ namespace Rokas.Presentation
             }
         }
 
+        private void RefreshExitingCharacterViews(
+            RokasVnRuntimeSceneSnapshot scene)
+        {
+            if (exitingCharacterViews.Count == 0)
+                return;
+
+            RokasVnRuntimePresentationSnapshot presentation =
+                scene != null
+                    ? scene.presentation
+                    : null;
+            if (presentation == null)
+                presentation =
+                    new RokasVnRuntimePresentationSnapshot();
+
+            float duration =
+                Mathf.Max(
+                    0f,
+                    presentation.characterTransitionDuration);
+            float raw =
+                duration <= .0001f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        playback.SceneElapsedSeconds /
+                        duration);
+
+            if (presentation.characterTransitionMode == 0)
+                raw = 1f;
+
+            float motion =
+                EvaluateTransitionEasing(
+                    raw,
+                    presentation.characterTransitionEasing);
+            float fadeRaw;
+            if (raw >= 1f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (presentation.characterTransitionFadeDuration <= 0f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (duration <= 0f)
+            {
+                fadeRaw =
+                    raw > 0f ? 1f : 0f;
+            }
+            else
+            {
+                fadeRaw = Mathf.Clamp01(
+                    (raw * duration) /
+                    presentation.characterTransitionFadeDuration);
+            }
+            float fade =
+                EvaluateTransitionEasing(
+                    fadeRaw,
+                    presentation.characterTransitionEasing);
+            float alpha =
+                Mathf.Clamp01(1f - fade);
+
+            for (int i = 0;
+                 i < exitingCharacterViews.Count;
+                 i++)
+            {
+                CharacterView view =
+                    exitingCharacterViews[i];
+                if (view == null ||
+                    view.Image == null ||
+                    view.Rect == null)
+                    continue;
+
+                if (alpha <= .0001f)
+                {
+                    view.Image.gameObject
+                        .SetActive(false);
+                    continue;
+                }
+
+                Vector2 offset = Vector2.zero;
+                if (presentation.characterTransitionMode == 2)
+                {
+                    float sign =
+                        presentation.characterTransitionSlideDirection == 0
+                            ? -1f
+                            : 1f;
+                    offset.x =
+                        sign *
+                        Mathf.Max(
+                            0f,
+                            presentation.characterTransitionSlideDistance) *
+                        motion;
+                }
+
+                view.Rect.anchoredPosition =
+                    view.ExitBasePosition +
+                    offset;
+                view.Rect.localScale =
+                    view.ExitBaseScale;
+                Color color =
+                    view.ExitBaseColor;
+                color.a *= alpha;
+                view.Image.color = color;
+                view.Image.gameObject
+                    .SetActive(true);
+            }
+        }
+
+        private static bool SceneContainsCharacter(
+            RokasVnRuntimeSceneSnapshot scene,
+            string characterId)
+        {
+            if (scene == null ||
+                scene.characters == null ||
+                string.IsNullOrWhiteSpace(
+                    characterId))
+                return false;
+
+            for (int i = 0;
+                 i < scene.characters.Count;
+                 i++)
+            {
+                RokasVnRuntimeCharacterSnapshot character =
+                    scene.characters[i];
+                if (character != null &&
+                    string.Equals(
+                        character.characterId ??
+                        string.Empty,
+                        characterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static float EvaluateTransitionEasing(
+            float value,
+            int easing)
+        {
+            float t = Mathf.Clamp01(value);
+            switch (easing)
+            {
+                case 0:
+                    return t;
+                case 1:
+                    return t * t;
+                case 2:
+                    return 1f -
+                        ((1f - t) * (1f - t));
+                default:
+                    return t * t *
+                        (3f - (2f * t));
+            }
+        }
+
         private static void ConfigureCharacterRect(
             RectTransform rect)
         {
@@ -1355,7 +1558,9 @@ namespace Rokas.Presentation
         private void RefreshCharacters(
             RokasVnRuntimeSceneSnapshot scene)
         {
-            if (scene.characters == null) return;
+            RefreshExitingCharacterViews(scene);
+            if (scene == null ||
+                scene.characters == null) return;
             for (int i = 0; i < scene.characters.Count; i++)
             {
                 RokasVnRuntimeCharacterSnapshot authored =
