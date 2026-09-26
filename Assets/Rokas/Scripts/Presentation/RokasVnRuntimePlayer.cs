@@ -748,6 +748,24 @@ namespace Rokas.Presentation
         private void ApplyPresentationGeometry(
             RokasVnRuntimePresentationSnapshot presentation)
         {
+            dialoguePlaque.texture = package.DialoguePlaque;
+            if (presentation != null &&
+                !string.IsNullOrWhiteSpace(
+                    presentation.dialoguePlaqueAssetGuid))
+            {
+                RokasVnRuntimeAssetBinding plaqueBinding;
+                if (package.TryGetAsset(
+                        presentation.dialoguePlaqueAssetGuid,
+                        out plaqueBinding) &&
+                    plaqueBinding != null)
+                {
+                    Texture authoredPlaque =
+                        ResolveTexture(plaqueBinding.asset);
+                    if (authoredPlaque != null)
+                        dialoguePlaque.texture = authoredPlaque;
+                }
+            }
+
             if (presentation == null ||
                 !presentation.hasResolvedOracleGeometry ||
                 presentation.dialoguePanelRect.width <= 0f ||
