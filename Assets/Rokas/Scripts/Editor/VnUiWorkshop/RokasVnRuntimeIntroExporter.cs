@@ -501,6 +501,16 @@ namespace Rokas.EditorTools.VnUiWorkshop
             string destination =
                 runtimeRoot + "/Assets/" + guid.ToLowerInvariant() + extension.ToLowerInvariant();
             UnityEngine.Object copied = CopyAssetObject(sourcePath, destination);
+            if (IsManagedComposerStill(sourcePath) &&
+                (copied is Texture2D || copied is Sprite))
+            {
+                VnSceneComposerAssetLibrary
+                    .ConfigureStillImporterForNativeQuality(
+                        destination);
+                copied =
+                    AssetDatabase.LoadMainAssetAtPath(
+                        destination);
+            }
             bindings.Add(new RokasVnRuntimeAssetBinding
             {
                 authoredKey = guid.ToLowerInvariant(),
@@ -564,7 +574,9 @@ namespace Rokas.EditorTools.VnUiWorkshop
                     destination = runtimeRoot + "/External/" + stable + extension;
                     ReplaceFileAsset(sourcePath, destination);
                     if (scene.media.kind == VnSceneComposerMediaKind.ExternalImage)
-                        PreserveExternalImageNativeSize(destination);
+                        VnSceneComposerAssetLibrary
+                            .ConfigureStillImporterForNativeQuality(
+                                destination);
                     copied = AssetDatabase.LoadMainAssetAtPath(destination);
                     kind = scene.media.kind == VnSceneComposerMediaKind.ExternalVideo
                         ? RokasVnRuntimeAssetKind.Video
@@ -701,42 +713,26 @@ namespace Rokas.EditorTools.VnUiWorkshop
             return copied;
         }
 
-        private static void PreserveExternalImageNativeSize(string assetPath)
+        private static bool IsManagedComposerStill(
+            string assetPath)
         {
-            TextureImporter importer =
-                AssetImporter.GetAtPath(assetPath) as TextureImporter;
-            if (importer == null)
-                throw new IOException(
-                    "External VN image did not import as a TextureImporter: " +
-                    assetPath);
+            string normalized =
+                NormalizeAssetPath(assetPath);
+            string managedRoot =
+                NormalizeAssetPath(
+                    VnSceneComposerAssetLibrary
+                        .ManagedRootRelative);
+            if (!normalized.StartsWith(
+                    managedRoot + "/",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
 
-            importer.GetSourceTextureWidthAndHeight(
-                out int sourceWidth,
-                out int sourceHeight);
-            int sourceLongest = Mathf.Max(sourceWidth, sourceHeight);
-            if (sourceLongest <= 0)
-                throw new IOException(
-                    "External VN image source dimensions are invalid: " +
-                    assetPath);
-
-            int requiredMaxSize = Mathf.Clamp(
-                Mathf.NextPowerOfTwo(sourceLongest),
-                32,
-                16384);
-            bool changed = false;
-            if (importer.maxTextureSize < requiredMaxSize)
-            {
-                importer.maxTextureSize = requiredMaxSize;
-                changed = true;
-            }
-            if (importer.npotScale != TextureImporterNPOTScale.None)
-            {
-                importer.npotScale = TextureImporterNPOTScale.None;
-                changed = true;
-            }
-
-            if (changed)
-                importer.SaveAndReimport();
+            string extension =
+                Path.GetExtension(normalized)
+                    .ToLowerInvariant();
+            return extension == ".png" ||
+                   extension == ".jpg" ||
+                   extension == ".jpeg";
         }
 
         private static void ReplaceFileAsset(
