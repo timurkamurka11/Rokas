@@ -1,4 +1,5 @@
 name: ROKAS VN Main-Game Final Validation
+# Final parity validation trigger: 2026-09-26
 
 on:
   push:
