@@ -416,7 +416,7 @@ namespace Rokas.Presentation
         private readonly Button muteButton;
         private readonly Button menuButton;
         private readonly RawImage completionTriangle;
-        private readonly Vector2 completionTriangleBasePosition;
+        private Vector2 completionTriangleBasePosition;
         private readonly CanvasGroup terminalFade;
         private readonly GameObject menuOverlay;
         private readonly Image sceneTransitionImage;
