@@ -647,6 +647,151 @@ namespace Rokas.EditorTools.Tests
 
 
         [Test]
+        public void ProjectOwnedExternalPngPreservesNativeWidthThroughPreviewAndRuntimeExport()
+        {
+            const string root =
+                "Assets/Rokas/Tests/EditorWorkshop/__RuntimeProjectOwnedNativeImageFixture";
+            const string runtimeRoot = root + "/Runtime";
+            const string packagePath =
+                runtimeRoot + "/RokasVnRuntimeIntroPackage.asset";
+            string externalPath = Path.Combine(
+                Path.GetTempPath(),
+                "RokasVnProjectOwnedNative2305-" +
+                System.Guid.NewGuid().ToString("N") +
+                ".png");
+
+            AssetDatabase.DeleteAsset(root);
+            Directory.CreateDirectory(root);
+            var sourceTexture =
+                new Texture2D(2305, 7, TextureFormat.RGBA32, false);
+            string importedPath = null;
+            string stableId = null;
+            try
+            {
+                sourceTexture.SetPixel(0, 0, Color.cyan);
+                sourceTexture.SetPixel(2304, 6, Color.magenta);
+                sourceTexture.Apply(false, false);
+                File.WriteAllBytes(
+                    externalPath,
+                    sourceTexture.EncodeToPNG());
+            }
+            finally
+            {
+                Object.DestroyImmediate(sourceTexture);
+            }
+
+            try
+            {
+                var project = new VnSceneComposerProject
+                {
+                    projectId = ProjectId,
+                    title = "Project-Owned Native External Image Fixture"
+                };
+                project.scenes.Clear();
+                var scene = new VnSceneComposerScene
+                {
+                    label = "Terminal",
+                    isTerminal = true,
+                    terminalFadeDuration = .4f
+                };
+                scene.dialogueBeats[0].text = "Native project image";
+                VnSceneComposerMediaEditing.SetExternalImage(
+                    scene,
+                    externalPath,
+                    VnSceneComposerMediaScaleMode.Fit);
+                project.scenes.Add(scene);
+
+                Assert.That(
+                    scene.media.kind,
+                    Is.EqualTo(
+                        VnSceneComposerMediaKind.ExistingRokasAsset),
+                    "Current image onboarding path must be tested, not the legacy ExternalImage path.");
+
+                importedPath =
+                    AssetDatabase.GUIDToAssetPath(
+                        scene.media.reference);
+                Assert.That(importedPath, Is.Not.Empty);
+                stableId =
+                    VnSceneComposerAssetLibrary.FindByPurpose(
+                        VnSceneComposerAssetLibrary.GetDefaultProjectRoot(),
+                        VnSceneComposerAssetPurpose.Background)
+                    .Single(entry =>
+                        entry.assetGuid ==
+                        scene.media.reference)
+                    .stableAssetId;
+
+                using (VnSceneComposerImagePreview preview =
+                       VnSceneComposerMediaEditing.OpenImagePreview(
+                           scene.media))
+                {
+                    Assert.That(preview.texture, Is.Not.Null);
+                    Assert.That(
+                        preview.texture.width,
+                        Is.EqualTo(2305),
+                        "Authoritative Preview must retain source/native width for project-owned VN stills.");
+                    Assert.That(
+                        preview.texture.height,
+                        Is.EqualTo(7));
+                }
+
+                RokasVnRuntimeIntroPackage package =
+                    RokasVnRuntimeIntroExporter.ExportProjectOwnedPackage(
+                        project,
+                        JsonUtility.ToJson(project),
+                        "project-owned-native-image-fixture",
+                        packagePath,
+                        runtimeRoot);
+
+                Assert.That(
+                    package.TryGetAsset(
+                        scene.media.reference,
+                        out RokasVnRuntimeAssetBinding binding),
+                    Is.True);
+                Texture2D runtimeTexture =
+                    binding.asset as Texture2D;
+                Assert.That(runtimeTexture, Is.Not.Null);
+                Assert.That(
+                    runtimeTexture.width,
+                    Is.EqualTo(2305),
+                    "Runtime export must preserve the same native image dimensions as Preview.");
+                Assert.That(
+                    runtimeTexture.height,
+                    Is.EqualTo(7));
+
+                TextureImporter runtimeImporter =
+                    AssetImporter.GetAtPath(
+                        AssetDatabase.GetAssetPath(
+                            runtimeTexture))
+                    as TextureImporter;
+                Assert.That(runtimeImporter, Is.Not.Null);
+                Assert.That(
+                    runtimeImporter.textureCompression,
+                    Is.EqualTo(
+                        TextureImporterCompression.Uncompressed));
+                Assert.That(
+                    runtimeImporter.npotScale,
+                    Is.EqualTo(
+                        TextureImporterNPOTScale.None));
+                Assert.That(
+                    runtimeImporter.filterMode,
+                    Is.EqualTo(FilterMode.Bilinear));
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(root);
+                if (!string.IsNullOrEmpty(stableId))
+                    VnSceneComposerAssetLibrary.Unregister(
+                        VnSceneComposerAssetLibrary.GetDefaultProjectRoot(),
+                        stableId);
+                if (!string.IsNullOrEmpty(importedPath))
+                    AssetDatabase.DeleteAsset(importedPath);
+                AssetDatabase.Refresh();
+                if (File.Exists(externalPath))
+                    File.Delete(externalPath);
+            }
+        }
+
+        [Test]
         public void ExternalPngExportPreservesNativeWidthAboveUnityDefaultMaxSize()
         {
             const string root =
