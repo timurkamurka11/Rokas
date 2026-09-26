@@ -1,0 +1,42 @@
+name: ROKAS Main Room Overlay Workshop
+
+on:
+  push:
+    branches:
+      - codex/home-room-overlay-workshop
+    paths:
+      - 'Assets/Rokas/Art/Home/OverlayWorkshop/**'
+      - 'Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/**'
+      - 'Assets/Rokas/Tests/EditorWorkshop/MainRoomOverlayWorkshop*.cs'
+      - '.github/workflows/home-overlay-workshop.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  workshop-editmode:
+    name: Main Room Overlay Workshop EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run workshop EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.MainRoomOverlayWorkshop
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Main Room Overlay Workshop
+          artifactsPath: artifacts-home-overlay-workshop
