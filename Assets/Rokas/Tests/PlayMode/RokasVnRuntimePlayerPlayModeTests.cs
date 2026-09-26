@@ -960,6 +960,64 @@ namespace Rokas.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator ReplicaShakeMovesWholeVnPresentationRootLikeImmutablePreview()
+        {
+            package = CreatePackage();
+            RokasVnRuntimeBeatSnapshot beat =
+                package.Snapshot.scenes[0].dialogueBeats[0];
+            beat.text = string.Empty;
+            beat.replicaEffect.type = 1;
+            beat.replicaEffect.intensity = 1f;
+            beat.replicaEffect.duration = 1f;
+            beat.replicaEffect.frequency = 1f;
+            beat.replicaEffect.decay = 1f;
+
+            host = new GameObject("RuntimeVnGlobalShakeFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(
+                    host.transform,
+                    package,
+                    null);
+            yield return null;
+
+            RectTransform presentationRoot =
+                Find("VnReplicaEffectRoot")
+                    .GetComponent<RectTransform>();
+            RectTransform mina =
+                Find("VnCharacter_Mina")
+                    .GetComponent<RectTransform>();
+            Vector2 minaLocalBefore =
+                mina.anchoredPosition;
+
+            player.TickForTests(.125f);
+            RokasVnRuntimeReplicaEffectSample expected =
+                player.Playback.SampleReplicaEffect();
+
+            Assert.That(expected.active, Is.True);
+            Assert.That(
+                presentationRoot.anchoredPosition.x,
+                Is.EqualTo(expected.offset.x).Within(.001f));
+            Assert.That(
+                presentationRoot.anchoredPosition.y,
+                Is.EqualTo(expected.offset.y).Within(.001f));
+            Assert.That(
+                mina.anchoredPosition,
+                Is.EqualTo(minaLocalBefore),
+                "Immutable Preview Shake moves the whole VN canvas; it must not be re-applied locally to Mina.");
+
+            player.TickForTests(1f);
+            Assert.That(
+                presentationRoot.anchoredPosition,
+                Is.EqualTo(Vector2.zero));
+            Assert.That(
+                presentationRoot.localScale,
+                Is.EqualTo(Vector3.one));
+
+            player.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void RuntimePlayerLivesInPlayerAssemblyWithoutUnityEditorReference()
         {
