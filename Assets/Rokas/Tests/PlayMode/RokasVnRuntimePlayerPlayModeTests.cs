@@ -177,6 +177,53 @@ namespace Rokas.Tests
             yield return null;
         }
 
+        [Test]
+        public void RuntimeControlSemanticsMatchFrozen3dbOracleSamples()
+        {
+            Rect plaque =
+                new Rect(100f, -98f, 1200f, 400f);
+            RokasVnPlaqueUiLayout layout =
+                RokasVnRuntimeUiSemantics.Layout(plaque);
+
+            Assert.That(layout.Mute.x, Is.EqualTo(1102.4f).Within(.001f));
+            Assert.That(layout.Mute.y, Is.EqualTo(120f).Within(.001f));
+            Assert.That(layout.Mute.width, Is.EqualTo(40f).Within(.001f));
+            Assert.That(layout.Forward.x, Is.EqualTo(1155.2f).Within(.001f));
+            Assert.That(layout.Menu.x, Is.EqualTo(1208f).Within(.001f));
+            Assert.That(layout.Triangle.x, Is.EqualTo(1182f).Within(.001f));
+            Assert.That(layout.Triangle.y, Is.EqualTo(8.888889f).Within(.001f));
+            Assert.That(layout.Triangle.width, Is.EqualTo(27.2f).Within(.001f));
+            Assert.That(layout.Triangle.height, Is.EqualTo(30.222223f).Within(.001f));
+
+            RokasVnTriangleUiSample triangle =
+                RokasVnRuntimeUiSemantics.SampleTriangle(.1875f);
+            Assert.That(triangle.OffsetY, Is.EqualTo(2.25f).Within(.001f));
+            Assert.That(triangle.Scale, Is.EqualTo(1.025f).Within(.001f));
+            Assert.That(triangle.Alpha, Is.EqualTo(.97f).Within(.001f));
+
+            RokasVnButtonUiSample hover =
+                RokasVnRuntimeUiSemantics.SampleButton(
+                    new Rect(0f, 0f, 100f, 100f),
+                    true,
+                    false,
+                    true,
+                    1f);
+            Assert.That(hover.Rect.width, Is.EqualTo(100f).Within(.001f));
+            Assert.That(hover.Brightness, Is.EqualTo(.97f).Within(.001f));
+            Assert.That(hover.Alpha, Is.EqualTo(.90f).Within(.001f));
+
+            RokasVnButtonUiSample pressed =
+                RokasVnRuntimeUiSemantics.SampleButton(
+                    new Rect(0f, 0f, 100f, 100f),
+                    true,
+                    true,
+                    true,
+                    1f);
+            Assert.That(pressed.Rect.width, Is.EqualTo(95f).Within(.001f));
+            Assert.That(pressed.Brightness, Is.EqualTo(.92f).Within(.001f));
+            Assert.That(pressed.Alpha, Is.EqualTo(.90f).Within(.001f));
+        }
+
         [UnityTest]
         public IEnumerator PlaqueControlsAndCompletionIndicatorUseSharedPreviewSemantics()
         {
