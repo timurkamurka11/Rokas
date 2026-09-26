@@ -407,9 +407,13 @@ namespace Rokas.Presentation
         private readonly GameObject root;
         private readonly RawImage background;
         private readonly AspectRatioFitter backgroundAspect;
+        private readonly RawImage transitionSourceBackground;
+        private readonly AspectRatioFitter transitionSourceBackgroundAspect;
         private readonly VideoPlayer videoPlayer;
         private readonly RectTransform characterLayer;
+        private readonly CanvasGroup characterForeground;
         private readonly RawImage dialoguePlaque;
+        private readonly CanvasGroup plaqueForeground;
         private readonly Text speakerText;
         private readonly Text dialogueText;
         private readonly Button forwardButton;
@@ -506,6 +510,19 @@ namespace Rokas.Presentation
                 background.gameObject.AddComponent<AspectRatioFitter>();
             backgroundAspect.enabled = false;
 
+            transitionSourceBackground = CreateRaw(
+                rootRect, "VnTransitionSourceBackground", null,
+                Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero);
+            transitionSourceBackground.raycastTarget = false;
+            transitionSourceBackgroundAspect =
+                transitionSourceBackground.gameObject
+                    .AddComponent<AspectRatioFitter>();
+            transitionSourceBackgroundAspect.enabled = false;
+            transitionSourceBackground.transform.SetSiblingIndex(
+                background.transform.GetSiblingIndex());
+            transitionSourceBackground.gameObject.SetActive(false);
+
             videoPlayer = root.AddComponent<VideoPlayer>();
             videoPlayer.playOnAwake = false;
             videoPlayer.renderMode = VideoRenderMode.APIOnly;
@@ -516,6 +533,9 @@ namespace Rokas.Presentation
                 rootRect, "VnCharacters",
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
+            characterForeground =
+                characterLayer.gameObject.AddComponent<CanvasGroup>();
+            characterForeground.alpha = 1f;
 
             Image clickSurface = CreateImage(
                 rootRect, "VnStoryClickSurface",
@@ -536,6 +556,9 @@ namespace Rokas.Presentation
                 new Vector2(.5f, 0f),
                 Vector2.zero,
                 Vector2.zero);
+            plaqueForeground =
+                dialoguePlaque.gameObject.AddComponent<CanvasGroup>();
+            plaqueForeground.alpha = 1f;
             RectTransform plaqueRect =
                 (RectTransform)dialoguePlaque.transform;
             plaqueRect.pivot = new Vector2(.5f, 0f);
@@ -958,20 +981,35 @@ namespace Rokas.Presentation
             Texture texture,
             int scaleMode)
         {
-            if (backgroundAspect == null) return;
+            ApplyBackgroundScaleMode(
+                background,
+                backgroundAspect,
+                texture,
+                scaleMode);
+        }
+
+        private static void ApplyBackgroundScaleMode(
+            RawImage image,
+            AspectRatioFitter aspect,
+            Texture texture,
+            int scaleMode)
+        {
+            if (image == null || aspect == null) return;
 
             if (scaleMode == 2 || texture == null ||
                 texture.height <= 0)
             {
-                backgroundAspect.enabled = false;
+                aspect.enabled = false;
                 return;
             }
 
-            backgroundAspect.enabled = true;
-            backgroundAspect.aspectRatio =
-                Mathf.Max(.0001f,
-                    (float)texture.width / texture.height);
-            backgroundAspect.aspectMode =
+            aspect.enabled = true;
+            aspect.aspectRatio =
+                Mathf.Max(
+                    .0001f,
+                    (float)texture.width /
+                    texture.height);
+            aspect.aspectMode =
                 scaleMode == 0
                     ? AspectRatioFitter.AspectMode.FitInParent
                     : AspectRatioFitter.AspectMode.EnvelopeParent;
@@ -1022,6 +1060,11 @@ namespace Rokas.Presentation
             sceneTransitionDuration = Mathf.Clamp(
                 target.sceneTransitionDuration,
                 .0001f, 10f);
+
+            if (sceneTransitionType == 2)
+                CaptureFadeSourceBackground();
+            else
+                ResetFadeComposition();
 
             sceneTransitionImage.gameObject.SetActive(true);
             sceneTransitionOverlay.blocksRaycasts = true;
@@ -1085,18 +1128,17 @@ namespace Rokas.Presentation
 
             RectTransform rect =
                 (RectTransform)sceneTransitionImage.transform;
-            // Wipe coverage is represented by the overlay RectTransform itself.
-            // Keep every covered pixel opaque; fading the wipe re-exposes the
-            // outgoing frame and creates a visible half-transparent transition.
-            sceneTransitionOverlay.alpha =
-                sceneTransitionType == 1
-                    ? (coverage > .0001f ? 1f : 0f)
-                    : coverage;
             sceneTransitionOverlay.blocksRaycasts = true;
             sceneTransitionOverlay.interactable = true;
 
             if (sceneTransitionType == 1)
             {
+                // Immutable Preview DarkCurtain: covered pixels are opaque.
+                sceneTransitionOverlay.alpha =
+                    coverage > .0001f ? 1f : 0f;
+                SetForegroundAlpha(1f);
+                SetBackgroundAlpha(1f);
+
                 bool anchorRight =
                     (!reveal && sceneTransitionDirection == 1) ||
                     (reveal && sceneTransitionDirection == 0);
@@ -1111,11 +1153,77 @@ namespace Rokas.Presentation
             }
             else
             {
+                // Immutable Preview Fade: a subtle .22 dark veil accompanies
+                // foreground fade-out/in while the incoming background
+                // crossfades over the retained outgoing frame.
+                sceneTransitionOverlay.alpha =
+                    coverage * .22f;
+                float foregroundAlpha =
+                    reveal
+                        ? phaseProgress
+                        : 1f - phaseProgress;
+                SetForegroundAlpha(foregroundAlpha);
+
+                if (sceneTransitionSwapped && reveal)
+                {
+                    float blend =
+                        phaseProgress * phaseProgress *
+                        (3f - (2f * phaseProgress));
+                    SetBackgroundAlpha(blend);
+                }
+                else
+                {
+                    SetBackgroundAlpha(1f);
+                }
+
                 rect.anchorMin = Vector2.zero;
                 rect.anchorMax = Vector2.one;
                 rect.offsetMin = Vector2.zero;
                 rect.offsetMax = Vector2.zero;
             }
+        }
+
+        private void CaptureFadeSourceBackground()
+        {
+            Texture source = background.texture;
+            transitionSourceBackground.texture = source;
+            transitionSourceBackground.uvRect = background.uvRect;
+            transitionSourceBackground.color = Color.white;
+            transitionSourceBackground.gameObject.SetActive(
+                source != null);
+            ApplyBackgroundScaleMode(
+                transitionSourceBackground,
+                transitionSourceBackgroundAspect,
+                source,
+                currentMediaScaleMode);
+            SetBackgroundAlpha(1f);
+            SetForegroundAlpha(1f);
+        }
+
+        private void ResetFadeComposition()
+        {
+            SetBackgroundAlpha(1f);
+            SetForegroundAlpha(1f);
+            transitionSourceBackground.texture = null;
+            transitionSourceBackground.color = Color.white;
+            transitionSourceBackground.gameObject.SetActive(false);
+            transitionSourceBackgroundAspect.enabled = false;
+        }
+
+        private void SetForegroundAlpha(float alpha)
+        {
+            float value = Mathf.Clamp01(alpha);
+            if (characterForeground != null)
+                characterForeground.alpha = value;
+            if (plaqueForeground != null)
+                plaqueForeground.alpha = value;
+        }
+
+        private void SetBackgroundAlpha(float alpha)
+        {
+            Color color = background.color;
+            color.a = Mathf.Clamp01(alpha);
+            background.color = color;
         }
 
         private void CompleteSceneTransition()
@@ -1130,6 +1238,7 @@ namespace Rokas.Presentation
             sceneTransitionOverlay.blocksRaycasts = false;
             sceneTransitionOverlay.interactable = false;
             sceneTransitionImage.gameObject.SetActive(false);
+            ResetFadeComposition();
             RefreshControlVisuals();
         }
 
@@ -1145,6 +1254,7 @@ namespace Rokas.Presentation
             sceneTransitionOverlay.blocksRaycasts = false;
             sceneTransitionOverlay.interactable = false;
             sceneTransitionImage.gameObject.SetActive(false);
+            ResetFadeComposition();
             RefreshControlVisuals();
         }
 
