@@ -433,6 +433,66 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator RuntimeMenuUsesImmutableOracleDialogueFont()
+        {
+            package = CreatePackage();
+            RokasAssets assets =
+                Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            Assert.That(assets.serif, Is.Not.Null);
+
+            const string dialogueFontGuid =
+                "abababababababababababababababab";
+            RokasVnRuntimeSceneSnapshot scene =
+                package.Snapshot.scenes[0];
+            scene.presentation.dialogueFontAssetGuid =
+                dialogueFontGuid;
+            scene.presentation.dialogueFontPreset = 1;
+
+            var bindings = package.Assets.ToList();
+            bindings.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = dialogueFontGuid,
+                displayName = assets.serif.name,
+                kind = RokasVnRuntimeAssetKind.Font,
+                asset = assets.serif
+            });
+            package.Configure(
+                package.ProjectId,
+                package.SourceProjectSha256,
+                package.PortableProjectJson,
+                package.Snapshot,
+                bindings,
+                package.CharacterStates.ToList(),
+                package.DialoguePlaque,
+                package.ControlSheet,
+                package.MutedSpeaker,
+                package.CompletionTriangle);
+
+            host = new GameObject(
+                "RuntimeVnMenuOracleFontFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(
+                    host.transform,
+                    package,
+                    null);
+            yield return null;
+
+            Text[] menuTexts =
+                Find("VnRuntimeMenu")
+                    .GetComponentsInChildren<Text>(true);
+            Assert.That(menuTexts.Length, Is.EqualTo(5));
+            Assert.That(
+                menuTexts.All(item =>
+                    item.font == assets.serif),
+                Is.True,
+                "Immutable 3db14827 menu renders title and rows with frame.DialogueFont.");
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator RuntimeMenuMatchesAuthoritativePreviewStructureAndFreezesPlayback()
         {
             package = CreatePackage();
@@ -469,6 +529,24 @@ namespace Rokas.Tests
             RokasVnMenuUiLayout layout =
                 RokasVnRuntimeUiSemantics.MenuLayout(
                     canvasLogical);
+            Assert.That(
+                layout.Panel,
+                Is.EqualTo(
+                    new Rect(740f, 335f, 440f, 410f)),
+                "Frozen 3db14827 menu panel geometry changed.");
+            Assert.That(
+                layout.Title,
+                Is.EqualTo(
+                    new Rect(764f, 353f, 392f, 32f)),
+                "Frozen 3db14827 menu title geometry changed.");
+            Assert.That(
+                RokasVnRuntimeUiSemantics.MenuTitleFontSize(
+                    1080f),
+                Is.EqualTo(24));
+            Assert.That(
+                RokasVnRuntimeUiSemantics.MenuRowFontSize(
+                    48f),
+                Is.EqualTo(17));
             Image panel =
                 Find("VnMenuPanel")
                 .GetComponent<Image>();
