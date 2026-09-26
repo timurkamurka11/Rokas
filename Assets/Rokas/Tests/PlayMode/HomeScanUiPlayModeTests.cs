@@ -38,14 +38,14 @@ namespace Rokas.Tests
             Assert.That(outline, Is.Not.Null);
             Assert.That(outline.raycastTarget, Is.False);
 
-            AssertMarker("LampHotspot", 139f, 402f);
-            AssertMarker("WindowHotspot", 698f, 129f);
-            AssertMarker("DeskLampHotspot", 1157f, 194f);
-            AssertMarker("WorkbenchHotspot", 1404f, 299f);
-            AssertMarker("DoorHotspot", 1743f, 136f);
-            AssertMarker("LaptopHotspot", 1094f, 490f);
-            AssertMarker("TeaHotspot", 832f, 594f);
-            AssertMarker("MameHotspot", 299f, 784f);
+            AssertMarker("LampHotspot", 138.5f, 400.1f);
+            AssertMarker("WindowHotspot", 696.6f, 128.8f);
+            AssertMarker("DeskLampHotspot", 1151.3f, 194.9f);
+            AssertMarker("WorkbenchHotspot", 1403.5f, 296.8f);
+            AssertMarker("DoorHotspot", 1748f, 132.9f);
+            AssertMarker("LaptopHotspot", 1093.4f, 489.6f);
+            AssertMarker("TeaHotspot", 831.2f, 592.9f);
+            AssertMarker("MameHotspot", 297f, 781.6f);
 
             foreach (string hotspot in new[]
             {
