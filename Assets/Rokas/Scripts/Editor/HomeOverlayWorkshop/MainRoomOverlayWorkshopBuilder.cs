@@ -73,12 +73,11 @@ namespace Rokas.EditorTools
 
         public static Scene CreateUnsavedWorkshopForTests(string iconRoot)
         {
-            Scene previous = SceneManager.GetActiveScene();
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            SceneManager.SetActiveScene(scene);
+            // Test-only helper: the Test Runner may start with an untitled unsaved scene,
+            // which Unity refuses to keep while creating an additive scene.
+            // A Single test scene is safe here because the test owns the editor scene state.
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Populate(scene, iconRoot);
-            if (previous.IsValid() && previous.isLoaded)
-                SceneManager.SetActiveScene(previous);
             return scene;
         }
 
