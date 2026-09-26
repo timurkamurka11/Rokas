@@ -14,6 +14,8 @@ namespace Rokas.Presentation
         public float alpha;
         public float brightness;
         public int stageSlot;
+        public string expressionSourceStateId;
+        public float expressionSourceAlpha;
     }
 
     public struct RokasVnRuntimeReplicaEffectSample
@@ -216,6 +218,8 @@ namespace Rokas.Presentation
             };
 
             ApplySpeakerFocus(scene, states, characterId, ref sample);
+            ApplySceneEntryCharacterTransition(scene, ref sample);
+            ApplyExpressionTransition(scene, ref sample);
             ApplySceneActionBounce(scene, ref sample);
             ApplyBeatEffect(scene, ref sample);
             return sample;
@@ -277,6 +281,162 @@ namespace Rokas.Presentation
                     break;
             }
             return result;
+        }
+
+        private void ApplySceneEntryCharacterTransition(
+            RokasVnRuntimeSceneSnapshot scene,
+            ref RokasVnRuntimeCharacterSample sample)
+        {
+            if (CurrentSceneIndex <= 0 ||
+                scene == null ||
+                SceneHasCharacter(
+                    snapshot.scenes[CurrentSceneIndex - 1],
+                    sample.characterId))
+                return;
+
+            RokasVnRuntimePresentationSnapshot presentation =
+                scene.presentation ??
+                new RokasVnRuntimePresentationSnapshot();
+            if (presentation.characterTransitionMode == 0)
+                return;
+
+            float duration =
+                Mathf.Max(
+                    0f,
+                    presentation.characterTransitionDuration);
+            float raw =
+                duration <= .0001f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        sceneElapsedSeconds / duration);
+            float motion =
+                EvaluateEasing(
+                    raw,
+                    presentation.characterTransitionEasing);
+            float fadeRaw;
+            if (raw >= 1f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (presentation.characterTransitionFadeDuration <= 0f)
+            {
+                fadeRaw = 1f;
+            }
+            else if (duration <= 0f)
+            {
+                fadeRaw = raw > 0f ? 1f : 0f;
+            }
+            else
+            {
+                fadeRaw = Mathf.Clamp01(
+                    (raw * duration) /
+                    presentation.characterTransitionFadeDuration);
+            }
+            float fade =
+                EvaluateEasing(
+                    fadeRaw,
+                    presentation.characterTransitionEasing);
+
+            if (presentation.characterTransitionMode == 2)
+            {
+                float sign =
+                    presentation.characterTransitionSlideDirection == 0
+                        ? -1f
+                        : 1f;
+                float distance =
+                    Mathf.Max(
+                        0f,
+                        presentation.characterTransitionSlideDistance);
+                sample.position +=
+                    new Vector2(
+                        sign * distance * (1f - motion),
+                        0f);
+            }
+
+            sample.alpha *= fade;
+        }
+
+        private void ApplyExpressionTransition(
+            RokasVnRuntimeSceneSnapshot scene,
+            ref RokasVnRuntimeCharacterSample sample)
+        {
+            sample.expressionSourceStateId = string.Empty;
+            sample.expressionSourceAlpha = 0f;
+            if (CurrentSceneIndex <= 0 ||
+                scene == null)
+                return;
+
+            RokasVnRuntimeSceneSnapshot previous =
+                snapshot.scenes[CurrentSceneIndex - 1];
+            RokasVnRuntimeCharacterSnapshot previousCharacter =
+                FindCharacter(
+                    previous,
+                    sample.characterId);
+            RokasVnRuntimeCharacterSnapshot currentCharacter =
+                FindCharacter(
+                    scene,
+                    sample.characterId);
+            if (previousCharacter == null ||
+                currentCharacter == null ||
+                string.IsNullOrWhiteSpace(
+                    previousCharacter.stateId) ||
+                string.IsNullOrWhiteSpace(
+                    currentCharacter.stateId) ||
+                string.Equals(
+                    previousCharacter.stateId,
+                    currentCharacter.stateId,
+                    StringComparison.Ordinal))
+                return;
+
+            RokasVnRuntimePresentationSnapshot presentation =
+                scene.presentation ??
+                new RokasVnRuntimePresentationSnapshot();
+            float duration =
+                Mathf.Max(
+                    0f,
+                    presentation.expressionTransitionDuration);
+            float raw =
+                duration <= .0001f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        sceneElapsedSeconds / duration);
+            float eased =
+                EvaluateEasing(
+                    raw,
+                    presentation.expressionTransitionEasing);
+
+            sample.expressionSourceStateId =
+                previousCharacter.stateId;
+            sample.expressionSourceAlpha =
+                1f - eased;
+            sample.alpha *= eased;
+        }
+
+        private static RokasVnRuntimeCharacterSnapshot FindCharacter(
+            RokasVnRuntimeSceneSnapshot scene,
+            string characterId)
+        {
+            if (scene == null ||
+                scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return null;
+
+            for (int i = 0;
+                 i < scene.characters.Count;
+                 i++)
+            {
+                RokasVnRuntimeCharacterSnapshot character =
+                    scene.characters[i];
+                if (character != null &&
+                    string.Equals(
+                        character.characterId ??
+                        string.Empty,
+                        characterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    return character;
+            }
+
+            return null;
         }
 
         private void ApplySceneActionBounce(
