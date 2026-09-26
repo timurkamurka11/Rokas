@@ -829,12 +829,15 @@ namespace Rokas.Tests
                 "Background swap must happen under the authored dark cover.");
             Assert.That(overlay.alpha, Is.EqualTo(1f).Within(.001f),
                 "The Scene swap must commit while the authored curtain is fully closed.");
-            Assert.That(outgoingCharacter.activeSelf, Is.False,
-                "Outgoing character GameObjects must stop rendering synchronously at the swap.");
-            Assert.That(outgoingCharacter.transform.parent, Is.Null,
-                "Outgoing character GameObjects must leave the runtime render tree synchronously.");
+            Assert.That(outgoingCharacter.activeSelf, Is.True,
+                "Immutable Preview retains the outgoing character as the authored exit-transition source under full curtain.");
+            Assert.That(
+                outgoingCharacter.name,
+                Is.EqualTo("VnCharacterExit_Mina"));
+            Assert.That(outgoingCharacter.transform.parent, Is.Not.Null,
+                "Exit-transition source stays in the VN character layer until its authored fade completes.");
             Assert.That(Find("VnCharacter_Mina"), Is.Null,
-                "No outgoing character render entry may survive into the incoming Scene tree.");
+                "The old character must no longer occupy the incoming character identity even while its exit source is retained.");
 
             GameObject incomingCharacter = Find("VnCharacter_Keiko");
             Assert.That(incomingCharacter, Is.Not.Null,
