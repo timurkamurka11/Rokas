@@ -839,7 +839,6 @@ namespace Rokas.Tests
             GameObject incomingCharacter = Find("VnCharacter_Keiko");
             Assert.That(incomingCharacter, Is.Not.Null,
                 "Incoming character render state must already be prepared under the closed curtain.");
-            Assert.That(incomingCharacter.activeSelf, Is.True);
             RawImage incomingImage = incomingCharacter.GetComponent<RawImage>();
             Texture incomingTexture = package.CharacterStates
                 .First(binding => binding.stateId == "keiko_runtime").texture;
@@ -874,10 +873,19 @@ namespace Rokas.Tests
 
             RawImage keiko =
                 Find("VnCharacter_Keiko").GetComponent<RawImage>();
+            RawImage minaExit =
+                Find("VnCharacterExit_Mina").GetComponent<RawImage>();
             Assert.That(
                 keiko.gameObject.activeSelf,
                 Is.False,
                 "Immutable Preview Fade character transition starts an entering character at alpha zero.");
+            Assert.That(
+                minaExit.gameObject.activeSelf,
+                Is.True,
+                "Outgoing character must remain as the authored transition source instead of disappearing instantly.");
+            Assert.That(
+                minaExit.color.a,
+                Is.EqualTo(1f).Within(.001f));
 
             player.TickForTests(.15f);
             Assert.That(keiko.gameObject.activeSelf, Is.True);
@@ -885,11 +893,19 @@ namespace Rokas.Tests
                 keiko.color.a,
                 Is.EqualTo(.5f).Within(.03f),
                 "Entering character must use the authored .30s EaseInOut fade.");
+            Assert.That(
+                minaExit.color.a,
+                Is.EqualTo(.5f).Within(.03f),
+                "Outgoing character must use the matching authored exit fade.");
 
             player.TickForTests(.15f);
             Assert.That(
                 keiko.color.a,
                 Is.EqualTo(1f).Within(.001f));
+            Assert.That(
+                minaExit.gameObject.activeSelf,
+                Is.False,
+                "Outgoing character must leave rendering after the authored transition completes.");
 
             player.Dispose();
             yield return null;
