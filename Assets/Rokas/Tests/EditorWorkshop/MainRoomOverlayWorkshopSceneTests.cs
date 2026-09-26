@@ -56,6 +56,42 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void LayoutJsonRoundTripPreservesManualWorkshopEdits()
+        {
+            scene = MainRoomOverlayWorkshopBuilder.CreateUnsavedWorkshopForTests(destinationRoot);
+            GameObject root = FindRoot(scene, "MainRoomOverlayWorkshop");
+            Assert.That(root, Is.Not.Null);
+
+            RectTransform laptop = FindTransform(root, "Hotspot_Laptop") as RectTransform;
+            MainRoomOverlayEditablePath outline = Find<MainRoomOverlayEditablePath>(root, "Outline_Laptop");
+            MainRoomOverlayDottedConnector connector = Find<MainRoomOverlayDottedConnector>(root, "Connector_Laptop");
+            Assert.That(laptop, Is.Not.Null);
+            Assert.That(outline, Is.Not.Null);
+            Assert.That(connector, Is.Not.Null);
+
+            laptop.anchoredPosition = new Vector2(777f, -333f);
+            laptop.sizeDelta = new Vector2(123f, 117f);
+            outline.SetPoint(0, new Vector2(812f, 499f));
+
+            string json = MainRoomOverlayWorkshopLayoutIO.CaptureJson(root);
+            Assert.That(json, Does.Contain("Hotspot_Laptop"));
+            Assert.That(json, Does.Contain("Outline_Laptop"));
+
+            laptop.anchoredPosition = new Vector2(10f, -10f);
+            laptop.sizeDelta = new Vector2(10f, 10f);
+            outline.SetPoint(0, Vector2.zero);
+
+            MainRoomOverlayWorkshopLayoutIO.ApplyJson(root, json);
+
+            Assert.That(laptop.anchoredPosition.x, Is.EqualTo(777f).Within(.01f));
+            Assert.That(laptop.anchoredPosition.y, Is.EqualTo(-333f).Within(.01f));
+            Assert.That(laptop.sizeDelta.x, Is.EqualTo(123f).Within(.01f));
+            Assert.That(laptop.sizeDelta.y, Is.EqualTo(117f).Within(.01f));
+            Assert.That(outline.GetPoint(0).x, Is.EqualTo(812f).Within(.01f));
+            Assert.That(outline.GetPoint(0).y, Is.EqualTo(499f).Within(.01f));
+        }
+
+        [Test]
         public void BuilderCreatesEditableWorkshopLayersWithoutTouchingBuildSettings()
         {
             scene = MainRoomOverlayWorkshopBuilder.CreateUnsavedWorkshopForTests(destinationRoot);
