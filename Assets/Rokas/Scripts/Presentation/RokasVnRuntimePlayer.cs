@@ -1565,6 +1565,10 @@ namespace Rokas.Presentation
             RokasVnRuntimeSceneSnapshot scene)
         {
             RefreshExitingCharacterViews(scene);
+            RokasVnRuntimeReplicaEffectSample effect =
+                playback.SampleReplicaEffect();
+            ApplyGlobalReplicaShake(effect);
+
             if (scene == null ||
                 scene.characters == null) return;
             for (int i = 0; i < scene.characters.Count; i++)
@@ -1618,9 +1622,6 @@ namespace Rokas.Presentation
                     sample);
             }
 
-            RokasVnRuntimeReplicaEffectSample effect =
-                playback.SampleReplicaEffect();
-            ApplyGlobalReplicaShake(effect);
             if (!effect.active) return;
 
             int replicaType =
