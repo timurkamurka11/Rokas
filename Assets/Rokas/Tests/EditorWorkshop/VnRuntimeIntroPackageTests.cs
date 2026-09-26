@@ -100,6 +100,111 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void ExportSnapshotMatchesImmutableOracleResolvedGeometryAndBeatStyles()
+        {
+            var project = new VnSceneComposerProject
+            {
+                projectId = ProjectId,
+                title = "Immutable Oracle Presentation Fixture",
+                defaultPresentation = new VnPresentationWorkshopPreset()
+            };
+            project.scenes.Clear();
+            project.defaultPresentation.dialoguePanel.hasPositionDelta = true;
+            project.defaultPresentation.dialoguePanel.positionDelta =
+                new Vector2(17f, 11f);
+            project.defaultPresentation.speakerName.hasPositionDelta = true;
+            project.defaultPresentation.speakerName.positionDelta =
+                new Vector2(-9f, 6f);
+            project.defaultPresentation.dialogueText.hasSizeDelta = true;
+            project.defaultPresentation.dialogueText.sizeDelta =
+                new Vector2(-42f, 18f);
+
+            var scene = new VnSceneComposerScene { label = "Oracle" };
+            scene.dialogueBeats.Clear();
+            var mina = new VnSceneComposerDialogueBeat
+            {
+                speaker = "Mina",
+                text = "Первая реплика"
+            };
+            var keiko = new VnSceneComposerDialogueBeat
+            {
+                speaker = "Keiko",
+                text = "Вторая реплика"
+            };
+            scene.dialogueBeats.Add(mina);
+            scene.dialogueBeats.Add(keiko);
+            project.scenes.Add(scene);
+
+            string minaKey =
+                VnSceneComposerTextStyleResolver.ResolveSpeakerKey(
+                    scene,
+                    mina);
+            string keikoKey =
+                VnSceneComposerTextStyleResolver.ResolveSpeakerKey(
+                    scene,
+                    keiko);
+            VnSceneComposerTextStyleResolver.SetProjectSpeakerNameColor(
+                project,
+                minaKey,
+                new Color(.15f, .75f, .95f, 1f));
+            VnSceneComposerTextStyleResolver.SetProjectSpeakerNameColor(
+                project,
+                keikoKey,
+                new Color(.90f, .35f, .20f, 1f));
+            VnSceneComposerTextStyleResolver.SetProjectSpeakerDialogueBodyColor(
+                project,
+                minaKey,
+                new Color(.85f, .95f, 1f, 1f));
+            VnSceneComposerTextStyleResolver.SetProjectSpeakerDialogueBodyColor(
+                project,
+                keikoKey,
+                new Color(1f, .88f, .72f, 1f));
+
+            VnWorkshopPreviewFrame oracle =
+                VnSceneComposerComposition.BuildFrame(
+                    project,
+                    scene,
+                    mina,
+                    VnWorkshopResolution.Reference1920x1080,
+                    null);
+            VnWorkshopTypographyValues expectedMina =
+                VnSceneComposerTextStyleResolver.Resolve(
+                    project,
+                    scene,
+                    mina);
+            VnWorkshopTypographyValues expectedKeiko =
+                VnSceneComposerTextStyleResolver.Resolve(
+                    project,
+                    scene,
+                    keiko);
+
+            RokasVnRuntimeIntroSnapshot snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "immutable-oracle-presentation");
+            RokasVnRuntimePresentationSnapshot presentation =
+                snapshot.scenes[0].presentation;
+
+            Assert.That(presentation.hasResolvedOracleGeometry, Is.True);
+            Assert.That(presentation.dialoguePanelRect, Is.EqualTo(oracle.DialoguePanel));
+            Assert.That(presentation.speakerNameRect, Is.EqualTo(oracle.SpeakerName));
+            Assert.That(presentation.dialogueTextRect, Is.EqualTo(oracle.DialogueText));
+
+            RokasVnRuntimeTypographySnapshot actualMina =
+                snapshot.scenes[0].dialogueBeats[0].typography;
+            RokasVnRuntimeTypographySnapshot actualKeiko =
+                snapshot.scenes[0].dialogueBeats[1].typography;
+            Assert.That(actualMina.resolved, Is.True);
+            Assert.That(actualKeiko.resolved, Is.True);
+            Assert.That(actualMina.speakerColor, Is.EqualTo(expectedMina.SpeakerColor));
+            Assert.That(actualMina.dialogueColor, Is.EqualTo(expectedMina.DialogueColor));
+            Assert.That(actualKeiko.speakerColor, Is.EqualTo(expectedKeiko.SpeakerColor));
+            Assert.That(actualKeiko.dialogueColor, Is.EqualTo(expectedKeiko.DialogueColor));
+            Assert.That(actualMina.speakerColor, Is.Not.EqualTo(actualKeiko.speakerColor));
+            Assert.That(actualMina.dialogueColor, Is.Not.EqualTo(actualKeiko.dialogueColor));
+        }
+
+        [Test]
         public void SpeakerFocusSamplesMatchAuthoritativePreviewResolverAcrossSwitch()
         {
             var project = new VnSceneComposerProject
