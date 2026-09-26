@@ -155,6 +155,7 @@ namespace Rokas.Presentation
         public Rect dialoguePanelRect;
         public Rect speakerNameRect;
         public Rect dialogueTextRect;
+        public string dialoguePlaqueAssetGuid = string.Empty;
 
         public float leftX = -360f;
         public float centerX;
