@@ -51,6 +51,26 @@ namespace Rokas.Presentation
     }
 
     [Serializable]
+    public sealed class RokasVnRuntimeTypographySnapshot
+    {
+        public bool resolved;
+        public int dialogueFontPreset;
+        public string dialogueFontAssetGuid = string.Empty;
+        public Color dialogueColor = Color.white;
+        public float dialogueFontSize = 22f;
+        public float dialogueCharacterSpacing;
+        public float dialogueLineSpacing;
+        public float dialogueParagraphSpacing;
+        public int dialogueAlignment;
+        public int speakerFontPreset;
+        public string speakerFontAssetGuid = string.Empty;
+        public Color speakerColor = Color.white;
+        public float speakerFontSize = 26f;
+        public float speakerCharacterSpacing;
+        public int speakerAlignment;
+    }
+
+    [Serializable]
     public sealed class RokasVnRuntimeBeatSnapshot
     {
         public string beatId = string.Empty;
@@ -69,6 +89,8 @@ namespace Rokas.Presentation
             new RokasVnRuntimeMovementSnapshot();
         public List<RokasVnRuntimeStagingSnapshot> characterStaging =
             new List<RokasVnRuntimeStagingSnapshot>();
+        public RokasVnRuntimeTypographySnapshot typography =
+            new RokasVnRuntimeTypographySnapshot();
     }
 
     [Serializable]
@@ -129,6 +151,11 @@ namespace Rokas.Presentation
     [Serializable]
     public sealed class RokasVnRuntimePresentationSnapshot
     {
+        public bool hasResolvedOracleGeometry;
+        public Rect dialoguePanelRect;
+        public Rect speakerNameRect;
+        public Rect dialogueTextRect;
+
         public float leftX = -360f;
         public float centerX;
         public float rightX = 360f;
