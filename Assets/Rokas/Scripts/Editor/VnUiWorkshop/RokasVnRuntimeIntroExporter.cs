@@ -249,6 +249,12 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 VnSceneComposerComposition.ResolvePresentation(project, scene);
             VnWorkshopStageLayoutValues stage =
                 VnPresentationWorkshopVn10Resolver.ResolveStageLayout(preset);
+            VnWorkshopActionBounceValues actionBounce =
+                VnPresentationWorkshopVn10Resolver.ResolveActionBounce(preset);
+            VnWorkshopCharacterTransitionValues characterTransition =
+                VnPresentationWorkshopVn10Resolver.ResolveCharacterTransition(preset);
+            VnWorkshopExpressionTransitionValues expressionTransition =
+                VnPresentationWorkshopVn10Resolver.ResolveExpressionTransition(preset);
             VnWorkshopSpeakerFocusValues focus =
                 VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(preset);
             VnWorkshopTypewriterValues typewriter =
@@ -303,6 +309,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
                 rightScale = stage.RightScale,
                 stageRepositionDuration = stage.RepositionDuration,
                 stageEasing = (int)stage.Easing,
+
+                actionBounceAmplitude = actionBounce.Amplitude,
+                actionBounceDuration = actionBounce.Duration,
+                actionBounceScaleEmphasis = actionBounce.ScaleEmphasis,
+                actionBounceOvershoot = actionBounce.Overshoot,
+                actionBounceEasing = (int)actionBounce.Easing,
+
+                characterTransitionMode = (int)characterTransition.Mode,
+                characterTransitionDuration = characterTransition.Duration,
+                characterTransitionFadeDuration = characterTransition.FadeDuration,
+                characterTransitionSlideDistance = characterTransition.SlideDistance,
+                characterTransitionSlideDirection = (int)characterTransition.SlideDirection,
+                characterTransitionEasing = (int)characterTransition.Easing,
+
+                expressionTransitionDuration = expressionTransition.Duration,
+                expressionTransitionEasing = (int)expressionTransition.Easing,
 
                 speakerActiveScale = focus.ActiveScale,
                 speakerActiveBrightness = focus.ActiveBrightness,
