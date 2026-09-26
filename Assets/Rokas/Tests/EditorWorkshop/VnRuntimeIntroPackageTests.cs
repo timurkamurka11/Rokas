@@ -326,6 +326,236 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void MovementAndReplicaEffectSamplesMatchAuthoritativePreviewSamplers()
+        {
+            VnSceneComposerMovementActionType[] actions =
+            {
+                VnSceneComposerMovementActionType.ExitLeft,
+                VnSceneComposerMovementActionType.ExitRight,
+                VnSceneComposerMovementActionType.Disappear,
+                VnSceneComposerMovementActionType.MoveLeft,
+                VnSceneComposerMovementActionType.MoveCenter,
+                VnSceneComposerMovementActionType.MoveRight
+            };
+
+            foreach (VnSceneComposerMovementActionType action in actions)
+            {
+                var project = new VnSceneComposerProject
+                {
+                    projectId = ProjectId,
+                    title = "Movement Parity Fixture",
+                    defaultPresentation = new VnPresentationWorkshopPreset()
+                };
+                project.scenes.Clear();
+                var scene = new VnSceneComposerScene();
+                scene.characters.Clear();
+                scene.characters.Add(new VnSceneComposerCharacter
+                {
+                    characterId = "Mina",
+                    stateId = "mina_neutral",
+                    stageSlot = VnWorkshopStageSlot.Center
+                });
+                scene.dialogueBeats.Clear();
+                var beat = new VnSceneComposerDialogueBeat
+                {
+                    speaker = "Mina",
+                    text = string.Empty
+                };
+                beat.movement.primary.characterId = "Mina";
+                beat.movement.primary.action = action;
+                beat.movement.primary.duration = .8f;
+                scene.dialogueBeats.Add(beat);
+                project.scenes.Add(scene);
+
+                VnWorkshopStageLayoutValues stage =
+                    VnPresentationWorkshopVn10Resolver.ResolveStageLayout(
+                        project.defaultPresentation);
+                const float elapsed = .37f;
+                VnSceneComposerResolvedMovementSample expected =
+                    VnSceneComposerMovementResolver.Sample(
+                        scene,
+                        beat,
+                        "Mina",
+                        elapsed,
+                        stage,
+                        1920f,
+                        null);
+
+                RokasVnRuntimeIntroSnapshot snapshot =
+                    RokasVnRuntimeIntroExporter.BuildSnapshot(
+                        project,
+                        "movement-parity-" + action);
+                var runtime =
+                    new RokasVnRuntimePlaybackState(snapshot);
+                runtime.StartFromBeginning();
+                runtime.AdvanceTime(elapsed);
+                RokasVnRuntimeCharacterSample actual =
+                    runtime.SampleCharacter("Mina");
+
+                Assert.That(actual.visible, Is.EqualTo(expected.Visible), action.ToString());
+                Assert.That(actual.alpha, Is.EqualTo(expected.Alpha).Within(.0001f), action.ToString());
+                Assert.That(actual.stageSlot, Is.EqualTo((int)expected.StageSlot), action.ToString());
+                Assert.That(actual.position.x, Is.EqualTo(expected.StagePosition.x).Within(.0001f), action.ToString());
+                Assert.That(actual.position.y, Is.EqualTo(expected.StagePosition.y).Within(.0001f), action.ToString());
+                Assert.That(actual.scale, Is.EqualTo(expected.StageScale).Within(.0001f), action.ToString());
+            }
+
+            VnSceneComposerReplicaEffectType[] effectTypes =
+            {
+                VnSceneComposerReplicaEffectType.Shake,
+                VnSceneComposerReplicaEffectType.Punch,
+                VnSceneComposerReplicaEffectType.Flash,
+                VnSceneComposerReplicaEffectType.Pulse
+            };
+
+            foreach (VnSceneComposerReplicaEffectType effectType in effectTypes)
+            {
+                var project = new VnSceneComposerProject
+                {
+                    projectId = ProjectId,
+                    title = "Effect Parity Fixture"
+                };
+                project.scenes.Clear();
+                var scene = new VnSceneComposerScene();
+                scene.dialogueBeats.Clear();
+                var beat = new VnSceneComposerDialogueBeat
+                {
+                    text = string.Empty,
+                    replicaEffect = new VnSceneComposerReplicaEffect
+                    {
+                        type = effectType,
+                        intensity = .63f,
+                        duration = .8f,
+                        frequency = 9f,
+                        decay = 1.7f,
+                        direction = new Vector2(-2f, 1f),
+                        flashColor = new Color(.8f, .3f, .2f, .75f)
+                    }
+                };
+                scene.dialogueBeats.Add(beat);
+                project.scenes.Add(scene);
+
+                const float elapsed = .31f;
+                VnSceneComposerReplicaEffectSample expected =
+                    VnSceneComposerReplicaEffects.Sample(
+                        beat.replicaEffect,
+                        elapsed);
+                RokasVnRuntimeIntroSnapshot snapshot =
+                    RokasVnRuntimeIntroExporter.BuildSnapshot(
+                        project,
+                        "effect-parity-" + effectType);
+                var runtime =
+                    new RokasVnRuntimePlaybackState(snapshot);
+                runtime.StartFromBeginning();
+                runtime.AdvanceTime(elapsed);
+                RokasVnRuntimeReplicaEffectSample actual =
+                    runtime.SampleReplicaEffect();
+
+                Assert.That(actual.active, Is.EqualTo(expected.Active), effectType.ToString());
+                Assert.That(actual.offset.x, Is.EqualTo(expected.Offset.x).Within(.0001f), effectType.ToString());
+                Assert.That(actual.offset.y, Is.EqualTo(expected.Offset.y).Within(.0001f), effectType.ToString());
+                Assert.That(actual.scale, Is.EqualTo(expected.Scale).Within(.0001f), effectType.ToString());
+                Assert.That(actual.flash.r, Is.EqualTo(expected.Flash.r).Within(.0001f), effectType.ToString());
+                Assert.That(actual.flash.g, Is.EqualTo(expected.Flash.g).Within(.0001f), effectType.ToString());
+                Assert.That(actual.flash.b, Is.EqualTo(expected.Flash.b).Within(.0001f), effectType.ToString());
+                Assert.That(actual.flash.a, Is.EqualTo(expected.Flash.a).Within(.0001f), effectType.ToString());
+            }
+        }
+
+        [Test]
+        public void SecondaryMovementTimingMatchesPreviewForSimultaneousAndAfterPrimary()
+        {
+            foreach (VnSceneComposerMovementTiming timing in new[]
+                     {
+                         VnSceneComposerMovementTiming.Simultaneous,
+                         VnSceneComposerMovementTiming.AfterPrimary
+                     })
+            {
+                var project = new VnSceneComposerProject
+                {
+                    projectId = ProjectId,
+                    title = "Secondary Movement Parity Fixture",
+                    defaultPresentation = new VnPresentationWorkshopPreset()
+                };
+                project.scenes.Clear();
+                var scene = new VnSceneComposerScene();
+                scene.characters.Clear();
+                scene.characters.Add(new VnSceneComposerCharacter
+                {
+                    characterId = "Mina",
+                    stateId = "mina_neutral",
+                    stageSlot = VnWorkshopStageSlot.Left
+                });
+                scene.characters.Add(new VnSceneComposerCharacter
+                {
+                    characterId = "Keiko",
+                    stateId = "keiko_neutral",
+                    stageSlot = VnWorkshopStageSlot.Right
+                });
+                scene.dialogueBeats.Clear();
+                var beat = new VnSceneComposerDialogueBeat
+                {
+                    text = string.Empty
+                };
+                beat.movement.primary.characterId = "Mina";
+                beat.movement.primary.action =
+                    VnSceneComposerMovementActionType.MoveCenter;
+                beat.movement.primary.duration = .8f;
+                beat.movement.secondary.characterId = "Keiko";
+                beat.movement.secondary.action =
+                    VnSceneComposerMovementActionType.MoveCenter;
+                beat.movement.secondary.duration = .6f;
+                beat.movement.secondaryTiming = timing;
+                scene.dialogueBeats.Add(beat);
+                project.scenes.Add(scene);
+
+                VnWorkshopStageLayoutValues stage =
+                    VnPresentationWorkshopVn10Resolver.ResolveStageLayout(
+                        project.defaultPresentation);
+                foreach (float elapsed in new[] { .35f, .95f, 1.45f })
+                {
+                    RokasVnRuntimeIntroSnapshot snapshot =
+                        RokasVnRuntimeIntroExporter.BuildSnapshot(
+                            project,
+                            "secondary-parity-" + timing + "-" + elapsed);
+                    var runtime =
+                        new RokasVnRuntimePlaybackState(snapshot);
+                    runtime.StartFromBeginning();
+                    runtime.AdvanceTime(elapsed);
+
+                    foreach (string id in new[] { "Mina", "Keiko" })
+                    {
+                        VnSceneComposerResolvedMovementSample expected =
+                            VnSceneComposerMovementResolver.Sample(
+                                scene,
+                                beat,
+                                id,
+                                elapsed,
+                                stage,
+                                1920f,
+                                null);
+                        RokasVnRuntimeCharacterSample actual =
+                            runtime.SampleCharacter(id);
+                        Assert.That(actual.visible, Is.EqualTo(expected.Visible),
+                            timing + " " + id + " @" + elapsed);
+                        Assert.That(actual.alpha,
+                            Is.EqualTo(expected.Alpha).Within(.0001f),
+                            timing + " " + id + " @" + elapsed);
+                        Assert.That(actual.position.x,
+                            Is.EqualTo(expected.StagePosition.x).Within(.0001f),
+                            timing + " " + id + " @" + elapsed);
+                        Assert.That(actual.position.y,
+                            Is.EqualTo(expected.StagePosition.y).Within(.0001f),
+                            timing + " " + id + " @" + elapsed);
+                        Assert.That(actual.scale,
+                            Is.EqualTo(expected.StageScale).Within(.0001f),
+                            timing + " " + id + " @" + elapsed);
+                    }
+                }
+            }
+        }
+
+        [Test]
         public void ProjectOwnedExportCopiesAuthoredGuidAssetsAndRuntimeUiOutsideEditor()
         {
             const string root =
