@@ -79,6 +79,158 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void SpeakerFocusSamplesMatchAuthoritativePreviewResolverAcrossSwitch()
+        {
+            var project = new VnSceneComposerProject
+            {
+                projectId = ProjectId,
+                title = "Speaker Focus Parity Fixture",
+                defaultPresentation = new VnPresentationWorkshopPreset()
+            };
+            project.scenes.Clear();
+
+            VnPresentationWorkshopVn10Resolver.SetSpeakerFocusPreviewOverrides(
+                project.defaultPresentation,
+                1.08f,
+                1.10f,
+                14f,
+                .90f,
+                .65f,
+                .70f,
+                .50f,
+                VnWorkshopEasing.Linear);
+
+            var scene = new VnSceneComposerScene
+            {
+                label = "Focus"
+            };
+            scene.characters.Clear();
+            scene.characters.Add(new VnSceneComposerCharacter
+            {
+                characterId = "Mina",
+                stateId = "mina_neutral",
+                stageSlot = VnWorkshopStageSlot.Left
+            });
+            scene.characters.Add(new VnSceneComposerCharacter
+            {
+                characterId = "Keiko",
+                stateId = "keiko_neutral",
+                stageSlot = VnWorkshopStageSlot.Right
+            });
+            scene.dialogueBeats.Clear();
+            scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat
+            {
+                speaker = "Mina",
+                text = string.Empty
+            });
+            scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat
+            {
+                speaker = "Keiko",
+                text = string.Empty
+            });
+            project.scenes.Add(scene);
+
+            VnWorkshopSpeakerFocusValues focus =
+                VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(
+                    project.defaultPresentation);
+            RokasVnRuntimeIntroSnapshot snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "speaker-focus-parity");
+            RokasVnRuntimePresentationSnapshot runtimePresentation =
+                snapshot.scenes[0].presentation;
+
+            Assert.That(runtimePresentation.speakerActiveScale,
+                Is.EqualTo(focus.ActiveScale).Within(.0001f));
+            Assert.That(runtimePresentation.speakerActiveBrightness,
+                Is.EqualTo(focus.ActiveBrightness).Within(.0001f));
+            Assert.That(runtimePresentation.speakerActiveForwardOffset,
+                Is.EqualTo(focus.ActiveForwardOffset).Within(.0001f));
+            Assert.That(runtimePresentation.speakerInactiveScale,
+                Is.EqualTo(focus.InactiveScale).Within(.0001f));
+            Assert.That(runtimePresentation.speakerInactiveBrightness,
+                Is.EqualTo(focus.InactiveBrightness).Within(.0001f));
+            Assert.That(runtimePresentation.speakerInactiveAlpha,
+                Is.EqualTo(focus.InactiveAlpha).Within(.0001f));
+            Assert.That(runtimePresentation.speakerFocusTransitionDuration,
+                Is.EqualTo(focus.TransitionDuration).Within(.0001f));
+            Assert.That(runtimePresentation.speakerFocusEasing,
+                Is.EqualTo((int)focus.Easing));
+
+            var playback =
+                new RokasVnRuntimePlaybackState(snapshot);
+            playback.StartFromBeginning();
+            playback.AdvanceDialogue();
+            Assert.That(playback.CurrentBeatIndex, Is.EqualTo(1));
+
+            AssertSpeakerFocusParity(
+                playback,
+                runtimePresentation,
+                focus,
+                0f);
+            playback.AdvanceTime(.25f);
+            AssertSpeakerFocusParity(
+                playback,
+                runtimePresentation,
+                focus,
+                .5f);
+            playback.AdvanceTime(.25f);
+            AssertSpeakerFocusParity(
+                playback,
+                runtimePresentation,
+                focus,
+                1f);
+        }
+
+        private static void AssertSpeakerFocusParity(
+            RokasVnRuntimePlaybackState playback,
+            RokasVnRuntimePresentationSnapshot presentation,
+            VnWorkshopSpeakerFocusValues focus,
+            float normalizedProgress)
+        {
+            RokasVnRuntimeCharacterSample mina =
+                playback.SampleCharacter("Mina");
+            RokasVnRuntimeCharacterSample keiko =
+                playback.SampleCharacter("Keiko");
+
+            VnWorkshopSpeakerFocusSample expectedMina =
+                VnPresentationWorkshopVn10Resolver.SampleSpeakerFocus(
+                    2, 0, 1, 0,
+                    normalizedProgress,
+                    focus);
+            VnWorkshopSpeakerFocusSample expectedKeiko =
+                VnPresentationWorkshopVn10Resolver.SampleSpeakerFocus(
+                    2, 0, 1, 1,
+                    normalizedProgress,
+                    focus);
+
+            Assert.That(
+                mina.scale / presentation.leftScale,
+                Is.EqualTo(expectedMina.Scale).Within(.0001f));
+            Assert.That(
+                keiko.scale / presentation.rightScale,
+                Is.EqualTo(expectedKeiko.Scale).Within(.0001f));
+            Assert.That(
+                mina.brightness,
+                Is.EqualTo(expectedMina.Brightness).Within(.0001f));
+            Assert.That(
+                keiko.brightness,
+                Is.EqualTo(expectedKeiko.Brightness).Within(.0001f));
+            Assert.That(
+                mina.alpha,
+                Is.EqualTo(expectedMina.Alpha).Within(.0001f));
+            Assert.That(
+                keiko.alpha,
+                Is.EqualTo(expectedKeiko.Alpha).Within(.0001f));
+            Assert.That(
+                mina.position.y - presentation.slotY,
+                Is.EqualTo(expectedMina.PositionOffset.y).Within(.0001f));
+            Assert.That(
+                keiko.position.y - presentation.slotY,
+                Is.EqualTo(expectedKeiko.PositionOffset.y).Within(.0001f));
+        }
+
+        [Test]
         public void ProjectOwnedExportCopiesAuthoredGuidAssetsAndRuntimeUiOutsideEditor()
         {
             const string root =
