@@ -338,6 +338,8 @@ namespace Rokas.Presentation
             public string CharacterId;
             public RectTransform Rect;
             public RawImage Image;
+            public RectTransform ExpressionSourceRect;
+            public RawImage ExpressionSourceImage;
         }
 
         private sealed class ControlMotion
@@ -1263,18 +1265,12 @@ namespace Rokas.Presentation
         {
             foreach (CharacterView view in characterViews.Values)
             {
-                if (view == null || view.Image == null) continue;
+                if (view == null) continue;
 
-                // Destroy is deferred in PlayMode. Remove outgoing characters
-                // from render ownership synchronously at the covered Scene swap
-                // so old and incoming render trees can never overlap for a frame.
-                GameObject characterObject = view.Image.gameObject;
-                characterObject.SetActive(false);
-                characterObject.transform.SetParent(null, false);
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(characterObject);
-                else
-                    UnityEngine.Object.DestroyImmediate(characterObject);
+                DestroyCharacterRenderObject(
+                    view.ExpressionSourceImage);
+                DestroyCharacterRenderObject(
+                    view.Image);
             }
             characterViews.Clear();
 
@@ -1287,6 +1283,22 @@ namespace Rokas.Presentation
                     string.IsNullOrWhiteSpace(character.characterId))
                     continue;
 
+                RawImage expressionSource = CreateRaw(
+                    characterLayer,
+                    "VnCharacterExpressionSource_" +
+                    character.characterId,
+                    null,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero);
+                RectTransform expressionSourceRect =
+                    (RectTransform)expressionSource.transform;
+                ConfigureCharacterRect(
+                    expressionSourceRect);
+                expressionSource.raycastTarget = false;
+                expressionSource.gameObject.SetActive(false);
+
                 RawImage image = CreateRaw(
                     characterLayer,
                     "VnCharacter_" + character.characterId,
@@ -1295,10 +1307,9 @@ namespace Rokas.Presentation
                     Vector2.zero,
                     Vector2.zero,
                     Vector2.zero);
-                RectTransform rect = (RectTransform)image.transform;
-                rect.anchorMin = Vector2.zero;
-                rect.anchorMax = Vector2.zero;
-                rect.pivot = new Vector2(.5f, .5f);
+                RectTransform rect =
+                    (RectTransform)image.transform;
+                ConfigureCharacterRect(rect);
                 image.raycastTarget = false;
 
                 characterViews[character.characterId] =
@@ -1306,9 +1317,39 @@ namespace Rokas.Presentation
                     {
                         CharacterId = character.characterId,
                         Rect = rect,
-                        Image = image
+                        Image = image,
+                        ExpressionSourceRect =
+                            expressionSourceRect,
+                        ExpressionSourceImage =
+                            expressionSource
                     };
             }
+        }
+
+        private static void ConfigureCharacterRect(
+            RectTransform rect)
+        {
+            if (rect == null) return;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(.5f, .5f);
+        }
+
+        private static void DestroyCharacterRenderObject(
+            RawImage image)
+        {
+            if (image == null) return;
+            GameObject characterObject =
+                image.gameObject;
+            characterObject.SetActive(false);
+            characterObject.transform.SetParent(
+                null, false);
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(
+                    characterObject);
+            else
+                UnityEngine.Object.DestroyImmediate(
+                    characterObject);
         }
 
         private void RefreshCharacters(
@@ -1337,41 +1378,33 @@ namespace Rokas.Presentation
                     state.texture != null;
 
                 view.Image.gameObject.SetActive(
-                    sample.visible && sample.alpha > .0001f &&
+                    sample.visible &&
+                    sample.alpha > .0001f &&
                     hasState);
-                if (!hasState) continue;
+                if (!hasState)
+                {
+                    if (view.ExpressionSourceImage != null)
+                        view.ExpressionSourceImage
+                            .gameObject.SetActive(false);
+                    continue;
+                }
 
                 view.Image.texture = state.texture;
                 view.Image.uvRect = state.bodyUv;
-                float sourceWidth =
-                    state.texture.width *
-                    Mathf.Max(.0001f, state.bodyUv.width);
-                float sourceHeight =
-                    state.texture.height *
-                    Mathf.Max(.0001f, state.bodyUv.height);
-                float aspect =
-                    sourceHeight > .0001f
-                        ? sourceWidth / sourceHeight
-                        : .4f;
-                view.Rect.SetSizeWithCurrentAnchors(
-                    RectTransform.Axis.Horizontal,
-                    CharacterBodyHeight * aspect);
-                view.Rect.SetSizeWithCurrentAnchors(
-                    RectTransform.Axis.Vertical,
-                    CharacterBodyHeight);
-                view.Rect.anchoredPosition =
-                    new Vector2(
-                        ReferenceWidth * .5f + sample.position.x,
-                        CharacterBaseCenterY + sample.position.y);
-                view.Rect.localScale =
-                    new Vector3(
-                        sample.scale, sample.scale, 1f);
+                ApplyCharacterGeometry(
+                    view.Rect,
+                    state,
+                    sample);
                 view.Image.color =
                     new Color(
                         sample.brightness,
                         sample.brightness,
                         sample.brightness,
                         sample.alpha);
+
+                RefreshExpressionSource(
+                    view,
+                    sample);
             }
 
             RokasVnRuntimeReplicaEffectSample effect =
@@ -1397,6 +1430,98 @@ namespace Rokas.Presentation
                         effect.flash,
                         effect.flash.a);
             }
+        }
+
+        private static void ApplyCharacterGeometry(
+            RectTransform rect,
+            RokasVnRuntimeCharacterStateBinding state,
+            RokasVnRuntimeCharacterSample sample)
+        {
+            if (rect == null ||
+                state == null ||
+                state.texture == null)
+                return;
+
+            float sourceWidth =
+                state.texture.width *
+                Mathf.Max(
+                    .0001f,
+                    state.bodyUv.width);
+            float sourceHeight =
+                state.texture.height *
+                Mathf.Max(
+                    .0001f,
+                    state.bodyUv.height);
+            float aspect =
+                sourceHeight > .0001f
+                    ? sourceWidth / sourceHeight
+                    : .4f;
+            rect.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Horizontal,
+                CharacterBodyHeight * aspect);
+            rect.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                CharacterBodyHeight);
+            rect.anchoredPosition =
+                new Vector2(
+                    ReferenceWidth * .5f +
+                    sample.position.x,
+                    CharacterBaseCenterY +
+                    sample.position.y);
+            rect.localScale =
+                new Vector3(
+                    sample.scale,
+                    sample.scale,
+                    1f);
+        }
+
+        private void RefreshExpressionSource(
+            CharacterView view,
+            RokasVnRuntimeCharacterSample sample)
+        {
+            if (view == null ||
+                view.ExpressionSourceImage == null ||
+                view.ExpressionSourceRect == null ||
+                string.IsNullOrWhiteSpace(
+                    sample.expressionSourceStateId) ||
+                sample.expressionSourceAlpha <= .0001f)
+            {
+                if (view != null &&
+                    view.ExpressionSourceImage != null)
+                    view.ExpressionSourceImage
+                        .gameObject.SetActive(false);
+                return;
+            }
+
+            RokasVnRuntimeCharacterStateBinding sourceState;
+            if (!package.TryGetCharacterState(
+                    sample.expressionSourceStateId,
+                    out sourceState) ||
+                sourceState == null ||
+                sourceState.texture == null)
+            {
+                view.ExpressionSourceImage
+                    .gameObject.SetActive(false);
+                return;
+            }
+
+            view.ExpressionSourceImage.texture =
+                sourceState.texture;
+            view.ExpressionSourceImage.uvRect =
+                sourceState.bodyUv;
+            ApplyCharacterGeometry(
+                view.ExpressionSourceRect,
+                sourceState,
+                sample);
+            view.ExpressionSourceImage.color =
+                new Color(
+                    sample.brightness,
+                    sample.brightness,
+                    sample.brightness,
+                    Mathf.Clamp01(
+                        sample.expressionSourceAlpha));
+            view.ExpressionSourceImage
+                .gameObject.SetActive(true);
         }
 
         private void RefreshDialogue(
