@@ -116,34 +116,112 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
         }
 
-        private static void DrawComposerMenu(Rect canvas, VnWorkshopPreviewFrame frame)
+        private static void DrawComposerMenu(
+            Rect canvas,
+            VnWorkshopPreviewFrame frame)
         {
-            if (!PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playback) || playback.Owner == null || !playback.Owner.IsMenuOpen) return;
+            if (!PlaybackFrames.TryGetValue(
+                    frame,
+                    out VnSceneComposerPlaybackFrame playback) ||
+                playback.Owner == null ||
+                !playback.Owner.IsMenuOpen)
+                return;
+
             var owner = playback.Owner;
+            RokasVnMenuUiLayout layout =
+                RokasVnRuntimeUiSemantics.MenuLayout(
+                    canvas);
             Color old = GUI.color;
-            GUI.color = new Color(.012f,.024f,.045f,.88f);
-            GUI.DrawTexture(canvas,Texture2D.whiteTexture);
-            float width=Mathf.Min(canvas.width*.68f,440f), height=Mathf.Min(canvas.height*.84f,410f);
-            Rect panel=new Rect(canvas.center.x-width*.5f,canvas.center.y-height*.5f,width,height);
-            GUI.color = new Color(.035f,.085f,.13f,.98f); GUI.DrawTexture(panel,Texture2D.whiteTexture);
-            GUI.color = new Color(.2f,.75f,1f,1f); DrawOutline(panel,1.5f);
-            GUI.color=Color.white;
-            var title=new GUIStyle(EditorStyles.boldLabel) { font=frame.DialogueFont,fontSize=Mathf.RoundToInt(Mathf.Clamp(canvas.height*.044f,16f,24f)),alignment=TextAnchor.MiddleLeft };
-            title.normal.textColor=new Color(.62f,.9f,1f);
-            GUI.Label(new Rect(panel.x+24,panel.y+18,panel.width-48,32),"ROKAS  /  ПАУЗА",title);
-            float row=Mathf.Min(48f,(height-90f)/4f), gap=8f;
-            string[] labels={"Продолжить","Настройки  ·  Скоро","Сохранение  ·  Скоро","Главное меню  ·  Скоро"};
-            var style=new GUIStyle(GUI.skin.button) { font=frame.DialogueFont,fontSize=Mathf.RoundToInt(Mathf.Clamp(row*.35f,12,18)),alignment=TextAnchor.MiddleLeft,padding=new RectOffset(16,10,4,4) };
-            for(int i=0;i<labels.Length;i++)
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuShadeColor;
+            GUI.DrawTexture(
+                canvas,
+                Texture2D.whiteTexture);
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuPanelColor;
+            GUI.DrawTexture(
+                layout.Panel,
+                Texture2D.whiteTexture);
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuOutlineColor;
+            DrawOutline(layout.Panel, 1.5f);
+            GUI.color = Color.white;
+
+            var title = new GUIStyle(
+                EditorStyles.boldLabel)
             {
-                Rect button=new Rect(panel.x+24,panel.y+64+i*(row+gap),panel.width-48,row);
-                using(new EditorGUI.DisabledScope(i!=0)) if(GUI.Button(button,labels[i],style) && i==0) owner.SetMenuOpen(false);
+                font = frame.DialogueFont,
+                fontSize =
+                    RokasVnRuntimeUiSemantics
+                        .MenuTitleFontSize(
+                            canvas.height),
+                alignment =
+                    TextAnchor.MiddleLeft
+            };
+            title.normal.textColor =
+                RokasVnRuntimeUiSemantics
+                    .MenuTitleColor;
+            GUI.Label(
+                layout.Title,
+                RokasVnRuntimeUiSemantics
+                    .MenuTitle,
+                title);
+
+            Rect[] rows =
+            {
+                layout.Resume,
+                layout.Settings,
+                layout.Save,
+                layout.MainMenu
+            };
+            var style = new GUIStyle(
+                GUI.skin.button)
+            {
+                font = frame.DialogueFont,
+                fontSize =
+                    RokasVnRuntimeUiSemantics
+                        .MenuRowFontSize(
+                            layout.Resume.height),
+                alignment =
+                    TextAnchor.MiddleLeft,
+                padding =
+                    new RectOffset(
+                        16, 10, 4, 4)
+            };
+            for (int i = 0; i < rows.Length; i++)
+            {
+                using (new EditorGUI.DisabledScope(
+                           i != 0))
+                {
+                    if (GUI.Button(
+                            rows[i],
+                            RokasVnRuntimeUiSemantics
+                                .MenuLabel(i),
+                            style) &&
+                        i == 0)
+                        owner.SetMenuOpen(false);
+                }
             }
-            GUI.color=old;
-            if(Event.current.type==EventType.KeyDown && Event.current.keyCode==KeyCode.Escape) { owner.SetMenuOpen(false); Event.current.Use(); }
+
+            GUI.color = old;
+            if (Event.current.type ==
+                    EventType.KeyDown &&
+                Event.current.keyCode ==
+                    KeyCode.Escape)
+            {
+                owner.SetMenuOpen(false);
+                Event.current.Use();
+            }
             // IMGUI modal layer: consume every remaining pointer/key event before the
             // preview's dialogue/drag handler can receive it. No Stop/Restart path.
-            if(Event.current.isMouse || Event.current.isKey || Event.current.type==EventType.ScrollWheel) Event.current.Use();
+            if (Event.current.isMouse ||
+                Event.current.isKey ||
+                Event.current.type ==
+                    EventType.ScrollWheel)
+                Event.current.Use();
         }
     }
 }

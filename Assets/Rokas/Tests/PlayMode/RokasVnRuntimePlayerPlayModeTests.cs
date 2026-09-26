@@ -262,6 +262,133 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator RuntimeMenuMatchesAuthoritativePreviewStructureAndFreezesPlayback()
+        {
+            package = CreatePackage();
+            host = new GameObject(
+                "RuntimeVnMenuParityFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(
+                    host.transform,
+                    package,
+                    null);
+            yield return null;
+
+            float before =
+                player.Playback.BeatElapsedSeconds;
+            FindButton("VnMenuButton")
+                .onClick.Invoke();
+
+            GameObject menu =
+                Find("VnRuntimeMenu");
+            Assert.That(menu, Is.Not.Null);
+            Assert.That(menu.activeSelf, Is.True);
+            Assert.That(player.IsMenuOpen, Is.True);
+
+            Image shade =
+                Find("Shade").GetComponent<Image>();
+            Assert.That(
+                shade.color,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .MenuShadeColor));
+
+            Rect canvasLogical =
+                new Rect(0f, 0f, 1920f, 1080f);
+            RokasVnMenuUiLayout layout =
+                RokasVnRuntimeUiSemantics.MenuLayout(
+                    canvasLogical);
+            Image panel =
+                Find("VnMenuPanel")
+                .GetComponent<Image>();
+            Assert.That(
+                panel.color,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .MenuPanelColor));
+            AssertCanvasTopLeftRect(
+                panel.rectTransform,
+                layout.Panel,
+                canvasLogical);
+
+            Text title =
+                Find("VnMenuTitle")
+                .GetComponent<Text>();
+            Assert.That(
+                title.text,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .MenuTitle));
+            Assert.That(
+                title.color,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .MenuTitleColor));
+            AssertCanvasTopLeftRect(
+                title.rectTransform,
+                layout.Title,
+                canvasLogical);
+
+            string[] names =
+            {
+                "VnResumeButton",
+                "VnSettingsButton",
+                "VnSaveButton",
+                "VnMainMenuButton"
+            };
+            Rect[] rows =
+            {
+                layout.Resume,
+                layout.Settings,
+                layout.Save,
+                layout.MainMenu
+            };
+            for (int i = 0;
+                 i < names.Length;
+                 i++)
+            {
+                Button button =
+                    FindButton(names[i]);
+                Assert.That(button, Is.Not.Null);
+                Assert.That(
+                    button.interactable,
+                    Is.EqualTo(i == 0));
+                Text label =
+                    button.GetComponentInChildren<
+                        Text>(true);
+                Assert.That(
+                    label.text,
+                    Is.EqualTo(
+                        RokasVnRuntimeUiSemantics
+                            .MenuLabel(i)));
+                Assert.That(
+                    label.alignment,
+                    Is.EqualTo(
+                        TextAnchor.MiddleLeft));
+                AssertCanvasTopLeftRect(
+                    button.GetComponent<
+                        RectTransform>(),
+                    rows[i],
+                    canvasLogical);
+            }
+
+            player.TickForTests(1f);
+            Assert.That(
+                player.Playback.BeatElapsedSeconds,
+                Is.EqualTo(before)
+                    .Within(.001f),
+                "Modal VN menu must freeze dialogue/typewriter presentation.");
+
+            FindButton("VnResumeButton")
+                .onClick.Invoke();
+            Assert.That(player.IsMenuOpen, Is.False);
+            Assert.That(menu.activeSelf, Is.False);
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AuthoredDarkCurtainCoversSceneSwapAndLocksAdvance()
         {
             package = CreateTransitionPackage();
@@ -592,6 +719,35 @@ namespace Rokas.Tests
         {
             GameObject go = Find(name);
             return go != null ? go.GetComponent<Button>() : null;
+        }
+
+        private static void AssertCanvasTopLeftRect(
+            RectTransform actual,
+            Rect expected,
+            Rect canvasLogical)
+        {
+            Vector2 expectedPosition =
+                new Vector2(
+                    expected.center.x -
+                    canvasLogical.center.x,
+                    canvasLogical.center.y -
+                    expected.center.y);
+            Assert.That(
+                actual.sizeDelta.x,
+                Is.EqualTo(expected.width)
+                    .Within(.01f));
+            Assert.That(
+                actual.sizeDelta.y,
+                Is.EqualTo(expected.height)
+                    .Within(.01f));
+            Assert.That(
+                actual.anchoredPosition.x,
+                Is.EqualTo(expectedPosition.x)
+                    .Within(.01f));
+            Assert.That(
+                actual.anchoredPosition.y,
+                Is.EqualTo(expectedPosition.y)
+                    .Within(.01f));
         }
 
         private static void AssertPlaqueRect(

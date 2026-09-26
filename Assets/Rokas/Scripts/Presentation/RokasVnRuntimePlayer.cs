@@ -18,8 +18,11 @@ namespace Rokas.Presentation
 
         private void Update()
         {
-            if (owner != null)
-                owner.Tick(Time.unscaledDeltaTime);
+            if (owner == null) return;
+
+            owner.Tick(Time.unscaledDeltaTime);
+            if (Input.GetKeyDown(KeyCode.Escape))
+                owner.HandleEscapeInput();
         }
     }
 
@@ -43,6 +46,16 @@ namespace Rokas.Presentation
         public Rect Rect;
         public float Brightness;
         public float Alpha;
+    }
+
+    public struct RokasVnMenuUiLayout
+    {
+        public Rect Panel;
+        public Rect Title;
+        public Rect Resume;
+        public Rect Settings;
+        public Rect Save;
+        public Rect MainMenu;
     }
 
     public static class RokasVnRuntimeUiSemantics
@@ -108,7 +121,7 @@ namespace Rokas.Presentation
             bool pressed,
             bool enabled)
         {
-            if (!enabled) return .55f;
+            if (!enabled) return ButtonBaseBrightness;
             return pressed ? .92f :
                 hover ? .97f :
                 ButtonBaseBrightness;
@@ -151,13 +164,113 @@ namespace Rokas.Presentation
                 Rect = new Rect(
                     baseline.center - size * .5f,
                     size),
-                Brightness = Mathf.Lerp(
-                    ButtonBaseBrightness,
-                    ButtonBrightnessTarget(
-                        hover, pressed, enabled),
-                    t),
+                Brightness = enabled
+                    ? Mathf.Lerp(
+                        ButtonBaseBrightness,
+                        ButtonBrightnessTarget(
+                            hover, pressed, true),
+                        t)
+                    : .55f,
                 Alpha = ButtonAlpha(enabled)
             };
+        }
+
+        public const string MenuTitle =
+            "ROKAS  /  ПАУЗА";
+
+        public static Color MenuShadeColor =>
+            new Color(.012f, .024f, .045f, .88f);
+
+        public static Color MenuPanelColor =>
+            new Color(.035f, .085f, .13f, .98f);
+
+        public static Color MenuOutlineColor =>
+            new Color(.2f, .75f, 1f, 1f);
+
+        public static Color MenuTitleColor =>
+            new Color(.62f, .9f, 1f, 1f);
+
+        public static RokasVnMenuUiLayout MenuLayout(
+            Rect canvas)
+        {
+            float width = Mathf.Min(
+                canvas.width * .68f, 440f);
+            float height = Mathf.Min(
+                canvas.height * .84f, 410f);
+            Rect panel = new Rect(
+                canvas.center.x - width * .5f,
+                canvas.center.y - height * .5f,
+                width,
+                height);
+            float row = Mathf.Min(
+                48f,
+                (height - 90f) / 4f);
+            float gap = 8f;
+            return new RokasVnMenuUiLayout
+            {
+                Panel = panel,
+                Title = new Rect(
+                    panel.x + 24f,
+                    panel.y + 18f,
+                    panel.width - 48f,
+                    32f),
+                Resume = MenuRow(
+                    panel, row, gap, 0),
+                Settings = MenuRow(
+                    panel, row, gap, 1),
+                Save = MenuRow(
+                    panel, row, gap, 2),
+                MainMenu = MenuRow(
+                    panel, row, gap, 3)
+            };
+        }
+
+        public static string MenuLabel(int index)
+        {
+            switch (index)
+            {
+                case 0: return "Продолжить";
+                case 1: return "Настройки  ·  Скоро";
+                case 2: return "Сохранение  ·  Скоро";
+                case 3: return "Главное меню  ·  Скоро";
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(index));
+            }
+        }
+
+        public static int MenuTitleFontSize(
+            float canvasHeight)
+        {
+            return Mathf.RoundToInt(
+                Mathf.Clamp(
+                    canvasHeight * .044f,
+                    16f,
+                    24f));
+        }
+
+        public static int MenuRowFontSize(
+            float rowHeight)
+        {
+            return Mathf.RoundToInt(
+                Mathf.Clamp(
+                    rowHeight * .35f,
+                    12f,
+                    18f));
+        }
+
+        private static Rect MenuRow(
+            Rect panel,
+            float row,
+            float gap,
+            int index)
+        {
+            return new Rect(
+                panel.x + 24f,
+                panel.y + 64f +
+                index * (row + gap),
+                panel.width - 48f,
+                row);
         }
 
         private static Rect Center(
@@ -1347,23 +1460,107 @@ namespace Rokas.Presentation
             rect.SetParent(rootRect, false);
             Stretch(rect);
 
+            Rect canvasLogical = new Rect(
+                0f,
+                0f,
+                ReferenceWidth,
+                ReferenceHeight);
+            RokasVnMenuUiLayout layout =
+                RokasVnRuntimeUiSemantics.MenuLayout(
+                    canvasLogical);
+
             Image shade = CreateImage(
-                rect, "Shade",
-                new Color(.02f, .04f, .07f, .88f),
-                Vector2.zero, Vector2.one,
-                Vector2.zero, Vector2.zero);
+                rect,
+                "Shade",
+                RokasVnRuntimeUiSemantics
+                    .MenuShadeColor,
+                Vector2.zero,
+                Vector2.one,
+                Vector2.zero,
+                Vector2.zero);
             shade.raycastTarget = true;
 
-            Button resume = CreateTextButton(
+            Image panel = CreateImage(
+                rect,
+                "VnMenuPanel",
+                RokasVnRuntimeUiSemantics
+                    .MenuPanelColor,
+                new Vector2(.5f, .5f),
+                new Vector2(.5f, .5f),
+                Vector2.zero,
+                Vector2.zero);
+            ApplyCanvasTopLeftRect(
+                panel.rectTransform,
+                layout.Panel,
+                canvasLogical);
+            panel.raycastTarget = false;
+            Outline outline =
+                panel.gameObject.AddComponent<Outline>();
+            outline.effectColor =
+                RokasVnRuntimeUiSemantics
+                    .MenuOutlineColor;
+            outline.effectDistance =
+                new Vector2(1.5f, -1.5f);
+            outline.useGraphicAlpha = false;
+
+            Text title = CreateText(
+                rect,
+                "VnMenuTitle",
+                font,
+                new Vector2(.5f, .5f),
+                new Vector2(.5f, .5f),
+                RokasVnRuntimeUiSemantics
+                    .MenuTitle,
+                RokasVnRuntimeUiSemantics
+                    .MenuTitleFontSize(
+                        ReferenceHeight),
+                FontStyle.Bold);
+            ApplyCanvasTopLeftRect(
+                title.rectTransform,
+                layout.Title,
+                canvasLogical);
+            title.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuTitleColor;
+            title.alignment =
+                TextAnchor.MiddleLeft;
+
+            CreateMenuButton(
                 rect,
                 "VnResumeButton",
                 font,
-                "ПРОДОЛЖИТЬ",
-                new Vector2(.5f, .5f),
-                new Vector2(360f, 84f),
+                0,
+                layout.Resume,
+                canvasLogical,
+                true,
                 ToggleMenu);
-            resume.targetGraphic.color =
-                new Color(.08f, .16f, .22f, .98f);
+            CreateMenuButton(
+                rect,
+                "VnSettingsButton",
+                font,
+                1,
+                layout.Settings,
+                canvasLogical,
+                false,
+                null);
+            CreateMenuButton(
+                rect,
+                "VnSaveButton",
+                font,
+                2,
+                layout.Save,
+                canvasLogical,
+                false,
+                null);
+            CreateMenuButton(
+                rect,
+                "VnMainMenuButton",
+                font,
+                3,
+                layout.MainMenu,
+                canvasLogical,
+                false,
+                null);
 
             overlay.SetActive(false);
             return overlay;
@@ -1380,6 +1577,12 @@ namespace Rokas.Presentation
             menuOverlay.SetActive(menuOpen);
             audioPlayback.SetPaused(menuOpen);
             RefreshControlVisuals();
+        }
+
+        internal void HandleEscapeInput()
+        {
+            if (!disposed && menuOpen)
+                ToggleMenu();
         }
 
         private void HandleSequenceCompleted()
@@ -1523,19 +1726,28 @@ namespace Rokas.Presentation
             return text;
         }
 
-        private static Button CreateTextButton(
+        private static Button CreateMenuButton(
             Transform parent,
             string name,
             Font font,
-            string label,
-            Vector2 anchor,
-            Vector2 size,
+            int labelIndex,
+            Rect logicalRect,
+            Rect canvasLogical,
+            bool interactable,
             Action action)
         {
             RectTransform rect = CreateRect(
-                parent, name,
-                anchor, anchor,
-                -size * .5f, size * .5f);
+                parent,
+                name,
+                new Vector2(.5f, .5f),
+                new Vector2(.5f, .5f),
+                Vector2.zero,
+                Vector2.zero);
+            ApplyCanvasTopLeftRect(
+                rect,
+                logicalRect,
+                canvasLogical);
+
             Image image =
                 rect.gameObject.AddComponent<Image>();
             image.color =
@@ -1543,18 +1755,54 @@ namespace Rokas.Presentation
             Button button =
                 rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(
-                () =>
-                {
-                    if (action != null) action();
-                });
+            button.interactable = interactable;
+            if (action != null)
+            {
+                button.onClick.AddListener(
+                    () => action());
+            }
 
             Text text = CreateText(
-                rect, "Label", font,
-                Vector2.zero, Vector2.one,
-                label, 26, FontStyle.Bold);
-            text.alignment = TextAnchor.MiddleCenter;
+                rect,
+                "Label",
+                font,
+                Vector2.zero,
+                Vector2.one,
+                RokasVnRuntimeUiSemantics
+                    .MenuLabel(labelIndex),
+                RokasVnRuntimeUiSemantics
+                    .MenuRowFontSize(
+                        logicalRect.height),
+                FontStyle.Normal);
+            text.rectTransform.offsetMin =
+                new Vector2(16f, 4f);
+            text.rectTransform.offsetMax =
+                new Vector2(-10f, -4f);
+            text.alignment =
+                TextAnchor.MiddleLeft;
+            text.color = Color.white;
             return button;
+        }
+
+        private static void ApplyCanvasTopLeftRect(
+            RectTransform target,
+            Rect logicalRect,
+            Rect canvasLogical)
+        {
+            target.anchorMin =
+                new Vector2(.5f, .5f);
+            target.anchorMax =
+                new Vector2(.5f, .5f);
+            target.pivot =
+                new Vector2(.5f, .5f);
+            target.sizeDelta =
+                logicalRect.size;
+            target.anchoredPosition =
+                new Vector2(
+                    logicalRect.center.x -
+                    canvasLogical.center.x,
+                    canvasLogical.center.y -
+                    logicalRect.center.y);
         }
 
         private static RectTransform CreateRect(
