@@ -128,6 +128,56 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator RuntimeUsesSceneAuthoredPlaqueVisualBinding()
+        {
+            package = CreatePackage();
+            const string plaqueGuid =
+                "12121212121212121212121212121212";
+            Texture2D authoredPlaque =
+                MakeTexture("RuntimeAuthoredPlaque");
+            package.Snapshot.scenes[0].presentation
+                .dialoguePlaqueAssetGuid = plaqueGuid;
+
+            var bindings = package.Assets.ToList();
+            bindings.Add(new RokasVnRuntimeAssetBinding
+            {
+                authoredKey = plaqueGuid,
+                displayName = authoredPlaque.name,
+                kind = RokasVnRuntimeAssetKind.Texture,
+                asset = authoredPlaque
+            });
+            package.Configure(
+                package.ProjectId,
+                package.SourceProjectSha256,
+                package.PortableProjectJson,
+                package.Snapshot,
+                bindings,
+                package.CharacterStates.ToList(),
+                package.DialoguePlaque,
+                package.ControlSheet,
+                package.MutedSpeaker,
+                package.CompletionTriangle);
+
+            host = new GameObject(
+                "RuntimeVnAuthoredPlaqueFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(
+                    host.transform,
+                    package,
+                    null);
+            yield return null;
+
+            Assert.That(
+                Find("VnDialoguePlaque")
+                    .GetComponent<RawImage>()
+                    .texture,
+                Is.SameAs(authoredPlaque));
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator PlaqueControlsAndCompletionIndicatorUseSharedPreviewSemantics()
         {
             package = CreatePackage();
