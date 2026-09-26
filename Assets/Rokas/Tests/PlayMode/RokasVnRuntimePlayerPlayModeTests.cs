@@ -854,6 +854,93 @@ namespace Rokas.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator IncomingCharacterUsesOracleFadeTransitionAfterSceneBoundary()
+        {
+            package = CreateTransitionPackage();
+            package.Snapshot.scenes[1].sceneTransitionType = 0;
+            package.Snapshot.scenes[1].presentation.characterTransitionMode = 1;
+            package.Snapshot.scenes[1].presentation.characterTransitionDuration = .30f;
+            package.Snapshot.scenes[1].presentation.characterTransitionFadeDuration = .30f;
+            package.Snapshot.scenes[1].presentation.characterTransitionEasing = 3;
+            host = new GameObject("RuntimeVnCharacterEnterTransitionFixture");
+
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            Assert.That(player.RequestAdvance(), Is.True);
+            Assert.That(player.Playback.CurrentSceneIndex, Is.EqualTo(1));
+
+            RawImage keiko =
+                Find("VnCharacter_Keiko").GetComponent<RawImage>();
+            Assert.That(
+                keiko.gameObject.activeSelf,
+                Is.False,
+                "Immutable Preview Fade character transition starts an entering character at alpha zero.");
+
+            player.TickForTests(.15f);
+            Assert.That(keiko.gameObject.activeSelf, Is.True);
+            Assert.That(
+                keiko.color.a,
+                Is.EqualTo(.5f).Within(.03f),
+                "Entering character must use the authored .30s EaseInOut fade.");
+
+            player.TickForTests(.15f);
+            Assert.That(
+                keiko.color.a,
+                Is.EqualTo(1f).Within(.001f));
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator PoseStateChangeCrossfadesOldAndNewAuthoredTextures()
+        {
+            package = CreateExpressionTransitionPackage();
+            host = new GameObject("RuntimeVnExpressionTransitionFixture");
+
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(host.transform, package, null);
+            yield return null;
+
+            Texture oldTexture = package.CharacterStates
+                .First(binding => binding.stateId == "mina_neutral_runtime")
+                .texture;
+            Texture newTexture = package.CharacterStates
+                .First(binding => binding.stateId == "mina_smile_runtime")
+                .texture;
+
+            Assert.That(player.RequestAdvance(), Is.True);
+            Assert.That(player.Playback.CurrentSceneIndex, Is.EqualTo(1));
+
+            RawImage target =
+                Find("VnCharacter_Mina").GetComponent<RawImage>();
+            RawImage source =
+                Find("VnCharacterExpressionSource_Mina")
+                    .GetComponent<RawImage>();
+            Assert.That(target.texture, Is.SameAs(newTexture));
+            Assert.That(source.texture, Is.SameAs(oldTexture));
+            Assert.That(source.gameObject.activeSelf, Is.True);
+            Assert.That(source.color.a, Is.EqualTo(1f).Within(.001f));
+            Assert.That(target.gameObject.activeSelf, Is.False,
+                "Target pose starts transparent while the previous authored pose remains visible.");
+
+            player.TickForTests(.12f);
+            Assert.That(target.gameObject.activeSelf, Is.True);
+            Assert.That(target.color.a, Is.EqualTo(.5f).Within(.03f));
+            Assert.That(source.color.a, Is.EqualTo(.5f).Within(.03f));
+
+            player.TickForTests(.12f);
+            Assert.That(target.color.a, Is.EqualTo(1f).Within(.001f));
+            Assert.That(source.gameObject.activeSelf, Is.False,
+                "Previous pose render must be released when the expression crossfade completes.");
+
+            player.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void RuntimePlayerLivesInPlayerAssemblyWithoutUnityEditorReference()
         {
@@ -1022,6 +1109,101 @@ namespace Rokas.Tests
                 result.Snapshot,
                 assets,
                 characterStates,
+                result.DialoguePlaque,
+                result.ControlSheet,
+                result.MutedSpeaker,
+                result.CompletionTriangle);
+            return result;
+        }
+
+        private RokasVnRuntimeIntroPackage CreateExpressionTransitionPackage()
+        {
+            RokasVnRuntimeIntroPackage result = CreatePackage();
+            Texture2D smile =
+                MakeTexture("RuntimeMinaSmile");
+
+            RokasVnRuntimeSceneSnapshot first =
+                result.Snapshot.scenes[0];
+            first.label = "Neutral";
+            first.isTerminal = false;
+            first.dialogueBeats.Clear();
+            first.characters[0].stateId =
+                "mina_neutral_runtime";
+            first.dialogueBeats.Add(
+                new RokasVnRuntimeBeatSnapshot
+                {
+                    beatId =
+                        "77777777777777777777777777777777",
+                    speaker = "Mina",
+                    text = string.Empty
+                });
+
+            var second =
+                new RokasVnRuntimeSceneSnapshot
+                {
+                    sceneId =
+                        "88888888888888888888888888888888",
+                    label = "Smile",
+                    isTerminal = true,
+                    terminalFadeDuration = .4f,
+                    sceneTransitionType = 0,
+                    presentation =
+                        new RokasVnRuntimePresentationSnapshot
+                        {
+                            expressionTransitionDuration = .24f,
+                            expressionTransitionEasing = 3,
+                            characterTransitionMode = 1,
+                            characterTransitionDuration = .30f,
+                            characterTransitionFadeDuration = .30f,
+                            characterTransitionEasing = 3
+                        }
+                };
+            second.characters.Add(
+                new RokasVnRuntimeCharacterSnapshot
+                {
+                    characterId = "Mina",
+                    stateId = "mina_smile_runtime",
+                    stageSlot = 1
+                });
+            second.dialogueBeats.Add(
+                new RokasVnRuntimeBeatSnapshot
+                {
+                    beatId =
+                        "99999999999999999999999999999999",
+                    speaker = "Mina",
+                    text = string.Empty
+                });
+
+            result.Snapshot.scenes.Clear();
+            result.Snapshot.scenes.Add(first);
+            result.Snapshot.scenes.Add(second);
+            result.Snapshot.sceneCount = 2;
+            result.Snapshot.beatCount = 2;
+
+            var states =
+                result.CharacterStates.ToList();
+            RokasVnRuntimeCharacterStateBinding neutral =
+                states.First(
+                    item =>
+                        item.stateId == "mina_runtime");
+            neutral.stateId = "mina_neutral_runtime";
+            states.Add(
+                new RokasVnRuntimeCharacterStateBinding
+                {
+                    stateId = "mina_smile_runtime",
+                    characterId = "Mina",
+                    texture = smile,
+                    bodyUv =
+                        new Rect(0f, 0f, 1f, 1f)
+                });
+
+            result.Configure(
+                result.ProjectId,
+                result.SourceProjectSha256,
+                result.PortableProjectJson,
+                result.Snapshot,
+                result.Assets.ToList(),
+                states,
                 result.DialoguePlaque,
                 result.ControlSheet,
                 result.MutedSpeaker,
