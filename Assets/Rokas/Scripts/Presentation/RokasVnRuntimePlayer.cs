@@ -1349,6 +1349,7 @@ namespace Rokas.Presentation
                 ResolveRuntimeFont(
                     dialogueFontGuid,
                     dialogueFontPreset);
+            ApplyMenuFont(dialogueText.font);
             speakerText.fontStyle =
                 string.IsNullOrWhiteSpace(speakerFontGuid)
                     ? FontStyle.Bold
@@ -1688,6 +1689,21 @@ namespace Rokas.Presentation
 
             overlay.SetActive(false);
             return overlay;
+        }
+
+        private void ApplyMenuFont(Font authoredDialogueFont)
+        {
+            if (menuOverlay == null ||
+                authoredDialogueFont == null)
+                return;
+
+            Text[] menuTexts =
+                menuOverlay.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < menuTexts.Length; i++)
+            {
+                if (menuTexts[i] != null)
+                    menuTexts[i].font = authoredDialogueFont;
+            }
         }
 
         private void ToggleMenu()
