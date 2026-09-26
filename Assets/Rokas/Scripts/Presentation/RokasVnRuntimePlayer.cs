@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
@@ -22,6 +23,196 @@ namespace Rokas.Presentation
         }
     }
 
+    public struct RokasVnPlaqueUiLayout
+    {
+        public Rect Mute;
+        public Rect Forward;
+        public Rect Menu;
+        public Rect Triangle;
+    }
+
+    public struct RokasVnTriangleUiSample
+    {
+        public float OffsetY;
+        public float Scale;
+        public float Alpha;
+    }
+
+    public struct RokasVnButtonUiSample
+    {
+        public Rect Rect;
+        public float Brightness;
+        public float Alpha;
+    }
+
+    public static class RokasVnRuntimeUiSemantics
+    {
+        public const float ButtonTransitionDuration = .09f;
+        public const float ButtonBaseScale = .97f;
+        public const float ButtonBaseBrightness = .90f;
+        public const float ButtonEnabledAlpha = .90f;
+        public const float ButtonDisabledAlpha = .42f;
+        public const float TrianglePeriod = .75f;
+        public const float TriangleAspect = .90f;
+
+        public static RokasVnPlaqueUiLayout Layout(Rect plaque)
+        {
+            float diameter = Mathf.Min(
+                plaque.width * .038f,
+                plaque.height * .10f);
+            float y = plaque.y + plaque.height * .595f;
+            float gap = diameter * 1.32f;
+            float right = plaque.xMax - plaque.width * .06f;
+            return new RokasVnPlaqueUiLayout
+            {
+                Mute = Center(right - (2f * gap), y, diameter),
+                Forward = Center(right - gap, y, diameter),
+                Menu = Center(right, y, diameter),
+                Triangle = new Rect(
+                    plaque.x + plaque.width * .913f -
+                    diameter * .34f,
+                    Mathf.Max(
+                        24f,
+                        plaque.y + plaque.height * .27f) -
+                    diameter * .34f / TriangleAspect,
+                    diameter * .68f,
+                    diameter * .68f / TriangleAspect)
+            };
+        }
+
+        public static RokasVnTriangleUiSample SampleTriangle(
+            float unscaledSeconds)
+        {
+            float wave = Mathf.Sin(
+                unscaledSeconds *
+                (Mathf.PI * 2f / TrianglePeriod));
+            return new RokasVnTriangleUiSample
+            {
+                OffsetY = wave * 2.25f,
+                Scale = 1f + wave * .025f,
+                Alpha = .87f + wave * .10f
+            };
+        }
+
+        public static float ButtonScaleTarget(
+            bool hover,
+            bool pressed,
+            bool enabled)
+        {
+            if (!enabled) return ButtonBaseScale;
+            return pressed ? .95f : hover ? 1f : ButtonBaseScale;
+        }
+
+        public static float ButtonBrightnessTarget(
+            bool hover,
+            bool pressed,
+            bool enabled)
+        {
+            if (!enabled) return .55f;
+            return pressed ? .92f :
+                hover ? .97f :
+                ButtonBaseBrightness;
+        }
+
+        public static float ButtonAlpha(bool enabled)
+        {
+            return enabled
+                ? ButtonEnabledAlpha
+                : ButtonDisabledAlpha;
+        }
+
+        public static float ButtonEase(float elapsedSeconds)
+        {
+            return Mathf.SmoothStep(
+                0f,
+                1f,
+                Mathf.Clamp01(
+                    elapsedSeconds /
+                    ButtonTransitionDuration));
+        }
+
+        public static RokasVnButtonUiSample SampleButton(
+            Rect baseline,
+            bool hover,
+            bool pressed,
+            bool enabled,
+            float progress)
+        {
+            float t = Mathf.SmoothStep(
+                0f, 1f, Mathf.Clamp01(progress));
+            float scale = Mathf.Lerp(
+                ButtonBaseScale,
+                ButtonScaleTarget(
+                    hover, pressed, enabled),
+                t);
+            Vector2 size = baseline.size * scale;
+            return new RokasVnButtonUiSample
+            {
+                Rect = new Rect(
+                    baseline.center - size * .5f,
+                    size),
+                Brightness = Mathf.Lerp(
+                    ButtonBaseBrightness,
+                    ButtonBrightnessTarget(
+                        hover, pressed, enabled),
+                    t),
+                Alpha = ButtonAlpha(enabled)
+            };
+        }
+
+        private static Rect Center(
+            float x,
+            float y,
+            float size)
+        {
+            return new Rect(
+                x - size * .5f,
+                y - size * .5f,
+                size,
+                size);
+        }
+    }
+
+    internal sealed class RokasVnRuntimeControlPointerState :
+        MonoBehaviour,
+        IPointerEnterHandler,
+        IPointerExitHandler,
+        IPointerDownHandler,
+        IPointerUpHandler
+    {
+        public bool Hovered { get; private set; }
+        public bool Pressed { get; private set; }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            Hovered = true;
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            Hovered = false;
+            Pressed = false;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            if (eventData != null &&
+                eventData.button == PointerEventData.InputButton.Left)
+                Pressed = true;
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            Pressed = false;
+        }
+
+        public void ResetState()
+        {
+            Hovered = false;
+            Pressed = false;
+        }
+    }
+
     public sealed class RokasVnRuntimePlayer : IDisposable
     {
         private const float ReferenceWidth = 1920f;
@@ -36,12 +227,69 @@ namespace Rokas.Presentation
             public RawImage Image;
         }
 
+        private sealed class ControlMotion
+        {
+            public float ChangedAt;
+            public float FromScale =
+                RokasVnRuntimeUiSemantics.ButtonBaseScale;
+            public float ToScale =
+                RokasVnRuntimeUiSemantics.ButtonBaseScale;
+            public float FromBrightness =
+                RokasVnRuntimeUiSemantics.ButtonBaseBrightness;
+            public float ToBrightness =
+                RokasVnRuntimeUiSemantics.ButtonBaseBrightness;
+
+            public float Scale(float now)
+            {
+                return Mathf.Lerp(
+                    FromScale,
+                    ToScale,
+                    RokasVnRuntimeUiSemantics.ButtonEase(
+                        now - ChangedAt));
+            }
+
+            public float Brightness(float now)
+            {
+                return Mathf.Lerp(
+                    FromBrightness,
+                    ToBrightness,
+                    RokasVnRuntimeUiSemantics.ButtonEase(
+                        now - ChangedAt));
+            }
+
+            public void Target(
+                bool hover,
+                bool pressed,
+                bool enabled,
+                float now)
+            {
+                float scale =
+                    RokasVnRuntimeUiSemantics.ButtonScaleTarget(
+                        hover, pressed, enabled);
+                float brightness =
+                    RokasVnRuntimeUiSemantics.ButtonBrightnessTarget(
+                        hover, pressed, enabled);
+                if (Mathf.Approximately(scale, ToScale) &&
+                    Mathf.Approximately(
+                        brightness, ToBrightness))
+                    return;
+
+                FromScale = Scale(now);
+                FromBrightness = Brightness(now);
+                ToScale = scale;
+                ToBrightness = brightness;
+                ChangedAt = now;
+            }
+        }
+
         private readonly RokasVnRuntimeIntroPackage package;
         private readonly RokasVnRuntimePlaybackState playback;
         private readonly Action onCompleted;
         private readonly RokasVnRuntimeAudioPlayback audioPlayback;
         private readonly Dictionary<string, CharacterView> characterViews =
             new Dictionary<string, CharacterView>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<Button, ControlMotion> controlMotions =
+            new Dictionary<Button, ControlMotion>();
 
         private readonly GameObject root;
         private readonly RawImage background;
@@ -55,6 +303,7 @@ namespace Rokas.Presentation
         private readonly Button muteButton;
         private readonly Button menuButton;
         private readonly RawImage completionTriangle;
+        private readonly Vector2 completionTriangleBasePosition;
         private readonly CanvasGroup terminalFade;
         private readonly GameObject menuOverlay;
         private readonly Image sceneTransitionImage;
@@ -205,23 +454,42 @@ namespace Rokas.Presentation
                 22,
                 FontStyle.Normal);
 
+            Rect plaqueLogical = new Rect(
+                ReferenceWidth * .04f,
+                -98f,
+                plaqueRect.sizeDelta.x,
+                plaqueRect.sizeDelta.y);
+            RokasVnPlaqueUiLayout plaqueUi =
+                RokasVnRuntimeUiSemantics.Layout(
+                    plaqueLogical);
+
             muteButton = CreateControlButton(
-                plaqueRect, "VnMuteButton", 0, .84f,
+                plaqueRect, "VnMuteButton", 0,
+                plaqueUi.Mute, plaqueLogical,
                 () => SetMuted(!muted));
             forwardButton = CreateControlButton(
-                plaqueRect, "VnForwardButton", 1, .90f,
+                plaqueRect, "VnForwardButton", 1,
+                plaqueUi.Forward, plaqueLogical,
                 () => RequestAdvance());
             menuButton = CreateControlButton(
-                plaqueRect, "VnMenuButton", 2, .96f,
+                plaqueRect, "VnMenuButton", 2,
+                plaqueUi.Menu, plaqueLogical,
                 ToggleMenu);
 
             completionTriangle = CreateRaw(
                 plaqueRect, "VnCompletionTriangle",
                 package.CompletionTriangle,
-                new Vector2(.913f, .27f),
-                new Vector2(.913f, .27f),
-                new Vector2(-24f, -28f),
-                new Vector2(24f, 28f));
+                new Vector2(.5f, 0f),
+                new Vector2(.5f, 0f),
+                Vector2.zero,
+                Vector2.zero);
+            ApplyPlaqueLogicalRect(
+                (RectTransform)completionTriangle.transform,
+                plaqueUi.Triangle,
+                plaqueLogical);
+            completionTriangleBasePosition =
+                ((RectTransform)completionTriangle.transform)
+                .anchoredPosition;
             completionTriangle.raycastTarget = false;
 
             menuOverlay = BuildMenuOverlay(rootRect, fallbackFont);
@@ -889,36 +1157,36 @@ namespace Rokas.Presentation
             completionTriangle.gameObject.SetActive(showTriangle);
             if (showTriangle)
             {
-                float wave = Mathf.Sin(
-                    uiElapsedSeconds *
-                    (Mathf.PI * 2f / .75f));
+                RokasVnTriangleUiSample sample =
+                    RokasVnRuntimeUiSemantics.SampleTriangle(
+                        uiElapsedSeconds);
                 RectTransform triangle =
                     (RectTransform)completionTriangle.transform;
                 triangle.anchoredPosition =
-                    new Vector2(0f, wave * 2.25f);
-                float scale = 1f + wave * .025f;
+                    completionTriangleBasePosition +
+                    new Vector2(0f, sample.OffsetY);
                 triangle.localScale =
-                    new Vector3(scale, scale, 1f);
+                    new Vector3(
+                        sample.Scale,
+                        sample.Scale,
+                        1f);
                 completionTriangle.color =
                     new Color(
                         1f, 1f, 1f,
-                        .87f + wave * .10f);
+                        sample.Alpha);
             }
         }
 
         private void RefreshControlVisuals()
         {
-            forwardButton.interactable =
+            bool commonEnabled =
                 !menuOpen &&
                 !sceneTransitionActive &&
                 !playback.IsTerminalFadeActive &&
                 !playback.IsSequenceCompleted;
-            muteButton.interactable =
-                !sceneTransitionActive &&
-                !playback.IsSequenceCompleted;
-            menuButton.interactable =
-                !sceneTransitionActive &&
-                !playback.IsSequenceCompleted;
+            forwardButton.interactable = commonEnabled;
+            muteButton.interactable = commonEnabled;
+            menuButton.interactable = commonEnabled;
 
             RawImage muteGraphic =
                 muteButton.targetGraphic as RawImage;
@@ -933,38 +1201,137 @@ namespace Rokas.Presentation
                         ? new Rect(0f, 0f, 1f, 1f)
                         : ControlUv(0);
             }
+
+            ApplyControlVisual(muteButton);
+            ApplyControlVisual(forwardButton);
+            ApplyControlVisual(menuButton);
+        }
+
+        private void ApplyControlVisual(Button button)
+        {
+            if (button == null) return;
+
+            RokasVnRuntimeControlPointerState pointer =
+                button.GetComponent<
+                    RokasVnRuntimeControlPointerState>();
+            bool enabled = button.interactable;
+            if (!enabled && pointer != null)
+                pointer.ResetState();
+
+            bool hover =
+                enabled && pointer != null && pointer.Hovered;
+            bool pressed =
+                hover && pointer != null && pointer.Pressed;
+
+            ControlMotion motion;
+            if (!controlMotions.TryGetValue(
+                    button, out motion))
+            {
+                motion = new ControlMotion();
+                controlMotions[button] = motion;
+            }
+            motion.Target(
+                hover,
+                pressed,
+                enabled,
+                uiElapsedSeconds);
+
+            RawImage graphic =
+                button.targetGraphic as RawImage;
+            if (graphic == null) return;
+
+            float scale =
+                motion.Scale(uiElapsedSeconds);
+            graphic.rectTransform.localScale =
+                new Vector3(scale, scale, 1f);
+            float brightness =
+                motion.Brightness(uiElapsedSeconds);
+            graphic.color = new Color(
+                brightness,
+                brightness,
+                brightness,
+                RokasVnRuntimeUiSemantics.ButtonAlpha(
+                    enabled));
         }
 
         private Button CreateControlButton(
             RectTransform plaque,
             string name,
             int controlIndex,
-            float normalizedX,
+            Rect logicalRect,
+            Rect plaqueLogical,
             Action action)
         {
             RectTransform rect = CreateRect(
                 plaque,
                 name,
-                new Vector2(normalizedX, .595f),
-                new Vector2(normalizedX, .595f),
-                new Vector2(-30f, -30f),
-                new Vector2(30f, 30f));
+                new Vector2(.5f, 0f),
+                new Vector2(.5f, 0f),
+                Vector2.zero,
+                Vector2.zero);
+            ApplyPlaqueLogicalRect(
+                rect,
+                logicalRect,
+                plaqueLogical);
+
+            Image hitSurface =
+                rect.gameObject.AddComponent<Image>();
+            hitSurface.color =
+                new Color(0f, 0f, 0f, 0f);
+            hitSurface.raycastTarget = true;
+
+            RectTransform visual = CreateRect(
+                rect,
+                name + "Visual",
+                Vector2.zero,
+                Vector2.one,
+                Vector2.zero,
+                Vector2.zero);
             RawImage graphic =
-                rect.gameObject.AddComponent<RawImage>();
+                visual.gameObject.AddComponent<RawImage>();
             graphic.texture = package.ControlSheet;
             graphic.uvRect = ControlUv(controlIndex);
-            graphic.color = Color.white;
-            graphic.raycastTarget = true;
+            graphic.color = new Color(
+                RokasVnRuntimeUiSemantics
+                    .ButtonBaseBrightness,
+                RokasVnRuntimeUiSemantics
+                    .ButtonBaseBrightness,
+                RokasVnRuntimeUiSemantics
+                    .ButtonBaseBrightness,
+                RokasVnRuntimeUiSemantics
+                    .ButtonEnabledAlpha);
+            graphic.raycastTarget = false;
 
-            Button button = rect.gameObject.AddComponent<Button>();
+            Button button =
+                rect.gameObject.AddComponent<Button>();
             button.targetGraphic = graphic;
-            button.transition = Selectable.Transition.ColorTint;
+            button.transition =
+                Selectable.Transition.None;
+            rect.gameObject.AddComponent<
+                RokasVnRuntimeControlPointerState>();
             button.onClick.AddListener(
                 () =>
                 {
-                    if (!disposed && action != null) action();
+                    if (!disposed && action != null)
+                        action();
                 });
             return button;
+        }
+
+        private static void ApplyPlaqueLogicalRect(
+            RectTransform target,
+            Rect logicalRect,
+            Rect plaqueLogical)
+        {
+            target.anchorMin = new Vector2(.5f, 0f);
+            target.anchorMax = new Vector2(.5f, 0f);
+            target.pivot = new Vector2(.5f, .5f);
+            target.sizeDelta = logicalRect.size;
+            target.anchoredPosition = new Vector2(
+                logicalRect.center.x -
+                plaqueLogical.center.x,
+                logicalRect.center.y -
+                plaqueLogical.y);
         }
 
         private GameObject BuildMenuOverlay(

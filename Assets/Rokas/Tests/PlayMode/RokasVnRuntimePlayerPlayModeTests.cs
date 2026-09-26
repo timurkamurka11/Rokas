@@ -78,6 +78,144 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlaqueControlsAndCompletionIndicatorUseSharedPreviewSemantics()
+        {
+            package = CreatePackage();
+            host = new GameObject("RuntimeVnUiParityFixture");
+            RokasVnRuntimePlayer player =
+                RokasVnRuntimePlayer.Create(
+                    host.transform,
+                    package,
+                    null);
+            yield return null;
+
+            RectTransform plaque =
+                Find("VnDialoguePlaque")
+                .GetComponent<RectTransform>();
+            Rect plaqueLogical = new Rect(
+                1920f * .04f,
+                -98f,
+                plaque.sizeDelta.x,
+                plaque.sizeDelta.y);
+            RokasVnPlaqueUiLayout layout =
+                RokasVnRuntimeUiSemantics.Layout(
+                    plaqueLogical);
+
+            AssertPlaqueRect(
+                Find("VnMuteButton")
+                    .GetComponent<RectTransform>(),
+                layout.Mute,
+                plaqueLogical);
+            AssertPlaqueRect(
+                Find("VnForwardButton")
+                    .GetComponent<RectTransform>(),
+                layout.Forward,
+                plaqueLogical);
+            AssertPlaqueRect(
+                Find("VnMenuButton")
+                    .GetComponent<RectTransform>(),
+                layout.Menu,
+                plaqueLogical);
+
+            Button forward =
+                FindButton("VnForwardButton");
+            RawImage forwardGraphic =
+                forward.targetGraphic as RawImage;
+            Assert.That(forwardGraphic, Is.Not.Null);
+            Assert.That(
+                forward.transition,
+                Is.EqualTo(Selectable.Transition.None));
+            Assert.That(
+                forwardGraphic.rectTransform.localScale.x,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .ButtonBaseScale)
+                    .Within(.001f));
+            Assert.That(
+                forwardGraphic.color.r,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .ButtonBaseBrightness)
+                    .Within(.001f));
+            Assert.That(
+                forwardGraphic.color.a,
+                Is.EqualTo(
+                    RokasVnRuntimeUiSemantics
+                        .ButtonEnabledAlpha)
+                    .Within(.001f));
+
+            Assert.That(
+                player.RequestAdvance(),
+                Is.False,
+                "First advance should complete the typewriter.");
+            RectTransform triangle =
+                Find("VnCompletionTriangle")
+                .GetComponent<RectTransform>();
+            Assert.That(
+                triangle.gameObject.activeSelf,
+                Is.True);
+            AssertPlaqueRect(
+                triangle,
+                layout.Triangle,
+                plaqueLogical);
+
+            Vector2 triangleBase =
+                triangle.anchoredPosition;
+            player.TickForTests(.1875f);
+            RokasVnTriangleUiSample sample =
+                RokasVnRuntimeUiSemantics.SampleTriangle(
+                    .1875f);
+            Assert.That(
+                triangle.anchoredPosition.x,
+                Is.EqualTo(triangleBase.x)
+                    .Within(.001f));
+            Assert.That(
+                triangle.anchoredPosition.y,
+                Is.EqualTo(
+                    triangleBase.y +
+                    sample.OffsetY)
+                    .Within(.001f));
+            Assert.That(
+                triangle.localScale.x,
+                Is.EqualTo(sample.Scale)
+                    .Within(.001f));
+            RawImage triangleGraphic =
+                triangle.GetComponent<RawImage>();
+            Assert.That(
+                triangleGraphic.color.a,
+                Is.EqualTo(sample.Alpha)
+                    .Within(.001f));
+
+            FindButton("VnMenuButton")
+                .onClick.Invoke();
+            Assert.That(player.IsMenuOpen, Is.True);
+            foreach (string name in new[]
+            {
+                "VnMuteButton",
+                "VnForwardButton",
+                "VnMenuButton"
+            })
+            {
+                Button button = FindButton(name);
+                Assert.That(
+                    button.interactable,
+                    Is.False,
+                    name + " must be disabled while the modal VN menu is open.");
+                RawImage graphic =
+                    button.targetGraphic as RawImage;
+                Assert.That(
+                    graphic.color.a,
+                    Is.EqualTo(
+                        RokasVnRuntimeUiSemantics
+                            .ButtonDisabledAlpha)
+                        .Within(.001f));
+            }
+
+            player.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AuthoredBgmAndSfxRespectMuteAndDisposeWithRuntime()
         {
             package = CreateAudioPackage();
@@ -454,6 +592,34 @@ namespace Rokas.Tests
         {
             GameObject go = Find(name);
             return go != null ? go.GetComponent<Button>() : null;
+        }
+
+        private static void AssertPlaqueRect(
+            RectTransform actual,
+            Rect expected,
+            Rect plaqueLogical)
+        {
+            Vector2 expectedPosition = new Vector2(
+                expected.center.x -
+                plaqueLogical.center.x,
+                expected.center.y -
+                plaqueLogical.y);
+            Assert.That(
+                actual.sizeDelta.x,
+                Is.EqualTo(expected.width)
+                    .Within(.01f));
+            Assert.That(
+                actual.sizeDelta.y,
+                Is.EqualTo(expected.height)
+                    .Within(.01f));
+            Assert.That(
+                actual.anchoredPosition.x,
+                Is.EqualTo(expectedPosition.x)
+                    .Within(.01f));
+            Assert.That(
+                actual.anchoredPosition.y,
+                Is.EqualTo(expectedPosition.y)
+                    .Within(.01f));
         }
 
         [UnityTearDown]

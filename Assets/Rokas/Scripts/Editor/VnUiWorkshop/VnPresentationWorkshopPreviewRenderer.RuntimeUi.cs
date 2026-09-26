@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Rokas.Presentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,11 +16,19 @@ namespace Rokas.EditorTools.VnUiWorkshop
             public bool Held;
             public float Scale(double now) { return Mathf.Lerp(FromScale, ToScale, Ease(now)); }
             public float Light(double now) { return Mathf.Lerp(FromLight, ToLight, Ease(now)); }
-            private float Ease(double now) { return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(now-ChangedAt)/.09f)); }
+            private float Ease(double now)
+            {
+                return RokasVnRuntimeUiSemantics.ButtonEase(
+                    (float)(now - ChangedAt));
+            }
             public void Target(bool hover, bool pressed, double now)
             {
-                float scale = pressed ? .95f : hover ? 1f : .97f;
-                float light = pressed ? .92f : hover ? .97f : .9f;
+                float scale =
+                    RokasVnRuntimeUiSemantics.ButtonScaleTarget(
+                        hover, pressed, true);
+                float light =
+                    RokasVnRuntimeUiSemantics.ButtonBrightnessTarget(
+                        hover, pressed, true);
                 if (scale == ToScale && light == ToLight) return;
                 FromScale = Scale(now); FromLight = Light(now); ToScale = scale; ToLight = light; ChangedAt = now;
             }
