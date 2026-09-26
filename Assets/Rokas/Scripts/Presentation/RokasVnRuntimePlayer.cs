@@ -412,6 +412,7 @@ namespace Rokas.Presentation
             new Dictionary<Button, ControlMotion>();
 
         private readonly GameObject root;
+        private readonly RectTransform replicaEffectRoot;
         private readonly RawImage background;
         private readonly AspectRatioFitter backgroundAspect;
         private readonly RawImage transitionSourceBackground;
@@ -508,8 +509,13 @@ namespace Rokas.Presentation
             scaler.matchWidthOrHeight = .5f;
 
             RectTransform rootRect = (RectTransform)root.transform;
+            replicaEffectRoot = CreateRect(
+                rootRect, "VnReplicaEffectRoot",
+                Vector2.zero, Vector2.one,
+                Vector2.zero, Vector2.zero);
+
             background = CreateRaw(
-                rootRect, "VnBackground", null,
+                replicaEffectRoot, "VnBackground", null,
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
             background.raycastTarget = false;
@@ -518,7 +524,7 @@ namespace Rokas.Presentation
             backgroundAspect.enabled = false;
 
             transitionSourceBackground = CreateRaw(
-                rootRect, "VnTransitionSourceBackground", null,
+                replicaEffectRoot, "VnTransitionSourceBackground", null,
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
             transitionSourceBackground.raycastTarget = false;
@@ -537,7 +543,7 @@ namespace Rokas.Presentation
             videoPlayer.waitForFirstFrame = true;
 
             characterLayer = CreateRect(
-                rootRect, "VnCharacters",
+                replicaEffectRoot, "VnCharacters",
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
             characterForeground =
@@ -545,7 +551,7 @@ namespace Rokas.Presentation
             characterForeground.alpha = 1f;
 
             Image clickSurface = CreateImage(
-                rootRect, "VnStoryClickSurface",
+                replicaEffectRoot, "VnStoryClickSurface",
                 new Color(0f, 0f, 0f, 0f),
                 Vector2.zero, Vector2.one,
                 Vector2.zero, Vector2.zero);
@@ -557,7 +563,7 @@ namespace Rokas.Presentation
             storyButton.onClick.AddListener(() => RequestAdvance());
 
             dialoguePlaque = CreateRaw(
-                rootRect, "VnDialoguePlaque",
+                replicaEffectRoot, "VnDialoguePlaque",
                 package.DialoguePlaque,
                 new Vector2(.5f, 0f),
                 new Vector2(.5f, 0f),
@@ -1614,7 +1620,16 @@ namespace Rokas.Presentation
 
             RokasVnRuntimeReplicaEffectSample effect =
                 playback.SampleReplicaEffect();
+            ApplyGlobalReplicaShake(effect);
             if (!effect.active) return;
+
+            int replicaType =
+                playback.CurrentBeat != null &&
+                playback.CurrentBeat.replicaEffect != null
+                    ? playback.CurrentBeat.replicaEffect.type
+                    : 0;
+            if (replicaType == 1)
+                return;
 
             string target = playback.CurrentBeat != null
                 ? playback.CurrentBeat.targetCharacterId
@@ -1635,6 +1650,32 @@ namespace Rokas.Presentation
                         effect.flash,
                         effect.flash.a);
             }
+        }
+
+        private void ApplyGlobalReplicaShake(
+            RokasVnRuntimeReplicaEffectSample effect)
+        {
+            if (replicaEffectRoot == null)
+                return;
+
+            int replicaType =
+                playback.CurrentBeat != null &&
+                playback.CurrentBeat.replicaEffect != null
+                    ? playback.CurrentBeat.replicaEffect.type
+                    : 0;
+            bool useGlobalShake =
+                effect.active && replicaType == 1;
+
+            replicaEffectRoot.anchoredPosition =
+                useGlobalShake
+                    ? effect.offset
+                    : Vector2.zero;
+            float scale =
+                useGlobalShake
+                    ? Mathf.Max(.0001f, effect.scale)
+                    : 1f;
+            replicaEffectRoot.localScale =
+                new Vector3(scale, scale, 1f);
         }
 
         private static void ApplyCharacterGeometry(
