@@ -1,29 +1,62 @@
+using System;
+using System.IO;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 
 namespace Rokas.EditorTools.Tests
 {
     public sealed class MainRoomOverlayWorkshopAssetTests
     {
-        private static readonly string[] IconPaths =
+        private static readonly string[] Names =
         {
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/LightBulb.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Cat.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Window.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Tea.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Laptop.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/DeskLamp.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Swords.png",
-            "Assets/Rokas/Art/Home/OverlayWorkshop/Icons/Exit.png"
+            "LightBulb", "Cat", "Window", "Tea",
+            "Laptop", "DeskLamp", "Swords", "Exit"
         };
 
-        [Test]
-        public void ProvidedIconsExistAsUncompressedSingleSprites()
+        private string sourceDirectory;
+        private string destinationRoot;
+
+        [SetUp]
+        public void SetUp()
         {
-            foreach (string path in IconPaths)
+            sourceDirectory = Path.Combine(Path.GetTempPath(), "rokas-workshop-icons-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(sourceDirectory);
+            destinationRoot = "Assets/__RokasMainRoomOverlayWorkshopTests/" + Guid.NewGuid().ToString("N") + "/Icons";
+
+            foreach (string name in Names)
             {
-                var sprite = AssetDatabase.LoadAssetAtPath<UnityEngine.Sprite>(path);
-                Assert.That(sprite, Is.Not.Null, path + " must use the provided project-owned PNG.");
+                var texture = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+                texture.SetPixel(0, 0, Color.white);
+                texture.Apply();
+                File.WriteAllBytes(Path.Combine(sourceDirectory, name + ".png"), texture.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (!string.IsNullOrEmpty(sourceDirectory) && Directory.Exists(sourceDirectory))
+                Directory.Delete(sourceDirectory, true);
+            if (!string.IsNullOrEmpty(destinationRoot))
+            {
+                string folder = destinationRoot.Substring(0, destinationRoot.LastIndexOf('/'));
+                AssetDatabase.DeleteAsset(folder);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        [Test]
+        public void ImporterCopiesCanonicalIconsAsUncompressedSingleSprites()
+        {
+            MainRoomOverlayWorkshopIconImporter.ImportFromDirectory(sourceDirectory, destinationRoot);
+
+            foreach (string name in Names)
+            {
+                string path = destinationRoot + "/" + name + ".png";
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                Assert.That(sprite, Is.Not.Null, path);
 
                 var importer = AssetImporter.GetAtPath(path) as TextureImporter;
                 Assert.That(importer, Is.Not.Null, path);
@@ -32,6 +65,7 @@ namespace Rokas.EditorTools.Tests
                 Assert.That(importer.npotScale, Is.EqualTo(TextureImporterNPOTScale.None), path);
                 Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed), path);
                 Assert.That(importer.alphaIsTransparency, Is.True, path);
+                Assert.That(importer.mipmapEnabled, Is.False, path);
             }
         }
     }
