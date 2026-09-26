@@ -43,6 +43,7 @@ namespace Rokas.Presentation
         private bool started;
         private bool forceDialogueVisible;
         private bool completionRaised;
+        private float sceneElapsedSeconds;
         private float beatElapsedSeconds;
         private float terminalFadeElapsed;
 
@@ -76,6 +77,7 @@ namespace Rokas.Presentation
             }
         }
 
+        public float SceneElapsedSeconds => sceneElapsedSeconds;
         public float BeatElapsedSeconds => beatElapsedSeconds;
 
         public int VisibleDialogueCharacters
@@ -138,6 +140,7 @@ namespace Rokas.Presentation
                 return;
             }
 
+            sceneElapsedSeconds += unscaledDeltaTime;
             beatElapsedSeconds += unscaledDeltaTime;
         }
 
@@ -213,6 +216,8 @@ namespace Rokas.Presentation
             };
 
             ApplySpeakerFocus(scene, states, characterId, ref sample);
+            ApplySceneActionBounce(scene, ref sample);
+            ApplyBeatEffect(scene, ref sample);
             return sample;
         }
 
@@ -274,10 +279,252 @@ namespace Rokas.Presentation
             return result;
         }
 
+        private void ApplySceneActionBounce(
+            RokasVnRuntimeSceneSnapshot scene,
+            ref RokasVnRuntimeCharacterSample sample)
+        {
+            if (scene == null || !scene.triggerActionBounce)
+                return;
+
+            RokasVnRuntimePresentationSnapshot presentation =
+                scene.presentation ??
+                new RokasVnRuntimePresentationSnapshot();
+            ApplyActionBounce(
+                ref sample,
+                sceneElapsedSeconds,
+                presentation.actionBounceAmplitude,
+                presentation.actionBounceDuration,
+                presentation.actionBounceScaleEmphasis,
+                presentation.actionBounceOvershoot,
+                presentation.actionBounceEasing);
+        }
+
+        private void ApplyBeatEffect(
+            RokasVnRuntimeSceneSnapshot scene,
+            ref RokasVnRuntimeCharacterSample sample)
+        {
+            RokasVnRuntimeBeatSnapshot beat = CurrentBeat;
+            if (scene == null || beat == null)
+                return;
+
+            string target;
+            float strength;
+            float duration;
+            float elapsed;
+            if (TryResolveStagingEffect(
+                    scene, beat, 1,
+                    out target, out strength,
+                    out duration, out elapsed))
+            {
+                if (string.Equals(
+                        sample.characterId,
+                        target,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    RokasVnRuntimePresentationSnapshot presentation =
+                        scene.presentation ??
+                        new RokasVnRuntimePresentationSnapshot();
+                    ApplyActionBounce(
+                        ref sample,
+                        elapsed,
+                        strength,
+                        duration,
+                        presentation.actionBounceScaleEmphasis,
+                        presentation.actionBounceOvershoot,
+                        presentation.actionBounceEasing);
+                }
+                return;
+            }
+
+            if (TryResolveStagingEffect(
+                    scene, beat, 2,
+                    out target, out strength,
+                    out duration, out elapsed))
+            {
+                if (string.Equals(
+                        sample.characterId,
+                        target,
+                        StringComparison.OrdinalIgnoreCase))
+                    ApplyHop(
+                        ref sample,
+                        elapsed,
+                        strength,
+                        duration);
+                return;
+            }
+
+            target = beat.targetCharacterId ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(target) ||
+                !string.Equals(
+                    sample.characterId,
+                    target,
+                    StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (beat.effect == 1)
+            {
+                RokasVnRuntimePresentationSnapshot presentation =
+                    scene.presentation ??
+                    new RokasVnRuntimePresentationSnapshot();
+                ApplyActionBounce(
+                    ref sample,
+                    beatElapsedSeconds,
+                    Mathf.Max(0f, beat.effectStrength),
+                    Mathf.Max(.01f, beat.effectDuration),
+                    presentation.actionBounceScaleEmphasis,
+                    presentation.actionBounceOvershoot,
+                    presentation.actionBounceEasing);
+            }
+            else if (beat.effect == 2)
+            {
+                ApplyHop(
+                    ref sample,
+                    beatElapsedSeconds,
+                    Mathf.Max(0f, beat.effectStrength),
+                    Mathf.Max(.01f, beat.effectDuration));
+            }
+        }
+
+        private bool TryResolveStagingEffect(
+            RokasVnRuntimeSceneSnapshot scene,
+            RokasVnRuntimeBeatSnapshot beat,
+            int requestedEffect,
+            out string characterId,
+            out float strength,
+            out float duration,
+            out float elapsedSinceTrigger)
+        {
+            characterId = string.Empty;
+            strength = 0f;
+            duration = 0f;
+            elapsedSinceTrigger = 0f;
+            if (scene == null || beat == null ||
+                beat.characterStaging == null)
+                return false;
+
+            for (int i = 0; i < beat.characterStaging.Count; i++)
+            {
+                RokasVnRuntimeStagingSnapshot row =
+                    beat.characterStaging[i];
+                if (row == null ||
+                    row.effect != requestedEffect ||
+                    row.delaySeconds >
+                        beatElapsedSeconds + .00001f ||
+                    !SceneHasCharacter(
+                        scene, row.characterId))
+                    continue;
+
+                characterId =
+                    row.characterId ?? string.Empty;
+                strength =
+                    Mathf.Max(0f, row.effectStrength);
+                duration =
+                    Mathf.Clamp(
+                        row.effectDuration,
+                        .01f, 10f);
+                elapsedSinceTrigger =
+                    Mathf.Max(
+                        0f,
+                        beatElapsedSeconds -
+                        row.delaySeconds);
+                return !string.IsNullOrWhiteSpace(
+                    characterId);
+            }
+
+            return false;
+        }
+
+        private static bool SceneHasCharacter(
+            RokasVnRuntimeSceneSnapshot scene,
+            string characterId)
+        {
+            if (scene == null ||
+                scene.characters == null ||
+                string.IsNullOrWhiteSpace(characterId))
+                return false;
+
+            for (int i = 0;
+                 i < scene.characters.Count;
+                 i++)
+            {
+                RokasVnRuntimeCharacterSnapshot character =
+                    scene.characters[i];
+                if (character != null &&
+                    string.Equals(
+                        character.characterId ??
+                        string.Empty,
+                        characterId,
+                        StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static void ApplyHop(
+            ref RokasVnRuntimeCharacterSample sample,
+            float elapsedSeconds,
+            float strength,
+            float duration)
+        {
+            float safeDuration =
+                Mathf.Max(.01f, duration);
+            float t = Mathf.Clamp01(
+                Mathf.Max(0f, elapsedSeconds) /
+                safeDuration);
+            if (t <= 0f || t >= 1f)
+                return;
+
+            float height =
+                Mathf.Max(0f, strength) *
+                Mathf.Sin(Mathf.PI * t);
+            sample.position +=
+                new Vector2(0f, -height);
+        }
+
+        private static void ApplyActionBounce(
+            ref RokasVnRuntimeCharacterSample sample,
+            float elapsedSeconds,
+            float amplitude,
+            float duration,
+            float scaleEmphasis,
+            float overshoot,
+            int easing)
+        {
+            float safeDuration =
+                Mathf.Max(.01f, duration);
+            float raw = Mathf.Clamp01(
+                Mathf.Max(0f, elapsedSeconds) /
+                safeDuration);
+            if (raw <= 0f || raw >= 1f)
+                return;
+
+            float eased =
+                EvaluateEasing(raw, easing);
+            float primary =
+                Mathf.Sin(Mathf.PI * eased);
+            float rebound =
+                Mathf.Sin(
+                    Mathf.PI * 2f * eased);
+            float y =
+                -Mathf.Max(0f, amplitude) *
+                (primary +
+                 (Mathf.Max(0f, overshoot) *
+                  .25f * rebound));
+            float scale =
+                1f +
+                (Mathf.Max(0f, scaleEmphasis) *
+                 primary);
+
+            sample.position +=
+                new Vector2(0f, y);
+            sample.scale *= scale;
+        }
+
         private void EnterScene(int sceneIndex)
         {
             CurrentSceneIndex = sceneIndex;
             CurrentBeatIndex = 0;
+            sceneElapsedSeconds = 0f;
             beatElapsedSeconds = 0f;
             forceDialogueVisible = false;
             IsTerminalFadeActive = false;
