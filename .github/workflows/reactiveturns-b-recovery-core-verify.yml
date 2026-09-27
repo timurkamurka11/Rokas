@@ -1,35 +1,34 @@
-name: ReactiveTurns B firestorage URL probe
+name: ReactiveTurns B firestorage API probe
 on:
   push:
     branches:
       - ci/reactiveturns-b-recovery-verify
-
 permissions:
   contents: read
-
 jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect firestorage share page
+      - name: Inspect firestorage client bundle
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail "https://firestorage.ai/en/f/MECiPfupweKT" -o /tmp/page.html
-          echo "PAGE_BYTES=$(wc -c </tmp/page.html)"
-          echo "--- URL CANDIDATES ---"
+          base="https://firestorage.ai"
+          js="/_next/static/chunks/app/(files)/en/f/page-a7beb6e4a798ea0d.js"
+          curl -L --fail "$base$js" -o /tmp/page.js
+          echo "JS_BYTES=$(wc -c </tmp/page.js)"
           python3 - <<'PY'
-          import re, html
-          s=open('/tmp/page.html',encoding='utf-8',errors='replace').read()
-          s=html.unescape(s)
-          for x in sorted(set(re.findall(r'https?://[^"\'<> ]+',s))):
-              print(x)
-          print('--- HREF/SRC ---')
-          for x in re.findall(r'(?:href|src)=["\']([^"\']+)',s):
-              print(x)
-          print('--- DOWNLOAD CONTEXT ---')
-          for m in re.finditer('download',s,re.I):
-              print(s[max(0,m.start()-300):m.start()+500].replace('\n',' ')[:800])
+          import re
+          s=open('/tmp/page.js',encoding='utf-8',errors='replace').read()
+          for pat in [r'/api/[^"'\' ]+', r'https?://[^"'\' ]+', r'fetch\([^)]{0,500}\)', r'download.{0,700}', r'share.{0,500}']:
+              print('---',pat,'---')
+              found=[]
+              for m in re.finditer(pat,s,re.I):
+                  v=m.group(0)
+                  if v not in found:
+                      found.append(v)
+              for v in found[:100]:
+                  print(v[:1200])
           PY
