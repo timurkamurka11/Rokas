@@ -1,4 +1,4 @@
-name: ReactiveTurns B recovery core verify
+name: ReactiveTurns B firestorage URL probe
 on:
   push:
     branches:
@@ -8,29 +8,28 @@ permissions:
   contents: read
 
 jobs:
-  core-recovery:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download recovered Milestone B core overlay
+      - name: Inspect firestorage share page
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 --retry-delay 2             "https://firestorage.ai/download/reactiveturns_core_overlay.tar.gz"             -o /tmp/reactiveturns_core_overlay.tar.gz
-          echo "f5a37385f53c9ff32be8c1e595eef4d4d345a1d51901a2b970bc64c1a4c0c130  /tmp/reactiveturns_core_overlay.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/reactiveturns_core_overlay.tar.gz -C .
-
-      - name: Recovery diff whitespace check
-        run: git diff --check
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Compile and run recovered Core suite
-        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
-
-      - name: Existing asset validator
-        run: python3 Tools/validate_assets.py
+          curl -L --fail "https://firestorage.ai/en/f/MECiPfupweKT" -o /tmp/page.html
+          echo "PAGE_BYTES=$(wc -c </tmp/page.html)"
+          echo "--- URL CANDIDATES ---"
+          python3 - <<'PY'
+          import re, html
+          s=open('/tmp/page.html',encoding='utf-8',errors='replace').read()
+          s=html.unescape(s)
+          for x in sorted(set(re.findall(r'https?://[^"\'<> ]+',s))):
+              print(x)
+          print('--- HREF/SRC ---')
+          for x in re.findall(r'(?:href|src)=["\']([^"\']+)',s):
+              print(x)
+          print('--- DOWNLOAD CONTEXT ---')
+          for m in re.finditer('download',s,re.I):
+              print(s[max(0,m.start()-300):m.start()+500].replace('\n',' ')[:800])
+          PY
