@@ -1,0 +1,36 @@
+name: ReactiveTurns B recovery core verify
+on:
+  push:
+    branches:
+      - ci/reactiveturns-b-recovery-verify
+
+permissions:
+  contents: read
+
+jobs:
+  core-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download recovered Milestone B core overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --retry-delay 2             "https://firestorage.ai/download/reactiveturns_core_overlay.tar.gz"             -o /tmp/reactiveturns_core_overlay.tar.gz
+          echo "f5a37385f53c9ff32be8c1e595eef4d4d345a1d51901a2b970bc64c1a4c0c130  /tmp/reactiveturns_core_overlay.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/reactiveturns_core_overlay.tar.gz -C .
+
+      - name: Recovery diff whitespace check
+        run: git diff --check
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compile and run recovered Core suite
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+
+      - name: Existing asset validator
+        run: python3 Tools/validate_assets.py
