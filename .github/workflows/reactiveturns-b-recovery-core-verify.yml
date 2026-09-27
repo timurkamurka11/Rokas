@@ -1,4 +1,4 @@
-name: ReactiveTurns B firestorage API probe 2
+name: ReactiveTurns B firestorage API probe 3
 on:
   push:
     branches:
@@ -11,15 +11,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect firestorage client bundle
+      - name: Inspect firestorage shared chunks
         shell: bash
         run: |
           set -euo pipefail
-          url="https://firestorage.ai/_next/static/chunks/app/%28files%29/en/f/page-a7beb6e4a798ea0d.js"
-          curl -sS -L -D /tmp/headers "$url" -o /tmp/page.js
-          echo "--- HEADERS ---"
-          cat /tmp/headers
-          echo "--- BYTES ---"
-          wc -c /tmp/page.js
-          echo "--- CONTENT ---"
-          cat /tmp/page.js
+          for p in             "/_next/static/chunks/8500-f4d7bfbe7500f274.js"             "/_next/static/chunks/8437-d65cc193dc908afa.js"             "/_next/static/chunks/5841-1160578ba9bb4f3e.js"             "/_next/static/chunks/4899-d89df949f2dbd5af.js"; do
+            f="/tmp/$(basename "$p")"
+            curl -sS -L --fail "https://firestorage.ai$p" -o "$f"
+            echo "=== $p bytes=$(wc -c <"$f") ==="
+            grep -Eo '.{0,180}(api|download|share|signed|presign|object|publicId|shareId).{0,500}' "$f" | head -80 || true
+          done
