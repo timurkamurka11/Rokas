@@ -110,3 +110,19 @@ The normal folder may retain that documented local dirty state while its tracked
 ## NEXT
 
 USER MANUAL ROKAS UNIFIED INTEGRATION INSPECTION in D:/Rokas/Rokas, Unity 6000.3.19f1, Assets/Rokas/Scenes/Rokas.unity. Stop after remote verification and the safe canonical switch; wait for user QA.
+
+## REACTIVETURNS MILESTONE A — 2026-09-27
+
+This section records the later ReactiveTurns milestone. The historical counts and handoff above describe the first unified checkpoint, not this milestone.
+
+Source integration/rokas-unified was f89f16ddbfc3b25adfaff9d70ca972644205721f. The verified feature source was b1d034178ce9d5f0e08ab1d3741272fce9ba8e77, based exactly on f89f16d. A real, conflict-free merge produced 62136f4a7386cd2d2e58dff3a9f1056e613c9215 in an isolated integration worktree. Development and PR #4 were untouched.
+
+The integrated Core behavior runner passed with exit 0, including ReactiveTurns definitions, clock, queue, defense/offense, checkpoints, idempotency, legacy Combat 2.0, save and payment behavior. Unity 6000.3.19f1 passed 863/863 EditMode and 126/126 PlayMode tests, with zero failures, skips or inconclusive results. PlayMode includes existing Home, Messages/Live Messenger, Legacy Combat and payment suites, plus the real Portal → ReactiveTurns duel → victory → Home → Payment → single claim → reload flow. The new focused tests cover actual Input System timestamps, focus and settings pause, duplicate input guards, postbattle input ownership and Unity save codec roundtrip.
+
+The actual arena canvas was rendered by the PlayMode visual test at 1920×1080 and 1280×720, with a separate windup frame, and inspected. It shows Keiko, the authored enemy, HP/AP/Seal, the live turn forecast, command buttons and the moving defense contact cue. A temporary Screen Space Camera/RenderTexture is used by the batch test to capture the UI. The notification popup is suppressed during the duel so the enemy HUD remains visible.
+
+The static asset validator reports 32 existing findings after this milestone versus 33 in the current canonical baseline: zero added, one removed when its package-assembly allowlist was corrected. The validator still exits 1 for historical TMP GUID, small-image and PCM findings. Two preexisting StreamingAssets video meta files generated in the canonical folder were preserved with their exact GUIDs in the integration checkpoint; this prevents new missing-meta findings in a fresh checkout.
+
+The first fresh integration import could not fetch YarnSpinner because GitHub TLS failed. Reusing the already resolved local YarnSpinner package cache allowed both complete Unity suites to pass without changing its declared version or the project manifest. Unity logs contain licensing/CDN network diagnostics, but no test, C# compilation or gameplay runtime failures. Final test XML, logs, validator comparisons and arena captures are retained at D:/Rokas/reactiveturns-milestone-a-evidence.
+
+The verified marker, remote SHA equality and canonical-folder update must be recorded separately after publication. Preserve all existing worktrees and meaningful local files until user manual inspection.
