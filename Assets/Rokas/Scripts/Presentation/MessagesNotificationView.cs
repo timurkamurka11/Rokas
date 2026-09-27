@@ -13,6 +13,7 @@ namespace Rokas.Presentation
         private readonly RectTransform layer;
         private int observedSequence;
         private bool dirty;
+        private bool suppressed;
         private float visibleTime;
 
         public MessagesNotificationView(UiKit ui, RectTransform stage, GameSession session)
@@ -31,6 +32,7 @@ namespace Rokas.Presentation
 
         public void Tick(float dt)
         {
+            if (suppressed) return;
             if (dirty)
             {
                 dirty = false;
@@ -50,6 +52,14 @@ namespace Rokas.Presentation
             if (visibleTime <= 0f) return;
             visibleTime = Mathf.Max(0f, visibleTime - Mathf.Max(0f, dt));
             if (visibleTime <= 0f) Hide();
+        }
+
+        public void SetSuppressed(bool value)
+        {
+            if (suppressed == value) return;
+            suppressed = value;
+            if (value) Hide();
+            else dirty = true;
         }
 
         public void Dispose()

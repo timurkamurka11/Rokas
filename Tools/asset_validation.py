@@ -26,6 +26,10 @@ def declared_external_assemblies(dependencies):
         assemblies.update(('UnityEngine.UI', 'Unity.TextMeshPro'))
     if 'com.unity.modules.video' in dependencies:
         assemblies.add('UnityEngine.VideoModule')
+    if 'com.unity.modules.screencapture' in dependencies:
+        assemblies.add('UnityEngine.ScreenCaptureModule')
+    if 'com.unity.inputsystem' in dependencies:
+        assemblies.add('Unity.InputSystem')
     if 'dev.yarnspinner.unity' in dependencies:
         assemblies.add('YarnSpinner.Unity')
     return assemblies

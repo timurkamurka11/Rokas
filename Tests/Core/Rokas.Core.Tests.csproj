@@ -21,6 +21,10 @@
     <Compile Include="YumikoFoodIntegrationTests.cs" />
     <Compile Include="LiveMessengerCoreTests.cs" />
     <Compile Include="LiveMessengerPolishCoreTests.cs" />
+    <Compile Include="ReactiveTurnsFoundationTests.cs" />
+    <Compile Include="ReactiveTurnsDefenseAndOffenseTests.cs" />
+    <Compile Include="ReactiveTurnsSaveTests.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/*.cs" />
+    <Compile Include="../../Assets/Rokas/Scripts/Core/ReactiveTurns/*.cs" />
   </ItemGroup>
 </Project>

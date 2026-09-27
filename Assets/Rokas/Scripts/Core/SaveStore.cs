@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 
 namespace Rokas.Core
 {
@@ -26,6 +27,14 @@ namespace Rokas.Core
         FutureVersionPreserved,
         SerializationFailed,
         IoFailure
+    }
+
+    // Precise storage boundary for deterministic fault injection and diagnostics.
+    public enum SaveCommitStage
+    {
+        BeforeTemporaryWrite,
+        AfterTemporaryFlush,
+        AfterReplace
     }
 
     public sealed class SaveLoadResult
@@ -84,11 +93,18 @@ namespace Rokas.Core
 
         private readonly string directoryPath;
         private readonly ISaveCodec codec;
+        private readonly Action<SaveCommitStage> commitObserver;
 
         public string PrimaryPath { get; private set; }
         public string BackupPath { get; private set; }
 
         public SaveStore(string directoryPath, ISaveCodec codec, string fileName = "save.json")
+            : this(directoryPath, codec, fileName, null)
+        {
+        }
+
+        internal SaveStore(string directoryPath, ISaveCodec codec, string fileName,
+            Action<SaveCommitStage> commitObserver)
         {
             if (string.IsNullOrEmpty(directoryPath))
             {
@@ -105,6 +121,7 @@ namespace Rokas.Core
 
             this.directoryPath = directoryPath;
             this.codec = codec;
+            this.commitObserver = commitObserver;
             PrimaryPath = Path.Combine(directoryPath, fileName);
             BackupPath = PrimaryPath + ".bak";
         }
@@ -214,7 +231,9 @@ namespace Rokas.Core
             try
             {
                 Directory.CreateDirectory(directoryPath);
+                Observe(SaveCommitStage.BeforeTemporaryWrite);
                 WriteUtf8Durably(temporaryPath, serialized);
+                Observe(SaveCommitStage.AfterTemporaryFlush);
 
                 if (primary.Status == CandidateStatus.Valid)
                 {
@@ -229,6 +248,8 @@ namespace Rokas.Core
                 {
                     File.Move(temporaryPath, PrimaryPath);
                 }
+
+                Observe(SaveCommitStage.AfterReplace);
 
                 return new SaveWriteResult(
                     SaveWriteStatus.Saved,
@@ -286,6 +307,18 @@ namespace Rokas.Core
             {
                 return new Candidate { Status = CandidateStatus.Invalid, Message = "Decode failed: " + error };
             }
+            if (data.version != serializedVersion)
+            {
+                return new Candidate { Status = CandidateStatus.Invalid, Message = "Decoded save version differs from JSON version." };
+            }
+            if (serializedVersion == 1)
+            {
+                data.version = SaveData.CurrentVersion;
+                data.combatMode = CombatMode.Legacy;
+                data.battleCheckpoint = null;
+                data.claimedEconomicRunIds = new List<string>();
+                data.firstClearRewardIds = new List<string>();
+            }
             string validationError;
             if (!ValidateCurrent(data, out validationError))
             {
@@ -309,6 +342,25 @@ namespace Rokas.Core
             }
         }
 
+        internal bool TryClone(SaveData source, out SaveData copy, out string error)
+        {
+            copy = null;
+            if (source == null)
+            {
+                error = "Save data is null.";
+                return false;
+            }
+            try
+            {
+                return TryDeserialize(codec.Serialize(source), out copy, out error) && copy != null;
+            }
+            catch (Exception exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
         private static bool ValidateCurrent(SaveData data, out string error)
         {
             if (data == null)
@@ -323,7 +375,7 @@ namespace Rokas.Core
             }
             if (data.yen < 0 || data.reputation < 0 || data.spiritAsh < 0 ||
                 data.weaponLevel < 1 || data.weaponLevel > SaveData.MaxWeaponLevel ||
-                data.completedRuns < 0 || data.mameInteractions < 0)
+                data.completedRuns < 0 || data.contractRunSequence < 0 || data.mameInteractions < 0)
             {
                 error = "Save contains invalid progression values.";
                 return false;
@@ -331,6 +383,28 @@ namespace Rokas.Core
             if (!Enum.IsDefined(typeof(RunPhase), data.phase))
             {
                 error = "Save contains an unknown run phase.";
+                return false;
+            }
+            if (!Enum.IsDefined(typeof(CombatMode), data.combatMode) ||
+                data.claimedEconomicRunIds == null || data.firstClearRewardIds == null ||
+                !ValidLedger(data.claimedEconomicRunIds) || !ValidLedger(data.firstClearRewardIds))
+            {
+                error = "Save contains invalid combat mode or reward ledger.";
+                return false;
+            }
+            if (data.combatMode == CombatMode.ReactiveTurns &&
+                (data.phase == RunPhase.Combat || data.phase == RunPhase.Sealed ||
+                 data.phase == RunPhase.Failed || data.phase == RunPhase.Payment) &&
+                (data.battleCheckpoint == null || data.battleCheckpoint.schemaVersion != 2 ||
+                 data.battleCheckpoint.economicRunId != ContractService.GetEconomicRunId(
+                     data.activeContractId, data.contractRunSequence) ||
+                 data.battleCheckpoint.attemptId < 1 || data.battleCheckpoint.revision < 0 ||
+                 data.battleCheckpoint.actors == null || data.battleCheckpoint.queue == null ||
+                 (data.phase == RunPhase.Sealed || data.phase == RunPhase.Payment) &&
+                 data.battleCheckpoint.terminalResult != "Victory" ||
+                 data.phase == RunPhase.Failed && data.battleCheckpoint.terminalResult != "Defeat"))
+            {
+                error = "Reactive combat is missing a valid stable checkpoint.";
                 return false;
             }
             if (data.settings == null ||
@@ -364,6 +438,16 @@ namespace Rokas.Core
             return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
+        private static bool ValidLedger(List<string> ids)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < ids.Count; index++)
+            {
+                if (string.IsNullOrEmpty(ids[index]) || !seen.Add(ids[index])) return false;
+            }
+            return true;
+        }
+
         private static SaveWriteResult SerializationFailure(string message)
         {
             return new SaveWriteResult(
@@ -379,6 +463,11 @@ namespace Rokas.Core
                 stream.Write(bytes, 0, bytes.Length);
                 stream.Flush(true);
             }
+        }
+
+        private void Observe(SaveCommitStage stage)
+        {
+            if (commitObserver != null) commitObserver(stage);
         }
 
         private static void TryDelete(string path)

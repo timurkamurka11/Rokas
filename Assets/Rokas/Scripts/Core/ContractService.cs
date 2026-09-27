@@ -4,6 +4,12 @@ namespace Rokas.Core
 {
     public sealed class ContractService
     {
+        public static string GetEconomicRunId(string contractId, int runSequence)
+        {
+            return string.IsNullOrEmpty(contractId) || runSequence < 1
+                ? string.Empty : contractId + ":" + runSequence;
+        }
+
         public bool Accept(SaveData state, ContractDefinition contract)
         {
             RequireStateAndContract(state, contract);
@@ -41,6 +47,8 @@ namespace Rokas.Core
             }
 
             state.phase = RunPhase.Combat;
+            state.combatMode = CombatMode.Legacy;
+            state.battleCheckpoint = null;
             state.enemyHp = contract.enemyHealth;
             state.playerHp = 100f;
             state.enemyTimer = contract.enemyInterval;
@@ -77,6 +85,8 @@ namespace Rokas.Core
 
         internal static void ResetCombat(SaveData state)
         {
+            state.combatMode = CombatMode.Legacy;
+            state.battleCheckpoint = null;
             state.enemyHp = 0f;
             state.playerHp = 100f;
             state.enemyTimer = 0f;

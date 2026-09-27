@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Rokas.Core
 {
@@ -53,6 +54,12 @@ namespace Rokas.Core
                 return false;
             }
 
+            string economicRunId = ContractService.GetEconomicRunId(state.activeContractId, state.contractRunSequence);
+            if (string.IsNullOrEmpty(economicRunId)) return false;
+            if (state.claimedEconomicRunIds == null) state.claimedEconomicRunIds = new List<string>();
+            if (state.firstClearRewardIds == null) state.firstClearRewardIds = new List<string>();
+            if (state.claimedEconomicRunIds.Contains(economicRunId)) return false;
+
             if (contract.reward < 0 || contract.reputationReward < 0 || contract.ashReward < 0 ||
                 !CanAdd(state.yen, contract.reward) ||
                 !CanAdd(state.reputation, contract.reputationReward) ||
@@ -66,6 +73,10 @@ namespace Rokas.Core
             state.reputation += contract.reputationReward;
             state.spiritAsh += contract.ashReward;
             state.completedRuns++;
+            state.claimedEconomicRunIds.Add(economicRunId);
+            string firstClearId = "first-clear:" + contract.id;
+            if (!state.firstClearRewardIds.Contains(firstClearId))
+                state.firstClearRewardIds.Add(firstClearId);
             state.phase = RunPhase.Home;
             state.activeContractId = string.Empty;
             state.preparedFoodId = string.Empty;

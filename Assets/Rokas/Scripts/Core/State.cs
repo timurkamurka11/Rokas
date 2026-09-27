@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Rokas.Core.ReactiveTurns;
 
 namespace Rokas.Core
 {
@@ -11,6 +13,12 @@ namespace Rokas.Core
         Sealed,
         Payment,
         Failed
+    }
+
+    public enum CombatMode
+    {
+        Legacy,
+        ReactiveTurns
     }
 
     [Serializable]
@@ -28,7 +36,7 @@ namespace Rokas.Core
     [Serializable]
     public sealed class SaveData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         public const int MaxWeaponLevel = int.MaxValue / 300;
 
         public int version = CurrentVersion;
@@ -38,6 +46,10 @@ namespace Rokas.Core
         public int weaponLevel = 1;
         public int completedRuns;
         public int contractRunSequence;
+        public CombatMode combatMode = CombatMode.Legacy;
+        public BattleCheckpoint battleCheckpoint;
+        public List<string> claimedEconomicRunIds = new List<string>();
+        public List<string> firstClearRewardIds = new List<string>();
         public RunPhase phase = RunPhase.Home;
         public string activeContractId = string.Empty;
         public string activeDestinationId = string.Empty;

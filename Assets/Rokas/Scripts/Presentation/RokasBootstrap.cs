@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using Rokas.Core;
+using Rokas.Core.ReactiveTurns;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -32,6 +33,11 @@ namespace Rokas.Presentation
         private bool enterWorldTransition;
         private float autosave;
         private RunPhase previousPhase;
+        private ReactiveInputAdapter reactiveInput;
+        private ReactiveCombatSession reactiveBoundCombat;
+        private CombatClock reactiveClock;
+        private long lastReactiveDeviceUs;
+        private long reactivePrepareUntilUs;
 
         private void Start()
         {
@@ -83,7 +89,8 @@ namespace Rokas.Presentation
             if (!string.IsNullOrEmpty(state.activeContractId) && state.activeContractId != contract.id)
                 saveBlocked = true;
 
-            Session = new GameSession(state, contract);
+            Session = new GameSession(state, contract, store);
+            reactiveInput = new ReactiveInputAdapter();
             previousPhase = state.phase;
             vnIntroProgress = new PlayerPrefsVnIntroProgress();
             var cameraRoot = new GameObject("RokasCamera", typeof(Camera), typeof(AudioListener));
@@ -380,7 +387,9 @@ namespace Rokas.Presentation
 
         public void SaveNow()
         {
-            if (Session == null || store == null || saveBlocked) return;
+            if (Session == null || store == null || saveBlocked || Session.SaveBlocked) return;
+            if (Session.CombatMode == CombatMode.ReactiveTurns && Session.State.phase == RunPhase.Combat)
+                return; // Active combat writes only through GameSession's durable checkpoint transaction.
             var result = store.Save(Session.State);
             if (result.Succeeded)
             {
@@ -412,12 +421,180 @@ namespace Rokas.Presentation
                 Screen.fullScreenMode = Session.State.settings.fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
         }
 
+        public void SubmitReactiveCommand(CommandKind kind, string skillId)
+        {
+            if (!CanUseReactiveCombat() || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            string[] targets = kind == CommandKind.Basic || kind == CommandKind.Skill
+                ? new[] { Session.Contract.enemyId } : new string[0];
+            var intent = new CommandIntent(Guid.NewGuid().ToString("N"), Session.ReactiveCombat.Revision,
+                kind, skillId, targets);
+            CommandResult result = Session.ReactiveCombat.SubmitCommand(intent);
+            if (!result.Accepted)
+                View.Toast(result.Reason == "InsufficientAp" ? "Недостаточно AP." : "Сейчас действие недоступно.");
+            View.RefreshReactiveCombat();
+        }
+
+        public void SubmitReactiveDefense(ReactivePressKind kind)
+        {
+            if (!CanUseReactiveCombat() || reactiveClock == null || reactiveClock.IsPaused) return;
+            ReactiveCombatSession combat = Session.ReactiveCombat;
+            long deviceUs;
+            if (!reactiveInput.TryConsumeUiActivation(out deviceUs)) return;
+            long? combatUs = reactiveClock.MapInput(deviceUs, reactiveClock.CurrentEpoch);
+            if (!combatUs.HasValue) return;
+            DefenseKind defense = kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
+            combat.SubmitDefense(new DefenseIntent("ui-" + Guid.NewGuid().ToString("N"),
+                combat.InputEpoch, defense, combatUs.Value));
+            combat.ReleaseDefense(defense, combat.InputEpoch); // A button click includes a release.
+            View.RefreshReactiveCombat();
+        }
+
+        public void ConfirmReactiveCounter()
+        {
+            if (!CanUseReactiveCombat() || reactiveClock == null || reactiveClock.IsPaused) return;
+            ReactiveCombatSession combat = Session.ReactiveCombat;
+            long deviceUs;
+            if (!reactiveInput.TryConsumeUiActivation(out deviceUs)) return;
+            long? combatUs = reactiveClock.MapInput(deviceUs, reactiveClock.CurrentEpoch);
+            if (!combatUs.HasValue) return;
+            combat.ConfirmCounter("counter-" + Guid.NewGuid().ToString("N"), combat.InputEpoch, combatUs.Value);
+            View.RefreshReactiveCombat();
+        }
+
+        public void RetryReactiveSave()
+        {
+            if (Session == null || !Session.SaveBlocked || saveBlocked) return;
+            bool saved = Session.RetryBlockedSave();
+            View?.SetSaveStatus(saved);
+            View?.RefreshReactiveCombat();
+            if (!saved) View?.Toast("Не удалось записать профиль. Проверьте доступ к папке сохранений.", 8);
+        }
+
+        private bool CanUseReactiveCombat()
+        {
+            return Session != null && View != null && reactiveInput != null && focused && !saveBlocked &&
+                !Session.SaveBlocked && !View.Paused && Session.State.phase == RunPhase.Combat &&
+                Session.CombatMode == CombatMode.ReactiveTurns && Session.ReactiveCombat != null;
+        }
+
+        private void ClearReactiveBinding()
+        {
+            reactiveInput?.SetContext(false);
+            reactiveBoundCombat = null;
+            reactiveClock = null;
+            lastReactiveDeviceUs = 0;
+            reactivePrepareUntilUs = 0;
+        }
+
+        private void PauseReactiveCombat(string reason)
+        {
+            if (reactiveClock == null || reactiveClock.IsPaused || reactiveBoundCombat == null) return;
+            long now = reactiveInput.DeviceNowUs;
+            reactiveClock.Pause(now);
+            reactiveBoundCombat.Suspend(reason);
+            reactiveInput.SetContext(false);
+            reactiveInput.ForceRearm();
+            reactivePrepareUntilUs = 0;
+            lastReactiveDeviceUs = now;
+        }
+
+        private void TickReactiveCombat()
+        {
+            ReactiveCombatSession combat = Session.ReactiveCombat;
+            if (combat == null || reactiveInput == null) return;
+            long now = reactiveInput.DeviceNowUs;
+            if (reactiveBoundCombat != combat)
+            {
+                reactiveInput.SetContext(false);
+                reactiveBoundCombat = combat;
+                reactiveClock = new CombatClock(now, combat.CurrentCombatUs);
+                lastReactiveDeviceUs = now;
+                reactivePrepareUntilUs = 0;
+            }
+
+            if (!focused || saveBlocked || Session.SaveBlocked || View.Paused)
+            {
+                PauseReactiveCombat(Session.SaveBlocked ? "SaveBlocked" : "Paused");
+                View.RefreshReactiveCombat();
+                return;
+            }
+
+            if (reactiveClock.IsPaused)
+            {
+                if (reactivePrepareUntilUs == 0) reactivePrepareUntilUs = checked(now + 600000);
+                if (now < reactivePrepareUntilUs)
+                {
+                    View.RefreshReactiveCombat();
+                    return;
+                }
+                reactiveClock.Resume(now);
+                combat.Resume(reactiveClock.CurrentEpoch);
+                reactiveInput.ForceRearm();
+                reactivePrepareUntilUs = 0;
+                lastReactiveDeviceUs = now;
+            }
+
+            if (now - lastReactiveDeviceUs > 100000)
+            {
+                reactiveClock.Pause(lastReactiveDeviceUs);
+                combat.Suspend("FrameGap");
+                reactiveInput.SetContext(false);
+                reactiveInput.ForceRearm();
+                reactivePrepareUntilUs = checked(now + 600000);
+                lastReactiveDeviceUs = now;
+                View.RefreshReactiveCombat();
+                return;
+            }
+            lastReactiveDeviceUs = now;
+
+            bool defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
+            bool reactiveInputContext = defenseContext || combat.Phase == ReactivePhase.CounterWindow;
+            reactiveInput.SetContext(reactiveInputContext);
+            reactiveInput.SetDefenseEnabled(defenseContext);
+            reactiveInput.Tick();
+            reactiveInput.Flush(SubmitReactiveDevicePress);
+            if (defenseContext)
+            {
+                if (reactiveInput.IsReleased(ReactivePressKind.Dodge))
+                    combat.ReleaseDefense(DefenseKind.Dodge, combat.InputEpoch);
+                if (reactiveInput.IsReleased(ReactivePressKind.Parry))
+                    combat.ReleaseDefense(DefenseKind.Parry, combat.InputEpoch);
+            }
+
+            long combatNowUs = reactiveClock.CombatTimeAt(now);
+            CombatStep step = combat.Advance(combatNowUs, combatNowUs - 40000);
+            View.PresentReactiveCombatStep(step);
+            defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
+            reactiveInput.SetContext(defenseContext || combat.Phase == ReactivePhase.CounterWindow);
+            reactiveInput.SetDefenseEnabled(defenseContext);
+
+            BattleCheckpoint stable = combat.GetStableCheckpoint();
+            if (Session.State.battleCheckpoint == null || stable.revision > Session.State.battleCheckpoint.revision)
+                Session.SaveReactiveCheckpoint();
+            View.RefreshReactiveCombat();
+        }
+
+        private void SubmitReactiveDevicePress(ReactiveDevicePress press)
+        {
+            if (press.Epoch != reactiveInput.Epoch || reactiveClock == null || reactiveClock.IsPaused ||
+                reactiveBoundCombat == null || reactiveBoundCombat.Phase != ReactivePhase.EnemyExecution) return;
+            long? combatUs = reactiveClock.MapInput(press.DeviceTimeUs, reactiveClock.CurrentEpoch);
+            if (!combatUs.HasValue) return;
+            DefenseKind kind = press.Kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
+            reactiveBoundCombat.SubmitDefense(new DefenseIntent("device-" + press.InputId,
+                reactiveBoundCombat.InputEpoch, kind, combatUs.Value));
+        }
+
         private void Update()
         {
             if (Session == null || View == null) return;
             float dt = Mathf.Min(Time.unscaledDeltaTime, .1f);
             if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
-            if (focused && !saveBlocked)
+            if (Session.CombatMode == CombatMode.ReactiveTurns && Session.State.phase == RunPhase.Combat)
+                TickReactiveCombat();
+            else
+                ClearReactiveBinding();
+            if (focused && !saveBlocked && Session.CombatMode == CombatMode.Legacy)
                 View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
             if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
             View.Tick(dt);
@@ -431,10 +608,13 @@ namespace Rokas.Presentation
         private void OnApplicationFocus(bool value)
         {
             focused = value;
-            if (!value && Session != null) { View?.CancelCombatInput(); SaveNow(); }
+            if (!value && Session != null) { PauseReactiveCombat("FocusLost"); View?.CancelCombatInput(); SaveNow(); }
         }
 
-        private void OnApplicationPause(bool value) { if (value) { View?.CancelCombatInput(); SaveNow(); } }
+        private void OnApplicationPause(bool value)
+        {
+            if (value) { PauseReactiveCombat("ApplicationPause"); View?.CancelCombatInput(); SaveNow(); }
+        }
         private void OnApplicationQuit() { SaveNow(); }
         private void OnDestroy()
         {
@@ -443,6 +623,7 @@ namespace Rokas.Presentation
             if (mainMenu != null) mainMenu.Dispose();
             DisposeVnIntroRuntime();
             if (View != null) View.Dispose();
+            if (reactiveInput != null) reactiveInput.Dispose();
             if (sound != null) sound.Dispose();
         }
     }

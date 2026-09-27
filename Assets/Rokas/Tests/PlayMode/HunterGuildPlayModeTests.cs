@@ -123,6 +123,8 @@ namespace Rokas.Tests
             RokasBootstrap boot = Bootstrap();
             boot.Session.State.phase = RunPhase.Payment;
             boot.Session.State.activeContractId = boot.Session.Contract.id;
+            boot.Session.State.contractRunSequence = 1;
+            boot.SaveNow(); // Claim reads the durable profile, so this fixture must persist Payment.
 
             Assert.That(boot.Session.ClaimPayment(), Is.True, "one real Payment transition must succeed");
             yield return null;

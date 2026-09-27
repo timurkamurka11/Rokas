@@ -1,5 +1,6 @@
 using System;
 using Rokas.Core;
+using Rokas.Core.ReactiveTurns;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +17,7 @@ namespace Rokas.Presentation
         private readonly Action<string> toast;
         private readonly WorldEffects world;
         private readonly Func<bool> paused;
+        private readonly ReactiveMissionView reactiveView;
         private RawImage enemy;
         private CombatHud combatHud;
         private Image combatFlash;
@@ -31,13 +33,24 @@ namespace Rokas.Presentation
         private float enemyAttackTime;
 
         public MissionView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio,
-            Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world, Func<bool> paused)
-        { this.ui = ui; this.assets = assets; this.session = session; this.audio = audio; this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused; }
+            Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world,
+            Func<bool> paused, Action<CommandKind, string> reactiveCommand,
+            Action<ReactivePressKind> reactiveDefense, Action reactiveCounter, Action reactiveRetrySave)
+        {
+            this.ui = ui; this.assets = assets; this.session = session; this.audio = audio;
+            this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused;
+            reactiveView = new ReactiveMissionView(ui, assets,
+                () => reactiveCommand(CommandKind.Basic, null),
+                () => reactiveCommand(CommandKind.Skill, "seal_strike"),
+                () => reactiveCommand(CommandKind.Defend, null),
+                () => reactiveDefense(ReactivePressKind.Dodge),
+                () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave);
+        }
 
         public void CancelInput() { combatHud?.CancelInput(); }
         public void HandleInput(bool dodge, bool deflect, bool resonance)
         {
-            if (paused() || session.State.phase != RunPhase.Combat) return;
+            if (paused() || session.State.phase != RunPhase.Combat || session.CombatMode != CombatMode.Legacy) return;
             if (deflect) session.Deflect();
             else if (dodge) session.Dodge();
             if (resonance) session.ActivateResonance();
@@ -51,14 +64,21 @@ namespace Rokas.Presentation
                 ui.Label(parent, "PortalEyebrow", "МЕСТО, КОТОРОГО НЕТ НА КАРТЕ", 66, 148, 1120, 42, 20, UiKit.Gold);
                 ui.Label(parent, "PortalTitle", "Другая сторона.", 63, 207, 1030, 102, 62, UiKit.Paper, true);
                 ui.Label(parent, "PortalNote", "Город стихает. За воротами слышен поезд.", 67, 321, 1050, 70, 27);
-                ui.Button(parent, "EnterPortal", "Войти в искажение", 1240, 866, 600, 76,
-                    () => travel(session.EnterPortal, "ПЛАТФОРМА КИСАРАГИ\nСледующая остановка не объявлена."), true);
+                ui.Button(parent, "EnterReactivePortal", "Войти в искажение", 1240, 866, 600, 76,
+                    () => travel(session.EnterReactiveTestEncounter, "ПЛАТФОРМА КИСАРАГИ\nСледующая остановка не объявлена."), true);
                 ui.Button(parent, "ReturnFromPortal", "Вернуться домой", 67, 881, 450, 60,
                     () => travel(session.ReturnHome, "Вы возвращаетесь по мокрым улицам."));
                 return;
             }
 
             bool fighting = session.State.phase == RunPhase.Combat;
+            if (fighting && session.CombatMode == CombatMode.ReactiveTurns)
+            {
+                combatHud = null;
+                reactiveView.Build(parent);
+                Refresh();
+                return;
+            }
             ui.Label(parent, "DepthLabel", "ГЛУБИНА 01     /     КОНТРАКТ E", 66, 134, 700, 43, 18, UiKit.Gold);
             ui.Label(parent, "EnemyName", "Безликий пассажир", 580, 131, 800, 64, 39, UiKit.Paper, true, TextAnchor.MiddleCenter);
             ui.Label(parent, "EnemyIdentity", "НОППЭРА-БО  /  ПОВРЕЖДЁННЫЙ", 650, 202, 660, 36, 16, UiKit.Muted, false, TextAnchor.MiddleCenter);
@@ -97,7 +117,80 @@ namespace Rokas.Presentation
             Refresh();
         }
 
-        public void Refresh() { combatHud?.Refresh(); }
+        public void Refresh()
+        {
+            if (session.State.phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns)
+            {
+                ReactiveCombatSession combat = session.ReactiveCombat;
+                if (combat == null) return;
+                ReactiveDisplayPhase displayPhase = ReactiveDisplayPhase.Result;
+                if (session.SaveBlocked) displayPhase = ReactiveDisplayPhase.SaveBlocked;
+                else if (combat.Phase == ReactivePhase.Suspended) displayPhase = ReactiveDisplayPhase.Suspended;
+                else if (combat.Phase == ReactivePhase.PlayerCommand) displayPhase = ReactiveDisplayPhase.Command;
+                else if (combat.Phase == ReactivePhase.EnemyExecution) displayPhase = ReactiveDisplayPhase.Reacting;
+                else if (combat.Phase == ReactivePhase.CounterWindow) displayPhase = ReactiveDisplayPhase.CounterOffer;
+
+                string telegraph = string.Empty;
+                string detail = string.Empty;
+                float contactProgress = 0f;
+                if (combat.Phase == ReactivePhase.EnemyExecution && combat.CurrentAttack != null)
+                {
+                    int hits = combat.CurrentAttack.Hits.Count;
+                    long elapsed = Math.Max(0, combat.CurrentCombatUs - combat.CurrentActionStartUs);
+                    long previousImpact = 0;
+                    int upcoming = hits - 1;
+                    for (int i = 0; i < hits; i++)
+                    {
+                        if (elapsed <= combat.CurrentAttack.Hits[i].ImpactUs)
+                        {
+                            upcoming = i;
+                            break;
+                        }
+                        previousImpact = combat.CurrentAttack.Hits[i].ImpactUs;
+                    }
+                    long nextImpact = combat.CurrentAttack.Hits[upcoming].ImpactUs;
+                    contactProgress = nextImpact > previousImpact
+                        ? Mathf.Clamp01((float)(elapsed - previousImpact) / (nextImpact - previousImpact)) : 1f;
+                    telegraph = hits == 1 ? "ВРАГ АТАКУЕТ" : "СЕРИЯ УДАРОВ  " + (upcoming + 1) + " / " + hits;
+                    detail = "ЦЕЛЬ: КЕЙКО    •    ПОДГОТОВЬ ЗАЩИТУ";
+                }
+                else if (displayPhase == ReactiveDisplayPhase.Command) detail = "Выбери действие. Порядок ходов указан выше.";
+                else if (displayPhase == ReactiveDisplayPhase.CounterOffer) detail = "Подтверди контратаку до закрытия окна.";
+                else if (displayPhase == ReactiveDisplayPhase.Suspended) detail = "Пауза. Отпусти клавиши защиты перед продолжением.";
+                else if (displayPhase == ReactiveDisplayPhase.SaveBlocked) detail = "Не удалось сохранить бой. Повтори запись профиля.";
+
+                TurnForecast forecast = combat.Preview(null, 4);
+                CommandImpactPreview basic = combat.PreviewCommandImpact(CommandKind.Basic, null, session.Contract.enemyId);
+                CommandImpactPreview seal = combat.PreviewCommandImpact(CommandKind.Skill, "seal_strike", session.Contract.enemyId);
+                string commandPreview = basic == null || seal == null ? string.Empty :
+                    "ОБЫЧНЫЙ: −" + basic.Damage + " HP, +" + basic.ApGain + " AP     ПЕЧАТЬ: −" +
+                    seal.Damage + " HP, −" + seal.SealDamage + " SEAL, " + seal.ApCost + " AP";
+                string forecastText = "ОЧЕРЁДНОСТЬ  ";
+                for (int i = 0; i < forecast.Slots.Count; i++)
+                {
+                    if (i > 0) forecastText += "  →  ";
+                    forecastText += forecast.Slots[i].ActorId == ReactiveDuelDefinitions.HunterId ? "КЕЙКО" : "ЁКАЙ";
+                }
+                reactiveView.Refresh(new ReactiveBattleDisplay
+                {
+                    HunterHp = combat.HunterHp,
+                    HunterAp = combat.HunterAp,
+                    EnemyHp = combat.EnemyHp,
+                    EnemySeal = combat.EnemySeal,
+                    EnemySealMax = combat.EnemySealMax,
+                    Broken = combat.EnemyBroken,
+                    CanSealStrike = seal != null && seal.CanAfford,
+                    Forecast = forecastText,
+                    Telegraph = telegraph,
+                    Detail = detail,
+                    CommandPreview = commandPreview,
+                    ContactProgress = contactProgress,
+                    Phase = displayPhase
+                });
+                return;
+            }
+            combatHud?.Refresh();
+        }
 
         public void OnAction(CombatAction action)
         {
@@ -132,9 +225,28 @@ namespace Rokas.Presentation
             text.gameObject.SetActive(true);
         }
 
+        public void PresentReactiveCombatStep(CombatStep step)
+        {
+            if (step == null || session.CombatMode != CombatMode.ReactiveTurns) return;
+            foreach (CombatEvent combatEvent in step.Events)
+            {
+                if (combatEvent.Kind != CombatEventKind.HitResolved) continue;
+                reactiveView.Present(combatEvent);
+                bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
+                bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
+                audio.Play(perfect ? assets.critical : assets.hit);
+                world.Impact(perfect ? .9f : defended ? .45f : .65f);
+            }
+        }
+
         public void Tick(float dt, bool paused)
         {
             if (paused) { CancelInput(); return; }
+            if (session.State.phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns)
+            {
+                reactiveView.Tick(dt);
+                return;
+            }
             HitStopRemaining = Mathf.Max(0, HitStopRemaining - dt);
             combatHud?.Tick(dt);
             sparkTime = Mathf.Max(0, sparkTime - dt);
@@ -179,6 +291,7 @@ namespace Rokas.Presentation
         public void ClearReferences()
         {
             CancelInput();
+            reactiveView.ClearReferences();
             combatHud = null;
             combatFlash = null;
             HitStopRemaining = sparkTime = 0;

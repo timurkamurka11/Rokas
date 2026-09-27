@@ -21,6 +21,11 @@ namespace Rokas.Core
             "glitchIntensity", "damageNumbers", "fullscreen"
         };
 
+        private static readonly string[] RequiredV2Fields =
+        {
+            "combatMode", "claimedEconomicRunIds", "firstClearRewardIds"
+        };
+
         public static bool TryReadVersion(string json, out int version, out string error)
         {
             HashSet<string> saveFields;
@@ -50,6 +55,11 @@ namespace Rokas.Core
             if (!ContainsEvery(saveFields, RequiredSaveFields, out missing))
             {
                 error = "Missing required save field '" + missing + "'.";
+                return false;
+            }
+            if (version >= 2 && !ContainsEvery(saveFields, RequiredV2Fields, out missing))
+            {
+                error = "Missing required v2 save field '" + missing + "'.";
                 return false;
             }
             if (!ContainsEvery(settingsFields, RequiredSettingsFields, out missing))

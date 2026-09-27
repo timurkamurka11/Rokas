@@ -173,6 +173,9 @@ namespace Rokas.Core
 
         public event Action Changed;
 
+        // A durable transaction can publish a new message state created by a temporary service.
+        internal void SignalPublishedState() { NotifyChanged(); }
+
         public int TotalUnread
         {
             get

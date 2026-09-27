@@ -72,7 +72,7 @@ namespace Rokas.Tests
             Press("DoorHotspot");
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Portal));
-            Press("EnterPortal");
+            Assert.That(boot.Session.EnterPortal(), Is.True, "Legacy combat remains available to migration fixtures.");
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
 
