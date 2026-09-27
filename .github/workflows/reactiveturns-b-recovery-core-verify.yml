@@ -1,23 +1,44 @@
-name: ReactiveTurns B firestorage API probe 3
+name: ReactiveTurns B recovery core verify
 on:
   push:
     branches:
       - ci/reactiveturns-b-recovery-verify
+
 permissions:
   contents: read
+
 jobs:
-  probe:
+  core-recovery:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect firestorage shared chunks
+
+      - name: Download recovered Milestone B core overlay
         shell: bash
         run: |
           set -euo pipefail
-          for p in             "/_next/static/chunks/8500-f4d7bfbe7500f274.js"             "/_next/static/chunks/8437-d65cc193dc908afa.js"             "/_next/static/chunks/5841-1160578ba9bb4f3e.js"             "/_next/static/chunks/4899-d89df949f2dbd5af.js"; do
-            f="/tmp/$(basename "$p")"
-            curl -sS -L --fail "https://firestorage.ai$p" -o "$f"
-            echo "=== $p bytes=$(wc -c <"$f") ==="
-            grep -Eo '.{0,180}(api|download|share|signed|presign|object|publicId|shareId).{0,500}' "$f" | head -80 || true
-          done
+          api="https://api.firestorage.ai/dev/file"
+          share="MECiPfupweKT"
+          metadata="$(curl -fsS "$api/shares/$share/files?maxResults=1000")"
+          file_id="$(printf '%s' "$metadata" | jq -r '.files[] | select(.fileName=="reactiveturns_core_overlay.tar.gz") | .fileId' | head -1)"
+          test -n "$file_id" && test "$file_id" != "null"
+          download_json="$(curl -fsS -X POST "$api/shares/$share/files/$file_id/download")"
+          download_url="$(printf '%s' "$download_json" | jq -r '.downloadUrl')"
+          test -n "$download_url" && test "$download_url" != "null"
+          curl -L --fail --retry 3 --retry-delay 2 "$download_url" -o /tmp/reactiveturns_core_overlay.tar.gz
+          echo "f5a37385f53c9ff32be8c1e595eef4d4d345a1d51901a2b970bc64c1a4c0c130  /tmp/reactiveturns_core_overlay.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/reactiveturns_core_overlay.tar.gz -C .
+
+      - name: Recovery diff whitespace check
+        run: git diff --check
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compile and run recovered Core suite
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+
+      - name: Existing asset validator
+        run: python3 Tools/validate_assets.py
