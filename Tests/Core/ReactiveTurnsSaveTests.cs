@@ -256,6 +256,8 @@ namespace Rokas.Core.Tests
 
                 GameSession seeded = new GameSession(seedStore.Load().Data, new ContractDefinition(), seedStore);
                 True(seeded.EnterReactiveTestEncounter(), "reactive encounter should enter");
+                True(seeded.ReactiveCombat.SelectTarget("E1"), "target A should be selected explicitly");
+                True(seeded.SaveReactiveCheckpoint(), "target A should be durably persisted before the failed B write");
                 SaveData durableA = seedStore.Load().Data;
                 string targetA = durableA.battleCheckpoint.selectedTargetId;
                 long revision = durableA.battleCheckpoint.revision;
@@ -312,6 +314,8 @@ namespace Rokas.Core.Tests
 
                 GameSession seeded = new GameSession(seedStore.Load().Data, new ContractDefinition(), seedStore);
                 True(seeded.EnterReactiveTestEncounter(), "reactive encounter should enter");
+                True(seeded.ReactiveCombat.SelectTarget("E1"), "target A should be selected explicitly");
+                True(seeded.SaveReactiveCheckpoint(), "target A should be durably persisted before the lost acknowledgement");
                 long revision = seedStore.Load().Data.battleCheckpoint.revision;
 
                 int writeAttempts = 0;
