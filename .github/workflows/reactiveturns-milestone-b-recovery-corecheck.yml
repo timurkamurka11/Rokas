@@ -14,8 +14,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: git diff check
-        run: git diff --check ${{ github.event.before }} ${{ github.sha }} || git diff --check HEAD^ HEAD
+        run: git diff --check HEAD^ HEAD
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
