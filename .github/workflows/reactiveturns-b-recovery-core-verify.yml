@@ -21,14 +21,14 @@ jobs:
           api="https://api.firestorage.ai/dev/file"
           share="MECiPfupweKT"
           metadata="$(curl -fsS "$api/shares/$share/files?maxResults=1000")"
-          file_id="$(printf '%s' "$metadata" | jq -r '.files[] | select(.fileName=="reactiveturns_core_overlay.tar.gz") | .fileId' | head -1)"
+          file_id="$(printf '%s' "$metadata" | jq -r '.files[] | select(.fileName=="reactiveturns_core_overlay_v2.tar.gz") | .fileId' | head -1)"
           test -n "$file_id" && test "$file_id" != "null"
           download_json="$(curl -fsS -X POST "$api/shares/$share/files/$file_id/download")"
           download_url="$(printf '%s' "$download_json" | jq -r '.downloadUrl')"
           test -n "$download_url" && test "$download_url" != "null"
-          curl -L --fail --retry 3 --retry-delay 2 "$download_url" -o /tmp/reactiveturns_core_overlay.tar.gz
-          echo "f5a37385f53c9ff32be8c1e595eef4d4d345a1d51901a2b970bc64c1a4c0c130  /tmp/reactiveturns_core_overlay.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/reactiveturns_core_overlay.tar.gz -C .
+          curl -L --fail --retry 3 --retry-delay 2 "$download_url" -o /tmp/reactiveturns_core_overlay_v2.tar.gz
+          echo "730cfe684b34ece520fb4df047c1d746f62c34281b51a392e4cbc99ee9fad110  /tmp/reactiveturns_core_overlay_v2.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/reactiveturns_core_overlay_v2.tar.gz -C .
 
       - name: Recovery diff whitespace check
         run: git diff --check
