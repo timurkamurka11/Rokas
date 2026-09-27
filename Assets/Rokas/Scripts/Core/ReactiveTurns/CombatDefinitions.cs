@@ -87,13 +87,16 @@ namespace Rokas.Core.ReactiveTurns
         public long ImpactUs { get; private set; }
         public int RawDamage { get; private set; }
         public DefenseResponseMask AllowedResponses { get; private set; }
+        public bool IsHeavy { get; private set; }
 
-        public HitDefinition(string id, long impactUs, int rawDamage, DefenseResponseMask allowedResponses)
+        public HitDefinition(string id, long impactUs, int rawDamage, DefenseResponseMask allowedResponses,
+            bool isHeavy = false)
         {
             Id = id;
             ImpactUs = impactUs;
             RawDamage = rawDamage;
             AllowedResponses = allowedResponses;
+            IsHeavy = isHeavy;
         }
     }
 
@@ -123,16 +126,31 @@ namespace Rokas.Core.ReactiveTurns
         public int DelayTicks { get; private set; }
         public double DamagePower { get; private set; }
         public int SealDamage { get; private set; }
+        public TargetingMode Targeting { get; private set; }
+        public int DelayTargetTicks { get; private set; }
+        public double OffenseTimingBonus { get; private set; }
+        public long OffenseTimingEarlyUs { get; private set; }
+        public long OffenseTimingLateUs { get; private set; }
 
-        public SkillDefinition(string id, int apCost, int delayTicks, double damagePower, int sealDamage)
+        public SkillDefinition(string id, int apCost, int delayTicks, double damagePower, int sealDamage,
+            TargetingMode targeting = TargetingMode.SingleEnemy, int delayTargetTicks = 0,
+            double offenseTimingBonus = 1, long offenseTimingEarlyUs = 0,
+            long offenseTimingLateUs = 0)
         {
             Id = id;
             ApCost = apCost;
             DelayTicks = delayTicks;
             DamagePower = damagePower;
             SealDamage = sealDamage;
+            Targeting = targeting;
+            DelayTargetTicks = delayTargetTicks;
+            OffenseTimingBonus = offenseTimingBonus;
+            OffenseTimingEarlyUs = offenseTimingEarlyUs;
+            OffenseTimingLateUs = offenseTimingLateUs;
         }
     }
+
+    public enum TargetingMode { SingleEnemy, AllActiveEnemies }
 
     public sealed class WaveDefinition
     {
@@ -271,9 +289,17 @@ namespace Rokas.Core.ReactiveTurns
                 if (skill.DelayTicks <= 0) errors.Add(path + "/delayTicks");
                 if (double.IsNaN(skill.DamagePower) || double.IsInfinity(skill.DamagePower) || skill.DamagePower < 0) errors.Add(path + "/damagePower");
                 if (skill.SealDamage < 0) errors.Add(path + "/sealDamage");
+                if (!Enum.IsDefined(typeof(TargetingMode), skill.Targeting)) errors.Add(path + "/targeting");
+                if (skill.DelayTargetTicks < 0) errors.Add(path + "/delayTargetTicks");
+                if (double.IsNaN(skill.OffenseTimingBonus) ||
+                    double.IsInfinity(skill.OffenseTimingBonus) || skill.OffenseTimingBonus < 1 ||
+                    skill.OffenseTimingEarlyUs < 0 || skill.OffenseTimingLateUs < 0 ||
+                    skill.OffenseTimingEarlyUs > 200000 || skill.OffenseTimingLateUs > 160000)
+                    errors.Add(path + "/offenseTiming");
             }
 
             var waveIds = new HashSet<string>(StringComparer.Ordinal);
+            var assignedEnemies = new HashSet<string>(StringComparer.Ordinal);
             foreach (WaveDefinition wave in Waves)
             {
                 if (wave == null) { errors.Add("waves/null"); continue; }
@@ -284,8 +310,13 @@ namespace Rokas.Core.ReactiveTurns
                 {
                     ActorDefinition actor = FindActor(actorId);
                     if (actor == null || actor.IsHunter) errors.Add(path + "/enemyActorIds/" + actorId);
+                    if (!assignedEnemies.Add(actorId)) errors.Add(path + "/duplicateEnemy/" + actorId);
                 }
             }
+            if (Waves.Count > 0)
+                foreach (ActorDefinition actor in Actors)
+                    if (actor != null && !actor.IsHunter && !assignedEnemies.Contains(actor.Id))
+                        errors.Add("waves/unassignedEnemy/" + actor.Id);
             return new ValidationResult(errors, warnings);
         }
 
@@ -324,6 +355,7 @@ namespace Rokas.Core.ReactiveTurns
                     if (hit == null) { Add(text, "null-hit"); continue; }
                     Add(text, hit.Id); Add(text, hit.ImpactUs); Add(text, hit.RawDamage);
                     Add(text, (int)hit.AllowedResponses);
+                    if (hit.IsHeavy) Add(text, "heavy");
                 }
             }
             Add(text, Skills.Count);
@@ -332,6 +364,17 @@ namespace Rokas.Core.ReactiveTurns
                 if (skill == null) { Add(text, "null-skill"); continue; }
                 Add(text, skill.Id); Add(text, skill.ApCost); Add(text, skill.DelayTicks);
                 Add(text, skill.DamagePower); Add(text, skill.SealDamage);
+                if (skill.Targeting != TargetingMode.SingleEnemy || skill.DelayTargetTicks != 0)
+                {
+                    Add(text, "targeting"); Add(text, (int)skill.Targeting);
+                    Add(text, skill.DelayTargetTicks);
+                }
+                if (skill.OffenseTimingBonus != 1 || skill.OffenseTimingEarlyUs != 0 ||
+                    skill.OffenseTimingLateUs != 0)
+                {
+                    Add(text, "offenseTiming"); Add(text, skill.OffenseTimingBonus);
+                    Add(text, skill.OffenseTimingEarlyUs); Add(text, skill.OffenseTimingLateUs);
+                }
             }
             Add(text, Waves.Count);
             foreach (WaveDefinition wave in Waves)

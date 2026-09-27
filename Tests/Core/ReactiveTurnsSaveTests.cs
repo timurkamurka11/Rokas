@@ -18,6 +18,8 @@ namespace Rokas.Core.Tests
             ReactiveEntryWaitsForDurableInitialCheckpoint();
             ReactiveEntryPublishesAnAlreadyStartedSession();
             MidActionSaveReplaysTheStablePreActionDecision();
+            FailedTargetChangeSaveRetryRequiresTheNewTarget();
+            PostReplaceTargetChangeRetryReconcilesTheNewTarget();
             RetreatRetryKeepsEconomicRunAndSeed();
             FailedPaymentWriteCanRetryWithoutDuplicatingReward();
             FailedTemporaryWriteNeverPublishesHalfAPayment();
@@ -223,7 +225,8 @@ namespace Rokas.Core.Tests
                 Equal(ReactivePhase.PlayerCommand, session.ReactiveCombat.Phase, "entry starts the first decision");
                 long stableRevision = session.ReactiveCombat.Revision;
                 CommandResult original = session.ReactiveCombat.SubmitCommand(new CommandIntent(
-                    "preaction-basic", stableRevision, CommandKind.Basic, null, new[] { session.Contract.enemyId }));
+                    "preaction-basic", stableRevision, CommandKind.Basic, null,
+                    new[] { session.ReactiveCombat.ActiveEnemyIds[0] }));
                 True(original.Accepted, "command should begin an unresolved action");
 
                 True(session.SaveReactiveCheckpoint(), "mid-action autosave should store the last stable snapshot");
@@ -237,9 +240,116 @@ namespace Rokas.Core.Tests
                 Equal(4, reopened.ReactiveCombat.HunterAp, "reload retains pre-action AP");
                 CommandResult replay = reopened.ReactiveCombat.SubmitCommand(new CommandIntent(
                     "preaction-basic", reopened.ReactiveCombat.Revision, CommandKind.Basic, null,
-                    new[] { reopened.Contract.enemyId }));
+                    new[] { reopened.ReactiveCombat.ActiveEnemyIds[0] }));
                 True(replay.Accepted, "the interrupted action can be replayed");
                 Equal(original.ActionId, replay.ActionId, "same run, attempt and seed replay the action identity");
+            });
+        }
+
+        private static void FailedTargetChangeSaveRetryRequiresTheNewTarget()
+        {
+            WithDirectory(delegate(string directory)
+            {
+                SaveStore seedStore = new SaveStore(directory, new JsonCodec());
+                SaveData state = PortalState();
+                True(seedStore.Save(state).Succeeded, "Portal fixture should persist");
+
+                GameSession seeded = new GameSession(seedStore.Load().Data, new ContractDefinition(), seedStore);
+                True(seeded.EnterReactiveTestEncounter(), "reactive encounter should enter");
+                SaveData durableA = seedStore.Load().Data;
+                string targetA = durableA.battleCheckpoint.selectedTargetId;
+                long revision = durableA.battleCheckpoint.revision;
+                Equal("E1", targetA, "fixture starts with target A");
+
+                bool failTargetWriteOnce = true;
+                SaveStore faultedStore = new SaveStore(directory, new JsonCodec(), "save.json",
+                    delegate(SaveCommitStage stage)
+                    {
+                        if (stage == SaveCommitStage.BeforeTemporaryWrite && failTargetWriteOnce)
+                        {
+                            failTargetWriteOnce = false;
+                            throw new IOException("simulated target-change save failure");
+                        }
+                    });
+
+                GameSession session = new GameSession(faultedStore.Load().Data, new ContractDefinition(), faultedStore);
+                True(session.ReactiveCombat.SelectTarget("E2"), "target B should be selected in live combat");
+                Equal(revision, session.ReactiveCombat.Revision,
+                    "target selection intentionally keeps the battle revision unchanged");
+                Equal("E2", session.ReactiveCombat.GetStableCheckpoint().selectedTargetId,
+                    "stable checkpoint contains target B before persistence");
+
+                Equal(false, session.SaveReactiveCheckpoint(), "target B save should fail once");
+                True(session.SaveBlocked, "failed target persistence must block the session");
+                Equal(targetA, seedStore.Load().Data.battleCheckpoint.selectedTargetId,
+                    "old durable checkpoint still contains target A");
+                Equal(revision, seedStore.Load().Data.battleCheckpoint.revision,
+                    "old durable checkpoint has the same revision as pending target B");
+
+                True(session.RetryBlockedSave(),
+                    "retry must write pending target B instead of accepting stale target A by revision alone");
+                Equal(false, session.SaveBlocked, "successful retry clears the save block");
+
+                SaveData durableB = seedStore.Load().Data;
+                Equal("E2", durableB.battleCheckpoint.selectedTargetId,
+                    "retry durably persists target B");
+                Equal(revision, durableB.battleCheckpoint.revision,
+                    "target-only persistence does not invent a new battle revision");
+                Equal("E2", session.State.battleCheckpoint.selectedTargetId,
+                    "published session state matches the durable target B checkpoint");
+                Equal("E2", session.ReactiveCombat.SelectedTargetId,
+                    "live combat target remains aligned with the durable checkpoint");
+            });
+        }
+
+        private static void PostReplaceTargetChangeRetryReconcilesTheNewTarget()
+        {
+            WithDirectory(delegate(string directory)
+            {
+                SaveStore seedStore = new SaveStore(directory, new JsonCodec());
+                SaveData state = PortalState();
+                True(seedStore.Save(state).Succeeded, "Portal fixture should persist");
+
+                GameSession seeded = new GameSession(seedStore.Load().Data, new ContractDefinition(), seedStore);
+                True(seeded.EnterReactiveTestEncounter(), "reactive encounter should enter");
+                long revision = seedStore.Load().Data.battleCheckpoint.revision;
+
+                int writeAttempts = 0;
+                bool failAfterReplaceOnce = true;
+                SaveStore faultedStore = new SaveStore(directory, new JsonCodec(), "save.json",
+                    delegate(SaveCommitStage stage)
+                    {
+                        if (stage == SaveCommitStage.BeforeTemporaryWrite) writeAttempts++;
+                        if (stage == SaveCommitStage.AfterReplace && failAfterReplaceOnce)
+                        {
+                            failAfterReplaceOnce = false;
+                            throw new IOException("simulated target-change acknowledgement loss after replace");
+                        }
+                    });
+
+                GameSession session = new GameSession(faultedStore.Load().Data, new ContractDefinition(), faultedStore);
+                True(session.ReactiveCombat.SelectTarget("E2"), "target B should be selected in live combat");
+
+                Equal(false, session.SaveReactiveCheckpoint(),
+                    "UI success waits for acknowledgement even though target B reached durable storage");
+                True(session.SaveBlocked, "unacknowledged target persistence must block the session");
+                Equal("E1", session.State.battleCheckpoint.selectedTargetId,
+                    "unacknowledged target B write must not publish into the live profile");
+                Equal("E2", seedStore.Load().Data.battleCheckpoint.selectedTargetId,
+                    "target B is already durable after the replace");
+                Equal(revision, seedStore.Load().Data.battleCheckpoint.revision,
+                    "target B durable checkpoint keeps the same battle revision");
+                Equal(1, writeAttempts, "the original target B persistence used one write attempt");
+
+                True(session.RetryBlockedSave(),
+                    "retry should reconcile the already durable target B checkpoint");
+                Equal(false, session.SaveBlocked, "reconciliation clears the save block");
+                Equal("E2", session.State.battleCheckpoint.selectedTargetId,
+                    "reconciliation publishes the durable target B checkpoint");
+                Equal("E2", session.ReactiveCombat.SelectedTargetId,
+                    "live combat remains aligned with the reconciled target B checkpoint");
+                Equal(1, writeAttempts,
+                    "reconciliation must not rewrite an already durable target B checkpoint");
             });
         }
 

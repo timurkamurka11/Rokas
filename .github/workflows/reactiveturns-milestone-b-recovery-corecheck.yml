@@ -1,0 +1,23 @@
+name: ReactiveTurns Milestone B Recovery Core Check
+
+on:
+  push:
+    branches:
+      - codex/reactiveturns-milestone-b-recovery-corecheck
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: git diff check
+        run: git diff --check ${{ github.event.before }} ${{ github.sha }} || git diff --check HEAD^ HEAD
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: ReactiveTurns Core suite
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release

@@ -43,6 +43,13 @@ namespace Rokas.Core.ReactiveTurns
         private DefenseSequenceLedger _defenseLedger;
         private bool _activeImpactApplied;
         private bool _counterConfirmed;
+        private readonly HashSet<string> _offenseTimingInputIds =
+            new HashSet<string>(StringComparer.Ordinal);
+        private bool _offenseTimingSucceeded;
+        public bool CurrentOffenseTimingAccepted
+        {
+            get { return _phase == ReactivePhase.PlayerExecution && _offenseTimingSucceeded; }
+        }
 
         public bool EnemyBroken
         {
@@ -64,13 +71,15 @@ namespace Rokas.Core.ReactiveTurns
                 return new CommandImpactPreview { ProjectedAp = Hunter.Ap, CanAfford = true };
             CombatActorState target;
             if (string.IsNullOrEmpty(targetId) || !_actors.TryGetValue(targetId, out target) ||
-                !target.Alive || _definitions.FindActor(targetId).IsHunter) return null;
+                !target.Alive || _definitions.FindActor(targetId).IsHunter ||
+                !_queue.GetEntry(targetId).Active) return null;
             SealLedger seal;
             _sealLedgers.TryGetValue(targetId, out seal);
             int cost = skill == null ? 0 : skill.ApCost;
             int gain = kind == CommandKind.Basic ? Math.Min(2, 6 - Hunter.Ap) : 0;
-            int sealDamage = skill == null || seal == null || seal.IsBroken || seal.RefractoryActionsRemaining > 0 ?
-                0 : Math.Min(skill.SealDamage, seal.Remaining);
+            int authoredSeal = skill == null ? 12 : skill.SealDamage;
+            int sealDamage = seal == null || seal.IsBroken || seal.RefractoryActionsRemaining > 0 ?
+                0 : Math.Min(authoredSeal, seal.Remaining);
             return new CommandImpactPreview {
                 Damage = ComputeHunterDamage(skill, seal), SealDamage = sealDamage,
                 ApCost = cost, ApGain = gain, ProjectedAp = Math.Max(0, Math.Min(6, Hunter.Ap - cost + gain)),
@@ -138,7 +147,7 @@ namespace Rokas.Core.ReactiveTurns
                 Broken = seal == null ? 1 : seal.DamageMultiplier
             });
             target.Hp = Math.Max(0, target.Hp - damage);
-            if (!target.Alive) _queue.MarkDead(target.Id);
+            if (!target.Alive) { _queue.MarkDead(target.Id); EnsureValidSelection(); }
             _counterConfirmed = true;
             _events.Add(new CombatEvent(CombatEventKind.HitResolved, Hunter.Id, target.Id,
                 _currentActionId, "counter", combatUs, damage, "Counter"));
@@ -146,15 +155,31 @@ namespace Rokas.Core.ReactiveTurns
             return new CounterAttempt { Accepted = true, Damage = damage };
         }
 
+        public bool SubmitOffenseTiming(string inputId, long epoch, long combatUs)
+        {
+            if (string.IsNullOrWhiteSpace(inputId) || !_offenseTimingInputIds.Add(inputId) ||
+                epoch != _inputEpoch || _phase != ReactivePhase.PlayerExecution ||
+                _activeCommand == null || _activeCommand.Kind != CommandKind.Skill ||
+                _activeImpactApplied || _offenseTimingSucceeded) return false;
+            SkillDefinition skill = _definitions.FindSkill(_activeCommand.SkillId);
+            if (skill == null || skill.OffenseTimingBonus <= 1) return false;
+            long impactUs = checked(_actionStartUs + 200000);
+            if (combatUs < impactUs - skill.OffenseTimingEarlyUs ||
+                combatUs > impactUs + skill.OffenseTimingLateUs) return false;
+            _offenseTimingSucceeded = true;
+            return true;
+        }
+
         private static CounterAttempt CounterRejected(string reason)
         {
             return new CounterAttempt { Accepted = false, Reason = reason };
         }
 
-        private int ComputeHunterDamage(SkillDefinition skill, SealLedger seal)
+        private int ComputeHunterDamage(SkillDefinition skill, SealLedger seal, double timing = 1)
         {
             return DamageResolver.Resolve(new DamageRequest(skill == null ? 1 : skill.DamagePower,
-                _definitions.HunterAttack, 0) { Broken = seal == null ? 1 : seal.DamageMultiplier });
+                _definitions.HunterAttack, 0) { Broken = seal == null ? 1 : seal.DamageMultiplier,
+                    Timing = timing });
         }
 
         partial void OnEnemyAttackStarted(AttackSequenceDefinition sequence, string actionId, long startCombatUs)
@@ -177,11 +202,14 @@ namespace Rokas.Core.ReactiveTurns
                 if (suffixCanceled) continue;
                 int damage = DamageResolver.Resolve(new DamageRequest(1, hit.RawDamage, 0) {
                     DefenseOutcomeMultiplier = hit.Outcome == DefenseOutcome.Dodge ||
-                        hit.Outcome == DefenseOutcome.Parry || hit.Outcome == DefenseOutcome.Perfect ? 0 : 1,
+                        hit.Outcome == DefenseOutcome.Perfect ? 0 :
+                        hit.IsHeavy && hit.Outcome == DefenseOutcome.Parry ? .5 :
+                        hit.Outcome == DefenseOutcome.Parry ? 0 : 1,
                     DefendMultiplier = _points.DefendActive ? .5 : 1
                 });
                 Hunter.Hp = Math.Max(0, Hunter.Hp - damage);
-                DefenseReward reward = _points.GrantDefense(hit.EventId, hit.Outcome);
+                DefenseReward reward = _points.GrantDefense(hit.EventId,
+                    hit.IsHeavy && hit.Outcome == DefenseOutcome.Parry ? DefenseOutcome.Dodge : hit.Outcome);
                 Hunter.Ap = _points.Current;
                 CombatActorState enemy = _actors[_currentAttackerId];
                 SealLedger seal;
@@ -212,12 +240,19 @@ namespace Rokas.Core.ReactiveTurns
         {
             _points.SyncCurrent(Hunter.Ap);
             _activeImpactApplied = false;
+            _offenseTimingSucceeded = false;
+            _offenseTimingInputIds.Clear();
             if (intent.Kind == CommandKind.Defend) _points.ActivateDefend();
         }
 
         partial void OnPlayerExecutionAdvanced(long combatUs, long watermarkUs)
         {
-            if (_activeImpactApplied || watermarkUs < checked(_actionStartUs + 200000)) return;
+            SkillDefinition pendingSkill = _activeCommand != null &&
+                _activeCommand.Kind == CommandKind.Skill ?
+                _definitions.FindSkill(_activeCommand.SkillId) : null;
+            long settleUs = checked(_actionStartUs + 200000 +
+                (pendingSkill == null ? 0 : pendingSkill.OffenseTimingLateUs));
+            if (_activeImpactApplied || watermarkUs < settleUs) return;
             _activeImpactApplied = true;
             if (_activeCommand.Kind == CommandKind.Retreat)
             {
@@ -225,31 +260,59 @@ namespace Rokas.Core.ReactiveTurns
                 return;
             }
             if (_activeCommand.Kind != CommandKind.Basic && _activeCommand.Kind != CommandKind.Skill) return;
-            CombatActorState target = _actors[_activeCommand.TargetIds[0]];
-            SealLedger seal;
-            _sealLedgers.TryGetValue(target.Id, out seal);
             SkillDefinition skill = _activeCommand.Kind == CommandKind.Skill ?
                 _definitions.FindSkill(_activeCommand.SkillId) : null;
-            int damage = ComputeHunterDamage(skill, seal);
-            target.Hp = Math.Max(0, target.Hp - damage);
-            if (!target.Alive) _queue.MarkDead(target.Id);
             string impactId = _currentActionId + "/impact";
-            if (skill != null && seal != null && skill.SealDamage > 0)
+            bool anyImpact = false;
+            foreach (string targetId in _activeTargetIds)
             {
-                seal.ApplyDamage(skill.SealDamage, _currentActionId, impactId);
-                target.Seal = seal.Remaining;
-                if (seal.IsBroken && seal.TryConsumeSkipToken())
-                    _queue.GetEntry(target.Id).SkipNextTurn = true;
+                CombatActorState target = _actors[targetId];
+                QueueEntry queueEntry = _queue.GetEntry(targetId);
+                if (!target.Alive || queueEntry == null || !queueEntry.Active) continue;
+                anyImpact = true;
+                SealLedger seal;
+                _sealLedgers.TryGetValue(targetId, out seal);
+                int damage = ComputeHunterDamage(skill, seal,
+                    skill != null && _offenseTimingSucceeded ? skill.OffenseTimingBonus : 1);
+                target.Hp = Math.Max(0, target.Hp - damage);
+                if (!target.Alive) { _queue.MarkDead(target.Id); EnsureValidSelection(); }
+                int authoredSeal = skill == null ? 12 : skill.SealDamage;
+                if (seal != null && authoredSeal > 0 && target.Alive)
+                {
+                    seal.ApplyDamage(authoredSeal, _currentActionId, impactId + "/" + targetId);
+                    target.Seal = seal.Remaining;
+                    if (seal.IsBroken && seal.TryConsumeSkipToken())
+                        queueEntry.SkipNextTurn = true;
+                }
+                if (skill != null && skill.DelayTargetTicks > 0 && target.Alive && !queueEntry.AnchorDelayed)
+                {
+                    queueEntry.NextTick = checked(queueEntry.NextTick + skill.DelayTargetTicks);
+                    queueEntry.AnchorDelayed = true;
+                }
+                _events.Add(new CombatEvent(CombatEventKind.HitResolved, Hunter.Id, target.Id,
+                    _currentActionId, "impact", checked(_actionStartUs + 200000), damage,
+                    skill != null && skill.Id == "heavy" && _offenseTimingSucceeded ?
+                        "TimedHeavy" : _activeCommand.Kind.ToString()));
+            }
+            if (!anyImpact)
+            {
+                _queue = _preCommandQueue.Clone();
+                foreach (CombatActorState actor in _actors.Values)
+                    if (!actor.Alive) _queue.MarkDead(actor.Id);
+                Hunter.Ap = Math.Min(6, Hunter.Ap + (skill == null ? 0 : skill.ApCost));
+                _points.SyncCurrent(Hunter.Ap);
+                _activeCommandCancelled = true;
+                _events.Add(new CombatEvent(CombatEventKind.CommandCancelled, Hunter.Id,
+                    actionId: _currentActionId, combatUs: _lastCombatUs,
+                    detail: "AllTargetsUnavailableBeforeImpact"));
+                return;
             }
             if (_activeCommand.Kind == CommandKind.Basic)
             {
                 _points.GrantBasic(impactId);
                 Hunter.Ap = _points.Current;
             }
-            _events.Add(new CombatEvent(CombatEventKind.HitResolved, Hunter.Id, target.Id,
-                _currentActionId, "impact", checked(_actionStartUs + 200000), damage,
-                _activeCommand.Kind.ToString()));
-            if (!target.Alive)
+            if (_definitions.Waves.Count == 0)
             {
                 bool anyEnemyAlive = false;
                 foreach (ActorDefinition actor in _definitions.Actors)
@@ -276,10 +339,12 @@ namespace Rokas.Core.ReactiveTurns
                 if (_activeCommand != null && (_activeCommand.Kind == CommandKind.Basic ||
                     _activeCommand.Kind == CommandKind.Skill))
                 {
-                    string targetId = _activeCommand.TargetIds[0];
-                    SealLedger seal;
-                    if (_sealLedgers.TryGetValue(targetId, out seal))
-                        seal.CompleteOffensiveCommand(_currentActionId, true);
+                    foreach (string targetId in _activeTargetIds)
+                    {
+                        SealLedger seal;
+                        if (_sealLedgers.TryGetValue(targetId, out seal))
+                            seal.CompleteOffensiveCommand(_currentActionId, true);
+                    }
                 }
                 foreach (KeyValuePair<string, SealLedger> item in _sealLedgers)
                 {
