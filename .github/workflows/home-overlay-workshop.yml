@@ -7,6 +7,10 @@ on:
     paths:
       - 'Assets/Rokas/Art/Home/OverlayWorkshop/**'
       - 'Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/**'
+      - 'Assets/Rokas/Scripts/WorkshopComponents/MainRoomOverlayCustomGlow.cs'
+      - 'Assets/Rokas/Scripts/WorkshopComponents/MainRoomOverlayCustomGlow.cs.meta'
+      - 'Assets/Rokas/EditorWorkshops/MainRoomOverlayWorkshop.unity'
+      - 'Assets/Rokas/EditorWorkshops/MainRoomOverlayWorkshop.unity.meta'
       - 'Assets/Rokas/Tests/EditorWorkshop/MainRoomOverlayWorkshop*.cs'
       - '.github/workflows/home-overlay-workshop.yml'
 
