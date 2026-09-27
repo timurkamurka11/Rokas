@@ -27,6 +27,9 @@ namespace Rokas.Core.Tests
                 YumikoFoodIntegrationTests.RunAll();
                 LiveMessengerCoreTests.RunAll();
                 LiveMessengerPolishCoreTests.RunAll();
+                ReactiveTurnsFoundationTests.RunAll();
+                ReactiveTurnsDefenseAndOffenseTests.RunAll();
+                ReactiveTurnsSaveTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;
             }

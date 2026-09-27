@@ -24,7 +24,7 @@ PlayerSettings:
     Standalone: 0
   apiCompatibilityLevelPerPlatform:
     Standalone: 6
-  activeInputHandler: 0
+  activeInputHandler: 2
   scriptingRuntimeVersion: 1
   gcIncremental: 1
   allowUnsafeCode: 0

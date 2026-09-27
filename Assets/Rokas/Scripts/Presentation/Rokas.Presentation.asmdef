@@ -3,6 +3,7 @@
   "rootNamespace": "Rokas.Presentation",
   "references": [
     "Rokas.Core",
+    "Unity.InputSystem",
     "UnityEngine.UI",
     "UnityEngine.VideoModule",
     "UnityEngine.ScreenCaptureModule",

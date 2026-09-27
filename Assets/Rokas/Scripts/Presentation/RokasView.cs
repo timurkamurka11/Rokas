@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Rokas.Core;
+using Rokas.Core.ReactiveTurns;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -88,7 +89,8 @@ namespace Rokas.Presentation
             toastOutline.effectDistance = new Vector2(2, -2);
             transitions = ui.Rect(stage, "Transitions", 0, 0, 1920, 1080);
             home = new HomeView(ui, assets, session, audio, OpenPanel, Act, Travel, ToastShort);
-            mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused);
+            mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused,
+                owner.SubmitReactiveCommand, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter, owner.RetryReactiveSave);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,
                 owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
@@ -232,6 +234,9 @@ namespace Rokas.Presentation
             home.Refresh();
             mission.Refresh();
         }
+
+        public void RefreshReactiveCombat() { mission.Refresh(); }
+        public void PresentReactiveCombatStep(CombatStep step) { mission.PresentReactiveCombatStep(step); }
 
         private static bool IsHomeLocation(RunPhase value)
         {

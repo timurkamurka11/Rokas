@@ -306,7 +306,7 @@ namespace Rokas.Core.Tests
             {
                 SaveStore store = new SaveStore(directory, new JsonCodec());
                 Directory.CreateDirectory(directory);
-                string changedFutureShape = "{\"version\":2,\"futureOnly\":true}";
+                string changedFutureShape = "{\"version\":" + (SaveData.CurrentVersion + 1) + ",\"futureOnly\":true}";
                 File.WriteAllText(store.PrimaryPath, changedFutureShape, System.Text.Encoding.UTF8);
 
                 Equal(SaveLoadStatus.FutureVersion, store.Load().Status, "future schema must be protected before current required-field checks");
