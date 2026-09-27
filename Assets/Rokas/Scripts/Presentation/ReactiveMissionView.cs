@@ -60,7 +60,9 @@ namespace Rokas.Presentation
         private Image hunterFlash;
         private Image enemyFlash;
         private Image timingBeacon;
+        private Image contactTrack;
         private Image contactFill;
+        private Text defenseHint;
         private GameObject commandPanel;
         private GameObject defensePanel;
         private GameObject counterPanel;
@@ -68,6 +70,7 @@ namespace Rokas.Presentation
         private Button sealStrikeButton;
         private float age;
         private float feedbackTime;
+        private float windupProgress;
         private bool feedbackOnHunter;
         private Color feedbackColor;
 
@@ -122,10 +125,10 @@ namespace Rokas.Presentation
             detail = ui.Label(root, "ReactiveDetail", "", 600, 350, 720, 96, 24, UiKit.Gold, false, TextAnchor.MiddleCenter);
             hitFeedback = ui.Label(root, "ReactiveHitFeedback", "", 650, 445, 620, 88, 38,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
-            ui.Box(root, "ReactiveContactTrack", 647, 550, 626, 9, new Color(.34f, .43f, .44f, .65f));
+            contactTrack = ui.Box(root, "ReactiveContactTrack", 647, 550, 626, 9, new Color(.34f, .43f, .44f, .65f));
             contactFill = ui.Box(root, "ReactiveContactFill", 647, 550, 0, 9, UiKit.Jade);
             timingBeacon = ui.Box(root, "ReactiveTimingBeacon", 954, 527, 12, 45, UiKit.Jade);
-            ui.Label(root, "ReactiveDefenseHint", "ПКМ / D — УКЛОНЕНИЕ     SPACE / F — ПАРИРОВАНИЕ",
+            defenseHint = ui.Label(root, "ReactiveDefenseHint", "ПКМ / D — УКЛОНЕНИЕ     SPACE / F — ПАРИРОВАНИЕ",
                 570, 573, 780, 39, 20, UiKit.Paper, false, TextAnchor.MiddleCenter);
 
             commandPanel = ui.Rect(root, "ReactiveCommands", 594, 636, 766, 180).gameObject;
@@ -198,10 +201,19 @@ namespace Rokas.Presentation
             detail.text = display.Detail ?? string.Empty;
             commandPreview.text = display.CommandPreview ?? string.Empty;
             float progress = Mathf.Clamp01(display.ContactProgress);
+            windupProgress = display.Phase == ReactiveDisplayPhase.Reacting ? progress : 0f;
             contactFill.rectTransform.sizeDelta = new Vector2(626 * progress, 9);
             contactFill.color = progress > .72f ? UiKit.Gold : UiKit.Jade;
             timingBeacon.color = display.Phase == ReactiveDisplayPhase.Reacting
                 ? new Color(1f, .78f, .35f, .38f + .6f * progress) : Color.clear;
+            timingBeacon.rectTransform.anchoredPosition = new Vector2(647 + 626 * progress - 6, -527);
+            enemy.color = new Color(1f, 1f - .19f * windupProgress, 1f - .18f * windupProgress);
+            enemy.rectTransform.localScale = Vector3.one * (1f + .035f * windupProgress);
+            bool timingVisible = display.Phase == ReactiveDisplayPhase.Reacting;
+            contactTrack.gameObject.SetActive(timingVisible);
+            contactFill.gameObject.SetActive(timingVisible);
+            timingBeacon.gameObject.SetActive(timingVisible);
+            defenseHint.gameObject.SetActive(timingVisible);
             bool command = display.Phase == ReactiveDisplayPhase.Command;
             bool defense = display.Phase == ReactiveDisplayPhase.Reacting;
             commandPanel.SetActive(command);
@@ -216,7 +228,8 @@ namespace Rokas.Presentation
             if (!hunter || !enemy) return;
             age += Mathf.Max(0, seconds);
             hunter.rectTransform.anchoredPosition = new Vector2(132, -167 + Mathf.Sin(age * 1.3f) * 2f);
-            enemy.rectTransform.anchoredPosition = new Vector2(1240, -142 + Mathf.Sin(age * 1.05f + .7f) * 3f);
+            enemy.rectTransform.anchoredPosition = new Vector2(1240 - 24 * windupProgress,
+                -142 + Mathf.Sin(age * 1.05f + .7f) * 3f);
             feedbackTime = Mathf.Max(0, feedbackTime - seconds);
             float flash = Mathf.Clamp01(feedbackTime * 2.5f);
             hitFeedback.color = new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash);
@@ -230,7 +243,8 @@ namespace Rokas.Presentation
             hunter = enemy = null;
             hunterHp = ap = targetHp = targetSeal = forecast = telegraph = detail = commandPreview = null;
             contactFill = null;
-            timingBeacon = hunterFlash = enemyFlash = null;
+            contactTrack = timingBeacon = hunterFlash = enemyFlash = null;
+            defenseHint = null;
             hitFeedback = null;
             commandPanel = defensePanel = counterPanel = saveBlockedPanel = null;
             sealStrikeButton = null;

@@ -79,6 +79,17 @@ class MessagesAssetValidationTests(unittest.TestCase):
         assemblies = module.declared_external_assemblies({})
         self.assertNotIn('Unity.TextMeshPro', assemblies)
 
+    def test_input_system_and_screen_capture_require_declared_packages(self):
+        module = load_helper()
+        self.assertNotIn('Unity.InputSystem', module.declared_external_assemblies({}))
+        self.assertNotIn('UnityEngine.ScreenCaptureModule', module.declared_external_assemblies({}))
+        assemblies = module.declared_external_assemblies({
+            'com.unity.inputsystem': '1.20.0',
+            'com.unity.modules.screencapture': '1.0.0',
+        })
+        self.assertIn('Unity.InputSystem', assemblies)
+        self.assertIn('UnityEngine.ScreenCaptureModule', assemblies)
+
 
 if __name__ == '__main__':
     unittest.main()

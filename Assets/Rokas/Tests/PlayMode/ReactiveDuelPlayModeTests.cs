@@ -98,6 +98,42 @@ namespace Rokas.Tests
                 "Timestamped Dodge from Input System must reach Core before the hit resolves.");
         }
 
+        [UnityTest]
+        public IEnumerator FocusAndSettingsPauseFreezeCombatThenResume()
+        {
+            priorEditorInputBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+            priorBackgroundBehavior = InputSystem.settings.backgroundBehavior;
+            directory = Path.Combine(Path.GetTempPath(), "rokas-reactive-pause-" + Guid.NewGuid().ToString("N"));
+            root = new GameObject("ReactivePauseFixture");
+            var boot = root.AddComponent<RokasBootstrap>();
+            boot.Initialize(directory);
+            boot.SendMessage("OnApplicationFocus", true);
+            yield return null;
+            Assert.That(boot.Session.AcceptContract(), Is.True);
+            Assert.That(boot.Session.LeaveHome(), Is.True);
+            yield return null;
+            Press("EnterReactivePortal");
+            yield return new WaitForSecondsRealtime(1.9f);
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+
+            boot.SendMessage("OnApplicationFocus", false);
+            yield return null;
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.Suspended));
+            long frozenUs = boot.Session.ReactiveCombat.CurrentCombatUs;
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(boot.Session.ReactiveCombat.CurrentCombatUs, Is.EqualTo(frozenUs));
+            boot.SendMessage("OnApplicationFocus", true);
+            yield return new WaitForSecondsRealtime(.75f);
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+
+            boot.View.Escape();
+            yield return null;
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.Suspended));
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.75f);
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+        }
+
         private void Press(string name)
         {
             Button button = Find(name)?.GetComponent<Button>();

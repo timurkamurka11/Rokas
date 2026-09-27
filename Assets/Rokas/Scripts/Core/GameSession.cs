@@ -398,7 +398,7 @@ namespace Rokas.Core
             {
                 if (!mutation(State)) return false;
                 ClearSaveBlock();
-                if (!IsReactiveSave(kind)) NotifyChanged();
+                NotifyCommittedState(kind);
                 return true;
             }
 
@@ -427,7 +427,7 @@ namespace Rokas.Core
             {
                 Publish(candidate);
                 ClearSaveBlock();
-                if (!IsReactiveSave(kind)) NotifyChanged();
+                NotifyCommittedState(kind);
                 return true;
             }
             if (!mutation(candidate))
@@ -443,8 +443,15 @@ namespace Rokas.Core
             }
             Publish(candidate);
             ClearSaveBlock();
-            if (!IsReactiveSave(kind)) NotifyChanged();
+            NotifyCommittedState(kind);
             return true;
+        }
+
+        private void NotifyCommittedState(PendingSaveKind kind)
+        {
+            if (IsReactiveSave(kind)) return;
+            if (kind == PendingSaveKind.Payment) Messages.SignalPublishedState();
+            else NotifyChanged();
         }
 
         private static bool IsReactiveSave(PendingSaveKind kind)

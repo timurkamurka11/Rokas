@@ -368,6 +368,8 @@ namespace Rokas.Presentation
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
             }
+            messageNotifications.SetSuppressed(session.CombatMode == CombatMode.ReactiveTurns &&
+                session.State.phase == RunPhase.Combat);
             messageNotifications.Tick(dt);
             if (toastTime > 0)
             {

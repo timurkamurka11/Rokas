@@ -56,7 +56,7 @@ namespace Rokas.Tests
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Portal));
 
-            Press("EnterPortal");
+            Assert.That(boot.Session.EnterPortal(), Is.True, "This regression exercises the retained Legacy combat mode.");
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
 

@@ -152,7 +152,7 @@ namespace Rokas.Presentation
                     contactProgress = nextImpact > previousImpact
                         ? Mathf.Clamp01((float)(elapsed - previousImpact) / (nextImpact - previousImpact)) : 1f;
                     telegraph = hits == 1 ? "ВРАГ АТАКУЕТ" : "СЕРИЯ УДАРОВ  " + (upcoming + 1) + " / " + hits;
-                    detail = "ЦЕЛЬ: КЕЙКО    •    ПКМ / D — УКЛОНЕНИЕ    •    SPACE / F — ПАРИРОВАНИЕ";
+                    detail = "ЦЕЛЬ: КЕЙКО    •    ПОДГОТОВЬ ЗАЩИТУ";
                 }
                 else if (displayPhase == ReactiveDisplayPhase.Command) detail = "Выбери действие. Порядок ходов указан выше.";
                 else if (displayPhase == ReactiveDisplayPhase.CounterOffer) detail = "Подтверди контратаку до закрытия окна.";
