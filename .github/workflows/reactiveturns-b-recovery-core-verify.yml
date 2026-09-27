@@ -1,4 +1,4 @@
-name: ReactiveTurns B firestorage API probe
+name: ReactiveTurns B firestorage API probe 2
 on:
   push:
     branches:
@@ -15,20 +15,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base="https://firestorage.ai"
-          js="/_next/static/chunks/app/(files)/en/f/page-a7beb6e4a798ea0d.js"
-          curl -L --fail "$base$js" -o /tmp/page.js
-          echo "JS_BYTES=$(wc -c </tmp/page.js)"
-          python3 - <<'PY'
-          import re
-          s=open('/tmp/page.js',encoding='utf-8',errors='replace').read()
-          for pat in [r'/api/[^"'\' ]+', r'https?://[^"'\' ]+', r'fetch\([^)]{0,500}\)', r'download.{0,700}', r'share.{0,500}']:
-              print('---',pat,'---')
-              found=[]
-              for m in re.finditer(pat,s,re.I):
-                  v=m.group(0)
-                  if v not in found:
-                      found.append(v)
-              for v in found[:100]:
-                  print(v[:1200])
-          PY
+          url="https://firestorage.ai/_next/static/chunks/app/%28files%29/en/f/page-a7beb6e4a798ea0d.js"
+          curl -sS -L -D /tmp/headers "$url" -o /tmp/page.js
+          echo "--- HEADERS ---"
+          cat /tmp/headers
+          echo "--- BYTES ---"
+          wc -c /tmp/page.js
+          echo "--- CONTENT ---"
+          cat /tmp/page.js
