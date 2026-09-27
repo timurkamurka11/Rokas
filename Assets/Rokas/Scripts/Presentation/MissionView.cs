@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Rokas.Core;
 using Rokas.Core.ReactiveTurns;
 using UnityEngine;
@@ -31,11 +33,15 @@ namespace Rokas.Presentation
         private float age;
         private float hitTime;
         private float enemyAttackTime;
+        public string SelectedReactiveTargetId { get { return reactiveView.SelectedTargetId; } }
+        public int AnimatedEnemyCount { get { return reactiveView.AnimatedEnemyCount; } }
+        public bool AnimatedActorsReady { get { return reactiveView.AnimatedActorsReady; } }
 
         public MissionView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio,
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world,
             Func<bool> paused, Action<CommandKind, string> reactiveCommand,
-            Action<ReactivePressKind> reactiveDefense, Action reactiveCounter, Action reactiveRetrySave)
+            Action<ReactivePressKind> reactiveDefense, Action reactiveCounter, Action reactiveRetrySave,
+            Action<string> reactiveTarget)
         {
             this.ui = ui; this.assets = assets; this.session = session; this.audio = audio;
             this.act = act; this.travel = travel; this.toast = toast; this.world = world; this.paused = paused;
@@ -43,8 +49,11 @@ namespace Rokas.Presentation
                 () => reactiveCommand(CommandKind.Basic, null),
                 () => reactiveCommand(CommandKind.Skill, "seal_strike"),
                 () => reactiveCommand(CommandKind.Defend, null),
+                () => reactiveCommand(CommandKind.Skill, "sweep"),
+                () => reactiveCommand(CommandKind.Skill, "heavy"),
+                () => reactiveCommand(CommandKind.Skill, "anchor"),
                 () => reactiveDefense(ReactivePressKind.Dodge),
-                () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave);
+                () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave, reactiveTarget);
         }
 
         public void CancelInput() { combatHud?.CancelInput(); }
@@ -127,6 +136,7 @@ namespace Rokas.Presentation
                 if (session.SaveBlocked) displayPhase = ReactiveDisplayPhase.SaveBlocked;
                 else if (combat.Phase == ReactivePhase.Suspended) displayPhase = ReactiveDisplayPhase.Suspended;
                 else if (combat.Phase == ReactivePhase.PlayerCommand) displayPhase = ReactiveDisplayPhase.Command;
+                else if (combat.CurrentPlayerSkillId == "heavy") displayPhase = ReactiveDisplayPhase.OffenseTiming;
                 else if (combat.Phase == ReactivePhase.EnemyExecution) displayPhase = ReactiveDisplayPhase.Reacting;
                 else if (combat.Phase == ReactivePhase.CounterWindow) displayPhase = ReactiveDisplayPhase.CounterOffer;
 
@@ -154,32 +164,86 @@ namespace Rokas.Presentation
                     telegraph = hits == 1 ? "ВРАГ АТАКУЕТ" : "СЕРИЯ УДАРОВ  " + (upcoming + 1) + " / " + hits;
                     detail = "ЦЕЛЬ: КЕЙКО    •    ПОДГОТОВЬ ЗАЩИТУ";
                 }
-                else if (displayPhase == ReactiveDisplayPhase.Command) detail = "Выбери действие. Порядок ходов указан выше.";
+                else if (displayPhase == ReactiveDisplayPhase.OffenseTiming)
+                {
+                    long elapsed = Math.Max(0, combat.CurrentCombatUs - combat.CurrentActionStartUs);
+                    contactProgress = Mathf.Clamp01(elapsed / 250000f);
+                    telegraph = combat.CurrentOffenseTimingAccepted ? "ТОЧНЫЙ ТАЙМИНГ" : "ТЯЖЁЛЫЙ УДАР";
+                    detail = combat.CurrentOffenseTimingAccepted ? "ПОПАДАНИЕ ПОДГОТОВЛЕНО" :
+                        "SPACE / ЛКМ — НАЖМИ В ОКНЕ КОНТАКТА";
+                }
+                else if (combat.Phase == ReactivePhase.WaveTransition)
+                {
+                    displayPhase = ReactiveDisplayPhase.WaveTransition;
+                    detail = "Следующая волна выходит на арену.";
+                }
+                else if (displayPhase == ReactiveDisplayPhase.Command) detail = "Выбери цель и действие. Порядок ходов указан выше.";
                 else if (displayPhase == ReactiveDisplayPhase.CounterOffer) detail = "Подтверди контратаку до закрытия окна.";
                 else if (displayPhase == ReactiveDisplayPhase.Suspended) detail = "Пауза. Отпусти клавиши защиты перед продолжением.";
                 else if (displayPhase == ReactiveDisplayPhase.SaveBlocked) detail = "Не удалось сохранить бой. Повтори запись профиля.";
 
-                TurnForecast forecast = combat.Preview(null, 4);
-                CommandImpactPreview basic = combat.PreviewCommandImpact(CommandKind.Basic, null, session.Contract.enemyId);
-                CommandImpactPreview seal = combat.PreviewCommandImpact(CommandKind.Skill, "seal_strike", session.Contract.enemyId);
+                var enemies = new List<ReactiveEnemyDisplay>(combat.ActiveEnemyIds.Count);
+                for (int i = 0; i < combat.ActiveEnemyIds.Count; i++)
+                {
+                    string id = combat.ActiveEnemyIds[i];
+                    CombatActorState state = combat.GetActorState(id);
+                    if (state == null || !state.Alive) continue;
+                    enemies.Add(new ReactiveEnemyDisplay
+                    {
+                        Id = id,
+                        Name = "ЁКАЙ " + id.Substring(1),
+                        Hp = state.Hp,
+                        MaxHp = combat.GetActorMaxHp(id),
+                        Seal = state.Seal,
+                        SealMax = combat.GetActorSealMax(id),
+                        Broken = state.Seal <= 0
+                    });
+                }
+                string selectedId = combat.SelectedTargetId;
+                if (string.IsNullOrEmpty(selectedId) || !combat.ActiveEnemyIds.Contains(selectedId))
+                    selectedId = combat.ActiveEnemyIds.Count > 0 ? combat.ActiveEnemyIds[0] : null;
+                TurnForecast forecast = combat.Preview(null, 5);
+                CommandImpactPreview basic = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Basic, null, selectedId);
+                CommandImpactPreview seal = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Skill, "seal_strike", selectedId);
+                CommandImpactPreview sweep = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Skill, "sweep", selectedId);
+                CommandImpactPreview heavy = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Skill, "heavy", selectedId);
+                CommandImpactPreview anchor = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Skill, "anchor", selectedId);
                 string commandPreview = basic == null || seal == null ? string.Empty :
                     "ОБЫЧНЫЙ: −" + basic.Damage + " HP, +" + basic.ApGain + " AP     ПЕЧАТЬ: −" +
-                    seal.Damage + " HP, −" + seal.SealDamage + " SEAL, " + seal.ApCost + " AP";
-                string forecastText = "ОЧЕРЁДНОСТЬ  ";
+                    seal.Damage + " HP, −" + seal.SealDamage + " SEAL     ТЯЖЁЛЫЙ: SPACE / ЛКМ НА КОНТАКТЕ";
+                string forecastText = string.Empty;
                 for (int i = 0; i < forecast.Slots.Count; i++)
                 {
                     if (i > 0) forecastText += "  →  ";
-                    forecastText += forecast.Slots[i].ActorId == ReactiveDuelDefinitions.HunterId ? "КЕЙКО" : "ЁКАЙ";
+                    string actorId = forecast.Slots[i].ActorId;
+                    forecastText += actorId == ReactiveDuelDefinitions.HunterId ? "КЕЙКО" :
+                        "ЁКАЙ " + actorId.Substring(1);
+                }
+                int defeatedCount = 0;
+                for (int i = 1; i <= 8; i++)
+                {
+                    CombatActorState actor = combat.GetActorState("E" + i);
+                    if (actor != null && actor.Hp <= 0) defeatedCount++;
                 }
                 reactiveView.Refresh(new ReactiveBattleDisplay
                 {
                     HunterHp = combat.HunterHp,
                     HunterAp = combat.HunterAp,
-                    EnemyHp = combat.EnemyHp,
-                    EnemySeal = combat.EnemySeal,
-                    EnemySealMax = combat.EnemySealMax,
-                    Broken = combat.EnemyBroken,
+                    Enemies = enemies,
+                    Wave = combat.CurrentWaveIndex + 1,
+                    WaveCount = combat.WaveCount,
+                    DefeatedCount = defeatedCount,
+                    SelectedTargetId = combat.SelectedTargetId,
+                    ActingId = combat.ActiveActorId,
                     CanSealStrike = seal != null && seal.CanAfford,
+                    CanSweep = sweep != null && sweep.CanAfford,
+                    CanHeavy = heavy != null && heavy.CanAfford,
+                    CanAnchor = anchor != null && anchor.CanAfford,
                     Forecast = forecastText,
                     Telegraph = telegraph,
                     Detail = detail,
@@ -230,8 +294,8 @@ namespace Rokas.Presentation
             if (step == null || session.CombatMode != CombatMode.ReactiveTurns) return;
             foreach (CombatEvent combatEvent in step.Events)
             {
-                if (combatEvent.Kind != CombatEventKind.HitResolved) continue;
                 reactiveView.Present(combatEvent);
+                if (combatEvent.Kind != CombatEventKind.HitResolved) continue;
                 bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
                 bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
                 audio.Play(perfect ? assets.critical : assets.hit);

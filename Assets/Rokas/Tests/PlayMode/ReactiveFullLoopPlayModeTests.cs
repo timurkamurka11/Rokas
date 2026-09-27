@@ -47,7 +47,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.AcceptContract(), Is.True);
             Assert.That(boot.Session.LeaveHome(), Is.True);
             yield return null;
-            Press("EnterReactivePortal");
+            Assert.That(boot.Session.EnterReactiveDuelTestEncounter(), Is.True);
             yield return new WaitForSecondsRealtime(1.9f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
             Assert.That(boot.View.Paused, Is.False);

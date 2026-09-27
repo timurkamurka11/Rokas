@@ -32,14 +32,19 @@ namespace Rokas.Core.Tests
                 Assert.That(loaded.Data.combatMode, Is.EqualTo(CombatMode.ReactiveTurns));
                 Assert.That(loaded.Data.battleCheckpoint, Is.Not.Null);
                 Assert.That(loaded.Data.battleCheckpoint.contentHash, Is.Not.Empty);
-                Assert.That(loaded.Data.battleCheckpoint.actors.Length, Is.EqualTo(2));
-                Assert.That(loaded.Data.battleCheckpoint.queue.Length, Is.EqualTo(2));
+                Assert.That(loaded.Data.battleCheckpoint.actors.Length, Is.EqualTo(9));
+                Assert.That(loaded.Data.battleCheckpoint.queue.Length, Is.EqualTo(9));
+                Assert.That(loaded.Data.battleCheckpoint.waveIndex, Is.EqualTo(0));
+                Assert.That(loaded.Data.battleCheckpoint.waveEntry, Is.Not.Null);
+                Assert.That(loaded.Data.battleCheckpoint.selectedTargetId, Is.EqualTo("E1"));
                 Assert.That(loaded.Data.battleCheckpoint.hunterAp, Is.EqualTo(4));
 
                 var restored = new GameSession(loaded.Data, contract, store);
                 Assert.That(restored.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
                 Assert.That(restored.ReactiveCombat.HunterAp, Is.EqualTo(4),
                     "A stable command turn must not grant its AP again on reload.");
+                Assert.That(restored.ReactiveCombat.ActiveEnemyIds.Count, Is.EqualTo(3));
+                Assert.That(restored.ReactiveCombat.SelectedTargetId, Is.EqualTo("E1"));
             }
             finally
             {

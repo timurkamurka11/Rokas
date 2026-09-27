@@ -47,7 +47,7 @@ namespace Rokas.Tests
             boot.SubmitReactiveCommand(CommandKind.Basic, null);
             Assert.That(boot.Session.ReactiveCombat, Is.Null, "Combat commands outside the arena are ignored.");
 
-            Press("EnterReactivePortal");
+            Assert.That(boot.Session.EnterReactiveDuelTestEncounter(), Is.True);
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
 
@@ -112,7 +112,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.AcceptContract(), Is.True);
             Assert.That(boot.Session.LeaveHome(), Is.True);
             yield return null;
-            Press("EnterReactivePortal");
+            Assert.That(boot.Session.EnterReactiveDuelTestEncounter(), Is.True);
             yield return new WaitForSecondsRealtime(1.9f);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
 

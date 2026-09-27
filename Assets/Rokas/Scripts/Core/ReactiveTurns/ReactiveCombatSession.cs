@@ -28,8 +28,15 @@ namespace Rokas.Core.ReactiveTurns
         private string _currentAttackerId;
         private AttackSequenceDefinition _currentAttack;
         private CommandIntent _activeCommand;
+        private string[] _activeTargetIds = new string[0];
+        private QueueState _preCommandQueue;
+        private bool _activeCommandCancelled;
         private long _actionStartUs;
         private long _actionEndUs;
+        private int _waveIndex;
+        private string _waveInstanceId;
+        private long _waveTransitionEndUs;
+        private string _selectedTargetId;
 
         public ReactivePhase Phase { get { return _phase; } }
         public long Revision { get { return _revision; } }
@@ -38,9 +45,73 @@ namespace Rokas.Core.ReactiveTurns
         public CombatOutcome? TerminalResult { get { return _terminal; } }
         public string CurrentActionId { get { return _currentActionId; } }
         public string ActiveActorId { get { return _currentAttackerId; } }
+        public string CurrentPlayerSkillId
+        {
+            get { return _phase == ReactivePhase.PlayerExecution && _activeCommand != null &&
+                _activeCommand.Kind == CommandKind.Skill ? _activeCommand.SkillId : null; }
+        }
         public AttackSequenceDefinition CurrentAttack { get { return _currentAttack; } }
         public long CurrentActionStartUs { get { return _actionStartUs; } }
         public QueueState Queue { get { return _queue.Clone(); } }
+        public int CurrentWaveIndex { get { return _waveIndex; } }
+        public int WaveCount { get { return Math.Max(1, _definitions.Waves.Count); } }
+        public string WaveInstanceId { get { return _waveInstanceId; } }
+        public string SelectedTargetId { get { return _selectedTargetId; } }
+        public IReadOnlyList<string> ActiveEnemyIds
+        {
+            get
+            {
+                var activeActors = new List<ActorDefinition>();
+                foreach (ActorDefinition actor in _definitions.Actors)
+                {
+                    QueueEntry entry = _queue.GetEntry(actor.Id);
+                    if (!actor.IsHunter && entry != null && entry.Active && entry.Alive && _actors[actor.Id].Alive)
+                        activeActors.Add(actor);
+                }
+                activeActors.Sort(delegate(ActorDefinition left, ActorDefinition right) {
+                    int ordinal = left.SpawnOrdinal.CompareTo(right.SpawnOrdinal);
+                    return ordinal != 0 ? ordinal : string.CompareOrdinal(left.Id, right.Id);
+                });
+                var ids = new List<string>();
+                foreach (ActorDefinition actor in activeActors) ids.Add(actor.Id);
+                return ids.AsReadOnly();
+            }
+        }
+        public CombatActorState GetActorState(string actorId)
+        {
+            CombatActorState actor;
+            return actorId != null && _actors.TryGetValue(actorId, out actor) ? actor.Clone() : null;
+        }
+        public int GetActorMaxHp(string actorId)
+        {
+            ActorDefinition actor = _definitions.FindActor(actorId);
+            return actor == null ? 0 : actor.MaxHp;
+        }
+        public int GetActorSealMax(string actorId)
+        {
+            ActorDefinition actor = _definitions.FindActor(actorId);
+            return actor == null ? 0 : actor.MaxSeal;
+        }
+        public bool SelectTarget(string actorId)
+        {
+            if (_phase != ReactivePhase.PlayerCommand || _terminal.HasValue) return false;
+            QueueEntry entry = actorId == null ? null : _queue.GetEntry(actorId);
+            ActorDefinition definition = _definitions.FindActor(actorId);
+            if (entry == null || definition == null || definition.IsHunter ||
+                !entry.Active || !entry.Alive || !_actors[actorId].Alive) return false;
+            _selectedTargetId = actorId;
+            CaptureStable();
+            return true;
+        }
+        public bool CycleTarget(int direction)
+        {
+            IReadOnlyList<string> ids = ActiveEnemyIds;
+            if (ids.Count == 0 || direction == 0) return false;
+            int current = -1;
+            for (int i = 0; i < ids.Count; i++) if (ids[i] == _selectedTargetId) current = i;
+            int next = current < 0 ? 0 : (current + (direction > 0 ? 1 : -1) + ids.Count) % ids.Count;
+            return SelectTarget(ids[next]);
+        }
         public int HunterHp { get { return Hunter == null ? 0 : Hunter.Hp; } }
         public int HunterAp { get { return Hunter == null ? 0 : Hunter.Ap; } }
         public int EnemyHp { get { CombatActorState e = FirstEnemy; return e == null ? 0 : e.Hp; } }
@@ -49,8 +120,8 @@ namespace Rokas.Core.ReactiveTurns
         {
             get
             {
-                foreach (ActorDefinition actor in _definitions.Actors)
-                    if (!actor.IsHunter) return actor.MaxSeal;
+                CombatActorState current = FirstEnemy;
+                if (current != null) return _definitions.FindActor(current.Id).MaxSeal;
                 return 0;
             }
         }
@@ -70,9 +141,28 @@ namespace Rokas.Core.ReactiveTurns
             get
             {
                 foreach (ActorDefinition actor in _definitions.Actors)
+                {
+                    QueueEntry entry = _queue.GetEntry(actor.Id);
+                    if (!actor.IsHunter && entry != null && entry.Active && entry.Alive)
+                        return _actors[actor.Id];
+                }
+                foreach (ActorDefinition actor in _definitions.Actors)
                     if (!actor.IsHunter) return _actors[actor.Id];
                 return null;
             }
+        }
+
+        private void EnsureValidSelection()
+        {
+            IReadOnlyList<string> active = ActiveEnemyIds;
+            foreach (string id in active) if (id == _selectedTargetId) return;
+            int priorOrdinal = _selectedTargetId == null ? -1 :
+                (_definitions.FindActor(_selectedTargetId) == null ? -1 :
+                    _definitions.FindActor(_selectedTargetId).SpawnOrdinal);
+            _selectedTargetId = active.Count == 0 ? null : active[0];
+            foreach (string id in active)
+                if (_definitions.FindActor(id).SpawnOrdinal > priorOrdinal)
+                { _selectedTargetId = id; break; }
         }
 
         public ReactiveCombatSession(CombatDefinitions definitions, BattleCheckpoint checkpoint = null)
@@ -81,7 +171,10 @@ namespace Rokas.Core.ReactiveTurns
             _definitions = definitions;
             BattleCheckpoint source = checkpoint == null ? BattleCheckpoint.CreateInitial(definitions, definitions.Id + ":1", 1, 1) : checkpoint.Clone();
             _checkpointError = ValidateCheckpointShape(definitions, source);
-            _queue = QueueState.FromCheckpoint(source);
+            _queue = QueueState.FromCheckpoint(source, definitions);
+            _waveIndex = source.waveIndex;
+            _waveInstanceId = source.waveInstanceId;
+            _selectedTargetId = source.selectedTargetId;
             _revision = source.revision;
             _seed = source.seed;
             _economicRunId = source.economicRunId;
@@ -96,6 +189,7 @@ namespace Rokas.Core.ReactiveTurns
                 if (!_actors.ContainsKey(actor.Id))
                     _actors[actor.Id] = new CombatActorState { Id = actor.Id, DefinitionId = actor.Id,
                         Hp = actor.MaxHp, Seal = actor.MaxSeal, Ap = actor.InitialAp };
+            EnsureValidSelection();
             if (source.commands != null) foreach (BattleCommandSnapshot command in source.commands)
                 if (command != null && !string.IsNullOrWhiteSpace(command.commandId))
                     _commandResults[command.commandId] = new CommandResult(command.accepted,
@@ -138,11 +232,20 @@ namespace Rokas.Core.ReactiveTurns
             }
             else if (_stableCheckpoint.phase == ReactivePhase.PlayerCommand.ToString())
                 _phase = ReactivePhase.PlayerCommand;
+            else if (_stableCheckpoint.phase == ReactivePhase.WaveTransition.ToString())
+            {
+                _phase = ReactivePhase.WaveTransition;
+                _waveTransitionEndUs = checked(_lastCombatUs + 2000000);
+            }
             else if (_stableCheckpoint.phase == ReactivePhase.Preparing.ToString() ||
                 _stableCheckpoint.phase == ReactivePhase.Dispatch.ToString() ||
                 _stableCheckpoint.phase == ReactivePhase.Settlement.ToString())
             {
                 _phase = ReactivePhase.Dispatch;
+                if (_definitions.Waves.Count > 0 &&
+                    _stableCheckpoint.phase == ReactivePhase.Preparing.ToString())
+                    _events.Add(new CombatEvent(CombatEventKind.WaveStarted,
+                        combatUs: _lastCombatUs, detail: _waveInstanceId));
                 DispatchNext();
             }
             else
@@ -166,23 +269,44 @@ namespace Rokas.Core.ReactiveTurns
             if (command.Kind == CommandKind.Skill && skill == null) return Reject(command, "UnknownSkill");
             int cost = skill == null ? 0 : skill.ApCost;
             if (Hunter.Ap < cost) return Reject(command, "InsufficientAp");
+            var targetIds = new List<string>();
             if (command.Kind == CommandKind.Basic || command.Kind == CommandKind.Skill)
             {
-                if (command.TargetIds.Count != 1) return Reject(command, "TargetCount");
-                CombatActorState target;
-                if (!_actors.TryGetValue(command.TargetIds[0], out target) || !target.Alive ||
-                    _definitions.FindActor(target.Id).IsHunter) return Reject(command, "InvalidTarget");
+                if (skill != null && skill.Targeting == TargetingMode.AllActiveEnemies)
+                {
+                    targetIds.AddRange(ActiveEnemyIds);
+                    if (targetIds.Count == 0) return Reject(command, "InvalidTarget");
+                    if (command.TargetIds.Count != 0)
+                    {
+                        if (command.TargetIds.Count != targetIds.Count) return Reject(command, "TargetCount");
+                        var selected = new HashSet<string>(command.TargetIds, StringComparer.Ordinal);
+                        if (selected.Count != targetIds.Count || !selected.SetEquals(targetIds))
+                            return Reject(command, "InvalidTarget");
+                    }
+                }
+                else
+                {
+                    if (command.TargetIds.Count != 1) return Reject(command, "TargetCount");
+                    CombatActorState target;
+                    if (!_actors.TryGetValue(command.TargetIds[0], out target) || !target.Alive ||
+                        _definitions.FindActor(target.Id).IsHunter ||
+                        !_queue.GetEntry(target.Id).Active) return Reject(command, "InvalidTarget");
+                    targetIds.Add(target.Id);
+                }
             }
 
             TurnDecision turn = _scheduler.SelectNext(_queue, _definitions);
             if (turn == null || _definitions.FindActor(turn.ActorId).IsHunter == false) return Reject(command, "NoPlayerTurn");
             int delay = command.Kind == CommandKind.Defend ? 80 : skill == null ? 100 : skill.DelayTicks;
+            _preCommandQueue = _queue.Clone();
             _scheduler.CommitAction(_queue, _definitions, turn, delay);
             Hunter.Ap -= cost;
             _currentActionId = NextActionId();
             _currentAttackerId = Hunter.Id;
             _currentAttack = null;
             _activeCommand = command;
+            _activeCommandCancelled = false;
+            _activeTargetIds = targetIds.ToArray();
             _actionStartUs = _lastCombatUs;
             _actionEndUs = checked(_actionStartUs + 400000);
             _phase = ReactivePhase.PlayerExecution;
@@ -190,7 +314,7 @@ namespace Rokas.Core.ReactiveTurns
             var result = new CommandResult(true, null, _currentActionId, _revision);
             _commandResults.Add(command.CommandId, result);
             _events.Add(new CombatEvent(CombatEventKind.CommandCommitted, Hunter.Id,
-                command.TargetIds.Count == 0 ? null : command.TargetIds[0], _currentActionId,
+                _activeTargetIds.Length == 0 ? null : _activeTargetIds[0], _currentActionId,
                 combatUs: _lastCombatUs, detail: command.Kind.ToString()));
             OnPlayerCommandCommitted(command);
             return result;
@@ -226,6 +350,8 @@ namespace Rokas.Core.ReactiveTurns
             {
                 OnCounterWindowAdvanced(combatUs, watermarkUs);
             }
+            else if (_phase == ReactivePhase.WaveTransition && combatUs >= _waveTransitionEndUs)
+                EnterNextWave();
             return Drain();
         }
 
@@ -278,10 +404,19 @@ namespace Rokas.Core.ReactiveTurns
         {
             if (_terminal.HasValue) return;
             if (!Hunter.Alive) { SetTerminal(CombatOutcome.Defeat); return; }
-            bool anyEnemyAlive = false;
-            foreach (ActorDefinition actor in _definitions.Actors)
-                if (!actor.IsHunter && _actors[actor.Id].Alive) anyEnemyAlive = true;
-            if (!anyEnemyAlive) { SetTerminal(CombatOutcome.Victory); return; }
+            if (ActiveEnemyIds.Count == 0)
+            {
+                if (_definitions.Waves.Count > 0 && _waveIndex + 1 < _definitions.Waves.Count)
+                    BeginWaveTransition();
+                else
+                {
+                    if (_definitions.Waves.Count > 0)
+                        _events.Add(new CombatEvent(CombatEventKind.WaveCleared,
+                            combatUs: _lastCombatUs, detail: _waveInstanceId));
+                    SetTerminal(CombatOutcome.Victory);
+                }
+                return;
+            }
             for (int guard = 0; guard < 1024; guard++)
             {
                 TurnDecision turn = _scheduler.SelectNext(_queue, _definitions);
@@ -325,16 +460,48 @@ namespace Rokas.Core.ReactiveTurns
             _events.Add(new CombatEvent(CombatEventKind.Error, detail: "DispatchLoop"));
         }
 
+        private void BeginWaveTransition()
+        {
+            _phase = ReactivePhase.WaveTransition;
+            _waveTransitionEndUs = checked(_lastCombatUs + 2000000);
+            _revision++;
+            _events.Add(new CombatEvent(CombatEventKind.WaveCleared, combatUs: _lastCombatUs,
+                detail: _waveInstanceId));
+            _events.Add(new CombatEvent(CombatEventKind.WaveTransitionStarted,
+                combatUs: _lastCombatUs, detail: _definitions.Waves[_waveIndex + 1].Id));
+            CaptureStable();
+        }
+
+        private void EnterNextWave()
+        {
+            if (_phase != ReactivePhase.WaveTransition || _waveIndex + 1 >= _definitions.Waves.Count)
+                return;
+            _waveIndex++;
+            _waveInstanceId = _economicRunId + ":" + _attemptId + ":wave:" + (_waveIndex + 1);
+            WaveDefinition wave = _definitions.Waves[_waveIndex];
+            _queue.ActivateWave(wave, _definitions);
+            EnsureValidSelection();
+            _phase = ReactivePhase.Dispatch;
+            _revision++;
+            _events.Add(new CombatEvent(CombatEventKind.WaveStarted,
+                combatUs: _lastCombatUs, detail: _waveInstanceId));
+            CaptureStable(true);
+            DispatchNext();
+        }
+
         private void SettleCurrentAction()
         {
             _phase = ReactivePhase.Settlement;
             _events.Add(new CombatEvent(CombatEventKind.ActionSettled, _currentAttackerId,
                 actionId: _currentActionId, combatUs: _lastCombatUs));
-            OnActionSettled();
+            if (!_activeCommandCancelled) OnActionSettled();
             _currentActionId = null;
             _currentAttackerId = null;
             _currentAttack = null;
             _activeCommand = null;
+            _activeTargetIds = new string[0];
+            _preCommandQueue = null;
+            _activeCommandCancelled = false;
             _revision++;
             CaptureStable();
             _phase = ReactivePhase.Dispatch;
@@ -347,6 +514,7 @@ namespace Rokas.Core.ReactiveTurns
             foreach (CombatActorState actor in _actors.Values)
                 if (!actor.Alive) _queue.MarkDead(actor.Id);
             _terminal = outcome;
+            _selectedTargetId = null;
             _phase = outcome == CombatOutcome.Victory ? ReactivePhase.Victory : ReactivePhase.Defeat;
             _revision++;
             _events.Add(new CombatEvent(outcome == CombatOutcome.Victory ? CombatEventKind.Victory : CombatEventKind.Defeat,
@@ -354,7 +522,7 @@ namespace Rokas.Core.ReactiveTurns
             CaptureStable();
         }
 
-        private void CaptureStable()
+        private void CaptureStable(bool captureWaveEntry = false)
         {
             BattleCheckpoint checkpoint = _stableCheckpoint.Clone();
             checkpoint.revision = _revision;
@@ -365,6 +533,9 @@ namespace Rokas.Core.ReactiveTurns
             checkpoint.defensiveHitCount = _queue.DefensiveHitCount;
             checkpoint.authoredDurationUs = _queue.AuthoredDurationUs;
             checkpoint.nextActionOrdinal = _nextActionOrdinal;
+            checkpoint.waveIndex = _waveIndex;
+            checkpoint.waveInstanceId = _waveInstanceId;
+            checkpoint.selectedTargetId = _selectedTargetId;
             checkpoint.terminalResult = _terminal.HasValue ? _terminal.Value.ToString() : null;
             checkpoint.hunterHp = Hunter.Hp;
             checkpoint.hunterAp = Hunter.Ap;
@@ -384,7 +555,8 @@ namespace Rokas.Core.ReactiveTurns
                 QueueEntry entry = _queue.Entries[i];
                 checkpoint.queue[i] = new BattleQueueEntrySnapshot { actorId = entry.ActorId,
                     nextTick = entry.NextTick, spawnOrdinal = entry.SpawnOrdinal, speed = entry.Speed,
-                    alive = entry.Alive, skipNextTurn = entry.SkipNextTurn, naturalTurns = entry.NaturalTurns };
+                    alive = entry.Alive, active = entry.Active, anchorDelayed = entry.AnchorDelayed,
+                    skipNextTurn = entry.SkipNextTurn, naturalTurns = entry.NaturalTurns };
             }
             var commandIds = new List<string>(_commandResults.Keys);
             commandIds.Sort(StringComparer.Ordinal);
@@ -397,6 +569,8 @@ namespace Rokas.Core.ReactiveTurns
                     newRevision = result.NewRevision };
             }
             OnCheckpointCaptured(checkpoint);
+            if (captureWaveEntry)
+                checkpoint.waveEntry = BattleWaveEntrySnapshot.FromCheckpoint(checkpoint);
             _stableCheckpoint = checkpoint;
         }
 
@@ -415,6 +589,12 @@ namespace Rokas.Core.ReactiveTurns
                 checkpoint.defensiveHitCount < 0 || checkpoint.defensiveHitCount > 6 ||
                 checkpoint.authoredDurationUs < 0 || checkpoint.authoredDurationUs > 8000000)
                 return "InvalidCheckpointHeader";
+            if (checkpoint.waveIndex < 0 ||
+                (definitions.Waves.Count > 0 && checkpoint.waveIndex >= definitions.Waves.Count) ||
+                (definitions.Waves.Count == 0 && checkpoint.waveIndex != 0))
+                return "InvalidCheckpointWave";
+            if (definitions.Waves.Count > 0 && string.IsNullOrWhiteSpace(checkpoint.waveInstanceId))
+                return "MissingCheckpointWaveIdentity";
             if (checkpoint.actors == null || checkpoint.actors.Length != definitions.Actors.Count ||
                 checkpoint.queue == null || checkpoint.queue.Length != definitions.Actors.Count)
                 return "InvalidCheckpointActorsOrQueue";
@@ -443,6 +623,12 @@ namespace Rokas.Core.ReactiveTurns
                     entry.speed < 80 || entry.speed > 125 || entry.naturalTurns < 0 ||
                     entry.alive != (actor.hp > 0) || (definition.IsHunter && entry.skipNextTurn))
                     return "InvalidCheckpointQueueState";
+                if (definitions.Waves.Count > 0)
+                {
+                    bool expectedActive = actor.hp > 0 && (definition.IsHunter ||
+                        definitions.Waves[checkpoint.waveIndex].EnemyActorIds.Contains(entry.actorId));
+                    if (entry.active != expectedActive) return "InvalidCheckpointActiveWave";
+                }
             }
             if (checkpoint.commands != null)
             {

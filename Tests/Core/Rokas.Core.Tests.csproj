@@ -24,6 +24,7 @@
     <Compile Include="ReactiveTurnsFoundationTests.cs" />
     <Compile Include="ReactiveTurnsDefenseAndOffenseTests.cs" />
     <Compile Include="ReactiveTurnsSaveTests.cs" />
+    <Compile Include="ReactiveTurnsWavesTests.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/*.cs" />
     <Compile Include="../../Assets/Rokas/Scripts/Core/ReactiveTurns/*.cs" />
   </ItemGroup>
