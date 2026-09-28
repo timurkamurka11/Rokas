@@ -21,6 +21,7 @@ namespace Rokas.Presentation
         private readonly Action<Func<bool>, string> act;
         private readonly Action<Func<bool>, string> travel;
         private readonly Action<string> toast;
+        private readonly Func<HubDialogueDefinition, bool> openHubDialogue;
         private RawImage mame;
         private Image weaponWard;
         private Text objective;
@@ -32,10 +33,12 @@ namespace Rokas.Presentation
         private float mameReaction;
 
         public HomeView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio, Action<string> open,
-            Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast)
+            Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast,
+            Func<HubDialogueDefinition, bool> openHubDialogue)
         {
             this.ui = ui; this.assets = assets; this.session = session; this.audio = audio;
             this.open = open; this.act = act; this.travel = travel; this.toast = toast;
+            this.openHubDialogue = openHubDialogue;
         }
 
         public void Build(RectTransform parent)
@@ -68,11 +71,26 @@ namespace Rokas.Presentation
                 ? "За окном кто-то есть?.."
                 : "Комната снова наполнилась теплом.");
 
+            Action toggleFloorLamp = () =>
+            {
+                string line = session.State.lampOn
+                    ? "За окном кто-то есть?.."
+                    : "Комната снова наполнилась теплом.";
+                act(() =>
+                {
+                    session.SetLamp(!session.State.lampOn);
+                    return true;
+                }, string.Empty);
+                OpenHub("home-floor-lamp", line);
+            };
+
             ScanActionMarker(parent, "LampHotspot", HomeScanGlyph.LightBulb,
-                138.5f, 400.1f, 48f, toggleLamp);
+                138.5f, 400.1f, 48f, toggleFloorLamp);
             ScanActionMarker(parent, "WindowHotspot", HomeScanGlyph.Window,
                 696.6f, 128.8f, 56f,
-                () => toast("Поезд проходит без остановки. На этот раз — настоящий."));
+                () => OpenHub(
+                    "home-window",
+                    "Поезд проходит без остановки. На этот раз — настоящий."));
             ScanActionMarker(parent, "DeskLampHotspot", HomeScanGlyph.DeskLamp,
                 1151.3f, 194.9f, 52f, toggleLamp);
             ScanActionMarker(parent, "WorkbenchHotspot", HomeScanGlyph.Swords,
@@ -92,9 +110,11 @@ namespace Rokas.Presentation
                     act(() => { session.PetMame(); return true; }, "");
                     mameReaction = 1;
                     audio.Play(assets.mame);
-                    toast(session.State.mameInteractions % 3 == 0
-                        ? "Мамэ внимательно смотрит в пустой угол."
-                        : "Мамэ довольно щурится. Почти как обычный питомец.");
+                    OpenHub(
+                        "home-mame",
+                        session.State.mameInteractions % 3 == 0
+                            ? "Мамэ внимательно смотрит в пустой угол."
+                            : "Мамэ довольно щурится. Почти как обычный питомец.");
                 });
 
             ScanActionMarker(parent, "DoorHotspot", HomeScanGlyph.Exit,
@@ -113,6 +133,12 @@ namespace Rokas.Presentation
                 });
 
             Refresh();
+        }
+
+        private void OpenHub(string id, string line)
+        {
+            openHubDialogue?.Invoke(
+                new HubDialogueDefinition(id, "КЕЙКО", line));
         }
 
         private Button ScanActionMarker(RectTransform parent, string name, HomeScanGlyph glyph,
