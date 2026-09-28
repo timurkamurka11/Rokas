@@ -390,6 +390,7 @@ namespace Rokas.Presentation
             if (!playback.IsOpen) return;
             playback.Tick(unscaledDeltaTime);
             uiElapsed += unscaledDeltaTime;
+            portraitElapsed += unscaledDeltaTime;
             RefreshPortrait(false);
             Refresh();
         }
@@ -511,9 +512,6 @@ namespace Rokas.Presentation
                 portraitState == HubDialoguePortraitState.Talk
                     ? TalkFramesPerSecond
                     : IdleFramesPerSecond;
-            if (!force)
-                portraitElapsed += Time.unscaledDeltaTime;
-
             int frame = Mathf.FloorToInt(
                 portraitElapsed * Mathf.Max(.01f, fps)) % 6;
             if (!force && frame == portraitFrame) return;
