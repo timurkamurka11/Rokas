@@ -79,7 +79,7 @@ namespace Rokas.Tests
             yield return null;
             Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.False,
                 "Laptop remains a direct action and must not open Hub Dialogue.");
-            Assert.That(FindRect("LaptopDesktop"), Is.Not.Null);
+            Assert.That(FindRect("YomiLaptop"), Is.Not.Null);
 
             LogAssert.NoUnexpectedReceived();
         }
