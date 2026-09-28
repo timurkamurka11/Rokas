@@ -23,16 +23,33 @@ namespace Rokas.Presentation
         }
     }
 
+    public readonly struct ReactiveOffensePress
+    {
+        public readonly long InputId;
+        public readonly long Epoch;
+        public readonly long DeviceTimeUs;
+
+        public ReactiveOffensePress(long inputId, long epoch, long deviceTimeUs)
+        {
+            InputId = inputId;
+            Epoch = epoch;
+            DeviceTimeUs = deviceTimeUs;
+        }
+    }
+
     // InputAction callback time comes from the device event. The queue is flushed before Core time advances.
     public sealed class ReactiveInputAdapter : IDisposable
     {
         private readonly InputAction dodge;
         private readonly InputAction parry;
+        private readonly InputAction offense;
         private readonly InputAction uiActivation;
         private readonly List<ReactiveDevicePress> pending = new List<ReactiveDevicePress>();
+        private readonly List<ReactiveOffensePress> pendingOffense = new List<ReactiveOffensePress>();
         private bool active;
         private bool armed;
         private bool defenseEnabled;
+        private bool offenseEnabled;
         private long? uiActivationTimeUs;
         private long epoch = 1;
         private long nextInputId = 1;
@@ -48,12 +65,16 @@ namespace Rokas.Presentation
             parry = new InputAction("ReactiveParry", InputActionType.Button);
             parry.AddBinding("<Keyboard>/space");
             parry.AddBinding("<Keyboard>/f");
+            offense = new InputAction("ReactiveOffenseTiming", InputActionType.Button);
+            offense.AddBinding("<Keyboard>/space");
+            offense.AddBinding("<Mouse>/leftButton");
             uiActivation = new InputAction("ReactiveUiActivation", InputActionType.Button);
             uiActivation.AddBinding("<Mouse>/leftButton");
             uiActivation.AddBinding("<Keyboard>/enter");
             uiActivation.AddBinding("<Keyboard>/numpadEnter");
             dodge.performed += OnDodge;
             parry.performed += OnParry;
+            offense.performed += OnOffense;
             uiActivation.performed += OnUiActivation;
         }
 
@@ -63,19 +84,23 @@ namespace Rokas.Presentation
             active = enabled;
             epoch++;
             pending.Clear();
+            pendingOffense.Clear();
             uiActivationTimeUs = null;
             defenseEnabled = enabled;
+            offenseEnabled = false;
             armed = enabled && AreControlsReleased();
             if (enabled)
             {
                 dodge.Enable();
                 parry.Enable();
+                offense.Enable();
                 uiActivation.Enable();
             }
             else
             {
                 dodge.Disable();
                 parry.Disable();
+                offense.Disable();
                 uiActivation.Disable();
             }
         }
@@ -87,13 +112,24 @@ namespace Rokas.Presentation
             defenseEnabled = enabled;
             epoch++;
             pending.Clear();
-            armed = enabled && AreControlsReleased();
+            armed = (defenseEnabled || offenseEnabled) && AreControlsReleased();
+        }
+
+        public void SetOffenseEnabled(bool enabled)
+        {
+            enabled &= active;
+            if (offenseEnabled == enabled) return;
+            offenseEnabled = enabled;
+            epoch++;
+            pendingOffense.Clear();
+            armed = (defenseEnabled || offenseEnabled) && AreControlsReleased();
         }
 
         public void ForceRearm()
         {
             epoch++;
             pending.Clear();
+            pendingOffense.Clear();
             uiActivationTimeUs = null;
             armed = false;
         }
@@ -143,6 +179,14 @@ namespace Rokas.Presentation
             pending.Clear();
         }
 
+        public void FlushOffense(Action<ReactiveOffensePress> accept)
+        {
+            if (accept == null) throw new ArgumentNullException(nameof(accept));
+            pendingOffense.Sort((left, right) => left.DeviceTimeUs.CompareTo(right.DeviceTimeUs));
+            for (int index = 0; index < pendingOffense.Count; index++) accept(pendingOffense[index]);
+            pendingOffense.Clear();
+        }
+
         private void OnDodge(InputAction.CallbackContext context)
         {
             Capture(context, ReactivePressKind.Dodge);
@@ -151,6 +195,13 @@ namespace Rokas.Presentation
         private void OnParry(InputAction.CallbackContext context)
         {
             Capture(context, ReactivePressKind.Parry);
+        }
+
+        private void OnOffense(InputAction.CallbackContext context)
+        {
+            if (!active || !offenseEnabled || !armed) return;
+            pendingOffense.Add(new ReactiveOffensePress(nextInputId++, epoch,
+                ToMicroseconds(context.time)));
         }
 
         private void OnUiActivation(InputAction.CallbackContext context)
@@ -164,12 +215,13 @@ namespace Rokas.Presentation
             pending.Add(new ReactiveDevicePress(nextInputId++, epoch, ToMicroseconds(context.time), kind));
         }
 
-        private static bool AreControlsReleased()
+        private bool AreControlsReleased()
         {
             Keyboard keyboard = Keyboard.current;
             Mouse mouse = Mouse.current;
             return (keyboard == null || (!keyboard.spaceKey.isPressed && !keyboard.fKey.isPressed && !keyboard.dKey.isPressed)) &&
-                   (mouse == null || !mouse.rightButton.isPressed);
+                   (mouse == null || (!mouse.rightButton.isPressed &&
+                       (!offenseEnabled || !mouse.leftButton.isPressed)));
         }
 
         private static long ToMicroseconds(double seconds)
@@ -182,9 +234,11 @@ namespace Rokas.Presentation
             SetContext(false);
             dodge.performed -= OnDodge;
             parry.performed -= OnParry;
+            offense.performed -= OnOffense;
             uiActivation.performed -= OnUiActivation;
             dodge.Dispose();
             parry.Dispose();
+            offense.Dispose();
             uiActivation.Dispose();
         }
     }

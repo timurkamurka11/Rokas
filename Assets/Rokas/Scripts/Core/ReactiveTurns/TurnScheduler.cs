@@ -11,13 +11,16 @@ namespace Rokas.Core.ReactiveTurns
         public int SpawnOrdinal { get; internal set; }
         public int Speed { get; internal set; }
         public bool Alive { get; internal set; }
+        public bool Active { get; internal set; }
+        public bool AnchorDelayed { get; internal set; }
         public bool SkipNextTurn { get; internal set; }
         public int NaturalTurns { get; internal set; }
 
         internal QueueEntry Clone()
         {
             return new QueueEntry { ActorId = ActorId, NextTick = NextTick, SpawnOrdinal = SpawnOrdinal,
-                Speed = Speed, Alive = Alive, SkipNextTurn = SkipNextTurn, NaturalTurns = NaturalTurns };
+                Speed = Speed, Alive = Alive, Active = Active, AnchorDelayed = AnchorDelayed,
+                SkipNextTurn = SkipNextTurn, NaturalTurns = NaturalTurns };
         }
     }
 
@@ -43,17 +46,21 @@ namespace Rokas.Core.ReactiveTurns
             var entries = new List<QueueEntry>();
             foreach (ActorDefinition actor in definitions.Actors)
                 entries.Add(new QueueEntry { ActorId = actor.Id, NextTick = actor.InitialTick,
-                    SpawnOrdinal = actor.SpawnOrdinal, Speed = actor.Speed, Alive = true });
+                    SpawnOrdinal = actor.SpawnOrdinal, Speed = actor.Speed, Alive = true,
+                    Active = actor.IsHunter || definitions.Waves.Count == 0 ||
+                        definitions.Waves[0].EnemyActorIds.Contains(actor.Id) });
             return new QueueState(entries, 0, 0, 0, 0);
         }
 
-        public static QueueState FromCheckpoint(BattleCheckpoint checkpoint)
+        public static QueueState FromCheckpoint(BattleCheckpoint checkpoint, CombatDefinitions definitions = null)
         {
             if (checkpoint == null) throw new ArgumentNullException("checkpoint");
             var entries = new List<QueueEntry>();
             if (checkpoint.queue != null) foreach (BattleQueueEntrySnapshot item in checkpoint.queue)
                 if (item != null) entries.Add(new QueueEntry { ActorId = item.actorId, NextTick = item.nextTick,
                     SpawnOrdinal = item.spawnOrdinal, Speed = item.speed, Alive = item.alive,
+                    Active = item.alive && (definitions == null || definitions.Waves.Count == 0 || item.active),
+                    AnchorDelayed = item.anchorDelayed,
                     SkipNextTurn = item.skipNextTurn, NaturalTurns = item.naturalTurns });
             return new QueueState(entries, checkpoint.nowTick, checkpoint.enemyActionCount,
                 checkpoint.defensiveHitCount, checkpoint.authoredDurationUs);
@@ -75,7 +82,21 @@ namespace Rokas.Core.ReactiveTurns
         public void MarkDead(string actorId)
         {
             QueueEntry entry = GetEntry(actorId);
-            if (entry != null) entry.Alive = false;
+            if (entry != null) { entry.Alive = false; entry.Active = false; }
+        }
+
+        public void ActivateWave(WaveDefinition wave, CombatDefinitions definitions)
+        {
+            if (wave == null || definitions == null) throw new ArgumentNullException("wave/definitions");
+            for (int i = 0; i < wave.EnemyActorIds.Count; i++)
+            {
+                QueueEntry entry = GetEntry(wave.EnemyActorIds[i]);
+                ActorDefinition actor = definitions.FindActor(wave.EnemyActorIds[i]);
+                if (entry == null || actor == null || !entry.Alive || entry.Active)
+                    throw new InvalidOperationException("Wave actor unavailable.");
+                entry.Active = true;
+                entry.NextTick = checked(NowTick + actor.InitialTick);
+            }
         }
 
         public void AddSummon(string actorId, int spawnOrdinal, int speed, long dueTick)
@@ -84,7 +105,7 @@ namespace Rokas.Core.ReactiveTurns
             if (speed < 80 || speed > 125) throw new ArgumentOutOfRangeException("speed");
             if (dueTick < checked(NowTick + 60)) throw new ArgumentOutOfRangeException("dueTick", "Summon needs at least 60 ticks of notice.");
             _entries.Add(new QueueEntry { ActorId = actorId, SpawnOrdinal = spawnOrdinal,
-                Speed = speed, NextTick = dueTick, Alive = true });
+                Speed = speed, NextTick = dueTick, Alive = true, Active = true });
         }
     }
 
@@ -126,7 +147,7 @@ namespace Rokas.Core.ReactiveTurns
             QueueEntry hunter = null;
             foreach (QueueEntry entry in state.Entries)
             {
-                if (!entry.Alive) continue;
+                if (!entry.Alive || !entry.Active) continue;
                 ActorDefinition definition = definitions.FindActor(entry.ActorId);
                 if (definition == null) continue;
                 if (definition.IsHunter) hunter = entry;
@@ -176,6 +197,7 @@ namespace Rokas.Core.ReactiveTurns
                 state.DefensiveHitCount = checked(state.DefensiveHitCount + attack.Hits.Count);
                 state.AuthoredDurationUs = checked(state.AuthoredDurationUs + attack.DurationUs);
                 entry.NaturalTurns = checked(entry.NaturalTurns + 1);
+                entry.AnchorDelayed = false;
             }
         }
 

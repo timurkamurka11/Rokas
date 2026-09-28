@@ -58,9 +58,19 @@ namespace Rokas.Core
             if (State.combatMode == Rokas.Core.CombatMode.ReactiveTurns && State.battleCheckpoint != null &&
                 (State.phase == RunPhase.Combat || State.phase == RunPhase.Sealed || State.phase == RunPhase.Failed))
             {
-                ReactiveCombat = new ReactiveCombatSession(ReactiveDuelDefinitions.Create(Contract, State), State.battleCheckpoint.Clone());
+                ReactiveCombat = new ReactiveCombatSession(ResolveReactiveDefinitions(State.battleCheckpoint),
+                    State.battleCheckpoint.Clone());
                 ReactiveCombat.Start();
             }
+        }
+
+        private CombatDefinitions ResolveReactiveDefinitions(BattleCheckpoint checkpoint)
+        {
+            CombatDefinitions eight = ReactiveEightEnemyDefinitions.Create(Contract, State);
+            if (checkpoint == null || checkpoint.contentHash == eight.ContentHash) return eight;
+            // Existing Milestone A duel saves remain loadable with their original content.
+            CombatDefinitions duel = ReactiveDuelDefinitions.Create(Contract, State);
+            return checkpoint.contentHash == duel.ContentHash ? duel : eight;
         }
 
         public bool AcceptContract()
@@ -143,11 +153,21 @@ namespace Rokas.Core
             return true;
         }
 
-        // Explicit test route. The normal Portal route remains Legacy until rollout.
+        // Explicit eight-enemy route. The normal Portal route remains Legacy until rollout.
         public bool EnterReactiveTestEncounter()
         {
+            return EnterReactiveEncounter(ReactiveEightEnemyDefinitions.Create(Contract, State));
+        }
+
+        // Keeps the accepted Milestone A duel available for regression and old checkpoint review.
+        public bool EnterReactiveDuelTestEncounter()
+        {
+            return EnterReactiveEncounter(ReactiveDuelDefinitions.Create(Contract, State));
+        }
+
+        private bool EnterReactiveEncounter(CombatDefinitions definitions)
+        {
             if (SaveBlocked || State.phase != RunPhase.Portal || State.activeContractId != Contract.id) return false;
-            CombatDefinitions definitions = ReactiveDuelDefinitions.Create(Contract, State);
             string runId = ContractService.GetEconomicRunId(Contract.id, State.contractRunSequence);
             if (string.IsNullOrEmpty(runId)) return false;
             BattleCheckpoint initial = BattleCheckpoint.CreateInitial(definitions, runId, 1, StableSeed(runId));
@@ -167,14 +187,23 @@ namespace Rokas.Core
             if (SaveBlocked || CombatMode != Rokas.Core.CombatMode.ReactiveTurns || State.phase != RunPhase.Failed ||
                 State.battleCheckpoint == null || State.battleCheckpoint.attemptId == long.MaxValue) return false;
             BattleCheckpoint previous = State.battleCheckpoint;
-            CombatDefinitions definitions = ReactiveDuelDefinitions.Create(Contract, State);
+            CombatDefinitions definitions = ResolveReactiveDefinitions(previous);
             BattleCheckpoint initial = BattleCheckpoint.CreateInitial(definitions, previous.economicRunId,
                 previous.attemptId + 1, previous.seed);
             return CommitReactiveCheckpoint(PendingSaveKind.ReactiveRetry, initial, false);
         }
 
-        // Milestone A has one wave, so its wave-entry snapshot is the encounter's initial checkpoint.
-        public bool RetryWave() { return RetryEncounter(); }
+        public bool RetryWave()
+        {
+            if (SaveBlocked || CombatMode != Rokas.Core.CombatMode.ReactiveTurns ||
+                State.phase != RunPhase.Failed || State.battleCheckpoint == null ||
+                State.battleCheckpoint.attemptId == long.MaxValue) return false;
+            BattleCheckpoint previous = State.battleCheckpoint;
+            // Pre-B duel saves have no wave-entry snapshot; their only retry is the encounter entry.
+            if (previous.waveEntry == null) return RetryEncounter();
+            BattleCheckpoint retry = previous.CreateWaveRetry(previous.attemptId + 1);
+            return CommitReactiveCheckpoint(PendingSaveKind.ReactiveRetry, retry, false);
+        }
 
         public bool RetreatReactiveEncounter()
         {
@@ -335,11 +364,13 @@ namespace Rokas.Core
                     BattleCheckpoint saved = durable.battleCheckpoint;
                     return saved != null && durable.combatMode == Rokas.Core.CombatMode.ReactiveTurns &&
                         saved.economicRunId == stable.economicRunId && saved.attemptId == stable.attemptId &&
-                        saved.revision >= stable.revision;
+                        saved.revision >= stable.revision &&
+                        string.Equals(saved.selectedTargetId, stable.selectedTargetId, StringComparison.Ordinal);
                 });
             if (success && (kind == PendingSaveKind.ReactiveEntry || kind == PendingSaveKind.ReactiveRetry))
             {
-                ReactiveCombat = new ReactiveCombatSession(ReactiveDuelDefinitions.Create(Contract, State), State.battleCheckpoint.Clone());
+                ReactiveCombat = new ReactiveCombatSession(ResolveReactiveDefinitions(State.battleCheckpoint),
+                    State.battleCheckpoint.Clone());
                 ReactiveCombat.Start();
             }
             if (success) NotifyChanged();

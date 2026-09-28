@@ -57,6 +57,58 @@ namespace Rokas.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator ArenaUsesActionSpecificImportedClips()
+        {
+            var root = new GameObject("ReactiveActorClipFixture", typeof(RectTransform));
+            ReactiveCombatArena arena = null;
+            try
+            {
+                arena = new ReactiveCombatArena(new UiKit(null, null), root.GetComponent<RectTransform>());
+                arena.SetEnemies(new[] { "E1" }, null);
+                GameObject world = GameObject.Find("ReactiveCombatWorld");
+                Assert.That(world, Is.Not.Null);
+                ReactiveCombatActorVisual hunterActor = null;
+                ReactiveCombatActorVisual enemyActor = null;
+                foreach (ReactiveCombatActorVisual visual in world.GetComponentsInChildren<ReactiveCombatActorVisual>())
+                {
+                    if (visual.name == "CombatActor_Keiko") hunterActor = visual;
+                    if (visual.name == "CombatActor_Yokai") enemyActor = visual;
+                }
+                Assert.That(hunterActor, Is.Not.Null);
+                Assert.That(enemyActor, Is.Not.Null);
+                Animation hunterAnimation = hunterActor.ModelRoot.GetComponent<Animation>();
+                Animation enemyAnimation = enemyActor.ModelRoot.GetComponent<Animation>();
+                Assert.That(hunterAnimation.GetClip("Heavy"), Is.Not.Null);
+                Assert.That(enemyAnimation.GetClip("Heavy"), Is.Not.Null);
+                Assert.That(enemyAnimation.GetClip("Stagger"), Is.Not.Null);
+
+                arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
+                    actionId: "basic-action", detail: "Basic"));
+                Assert.That(hunterAnimation.IsPlaying("Attack"), Is.True);
+                arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
+                    actionId: "defend-action", detail: "Defend"));
+                yield return new WaitForSecondsRealtime(.2f);
+                Assert.That(hunterAnimation.IsPlaying("Attack"), Is.False,
+                    "Defend must stop the ordinary attack pose.");
+
+                arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
+                    actionId: "heavy-hunter", detail: "heavy"));
+                Assert.That(hunterAnimation.IsPlaying("Heavy"), Is.True);
+                arena.Present(new CombatEvent(CombatEventKind.AttackStarted,
+                    actorId: "E1", actionId: "heavy-enemy", detail: "heavy"));
+                Assert.That(enemyAnimation.IsPlaying("Heavy"), Is.True);
+                arena.Present(new CombatEvent(CombatEventKind.HitResolved,
+                    targetId: "E1", actionId: "heavy-hunter", amount: 8));
+                Assert.That(enemyAnimation.IsPlaying("Stagger"), Is.True);
+            }
+            finally
+            {
+                arena?.Dispose();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         private static void Capture(GameObject root, int width, int height, string suffix = "")
         {
             Canvas canvas = root.GetComponentInChildren<Canvas>();
