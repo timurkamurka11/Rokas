@@ -16,7 +16,8 @@ namespace Rokas.Core.ReactiveTurns
     public enum CombatEventKind
     {
         TurnStarted, CommandCommitted, AttackStarted, HitResolved, ActionSettled,
-        ForcedResponse, Victory, Defeat, Suspended, Resumed, Error
+        ForcedResponse, Victory, Defeat, Suspended, Resumed, Error,
+        WaveStarted, WaveCleared, WaveTransitionStarted, CommandCancelled
     }
 
     public sealed class CombatEvent
@@ -115,6 +116,8 @@ namespace Rokas.Core.ReactiveTurns
         public int spawnOrdinal;
         public int speed;
         public bool alive;
+        public bool active;
+        public bool anchorDelayed;
         public bool skipNextTurn;
         public int naturalTurns;
     }
@@ -152,6 +155,11 @@ namespace Rokas.Core.ReactiveTurns
         public BattleActorSnapshot[] actors;
         public BattleQueueEntrySnapshot[] queue;
         public BattleCommandSnapshot[] commands;
+        public int waveIndex;
+        public string waveInstanceId;
+        public string selectedTargetId;
+        public bool restApplied;
+        public BattleWaveEntrySnapshot waveEntry;
 
         public static BattleCheckpoint CreateInitial(CombatDefinitions definitions, string economicRunId,
             long attemptId, long seed)
@@ -165,6 +173,7 @@ namespace Rokas.Core.ReactiveTurns
                 queue = new BattleQueueEntrySnapshot[definitions.Actors.Count],
                 commands = new BattleCommandSnapshot[0]
             };
+            checkpoint.waveInstanceId = economicRunId + ":" + attemptId + ":wave:1";
             for (int i = 0; i < definitions.Actors.Count; i++)
             {
                 ActorDefinition actor = definitions.Actors[i];
@@ -172,10 +181,13 @@ namespace Rokas.Core.ReactiveTurns
                     hp = actor.MaxHp, seal = actor.MaxSeal, ap = actor.InitialAp };
                 checkpoint.queue[i] = new BattleQueueEntrySnapshot { actorId = actor.Id,
                     nextTick = actor.InitialTick, spawnOrdinal = actor.SpawnOrdinal,
-                    speed = actor.Speed, alive = true };
+                    speed = actor.Speed, alive = true,
+                    active = actor.IsHunter || definitions.Waves.Count == 0 ||
+                        definitions.Waves[0].EnemyActorIds.Contains(actor.Id) };
                 if (actor.IsHunter) { checkpoint.hunterHp = actor.MaxHp; checkpoint.hunterAp = actor.InitialAp; }
                 else if (checkpoint.enemyHp == 0) { checkpoint.enemyHp = actor.MaxHp; checkpoint.enemySeal = actor.MaxSeal; }
             }
+            checkpoint.waveEntry = BattleWaveEntrySnapshot.FromCheckpoint(checkpoint);
             return checkpoint;
         }
 
@@ -196,7 +208,8 @@ namespace Rokas.Core.ReactiveTurns
                 for (int i = 0; i < queue.Length; i++) if (queue[i] != null)
                     clone.queue[i] = new BattleQueueEntrySnapshot { actorId = queue[i].actorId,
                         nextTick = queue[i].nextTick, spawnOrdinal = queue[i].spawnOrdinal,
-                        speed = queue[i].speed, alive = queue[i].alive, skipNextTurn = queue[i].skipNextTurn,
+                        speed = queue[i].speed, alive = queue[i].alive, active = queue[i].active,
+                        anchorDelayed = queue[i].anchorDelayed, skipNextTurn = queue[i].skipNextTurn,
                         naturalTurns = queue[i].naturalTurns };
             }
             if (commands != null)
@@ -208,6 +221,7 @@ namespace Rokas.Core.ReactiveTurns
                         actionId = commands[i].actionId, newRevision = commands[i].newRevision };
             }
             OnCheckpointCloned(clone);
+            if (waveEntry != null) clone.waveEntry = waveEntry.Clone();
             return clone;
         }
 

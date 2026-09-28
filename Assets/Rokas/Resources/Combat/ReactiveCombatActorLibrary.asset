@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8b3e6fc4a8baf64da3347afde6c920f, type: 3}
+  m_Name: ReactiveCombatActorLibrary
+  m_EditorClassIdentifier: Rokas.Presentation::Rokas.Presentation.ReactiveCombatActorLibrary
+  keiko:
+    model: {fileID: 919132149155446097, guid: e7b631b390af57f4ab2a82c95b079622, type: 3}
+    material: {fileID: 2100000, guid: a7eb21dd960e73943a37f19140f63ce0, type: 2}
+    idle: {fileID: 7400000, guid: e5a163ef5767c3e41b771d0e42ead535, type: 2}
+    attack: {fileID: 7400000, guid: 3dd7118afa7b08a488198807a1b36d55, type: 2}
+    heavy: {fileID: 7400000, guid: bc317e1a774e6304a9b242217eefe44f, type: 2}
+    hit: {fileID: 0}
+    stagger: {fileID: 0}
+    death: {fileID: 0}
+    walk: {fileID: 0}
+    standingHeight: 2
+    forwardYaw: 0
+  mina:
+    model: {fileID: 919132149155446097, guid: 2574abaf510bb6d4fbd8d34111fbe549, type: 3}
+    material: {fileID: 2100000, guid: eb85fd7513569204991315f9cd84ec74, type: 2}
+    idle: {fileID: 7400000, guid: 33c2a82f9b580434bbe342946acd0610, type: 2}
+    attack: {fileID: 7400000, guid: cd5d0fa225462c84a82d1c821b13ad91, type: 2}
+    heavy: {fileID: 7400000, guid: 006ade6f1ccad204fa7f503835a9363d, type: 2}
+    hit: {fileID: 7400000, guid: b94e7bf8ffdb2574cb0c6f8ac88f6f33, type: 2}
+    stagger: {fileID: 7400000, guid: 258bc4b087533a64e9ce3b4af8b488c2, type: 2}
+    death: {fileID: 0}
+    walk: {fileID: 0}
+    standingHeight: 2
+    forwardYaw: 0
+  yokai:
+    model: {fileID: 919132149155446097, guid: 6829b90e550fced4480c255578acbf2e, type: 3}
+    material: {fileID: 2100000, guid: ce76816c2418c414b8eaa22619cc21aa, type: 2}
+    idle: {fileID: 7400000, guid: 576ad4a8390dd6347bd4fd5bfa463862, type: 2}
+    attack: {fileID: 7400000, guid: cc57d2b9f38e6d747a6a1505256271d6, type: 2}
+    heavy: {fileID: 7400000, guid: 0bab50ef231bac940a718725d605efd2, type: 2}
+    hit: {fileID: 7400000, guid: 034136f787a5af849bedf3bbbdbb2a78, type: 2}
+    stagger: {fileID: 7400000, guid: 46672f096a514f34da7814def8b9c5c1, type: 2}
+    death: {fileID: 7400000, guid: a3c3c9383fb756a419660b33c37f108b, type: 2}
+    walk: {fileID: 7400000, guid: 54808b2d7188e5043b51b3f94ab7ad20, type: 2}
+    standingHeight: 2.7
+    forwardYaw: 0

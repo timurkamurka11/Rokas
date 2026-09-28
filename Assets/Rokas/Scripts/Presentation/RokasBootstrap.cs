@@ -424,14 +424,34 @@ namespace Rokas.Presentation
         public void SubmitReactiveCommand(CommandKind kind, string skillId)
         {
             if (!CanUseReactiveCombat() || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
-            string[] targets = kind == CommandKind.Basic || kind == CommandKind.Skill
-                ? new[] { Session.Contract.enemyId } : new string[0];
+            ReactiveCombatSession combat = Session.ReactiveCombat;
+            string[] targets = new string[0];
+            if (kind == CommandKind.Basic || kind == CommandKind.Skill && skillId != "sweep")
+            {
+                string selected = combat.SelectedTargetId;
+                bool valid = false;
+                for (int i = 0; i < combat.ActiveEnemyIds.Count; i++)
+                    if (combat.ActiveEnemyIds[i] == selected) { valid = true; break; }
+                if (!valid && combat.ActiveEnemyIds.Count > 0) selected = combat.ActiveEnemyIds[0];
+                if (string.IsNullOrEmpty(selected)) return;
+                targets = new[] { selected };
+            }
             var intent = new CommandIntent(Guid.NewGuid().ToString("N"), Session.ReactiveCombat.Revision,
                 kind, skillId, targets);
             CommandResult result = Session.ReactiveCombat.SubmitCommand(intent);
             if (!result.Accepted)
                 View.Toast(result.Reason == "InsufficientAp" ? "Недостаточно AP." : "Сейчас действие недоступно.");
             View.RefreshReactiveCombat();
+        }
+
+        public void SelectReactiveTarget(string actorId)
+        {
+            if (!CanUseReactiveCombat() || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            if (Session.ReactiveCombat.SelectTarget(actorId))
+            {
+                Session.SaveReactiveCheckpoint();
+                View.RefreshReactiveCombat();
+            }
         }
 
         public void SubmitReactiveDefense(ReactivePressKind kind)
@@ -548,11 +568,15 @@ namespace Rokas.Presentation
             lastReactiveDeviceUs = now;
 
             bool defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
-            bool reactiveInputContext = defenseContext || combat.Phase == ReactivePhase.CounterWindow;
+            bool offenseContext = combat.CurrentPlayerSkillId == "heavy";
+            bool reactiveInputContext = defenseContext || offenseContext ||
+                combat.Phase == ReactivePhase.CounterWindow;
             reactiveInput.SetContext(reactiveInputContext);
             reactiveInput.SetDefenseEnabled(defenseContext);
+            reactiveInput.SetOffenseEnabled(offenseContext);
             reactiveInput.Tick();
             reactiveInput.Flush(SubmitReactiveDevicePress);
+            reactiveInput.FlushOffense(SubmitReactiveOffensePress);
             if (defenseContext)
             {
                 if (reactiveInput.IsReleased(ReactivePressKind.Dodge))
@@ -565,8 +589,11 @@ namespace Rokas.Presentation
             CombatStep step = combat.Advance(combatNowUs, combatNowUs - 40000);
             View.PresentReactiveCombatStep(step);
             defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
-            reactiveInput.SetContext(defenseContext || combat.Phase == ReactivePhase.CounterWindow);
+            offenseContext = combat.CurrentPlayerSkillId == "heavy";
+            reactiveInput.SetContext(defenseContext || offenseContext ||
+                combat.Phase == ReactivePhase.CounterWindow);
             reactiveInput.SetDefenseEnabled(defenseContext);
+            reactiveInput.SetOffenseEnabled(offenseContext);
 
             BattleCheckpoint stable = combat.GetStableCheckpoint();
             if (Session.State.battleCheckpoint == null || stable.revision > Session.State.battleCheckpoint.revision)
@@ -583,6 +610,16 @@ namespace Rokas.Presentation
             DefenseKind kind = press.Kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
             reactiveBoundCombat.SubmitDefense(new DefenseIntent("device-" + press.InputId,
                 reactiveBoundCombat.InputEpoch, kind, combatUs.Value));
+        }
+
+        private void SubmitReactiveOffensePress(ReactiveOffensePress press)
+        {
+            if (press.Epoch != reactiveInput.Epoch || reactiveClock == null || reactiveClock.IsPaused ||
+                reactiveBoundCombat == null || reactiveBoundCombat.CurrentPlayerSkillId != "heavy") return;
+            long? combatUs = reactiveClock.MapInput(press.DeviceTimeUs, reactiveClock.CurrentEpoch);
+            if (!combatUs.HasValue) return;
+            reactiveBoundCombat.SubmitOffenseTiming("offense-" + press.InputId,
+                reactiveBoundCombat.InputEpoch, combatUs.Value);
         }
 
         private void Update()

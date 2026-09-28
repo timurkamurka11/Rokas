@@ -33,6 +33,7 @@ namespace Rokas.Core.ReactiveTurns
         public string HitId { get; internal set; }
         public DefenseOutcome Outcome { get; internal set; }
         public int RawDamage { get; internal set; }
+        public bool IsHeavy { get; internal set; }
         public long ImpactUs { get; internal set; }
     }
 
@@ -184,6 +185,7 @@ namespace Rokas.Core.ReactiveTurns
                     HitId = hit.Definition.Id,
                     Outcome = hit.Attempt == null ? DefenseOutcome.Miss : hit.Attempt.Outcome,
                     RawDamage = hit.Definition.RawDamage,
+                    IsHeavy = hit.Definition.IsHeavy,
                     ImpactUs = hit.ImpactUs
                 });
             }

@@ -29,6 +29,7 @@ namespace Rokas.Core.Tests
                 LiveMessengerPolishCoreTests.RunAll();
                 ReactiveTurnsFoundationTests.RunAll();
                 ReactiveTurnsDefenseAndOffenseTests.RunAll();
+                ReactiveTurnsWavesTests.RunAll();
                 ReactiveTurnsSaveTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;

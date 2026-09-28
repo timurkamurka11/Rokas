@@ -47,6 +47,9 @@ namespace Rokas.Presentation
 
         public bool Paused { get { return transition || storageBlocked || panel == "settings"; } }
         public bool CombatHitStop { get { return mission.HitStopRemaining > 0; } }
+        public string SelectedReactiveTargetId { get { return mission.SelectedReactiveTargetId; } }
+        public int AnimatedReactiveEnemyCount { get { return mission.AnimatedEnemyCount; } }
+        public bool ReactiveActorsReady { get { return mission.AnimatedActorsReady; } }
         public void CancelCombatInput() { mission.CancelInput(); }
         public void HandleCombatInput(bool dodge, bool deflect, bool resonance) { mission.HandleInput(dodge, deflect, resonance); }
         public bool LaptopOpen { get { return panel == "laptop"; } }
@@ -90,7 +93,8 @@ namespace Rokas.Presentation
             transitions = ui.Rect(stage, "Transitions", 0, 0, 1920, 1080);
             home = new HomeView(ui, assets, session, audio, OpenPanel, Act, Travel, ToastShort);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused,
-                owner.SubmitReactiveCommand, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter, owner.RetryReactiveSave);
+                owner.SubmitReactiveCommand, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter,
+                owner.RetryReactiveSave, owner.SelectReactiveTarget);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,
                 owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
@@ -249,12 +253,18 @@ namespace Rokas.Presentation
             home.ClearReferences();
             mission.ClearReferences();
             bool otherSide = phase == RunPhase.Combat || phase == RunPhase.Sealed || phase == RunPhase.Failed;
-            background.texture = otherSide ? assets.subway : phase == RunPhase.Portal ? assets.portal : assets.home;
+            Texture2D reactiveBackground = phase == RunPhase.Combat &&
+                session.CombatMode == CombatMode.ReactiveTurns
+                ? Resources.Load<Texture2D>("CombatB/AbyssArenaBackground") : null;
+            background.texture = reactiveBackground != null ? reactiveBackground :
+                otherSide ? assets.subway : phase == RunPhase.Portal ? assets.portal : assets.home;
             audio.SetLocation(otherSide || phase == RunPhase.Portal);
             effects.SetLocation(!otherSide && phase != RunPhase.Portal, phase == RunPhase.Portal);
             if (otherSide || phase == RunPhase.Portal) mission.Build(scene);
             else home.Build(scene);
-            status.text = otherSide ? "КИСАРАГИ  /  ЗАКРЫТАЯ ПЛАТФОРМА" : phase == RunPhase.Portal ? "ГОРОД  /  ЗАБЫТОЕ СВЯТИЛИЩЕ" : "ТВОЙ ДОМ  /  НОЧЬ, ДОЖДЬ";
+            status.text = reactiveBackground != null ? "ПРОПАСТЬ  /  ИСКАЖЁННЫЙ КОНТРАКТ" :
+                otherSide ? "КИСАРАГИ  /  ЗАКРЫТАЯ ПЛАТФОРМА" :
+                phase == RunPhase.Portal ? "ГОРОД  /  ЗАБЫТОЕ СВЯТИЛИЩЕ" : "ТВОЙ ДОМ  /  НОЧЬ, ДОЖДЬ";
         }
 
         private void OnHit(CombatHit hit) { mission.OnHit(hit); }
@@ -394,6 +404,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            mission.ClearReferences();
             effects.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
