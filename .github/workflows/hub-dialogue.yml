@@ -1,0 +1,49 @@
+name: ROKAS Hub Dialogue
+
+on:
+  push:
+    branches:
+      - codex/hub-dialogue-plaque
+    paths:
+      - 'Assets/Rokas/Art/Home/HubDialogue/**'
+      - 'Assets/Rokas/Resources/RokasAssets.asset'
+      - 'Assets/Rokas/Scripts/Presentation/HomeView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasAssets.cs'
+      - 'Assets/Rokas/Scripts/Presentation/HubDialogueRuntime.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasDialogueTypewriter.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasVnRuntimePlaybackState.cs'
+      - 'Assets/Rokas/Tests/EditMode/HubDialoguePlaybackTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/HubDialoguePlayModeTests.cs'
+      - '.github/workflows/hub-dialogue.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  hub-editmode:
+    name: Hub Dialogue EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Hub Dialogue EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.HubDialoguePlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hub Dialogue EditMode
+          artifactsPath: artifacts-hub-dialogue-editmode
