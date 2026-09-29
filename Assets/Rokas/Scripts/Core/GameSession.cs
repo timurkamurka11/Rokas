@@ -332,6 +332,14 @@ namespace Rokas.Core
             NotifyChanged();
         }
 
+        public bool MarkHubGuildIntroSeen()
+        {
+            if (SaveBlocked || State.hubGuildIntroSeen) return false;
+            State.hubGuildIntroSeen = true;
+            NotifyChanged();
+            return true;
+        }
+
         private bool CommitReactiveCheckpoint(PendingSaveKind kind, BattleCheckpoint checkpoint, bool retry)
         {
             if (checkpoint == null) return false;

@@ -229,7 +229,22 @@ namespace Rokas.Presentation
 
             yield return FadeCurtain(curtain, 1f, 0f, .28f);
             if (curtain) Destroy(curtain.gameObject);
+
+            TryOpenHubGuildIntroAfterVn();
             vnIntroHomeTransition = false;
+        }
+
+        private bool TryOpenHubGuildIntroAfterVn()
+        {
+            if (saveBlocked || Session == null || View == null ||
+                Session.State.hubGuildIntroSeen)
+                return false;
+            if (!View.OpenGuildIntro())
+                return false;
+            if (!Session.MarkHubGuildIntroSeen())
+                return false;
+            SaveNow();
+            return true;
         }
 
         private void DisposeVnIntroRuntime()
