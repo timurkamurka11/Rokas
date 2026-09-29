@@ -62,9 +62,34 @@ jobs:
           checkName: Hub Dialogue EditMode
           artifactsPath: artifacts-hub-dialogue-editmode
 
+  hub-vn-regression:
+    name: Shared VN Typewriter Regression
+    needs: hub-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run shared VN runtime playback regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.RokasVnRuntimePlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Shared VN Typewriter Regression
+          artifactsPath: artifacts-hub-dialogue-vn-regression
+
   hub-playmode:
     name: Hub Dialogue PlayMode
-    needs: hub-editmode
+    needs: [hub-editmode, hub-vn-regression]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
