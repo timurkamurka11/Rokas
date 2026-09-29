@@ -63,14 +63,6 @@ namespace Rokas.Presentation
             rule.color = Color.white;
             rule.raycastTarget = false;
 
-            Action toggleLamp = () => act(() =>
-            {
-                session.SetLamp(!session.State.lampOn);
-                return true;
-            }, session.State.lampOn
-                ? "За окном кто-то есть?.."
-                : "Комната снова наполнилась теплом.");
-
             Action toggleFloorLamp = () =>
             {
                 string line = session.State.lampOn
@@ -92,7 +84,7 @@ namespace Rokas.Presentation
                     "home-window",
                     "Поезд проходит без остановки. На этот раз — настоящий."));
             ScanActionMarker(parent, "DeskLampHotspot", HomeScanGlyph.DeskLamp,
-                1151.3f, 194.9f, 52f, toggleLamp);
+                1151.3f, 194.9f, 52f, toggleFloorLamp);
             ScanActionMarker(parent, "WorkbenchHotspot", HomeScanGlyph.Swords,
                 1403.5f, 296.8f, 46f, () => open("workbench"));
 
