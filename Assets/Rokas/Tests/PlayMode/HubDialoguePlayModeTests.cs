@@ -77,7 +77,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator InspectHotspots_WindowFloorLampsAndCat_OpenHub()
+        public IEnumerator InspectHotspots_WindowFloorLampAndCat_OpenHub()
         {
             Initialize("rokas-hub-dialogue-routing-");
             yield return null;
@@ -86,7 +86,6 @@ namespace Rokas.Tests
             {
                 "WindowHotspot",
                 "LampHotspot",
-                "DeskLampHotspot",
                 "MameHotspot"
             };
 
@@ -190,6 +189,9 @@ namespace Rokas.Tests
 
         private void Initialize(string prefix)
         {
+            LogAssert.Expect(
+                LogType.Log,
+                "[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6");
             directory = Path.Combine(
                 Path.GetTempPath(),
                 prefix + Guid.NewGuid().ToString("N"));
