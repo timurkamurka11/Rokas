@@ -91,10 +91,20 @@ namespace Rokas.EditorTools
 
         public static Scene CreateUnsavedWorkshopForTests()
         {
+            return CreateUnsavedWorkshopForTests(
+                HubDialogueConfig.LoadFresh());
+        }
+
+        public static Scene CreateUnsavedWorkshopForTests(
+            HubDialogueConfigData config)
+        {
             Scene scene = EditorSceneManager.NewScene(
                 NewSceneSetup.EmptyScene,
                 NewSceneMode.Single);
-            Populate(scene, HubDialogueConfig.LoadFresh());
+            Populate(
+                scene,
+                HubDialogueConfig.NormalizeForAuthoring(
+                    config ?? new HubDialogueConfigData()));
             return scene;
         }
 
@@ -113,22 +123,26 @@ namespace Rokas.EditorTools
                 : DefaultConfigPath;
             TextAsset asset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
             if (!asset || string.IsNullOrWhiteSpace(asset.text))
-                return new HubDialogueConfigData();
+                return HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
             try
             {
                 HubDialogueConfigData data =
                     JsonUtility.FromJson<HubDialogueConfigData>(asset.text);
-                return data ?? new HubDialogueConfigData();
+                return HubDialogueConfig.NormalizeForAuthoring(
+                    data ?? new HubDialogueConfigData());
             }
             catch
             {
-                return new HubDialogueConfigData();
+                return HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
             }
         }
 
         public static void WriteUserConfig(HubDialogueConfigData config)
         {
-            if (config == null) config = new HubDialogueConfigData();
+            config = HubDialogueConfig.NormalizeForAuthoring(
+                config ?? new HubDialogueConfigData());
             string absolute = ToAbsoluteProjectPath(UserConfigPath);
             Directory.CreateDirectory(Path.GetDirectoryName(absolute));
             File.WriteAllText(
@@ -151,236 +165,386 @@ namespace Rokas.EditorTools
             Scene scene,
             HubDialogueConfigData config)
         {
-            GameObject root = new GameObject("HubDialogueWorkshop");
+            config = HubDialogueConfig.NormalizeForAuthoring(
+                config ?? new HubDialogueConfigData());
+
+            GameObject root =
+                new GameObject("HubDialogueWorkshop");
             SceneManager.MoveGameObjectToScene(root, scene);
 
-            GameObject canvasObject = new GameObject(
-                "WorkshopCanvas",
-                typeof(RectTransform),
-                typeof(Canvas),
-                typeof(CanvasScaler),
-                typeof(GraphicRaycaster));
-            canvasObject.transform.SetParent(root.transform, false);
-            Canvas canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            GameObject canvasObject =
+                new GameObject(
+                    "WorkshopCanvas",
+                    typeof(RectTransform),
+                    typeof(Canvas),
+                    typeof(CanvasScaler),
+                    typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(
+                root.transform,
+                false);
+            Canvas canvas =
+                canvasObject.GetComponent<Canvas>();
+            canvas.renderMode =
+                RenderMode.ScreenSpaceOverlay;
+
+            // Runtime uses a fixed 1920x1080 authored stage. The Workshop
+            // deliberately uses the same pixel-space model rather than a
+            // second ScaleWithScreenSize interpretation.
+            CanvasScaler scaler =
+                canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode =
-                CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.screenMatchMode =
-                CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = .5f;
+                CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.scaleFactor = 1f;
+
             RectTransform canvasRect =
                 canvasObject.GetComponent<RectTransform>();
             Stretch(canvasRect);
 
+            RectTransform preview =
+                CreateRect(
+                    canvasRect,
+                    "HubDialoguePreview",
+                    new HubDialogueRectData(
+                        0f,
+                        0f,
+                        1920f,
+                        1080f));
+            preview.anchorMin =
+                preview.anchorMax =
+                    new Vector2(.5f, .5f);
+            preview.pivot =
+                new Vector2(.5f, .5f);
+            preview.anchoredPosition =
+                Vector2.zero;
+            preview.sizeDelta =
+                new Vector2(1920f, 1080f);
+
             RawImage background =
-                CreateRaw(canvasRect, "MainRoomBackground");
+                CreateRaw(
+                    preview,
+                    "MainRoomBackground",
+                    new HubDialogueRectData(
+                        0f,
+                        0f,
+                        1920f,
+                        1080f));
             background.texture =
                 AssetDatabase.LoadAssetAtPath<Texture2D>(
                     HomeTexturePath);
             background.raycastTarget = false;
-            Stretch(background.rectTransform);
-
-            RectTransform preview =
-                CreateRect(canvasRect, "HubDialoguePreview",
-                    new HubDialogueRectData(
-                        0f, 0f, 1920f, 1080f));
 
             RectTransform layout =
-                CreateRect(
+                CreateOptionalRect(
                     preview,
                     "HubDialogueLayoutRoot",
                     config.layoutRoot);
-            layout.localScale = new Vector3(
-                config.layoutScale,
-                config.layoutScale,
-                1f);
 
             RectTransform plaqueRoot =
-                CreateRect(
-                    layout,
-                    "HubDialoguePlaque",
-                    config.plaque);
+                layout
+                    ? CreateOptionalRect(
+                        layout,
+                        "HubDialoguePlaque",
+                        config.plaque)
+                    : null;
 
-            RawImage plaque =
-                CreateRaw(
+            if (plaqueRoot)
+            {
+                RawImage plaque =
+                    CreateRaw(
+                        plaqueRoot,
+                        "PlaqueArt",
+                        config.plaqueArt);
+                if (plaque)
+                {
+                    plaque.texture =
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(
+                            PlaqueTexturePath);
+                    plaque.raycastTarget = false;
+                }
+
+                RectTransform maskRoot =
+                    CreateOptionalRect(
+                        plaqueRoot,
+                        "PortraitMask",
+                        config.portraitMask);
+                if (maskRoot)
+                {
+                    var maskGraphic =
+                        maskRoot.gameObject.AddComponent<
+                            HubDialogueOctagonMaskGraphic>();
+                    HubDialogueLayout.ApplyGraphic(
+                        maskGraphic,
+                        config.portraitMask);
+                    maskGraphic.raycastTarget = false;
+
+                    Mask mask =
+                        maskRoot.gameObject.AddComponent<Mask>();
+                    mask.showMaskGraphic = false;
+
+                    RawImage portrait =
+                        CreateRaw(
+                            maskRoot,
+                            "PortraitImage",
+                            config.portrait);
+                    if (portrait)
+                    {
+                        portrait.texture =
+                            AssetDatabase.LoadAssetAtPath<Texture2D>(
+                                PortraitTexturePath);
+                        portrait.raycastTarget = false;
+                    }
+                }
+
+                RokasAssets assets =
+                    AssetDatabase.LoadAssetAtPath<RokasAssets>(
+                        AssetsPath);
+                Font font =
+                    assets ? assets.sans : null;
+
+                Text speaker =
+                    CreateText(
+                        plaqueRoot,
+                        "SpeakerName",
+                        config.speakerName,
+                        config.speaker,
+                        config.speakerFontSize,
+                        config.speakerAlignment,
+                        font);
+                if (speaker)
+                    speaker.fontStyle =
+                        FontStyle.Bold;
+
+                Text dialogue =
+                    CreateText(
+                        plaqueRoot,
+                        "DialogueText",
+                        config.guildIntroText,
+                        config.dialogue,
+                        config.dialogueFontSize,
+                        config.dialogueAlignment,
+                        font);
+                if (dialogue)
+                    dialogue.lineSpacing =
+                        config.dialogueLineSpacing;
+
+                RawImage cover =
+                    CreateRaw(
+                        plaqueRoot,
+                        "BakedArrowCover",
+                        config.arrowCover);
+                if (cover)
+                {
+                    cover.texture =
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(
+                            PlaqueTexturePath);
+                    cover.raycastTarget = false;
+                }
+
+                RectTransform arrow =
+                    CreateOptionalRect(
+                        plaqueRoot,
+                        "CompletionArrow",
+                        config.completionArrow);
+                if (arrow)
+                {
+                    HubDialogueTriangleGraphic triangle =
+                        arrow.gameObject.AddComponent<
+                            HubDialogueTriangleGraphic>();
+                    HubDialogueLayout.ApplyGraphic(
+                        triangle,
+                        config.completionArrow);
+                    triangle.raycastTarget = false;
+                }
+
+                CreateControlGuide(
                     plaqueRoot,
-                    "PlaqueArt",
-                    config.plaqueArt);
-            plaque.texture =
-                AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    PlaqueTexturePath);
-            plaque.raycastTarget = false;
-
-            RectTransform maskRoot =
-                CreateRect(
+                    "HubMuteButton",
+                    config.muteButton,
+                    config.muteButtonEnabled);
+                CreateControlGuide(
                     plaqueRoot,
-                    "PortraitMask",
-                    config.portraitMask);
-            var maskGraphic =
-                maskRoot.gameObject.AddComponent<
-                    HubDialogueOctagonMaskGraphic>();
-            maskGraphic.color = Color.white;
-            maskGraphic.raycastTarget = false;
-            Mask mask =
-                maskRoot.gameObject.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            RawImage portrait =
-                CreateRaw(
-                    maskRoot,
-                    "PortraitImage",
-                    config.portrait);
-            portrait.texture =
-                AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    PortraitTexturePath);
-            portrait.uvRect =
-                new Rect(0f, 0f, 1f / 6f, .5f);
-            portrait.raycastTarget = false;
-
-            RokasAssets assets =
-                AssetDatabase.LoadAssetAtPath<RokasAssets>(
-                    AssetsPath);
-            Font font = assets ? assets.sans : null;
-
-            Text speaker =
-                CreateText(
+                    "HubForwardButton",
+                    config.forwardButton,
+                    config.forwardButtonEnabled);
+                CreateControlGuide(
                     plaqueRoot,
-                    "SpeakerName",
-                    config.speakerName,
-                    config.speaker,
-                    config.speakerFontSize,
-                    config.speakerAlignment,
-                    font);
-            speaker.fontStyle = FontStyle.Bold;
-            speaker.color =
-                new Color(.90f, .96f, 1f, 1f);
+                    "HubMenuButton",
+                    config.menuButton,
+                    config.menuButtonEnabled);
+            }
 
-            Text dialogue =
-                CreateText(
-                    plaqueRoot,
-                    "DialogueText",
-                    config.guildIntroText,
-                    config.dialogue,
-                    config.dialogueFontSize,
-                    config.dialogueAlignment,
-                    font);
-            dialogue.lineSpacing =
-                config.dialogueLineSpacing;
-
-            RawImage cover =
-                CreateRaw(
-                    plaqueRoot,
-                    "BakedArrowCover",
-                    config.arrowCover);
-            cover.texture =
-                AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    PlaqueTexturePath);
-            cover.uvRect = new Rect(
-                1680f / 2048f,
-                155f / 682f,
-                90f / 2048f,
-                90f / 682f);
-            cover.raycastTarget = false;
-
-            RectTransform arrow =
-                CreateRect(
-                    plaqueRoot,
-                    "CompletionArrow",
-                    config.completionArrow);
-            HubDialogueTriangleGraphic triangle =
-                arrow.gameObject.AddComponent<
-                    HubDialogueTriangleGraphic>();
-            triangle.color = Color.white;
-            triangle.raycastTarget = false;
-
-            CreateControlGuide(
-                plaqueRoot,
-                "HubMuteButton",
-                config.muteButton,
-                config.muteButtonEnabled);
-            CreateControlGuide(
-                plaqueRoot,
-                "HubForwardButton",
-                config.forwardButton,
-                config.forwardButtonEnabled);
-            CreateControlGuide(
-                plaqueRoot,
-                "HubMenuButton",
-                config.menuButton,
-                config.menuButtonEnabled);
-
-            GameObject note = new GameObject(
-                "WorkshopHelpers",
-                typeof(RectTransform));
-            note.transform.SetParent(canvasRect, false);
+            GameObject note =
+                new GameObject(
+                    "WorkshopHelpers",
+                    typeof(RectTransform));
+            note.transform.SetParent(
+                canvasRect,
+                false);
         }
 
         private static void CaptureScene(
             Scene scene,
             HubDialogueConfigData config)
         {
+            config = HubDialogueConfig.NormalizeForAuthoring(
+                config ?? new HubDialogueConfigData());
+
             GameObject root =
                 FindRoot(scene, "HubDialogueWorkshop");
             if (!root)
                 throw new InvalidOperationException(
                     "HubDialogueWorkshop root is missing.");
 
-            Transform transform = root.transform;
+            Transform transform =
+                root.transform;
+
             config.layoutRoot =
-                ReadRect(FindRect(
+                CaptureOptionalRect(
                     transform,
-                    "HubDialogueLayoutRoot"));
+                    "HubDialogueLayoutRoot",
+                    config.layoutRoot);
             RectTransform layout =
-                FindRect(transform, "HubDialogueLayoutRoot");
-            config.layoutScale =
-                Mathf.Max(.01f, layout.localScale.x);
+                FindTransform(
+                    transform,
+                    "HubDialogueLayoutRoot")
+                    as RectTransform;
+            if (layout)
+                config.layoutScale =
+                    Mathf.Max(
+                        .01f,
+                        layout.localScale.x);
+
             config.plaque =
-                ReadRect(FindRect(transform, "HubDialoguePlaque"));
+                CaptureOptionalRect(
+                    transform,
+                    "HubDialoguePlaque",
+                    config.plaque);
             config.plaqueArt =
-                ReadRect(FindRect(transform, "PlaqueArt"));
+                CaptureOptionalRect(
+                    transform,
+                    "PlaqueArt",
+                    config.plaqueArt);
             config.portraitMask =
-                ReadRect(FindRect(transform, "PortraitMask"));
+                CaptureOptionalRect(
+                    transform,
+                    "PortraitMask",
+                    config.portraitMask);
             config.portrait =
-                ReadRect(FindRect(transform, "PortraitImage"));
+                CaptureOptionalRect(
+                    transform,
+                    "PortraitImage",
+                    config.portrait);
             config.speaker =
-                ReadRect(FindRect(transform, "SpeakerName"));
+                CaptureOptionalRect(
+                    transform,
+                    "SpeakerName",
+                    config.speaker);
             config.dialogue =
-                ReadRect(FindRect(transform, "DialogueText"));
+                CaptureOptionalRect(
+                    transform,
+                    "DialogueText",
+                    config.dialogue);
             config.arrowCover =
-                ReadRect(FindRect(transform, "BakedArrowCover"));
+                CaptureOptionalRect(
+                    transform,
+                    "BakedArrowCover",
+                    config.arrowCover);
             config.completionArrow =
-                ReadRect(FindRect(transform, "CompletionArrow"));
+                CaptureOptionalRect(
+                    transform,
+                    "CompletionArrow",
+                    config.completionArrow);
             config.muteButton =
-                ReadRect(FindRect(transform, "HubMuteButton"));
+                CaptureOptionalRect(
+                    transform,
+                    "HubMuteButton",
+                    config.muteButton);
             config.forwardButton =
-                ReadRect(FindRect(transform, "HubForwardButton"));
+                CaptureOptionalRect(
+                    transform,
+                    "HubForwardButton",
+                    config.forwardButton);
             config.menuButton =
-                ReadRect(FindRect(transform, "HubMenuButton"));
+                CaptureOptionalRect(
+                    transform,
+                    "HubMenuButton",
+                    config.menuButton);
+
+            CaptureRawImage(
+                transform,
+                "PlaqueArt",
+                config.plaqueArt);
+            CaptureRawImage(
+                transform,
+                "PortraitImage",
+                config.portrait);
+            CaptureRawImage(
+                transform,
+                "BakedArrowCover",
+                config.arrowCover);
+            CaptureGraphic(
+                transform,
+                "PortraitMask",
+                config.portraitMask);
+            CaptureGraphic(
+                transform,
+                "CompletionArrow",
+                config.completionArrow);
 
             Text speaker =
-                FindRect(transform, "SpeakerName")
-                    .GetComponent<Text>();
+                FindComponent<Text>(
+                    transform,
+                    "SpeakerName");
             Text dialogue =
-                FindRect(transform, "DialogueText")
-                    .GetComponent<Text>();
-            config.speakerName = speaker.text;
-            config.speakerFontSize = speaker.fontSize;
-            config.speakerAlignment = speaker.alignment;
-            config.dialogueFontSize = dialogue.fontSize;
-            config.dialogueAlignment = dialogue.alignment;
-            config.dialogueLineSpacing = dialogue.lineSpacing;
+                FindComponent<Text>(
+                    transform,
+                    "DialogueText");
+
+            if (speaker)
+            {
+                config.speakerName =
+                    speaker.text;
+                config.speakerFontSize =
+                    speaker.fontSize;
+                config.speakerAlignment =
+                    speaker.alignment;
+                HubDialogueLayout.CaptureGraphic(
+                    speaker,
+                    config.speaker);
+            }
+
+            if (dialogue)
+            {
+                config.dialogueFontSize =
+                    dialogue.fontSize;
+                config.dialogueAlignment =
+                    dialogue.alignment;
+                config.dialogueLineSpacing =
+                    dialogue.lineSpacing;
+                HubDialogueLayout.CaptureGraphic(
+                    dialogue,
+                    config.dialogue);
+            }
+
+            Transform mute =
+                FindTransform(
+                    transform,
+                    "HubMuteButton");
+            Transform forward =
+                FindTransform(
+                    transform,
+                    "HubForwardButton");
+            Transform menu =
+                FindTransform(
+                    transform,
+                    "HubMenuButton");
 
             config.muteButtonEnabled =
-                FindRect(transform, "HubMuteButton")
-                    .gameObject.activeSelf;
+                mute && mute.gameObject.activeSelf;
             config.forwardButtonEnabled =
-                FindRect(transform, "HubForwardButton")
-                    .gameObject.activeSelf;
+                forward && forward.gameObject.activeSelf;
             config.menuButtonEnabled =
-                FindRect(transform, "HubMenuButton")
-                    .gameObject.activeSelf;
+                menu && menu.gameObject.activeSelf;
         }
 
         private static RectTransform CreateRect(
@@ -388,21 +552,38 @@ namespace Rokas.EditorTools
             string name,
             HubDialogueRectData data)
         {
+            if (!parent)
+                throw new InvalidOperationException(
+                    "Workshop parent is missing for " + name);
+
+            data =
+                data ?? new HubDialogueRectData();
+
             GameObject go =
-                new GameObject(name, typeof(RectTransform));
+                new GameObject(
+                    name,
+                    typeof(RectTransform));
             RectTransform rect =
                 go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
-            rect.anchorMin =
-                rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition =
-                new Vector2(data.x, -data.y);
-            rect.sizeDelta =
-                new Vector2(data.width, data.height);
-            rect.localEulerAngles =
-                new Vector3(0f, 0f, data.rotationZ);
+            HubDialogueLayout.Apply(rect, data);
             return rect;
+        }
+
+        private static RectTransform CreateOptionalRect(
+            Transform parent,
+            string name,
+            HubDialogueRectData data)
+        {
+            if (!parent ||
+                data == null ||
+                !data.exists)
+                return null;
+
+            return CreateRect(
+                parent,
+                name,
+                data);
         }
 
         private static RawImage CreateRaw(
@@ -411,20 +592,31 @@ namespace Rokas.EditorTools
             HubDialogueRectData data)
         {
             RectTransform rect =
-                CreateRect(parent, name, data);
+                CreateOptionalRect(
+                    parent,
+                    name,
+                    data);
+            if (!rect) return null;
+
             rect.gameObject.AddComponent<CanvasRenderer>();
-            return rect.gameObject.AddComponent<RawImage>();
+            RawImage image =
+                rect.gameObject.AddComponent<RawImage>();
+            HubDialogueLayout.ApplyRawImage(
+                image,
+                data);
+            return image;
         }
 
         private static RawImage CreateRaw(
             Transform parent,
             string name)
         {
-            GameObject go = new GameObject(
-                name,
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(RawImage));
+            GameObject go =
+                new GameObject(
+                    name,
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(RawImage));
             RectTransform rect =
                 go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
@@ -441,19 +633,28 @@ namespace Rokas.EditorTools
             Font font)
         {
             RectTransform rect =
-                CreateRect(parent, name, data);
+                CreateOptionalRect(
+                    parent,
+                    name,
+                    data);
+            if (!rect) return null;
+
             rect.gameObject.AddComponent<CanvasRenderer>();
-            Text text = rect.gameObject.AddComponent<Text>();
-            text.text = value ?? string.Empty;
+            Text text =
+                rect.gameObject.AddComponent<Text>();
+            text.text =
+                value ?? string.Empty;
             text.font = font;
             text.fontSize = fontSize;
             text.alignment = alignment;
-            text.color = Color.white;
             text.raycastTarget = false;
             text.horizontalOverflow =
                 HorizontalWrapMode.Wrap;
             text.verticalOverflow =
                 VerticalWrapMode.Overflow;
+            HubDialogueLayout.ApplyGraphic(
+                text,
+                data);
             return text;
         }
 
@@ -464,30 +665,105 @@ namespace Rokas.EditorTools
             bool active)
         {
             RectTransform rect =
-                CreateRect(parent, name, data);
+                CreateOptionalRect(
+                    parent,
+                    name,
+                    data);
+            if (!rect) return;
+
             rect.gameObject.AddComponent<CanvasRenderer>();
-            Image image = rect.gameObject.AddComponent<Image>();
-            image.color = new Color(1f, .72f, .22f, .18f);
+            Image image =
+                rect.gameObject.AddComponent<Image>();
+            image.color =
+                new Color(
+                    1f,
+                    .72f,
+                    .22f,
+                    .18f);
             image.raycastTarget = false;
-            rect.gameObject.SetActive(active);
+            rect.gameObject.SetActive(
+                active && data.active);
         }
 
         private static HubDialogueRectData ReadRect(
-            RectTransform rect)
+            RectTransform rect,
+            HubDialogueRectData data = null)
         {
             if (!rect)
                 throw new InvalidOperationException(
                     "Workshop RectTransform is missing.");
-            float z =
-                Mathf.DeltaAngle(
-                    0f,
-                    rect.localEulerAngles.z);
-            return new HubDialogueRectData(
-                rect.anchoredPosition.x,
-                -rect.anchoredPosition.y,
-                rect.sizeDelta.x,
-                rect.sizeDelta.y,
-                z);
+
+            data =
+                data ?? new HubDialogueRectData();
+            HubDialogueLayout.Capture(
+                rect,
+                data);
+            return data;
+        }
+
+        private static HubDialogueRectData CaptureOptionalRect(
+            Transform root,
+            string name,
+            HubDialogueRectData data)
+        {
+            data =
+                data ?? new HubDialogueRectData();
+
+            RectTransform rect =
+                FindTransform(root, name)
+                    as RectTransform;
+            if (!rect)
+            {
+                data.exists = false;
+                data.active = false;
+                return data;
+            }
+
+            return ReadRect(
+                rect,
+                data);
+        }
+
+        private static void CaptureRawImage(
+            Transform root,
+            string name,
+            HubDialogueRectData data)
+        {
+            RawImage image =
+                FindComponent<RawImage>(
+                    root,
+                    name);
+            if (image)
+                HubDialogueLayout.CaptureRawImage(
+                    image,
+                    data);
+        }
+
+        private static void CaptureGraphic(
+            Transform root,
+            string name,
+            HubDialogueRectData data)
+        {
+            Graphic graphic =
+                FindComponent<Graphic>(
+                    root,
+                    name);
+            if (graphic)
+                HubDialogueLayout.CaptureGraphic(
+                    graphic,
+                    data);
+        }
+
+        private static T FindComponent<T>(
+            Transform root,
+            string name)
+            where T : Component
+        {
+            Transform found =
+                FindTransform(root, name);
+            return found
+                ? found.GetComponent<T>()
+                : null;
         }
 
         private static RectTransform FindRect(

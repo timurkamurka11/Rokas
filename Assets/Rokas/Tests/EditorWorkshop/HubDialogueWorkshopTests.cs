@@ -61,12 +61,25 @@ namespace Rokas.EditorTools.Tests
                 new Vector2(271f, -166f);
             speaker.sizeDelta =
                 new Vector2(444f, 48f);
+            speaker.anchoredPosition3D =
+                new Vector3(271f, -166f, 4f);
             speaker.localEulerAngles =
-                new Vector3(0f, 0f, 3.5f);
+                new Vector3(2f, -1f, 3.5f);
+            speaker.localScale =
+                new Vector3(1.25f, .75f, 1.1f);
+            speaker.anchorMin =
+                new Vector2(.2f, .3f);
+            speaker.anchorMax =
+                new Vector2(.7f, .8f);
+            speaker.pivot =
+                new Vector2(.25f, .65f);
+
             speakerText.text = "Keiko";
             speakerText.fontSize = 24;
             speakerText.alignment =
                 TextAnchor.MiddleCenter;
+            speakerText.color =
+                new Color(.2f, .3f, .4f, .8f);
 
             HubDialogueConfigData data =
                 HubDialogueWorkshopBuilder.CaptureForTests(
@@ -77,8 +90,51 @@ namespace Rokas.EditorTools.Tests
             Assert.That(data.speaker.y, Is.EqualTo(166f));
             Assert.That(data.speaker.width, Is.EqualTo(444f));
             Assert.That(data.speaker.height, Is.EqualTo(48f));
-            Assert.That(data.speaker.rotationZ,
+            Assert.That(
+                data.speaker.anchoredZ,
+                Is.EqualTo(4f).Within(.01f));
+            Assert.That(
+                data.speaker.rotationX,
+                Is.EqualTo(2f).Within(.01f));
+            Assert.That(
+                data.speaker.rotationY,
+                Is.EqualTo(-1f).Within(.01f));
+            Assert.That(
+                data.speaker.rotationZ,
                 Is.EqualTo(3.5f).Within(.01f));
+            Assert.That(
+                data.speaker.scaleX,
+                Is.EqualTo(1.25f).Within(.01f));
+            Assert.That(
+                data.speaker.scaleY,
+                Is.EqualTo(.75f).Within(.01f));
+            Assert.That(
+                data.speaker.scaleZ,
+                Is.EqualTo(1.1f).Within(.01f));
+            Assert.That(
+                data.speaker.anchorMinX,
+                Is.EqualTo(.2f).Within(.01f));
+            Assert.That(
+                data.speaker.anchorMinY,
+                Is.EqualTo(.3f).Within(.01f));
+            Assert.That(
+                data.speaker.anchorMaxX,
+                Is.EqualTo(.7f).Within(.01f));
+            Assert.That(
+                data.speaker.anchorMaxY,
+                Is.EqualTo(.8f).Within(.01f));
+            Assert.That(
+                data.speaker.pivotX,
+                Is.EqualTo(.25f).Within(.01f));
+            Assert.That(
+                data.speaker.pivotY,
+                Is.EqualTo(.65f).Within(.01f));
+            Assert.That(
+                data.speaker.colorR,
+                Is.EqualTo(.2f).Within(.01f));
+            Assert.That(
+                data.speaker.colorA,
+                Is.EqualTo(.8f).Within(.01f));
             Assert.That(data.speakerName, Is.EqualTo("Keiko"));
             Assert.That(data.speakerFontSize, Is.EqualTo(24));
             Assert.That(
@@ -111,6 +167,10 @@ namespace Rokas.EditorTools.Tests
                     "Workshop persistence probe";
                 authored.speaker.x = 333f;
                 authored.speaker.y = 177f;
+                authored.speaker.scaleX = 1.31f;
+                authored.speaker.scaleY = .82f;
+                authored.speaker.anchorMinX = .12f;
+                authored.speaker.pivotY = .67f;
                 authored.voiceVolume = .27f;
 
                 HubDialogueWorkshopBuilder.WriteUserConfig(authored);
@@ -126,6 +186,19 @@ namespace Rokas.EditorTools.Tests
                     Is.EqualTo("Workshop persistence probe"));
                 Assert.That(runtime.speaker.x, Is.EqualTo(333f));
                 Assert.That(runtime.speaker.y, Is.EqualTo(177f));
+                Assert.That(runtime.schemaVersion, Is.EqualTo(2));
+                Assert.That(
+                    runtime.speaker.scaleX,
+                    Is.EqualTo(1.31f).Within(.001f));
+                Assert.That(
+                    runtime.speaker.scaleY,
+                    Is.EqualTo(.82f).Within(.001f));
+                Assert.That(
+                    runtime.speaker.anchorMinX,
+                    Is.EqualTo(.12f).Within(.001f));
+                Assert.That(
+                    runtime.speaker.pivotY,
+                    Is.EqualTo(.67f).Within(.001f));
                 Assert.That(
                     runtime.voiceVolume,
                     Is.EqualTo(.27f).Within(.001f));
@@ -145,6 +218,153 @@ namespace Rokas.EditorTools.Tests
                 AssetDatabase.Refresh();
                 HubDialogueConfig.ResetCache();
             }
+        }
+
+        [Test]
+        public void DeletedArrowCover_RemainsDeletedAfterCaptureAndRebuild()
+        {
+            HubDialogueConfigData authored =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
+
+            Scene scene =
+                HubDialogueWorkshopBuilder
+                    .CreateUnsavedWorkshopForTests(authored);
+            GameObject root =
+                scene.GetRootGameObjects()[0];
+
+            Transform cover =
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "BakedArrowCover");
+            Assert.That(cover, Is.Not.Null);
+
+            Object.DestroyImmediate(
+                cover.gameObject);
+
+            HubDialogueWorkshopBuilder.CaptureForTests(
+                scene,
+                authored);
+
+            Assert.That(
+                authored.arrowCover.exists,
+                Is.False,
+                "Deleting the Workshop object must create an explicit tombstone.");
+
+            Scene rebuilt =
+                HubDialogueWorkshopBuilder
+                    .CreateUnsavedWorkshopForTests(authored);
+            GameObject rebuiltRoot =
+                rebuilt.GetRootGameObjects()[0];
+
+            Assert.That(
+                HubDialogueWorkshopBuilder.FindTransform(
+                    rebuiltRoot.transform,
+                    "BakedArrowCover"),
+                Is.Null,
+                "Rebuild must not resurrect an explicitly deleted element.");
+        }
+
+        [Test]
+        public void SecondEdit_OverwritesFirstCapturedLayoutState()
+        {
+            Scene scene =
+                HubDialogueWorkshopBuilder
+                    .CreateUnsavedWorkshopForTests();
+            GameObject root =
+                scene.GetRootGameObjects()[0];
+            RectTransform plaque =
+                (RectTransform)
+                    HubDialogueWorkshopBuilder.FindTransform(
+                        root.transform,
+                        "PlaqueArt");
+
+            HubDialogueConfigData authored =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
+
+            plaque.anchoredPosition =
+                new Vector2(401f, -222f);
+            plaque.localScale =
+                new Vector3(1.2f, .9f, 1f);
+            HubDialogueWorkshopBuilder.CaptureForTests(
+                scene,
+                authored);
+
+            Assert.That(
+                authored.plaqueArt.x,
+                Is.EqualTo(401f));
+            Assert.That(
+                authored.plaqueArt.scaleX,
+                Is.EqualTo(1.2f).Within(.001f));
+
+            plaque.anchoredPosition =
+                new Vector2(477f, -255f);
+            plaque.localScale =
+                new Vector3(.83f, 1.14f, 1f);
+            HubDialogueWorkshopBuilder.CaptureForTests(
+                scene,
+                authored);
+
+            Assert.That(
+                authored.plaqueArt.x,
+                Is.EqualTo(477f),
+                "The second edit must become authoritative.");
+            Assert.That(
+                authored.plaqueArt.y,
+                Is.EqualTo(255f));
+            Assert.That(
+                authored.plaqueArt.scaleX,
+                Is.EqualTo(.83f).Within(.001f));
+            Assert.That(
+                authored.plaqueArt.scaleY,
+                Is.EqualTo(1.14f).Within(.001f));
+        }
+
+        [Test]
+        public void LegacyConfig_MigratesToV2WithoutLosingLegacyLayout()
+        {
+            HubDialogueConfigData legacy =
+                JsonUtility.FromJson<HubDialogueConfigData>(
+                    "{\"layoutScale\":1.25," +
+                    "\"arrowCover\":{" +
+                    "\"x\":1057,\"y\":249," +
+                    "\"width\":52,\"height\":54}}");
+
+            HubDialogueConfigData migrated =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    legacy);
+
+            Assert.That(
+                migrated.schemaVersion,
+                Is.EqualTo(2));
+            Assert.That(
+                migrated.arrowCover.exists,
+                Is.True);
+            Assert.That(
+                migrated.arrowCover.active,
+                Is.True);
+            Assert.That(
+                migrated.layoutRoot.scaleX,
+                Is.EqualTo(1.25f).Within(.001f));
+            Assert.That(
+                migrated.layoutRoot.anchorMinX,
+                Is.EqualTo(0f));
+            Assert.That(
+                migrated.layoutRoot.anchorMinY,
+                Is.EqualTo(1f));
+            Assert.That(
+                migrated.layoutRoot.pivotX,
+                Is.EqualTo(0f));
+            Assert.That(
+                migrated.layoutRoot.pivotY,
+                Is.EqualTo(1f));
+            Assert.That(
+                migrated.arrowCover.uvWidth,
+                Is.EqualTo(90f / 2048f).Within(.0001f));
+            Assert.That(
+                migrated.arrowCover.uvHeight,
+                Is.EqualTo(90f / 682f).Within(.0001f));
         }
 
         [Test]

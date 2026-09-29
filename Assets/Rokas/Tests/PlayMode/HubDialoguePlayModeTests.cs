@@ -233,6 +233,91 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator AuthoredLayout_IsAppliedToRuntimeWithoutReinterpretation()
+        {
+            Initialize(
+                "rokas-hub-dialogue-layout-parity-",
+                config =>
+                {
+                    config.plaqueArt.x = 421f;
+                    config.plaqueArt.y = 233f;
+                    config.plaqueArt.width = 777f;
+                    config.plaqueArt.height = 311f;
+                    config.plaqueArt.scaleX = 1.17f;
+                    config.plaqueArt.scaleY = .84f;
+                    config.plaqueArt.anchorMinX = .15f;
+                    config.plaqueArt.anchorMinY = .72f;
+                    config.plaqueArt.anchorMaxX = .15f;
+                    config.plaqueArt.anchorMaxY = .72f;
+                    config.plaqueArt.pivotX = .31f;
+                    config.plaqueArt.pivotY = .66f;
+                    config.plaqueArt.rotationZ = 4.25f;
+                });
+            yield return null;
+
+            RectTransform plaque =
+                FindRect("PlaqueArt");
+            Assert.That(plaque, Is.Not.Null);
+            Assert.That(
+                plaque.anchoredPosition.x,
+                Is.EqualTo(421f).Within(.001f));
+            Assert.That(
+                plaque.anchoredPosition.y,
+                Is.EqualTo(-233f).Within(.001f));
+            Assert.That(
+                plaque.sizeDelta.x,
+                Is.EqualTo(777f).Within(.001f));
+            Assert.That(
+                plaque.sizeDelta.y,
+                Is.EqualTo(311f).Within(.001f));
+            Assert.That(
+                plaque.localScale.x,
+                Is.EqualTo(1.17f).Within(.001f));
+            Assert.That(
+                plaque.localScale.y,
+                Is.EqualTo(.84f).Within(.001f));
+            Assert.That(
+                plaque.anchorMin.x,
+                Is.EqualTo(.15f).Within(.001f));
+            Assert.That(
+                plaque.anchorMin.y,
+                Is.EqualTo(.72f).Within(.001f));
+            Assert.That(
+                plaque.pivot.x,
+                Is.EqualTo(.31f).Within(.001f));
+            Assert.That(
+                plaque.pivot.y,
+                Is.EqualTo(.66f).Within(.001f));
+            Assert.That(
+                Mathf.DeltaAngle(
+                    0f,
+                    plaque.localEulerAngles.z),
+                Is.EqualTo(4.25f).Within(.01f));
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator ExplicitArrowCoverDeletion_IsNotRecreatedByRuntime()
+        {
+            Initialize(
+                "rokas-hub-dialogue-delete-cover-",
+                config =>
+                {
+                    config.arrowCover.exists = false;
+                    config.arrowCover.active = false;
+                });
+            yield return null;
+
+            Assert.That(
+                FindRect("BakedArrowCover"),
+                Is.Null,
+                "Runtime must respect the Workshop deletion tombstone.");
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator RepeatedInspectClick_DoesNotCreateDuplicatePlaques()
         {
             Initialize("rokas-hub-dialogue-duplicate-");
@@ -254,8 +339,15 @@ namespace Rokas.Tests
             LogAssert.NoUnexpectedReceived();
         }
 
-        private void Initialize(string prefix)
+        private void Initialize(
+            string prefix,
+            Action<HubDialogueConfigData> configure = null)
         {
+            HubDialogueConfig.ResetCache();
+            HubDialogueConfigData config =
+                HubDialogueConfig.Current;
+            configure?.Invoke(config);
+
             LogAssert.Expect(
                 LogType.Log,
                 "[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6");
@@ -286,6 +378,7 @@ namespace Rokas.Tests
             if (root != null) UnityEngine.Object.Destroy(root);
             root = null;
             bootstrap = null;
+            HubDialogueConfig.ResetCache();
             yield return null;
             if (!string.IsNullOrEmpty(directory) &&
                 Directory.Exists(directory))

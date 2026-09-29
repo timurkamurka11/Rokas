@@ -226,6 +226,7 @@ namespace Rokas.Presentation
         private readonly Text dialogue;
         private readonly HubDialogueTriangleGraphic completionTriangle;
         private readonly Vector2 triangleBasePosition;
+        private readonly Vector3 triangleBaseScale;
         private readonly Button muteButton;
         private readonly Button forwardButton;
         private readonly Button menuButton;
@@ -263,137 +264,311 @@ namespace Rokas.Presentation
                 throw new InvalidOperationException(
                     "ROKAS Hub Dialogue assets are missing from RokasAssets.");
 
-            root = ui.Rect(parent, "HubDialogueRoot", 0, 0, 1920, 1080);
+            root =
+                ui.Rect(
+                    parent,
+                    "HubDialogueRoot",
+                    0,
+                    0,
+                    1920,
+                    1080);
             root.SetAsLastSibling();
 
-            RectTransform layoutRoot = ui.Rect(
-                root, "HubDialogueLayoutRoot",
-                config.layoutRoot.x, config.layoutRoot.y,
-                config.layoutRoot.width, config.layoutRoot.height);
-            layoutRoot.localScale =
-                new Vector3(config.layoutScale, config.layoutScale, 1f);
-            ApplyRotation(layoutRoot, config.layoutRoot);
-
-            Image blocker = ui.Box(
-                root, "HubDialogueAdvanceSurface",
-                0, 0, 1920, 1080,
-                new Color(0f, 0f, 0f, 0f), true);
-            Button blockerButton = blocker.gameObject.AddComponent<Button>();
-            blockerButton.transition = Selectable.Transition.None;
-            blockerButton.targetGraphic = blocker;
-            blockerButton.navigation = new Navigation
-            {
-                mode = Navigation.Mode.None
-            };
-            blockerButton.onClick.AddListener(RequestAdvance);
-
-            RectTransform plaqueRoot = ui.Rect(
-                layoutRoot, "HubDialoguePlaque",
-                config.plaque.x, config.plaque.y,
-                config.plaque.width, config.plaque.height);
-
-            ApplyRotation(plaqueRoot, config.plaque);
-            RectTransform maskRoot = ui.Rect(
-                plaqueRoot, "PortraitMask",
-                config.portraitMask.x, config.portraitMask.y,
-                config.portraitMask.width, config.portraitMask.height);
-            ApplyRotation(maskRoot, config.portraitMask);
-            var maskGraphic =
-                maskRoot.gameObject.AddComponent<HubDialogueOctagonMaskGraphic>();
-            maskGraphic.color = Color.white;
-            maskGraphic.raycastTarget = false;
-            Mask mask = maskRoot.gameObject.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            portrait = ui.Art(
-                maskRoot, "PortraitImage",
-                assets.hubDialoguePortraitAtlas,
-                config.portrait.x, config.portrait.y,
-                config.portrait.width, config.portrait.height);
-            portrait.raycastTarget = false;
-            ApplyRotation(portrait.rectTransform, config.portrait);
-
-            RawImage plaque = ui.Art(
-                plaqueRoot, "PlaqueArt",
-                assets.hubDialoguePlaque,
-                config.plaqueArt.x, config.plaqueArt.y,
-                config.plaqueArt.width, config.plaqueArt.height);
-            plaque.raycastTarget = false;
-            ApplyRotation(plaque.rectTransform, config.plaqueArt);
-
-            speaker = ui.Label(
-                plaqueRoot, "SpeakerName", string.Empty,
-                config.speaker.x, config.speaker.y,
-                config.speaker.width, config.speaker.height,
-                config.speakerFontSize,
-                new Color(.90f, .96f, 1f, 1f),
-                false, config.speakerAlignment);
-            speaker.fontStyle = FontStyle.Bold;
-            ApplyRotation(speaker.rectTransform, config.speaker);
-
-            dialogue = ui.Label(
-                plaqueRoot, "DialogueText", string.Empty,
-                config.dialogue.x, config.dialogue.y,
-                config.dialogue.width, config.dialogue.height,
-                config.dialogueFontSize, Color.white,
-                false, config.dialogueAlignment);
-            dialogue.lineSpacing = config.dialogueLineSpacing;
-            ApplyRotation(dialogue.rectTransform, config.dialogue);
-
-            // PLANK.png contains a baked static arrow. Cover it with a nearby
-            // sample of the same panel texture, then render the shared animated
-            // completion semantic on top only when reveal is complete.
-            RawImage arrowCover = ui.Art(
-                plaqueRoot, "BakedArrowCover",
-                assets.hubDialoguePlaque,
-                config.arrowCover.x, config.arrowCover.y,
-                config.arrowCover.width, config.arrowCover.height);
-            arrowCover.uvRect = new Rect(
-                1680f / 2048f, 155f / 682f,
-                90f / 2048f, 90f / 682f);
-            arrowCover.raycastTarget = false;
-            ApplyRotation(arrowCover.rectTransform, config.arrowCover);
-
-            RectTransform triangleRect = ui.Rect(
-                plaqueRoot, "CompletionArrow",
-                config.completionArrow.x, config.completionArrow.y,
-                config.completionArrow.width, config.completionArrow.height);
-            completionTriangle =
-                triangleRect.gameObject.AddComponent<HubDialogueTriangleGraphic>();
-            completionTriangle.color = Color.white;
-            completionTriangle.raycastTarget = false;
-            ApplyRotation(triangleRect, config.completionArrow);
-            triangleBasePosition = triangleRect.anchoredPosition;
-
-            muteButton = TransparentButton(
-                plaqueRoot, "HubMuteButton",
-                config.muteButton.x, config.muteButton.y,
-                config.muteButton.width, config.muteButton.height,
-                () =>
+            Image blocker =
+                ui.Box(
+                    root,
+                    "HubDialogueAdvanceSurface",
+                    0,
+                    0,
+                    1920,
+                    1080,
+                    new Color(0f, 0f, 0f, 0f),
+                    true);
+            Button blockerButton =
+                blocker.gameObject.AddComponent<Button>();
+            blockerButton.transition =
+                Selectable.Transition.None;
+            blockerButton.targetGraphic =
+                blocker;
+            blockerButton.navigation =
+                new Navigation
                 {
-                    audio.SetVnMuted(!audio.VnMuted);
-                    Refresh();
-                });
-            muteButton.gameObject.SetActive(config.muteButtonEnabled);
-            ApplyRotation((RectTransform)muteButton.transform, config.muteButton);
-            forwardButton = TransparentButton(
-                plaqueRoot, "HubForwardButton",
-                config.forwardButton.x, config.forwardButton.y,
-                config.forwardButton.width, config.forwardButton.height,
+                    mode = Navigation.Mode.None
+                };
+            blockerButton.onClick.AddListener(
                 RequestAdvance);
-            forwardButton.gameObject.SetActive(config.forwardButtonEnabled);
-            ApplyRotation((RectTransform)forwardButton.transform, config.forwardButton);
-            menuButton = TransparentButton(
-                plaqueRoot, "HubMenuButton",
-                config.menuButton.x, config.menuButton.y,
-                config.menuButton.width, config.menuButton.height,
-                () =>
+
+            RawImage portraitValue = null;
+            Text speakerValue = null;
+            Text dialogueValue = null;
+            HubDialogueTriangleGraphic triangleValue = null;
+            Vector2 trianglePosition = Vector2.zero;
+            Vector3 triangleScale = Vector3.one;
+            Button muteValue = null;
+            Button forwardValue = null;
+            Button menuValue = null;
+
+            RectTransform layoutRoot = null;
+            if (config.layoutRoot != null &&
+                config.layoutRoot.exists)
+            {
+                layoutRoot =
+                    ui.Rect(
+                        root,
+                        "HubDialogueLayoutRoot",
+                        config.layoutRoot.x,
+                        config.layoutRoot.y,
+                        config.layoutRoot.width,
+                        config.layoutRoot.height);
+                HubDialogueLayout.Apply(
+                    layoutRoot,
+                    config.layoutRoot);
+            }
+
+            RectTransform plaqueRoot = null;
+            if (layoutRoot &&
+                config.plaque != null &&
+                config.plaque.exists)
+            {
+                plaqueRoot =
+                    ui.Rect(
+                        layoutRoot,
+                        "HubDialoguePlaque",
+                        config.plaque.x,
+                        config.plaque.y,
+                        config.plaque.width,
+                        config.plaque.height);
+                HubDialogueLayout.Apply(
+                    plaqueRoot,
+                    config.plaque);
+            }
+
+            if (plaqueRoot)
+            {
+                RectTransform maskRoot = null;
+                if (config.portraitMask != null &&
+                    config.portraitMask.exists)
                 {
-                    Close();
-                    openMenu?.Invoke();
-                });
-            menuButton.gameObject.SetActive(config.menuButtonEnabled);
-            ApplyRotation((RectTransform)menuButton.transform, config.menuButton);
+                    maskRoot =
+                        ui.Rect(
+                            plaqueRoot,
+                            "PortraitMask",
+                            config.portraitMask.x,
+                            config.portraitMask.y,
+                            config.portraitMask.width,
+                            config.portraitMask.height);
+                    HubDialogueLayout.Apply(
+                        maskRoot,
+                        config.portraitMask);
+
+                    var maskGraphic =
+                        maskRoot.gameObject.AddComponent<
+                            HubDialogueOctagonMaskGraphic>();
+                    HubDialogueLayout.ApplyGraphic(
+                        maskGraphic,
+                        config.portraitMask);
+                    maskGraphic.raycastTarget = false;
+
+                    Mask mask =
+                        maskRoot.gameObject.AddComponent<Mask>();
+                    mask.showMaskGraphic = false;
+                }
+
+                if (maskRoot &&
+                    config.portrait != null &&
+                    config.portrait.exists)
+                {
+                    portraitValue =
+                        ui.Art(
+                            maskRoot,
+                            "PortraitImage",
+                            assets.hubDialoguePortraitAtlas,
+                            config.portrait.x,
+                            config.portrait.y,
+                            config.portrait.width,
+                            config.portrait.height);
+                    portraitValue.raycastTarget = false;
+                    HubDialogueLayout.Apply(
+                        portraitValue.rectTransform,
+                        config.portrait);
+                    HubDialogueLayout.ApplyRawImage(
+                        portraitValue,
+                        config.portrait);
+                }
+
+                if (config.plaqueArt != null &&
+                    config.plaqueArt.exists)
+                {
+                    RawImage plaque =
+                        ui.Art(
+                            plaqueRoot,
+                            "PlaqueArt",
+                            assets.hubDialoguePlaque,
+                            config.plaqueArt.x,
+                            config.plaqueArt.y,
+                            config.plaqueArt.width,
+                            config.plaqueArt.height);
+                    plaque.raycastTarget = false;
+                    HubDialogueLayout.Apply(
+                        plaque.rectTransform,
+                        config.plaqueArt);
+                    HubDialogueLayout.ApplyRawImage(
+                        plaque,
+                        config.plaqueArt);
+                }
+
+                if (config.speaker != null &&
+                    config.speaker.exists)
+                {
+                    speakerValue =
+                        ui.Label(
+                            plaqueRoot,
+                            "SpeakerName",
+                            string.Empty,
+                            config.speaker.x,
+                            config.speaker.y,
+                            config.speaker.width,
+                            config.speaker.height,
+                            config.speakerFontSize,
+                            new Color(.90f, .96f, 1f, 1f),
+                            false,
+                            config.speakerAlignment);
+                    speakerValue.fontStyle =
+                        FontStyle.Bold;
+                    HubDialogueLayout.Apply(
+                        speakerValue.rectTransform,
+                        config.speaker);
+                    HubDialogueLayout.ApplyGraphic(
+                        speakerValue,
+                        config.speaker);
+                }
+
+                if (config.dialogue != null &&
+                    config.dialogue.exists)
+                {
+                    dialogueValue =
+                        ui.Label(
+                            plaqueRoot,
+                            "DialogueText",
+                            string.Empty,
+                            config.dialogue.x,
+                            config.dialogue.y,
+                            config.dialogue.width,
+                            config.dialogue.height,
+                            config.dialogueFontSize,
+                            Color.white,
+                            false,
+                            config.dialogueAlignment);
+                    dialogueValue.lineSpacing =
+                        config.dialogueLineSpacing;
+                    HubDialogueLayout.Apply(
+                        dialogueValue.rectTransform,
+                        config.dialogue);
+                    HubDialogueLayout.ApplyGraphic(
+                        dialogueValue,
+                        config.dialogue);
+                }
+
+                if (config.arrowCover != null &&
+                    config.arrowCover.exists)
+                {
+                    RawImage arrowCover =
+                        ui.Art(
+                            plaqueRoot,
+                            "BakedArrowCover",
+                            assets.hubDialoguePlaque,
+                            config.arrowCover.x,
+                            config.arrowCover.y,
+                            config.arrowCover.width,
+                            config.arrowCover.height);
+                    arrowCover.raycastTarget = false;
+                    HubDialogueLayout.Apply(
+                        arrowCover.rectTransform,
+                        config.arrowCover);
+                    HubDialogueLayout.ApplyRawImage(
+                        arrowCover,
+                        config.arrowCover);
+                }
+
+                if (config.completionArrow != null &&
+                    config.completionArrow.exists)
+                {
+                    RectTransform triangleRect =
+                        ui.Rect(
+                            plaqueRoot,
+                            "CompletionArrow",
+                            config.completionArrow.x,
+                            config.completionArrow.y,
+                            config.completionArrow.width,
+                            config.completionArrow.height);
+                    HubDialogueLayout.Apply(
+                        triangleRect,
+                        config.completionArrow);
+
+                    triangleValue =
+                        triangleRect.gameObject.AddComponent<
+                            HubDialogueTriangleGraphic>();
+                    HubDialogueLayout.ApplyGraphic(
+                        triangleValue,
+                        config.completionArrow);
+                    triangleValue.raycastTarget = false;
+                    trianglePosition =
+                        triangleRect.anchoredPosition;
+                    triangleScale =
+                        triangleRect.localScale;
+                }
+
+                muteValue =
+                    TransparentButton(
+                        plaqueRoot,
+                        "HubMuteButton",
+                        config.muteButton,
+                        () =>
+                        {
+                            audio.SetVnMuted(!audio.VnMuted);
+                            Refresh();
+                        });
+                if (muteValue)
+                    muteValue.gameObject.SetActive(
+                        config.muteButtonEnabled &&
+                        config.muteButton.active);
+
+                forwardValue =
+                    TransparentButton(
+                        plaqueRoot,
+                        "HubForwardButton",
+                        config.forwardButton,
+                        RequestAdvance);
+                if (forwardValue)
+                    forwardValue.gameObject.SetActive(
+                        config.forwardButtonEnabled &&
+                        config.forwardButton.active);
+
+                menuValue =
+                    TransparentButton(
+                        plaqueRoot,
+                        "HubMenuButton",
+                        config.menuButton,
+                        () =>
+                        {
+                            Close();
+                            openMenu?.Invoke();
+                        });
+                if (menuValue)
+                    menuValue.gameObject.SetActive(
+                        config.menuButtonEnabled &&
+                        config.menuButton.active);
+            }
+
+            portrait = portraitValue;
+            speaker = speakerValue;
+            dialogue = dialogueValue;
+            completionTriangle = triangleValue;
+            triangleBasePosition = trianglePosition;
+            triangleBaseScale = triangleScale;
+            muteButton = muteValue;
+            forwardButton = forwardValue;
+            menuButton = menuValue;
 
             root.gameObject.SetActive(false);
         }
@@ -490,9 +665,12 @@ namespace Rokas.Presentation
         {
             StopVoice();
             root.gameObject.SetActive(false);
-            speaker.text = string.Empty;
-            dialogue.text = string.Empty;
-            completionTriangle.gameObject.SetActive(false);
+            if (speaker)
+                speaker.text = string.Empty;
+            if (dialogue)
+                dialogue.text = string.Empty;
+            if (completionTriangle)
+                completionTriangle.gameObject.SetActive(false);
             setSceneInteractable(true);
             if (EventSystem.current)
                 EventSystem.current.SetSelectedGameObject(null);
@@ -502,50 +680,86 @@ namespace Rokas.Presentation
         {
             if (!playback.IsOpen) return;
 
-            speaker.text = playback.Definition != null
-                ? playback.Definition.Speaker
-                : string.Empty;
+            if (speaker)
+                speaker.text =
+                    playback.Definition != null
+                        ? playback.Definition.Speaker
+                        : string.Empty;
 
-            string full = playback.CurrentLine ?? string.Empty;
-            int visible = Mathf.Clamp(
-                playback.VisibleCharacters, 0, full.Length);
-            dialogue.text =
-                visible >= full.Length
-                    ? full
-                    : full.Substring(0, visible);
+            string full =
+                playback.CurrentLine ?? string.Empty;
+            int visible =
+                Mathf.Clamp(
+                    playback.VisibleCharacters,
+                    0,
+                    full.Length);
+            if (dialogue)
+                dialogue.text =
+                    visible >= full.Length
+                        ? full
+                        : full.Substring(0, visible);
 
-            bool showCompletion = playback.ShowCompletionIndicator;
-            completionTriangle.gameObject.SetActive(showCompletion);
+            bool showCompletion =
+                completionTriangle &&
+                config.completionArrow != null &&
+                config.completionArrow.active &&
+                playback.ShowCompletionIndicator;
+            if (completionTriangle)
+                completionTriangle.gameObject.SetActive(
+                    showCompletion);
+
             if (showCompletion)
             {
                 RokasVnTriangleUiSample sample =
-                    RokasVnRuntimeUiSemantics.SampleTriangle(uiElapsed);
+                    RokasVnRuntimeUiSemantics.SampleTriangle(
+                        uiElapsed);
                 RectTransform triangle =
-                    (RectTransform)completionTriangle.transform;
+                    (RectTransform)
+                        completionTriangle.transform;
+
                 triangle.anchoredPosition =
                     triangleBasePosition +
                     new Vector2(
                         0f,
-                        sample.OffsetY * config.completionBobScale);
+                        sample.OffsetY *
+                        config.completionBobScale);
+
                 float completionScale =
-                    1f + (sample.Scale - 1f) *
+                    1f +
+                    (sample.Scale - 1f) *
                     config.completionPulseScale;
+
+                // Pulse multiplies the authored Workshop scale instead of
+                // replacing it with a runtime-only value.
                 triangle.localScale =
                     new Vector3(
-                        completionScale,
-                        completionScale,
-                        1f);
+                        triangleBaseScale.x *
+                            completionScale,
+                        triangleBaseScale.y *
+                            completionScale,
+                        triangleBaseScale.z);
+
                 completionTriangle.color =
-                    new Color(1f, 1f, 1f, sample.Alpha);
+                    new Color(
+                        config.completionArrow.colorR,
+                        config.completionArrow.colorG,
+                        config.completionArrow.colorB,
+                        config.completionArrow.colorA *
+                            sample.Alpha);
             }
 
-            muteButton.interactable = true;
-            forwardButton.interactable = true;
-            menuButton.interactable = true;
+            if (muteButton)
+                muteButton.interactable = true;
+            if (forwardButton)
+                forwardButton.interactable = true;
+            if (menuButton)
+                menuButton.interactable = true;
         }
 
         private void RefreshPortrait(bool force)
         {
+            if (!portrait) return;
+
             HubDialoguePortraitState requested = playback.PortraitState;
             if (requested != portraitState)
             {
@@ -573,15 +787,6 @@ namespace Rokas.Presentation
                 rowY,
                 1f / 6f,
                 .5f);
-        }
-
-        private static void ApplyRotation(
-            RectTransform rect,
-            HubDialogueRectData data)
-        {
-            if (!rect || data == null) return;
-            rect.localEulerAngles =
-                new Vector3(0f, 0f, data.rotationZ);
         }
 
         private void SyncVoice()
@@ -617,44 +822,72 @@ namespace Rokas.Presentation
         private static Button TransparentButton(
             Transform parent,
             string name,
-            float x,
-            float y,
-            float width,
-            float height,
+            HubDialogueRectData data,
             Action action)
         {
-            var go = new GameObject(
-                name,
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image),
-                typeof(Button));
-            RectTransform rect = (RectTransform)go.transform;
-            rect.SetParent(parent, false);
-            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = new Vector2(x, -y);
-            rect.sizeDelta = new Vector2(width, height);
+            if (!parent ||
+                data == null ||
+                !data.exists)
+                return null;
 
-            Image image = go.GetComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, .001f);
+            var go =
+                new GameObject(
+                    name,
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button));
+            RectTransform rect =
+                (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            HubDialogueLayout.Apply(
+                rect,
+                data);
+
+            Image image =
+                go.GetComponent<Image>();
+            image.color =
+                new Color(
+                    1f,
+                    1f,
+                    1f,
+                    .001f);
             image.raycastTarget = true;
 
-            Button button = go.GetComponent<Button>();
+            Button button =
+                go.GetComponent<Button>();
             button.targetGraphic = image;
-            button.transition = Selectable.Transition.ColorTint;
-            ColorBlock colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1f, 1f, 1f, .72f);
-            colors.pressedColor = new Color(.78f, .88f, 1f, .72f);
-            colors.selectedColor = colors.highlightedColor;
+            button.transition =
+                Selectable.Transition.ColorTint;
+
+            ColorBlock colors =
+                button.colors;
+            colors.normalColor =
+                Color.white;
+            colors.highlightedColor =
+                new Color(
+                    1f,
+                    1f,
+                    1f,
+                    .72f);
+            colors.pressedColor =
+                new Color(
+                    .78f,
+                    .88f,
+                    1f,
+                    .72f);
+            colors.selectedColor =
+                colors.highlightedColor;
             colors.fadeDuration = .08f;
             button.colors = colors;
-            button.navigation = new Navigation
-            {
-                mode = Navigation.Mode.Automatic
-            };
-            button.onClick.AddListener(() => action?.Invoke());
+            button.navigation =
+                new Navigation
+                {
+                    mode =
+                        Navigation.Mode.Automatic
+                };
+            button.onClick.AddListener(
+                () => action?.Invoke());
             return button;
         }
     }
