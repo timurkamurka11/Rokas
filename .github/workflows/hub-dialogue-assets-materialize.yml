@@ -1,0 +1,130 @@
+name: ROKAS Hub Dialogue Asset Materializer
+
+on:
+  push:
+    branches:
+      - codex/hub-dialogue-plaque
+    paths:
+      - '.ci/hub-dialogue-assets/READY'
+      - '.github/workflows/hub-dialogue-assets-materialize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ hashFiles('.ci/hub-dialogue-assets/READY') != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install focused browser dependency
+        run: python -m pip install --disable-pip-version-check selenium==4.35.0
+
+      - name: Download the already-staged Hub Dialogue PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import os
+          import time
+          from pathlib import Path
+
+          from selenium import webdriver
+          from selenium.webdriver.common.by import By
+          from selenium.webdriver.support.ui import WebDriverWait
+
+          root = Path(os.environ["GITHUB_WORKSPACE"])
+          downloads = root / ".ci" / "hub-dialogue-downloads"
+          downloads.mkdir(parents=True, exist_ok=True)
+
+          options = webdriver.ChromeOptions()
+          options.add_argument("--headless=new")
+          options.add_argument("--no-sandbox")
+          options.add_argument("--disable-dev-shm-usage")
+          options.add_argument("--window-size=1440,1000")
+          options.add_experimental_option(
+              "prefs",
+              {
+                  "download.default_directory": str(downloads),
+                  "download.prompt_for_download": False,
+                  "download.directory_upgrade": True,
+                  "safebrowsing.enabled": True,
+              },
+          )
+
+          driver = webdriver.Chrome(options=options)
+          try:
+              driver.execute_cdp_cmd(
+                  "Page.setDownloadBehavior",
+                  {"behavior": "allow", "downloadPath": str(downloads)},
+              )
+              driver.get("https://firestorage.ai/en/f/IvipcMUWJiWj")
+              wait = WebDriverWait(driver, 45)
+
+              def download_named(expected_name):
+                  def buttons_ready(d):
+                      buttons = [
+                          b for b in d.find_elements(By.TAG_NAME, "button")
+                          if b.is_displayed()
+                          and b.is_enabled()
+                          and b.text.strip().lower() == "download"
+                      ]
+                      return buttons if len(buttons) >= 2 else False
+
+                  buttons = wait.until(buttons_ready)
+                  target_index = 0 if "portrait" in expected_name else 1
+                  driver.execute_script("arguments[0].click();", buttons[target_index])
+
+                  target = downloads / expected_name
+                  deadline = time.time() + 70
+                  while time.time() < deadline:
+                      partials = list(downloads.glob("*.crdownload"))
+                      if target.exists() and target.stat().st_size > 0 and not partials:
+                          return target
+                      time.sleep(1)
+                  raise RuntimeError(
+                      f"Timed out waiting for {expected_name}; "
+                      f"found {[p.name for p in downloads.iterdir()]}"
+                  )
+
+              atlas = download_named("hub_portrait_atlas_384_q.png")
+              plaque = download_named("hub_plaque_2048_q.png")
+          finally:
+              driver.quit()
+
+          expected = {
+              "hub_portrait_atlas_384_q.png":
+                  "fa7203340587ea989ffdd84912115f33fed1d62edac0c1571768d95c659ec923",
+              "hub_plaque_2048_q.png":
+                  "9c7317cf13f21af1ac79bb02a691d8c53229ccb39f5ff9cbdec4e02e2b487708",
+          }
+          for name, sha in expected.items():
+              data = (downloads / name).read_bytes()
+              actual = hashlib.sha256(data).hexdigest()
+              if actual != sha:
+                  raise RuntimeError(
+                      f"SHA256 mismatch for {name}: {actual} != {sha}"
+                  )
+
+          art = root / "Assets" / "Rokas" / "Art" / "Home" / "HubDialogue"
+          art.mkdir(parents=True, exist_ok=True)
+          (art / "KeikoHubPortraitAtlas.png").write_bytes(atlas.read_bytes())
+          (art / "HubDialoguePlaque.png").write_bytes(plaque.read_bytes())
+          PY
+
+      - name: Commit materialized Unity assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add             Assets/Rokas/Art/Home/HubDialogue/KeikoHubPortraitAtlas.png             Assets/Rokas/Art/Home/HubDialogue/HubDialoguePlaque.png
+          if git diff --cached --quiet; then
+            echo "Hub Dialogue assets already present; nothing to commit."
+            exit 0
+          fi
+          git commit -m "Hub Dialogue: materialize runtime PNG assets"
+          git push origin HEAD:codex/hub-dialogue-plaque
