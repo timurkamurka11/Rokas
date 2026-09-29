@@ -21,6 +21,8 @@ namespace Rokas.Presentation
         public Texture2D vnIconMute;
         public Texture2D vnIconPause;
         public Texture2D vnIconSkip;
+        public Texture2D hubDialoguePlaque;
+        public Texture2D hubDialoguePortraitAtlas;
         public Font sans;
         public Font serif;
         public TextAsset contract;
@@ -47,6 +49,7 @@ namespace Rokas.Presentation
                 && vnBusStopRainNight && vnNightSkyRain && vnBusStopPhoneMessageMina
                 && vnDialoguePanelKeikoDark && vnDialoguePanelMinaLight
                 && vnIconMute && vnIconPause && vnIconSkip
+                && hubDialoguePlaque && hubDialoguePortraitAtlas
                 && sans && serif && contract
                 && homeAmbience && subwayAmbience && homeMusic && missionMusic && combatMusic
                 && click && laptopMouseClick && enterGame && lampOn && lampOff

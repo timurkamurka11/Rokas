@@ -1,0 +1,109 @@
+name: ROKAS R11 Hub Dialogue
+
+on:
+  push:
+    branches:
+      - r11-finished-ui
+    paths:
+      - 'Assets/Rokas/Art/Home/HubDialogue/**'
+      - 'Assets/Rokas/Resources/RokasAssets.asset'
+      - 'Assets/Rokas/Scripts/Presentation/HomeView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasAssets.cs'
+      - 'Assets/Rokas/Scripts/Presentation/HubDialogueRuntime.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasDialogueTypewriter.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasVnRuntimePlaybackState.cs'
+      - 'Assets/Rokas/Tests/EditMode/HubDialoguePlaybackTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/HubDialoguePlayModeTests.cs'
+      - '.github/workflows/hub-dialogue-r11.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  hub-editmode:
+    name: R11 Hub Dialogue EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - name: Validate diff and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          git diff --check HEAD^ HEAD
+          test -s Assets/Rokas/Art/Home/HubDialogue/HubDialoguePlaque.png
+          test -s Assets/Rokas/Art/Home/HubDialogue/KeikoHubPortraitAtlas.png
+          grep -q 'guid: e3b0c44298fc4a0aa71f0d99d9a03f01' Assets/Rokas/Resources/RokasAssets.asset
+          grep -q 'guid: 3c1e2b9652ca49f3b13f9723146fca02' Assets/Rokas/Resources/RokasAssets.asset
+      - name: Run Hub Dialogue EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.HubDialoguePlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: R11 Hub Dialogue EditMode
+          artifactsPath: artifacts-r11-hub-editmode
+
+  hub-vn-regression:
+    name: R11 Shared VN Typewriter Regression
+    needs: hub-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run shared VN runtime regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.RokasVnRuntimePlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: R11 Shared VN Typewriter Regression
+          artifactsPath: artifacts-r11-hub-vn
+
+  hub-playmode:
+    name: R11 Hub Dialogue PlayMode
+    needs: [hub-editmode, hub-vn-regression]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Hub Dialogue PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HubDialoguePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: R11 Hub Dialogue PlayMode
+          artifactsPath: artifacts-r11-hub-playmode

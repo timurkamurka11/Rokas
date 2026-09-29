@@ -35,6 +35,7 @@ namespace Rokas.Presentation
         private readonly ContractPanels contracts;
         private readonly LaptopView laptop;
         private readonly MessagesNotificationView messageNotifications;
+        private readonly HubDialogueController hubDialogue;
         private RunPhase phase;
         private string panel;
         private bool transition;
@@ -46,7 +47,15 @@ namespace Rokas.Presentation
         public string LastMessageAudioCue { get; private set; }
         public int MessageAudioCueCount { get; private set; }
 
-        public bool Paused { get { return transition || storageBlocked || panel == "settings"; } }
+        public bool Paused
+        {
+            get
+            {
+                return transition || storageBlocked || panel == "settings" ||
+                    (hubDialogue != null && hubDialogue.IsOpen);
+            }
+        }
+        public bool HubDialogueOpen => hubDialogue != null && hubDialogue.IsOpen;
         public bool CombatHitStop { get { return mission.HitStopRemaining > 0; } }
         public string SelectedReactiveTargetId { get { return mission.SelectedReactiveTargetId; } }
         public int AnimatedReactiveEnemyCount { get { return mission.AnimatedEnemyCount; } }
@@ -98,7 +107,16 @@ namespace Rokas.Presentation
             toastOutline.effectColor = new Color(0, 0, 0, .9f);
             toastOutline.effectDistance = new Vector2(2, -2);
             transitions = ui.Rect(stage, "Transitions", 0, 0, 1920, 1080);
-            home = new HomeView(ui, assets, session, audio, OpenPanel, Act, Travel, ToastShort);
+            hubDialogue = new HubDialogueController(
+                ui,
+                stage,
+                assets,
+                audio,
+                SetSceneInteractionsEnabled,
+                OpenHubMenu);
+            home = new HomeView(
+                ui, assets, session, audio,
+                OpenPanel, Act, Travel, ToastShort, OpenHubDialogue);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused,
                 owner.SubmitReactiveCommand, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter,
                 owner.RetryReactiveSave, owner.SelectReactiveTarget);
@@ -256,6 +274,8 @@ namespace Rokas.Presentation
 
         private void RebuildScene()
         {
+            if (hubDialogue != null && hubDialogue.IsOpen)
+                hubDialogue.Close();
             ui.Clear(scene);
             home.ClearReferences();
             mission.ClearReferences();
@@ -280,7 +300,9 @@ namespace Rokas.Presentation
 
         private void OpenPanel(string value)
         {
-            if (transition || storageBlocked) return;
+            if (transition || storageBlocked ||
+                (hubDialogue != null && hubDialogue.IsOpen))
+                return;
             if (laptop.IsClosing) return;
             if (value == "laptop")
             {
@@ -296,7 +318,11 @@ namespace Rokas.Presentation
         private void RefreshPanel()
         {
             ui.Clear(panels);
-            sceneInput.interactable = string.IsNullOrEmpty(panel);
+            bool sceneEnabled =
+                string.IsNullOrEmpty(panel) &&
+                (hubDialogue == null || !hubDialogue.IsOpen);
+            sceneInput.interactable = sceneEnabled;
+            sceneInput.blocksRaycasts = sceneEnabled;
             settingsButton.interactable = string.IsNullOrEmpty(panel);
             if (string.IsNullOrEmpty(panel)) return;
             ui.Box(panels, "ModalShade", 0, 0, 1920, 1080, new Color(0, .015f, .02f, .76f), true);
@@ -327,7 +353,10 @@ namespace Rokas.Presentation
             panel = null;
             audio.SetLaptopMode(false);
             ui.Clear(panels);
-            sceneInput.interactable = true;
+            bool sceneEnabled =
+                hubDialogue == null || !hubDialogue.IsOpen;
+            sceneInput.interactable = sceneEnabled;
+            sceneInput.blocksRaycasts = sceneEnabled;
             settingsButton.interactable = true;
             if (EventSystem.current)
             {
@@ -353,6 +382,12 @@ namespace Rokas.Presentation
         public void Escape()
         {
             if (transition || storageBlocked) return;
+            if (hubDialogue != null && hubDialogue.IsOpen)
+            {
+                audio.Click();
+                hubDialogue.Close();
+                return;
+            }
             if (panel == "laptop" && laptop.BackToDesktop()) { audio.Click(); return; }
             if (string.IsNullOrEmpty(panel)) OpenPanel("settings"); else { audio.Click(); ClosePanel(); }
         }
@@ -360,6 +395,11 @@ namespace Rokas.Presentation
         public void FocusNext()
         {
             if (transition || storageBlocked || !EventSystem.current) return;
+            if (hubDialogue != null && hubDialogue.IsOpen)
+            {
+                hubDialogue.FocusNextControl();
+                return;
+            }
             var buttons = stage.GetComponentsInChildren<Button>();
             int selected = -1;
             for (int i = 0; i < buttons.Length; i++)
@@ -381,6 +421,7 @@ namespace Rokas.Presentation
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
             mission.Tick(dt, Paused);
+            hubDialogue?.Tick(dt);
             if (panel == "laptop")
             {
                 if (Time.frameCount != laptopOpenedFrame && Input.GetMouseButtonDown(0))
@@ -395,6 +436,36 @@ namespace Rokas.Presentation
                 toastTime -= dt;
                 if (toastTime <= 0) toast.text = "";
             }
+        }
+
+        private bool OpenHubDialogue(HubDialogueDefinition definition)
+        {
+            if (definition == null || transition || storageBlocked ||
+                !string.IsNullOrEmpty(panel) ||
+                hubDialogue == null || hubDialogue.IsOpen)
+                return false;
+
+            toast.text = string.Empty;
+            toastTime = 0f;
+            return hubDialogue.Open(definition);
+        }
+
+        private void OpenHubMenu()
+        {
+            if (hubDialogue != null && hubDialogue.IsOpen)
+                hubDialogue.Close();
+            OpenPanel("settings");
+        }
+
+        private void SetSceneInteractionsEnabled(bool value)
+        {
+            bool enabled =
+                value &&
+                string.IsNullOrEmpty(panel) &&
+                !transition &&
+                !storageBlocked;
+            sceneInput.interactable = enabled;
+            sceneInput.blocksRaycasts = enabled;
         }
 
         private void ToastShort(string value) { Toast(value); }
@@ -415,6 +486,7 @@ namespace Rokas.Presentation
         {
             mission.ClearReferences();
             effects.Dispose();
+            hubDialogue?.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
             session.LiveMessages.Signal -= HandleLiveMessengerSignal;

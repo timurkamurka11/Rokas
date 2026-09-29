@@ -1212,52 +1212,10 @@ namespace Rokas.Presentation
             float elapsedSeconds,
             RokasVnRuntimePresentationSnapshot values)
         {
-            if (string.IsNullOrEmpty(text)) return 0;
-            if (!values.typewriterEnabled) return text.Length;
-            if (elapsedSeconds < 0f) return 0;
-
-            float time = Mathf.Max(0f, values.typewriterLineStartDelay);
-            if (elapsedSeconds < time) return 0;
-            float characterDelay =
-                1f / Mathf.Max(
-                    .0001f, values.typewriterCharactersPerSecond) +
-                Mathf.Max(0f, values.typewriterBaseCharacterDelay);
-            int visible = 0;
-            for (int i = 0; i < text.Length; i++)
-            {
-                time += characterDelay;
-                if (elapsedSeconds + .00001f < time) return visible;
-                visible = i + 1;
-                time += GetPunctuationPause(text, i, values);
-                if (elapsedSeconds + .00001f < time) return visible;
-            }
-            return visible;
-        }
-
-        private static float GetPunctuationPause(
-            string text,
-            int index,
-            RokasVnRuntimePresentationSnapshot values)
-        {
-            char c = text[index];
-            if (c == ',') return values.typewriterCommaPause;
-            if (c == '…') return values.typewriterEllipsisPause;
-            if (c == '?') return values.typewriterQuestionPause;
-            if (c == '!') return values.typewriterExclamationPause;
-            if (c != '.') return 0f;
-
-            bool inAsciiEllipsis =
-                (index > 0 && text[index - 1] == '.') ||
-                (index + 1 < text.Length && text[index + 1] == '.');
-            if (!inAsciiEllipsis)
-                return values.typewriterPeriodPause;
-            bool isTerminalEllipsisDot =
-                index >= 2 && text[index - 1] == '.' &&
-                text[index - 2] == '.' &&
-                (index + 1 >= text.Length || text[index + 1] != '.');
-            return isTerminalEllipsisDot
-                ? values.typewriterEllipsisPause
-                : 0f;
+            return RokasDialogueTypewriter.CalculateVisibleCharacters(
+                text,
+                elapsedSeconds,
+                RokasDialogueTypewriterSettings.From(values));
         }
 
         private static float EvaluateEasing(float value, int easing)
