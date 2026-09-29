@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -213,9 +214,10 @@ namespace Rokas.Tests
             Assert.That(speakerName, Is.Not.Null);
             Assert.That(speakerName.text, Is.EqualTo("Keiko"));
             Assert.That(File.Exists(Path.Combine(directory, "save.json")), Is.True);
-            StringAssert.Contains(
-                "\"hubGuildIntroSeen\":true",
+            SaveData durable = JsonUtility.FromJson<SaveData>(
                 File.ReadAllText(Path.Combine(directory, "save.json")));
+            Assert.That(durable, Is.Not.Null);
+            Assert.That(durable.hubGuildIntroSeen, Is.True);
 
             Button advance = Find<Button>("HubForwardButton");
             advance.onClick.Invoke();
