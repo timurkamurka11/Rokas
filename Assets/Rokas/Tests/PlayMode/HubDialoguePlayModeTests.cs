@@ -15,7 +15,7 @@ namespace Rokas.Tests
         private string directory;
 
         [UnityTest]
-        public IEnumerator Window_OpensTalk_ThenCompletionAndClose()
+        public IEnumerator Window_UsesTalkThenIdle_ArrowAdvanceCloseAndCleanReopen()
         {
             Initialize("rokas-hub-dialogue-window-");
             yield return null;
@@ -33,53 +33,135 @@ namespace Rokas.Tests
             Assert.That(portrait, Is.Not.Null);
             Assert.That(portrait.texture, Is.Not.Null);
             Assert.That(portrait.uvRect.y, Is.EqualTo(0f).Within(.001f),
-                "Talk frames occupy the lower atlas row.");
+                "Typewriter start must use the Talk atlas row.");
+
+            RectTransform arrow = FindRect("CompletionArrow");
+            Assert.That(arrow, Is.Not.Null);
+            Assert.That(arrow.gameObject.activeInHierarchy, Is.False,
+                "Completion arrow must be hidden while the line is typing.");
+
+            Text dialogue = Find<Text>("DialogueText");
+            Assert.That(dialogue, Is.Not.Null);
+            string partial = dialogue.text;
 
             Button advance = Find<Button>("HubForwardButton");
             Assert.That(advance, Is.Not.Null);
             advance.onClick.Invoke();
             yield return null;
 
+            Assert.That(hub.gameObject.activeInHierarchy, Is.True,
+                "The first click while typing completes the current line only.");
+            Assert.That(dialogue.text.Length, Is.GreaterThanOrEqualTo(partial.Length));
             Assert.That(
                 portrait.uvRect.y,
                 Is.EqualTo(.5f).Within(.001f),
-                "Finishing the typewriter must switch portrait to Idle.");
-            RectTransform arrow = FindRect("CompletionArrow");
-            Assert.That(arrow, Is.Not.Null);
-            Assert.That(arrow.gameObject.activeInHierarchy, Is.True);
+                "Completed text must switch the portrait to Idle.");
+            Assert.That(arrow.gameObject.activeInHierarchy, Is.True,
+                "Completion arrow must appear only after the line is complete.");
 
             advance.onClick.Invoke();
             yield return null;
-            Assert.That(hub.gameObject.activeInHierarchy, Is.False);
+            Assert.That(hub.gameObject.activeInHierarchy, Is.False,
+                "The next click on the final completed line must close the plaque.");
+
+            window.onClick.Invoke();
+            yield return null;
+            Assert.That(hub.gameObject.activeInHierarchy, Is.True,
+                "The same inspect hotspot must reopen a clean Hub Dialogue.");
+            Assert.That(portrait.uvRect.y, Is.EqualTo(0f).Within(.001f));
+            Assert.That(arrow.gameObject.activeInHierarchy, Is.False);
+            Assert.That(dialogue.text.Length, Is.LessThan(
+                "Поезд проходит без остановки. На этот раз — настоящий.".Length));
 
             LogAssert.NoUnexpectedReceived();
         }
 
         [UnityTest]
-        public IEnumerator InspectHotspots_OpenHub_ButLaptopDoesNot()
+        public IEnumerator InspectHotspots_WindowFloorLampsAndCat_OpenHub()
         {
             Initialize("rokas-hub-dialogue-routing-");
             yield return null;
 
-            Find<Button>("LampHotspot").onClick.Invoke();
-            yield return null;
-            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.True);
-            Find<Button>("HubForwardButton").onClick.Invoke();
-            Find<Button>("HubForwardButton").onClick.Invoke();
-            yield return null;
+            string[] hotspotNames =
+            {
+                "WindowHotspot",
+                "LampHotspot",
+                "DeskLampHotspot",
+                "MameHotspot"
+            };
 
-            Find<Button>("MameHotspot").onClick.Invoke();
-            yield return null;
-            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.True);
-            Find<Button>("HubForwardButton").onClick.Invoke();
-            Find<Button>("HubForwardButton").onClick.Invoke();
+            for (int i = 0; i < hotspotNames.Length; i++)
+            {
+                Button hotspot = Find<Button>(hotspotNames[i]);
+                Assert.That(hotspot, Is.Not.Null, hotspotNames[i]);
+                hotspot.onClick.Invoke();
+                yield return null;
+
+                RectTransform hub = FindRect("HubDialogueRoot");
+                Assert.That(
+                    hub.gameObject.activeInHierarchy,
+                    Is.True,
+                    hotspotNames[i] + " must open Hub Dialogue.");
+
+                Button advance = Find<Button>("HubForwardButton");
+                advance.onClick.Invoke();
+                yield return null;
+                advance.onClick.Invoke();
+                yield return null;
+
+                Assert.That(
+                    hub.gameObject.activeInHierarchy,
+                    Is.False,
+                    hotspotNames[i] + " dialogue must close cleanly.");
+            }
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator Laptop_RemainsDirectAction_AndNeverOpensHub()
+        {
+            Initialize("rokas-hub-dialogue-laptop-");
             yield return null;
 
             Find<Button>("LaptopHotspot").onClick.Invoke();
             yield return null;
-            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.False,
-                "Laptop remains a direct action and must not open Hub Dialogue.");
-            Assert.That(FindRect("YomiLaptop"), Is.Not.Null);
+
+            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.False);
+            Assert.That(FindRect("YomiLaptop"), Is.Not.Null,
+                "Laptop hotspot must keep opening the existing laptop directly.");
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator Swords_RemainDirectAction_AndNeverOpenHub()
+        {
+            Initialize("rokas-hub-dialogue-swords-");
+            yield return null;
+
+            Find<Button>("WorkbenchHotspot").onClick.Invoke();
+            yield return null;
+
+            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.False);
+            Assert.That(FindRect("WorkbenchEyebrow"), Is.Not.Null,
+                "Swords hotspot must keep opening the existing workbench directly.");
+
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator Door_RemainsDirectAction_AndNeverOpensHub()
+        {
+            Initialize("rokas-hub-dialogue-door-");
+            yield return null;
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return null;
+
+            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.False);
+            Assert.That(FindRect("YomiLaptop"), Is.Not.Null,
+                "At the initial Home phase Door must keep its existing direct route to YOMI.");
 
             LogAssert.NoUnexpectedReceived();
         }
@@ -102,6 +184,7 @@ namespace Rokas.Tests
                     count++;
 
             Assert.That(count, Is.EqualTo(1));
+            Assert.That(FindRect("HubDialogueRoot").gameObject.activeInHierarchy, Is.True);
             LogAssert.NoUnexpectedReceived();
         }
 
