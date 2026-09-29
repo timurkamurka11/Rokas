@@ -4033,7 +4033,7 @@ MonoBehaviour:
         contentHash: f1bb0480b7defa2d13c0f2bae49c1523c7dbde32308128d9311305e40bed8183
         runtimeAssetKey: scene-media:975f7c15ded241e6b746e4498412b43d
         scaleMode: 0
-        loop: 0
+        loop: 1
       music:
         mode: 1
         assetGuid: 92fcadb7656e1c948bf753f2138d6bbb

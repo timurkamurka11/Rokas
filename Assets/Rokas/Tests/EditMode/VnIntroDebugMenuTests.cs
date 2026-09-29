@@ -15,13 +15,14 @@ namespace Rokas.Core.Tests
         public void CleanupPlayerPrefs()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.HubGuildIntroReplayKey);
             PlayerPrefs.DeleteKey(SentinelKey);
             PlayerPrefs.Save();
         }
 
         [TestCase("ROKAS/Debug/Reset VN Intro")]
         [TestCase("ROKAS/Debug/Replay VN Intro")]
-        public void MenuItemClearsOnlyIntroCompletionFlag(string menuPath)
+        public void MenuItemResetsIntroAndQueuesOneHubPromptReplay(string menuPath)
         {
             PlayerPrefs.SetInt(PlayerPrefsVnIntroProgress.CompletedKey, 1);
             PlayerPrefs.SetInt(SentinelKey, 73);
@@ -33,6 +34,10 @@ namespace Rokas.Core.Tests
 
             Assert.That(executed, Is.True, $"Menu item '{menuPath}' is not registered.");
             Assert.That(PlayerPrefs.HasKey(PlayerPrefsVnIntroProgress.CompletedKey), Is.False);
+            Assert.That(
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested,
+                Is.True,
+                "Reset/Replay VN Intro must make the post-VN guild prompt eligible exactly once.");
             Assert.That(PlayerPrefs.GetInt(SentinelKey, -1), Is.EqualTo(73));
         }
     }

@@ -233,6 +233,46 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
+        public IEnumerator GuildIntro_ResetReplayRequestOverridesSeenExactlyOnce()
+        {
+            Initialize("rokas-hub-dialogue-story-intro-reset-");
+            yield return null;
+
+            bootstrap.Session.State.hubGuildIntroSeen = true;
+            PlayerPrefsVnIntroProgress.RequestHubGuildIntroReplay();
+            PlayerPrefs.Save();
+
+            var method = typeof(RokasBootstrap).GetMethod(
+                "TryOpenHubGuildIntroAfterVn",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+
+            bool opened = (bool)method.Invoke(bootstrap, null);
+            yield return null;
+
+            Assert.That(opened, Is.True);
+            Assert.That(bootstrap.Session.State.hubGuildIntroSeen, Is.True);
+            Assert.That(bootstrap.View.HubDialogueOpen, Is.True);
+            Assert.That(
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested,
+                Is.False,
+                "The reset replay token must be consumed only after the prompt opens.");
+
+            Button advance = Find<Button>("HubForwardButton");
+            advance.onClick.Invoke();
+            yield return null;
+            advance.onClick.Invoke();
+            yield return null;
+            Assert.That(bootstrap.View.HubDialogueOpen, Is.False);
+
+            bool replayedAgain = (bool)method.Invoke(bootstrap, null);
+            Assert.That(replayedAgain, Is.False);
+            Assert.That(bootstrap.View.HubDialogueOpen, Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
         public IEnumerator AuthoredLayout_IsAppliedToRuntimeWithoutReinterpretation()
         {
             Initialize(
@@ -344,6 +384,8 @@ namespace Rokas.Tests
             Action<HubDialogueConfigData> configure = null)
         {
             HubDialogueConfig.ResetCache();
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.HubGuildIntroReplayKey);
+            PlayerPrefs.Save();
             HubDialogueConfigData config =
                 HubDialogueConfig.Current;
             configure?.Invoke(config);
@@ -379,6 +421,8 @@ namespace Rokas.Tests
             root = null;
             bootstrap = null;
             HubDialogueConfig.ResetCache();
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.HubGuildIntroReplayKey);
+            PlayerPrefs.Save();
             yield return null;
             if (!string.IsNullOrEmpty(directory) &&
                 Directory.Exists(directory))

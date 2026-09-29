@@ -205,6 +205,14 @@ namespace Rokas.EditorTools.VnUiWorkshop
                      scene.media.kind == VnSceneComposerMediaKind.ExternalGif))
                     mapped.media.runtimeAssetKey = "scene-media:" + mapped.sceneId;
 
+                // The authored opening sky predates the media-loop toggle and
+                // carries loop=false in the saved Composer project. It is a
+                // seamless ambient background and must remain animated until
+                // the scene advances, so runtime export repairs that legacy
+                // value deterministically.
+                if (RequiresOpeningSkyLoop(scene))
+                    mapped.media.loop = true;
+
                 if (scene.additionalAudioCues != null)
                 {
                     for (int i = 0; i < scene.additionalAudioCues.Count; i++)
@@ -239,6 +247,22 @@ namespace Rokas.EditorTools.VnUiWorkshop
             }
 
             return result;
+        }
+
+        private static bool RequiresOpeningSkyLoop(
+            VnSceneComposerScene scene)
+        {
+            if (scene == null || scene.media == null)
+                return false;
+            return scene.media.kind == VnSceneComposerMediaKind.ExternalVideo &&
+                string.Equals(
+                    scene.sceneId,
+                    "975f7c15ded241e6b746e4498412b43d",
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    scene.media.contentHash,
+                    "f1bb0480b7defa2d13c0f2bae49c1523c7dbde32308128d9311305e40bed8183",
+                    StringComparison.OrdinalIgnoreCase);
         }
 
         private static RokasVnRuntimePresentationSnapshot MapPresentation(

@@ -10,6 +10,8 @@ namespace Rokas.Core.Tests
         public void ClearKey()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.HubGuildIntroReplayKey);
+            PlayerPrefs.Save();
         }
 
         [Test]
@@ -27,6 +29,27 @@ namespace Rokas.Core.Tests
             Assert.That(progress.IsCompleted, Is.False);
             progress.MarkCompleted();
             Assert.That(new PlayerPrefsVnIntroProgress().IsCompleted, Is.True);
+        }
+
+        [Test]
+        public void HubGuildIntroReplayRequestIsExplicitAndConsumable()
+        {
+            Assert.That(
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested,
+                Is.False);
+
+            PlayerPrefsVnIntroProgress.RequestHubGuildIntroReplay();
+            PlayerPrefs.Save();
+
+            Assert.That(
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested,
+                Is.True);
+
+            PlayerPrefsVnIntroProgress.ConsumeHubGuildIntroReplay();
+
+            Assert.That(
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested,
+                Is.False);
         }
 
         [Test]

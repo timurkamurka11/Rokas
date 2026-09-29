@@ -9,20 +9,21 @@ namespace Rokas.EditorTools
         [MenuItem("ROKAS/Debug/Reset VN Intro")]
         private static void ResetVnIntro()
         {
-            ResetIntroFlag("ROKAS: VN intro completion flag reset.");
+            ResetIntroState("ROKAS: VN intro completion flag reset.");
         }
 
         [MenuItem("ROKAS/Debug/Replay VN Intro")]
         private static void ReplayVnIntro()
         {
-            ResetIntroFlag("ROKAS: VN intro reset; next Enter World will replay it.");
+            ResetIntroState("ROKAS: VN intro reset; next Enter World will replay it.");
         }
 
-        private static void ResetIntroFlag(string confirmation)
+        private static void ResetIntroState(string confirmation)
         {
             PlayerPrefs.DeleteKey(PlayerPrefsVnIntroProgress.CompletedKey);
+            PlayerPrefsVnIntroProgress.RequestHubGuildIntroReplay();
             PlayerPrefs.Save();
-            Debug.Log(confirmation);
+            Debug.Log(confirmation + " Hub guild intro prompt will replay after VN.");
         }
     }
 }

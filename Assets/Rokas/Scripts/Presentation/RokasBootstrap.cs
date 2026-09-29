@@ -236,14 +236,23 @@ namespace Rokas.Presentation
 
         private bool TryOpenHubGuildIntroAfterVn()
         {
+            bool replayRequested =
+                PlayerPrefsVnIntroProgress.HubGuildIntroReplayRequested;
             if (saveBlocked || Session == null || View == null ||
-                Session.State.hubGuildIntroSeen)
+                (Session.State.hubGuildIntroSeen && !replayRequested))
                 return false;
             if (!View.OpenGuildIntro())
                 return false;
-            if (!Session.MarkHubGuildIntroSeen())
-                return false;
-            SaveNow();
+
+            if (!Session.State.hubGuildIntroSeen)
+            {
+                if (!Session.MarkHubGuildIntroSeen())
+                    return false;
+                SaveNow();
+            }
+
+            if (replayRequested)
+                PlayerPrefsVnIntroProgress.ConsumeHubGuildIntroReplay();
             return true;
         }
 

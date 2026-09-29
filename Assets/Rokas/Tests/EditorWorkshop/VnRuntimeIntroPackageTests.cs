@@ -14,6 +14,71 @@ namespace Rokas.EditorTools.Tests
         private const string ProjectId = "3cc2bc9ec7974ea7a5f4d074683bed61";
 
         [Test]
+        public void ShippedOpeningSkyVideoLoopsContinuously()
+        {
+            RokasVnRuntimeIntroPackage package =
+                AssetDatabase.LoadAssetAtPath<RokasVnRuntimeIntroPackage>(
+                    RokasVnRuntimeIntroExporter.DefaultPackagePath);
+
+            Assert.That(package, Is.Not.Null);
+            Assert.That(package.Snapshot, Is.Not.Null);
+            Assert.That(package.Snapshot.scenes, Is.Not.Empty);
+
+            RokasVnRuntimeSceneSnapshot opening = package.Snapshot.scenes[0];
+            Assert.That(
+                opening.sceneId,
+                Is.EqualTo("975f7c15ded241e6b746e4498412b43d"));
+            Assert.That(
+                opening.media.displayName,
+                Does.Contain("sky_seamless_loop"));
+            Assert.That(
+                opening.media.loop,
+                Is.True,
+                "The opening seamless sky must not freeze on its final video frame.");
+        }
+
+        [Test]
+        public void LegacyOpeningSkyLoopFalseIsRepairedDuringRuntimeExport()
+        {
+            var project = new VnSceneComposerProject
+            {
+                projectId = ProjectId,
+                title = "Opening loop fixture"
+            };
+            project.scenes.Clear();
+
+            var scene = new VnSceneComposerScene
+            {
+                sceneId = "975f7c15ded241e6b746e4498412b43d",
+                label = "Opening",
+                media = new VnSceneComposerMediaReference
+                {
+                    kind = VnSceneComposerMediaKind.ExternalVideo,
+                    displayName = "sky_seamless_loop-enhanced.mp4",
+                    contentHash =
+                        "f1bb0480b7defa2d13c0f2bae49c1523c7dbde32308128d9311305e40bed8183",
+                    loop = false
+                },
+                isTerminal = true
+            };
+            scene.dialogueBeats.Clear();
+            scene.dialogueBeats.Add(new VnSceneComposerDialogueBeat
+            {
+                speaker = "Keiko",
+                text = "Opening"
+            });
+            project.scenes.Add(scene);
+
+            RokasVnRuntimeIntroSnapshot snapshot =
+                RokasVnRuntimeIntroExporter.BuildSnapshot(
+                    project,
+                    "opening-loop-fixture");
+
+            Assert.That(snapshot.scenes.Count, Is.EqualTo(1));
+            Assert.That(snapshot.scenes[0].media.loop, Is.True);
+        }
+
+        [Test]
         public void RuntimePresentationContractCarriesOracleBounceCharacterAndExpressionTimings()
         {
             string[] required =
