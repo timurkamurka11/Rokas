@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: 892cd5852cfe5641acf1657b28d04c33
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 32
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: DejaVu Serif
+  fontNames:
+  - DejaVu Serif
+  fallbackFontReferences: []
+  customCharacters:
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: DejaVu license in Docs/Licenses/DejaVu.txt
+  assetBundleName:
+  assetBundleVariant:

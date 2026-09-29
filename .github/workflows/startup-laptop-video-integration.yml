@@ -1,0 +1,90 @@
+name: ROKAS Startup Laptop Video Integration
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - .ci/startup-laptop-video-run
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: startup-laptop-video-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-playmode:
+    name: Focused Startup/Laptop Video PlayMode
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: StartupLaptopVideo-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            StartupLaptopVideo-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run focused PlayMode tests
+        id: focused
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.StartupLaptopVideoPlayModeTests -force-d3d11 -force-driver-type-warp
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Startup Laptop Video Focused Tests
+
+      - name: Require durable 6-test XML
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/playmode-results.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          path = 'artifacts/playmode-results.xml'
+          root = ET.parse(path).getroot()
+          total = int(root.attrib.get('total', '-1'))
+          passed = int(root.attrib.get('passed', '-1'))
+          failed = int(root.attrib.get('failed', '-1'))
+          skipped = int(root.attrib.get('skipped', '-1'))
+          print(f'FOCUSED_XML total={total} passed={passed} failed={failed} skipped={skipped}')
+          if (total, passed, failed, skipped) != (6, 6, 0, 0):
+              raise SystemExit('Focused gate must contain exactly 6/6 passing tests')
+          PY
+
+      - name: Preserve post-test git state
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p verification
+          git rev-parse HEAD > verification/head.txt
+          git rev-parse HEAD^{tree} > verification/tree.txt
+          git status --short --untracked-files=all > verification/git-status.txt
+          git diff --check > verification/git-diff-check.txt || true
+          git diff > verification/git-diff.txt
+
+      - name: Upload focused evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-focused-evidence
+          path: |
+            ${{ steps.focused.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn

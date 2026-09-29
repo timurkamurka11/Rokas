@@ -1,0 +1,18 @@
+{
+  "D:\\Rokas\\Rokas\\.worktrees\\home-unified-light-toggle\\Assets\\Rokas\\Art\\Home\\ApartmentNight.png": {
+    "dimensions": [
+      1672,
+      941
+    ],
+    "sha256": "3802d399a961488fe9e2b36472f015fa5dea5a1292fcb69a89bd6c7c1a2b3e5d",
+    "bytes": 2528853
+  },
+  "D:\\Rokas\\Rokas\\.worktrees\\home-unified-light-toggle\\Assets\\Rokas\\Resources\\Home\\ApartmentNightLightOff.png": {
+    "dimensions": [
+      1672,
+      941
+    ],
+    "sha256": "51a8faba612a8cf64b48c727ea8e38fe3edff4b52d64c4d747480cc58350d028",
+    "bytes": 2109309
+  }
+}

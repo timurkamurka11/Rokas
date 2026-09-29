@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: ae0881c89fe14dfa859e1705b752765f
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 44100
+    compressionFormat: 1
+    quality: 0.9
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: Derived runtime asset from LAMP OFF.mp3 SHA256 5173b4f44341fc4c2bae6cf1ebd463f7fb588a02183e76235d1f97e98ff40d01
+  assetBundleName:
+  assetBundleVariant:

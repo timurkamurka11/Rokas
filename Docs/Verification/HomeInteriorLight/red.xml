@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="8" result="Failed(Child)" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3,636216">
+  <test-suite type="TestSuite" id="1083" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="62" result="Failed" site="Child" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3.636216" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1079" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas/.worktrees/home-unified-light-toggle/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="62" result="Failed" site="Child" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3.623091" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33472" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1080" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="62" result="Failed" site="Child" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3.621781" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1081" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="62" result="Failed" site="Child" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3.620906" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1035" name="HomeWeather3PlayModeTests" fullname="Rokas.Tests.HomeWeather3PlayModeTests" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" testcasecount="8" result="Failed" site="Child" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:12Z" duration="3.617341" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1042" name="AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" fullname="Rokas.Tests.HomeWeather3PlayModeTests.AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" methodname="AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1185599654" result="Passed" start-time="2026-09-09 23:17:08Z" end-time="2026-09-09 23:17:08Z" duration="0.285679" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="ForcedLightningUsesMultipleIndependentEnvironmentalSources" fullname="Rokas.Tests.HomeWeather3PlayModeTests.ForcedLightningUsesMultipleIndependentEnvironmentalSources" methodname="ForcedLightningUsesMultipleIndependentEnvironmentalSources" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1082719347" result="Passed" start-time="2026-09-09 23:17:09Z" end-time="2026-09-09 23:17:09Z" duration="0.134362" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" methodname="LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1042145119" result="Failed" start-time="2026-09-09 23:17:09Z" end-time="2026-09-09 23:17:10Z" duration="1.640717" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  OFF must remove the baked practical light from the room artwork.
+  Expected: not same as <ApartmentNight (UnityEngine.Texture2D)>
+  But was:  <ApartmentNight (UnityEngine.Texture2D)>
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.HomeWeather3PlayModeTests+<LampButtonControlsBakedInteriorAndRestoresApprovedOnArt>d__2.MoveNext () [0x00163] in D:\Rokas\Rokas\.worktrees\home-unified-light-toggle\Assets\Rokas\Tests\PlayMode\HomeWeather3PlayModeTests.cs:53
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+            </test-case>
+            <test-case id="1039" name="LampOffDoesNotUseFullStageFlatDarknessCard" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffDoesNotUseFullStageFlatDarknessCard" methodname="LampOffDoesNotUseFullStageFlatDarknessCard" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1399730944" result="Passed" start-time="2026-09-09 23:17:10Z" end-time="2026-09-09 23:17:10Z" duration="0.091117" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Weather 3 may remove the legacy LampMood surface entirely.]]></message>
+              </reason>
+            </test-case>
+            <test-case id="1038" name="LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" methodname="LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="572749902" result="Failed" start-time="2026-09-09 23:17:10Z" end-time="2026-09-09 23:17:12Z" duration="1.195939" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Expected: 0
+  But was:  0.00632987684f
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.HomeWeather3PlayModeTests+<LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers>d__4.MoveNext () [0x00355] in D:\Rokas\Rokas\.worktrees\home-unified-light-toggle\Assets\Rokas\Tests\PlayMode\HomeWeather3PlayModeTests.cs:133
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+            </test-case>
+            <test-case id="1037" name="LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" methodname="LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1901444750" result="Failed" start-time="2026-09-09 23:17:12Z" end-time="2026-09-09 23:17:12Z" duration="0.068797" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  OFF must leave no residual warm practical contribution.
+  Expected: 0
+  But was:  0.00626755645f
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.HomeWeather3PlayModeTests+<LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent>d__3.MoveNext () [0x0008d] in D:\Rokas\Rokas\.worktrees\home-unified-light-toggle\Assets\Rokas\Tests\PlayMode\HomeWeather3PlayModeTests.cs:72
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+            </test-case>
+            <test-case id="1043" name="Weather3PreservesBoundedRigAndStationaryLaptopHotspot" fullname="Rokas.Tests.HomeWeather3PlayModeTests.Weather3PreservesBoundedRigAndStationaryLaptopHotspot" methodname="Weather3PreservesBoundedRigAndStationaryLaptopHotspot" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="646887517" result="Passed" start-time="2026-09-09 23:17:12Z" end-time="2026-09-09 23:17:12Z" duration="0.108243" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1040" name="WetGlassAndAtmosphereUseIndependentTextureSources" fullname="Rokas.Tests.HomeWeather3PlayModeTests.WetGlassAndAtmosphereUseIndependentTextureSources" methodname="WetGlassAndAtmosphereUseIndependentTextureSources" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1077803337" result="Passed" start-time="2026-09-09 23:17:12Z" end-time="2026-09-09 23:17:12Z" duration="0.074950" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\home-light-evidence\red.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

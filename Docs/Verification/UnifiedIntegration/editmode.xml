@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="33" result="Passed" total="33" passed="33" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0,3116145">
+  <test-suite type="TestSuite" id="1000" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="33" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.311615" total="33" passed="33" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1036" name="Rokas.Core.EditModeTests.dll" fullname="D:/Rokas/unified-integration/Library/ScriptAssemblies/Rokas.Core.EditModeTests.dll" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.237126" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="41076" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1037" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.236721" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1038" name="Core" fullname="Rokas.Core" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.236610" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1039" name="Tests" fullname="Rokas.Core.Tests" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.233201" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="CombatFoundationTests" fullname="Rokas.Core.Tests.CombatFoundationTests" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.052736" total="23" passed="23" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="ParameterizedMethod" id="1025" name="ApprovedCombatBehavior" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.048066" total="23" passed="23" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1002" name="ApprovedCombatBehavior(&quot;Combo&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Combo&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1020105229" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.023378" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1003" name="ApprovedCombatBehavior(&quot;Spam&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Spam&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="764323872" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000750" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1004" name="ApprovedCombatBehavior(&quot;ComboExpiry&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;ComboExpiry&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1592170437" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000547" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1005" name="ApprovedCombatBehavior(&quot;EarlyCharge&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;EarlyCharge&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="2096316933" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.002088" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1006" name="ApprovedCombatBehavior(&quot;Charged&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Charged&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="253014731" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000504" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1007" name="ApprovedCombatBehavior(&quot;PerfectCut&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;PerfectCut&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="2091845549" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000273" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1008" name="ApprovedCombatBehavior(&quot;OverheldCharge&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;OverheldCharge&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="637929749" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000160" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1009" name="ApprovedCombatBehavior(&quot;Dodge&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Dodge&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1252578795" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000653" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1010" name="ApprovedCombatBehavior(&quot;Deflect&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Deflect&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="2114317498" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000404" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1011" name="ApprovedCombatBehavior(&quot;DefenseCooldown&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;DefenseCooldown&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="337588779" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000455" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1012" name="ApprovedCombatBehavior(&quot;SealBreak&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;SealBreak&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1428850415" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000389" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1013" name="ApprovedCombatBehavior(&quot;RitualSuccess&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualSuccess&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="2122444788" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000690" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1014" name="ApprovedCombatBehavior(&quot;RitualReleaseFailure&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualReleaseFailure&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="68090153" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000353" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1015" name="ApprovedCombatBehavior(&quot;RitualOrderFailure&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualOrderFailure&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1833806026" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000264" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1016" name="ApprovedCombatBehavior(&quot;RitualTimeout&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RitualTimeout&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="168164752" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000191" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1017" name="ApprovedCombatBehavior(&quot;Resonance&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Resonance&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1027588483" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000538" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1018" name="ApprovedCombatBehavior(&quot;ResonanceExpiry&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;ResonanceExpiry&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="170793518" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000280" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1019" name="ApprovedCombatBehavior(&quot;Phases&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;Phases&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="754423511" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000290" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1020" name="ApprovedCombatBehavior(&quot;CancelCharge&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;CancelCharge&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1183594339" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000267" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1021" name="ApprovedCombatBehavior(&quot;RetryReset&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;RetryReset&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="840427787" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.001905" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1022" name="ApprovedCombatBehavior(&quot;InactiveGuards&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;InactiveGuards&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1270164929" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000216" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1023" name="ApprovedCombatBehavior(&quot;TickPartition&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;TickPartition&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="1394035707" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000206" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1024" name="ApprovedCombatBehavior(&quot;CancelledCombo&quot;)" fullname="Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(&quot;CancelledCombo&quot;)" methodname="ApprovedCombatBehavior" classname="Rokas.Core.Tests.CombatFoundationTests" runstate="Runnable" seed="411803679" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000211" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestFixture" id="1026" name="FirstLoopDomainTests" fullname="Rokas.Core.Tests.FirstLoopDomainTests" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.013975" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1029" name="CombatReloadPreservesHealthWithoutLegacyAutoDamage" fullname="Rokas.Core.Tests.FirstLoopDomainTests.CombatReloadPreservesHealthWithoutLegacyAutoDamage" methodname="CombatReloadPreservesHealthWithoutLegacyAutoDamage" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="30937573" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.008248" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="ContractRewardCannotBeClaimedTwice" fullname="Rokas.Core.Tests.FirstLoopDomainTests.ContractRewardCannotBeClaimedTwice" methodname="ContractRewardCannotBeClaimedTwice" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="1673509111" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.002481" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="HomeCannotSkipPhaseGuardIntoCombat" fullname="Rokas.Core.Tests.FirstLoopDomainTests.HomeCannotSkipPhaseGuardIntoCombat" methodname="HomeCannotSkipPhaseGuardIntoCombat" classname="Rokas.Core.Tests.FirstLoopDomainTests" runstate="Runnable" seed="204552859" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.001548" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1030" name="MessagesYarnTests" fullname="Rokas.Core.Tests.MessagesYarnTests" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.165443" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1032" name="KaitoDetailsBranchEmitsChoicesAndCoordinates" fullname="Rokas.Core.Tests.MessagesYarnTests.KaitoDetailsBranchEmitsChoicesAndCoordinates" methodname="KaitoDetailsBranchEmitsChoicesAndCoordinates" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" seed="346780503" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.142675" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="KaitoProjectImportsAndContainsStartNode" fullname="Rokas.Core.Tests.MessagesYarnTests.KaitoProjectImportsAndContainsStartNode" methodname="KaitoProjectImportsAndContainsStartNode" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" seed="391149096" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.004157" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1033" name="KaitoSkepticBranchContinuesDifferently" fullname="Rokas.Core.Tests.MessagesYarnTests.KaitoSkepticBranchContinuesDifferently" methodname="KaitoSkepticBranchContinuesDifferently" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" seed="1530060458" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.005153" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="ProductionControllerRejectsMissingNodeWithVisibleIdentity" fullname="Rokas.Core.Tests.MessagesYarnTests.ProductionControllerRejectsMissingNodeWithVisibleIdentity" methodname="ProductionControllerRejectsMissingNodeWithVisibleIdentity" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" seed="120097194" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.011601" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Messages dialogue cannot start [contact=kaito, node=Missing_Node]: node was not found in the bound ROKAS Yarn project.
+]]></output>
+              </test-case>
+              <test-case id="1034" name="ProductionYarnAdapterExistsAndRejectsMissingNodeVisibly" fullname="Rokas.Core.Tests.MessagesYarnTests.ProductionYarnAdapterExistsAndRejectsMissingNodeVisibly" methodname="ProductionYarnAdapterExistsAndRejectsMissingNodeVisibly" classname="Rokas.Core.Tests.MessagesYarnTests" runstate="Runnable" seed="1260117668" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.000452" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1043" name="Rokas.SerializationTests.dll" fullname="D:/Rokas/unified-integration/Library/ScriptAssemblies/Rokas.SerializationTests.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.064636" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="41076" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1044" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.064409" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1045" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.064287" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1040" name="UnitySaveTests" fullname="Rokas.Tests.UnitySaveTests" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.064164" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1042" name="PartialJsonCannotReplaceAValidBackup" fullname="Rokas.Tests.UnitySaveTests.PartialJsonCannotReplaceAValidBackup" methodname="PartialJsonCannotReplaceAValidBackup" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="1367649416" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.049818" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="UnityJsonRestoresAcceptedContractAndPendingPayment" fullname="Rokas.Tests.UnitySaveTests.UnityJsonRestoresAcceptedContractAndPendingPayment" methodname="UnityJsonRestoresAcceptedContractAndPendingPayment" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="967249456" result="Passed" start-time="2026-09-09 13:43:26Z" end-time="2026-09-09 13:43:26Z" duration="0.012486" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:/Rokas/unified-integration-evidence/unified-final-editmode-2.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

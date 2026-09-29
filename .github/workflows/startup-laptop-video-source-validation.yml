@@ -1,0 +1,122 @@
+name: ROKAS Startup Laptop Video Source Validation
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - .github/workflows/startup-laptop-video-source-validation.yml
+      - .ci/startup-laptop-video-source-validation
+
+permissions:
+  contents: read
+
+jobs:
+  source-media-validation:
+    name: Source Media SHA + ffprobe + Full Decode
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v7
+
+      - name: Ensure ffmpeg tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Validate exact source media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p source-media-validation/reference-frames
+
+          STARTUP='Assets/StreamingAssets/RokasVideo/StartupPreview.mp4'
+          LAPTOP='Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4'
+          STARTUP_SHA='28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
+          LAPTOP_SHA='111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
+
+          test -f "$STARTUP"
+          test -f "$LAPTOP"
+          echo "$STARTUP_SHA  $STARTUP" | sha256sum -c -
+          echo "$LAPTOP_SHA  $LAPTOP" | sha256sum -c -
+          sha256sum "$STARTUP" "$LAPTOP" | tee source-media-validation/sha256.txt
+
+          ffprobe -v error -show_streams -show_format -of json "$STARTUP" > source-media-validation/startup-ffprobe.json
+          ffprobe -v error -show_streams -show_format -of json "$LAPTOP" > source-media-validation/laptop-ffprobe.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          cases = [
+              ('startup', Path('source-media-validation/startup-ffprobe.json'), 1280, 720, 9.900023),
+              ('laptop', Path('source-media-validation/laptop-ffprobe.json'), 3840, 2160, 3.668005),
+          ]
+          lines = []
+          for label, path, width, height, duration in cases:
+              data = json.loads(path.read_text())
+              streams = data.get('streams', [])
+              video = next((s for s in streams if s.get('codec_type') == 'video'), None)
+              audio = next((s for s in streams if s.get('codec_type') == 'audio'), None)
+              if video is None:
+                  raise SystemExit(f'{label}: video stream missing')
+              if audio is None:
+                  raise SystemExit(f'{label}: audio stream missing')
+              if video.get('codec_name') != 'h264':
+                  raise SystemExit(f"{label}: expected h264, got {video.get('codec_name')}")
+              if int(video.get('width', -1)) != width or int(video.get('height', -1)) != height:
+                  raise SystemExit(f"{label}: expected {width}x{height}, got {video.get('width')}x{video.get('height')}")
+              if audio.get('codec_name') != 'aac':
+                  raise SystemExit(f"{label}: expected aac, got {audio.get('codec_name')}")
+              actual_duration = float(data.get('format', {}).get('duration', video.get('duration', 0)))
+              if abs(actual_duration - duration) > 0.15:
+                  raise SystemExit(f'{label}: duration {actual_duration} outside tolerance around {duration}')
+              lines.append(f'{label.upper()}_VIDEO_CODEC=h264')
+              lines.append(f'{label.upper()}_DIMENSIONS={width}x{height}')
+              lines.append(f'{label.upper()}_AUDIO_CODEC=aac')
+              lines.append(f'{label.upper()}_DURATION={actual_duration:.6f}')
+          Path('source-media-validation/metadata-proof.txt').write_text('\n'.join(lines) + '\n')
+          PY
+
+          ffmpeg -hide_banner -stats -i "$STARTUP" -map 0:v:0 -map 0:a:0 -f null - > /dev/null 2> source-media-validation/startup-full-decode.log
+          ffmpeg -hide_banner -stats -i "$LAPTOP" -map 0:v:0 -map 0:a:0 -f null - > /dev/null 2> source-media-validation/laptop-full-decode.log
+
+          ffmpeg -v error -ss 0.50 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-early.png
+          ffmpeg -v error -ss 4.95 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-middle.png
+          ffmpeg -v error -ss 9.40 -i "$STARTUP" -frames:v 1 -y source-media-validation/reference-frames/startup-late.png
+          ffmpeg -v error -ss 0.30 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-early.png
+          ffmpeg -v error -ss 1.83 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-middle.png
+          ffmpeg -v error -ss 3.30 -i "$LAPTOP" -frames:v 1 -y source-media-validation/reference-frames/laptop-late.png
+
+          test -s source-media-validation/reference-frames/startup-early.png
+          test -s source-media-validation/reference-frames/startup-middle.png
+          test -s source-media-validation/reference-frames/startup-late.png
+          test -s source-media-validation/reference-frames/laptop-early.png
+          test -s source-media-validation/reference-frames/laptop-middle.png
+          test -s source-media-validation/reference-frames/laptop-late.png
+
+          {
+            echo 'SOURCE_MEDIA_VALIDATION=PASS'
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "TREE=$(git rev-parse HEAD^{tree})"
+            echo 'STARTUP_SHA256=28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240'
+            echo 'LAPTOP_SHA256=111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a'
+            echo 'FFPROBE=PASS'
+            echo 'FULL_DECODE=PASS'
+            echo 'REFERENCE_FRAMES=6/6'
+          } > source-media-validation/summary.txt
+
+      - name: Upload source media validation
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-source-media-validation
+          path: source-media-validation
+          if-no-files-found: error

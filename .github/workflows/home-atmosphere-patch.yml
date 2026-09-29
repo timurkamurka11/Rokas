@@ -1,0 +1,117 @@
+name: Home Hub Atmosphere Patch
+
+on:
+  push:
+    branches: [feature/messages-system]
+    paths:
+      - .github/workflows/home-atmosphere-patch.yml
+      - Tools/apply_home_atmosphere.py
+
+permissions:
+  contents: write
+  checks: write
+
+jobs:
+  atmosphere:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v7
+        with:
+          ref: feature/messages-system
+          fetch-depth: 0
+
+      - name: Apply scoped Home atmosphere patch
+        run: python3 Tools/apply_home_atmosphere.py
+
+      - name: Literal git diff check
+        run: git diff --check
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run Core behavior regression guard
+        run: dotnet run --project Tests/Core/Rokas.Core.Tests.csproj --configuration Release
+
+      - name: Classify asset validator against historical baseline
+        run: |
+          set +e
+          python3 Tools/validate_assets.py > /tmp/home-validator.txt 2>&1
+          code=$?
+          set -e
+          cat /tmp/home-validator.txt
+          VALIDATOR_EXIT=$code python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          expected = {
+              'FAIL: Unresolved GUID 71c1514a6bd24e1e882cebbe1904ce04 in Assets/Rokas/Resources/RokasSans TMP.asset',
+              'FAIL: Unresolved GUID 2705215ac5b84b70bacc50632be6e391 in Assets/TextMesh Pro/Resources/TMP Settings.asset',
+              'FAIL: Unresolved GUID ab2114bdc8544297b417dfefe9f1e410 in Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset',
+              'FAIL: Unresolved GUID 84a92b25f83d49b9bc132d206b370281 in Assets/TextMesh Pro/Resources/Sprite Assets/EmojiOne.asset',
+              'FAIL: Background below HD: GreenTea.png',
+              'FAIL: Background below HD: HunterTempura.png',
+              'FAIL: Background below HD: MoonMochi.png',
+              'FAIL: Background below HD: SpicyMiso.png',
+              'FAIL: Background below HD: TravelerOnigiri.png',
+              'FAIL: Background below HD: HomeActionIcons.png',
+              'FAIL: Background below HD: EmojiOne.png',
+              'FAIL: Invalid stereo PCM source: LaptopMouseClick.wav',
+              'FAIL: Invalid stereo PCM source: UIWood.wav',
+          }
+          lines = Path('/tmp/home-validator.txt').read_text().splitlines()
+          failures = [line for line in lines if line.startswith('FAIL: ')]
+          unexpected = [line for line in failures if line not in expected]
+          if unexpected:
+              raise SystemExit('New validator regressions:\n' + '\n'.join(unexpected))
+          print(f'PASS: validator has 0 new relevant regressions; {len(failures)} historical findings remain.')
+          PY
+
+      - name: Cache Unity Library
+        uses: actions/cache@v6
+        with:
+          path: Library
+          key: Home-Atmosphere-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Run full Unity EditMode and PlayMode gates
+        id: unity-tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: auto
+          testMode: All
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home Hub Atmosphere Unity Tests
+
+      - name: Upload Home atmosphere test artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-atmosphere-unity-results
+          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+      - name: Persist green Home Hub atmosphere production
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            Assets/Rokas/Scripts/Presentation/HomeAtmosphereProfile.cs \
+            Assets/Rokas/Scripts/Presentation/HomeAtmosphereProfile.cs.meta \
+            Assets/Rokas/Resources/HomeAtmosphereProfile.asset \
+            Assets/Rokas/Resources/HomeAtmosphereProfile.asset.meta \
+            Assets/Rokas/Scripts/Presentation/WorldEffects.cs \
+            Assets/Rokas/Scripts/Presentation/RokasAudio.cs \
+            Assets/Rokas/Scripts/Presentation/RokasView.cs \
+            Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs
+          git commit -m "feat: polish Home Hub atmosphere weather and lighting"
+          git push origin HEAD:feature/messages-system

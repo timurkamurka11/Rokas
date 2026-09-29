@@ -1,0 +1,83 @@
+name: ROKAS Startup Laptop Video Media Transfer
+
+on:
+  push:
+    branches:
+      - feature/startup-laptop-video-integration
+    paths:
+      - .ci/startup-laptop-video-media
+
+permissions:
+  contents: write
+
+jobs:
+  ingest-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/startup-laptop-video-integration
+          fetch-depth: 0
+
+      - name: Download exact original media bytes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p Assets/StreamingAssets/RokasVideo verification-media
+          python3 - <<'PY'
+          import json, pathlib, subprocess, urllib.request
+
+          API = 'https://api.firestorage.ai/dev/file'
+          jobs = [
+              ('LJmh1mYMVX94', 'Preview(1).MP4', pathlib.Path('Assets/StreamingAssets/RokasVideo/StartupPreview.mp4')),
+              ('eGtjpdmquW_u', 'Laptop load(1).mp4', pathlib.Path('Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4')),
+          ]
+          for share, expected_name, destination in jobs:
+              with urllib.request.urlopen(f'{API}/shares/{share}/files?maxResults=1000') as response:
+                  payload = json.load(response)
+              matches = [f for f in payload.get('files', []) if f.get('fileName') == expected_name]
+              if len(matches) != 1:
+                  raise SystemExit(f'{share}: expected exactly one {expected_name}, found {len(matches)}')
+              file_id = matches[0]['fileId']
+              request = urllib.request.Request(f'{API}/shares/{share}/files/{file_id}/download', method='POST')
+              with urllib.request.urlopen(request) as response:
+                  download = json.load(response)
+              url = download['downloadUrl']
+              with urllib.request.urlopen(url) as response, destination.open('wb') as output:
+                  while True:
+                      chunk = response.read(1024 * 1024)
+                      if not chunk:
+                          break
+                      output.write(chunk)
+          PY
+
+      - name: Verify immutable media hashes and sizes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/StartupPreview.mp4)" = '2457855'
+          test "$(stat -c%s Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4)" = '6383263'
+          echo '28417ed9f1d6d12b1283e7ccb80c72fc910e8d326533a554245734efa3a2f240  Assets/StreamingAssets/RokasVideo/StartupPreview.mp4' | sha256sum -c -
+          echo '111036b0768a6be45202ae674c7815d9e78760e852ef28426255501a3717fa9a  Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4' | sha256sum -c -
+          sha256sum Assets/StreamingAssets/RokasVideo/*.mp4 > verification-media/source-sha256.txt
+          stat -c '%n %s' Assets/StreamingAssets/RokasVideo/*.mp4 > verification-media/source-sizes.txt
+
+      - name: Commit original media bytes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/StreamingAssets/RokasVideo/StartupPreview.mp4 Assets/StreamingAssets/RokasVideo/LaptopBoot.mp4
+          git diff --cached --stat
+          git commit -m 'feat: add original startup and laptop video media'
+          git push origin HEAD:feature/startup-laptop-video-integration
+
+      - name: Upload media proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: startup-laptop-video-media-proof
+          path: verification-media
+          if-no-files-found: warn

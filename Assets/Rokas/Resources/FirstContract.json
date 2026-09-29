@@ -1,0 +1,16 @@
+{
+  "id": "contract_subway_001",
+  "title": "Билет в один конец",
+  "location": "Закрытая платформа Кисараги",
+  "clientNote": "Он стоит у последнего вагона каждую ночь. Поезда здесь не ходят уже одиннадцать лет. Пожалуйста, заберите у него билет.",
+  "reward": 1800,
+  "reputationReward": 10,
+  "ashReward": 3,
+  "enemyId": "enemy_faceless_commuter",
+  "enemyHealth": 180,
+  "enemyDamage": 8,
+  "enemyInterval": 2.6,
+  "autoInterval": 1.2,
+  "autoDamage": 8,
+  "clickDamage": 5
+}

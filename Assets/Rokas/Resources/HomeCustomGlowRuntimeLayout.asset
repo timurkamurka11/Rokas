@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: HomeCustomGlowRuntimeLayout
+  m_EditorClassIdentifier: Rokas.Presentation:Rokas.Presentation:HomeCustomGlowRuntimeLayout
+  materialTemplate: {fileID: 2100000, guid: 7264a9419bb6e3747811d7bd2d8f57c8, type: 2}
+  entries:
+  - stableId: starter-long-vertical
+    sprite: {fileID: 21300000, guid: b25a6870d084c4d838321707843268e0, type: 3}
+    anchoredPosition: {x: 1760, y: -830}
+    sizeDelta: {x: 72, y: 330}
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    rotationZ: 0
+    active: 1
+    color: {r: 1, g: 1, b: 1, a: 1}
+    preserveAspect: 0
+    imageType: 1
+    fillCenter: 1
+    hazeElement: 0
+    brightness: 1.06
+    pulseEnabled: 1
+    pulseSpeed: 0.24
+    pulseAmount: 0.06
+    shimmerEnabled: 1
+    shimmerSpeed: 0.14
+    shimmerAmount: 0.24
+    shimmerWidth: 0.14
+    hazeEnabled: 0
+    hazeOpacity: 0.16
+    phaseOffset: 0
+  - stableId: starter-dot-stack
+    sprite: {fileID: 21300000, guid: 7e9e47c04b1e20fea56a75f6542ce4ca, type: 3}
+    anchoredPosition: {x: 1830, y: -865}
+    sizeDelta: {x: 58, y: 170}
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    rotationZ: 0
+    active: 1
+    color: {r: 1, g: 1, b: 1, a: 1}
+    preserveAspect: 1
+    imageType: 0
+    fillCenter: 1
+    hazeElement: 0
+    brightness: 1.06
+    pulseEnabled: 1
+    pulseSpeed: 0.24
+    pulseAmount: 0.06
+    shimmerEnabled: 1
+    shimmerSpeed: 0.14
+    shimmerAmount: 0.24
+    shimmerWidth: 0.14
+    hazeEnabled: 0
+    hazeOpacity: 0.16
+    phaseOffset: 0.33333334
+  - stableId: haze-preview-01
+    sprite: {fileID: 21300000, guid: 75b0f63a0b77dd8af783a216cd65d554, type: 3}
+    anchoredPosition: {x: 510, y: -900}
+    sizeDelta: {x: 430, y: 72}
+    anchorMin: {x: 0, y: 1}
+    anchorMax: {x: 0, y: 1}
+    pivot: {x: 0.5, y: 0.5}
+    localScale: {x: 1, y: 1, z: 1}
+    rotationZ: 0
+    active: 0
+    color: {r: 1, g: 1, b: 1, a: 1}
+    preserveAspect: 1
+    imageType: 0
+    fillCenter: 1
+    hazeElement: 1
+    brightness: 1
+    pulseEnabled: 0
+    pulseSpeed: 0.24
+    pulseAmount: 0.06
+    shimmerEnabled: 0
+    shimmerSpeed: 0.14
+    shimmerAmount: 0.24
+    shimmerWidth: 0.14
+    hazeEnabled: 0
+    hazeOpacity: 0.16
+    phaseOffset: 0.6666667

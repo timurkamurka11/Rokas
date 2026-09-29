@@ -1,0 +1,227 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Rokas.Presentation;
+using UnityEditor;
+using UnityEngine;
+
+namespace Rokas.EditorTools.VnUiWorkshop
+{
+    public static partial class VnPresentationWorkshopPreviewRenderer
+    {
+        private sealed class ButtonMotion
+        {
+            public double ChangedAt;
+            public float FromScale = .97f, ToScale = .97f, FromLight = .9f, ToLight = .9f;
+            public bool Held;
+            public float Scale(double now) { return Mathf.Lerp(FromScale, ToScale, Ease(now)); }
+            public float Light(double now) { return Mathf.Lerp(FromLight, ToLight, Ease(now)); }
+            private float Ease(double now)
+            {
+                return RokasVnRuntimeUiSemantics.ButtonEase(
+                    (float)(now - ChangedAt));
+            }
+            public void Target(bool hover, bool pressed, double now)
+            {
+                float scale =
+                    RokasVnRuntimeUiSemantics.ButtonScaleTarget(
+                        hover, pressed, true);
+                float light =
+                    RokasVnRuntimeUiSemantics.ButtonBrightnessTarget(
+                        hover, pressed, true);
+                if (scale == ToScale && light == ToLight) return;
+                FromScale = Scale(now); FromLight = Light(now); ToScale = scale; ToLight = light; ChangedAt = now;
+            }
+        }
+        private static readonly ConditionalWeakTable<VnSceneComposerPlaybackController, Dictionary<int, ButtonMotion>> ControlMotion =
+            new ConditionalWeakTable<VnSceneComposerPlaybackController, Dictionary<int, ButtonMotion>>();
+
+        private static void DrawComposerRuntimeControls(Rect canvas, VnWorkshopPreviewFrame frame,
+            float foregroundAlpha)
+        {
+            if (!frame.IsComposerFrame) return;
+            PlaybackFrames.TryGetValue(frame, out VnSceneComposerPlaybackFrame playback);
+            var owner = playback != null ? playback.Owner : null;
+            var layout = VnSceneComposerRuntimeUi.Layout(frame);
+            bool enabled = owner != null && owner.IsPlaying && !owner.IsMenuOpen &&
+                foregroundAlpha >= .99f;
+            DrawPlaqueButton(canvas, frame, layout.Mute, 0, "Звук", owner, enabled,
+                owner != null && owner.IsMuted, foregroundAlpha);
+            DrawPlaqueButton(canvas, frame, layout.Forward, 1, "Далее", owner,
+                enabled && !owner.IsSceneTransitionActive, false, foregroundAlpha);
+            DrawPlaqueButton(canvas, frame, layout.Menu, 2, "Меню", owner, enabled,
+                false, foregroundAlpha);
+            if (owner == null || !owner.ShowCompletionIndicator) return;
+            var sample = VnSceneComposerRuntimeUi.SampleTriangle(owner.UiElapsedSeconds);
+            Rect hit = LogicalToPreview(canvas, layout.Triangle, frame);
+            Rect visual = hit;
+            visual.position += new Vector2(0f, sample.OffsetY * canvas.height / frame.VirtualCanvasSize.y);
+            Vector2 size = visual.size * sample.Scale;
+            visual = new Rect(visual.center - size * .5f, size);
+            Texture2D triangle = VnSceneComposerRuntimeUi.CompletionTriangle;
+            if (triangle != null)
+            {
+                Color before = GUI.color;
+                GUI.color = VnSceneComposerRuntimeUi.CompletionIndicatorColor(
+                    sample.Alpha * foregroundAlpha);
+                GUI.DrawTextureWithTexCoords(visual, triangle, VnSceneComposerRuntimeUi.TriangleUv, true);
+                GUI.color = before;
+            }
+            using (new EditorGUI.DisabledScope(!enabled))
+                if (GUI.Button(hit, new GUIContent(string.Empty,"Реплика завершена — далее"), GUIStyle.none)) owner.RequestAdvance(owner.InputTick);
+        }
+
+        private static void DrawPlaqueButton(Rect canvas, VnWorkshopPreviewFrame frame, Rect logical, int index,
+            string tooltip, VnSceneComposerPlaybackController owner, bool enabled, bool muted,
+            float foregroundAlpha)
+        {
+            Rect hit = LogicalToPreview(canvas, logical, frame);
+            bool hover = enabled && hit.Contains(Event.current.mousePosition);
+            double now = EditorApplication.timeSinceStartup;
+            ButtonMotion motion = new ButtonMotion();
+            if (owner != null)
+            {
+                var states = ControlMotion.GetOrCreateValue(owner);
+                if (!states.TryGetValue(index, out motion)) states[index] = motion = new ButtonMotion();
+                if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && hover) motion.Held = true;
+                if (Event.current.rawType == EventType.MouseUp || !enabled) motion.Held = false;
+                motion.Target(hover, hover && motion.Held, now);
+            }
+            float scale = motion.Scale(now);
+            Vector2 size = hit.size * scale;
+            Rect rect = new Rect(hit.center - size * .5f, size);
+            float alpha = (owner == null || enabled ? .9f : .42f) * foregroundAlpha;
+            Texture2D icon = VnSceneComposerRuntimeUi.ButtonTexture(index, muted);
+            if (icon != null)
+            {
+                Color before = GUI.color;
+                float light = motion.Light(now);
+                GUI.color = new Color(light, light, light, alpha);
+                GUI.DrawTextureWithTexCoords(rect, icon, VnSceneComposerRuntimeUi.ButtonTextureUv(index, muted), true);
+                GUI.color = before;
+            }
+            if (hover)
+            {
+                Color before = Handles.color;
+                Handles.color = new Color(.35f, .8f, 1f, .10f);
+                Handles.DrawWireDisc(rect.center, Vector3.forward, rect.width * .52f);
+                Handles.color = before;
+            }
+            using (new EditorGUI.DisabledScope(!enabled))
+            {
+                if (!GUI.Button(hit, new GUIContent(string.Empty, tooltip), GUIStyle.none) || owner == null) return;
+                if (index == 0) owner.SetMuted(!owner.IsMuted);
+                else if (index == 1) owner.RequestAdvance(owner.InputTick);
+                else owner.SetMenuOpen(true);
+            }
+        }
+
+        private static void DrawComposerMenu(
+            Rect canvas,
+            VnWorkshopPreviewFrame frame)
+        {
+            if (!PlaybackFrames.TryGetValue(
+                    frame,
+                    out VnSceneComposerPlaybackFrame playback) ||
+                playback.Owner == null ||
+                !playback.Owner.IsMenuOpen)
+                return;
+
+            var owner = playback.Owner;
+            RokasVnMenuUiLayout layout =
+                RokasVnRuntimeUiSemantics.MenuLayout(
+                    canvas);
+            Color old = GUI.color;
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuShadeColor;
+            GUI.DrawTexture(
+                canvas,
+                Texture2D.whiteTexture);
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuPanelColor;
+            GUI.DrawTexture(
+                layout.Panel,
+                Texture2D.whiteTexture);
+            GUI.color =
+                RokasVnRuntimeUiSemantics
+                    .MenuOutlineColor;
+            DrawOutline(layout.Panel, 1.5f);
+            GUI.color = Color.white;
+
+            var title = new GUIStyle(
+                EditorStyles.boldLabel)
+            {
+                font = frame.DialogueFont,
+                fontSize =
+                    RokasVnRuntimeUiSemantics
+                        .MenuTitleFontSize(
+                            canvas.height),
+                alignment =
+                    TextAnchor.MiddleLeft
+            };
+            title.normal.textColor =
+                RokasVnRuntimeUiSemantics
+                    .MenuTitleColor;
+            GUI.Label(
+                layout.Title,
+                RokasVnRuntimeUiSemantics
+                    .MenuTitle,
+                title);
+
+            Rect[] rows =
+            {
+                layout.Resume,
+                layout.Settings,
+                layout.Save,
+                layout.MainMenu
+            };
+            var style = new GUIStyle(
+                GUI.skin.button)
+            {
+                font = frame.DialogueFont,
+                fontSize =
+                    RokasVnRuntimeUiSemantics
+                        .MenuRowFontSize(
+                            layout.Resume.height),
+                alignment =
+                    TextAnchor.MiddleLeft,
+                padding =
+                    new RectOffset(
+                        16, 10, 4, 4)
+            };
+            for (int i = 0; i < rows.Length; i++)
+            {
+                using (new EditorGUI.DisabledScope(
+                           i != 0))
+                {
+                    if (GUI.Button(
+                            rows[i],
+                            RokasVnRuntimeUiSemantics
+                                .MenuLabel(i),
+                            style) &&
+                        i == 0)
+                        owner.SetMenuOpen(false);
+                }
+            }
+
+            GUI.color = old;
+            if (Event.current.type ==
+                    EventType.KeyDown &&
+                Event.current.keyCode ==
+                    KeyCode.Escape)
+            {
+                owner.SetMenuOpen(false);
+                Event.current.Use();
+            }
+            // IMGUI modal layer: consume every remaining pointer/key event before the
+            // preview's dialogue/drag handler can receive it. No Stop/Restart path.
+            if (Event.current.isMouse ||
+                Event.current.isKey ||
+                Event.current.type ==
+                    EventType.ScrollWheel)
+                Event.current.Use();
+        }
+    }
+}

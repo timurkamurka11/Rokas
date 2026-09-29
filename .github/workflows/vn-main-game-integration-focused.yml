@@ -1,0 +1,132 @@
+name: ROKAS VN Main-Game Integration Focused
+
+on:
+  push:
+    branches:
+      - codex/vn-intro-main-game-integration
+    paths:
+      - 'Assets/Rokas/Scripts/Presentation/**'
+      - 'Assets/Rokas/Scripts/Editor/VnUiWorkshop/**'
+      - 'Assets/Rokas/Tests/EditorWorkshop/VnRuntimeIntroPackageTests.cs'
+      - 'Assets/Rokas/Tests/EditMode/RokasVnRuntimePlaybackTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/RokasVnRuntimePlayerPlayModeTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/VnSceneComposerMainGameIntegrationPlayModeTests.cs'
+      - 'Assets/Rokas/Tests/PlayMode/VnIntroPlayModeTests.cs'
+      - '.github/workflows/vn-main-game-integration-focused.yml'
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  package-contract:
+    name: VN runtime package contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run package/export contract tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.VnRuntimeIntroPackageTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Runtime Package Contract
+          artifactsPath: artifacts-vn-runtime-package
+
+      - name: Run runtime playback semantics tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Core.Tests.RokasVnRuntimePlaybackTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Runtime Playback Semantics
+          artifactsPath: artifacts-vn-runtime-playback
+
+  runtime-player:
+    name: VN reusable runtime player
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run reusable runtime player PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.RokasVnRuntimePlayerPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Reusable Runtime Player
+          artifactsPath: artifacts-vn-runtime-player
+
+  legacy-route-compatibility:
+    name: VN legacy route compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run packaged-runtime compatibility coverage
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnIntroPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Legacy Route Compatibility
+          artifactsPath: artifacts-vn-legacy-route
+
+  main-game-integration:
+    name: VN Main Menu Start integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Main Menu Start to packaged VN integration
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VnSceneComposerMainGameIntegrationPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: VN Main Game Integration
+          artifactsPath: artifacts-vn-main-game-integration

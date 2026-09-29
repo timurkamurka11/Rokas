@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: b67a929e3f4b4bdd9e19c489b2763bb5
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 44100
+    compressionFormat: 1
+    quality: 0.9
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: Derived runtime trim from LAMP ON.mp3 SHA256 d133e1f226a7a5c6b0e5e7b2d5cf23a5c7c6ac14dcdb461724dab96441b1180a
+  assetBundleName:
+  assetBundleVariant:

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="13" result="Passed" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:46Z" duration="4,4479051">
+  <test-suite type="TestSuite" id="1083" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="62" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:46Z" duration="4.447905" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1079" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas/.worktrees/home-unified-light-toggle/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="62" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:46Z" duration="4.436916" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="38452" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1080" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="62" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:46Z" duration="4.435667" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1081" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="62" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:46Z" duration="4.434815" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1029" name="HomeAtmospherePlayModeTests" fullname="Rokas.Tests.HomeAtmospherePlayModeTests" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:43Z" duration="1.389367" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1030" name="HomeBuildsLayeredParticleRainAndWindowDepth" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLayeredParticleRainAndWindowDepth" methodname="HomeBuildsLayeredParticleRainAndWindowDepth" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="544405147" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:42Z" duration="0.274754" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1032" name="HomeBuildsLogical25DPlanesAndReadableDepth" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HomeBuildsLogical25DPlanesAndReadableDepth" methodname="HomeBuildsLogical25DPlanesAndReadableDepth" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="994125209" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:42Z" duration="0.071483" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1033" name="HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" methodname="HybridParallaxMovesOnlyVisualPlanesAndStaysBounded" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="854680620" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:42Z" duration="0.092380" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1031" name="ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" methodname="ProfileIsSerializedAndStormRoutesOneDelayedThunderCue" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="1139795482" result="Passed" start-time="2026-09-09 23:19:42Z" end-time="2026-09-09 23:19:43Z" duration="0.830439" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1034" name="RepeatedTicksReuseTheBoundedWeatherRig" fullname="Rokas.Tests.HomeAtmospherePlayModeTests.RepeatedTicksReuseTheBoundedWeatherRig" methodname="RepeatedTicksReuseTheBoundedWeatherRig" classname="Rokas.Tests.HomeAtmospherePlayModeTests" runstate="Runnable" seed="1533044845" result="Passed" start-time="2026-09-09 23:19:43Z" end-time="2026-09-09 23:19:43Z" duration="0.101429" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1035" name="HomeWeather3PlayModeTests" fullname="Rokas.Tests.HomeWeather3PlayModeTests" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-09-09 23:19:43Z" end-time="2026-09-09 23:19:46Z" duration="3.029875" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1042" name="AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" fullname="Rokas.Tests.HomeWeather3PlayModeTests.AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" methodname="AutomaticLightningSchedulingRecoversAfterLeavingHomeDuringActiveFlash" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1798207806" result="Passed" start-time="2026-09-09 23:19:43Z" end-time="2026-09-09 23:19:43Z" duration="0.102312" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="ForcedLightningUsesMultipleIndependentEnvironmentalSources" fullname="Rokas.Tests.HomeWeather3PlayModeTests.ForcedLightningUsesMultipleIndependentEnvironmentalSources" methodname="ForcedLightningUsesMultipleIndependentEnvironmentalSources" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1979042950" result="Passed" start-time="2026-09-09 23:19:43Z" end-time="2026-09-09 23:19:43Z" duration="0.091758" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" methodname="LampButtonControlsBakedInteriorAndRestoresApprovedOnArt" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1327594947" result="Passed" start-time="2026-09-09 23:19:43Z" end-time="2026-09-09 23:19:45Z" duration="1.338344" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1039" name="LampOffDoesNotUseFullStageFlatDarknessCard" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffDoesNotUseFullStageFlatDarknessCard" methodname="LampOffDoesNotUseFullStageFlatDarknessCard" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="2060590410" result="Passed" start-time="2026-09-09 23:19:45Z" end-time="2026-09-09 23:19:45Z" duration="0.079291" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <reason>
+                <message><![CDATA[Weather 3 may remove the legacy LampMood surface entirely.]]></message>
+              </reason>
+            </test-case>
+            <test-case id="1038" name="LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" methodname="LampOffSurvivesMessagesCombatReturnAndSaveReloadWithoutDuplicatingLayers" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="636455429" result="Passed" start-time="2026-09-09 23:19:45Z" end-time="2026-09-09 23:19:46Z" duration="1.164193" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1037" name="LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" fullname="Rokas.Tests.HomeWeather3PlayModeTests.LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" methodname="LampOffZeroesWarmContributionWhileWeatherAndLightningRemainIndependent" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="1131958941" result="Passed" start-time="2026-09-09 23:19:46Z" end-time="2026-09-09 23:19:46Z" duration="0.070994" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1043" name="Weather3PreservesBoundedRigAndStationaryLaptopHotspot" fullname="Rokas.Tests.HomeWeather3PlayModeTests.Weather3PreservesBoundedRigAndStationaryLaptopHotspot" methodname="Weather3PreservesBoundedRigAndStationaryLaptopHotspot" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="2082651673" result="Passed" start-time="2026-09-09 23:19:46Z" end-time="2026-09-09 23:19:46Z" duration="0.089544" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1040" name="WetGlassAndAtmosphereUseIndependentTextureSources" fullname="Rokas.Tests.HomeWeather3PlayModeTests.WetGlassAndAtmosphereUseIndependentTextureSources" methodname="WetGlassAndAtmosphereUseIndependentTextureSources" classname="Rokas.Tests.HomeWeather3PlayModeTests" runstate="Runnable" seed="650068519" result="Passed" start-time="2026-09-09 23:19:46Z" end-time="2026-09-09 23:19:46Z" duration="0.076468" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\home-light-evidence\green.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
