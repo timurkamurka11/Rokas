@@ -1,0 +1,1182 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.19f1 (7689f4515d75) revision 7768564'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 10  (10.0.19044) 64bit EnterpriseS' Language: 'ru' Physical Memory: 32536 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-tim" at "2026-09-29T22:35:05.3951415Z"
+System  architecture: x64
+Process architecture: x64
+Date: 2026-09-29T22:35:05Z
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 18444, path: "D:/BOT/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.3+d7ffd15
+  Session Id:              f1365d43dd1e4fe0be8cd6cf39e5ff1d
+  Correlation Id:          3e8994e4b2b40360d5fd196aa2b663d9
+  External correlation Id: 6487510046398796601
+  Machine Id:              oTNjJO4DzpMymFT5Gtg2J/cBqjA=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-tim" (connect: 0.00s, validation: 0.00s, handshake: 0.03s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-tim-notifications" at "2026-09-29T22:35:05.4235737Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Module] Licensing Background thread has ended after 0.03s
+
+COMMAND LINE ARGUMENTS:
+D:\BOT\6000.3.19f1\Editor\Unity.exe
+-batchmode
+-projectPath
+D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY
+-runTests
+-testPlatform
+PlayMode
+-testResults
+D:\Rokas\reactiveturns-b2-staging\playfocus-results.xml
+-logFile
+D:\Rokas\reactiveturns-b2-staging\playfocus-tests.log
+-testFilter
+Rokas.Tests.ReactiveInputAdapterPlayModeTests;Rokas.Tests.ReactiveArenaVisualPlayModeTests;Rokas.Tests.ReactiveEightEnemyPlayModeTests;Rokas.Tests.ReactiveHeavyTimingPlayModeTests;Rokas.Tests.ReactiveDuelPlayModeTests;Rokas.Tests.ReactiveFullLoopPlayModeTests;Rokas.Tests.ReactiveWaveTransitionPlayModeTests;Rokas.Tests.ReactiveSwordPlayModeTests;Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests;Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests;Rokas.Tests.ReactiveReactionPolishPlayModeTests;Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests
+Successfully changed project path to: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY
+D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+Player connection [21264]  Target information:
+
+Player connection [21264]  * "[IP] 192.168.0.104 [Port] 55504 [Flags] 2 [Guid] 3971650138 [EditorId] 3971650138 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [21264]  * "[IP] 172.22.0.1 [Port] 55504 [Flags] 2 [Guid] 3971650138 [EditorId] 3971650138 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [21264]  * "[IP] 172.19.0.1 [Port] 55504 [Flags] 2 [Guid] 3971650138 [EditorId] 3971650138 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [21264] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [21264] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-21204" after 0.2 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 0.07 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.3.19f1 (7689f4515d75)
+[Subsystems] Discovering subsystems at path D:/BOT/6000.3.19f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 5060 Ti (ID=0x2d04)
+    Vendor:          NVIDIA
+    VRAM:            15962 MB
+    App VRAM Budget: 15194 MB
+    Driver:          32.0.15.8157
+Initialize mono
+Mono path[0] = 'D:/BOT/6000.3.19f1/Editor/Data/Managed'
+Mono path[1] = 'D:/BOT/6000.3.19f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'D:/BOT/6000.3.19f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56204
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: D:/BOT/6000.3.19f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.001101 seconds.
+- Loaded All Assemblies, in  0.345 seconds
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.353 seconds
+Domain Reload Profiling: 697ms
+	BeginReloadAssembly (119ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (18ms)
+	RebuildCommonClasses (30ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (37ms)
+	LoadAllAssembliesAndSetupDomain (147ms)
+		LoadAssemblies (100ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (144ms)
+			TypeCache.Refresh (143ms)
+				TypeCache.ScanAssembly (131ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (353ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (320ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (42ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (82ms)
+			ProcessInitializeOnLoadAttributes (121ms)
+			ProcessInitializeOnLoadMethodAttributes (71ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 18 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.inputsystem@1.20.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194)
+  Built-in packages:
+    com.unity.test-framework@1.6.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.test-framework@bd7f943e9647)
+    com.unity.ugui@2.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.ugui@b95364aab964)
+    com.unity.modules.animation@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.audio@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.imageconversion@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.screencapture@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.ui@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.video@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.unitywebrequest@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.hierarchycore@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.modules.physics@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.physics)
+    com.unity.ext.nunit@2.0.5 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.ext.nunit@d8c07649098d)
+  Git packages:
+    dev.yarnspinner.unity@https://github.com/YarnSpinnerTool/YarnSpinner-Unity.git#v3.1.2 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\dev.yarnspinner.unity@e1ba6f471d92)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+Starting: D:\BOT\6000.3.19f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s82ms
+*** Tundra build success (0.06 seconds), 0 items updated, 342 evaluated
+AssetDatabase: script compilation time: 0.430779s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.679 seconds
+Refreshing native plugins compatible for Editor in 0.23 ms, found 0 plugins.
+Native extension for WindowsStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.497 seconds
+Domain Reload Profiling: 1175ms
+	BeginReloadAssembly (277ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (19ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (139ms)
+	RebuildCommonClasses (30ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (21ms)
+	LoadAllAssembliesAndSetupDomain (339ms)
+		LoadAssemblies (237ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (181ms)
+			TypeCache.Refresh (161ms)
+				TypeCache.ScanAssembly (148ms)
+			BuildScriptInfoCaches (14ms)
+			ResolveRequiredComponents (3ms)
+	FinalizeReload (497ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (330ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (23ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (119ms)
+			ProcessInitializeOnLoadAttributes (138ms)
+			ProcessInitializeOnLoadMethodAttributes (43ms)
+			AfterProcessingInitializeOnLoad (3ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (19ms)
+Asset Pipeline Refresh (id=31631a80b7407304a9e6ce4651e6c7d2): Total: 1.825 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=638 ms
+		Asset DB Callback time: managed=56 ms, native=3 ms
+		Scripting: domain reloads=1, domain reload time=680 ms, compile time=432 ms, other=14 ms
+		Project Asset Count: scripts=432, non-scripts=566
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 4.651ms
+	ApplyChangesToAssetFolders: 0.286ms
+	Scan: 22.604ms
+	OnSourceAssetsModified: 0.002ms
+	CategorizeAssetsWithTransientArtifact: 10.668ms
+	ProcessAssetsWithTransientArtifactChanges: 24.508ms
+	CategorizeAssets: 8.941ms
+	ImportOutOfDateAssets: 499.463ms (67.027ms without children)
+		CompileScripts: 431.949ms
+		ReloadNativeAssets: 0.001ms
+		UnloadImportedAssets: 0.120ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.145ms
+		InitializingProgressBar: 0.001ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.220ms
+	PostProcessAllAssets: 56.233ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.002ms
+	UnloadStreamsBegin: 1.137ms
+	PersistCurrentRevisions: 0.034ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 3.509ms
+	Untracked: 1196.818ms
+
+Application.AssetDatabase Initial Refresh End
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 seconds
+Scanning for USB devices : 1.673ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-ROKAS
+Unloading 7 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 1634 unused Assets / (1.3 MB). Loaded Objects now: 2241.
+Memory consumption went from 112.1 MB to 110.8 MB.
+Total: 4.852300 ms (FindLiveObjects: 0.173200 ms CreateObjectMapping: 0.073400 ms MarkObjects: 3.987900 ms  DeleteObjects: 0.616800 ms)
+
+Unity is running with Administrator privileges, which is not supported. Unity executes scripts and binary libraries in your project that may originate from third party sources and potentially be harmful to your computer. Unity may also execute scripts and binary libraries that are still under development and not yet fully tested. Running Unity with Administrator privileges may lead to catastrophic consequences, including but not limited to accidental data loss, change of global system settings or even bricking your device.
+[Project] Loading completed in 3.462 seconds
+	Project init time: 				3.271 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.211 seconds
+		Asset Database init time: 		0.064 seconds
+		Global illumination init time: 	0.002 seconds
+		Assemblies load time: 			0.712 seconds
+		Unity extensions init time: 	0.002 seconds
+		Asset Database refresh time: 	1.825 seconds
+	Scene opening time: 			0.080 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1790721308848,"processId":21204,"projectLoad":3.4619258,"projectInit":3.2710184,"templateInit":0.0,"packageManagerInit":0.2108505,"assetDatabaseInit":0.0639439,"globalIlluminationInit":0.0020521,"assembliesLoad":0.7119472,"unityExtensionsInit":0.0017087,"assetDatabaseRefresh":1.825495,"sceneOpening":0.0798783}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1790721308848,"processId":21204,"editorVersion":"6000.3.19f1 (7689f4515d75)","branch":"6000.3/staging","buildType":"Release","platform":"Windows"}
+[Licensing::Client] Successfully resolved entitlement details
+Running tests for ExecutionSettings with details:
+targetPlatform =
+playerHeartbeatTimeout = 600
+filters[0] =
+   Filter with settings:
+   testMode = PlayMode
+   targetPlatform =
+   testNames = null
+   groupNames = Rokas.Tests.ReactiveInputAdapterPlayModeTests, Rokas.Tests.ReactiveArenaVisualPlayModeTests, Rokas.Tests.ReactiveEightEnemyPlayModeTests, Rokas.Tests.ReactiveHeavyTimingPlayModeTests, Rokas.Tests.ReactiveDuelPlayModeTests, Rokas.Tests.ReactiveFullLoopPlayModeTests, Rokas.Tests.ReactiveWaveTransitionPlayModeTests, Rokas.Tests.ReactiveSwordPlayModeTests, Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests, Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests, Rokas.Tests.ReactiveReactionPolishPlayModeTests, Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests
+   categoryNames = null
+   assemblyNames = null
+ignoreTests = {}
+featureFlags = null
+
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:InitializeAndExecuteRun (string[]) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/Executer.cs:53)
+UnityEditor.TestTools.TestRunner.CommandLineTest.TestStarter:InitializeAndExecuteRun () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/TestStarter.cs:64)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions ()
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 53)
+
+Start Indexing on Editor startup
+[Indexing] Starting Initial Indexing for Assets
+[UnityConnectServicesConfig] config is NOT valid, switching to default
+Created GICache directory at C:/Users/tim/AppData/LocalLow/Unity/Caches/GiCache. Took: 0.005s, timestamps: [3.465 - 3.470]
+Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (43.9 KB). Loaded Objects now: 2258.
+Memory consumption went from 109.7 MB to 109.6 MB.
+Total: 4.592700 ms (FindLiveObjects: 0.084200 ms CreateObjectMapping: 0.025800 ms MarkObjects: 4.476700 ms  DeleteObjects: 0.005200 ms)
+
+Start importing Assets/InitTestScene2f095bcf-62f8-4aaa-b094-689f8bc1a5ac.unity using Guid(755d1f54e0e3211409a64291fefb6130) (DefaultImporter) -> (artifact id: 'f03d7a90e91da805605084fba8a4d0e6') in 0.0043342 seconds
+Refreshing native plugins compatible for Editor in 0.16 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=1d92f38fbf08b1e47a9a3c53d0e9514d): Total: 0.055 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.362 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Native extension for WindowsStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.603 seconds
+Domain Reload Profiling: 965ms
+	BeginReloadAssembly (171ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (15ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (52ms)
+	RebuildCommonClasses (31ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (23ms)
+	LoadAllAssembliesAndSetupDomain (125ms)
+		LoadAssemblies (100ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (105ms)
+			TypeCache.Refresh (6ms)
+				TypeCache.ScanAssembly (0ms)
+			BuildScriptInfoCaches (93ms)
+			ResolveRequiredComponents (3ms)
+	FinalizeReload (603ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (385ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (20ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (106ms)
+			ProcessInitializeOnLoadAttributes (137ms)
+			ProcessInitializeOnLoadMethodAttributes (116ms)
+			AfterProcessingInitializeOnLoad (3ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (25ms)
+Asset Pipeline Refresh (id=9ebe3189a4263694ea1678951fc43bcd): Total: 1.039 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=630 ms
+		Asset DB Callback time: managed=37 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=369 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=432, non-scripts=567
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 0.633ms
+	ApplyChangesToAssetFolders: 0.088ms
+	Scan: 0.000ms
+	OnSourceAssetsModified: 0.001ms
+	CategorizeAssetsWithTransientArtifact: 0.002ms
+	ProcessAssetsWithTransientArtifactChanges: 0.754ms
+	CategorizeAssets: 7.222ms
+	ImportOutOfDateAssets: 604.699ms (603.329ms without children)
+		CompileScripts: 1.056ms
+		CollectScriptTypesHashes: 0.001ms
+		ReloadNativeAssets: 0.001ms
+		UnloadImportedAssets: 0.001ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.134ms
+		InitializingProgressBar: 0.000ms
+		OnDemandSchedulerStart: 0.178ms
+	PostProcessAllAssets: 37.704ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.042ms
+	UnloadStreamsBegin: 0.028ms
+	PersistCurrentRevisions: 0.036ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 2.258ms
+	Untracked: 387.556ms
+
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.796 ms
+	Integration:            1041.857 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.006 ms
+	Total Operation Time:   1042.662 ms
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[Licensing::Client] Successfully resolved entitlement details
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveArenaVisualPlayModeTests/<ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes>d__0:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveArenaVisualPlayModeTests.cs:25)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveArenaVisualPlayModeTests/<ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes>d__0:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveArenaVisualPlayModeTests.cs:28)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests/<LiveContactDefenseReturnAndCorpseLifecycleAreRendered>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveCombatPolishCapturePlayModeTests.cs:46)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests/<LiveContactDefenseReturnAndCorpseLifecycleAreRendered>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveCombatPolishCapturePlayModeTests.cs:49)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+TrimDiskCacheJob: Current cache size 0mb
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveDuelPlayModeTests/<FocusAndSettingsPauseFreezeCombatThenResume>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveDuelPlayModeTests.cs:112)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveDuelPlayModeTests/<FocusAndSettingsPauseFreezeCombatThenResume>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveDuelPlayModeTests.cs:115)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveDuelPlayModeTests/<PortalOffersPlayableReactiveDuelWithProjectArt>d__5:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveDuelPlayModeTests.cs:39)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveDuelPlayModeTests/<PortalOffersPlayableReactiveDuelWithProjectArt>d__5:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveDuelPlayModeTests.cs:43)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveEightEnemyPlayModeTests/<PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget>d__2:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveEightEnemyPlayModeTests.cs:26)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveEightEnemyPlayModeTests/<PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget>d__2:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveEightEnemyPlayModeTests.cs:30)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveFullLoopPlayModeTests/<PortalDuelVictoryHomePaymentAndReload>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs:43)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveFullLoopPlayModeTests/<PortalDuelVictoryHomePaymentAndReload>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs:47)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.GameSession:NotifyCommittedState (Rokas.Core.GameSession/PendingSaveKind) (at Assets/Rokas/Scripts/Core/GameSession.cs:493)
+Rokas.Core.GameSession:CommitCandidate (Rokas.Core.GameSession/PendingSaveKind,Rokas.Core.ReactiveTurns.BattleCheckpoint,bool,System.Func`2<Rokas.Core.SaveData, bool>,System.Func`2<Rokas.Core.SaveData, bool>) (at Assets/Rokas/Scripts/Core/GameSession.cs:485)
+Rokas.Core.GameSession:ReturnHomeCore (bool) (at Assets/Rokas/Scripts/Core/GameSession.cs:416)
+Rokas.Core.GameSession:ReturnHome () (at Assets/Rokas/Scripts/Core/GameSession.cs:263)
+Rokas.Presentation.RokasView/<TravelRoutine>d__76:MoveNext () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:247)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:SignalPublishedState () (at Assets/Rokas/Scripts/Core/MessageService.cs:177)
+Rokas.Core.GameSession:NotifyCommittedState (Rokas.Core.GameSession/PendingSaveKind) (at Assets/Rokas/Scripts/Core/GameSession.cs:492)
+Rokas.Core.GameSession:CommitCandidate (Rokas.Core.GameSession/PendingSaveKind,Rokas.Core.ReactiveTurns.BattleCheckpoint,bool,System.Func`2<Rokas.Core.SaveData, bool>,System.Func`2<Rokas.Core.SaveData, bool>) (at Assets/Rokas/Scripts/Core/GameSession.cs:485)
+Rokas.Core.GameSession:CommitPayment (bool) (at Assets/Rokas/Scripts/Core/GameSession.cs:392)
+Rokas.Core.GameSession:ClaimPaymentCore (bool) (at Assets/Rokas/Scripts/Core/GameSession.cs:293)
+Rokas.Core.GameSession:ClaimPayment () (at Assets/Rokas/Scripts/Core/GameSession.cs:288)
+Rokas.Presentation.RokasView:Act (System.Func`1<bool>,string) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:221)
+Rokas.Presentation.ContractPanels:<Laptop>b__9_0 () (at Assets/Rokas/Scripts/Presentation/ContractPanels.cs:49)
+Rokas.Presentation.UiKit/<>c__DisplayClass13_0:<Button>b__0 () (at Assets/Rokas/Scripts/Presentation/UiKit.cs:91)
+UnityEngine.Events.InvokableCall:Invoke ()
+UnityEngine.Events.UnityEvent:Invoke ()
+UnityEngine.UI.Button:Press () (at ./Library/PackageCache/com.unity.ugui@b95364aab964/Runtime/UGUI/UI/Core/Button.cs:70)
+UnityEngine.UI.Button:OnPointerClick (UnityEngine.EventSystems.PointerEventData) (at ./Library/PackageCache/com.unity.ugui@b95364aab964/Runtime/UGUI/UI/Core/Button.cs:114)
+UnityEngine.EventSystems.ExecuteEvents:Execute (UnityEngine.EventSystems.IPointerClickHandler,UnityEngine.EventSystems.BaseEventData) (at ./Library/PackageCache/com.unity.ugui@b95364aab964/Runtime/UGUI/EventSystem/ExecuteEvents.cs:57)
+UnityEngine.EventSystems.ExecuteEvents:Execute<UnityEngine.EventSystems.IPointerClickHandler> (UnityEngine.GameObject,UnityEngine.EventSystems.BaseEventData,UnityEngine.EventSystems.ExecuteEvents/EventFunction`1<UnityEngine.EventSystems.IPointerClickHandler>) (at ./Library/PackageCache/com.unity.ugui@b95364aab964/Runtime/UGUI/EventSystem/ExecuteEvents.cs:272)
+Rokas.Tests.ReactiveFullLoopPlayModeTests:Press (string) (at Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs:202)
+Rokas.Tests.ReactiveFullLoopPlayModeTests/<PortalDuelVictoryHomePaymentAndReload>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs:132)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveFullLoopPlayModeTests/<PortalDuelVictoryHomePaymentAndReload>d__6:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs:143)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveHeavyTimingPlayModeTests/<RunHeavyScenario>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveHeavyTimingPlayModeTests.cs:50)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveHeavyTimingPlayModeTests/<RunHeavyScenario>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveHeavyTimingPlayModeTests.cs:54)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveHeavyTimingPlayModeTests/<RunHeavyScenario>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveHeavyTimingPlayModeTests.cs:50)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveHeavyTimingPlayModeTests/<RunHeavyScenario>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveHeavyTimingPlayModeTests.cs:54)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:140)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:327)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:70)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:62)
+Rokas.Tests.ReactiveWaveTransitionPlayModeTests:NewBootstrap () (at Assets/Rokas/Tests/PlayMode/ReactiveWaveTransitionPlayModeTests.cs:140)
+Rokas.Tests.ReactiveWaveTransitionPlayModeTests/<ThreeWavesRefreshTheLiveArenaHudAndQueueThenReachVictory>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveWaveTransitionPlayModeTests.cs:45)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:315)
+Rokas.Presentation.RokasView:Refresh () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:280)
+Rokas.Core.GameSession:NotifyChanged () (at Assets/Rokas/Scripts/Core/GameSession.cs:625)
+Rokas.Core.MessageService:NotifyChanged () (at Assets/Rokas/Scripts/Core/MessageService.cs:907)
+Rokas.Core.MessageService:DeliverIncomingInternal (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:278)
+Rokas.Core.MessageService:DeliverIncomingLive (string,string,string,Rokas.Core.MessageAttachment,string,bool) (at Assets/Rokas/Scripts/Core/MessageService.cs:244)
+Rokas.Core.MessageService:DeliverYumikoContractContext (string) (at Assets/Rokas/Scripts/Core/MessageService.cs:568)
+Rokas.Core.GameSession:AcceptContract () (at Assets/Rokas/Scripts/Core/GameSession.cs:84)
+Rokas.Tests.ReactiveWaveTransitionPlayModeTests/<ThreeWavesRefreshTheLiveArenaHudAndQueueThenReachVictory>d__7:MoveNext () (at Assets/Rokas/Tests/PlayMode/ReactiveWaveTransitionPlayModeTests.cs:47)
+UnityEngine.TestTools.TestEnumerator/<Execute>d__7:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Attributes/TestEnumerator.cs:44)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerableAndRecordExceptions>d__4:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:79)
+UnityEngine.TestTools.EnumerableTestMethodCommand:AdvanceEnumerator (System.Collections.IEnumerator) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:64)
+UnityEngine.TestTools.EnumerableTestMethodCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/EnumerableTestMethodCommand.cs:47)
+UnityEngine.TestRunner.NUnitExtensions.Runner.UnityLogCheckDelegatingCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Runner/UnityLogCheckDelegatingCommand.cs:48)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<NUnit.Framework.ITestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<System.Reflection.MethodInfo>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.BeforeAfterTestCommandBase`1/<ExecuteEnumerable>d__16<UnityEngine.TestTools.IOuterUnityTestAction>:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/BeforeAfterTestCommandBase.cs:212)
+UnityEngine.TestTools.RetryCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RetryCommand.cs:37)
+UnityEngine.TestTools.RepeatCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/RepeatCommand.cs:36)
+UnityEngine.TestTools.IgnoreTestCommand/<ExecuteEnumerable>d__3:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/IgnoreTestCommand.cs:42)
+UnityEngine.TestTools.StrictCheckCommand/<ExecuteEnumerable>d__2:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/NUnitExtensions/Commands/StrictCheckCommand.cs:29)
+UnityEngine.TestTools.Utils.CoroutineRunner/<WrapEnumeratorForChecks>d__8:MoveNext () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEngine.TestRunner/Utils/CoroutineRunner.cs:58)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+(Filename: Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs Line: 448)
+
+Saving results to: D:\Rokas\reactiveturns-b2-staging\playfocus-results.xml
+Unloading 123 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.520 ms
+	Integration:            5.603 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.011 ms
+	Total Operation Time:   6.135 ms
+Unloading 376 unused Assets / (9.2 MB). Loaded Objects now: 2343.
+Memory consumption went from 470.5 MB to 461.3 MB.
+Total: 6.359800 ms (FindLiveObjects: 0.117400 ms CreateObjectMapping: 0.033100 ms MarkObjects: 5.892500 ms  DeleteObjects: 0.316000 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (0 B). Loaded Objects now: 2348.
+Memory consumption went from 460.7 MB to 460.7 MB.
+Total: 5.587800 ms (FindLiveObjects: 0.099000 ms CreateObjectMapping: 0.027900 ms MarkObjects: 5.452600 ms  DeleteObjects: 0.007200 ms)
+
+Refreshing native plugins compatible for Editor in 0.28 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c0f26b19be914544590a99f2f3969832): Total: 0.059 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+DisplayProgressbar: Undo
+Test run completed. Exiting with code 0 (Ok). Run completed.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitApplication (UnityEditor.TestTools.TestRunner.CommandLineTest.Executer/ReturnCodes,string) (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/Executer.cs:81)
+UnityEditor.TestTools.TestRunner.CommandLineTest.Executer:ExitIfRunIsCompleted () (at ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/Executer.cs:74)
+UnityEditor.EditorApplication:Internal_CallUpdateFunctions ()
+
+(Filename: ./Library/PackageCache/com.unity.test-framework@bd7f943e9647/UnityEditor.TestRunner/CommandLineTest/Executer.cs Line: 81)
+
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-tim-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-tim channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1790721432216,"processId":21204,"allocatedMemory":11180599,"memoryLabels":[{"Default":14409},{"Permanent":15236},{"NewDelete":68579},{"Thread":4237960},{"Manager":32125},{"VertexData":8},{"Geometry":816},{"Texture":296},{"Shader":79327},{"Material":24},{"GfxDevice":58512},{"Animation":392},{"Audio":2664},{"FreeType":8},{"FontEngine":736},{"Physics":2146},{"Physics2D":16},{"Serialization":720},{"Input":14984},{"JobScheduler":33024},{"TextLib":216},{"Mono":32},{"ScriptingNativeRuntime":155060},{"BaseObject":1678672},{"Resource":1336},{"Renderer":3000},{"Transform":4685},{"File":1016},{"WebCam":616},{"Culling":32},{"Terrain":11394},{"Wind":24},{"STL":40},{"String":14103},{"DynamicArray":101035},{"HashMap":79510},{"Utility":2660278},{"Curl":2614},{"PoolAlloc":2056},{"AI":80},{"TypeTree":5341},{"ScriptManager":512},{"RuntimeInitializeOnLoadManager":64},{"SpriteAtlas":112},{"GI":7792},{"Director":8240},{"CloudService":432},{"WebRequest":808},{"VR":47994},{"SceneManager":504},{"Video":208},{"LazyScriptCache":32},{"Camera":17},{"Secure":2377},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":336},{"Hierarchy":608},{"CoreStats":13112},{"Identifiers":6480},{"Gui":96},{"EditorUtility":109083},{"VersionControl":4},{"Undo":947},{"AssetDatabase":1304272},{"EditorGi":328},{"UnityConnect":29232},{"Upm":1896},{"AssetCompliance":64},{"DrivenProperties":72},{"LocalIPC":256},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2581},{"Licensing":664},{"AssetReference":32},{"IPCStream":32}]}

@@ -1,0 +1,174 @@
+{
+    "captures": [
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\normal-contact.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 249166,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\normal-return.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −20",
+            "combatUs": 922321,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -0.7785857915878296,
+                "y": -0.6200000047683716,
+                "z": -0.32453811168670657
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\enemy-reaction-cursor.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −20",
+            "combatUs": 1005855,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -1.7372552156448365,
+                "y": -0.6200000047683716,
+                "z": -0.25495728850364687
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\dodge-result.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "УКЛОНЕНИЕ",
+            "combatUs": 1739186,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\block-result.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "БЛОК",
+            "combatUs": 3372542,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\heavy-contact.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6295474,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\heavy-return.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −68",
+            "combatUs": 6914612,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 0.8443803787231445,
+                "y": -0.6200000047683716,
+                "z": 0.7572898268699646
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\corpse-fallen.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −68",
+            "combatUs": 6914612,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 0.8443803787231445,
+                "y": -0.6200000047683716,
+                "z": 0.7572898268699646
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\corpse-hold.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −68",
+            "combatUs": 7381264,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": -5.213715553283691,
+                "y": -0.6200000047683716,
+                "z": 0.004508739337325096
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-combat-polish-visuals\\corpse-sink.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:6",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Idle",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 9617585,
+            "hunterHp": 68,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            }
+        }
+    ]
+}

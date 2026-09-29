@@ -1,0 +1,26 @@
+[
+  {
+    "source": "Normal attack.fbx",
+    "target": "Assets/Rokas/Art/CombatActors/Keiko/Normal attack.fbx",
+    "bytes": 5747120,
+    "sha256": "031cd6662d28e98abdd0caadfbbd4f44986d8a52bc66f62fb981b61217819884"
+  },
+  {
+    "source": "Hard jump attack.fbx",
+    "target": "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack.fbx",
+    "bytes": 5797104,
+    "sha256": "09ea6ad930763fcf2ca43963db4a09569cfc588aaef902bbfa3620fb4e704954"
+  },
+  {
+    "source": "metal+sword+3d+model.fbx",
+    "target": "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model.fbx",
+    "bytes": 2136832,
+    "sha256": "b65470f1704f3d20a0d1967413e1d1d9bdcc5deff2a53f5ac820713e0daed710"
+  },
+  {
+    "source": "metal+sword+3d+model.fbm/metal+sword+3d+model_basecolor.jpg",
+    "target": "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model_basecolor.jpg",
+    "bytes": 2211934,
+    "sha256": "423614502a2a7ca8607973592e066a4f32bbeae4e38589e33e652ba0d1b2451e"
+  }
+]

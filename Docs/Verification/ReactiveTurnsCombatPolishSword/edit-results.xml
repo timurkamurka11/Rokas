@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="6" result="Passed" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1,1923028">
+  <test-suite type="TestSuite" id="1000" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="936" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.192303" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1074" name="Rokas.Core.EditModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.Core.EditModeTests.dll" runstate="Runnable" testcasecount="60" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.146492" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="9452" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1075" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="60" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.145858" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1077" name="Core" fullname="Rokas.Core" runstate="Runnable" testcasecount="57" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.044610" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1078" name="Tests" fullname="Rokas.Core.Tests" runstate="Runnable" testcasecount="57" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.042536" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1050" name="ReactiveUnitySaveCodecTests" fullname="Rokas.Core.Tests.ReactiveUnitySaveCodecTests" classname="Rokas.Core.Tests.ReactiveUnitySaveCodecTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.040056" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1051" name="ActiveReactiveCheckpointRoundTripsThroughUnityJsonAndResumesOnce" fullname="Rokas.Core.Tests.ReactiveUnitySaveCodecTests.ActiveReactiveCheckpointRoundTripsThroughUnityJsonAndResumesOnce" methodname="ActiveReactiveCheckpointRoundTripsThroughUnityJsonAndResumesOnce" classname="Rokas.Core.Tests.ReactiveUnitySaveCodecTests" runstate="Runnable" seed="775627884" result="Passed" start-time="2026-09-29 22:37:39Z" end-time="2026-09-29 22:37:40Z" duration="1.030691" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+        <test-suite type="TestSuite" id="1076" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.100720" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="ReactiveSwordAssetEditModeTests" fullname="Rokas.Tests.ReactiveSwordAssetEditModeTests" classname="Rokas.Tests.ReactiveSwordAssetEditModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.099822" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="1004" name="AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents" fullname="Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents" classname="Rokas.Tests.ReactiveSwordAssetEditModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.087186" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1002" name="AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(False)" fullname="Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(False)" methodname="AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents" classname="Rokas.Tests.ReactiveSwordAssetEditModeTests" runstate="Runnable" seed="704517963" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.083935" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1003" name="AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(True)" fullname="Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(True)" methodname="AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents" classname="Rokas.Tests.ReactiveSwordAssetEditModeTests" runstate="Runnable" seed="264442344" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.000778" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1005" name="ReusableWeaponPrefabResolvesItsMeshMaterialAndTexture" fullname="Rokas.Tests.ReactiveSwordAssetEditModeTests.ReusableWeaponPrefabResolvesItsMeshMaterialAndTexture" methodname="ReusableWeaponPrefabResolvesItsMeshMaterialAndTexture" classname="Rokas.Tests.ReactiveSwordAssetEditModeTests" runstate="Runnable" seed="1444647434" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.012062" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1082" name="Rokas.SerializationTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.SerializationTests.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.020286" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="9452" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1083" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.019864" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1084" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.019636" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1079" name="UnitySaveTests" fullname="Rokas.Tests.UnitySaveTests" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.019443" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1081" name="PartialJsonCannotReplaceAValidBackup" fullname="Rokas.Tests.UnitySaveTests.PartialJsonCannotReplaceAValidBackup" methodname="PartialJsonCannotReplaceAValidBackup" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="235110876" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.007873" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1080" name="UnityJsonRestoresAcceptedContractAndPendingPayment" fullname="Rokas.Tests.UnitySaveTests.UnityJsonRestoresAcceptedContractAndPendingPayment" methodname="UnityJsonRestoresAcceptedContractAndPendingPayment" classname="Rokas.Tests.UnitySaveTests" runstate="Runnable" seed="812872026" result="Passed" start-time="2026-09-29 22:37:40Z" end-time="2026-09-29 22:37:40Z" duration="0.010394" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\reactiveturns-b2-staging\edit-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

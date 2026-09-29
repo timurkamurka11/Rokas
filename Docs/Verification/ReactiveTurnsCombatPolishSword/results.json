@@ -1,0 +1,231 @@
+{
+  "unity": "6000.3.19f1",
+  "tests": {
+    "edit-results.xml": {
+      "summary": {
+        "id": "2",
+        "testcasecount": "6",
+        "result": "Passed",
+        "total": "6",
+        "passed": "6",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-29 22:37:39Z",
+        "end-time": "2026-09-29 22:37:40Z",
+        "duration": "1,1923028"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Core.Tests.ReactiveUnitySaveCodecTests.ActiveReactiveCheckpointRoundTripsThroughUnityJsonAndResumesOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(False)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(True)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.ReusableWeaponPrefabResolvesItsMeshMaterialAndTexture",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.UnitySaveTests.PartialJsonCannotReplaceAValidBackup",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.UnitySaveTests.UnityJsonRestoresAcceptedContractAndPendingPayment",
+          "result": "Passed"
+        }
+      ]
+    },
+    "playfocus-results.xml": {
+      "summary": {
+        "id": "2",
+        "testcasecount": "21",
+        "result": "Passed",
+        "total": "21",
+        "passed": "21",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-29 22:35:12Z",
+        "end-time": "2026-09-29 22:37:11Z",
+        "duration": "119,2550177"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.EnemyKeepsOtherSlotsAndCorpseFallsHoldsThenSinksWithoutShrinking",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.TenAlternatingAttacksReturnExactlyAndPresentationPauseHoldsPose",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaUsesActionSpecificImportedClips",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ImportedRunClipsApproachAndReturnToTheSameHomeAcrossActions",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests.LiveContactDefenseReturnAndCorpseLifecycleAreRendered",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveDuelPlayModeTests.FocusAndSettingsPauseFreezeCombatThenResume",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveDuelPlayModeTests.PortalOffersPlayableReactiveDuelWithProjectArt",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveEightEnemyPlayModeTests.PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveFullLoopPlayModeTests.PortalDuelVictoryHomePaymentAndReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyRejectsEarlyAndLateDevicePressesAndStillSettles",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DefenseInputIsOwnedOnlyByActiveArenaAndDoesNotDuplicate",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DevicePressKeepsItsTimestampAndNeedsReleaseAfterRearm",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.HpTextIsImmediateBarsTweenAndReplacementSlotOwnerSnaps",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.IncomingCursorUsesRealPressTimestampThenResolvesAndReopensForNextHit",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.MainCommandsOnlyExposeNormalAndHeavyAndHeavyDoesNotOpenEnemyReactionUi",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.NormalHeavyAndSweepEmitOneContactCueEachThroughExistingVolumeControls",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.ExistingActorEquipsOneReplaceableSwordAndUsesDistinctAuthoredClips",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.RenderSwordGripAndAuthoredAttackFramesInPlayMode",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveWaveTransitionPlayModeTests.ThreeWavesRefreshTheLiveArenaHudAndQueueThenReachVictory",
+          "result": "Passed"
+        }
+      ]
+    }
+  },
+  "source_hashes": [
+    {
+      "source": "Normal attack.fbx",
+      "target": "Assets/Rokas/Art/CombatActors/Keiko/Normal attack.fbx",
+      "bytes": 5747120,
+      "sha256": "031cd6662d28e98abdd0caadfbbd4f44986d8a52bc66f62fb981b61217819884",
+      "import_matches_source": true
+    },
+    {
+      "source": "Hard jump attack.fbx",
+      "target": "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack.fbx",
+      "bytes": 5797104,
+      "sha256": "09ea6ad930763fcf2ca43963db4a09569cfc588aaef902bbfa3620fb4e704954",
+      "import_matches_source": true
+    },
+    {
+      "source": "metal+sword+3d+model.fbx",
+      "target": "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model.fbx",
+      "bytes": 2136832,
+      "sha256": "b65470f1704f3d20a0d1967413e1d1d9bdcc5deff2a53f5ac820713e0daed710",
+      "import_matches_source": true
+    },
+    {
+      "source": "metal+sword+3d+model.fbm/metal+sword+3d+model_basecolor.jpg",
+      "target": "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model_basecolor.jpg",
+      "bytes": 2211934,
+      "sha256": "423614502a2a7ca8607973592e066a4f32bbeae4e38589e33e652ba0d1b2451e",
+      "import_matches_source": true
+    }
+  ],
+  "new_weapon_guids": {
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword.meta": "7f3279ed1f95f2e40a3715e9b21d41fd",
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/KeikoSword.mat.meta": "a6030b6603d76eb43b6cf4fce97ab99a",
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/KeikoSword.prefab.meta": "e77b4611c18fac34f999f43b784bda00",
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model.fbx.meta": "f6a04fc5b9beb964fb743a3cb9fa9c56",
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model_basecolor.jpg.meta": "7430f7be96bc5e34d8a774a2cbae42ae"
+  },
+  "unity_compilation_runtime_error_scan": {
+    "edit-tests.log": [],
+    "playfocus-tests.log": [],
+    "builder.log": []
+  },
+  "evidence_hashes": {
+    "polish-core.log": "0c891f4ebcf28f5b1670cd936667d29cdcdcb4f45ddca8f531d4279fa30c3e1a",
+    "edit-results.xml": "aa1d78b769d793e829888c7d1e66ffa6ca70aab07598485185f2ad7b407a72a5",
+    "playfocus-results.xml": "db5258419af4011acd12264d62836e5c5ba2fc16a4b9559227f57c5268b725d6",
+    "polish-validator-baseline.log": "453154f80e5854d08d52b087cecee454c6ba3bd6eddeb1d45d8246162987f7ab",
+    "polish-validator-final.log": "453154f80e5854d08d52b087cecee454c6ba3bd6eddeb1d45d8246162987f7ab",
+    "polish-validator-comparison.json": "664ad4c139b1cb5cbf9175b1c7ac28374364356c5472484c2bd07688324bd3b9",
+    "keiko-sword-import-map.json": "7d0eb9c9467c5c75720d96c06485f3739f8c5c66c5a8a732623389eaeabb11c6",
+    "edit-tests.log": "58b650eca84a91a8bedb2151fdb9d44124dd03f229344f5538bb295c4ecf8dcb",
+    "playfocus-tests.log": "c11b96d98838523fa17c8ad103fb3d65651d6a0435f53f6e54f57cda2d70d3f7",
+    "builder.log": "8719ac3e2626cda37dfcf74dfa624ebfc5f57e7e89b33a836aa74e963959dc09",
+    "capture-manifest.json": "e02003f4196a7b0d38dc08c23f2c37ec9748bfeb05677af1e2ade5d71d4999fb"
+  },
+  "rendered_visual_hashes": {
+    "block-result.png": "156b0aa7652504d5f096fd713c9e5738b5ad9ea6b4bfed4becebadd275a8578f",
+    "corpse-fallen.png": "83689beec2aa0ff0590054ca9a2bb0c7b9b9ccaeb0603497807860fbf339730d",
+    "corpse-hold.png": "ddbe283ed642afb98c1367901cebb94eddee3173b019e59d62e0a3003eef7d19",
+    "corpse-sink.png": "6745a535394f4e1904f7fd4d63eb65858e0d0c24bb911c32d269c610239fe5bf",
+    "dodge-result.png": "309206133082edaeb68c0658c30a86e1ec2e59790686afa569aaad66fd62f29b",
+    "enemy-reaction-cursor.png": "3e8ec9be1f06f967f576ecad6979b791281d954e8cab7609589195ae7bfe9702",
+    "heavy-contact.png": "51afdb99e33118b4beb1c9c2ad15372616323c93dbc7b8f5023b345caac6d3bc",
+    "heavy-return.png": "f9298e454f1b22d7635b60ddf3b8288b23b69f175de3e2514b10761951ada480",
+    "normal-contact.png": "6f7ddfcfa379b8ad62b6ba129ad7cce33e5d587242c91cdbe5539bb4e67fc63a",
+    "normal-return.png": "db96060387ab23b8c8be8ecfd11e06af005f97585dc9539ad97e65f7f4c7c66e",
+    "rokas-reactive-arena-1280x720.png": "6143b10229eb83f57bbcadb85d4f523aa301af511a92ef43cdf183035f071f43",
+    "rokas-reactive-arena-1920x1080-approach.png": "02f9c66d1dbdc56f705ead1c5fbcbdaa3e32cf71f0bb8c201f08cbf4a0711d22",
+    "rokas-reactive-arena-1920x1080-return.png": "33f7f3f6cda714320c2f2a6181f1d73d5bed47536430fa01ce95e15b9188fc89",
+    "rokas-reactive-arena-1920x1080-windup.png": "fbb9a3b67e1508c7b957e8fd0c01be1f818524b5c30a85882e774f610acc2dd6",
+    "rokas-reactive-arena-1920x1080.png": "0a395a178e7aa3b8cb46f2a346678e9872a9e885166badeb82a99aeb66b8d0bf",
+    "rokas-sword-grip-close.png": "e9265b41245bf80b6de6f583854014a392607b8da7f31447e27910d8d87b372b",
+    "rokas-sword-idle-front.png": "25486503c7b75b534596097ff8a6fdfb1eef1ee9e4c1c5ea5c5a4ae638f2284e",
+    "rokas-sword-idle-side.png": "d34fdbc2ddcc87b083842e92cb8b99943d6fc58bd6fb48244a73a98a6fc48a89",
+    "rokas-sword-Keiko_Hard_jump_attack-frames.png": "0b589629ec02029c0aadbb8957069d2f2002a37aa5c74800fa10c9976a4bb598",
+    "rokas-sword-Keiko_Keiko_Idle-frames.png": "f01340f322fe695f1fbea8f32379fb2f967342a4d37c9040929bf4877269e33a",
+    "rokas-sword-Keiko_Normal_attack-frames.png": "65ff18b15f946b48cf3bb7004905d1839b6ea1f34fbb51abcebf7a66f9924c3c"
+  }
+}
