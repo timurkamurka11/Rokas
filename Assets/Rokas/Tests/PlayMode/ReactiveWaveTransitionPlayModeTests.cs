@@ -74,7 +74,9 @@ namespace Rokas.Tests
             AssertWave(boot, 0, new[] { "E1", "E2", "E3" }, 3);
             string firstInstance = boot.Session.ReactiveCombat.WaveInstanceId;
 
-            Press("ReactiveSweep");
+            Assert.That(Find("ReactiveSweep").activeInHierarchy, Is.False,
+                "Sweep is retained in Core while the visible HUD offers Normal and Heavy only.");
+            boot.SubmitReactiveCommand(CommandKind.Skill, "sweep");
             yield return WaitForPhase(boot, ReactivePhase.WaveTransition, 6f);
             AssertTransition(boot, 0, 3, 4);
             Assert.That(boot.Session.State.battleCheckpoint.phase,
@@ -109,7 +111,7 @@ namespace Rokas.Tests
             AssertTransition(boot, 1, 6, 7);
             string secondInstance = boot.Session.ReactiveCombat.WaveInstanceId;
             yield return WaitForWave(boot, 2, 9f);
-            yield return WaitForRetiredModels(3, 2f);
+            yield return WaitForRetiredModels(3, 5f);
             AssertWave(boot, 2, new[] { "E7", "E8" }, 2);
             Assert.That(boot.Session.ReactiveCombat.WaveInstanceId, Is.Not.EqualTo(secondInstance));
             Assert.That(boot.Session.ReactiveCombat.SelectedTargetId, Is.EqualTo("E7"));
@@ -202,11 +204,13 @@ namespace Rokas.Tests
                     Assert.That(combat.ActiveEnemyIds.Count, Is.InRange(1, 3));
                     string selected = combat.ActiveEnemyIds[0];
                     if (combat.SelectedTargetId != selected) boot.SelectReactiveTarget(selected);
-                    string actionName = combat.ActiveEnemyIds.Count >= 2 && combat.HunterAp >= 3
-                        ? "ReactiveSweep" : "ReactiveBasic";
-                    Button action = Find(actionName)?.GetComponent<Button>();
+                    Button action = Find("ReactiveBasic")?.GetComponent<Button>();
                     if (action != null && action.gameObject.activeInHierarchy && action.IsInteractable())
-                        Press(actionName);
+                    {
+                        if (combat.ActiveEnemyIds.Count >= 2 && combat.HunterAp >= 3)
+                            boot.SubmitReactiveCommand(CommandKind.Skill, "sweep");
+                        else Press("ReactiveBasic");
+                    }
                 }
                 else if (combat.Phase == ReactivePhase.EnemyExecution &&
                          combat.CurrentActionId != guardedActionId)
@@ -262,10 +266,18 @@ namespace Rokas.Tests
             long start = combat.CurrentActionStartUs;
             foreach (HitDefinition hit in combat.CurrentAttack.Hits)
             {
+                // Corpse review can span an incoming hit. Never backdate a new
+                // press into a hit whose acquisition/delivery window has ended.
+                if (combat.CurrentCombatUs > start + hit.ImpactUs + combat.DefenseWindow.AcquireLateUs + 40000) continue;
+                // This fixture schedules presses directly; emulate the released key
+                // required after the runtime's frame-gap input epoch changes.
+                combat.ReleaseDefense(DefenseKind.Dodge, combat.InputEpoch);
                 DefenseAttempt attempt = combat.SubmitDefense(new DefenseIntent(
                     "wave-guard-" + actionId + "-" + hit.Id, combat.InputEpoch,
                     DefenseKind.Dodge, start + hit.ImpactUs - 150000));
-                Assert.That(attempt.Outcome, Is.EqualTo(DefenseOutcome.Dodge));
+                Assert.That(attempt.Outcome, Is.EqualTo(DefenseOutcome.Dodge),
+                    "Action=" + actionId + " Hit=" + hit.Id + " Now=" + combat.CurrentCombatUs +
+                    " Start=" + start + " Epoch=" + combat.InputEpoch);
                 combat.ReleaseDefense(DefenseKind.Dodge, combat.InputEpoch);
             }
         }

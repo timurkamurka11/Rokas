@@ -53,7 +53,9 @@ namespace Rokas.Tests
             Assert.That(boot.View.Paused, Is.False);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
 
-            Press("ReactiveSealStrike");
+            Assert.That(Find("ReactiveSealStrike").activeInHierarchy, Is.False,
+                "Legacy skills remain available to Core but are absent from the compact combat HUD.");
+            boot.SubmitReactiveCommand(CommandKind.Skill, "seal_strike");
             yield return WaitForPhase(boot, ReactivePhase.EnemyExecution, 5f);
             var combat = boot.Session.ReactiveCombat;
             Assert.That(combat.EnemyHp, Is.EqualTo(132));
@@ -78,7 +80,8 @@ namespace Rokas.Tests
             Assert.That(combat.EnemyHp, Is.EqualTo(107));
             Assert.That(combat.EnemyBroken, Is.True);
 
-            Press("ReactiveSealStrike");
+            yield return WaitForCommandReady("ReactiveBasic", 4f);
+            boot.SubmitReactiveCommand(CommandKind.Skill, "seal_strike");
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(47));
             Assert.That(combat.EnemyBroken, Is.False);
@@ -91,8 +94,8 @@ namespace Rokas.Tests
             yield return PressKey(Key.Q);
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 4f);
             Assert.That(combat.HunterHp, Is.EqualTo(92));
-            yield return WaitForCommandReady("ReactiveSealStrike", 2f);
-            Press("ReactiveSealStrike");
+            yield return WaitForCommandReady("ReactiveBasic", 4f);
+            boot.SubmitReactiveCommand(CommandKind.Skill, "seal_strike");
             yield return WaitForRunPhase(boot, RunPhase.Sealed, 4f);
             Assert.That(combat.TerminalResult, Is.EqualTo(CombatOutcome.Victory));
             Assert.That(combat.EnemyHp, Is.EqualTo(0));
@@ -107,6 +110,13 @@ namespace Rokas.Tests
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(), InputState.currentTime);
             InputSystem.Update();
 
+            float resultDeadline = Time.realtimeSinceStartup + 6f;
+            Assert.That(GameObject.Find("ReactiveCombatWorld"), Is.Not.Null,
+                "Terminal progression is saved immediately, while the last corpse remains visible.");
+            while (Find("ReturnHome") == null && Time.realtimeSinceStartup < resultDeadline) yield return null;
+            yield return null; // Unity releases the retired world at the end of the rebuild frame.
+            Assert.That(GameObject.Find("ReactiveCombatWorld"), Is.Null,
+                "The arena is released after its final death presentation.");
             Press("ReturnHome");
             yield return new WaitForSecondsRealtime(1.6f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Payment));

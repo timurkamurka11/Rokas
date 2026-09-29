@@ -43,6 +43,8 @@ namespace Rokas.Presentation
         private float toastTime;
         private int laptopOpenedFrame = -1;
         private int observedMessageSequence;
+        private bool reactiveResultPending;
+        private float reactiveResultRemaining;
 
         public string LastMessageAudioCue { get; private set; }
         public int MessageAudioCueCount { get; private set; }
@@ -64,7 +66,7 @@ namespace Rokas.Presentation
         public bool ReactiveActorsReady { get { return mission.AnimatedActorsReady; } }
         public bool HunterApproachComplete { get { return mission.HunterApproachComplete; } }
         public bool HunterAtHome { get { return mission.HunterAtHome; } }
-        public bool StartHunterApproach(string enemyId) { return mission.StartHunterApproach(enemyId); }
+        public bool StartHunterApproach(string enemyId, bool heavy = false) { return mission.StartHunterApproach(enemyId, heavy); }
         public void CancelHunterMotion() { mission.CancelHunterMotion(); }
         public void SetReactivePresentationLocked(bool value) { mission.SetReactivePresentationLocked(value); }
         public void CancelCombatInput() { mission.CancelInput(); }
@@ -255,11 +257,28 @@ namespace Rokas.Presentation
             RunPhase nextPhase = session.State.phase;
             if (phase != nextPhase)
             {
-                bool wasHomeLocation = IsHomeLocation(phase);
-                bool isHomeLocation = IsHomeLocation(nextPhase);
-                phase = nextPhase;
-                if (!wasHomeLocation && isHomeLocation) laptop.BeginHomeVisit();
-                RebuildScene();
+                bool finishReactiveArena = phase == RunPhase.Combat &&
+                    (nextPhase == RunPhase.Sealed || nextPhase == RunPhase.Failed) &&
+                    session.CombatMode == CombatMode.ReactiveTurns && mission.AnimatedActorsReady;
+                if (finishReactiveArena)
+                {
+                    // Terminal state is already saved. Keep only its visual fall/hold/sink
+                    // before replacing the arena with the existing result screen.
+                    if (!reactiveResultPending)
+                    {
+                        reactiveResultPending = true;
+                        reactiveResultRemaining = 4.5f;
+                    }
+                }
+                else
+                {
+                    reactiveResultPending = false;
+                    bool wasHomeLocation = IsHomeLocation(phase);
+                    bool isHomeLocation = IsHomeLocation(nextPhase);
+                    phase = nextPhase;
+                    if (!wasHomeLocation && isHomeLocation) laptop.BeginHomeVisit();
+                    RebuildScene();
+                }
             }
             wallet.text = "¥ " + session.State.yen.ToString("N0") + "     /     РЕП " + session.State.reputation + "     /     ПЕПЕЛ " + session.State.spiritAsh;
             home.Refresh();
@@ -268,6 +287,7 @@ namespace Rokas.Presentation
 
         public void RefreshReactiveCombat() { mission.Refresh(); }
         public void PresentReactiveCombatStep(CombatStep step) { mission.PresentReactiveCombatStep(step); }
+        public void PresentReactiveDefenseAttempt(DefenseAttempt attempt, long pressUs) { mission.PresentReactiveDefenseAttempt(attempt, pressUs); }
 
         private static bool IsHomeLocation(RunPhase value)
         {
@@ -423,6 +443,16 @@ namespace Rokas.Presentation
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
             mission.Tick(dt, Paused || !focused);
+            if (reactiveResultPending && focused && !Paused && !session.SaveBlocked)
+            {
+                reactiveResultRemaining = Mathf.Max(0f, reactiveResultRemaining - dt);
+                if (reactiveResultRemaining <= 0f)
+                {
+                    reactiveResultPending = false;
+                    phase = session.State.phase;
+                    RebuildScene();
+                }
+            }
             hubDialogue?.Tick(dt);
             if (panel == "laptop")
             {

@@ -39,7 +39,9 @@ namespace Rokas.Presentation
         public bool AnimatedActorsReady { get { return reactiveView.AnimatedActorsReady; } }
         public bool HunterApproachComplete { get { return reactiveView.HunterApproachComplete; } }
         public bool HunterAtHome { get { return reactiveView.HunterAtHome; } }
-        public bool StartHunterApproach(string enemyId) { return reactiveView.StartHunterApproach(enemyId); }
+        public bool StartHunterApproach(string enemyId, bool heavy = false) { return reactiveView.StartHunterApproach(enemyId, heavy); }
+        public void PresentReactiveDefenseAttempt(DefenseAttempt attempt, long pressUs)
+        { reactiveView.PresentDefenseAttempt(attempt, pressUs); }
         public void CancelHunterMotion() { reactiveView.CancelHunterMotion(); }
         public void SetReactivePresentationLocked(bool value) { reactiveView.SetPresentationLocked(value); }
 
@@ -136,7 +138,8 @@ namespace Rokas.Presentation
 
         public void Refresh()
         {
-            if (session.State.phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns)
+            if (session.CombatMode == CombatMode.ReactiveTurns &&
+                (session.State.phase == RunPhase.Combat || reactiveView.AnimatedActorsReady))
             {
                 ReactiveCombatSession combat = session.ReactiveCombat;
                 if (combat == null) return;
@@ -151,31 +154,53 @@ namespace Rokas.Presentation
                 string telegraph = string.Empty;
                 string detail = string.Empty;
                 float contactProgress = 0f;
+                string timingHitId = null;
+                long timingStartUs = 0;
+                long timingImpactUs = 0;
+                long timingEndUs = 0;
+                bool incomingHit = false;
+                DefenseResponseMask allowedResponses = DefenseResponseMask.None;
+                long offenseEarlyUs = 0;
+                long offenseLateUs = 0;
                 if (combat.Phase == ReactivePhase.EnemyExecution && combat.CurrentAttack != null)
                 {
                     int hits = combat.CurrentAttack.Hits.Count;
                     long elapsed = Math.Max(0, combat.CurrentCombatUs - combat.CurrentActionStartUs);
                     long previousImpact = 0;
-                    int upcoming = hits - 1;
+                    int upcoming = -1;
                     for (int i = 0; i < hits; i++)
                     {
-                        if (elapsed <= combat.CurrentAttack.Hits[i].ImpactUs)
+                        if (elapsed <= combat.CurrentAttack.Hits[i].ImpactUs + combat.DefenseWindow.AcquireLateUs + 40000)
                         {
                             upcoming = i;
                             break;
                         }
-                        previousImpact = combat.CurrentAttack.Hits[i].ImpactUs;
+                        previousImpact = combat.CurrentAttack.Hits[i].ImpactUs + combat.DefenseWindow.AcquireLateUs;
                     }
-                    long nextImpact = combat.CurrentAttack.Hits[upcoming].ImpactUs;
-                    contactProgress = nextImpact > previousImpact
-                        ? Mathf.Clamp01((float)(elapsed - previousImpact) / (nextImpact - previousImpact)) : 1f;
-                    telegraph = hits == 1 ? "ВРАГ АТАКУЕТ" : "СЕРИЯ УДАРОВ  " + (upcoming + 1) + " / " + hits;
-                    detail = "ЦЕЛЬ: КЕЙКО    •    ПОДГОТОВЬ ЗАЩИТУ";
+                    if (upcoming >= 0)
+                    {
+                        HitDefinition hit = combat.CurrentAttack.Hits[upcoming];
+                        long nextEnd = hit.ImpactUs + combat.DefenseWindow.AcquireLateUs;
+                        contactProgress = nextEnd > previousImpact
+                            ? Mathf.Clamp01((float)(elapsed - previousImpact) / (nextEnd - previousImpact)) : 1f;
+                        timingHitId = hit.Id;
+                        timingStartUs = combat.CurrentActionStartUs + previousImpact;
+                        timingImpactUs = combat.CurrentActionStartUs + hit.ImpactUs;
+                        timingEndUs = combat.CurrentActionStartUs + nextEnd;
+                        incomingHit = true;
+                        allowedResponses = hit.AllowedResponses;
+                        telegraph = hits == 1 ? "ВРАГ АТАКУЕТ" : "УДАР  " + (upcoming + 1) + " / " + hits;
+                    }
                 }
                 else if (displayPhase == ReactiveDisplayPhase.OffenseTiming)
                 {
                     long elapsed = Math.Max(0, combat.CurrentCombatUs - combat.CurrentActionStartUs);
-                    contactProgress = Mathf.Clamp01(elapsed / 250000f);
+                    offenseEarlyUs = combat.CurrentOffenseTimingEarlyUs;
+                    offenseLateUs = combat.CurrentOffenseTimingLateUs;
+                    timingStartUs = combat.CurrentActionStartUs;
+                    timingImpactUs = timingStartUs + 200000;
+                    timingEndUs = timingImpactUs + offenseLateUs;
+                    contactProgress = Mathf.Clamp01((float)elapsed / (200000 + offenseLateUs));
                     telegraph = combat.CurrentOffenseTimingAccepted ? "ТОЧНЫЙ ТАЙМИНГ" : "ТЯЖЁЛЫЙ УДАР";
                     detail = combat.CurrentOffenseTimingAccepted ? "ПОПАДАНИЕ ПОДГОТОВЛЕНО" :
                         "SPACE / ЛКМ — НАЖМИ В ОКНЕ КОНТАКТА";
@@ -229,8 +254,8 @@ namespace Rokas.Presentation
                 CommandImpactPreview anchor = selectedId == null ? null :
                     combat.PreviewCommandImpact(CommandKind.Skill, "anchor", selectedId);
                 string commandPreview = basic == null || seal == null ? string.Empty :
-                    "ОБЫЧНЫЙ: −" + basic.Damage + " HP, +" + basic.ApGain + " AP     ПЕЧАТЬ: −" +
-                    seal.Damage + " HP, −" + seal.SealDamage + " SEAL     ТЯЖЁЛЫЙ: SPACE / ЛКМ НА КОНТАКТЕ";
+                    "ОБЫЧНЫЙ: −" + basic.Damage + " HP, +" + basic.ApGain +
+                    " AP     ТЯЖЁЛЫЙ: 5 AP · SPACE / ЛКМ НА КОНТАКТЕ";
                 string forecastText = string.Empty;
                 for (int i = 0; i < forecast.Slots.Count; i++)
                 {
@@ -266,6 +291,16 @@ namespace Rokas.Presentation
                     Detail = detail,
                     CommandPreview = commandPreview,
                     ContactProgress = contactProgress,
+                    ActionId = combat.CurrentActionId,
+                    HitId = timingHitId,
+                    TimingStartUs = timingStartUs,
+                    TimingImpactUs = timingImpactUs,
+                    TimingEndUs = timingEndUs,
+                    DefenseWindow = combat.DefenseWindow,
+                    IncomingHit = incomingHit,
+                    AllowedResponses = allowedResponses,
+                    OffenseEarlyUs = offenseEarlyUs,
+                    OffenseLateUs = offenseLateUs,
                     Phase = displayPhase
                 });
                 return;
@@ -311,21 +346,23 @@ namespace Rokas.Presentation
             if (step == null || session.CombatMode != CombatMode.ReactiveTurns) return;
             foreach (CombatEvent combatEvent in step.Events)
             {
-                reactiveView.Present(combatEvent);
+                reactiveView.Present(combatEvent, combatEvent.Kind == CombatEventKind.AttackStarted
+                    ? session.ReactiveCombat?.CurrentAttack : null);
                 bool combatCueHandled = reactiveAudio.Present(combatEvent);
                 if (combatEvent.Kind != CombatEventKind.HitResolved) continue;
                 bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
                 bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
                 if (combatEvent.Amount > 0 && !combatCueHandled)
                     audio.Play(perfect ? assets.critical : assets.hit);
-                world.Impact(perfect ? .9f : defended ? .45f : .65f);
+                world.Impact(perfect ? .35f : defended ? .08f : .20f);
             }
         }
 
         public void Tick(float dt, bool paused)
         {
             if (paused || session.SaveBlocked) { CancelInput(); return; }
-            if (session.State.phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns)
+            if (session.CombatMode == CombatMode.ReactiveTurns &&
+                (session.State.phase == RunPhase.Combat || reactiveView.AnimatedActorsReady))
             {
                 reactiveView.Tick(dt);
                 ReactiveCombatSession combat = session.ReactiveCombat;

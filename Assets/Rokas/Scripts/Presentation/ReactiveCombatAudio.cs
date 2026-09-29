@@ -11,11 +11,9 @@ namespace Rokas.Presentation
         private const string HunterId = "P";
 
         private readonly RokasAudio audio;
-        private readonly AudioClip[] keikoSwings;
         private readonly AudioClip keikoImpact;
         private readonly AudioClip[] monsterAttacks;
         private readonly AudioClip[] monsterIdle;
-        private int swingIndex;
         private int attackIndex;
         private int idleIndex;
         private float idleCountdown;
@@ -24,8 +22,6 @@ namespace Rokas.Presentation
         public ReactiveCombatAudio(RokasAudio audio)
         {
             this.audio = audio ?? throw new ArgumentNullException(nameof(audio));
-            keikoSwings = LoadBank("Keiko/Keiko attack sound 2", "Keiko/Keiko attack sound 3",
-                "Keiko/Keiko attack sound 4");
             keikoImpact = Resources.Load<AudioClip>(AudioRoot + "Keiko/Keiko hit attack");
             monsterAttacks = LoadBank("Monsters/Monster attack sound",
                 "Monsters/Monster attack sound 3", "Monsters/Attack monster 2");
@@ -43,7 +39,8 @@ namespace Rokas.Presentation
                 case CombatEventKind.CommandCommitted:
                     if (!IsOffensiveCommand(combatEvent.Detail)) return false;
                     DelayIdle(5f);
-                    return PlayNext(keikoSwings, ref swingIndex, .48f);
+                    // The single Keiko attack cue belongs to the resolved contact, after approach.
+                    return false;
 
                 case CombatEventKind.AttackStarted:
                     if (combatEvent.ActorId == HunterId) return false;

@@ -13,10 +13,12 @@ namespace Rokas.Editor
         private const string ClipOutput = Source + "Clips/";
         private const string MaterialOutput = Source + "Materials/";
         private const string Output = "Assets/Rokas/Resources/Combat/ReactiveCombatActorLibrary.asset";
+        private const string SwordFolder = Source + "Weapons/KeikoSword/";
 
         [MenuItem("ROKAS/Combat/Build Imported Actor Library")]
         public static void Build()
         {
+            ConfigureSwordSources();
             if (!AssetDatabase.IsValidFolder("Assets/Rokas/Resources/Combat"))
                 AssetDatabase.CreateFolder("Assets/Rokas/Resources", "Combat");
             if (!AssetDatabase.IsValidFolder(ClipOutput.TrimEnd('/')))
@@ -37,8 +39,15 @@ namespace Rokas.Editor
                 "Keiko/anime_character_3d_model_basecolor.JPEG",
                 "Keiko/anime_character_3d_model_normal.JPEG");
             library.keiko.idle = Clip("Keiko/Keiko@Idle.fbx");
-            library.keiko.attack = Clip("Keiko/attack.fbx");
-            library.keiko.heavy = Clip("Keiko/attack2.fbx");
+            library.keiko.attack = Clip("Keiko/Normal attack.fbx", true);
+            library.keiko.heavy = Clip("Keiko/Hard jump attack.fbx", true);
+            library.keiko.attackContactNormalized = 20f / 38f;
+            library.keiko.heavyContactNormalized = 31f / 57f;
+            library.keiko.weaponPrefab = SwordPrefab();
+            library.keiko.weaponBonePath = "mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2/mixamorig:RightShoulder/mixamorig:RightArm/mixamorig:RightForeArm/mixamorig:RightHand";
+            library.keiko.weaponSocketPosition = new Vector3(0f, .033f, .006f);
+            library.keiko.weaponSocketEuler = new Vector3(0f, 180f, 0f);
+            library.keiko.weaponSocketScale = Vector3.one;
             library.keiko.hit = null;
             library.keiko.stagger = null;
             library.keiko.death = null;
@@ -46,7 +55,7 @@ namespace Rokas.Editor
             library.keiko.approach = Clip("Keiko/Run to hit enemies.fbx", true);
             library.keiko.returnHome = Clip("Keiko/Run Back after hit.fbx", true);
             library.keiko.standingHeight = 2f;
-            library.keiko.forwardYaw = 0f;
+            library.keiko.forwardYaw = 65f;
 
             library.mina.model = Model("Mina/anime girl character 3d model@Standing Idle.fbx");
             library.mina.material = ActorMaterial("Mina",
@@ -76,7 +85,7 @@ namespace Rokas.Editor
             library.yokai.approach = null;
             library.yokai.returnHome = null;
             library.yokai.standingHeight = 2.7f;
-            library.yokai.forwardYaw = 0f;
+            library.yokai.forwardYaw = 65f;
 
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
@@ -122,9 +131,75 @@ namespace Rokas.Editor
                     EditorUtility.SetDirty(copy);
                 }
                 if (inPlaceHorizontal) RemoveHorizontalHipTranslation(copy);
+                AnimationUtility.SetAnimationEvents(copy, new AnimationEvent[0]);
                 return copy;
             }
             throw new InvalidOperationException("Missing combat animation " + relative);
+        }
+
+        private static void ConfigureSwordSources()
+        {
+            AssetDatabase.Refresh();
+            foreach (string file in new[] { "Normal attack.fbx", "Hard jump attack.fbx" })
+            {
+                var importer = AssetImporter.GetAtPath(Source + "Keiko/" + file) as ModelImporter;
+                if (importer == null) throw new InvalidOperationException("Missing sword attack source: " + file);
+                importer.animationType = ModelImporterAnimationType.Legacy;
+                importer.importAnimation = true;
+                importer.materialImportMode = ModelImporterMaterialImportMode.None;
+                importer.optimizeGameObjects = false;
+                importer.animationCompression = ModelImporterAnimationCompression.Off;
+                var takes = importer.defaultClipAnimations;
+                if (takes.Length != 1) throw new InvalidOperationException("Expected one authored attack take: " + file);
+                takes[0].firstFrame = 0f;
+                takes[0].lastFrame = file.StartsWith("Normal", StringComparison.Ordinal) ? 38f : 57f;
+                takes[0].loopTime = false;
+                takes[0].loopPose = false;
+                importer.clipAnimations = takes;
+                importer.SaveAndReimport();
+            }
+            var sword = AssetImporter.GetAtPath(SwordFolder + "metal+sword+3d+model.fbx") as ModelImporter;
+            if (sword == null) throw new InvalidOperationException("Missing sword model");
+            sword.importAnimation = false;
+            sword.animationType = ModelImporterAnimationType.None;
+            sword.materialImportMode = ModelImporterMaterialImportMode.None;
+            sword.importNormals = ModelImporterNormals.Import;
+            sword.importTangents = ModelImporterTangents.CalculateMikk;
+            sword.isReadable = false;
+            sword.SaveAndReimport();
+        }
+
+        private static GameObject SwordPrefab()
+        {
+            string path = SwordFolder + "KeikoSword.prefab";
+            string materialPath = SwordFolder + "KeikoSword.mat";
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Standard")) { name = "Combat_KeikoSword" };
+                AssetDatabase.CreateAsset(material, materialPath);
+            }
+            material.mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(SwordFolder + "metal+sword+3d+model_basecolor.jpg");
+            material.color = Color.white;
+            material.SetFloat("_Metallic", .28f);
+            material.SetFloat("_Glossiness", .32f);
+            EditorUtility.SetDirty(material);
+            var root = new GameObject("KeikoSword");
+            try
+            {
+                GameObject mesh = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(SwordFolder + "metal+sword+3d+model.fbx"), root.transform, false);
+                mesh.name = "SwordMesh";
+                // Source handle is at upper right; wrapper puts the grip at zero and blade on +Z.
+                Vector3 grip = new Vector3(-.34207f, .90139f, .00035f);
+                Vector3 blade = new Vector3(.75112f, -.8907f, -.00035f).normalized;
+                Quaternion orientation = Quaternion.FromToRotation(blade, Vector3.forward);
+                mesh.transform.localRotation = orientation;
+                mesh.transform.localScale = Vector3.one * .55f;
+                mesh.transform.localPosition = -(orientation * grip) * .55f;
+                foreach (Renderer renderer in mesh.GetComponentsInChildren<Renderer>(true)) renderer.sharedMaterial = material;
+                return PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
         // The arena moves the actor root; keep the imported run cycle in place.

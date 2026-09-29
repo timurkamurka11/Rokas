@@ -16,8 +16,8 @@ MonoBehaviour:
     model: {fileID: 919132149155446097, guid: e7b631b390af57f4ab2a82c95b079622, type: 3}
     material: {fileID: 2100000, guid: a7eb21dd960e73943a37f19140f63ce0, type: 2}
     idle: {fileID: 7400000, guid: e5a163ef5767c3e41b771d0e42ead535, type: 2}
-    attack: {fileID: 7400000, guid: 3dd7118afa7b08a488198807a1b36d55, type: 2}
-    heavy: {fileID: 7400000, guid: bc317e1a774e6304a9b242217eefe44f, type: 2}
+    attack: {fileID: 7400000, guid: aa77631668d93e5459ecf9b0d6c54c9a, type: 2}
+    heavy: {fileID: 7400000, guid: 6f04fdd0f7bc63f4e940879d2fa242bb, type: 2}
     hit: {fileID: 0}
     stagger: {fileID: 0}
     death: {fileID: 0}
@@ -25,7 +25,14 @@ MonoBehaviour:
     approach: {fileID: 7400000, guid: b28cbddd192513449b913d9e1ff83422, type: 2}
     returnHome: {fileID: 7400000, guid: 23699d70a5a5e4246a8c361d514e8ad6, type: 2}
     standingHeight: 2
-    forwardYaw: 0
+    forwardYaw: 65
+    attackContactNormalized: 0.5263158
+    heavyContactNormalized: 0.54385966
+    weaponPrefab: {fileID: 1730584887549084084, guid: e77b4611c18fac34f999f43b784bda00, type: 3}
+    weaponBonePath: mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2/mixamorig:RightShoulder/mixamorig:RightArm/mixamorig:RightForeArm/mixamorig:RightHand
+    weaponSocketPosition: {x: 0, y: 0.033, z: 0.006}
+    weaponSocketEuler: {x: 0, y: 180, z: 0}
+    weaponSocketScale: {x: 1, y: 1, z: 1}
   mina:
     model: {fileID: 919132149155446097, guid: 2574abaf510bb6d4fbd8d34111fbe549, type: 3}
     material: {fileID: 2100000, guid: eb85fd7513569204991315f9cd84ec74, type: 2}
@@ -40,6 +47,13 @@ MonoBehaviour:
     returnHome: {fileID: 0}
     standingHeight: 2
     forwardYaw: 0
+    attackContactNormalized: 0.5
+    heavyContactNormalized: 0.5
+    weaponPrefab: {fileID: 0}
+    weaponBonePath:
+    weaponSocketPosition: {x: 0, y: 0, z: 0}
+    weaponSocketEuler: {x: 0, y: 0, z: 0}
+    weaponSocketScale: {x: 1, y: 1, z: 1}
   yokai:
     model: {fileID: 919132149155446097, guid: 6829b90e550fced4480c255578acbf2e, type: 3}
     material: {fileID: 2100000, guid: ce76816c2418c414b8eaa22619cc21aa, type: 2}
@@ -53,4 +67,11 @@ MonoBehaviour:
     approach: {fileID: 0}
     returnHome: {fileID: 0}
     standingHeight: 2.7
-    forwardYaw: 0
+    forwardYaw: 65
+    attackContactNormalized: 0.5
+    heavyContactNormalized: 0.5
+    weaponPrefab: {fileID: 0}
+    weaponBonePath:
+    weaponSocketPosition: {x: 0, y: 0, z: 0}
+    weaponSocketEuler: {x: 0, y: 0, z: 0}
+    weaponSocketScale: {x: 1, y: 1, z: 1}

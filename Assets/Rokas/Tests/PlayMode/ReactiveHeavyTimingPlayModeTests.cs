@@ -70,18 +70,24 @@ namespace Rokas.Tests
 
             Press("ReactiveTarget2");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"));
+            int clicksBeforeHeavy = boot.View.GenericClickCount;
             Press("ReactiveHeavy");
+            Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeHeavy),
+                "The Heavy command must not layer a generic UI click over its single contact cue.");
             Assert.That(combat.CurrentPlayerSkillId, Is.EqualTo("heavy"));
             boot.SelectReactiveTarget("E3");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),
                 "Target selection is locked to the committed action.");
             yield return null;
             Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.False,
+                "The reaction bar belongs only to incoming enemy attacks.");
+            Assert.That(Find("ReactiveOffenseTiming").activeInHierarchy, Is.False,
                 "Heavy timing starts after Keiko reaches the target.");
-            yield return WaitFor(boot, () => Find("ReactiveContactTrack").activeInHierarchy, 2f);
-            Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.True);
+            yield return WaitFor(boot, () => Find("ReactiveOffenseTiming").activeInHierarchy, 4f);
+            Assert.That(Find("ReactiveOffenseTiming").activeInHierarchy, Is.True);
+            Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveDefense").activeInHierarchy, Is.False);
-            Assert.That(Find("ReactiveDefenseHint").GetComponent<Text>().text, Does.Contain("SPACE"));
+            Assert.That(Find("OffenseHint").GetComponent<Text>().text, Does.Contain("SPACE"));
             Assert.That(Find("ReactiveTelegraph").GetComponent<Text>().text, Does.Contain("ТЯЖЁЛЫЙ"));
 
             long start = combat.CurrentActionStartUs;
@@ -114,8 +120,7 @@ namespace Rokas.Tests
 
             yield return WaitFor(boot, () => combat.Phase != ReactivePhase.PlayerExecution, 3f);
             Assert.That(combat.CurrentPlayerSkillId, Is.Null);
-            Assert.That(Find("ReactiveContactTrack").activeInHierarchy,
-                Is.EqualTo(combat.Phase == ReactivePhase.EnemyExecution),
+            Assert.That(Find("ReactiveOffenseTiming").activeInHierarchy, Is.False,
                 "The offensive timing UI is removed when Heavy ends.");
             Assert.That(combat.Phase, Is.Not.EqualTo(ReactivePhase.SafeError));
         }

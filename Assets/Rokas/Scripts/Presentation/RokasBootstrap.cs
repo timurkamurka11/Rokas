@@ -421,7 +421,7 @@ namespace Rokas.Presentation
                 string approachTarget = targets.Length > 0 ? targets[0] : combat.SelectedTargetId;
                 if (string.IsNullOrEmpty(approachTarget) && combat.ActiveEnemyIds.Count > 0)
                     approachTarget = combat.ActiveEnemyIds[0];
-                if (View.StartHunterApproach(approachTarget))
+                if (View.StartHunterApproach(approachTarget, skillId == "heavy"))
                 {
                     // Core accepts the command now. Its authored 0.2 s contact begins when
                     // the visual approach reaches the target, without changing combat rules.
@@ -453,8 +453,9 @@ namespace Rokas.Presentation
             long? combatUs = reactiveClock.MapInput(deviceUs, reactiveClock.CurrentEpoch);
             if (!combatUs.HasValue) return;
             DefenseKind defense = kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
-            combat.SubmitDefense(new DefenseIntent("ui-" + Guid.NewGuid().ToString("N"),
+            DefenseAttempt attempt = combat.SubmitDefense(new DefenseIntent("ui-" + Guid.NewGuid().ToString("N"),
                 combat.InputEpoch, defense, combatUs.Value));
+            View.PresentReactiveDefenseAttempt(attempt, combatUs.Value);
             combat.ReleaseDefense(defense, combat.InputEpoch);
             View.RefreshReactiveCombat();
         }
@@ -639,8 +640,9 @@ namespace Rokas.Presentation
             long? combatUs = reactiveClock.MapInput(press.DeviceTimeUs, reactiveClock.CurrentEpoch);
             if (!combatUs.HasValue) return;
             DefenseKind kind = press.Kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
-            reactiveBoundCombat.SubmitDefense(new DefenseIntent("device-" + press.InputId,
+            DefenseAttempt attempt = reactiveBoundCombat.SubmitDefense(new DefenseIntent("device-" + press.InputId,
                 reactiveBoundCombat.InputEpoch, kind, combatUs.Value));
+            View.PresentReactiveDefenseAttempt(attempt, combatUs.Value);
         }
 
         private void SubmitReactiveOffensePress(ReactiveOffensePress press)
@@ -665,7 +667,11 @@ namespace Rokas.Presentation
             if (focused && !saveBlocked && Session.CombatMode == CombatMode.Legacy)
                 View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
             if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
-            View.Tick(dt, focused);
+            // A frame-gap/focus preparation pause also freezes the arena's visual clock.
+            // The intentional approach/windup hold must keep moving until its gate opens.
+            bool presentationCanAdvance = focused &&
+                (reactiveClock == null || !reactiveClock.IsPaused || reactiveApproachHold);
+            View.Tick(dt, presentationCanAdvance);
             sound.Tick(dt, focused);
 
             if (focused && Input.GetKeyDown(KeyCode.Tab)) View.FocusNext();

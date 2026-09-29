@@ -51,6 +51,7 @@ namespace Rokas.Core.ReactiveTurns
                 _activeCommand.Kind == CommandKind.Skill ? _activeCommand.SkillId : null; }
         }
         public AttackSequenceDefinition CurrentAttack { get { return _currentAttack; } }
+        public DefenseWindowProfile DefenseWindow { get { return _definitions.Window; } }
         public long CurrentActionStartUs { get { return _actionStartUs; } }
         public QueueState Queue { get { return _queue.Clone(); } }
         public int CurrentWaveIndex { get { return _waveIndex; } }

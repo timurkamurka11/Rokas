@@ -68,7 +68,7 @@ namespace Rokas.Presentation
         }
 
         public Button Button(Transform parent, string name, string title, float x, float y, float w, float h,
-            Action action, bool primary = false, bool enabled = true)
+            Action action, bool primary = false, bool enabled = true, bool playClickSound = true)
         {
             Color baseColor = primary ? new Color(.17f, .32f, .29f, .98f) : new Color(.075f, .105f, .11f, .98f);
             var background = Box(parent, name, x, y, w, h, baseColor, true);
@@ -88,7 +88,7 @@ namespace Rokas.Presentation
             Box(background.transform, "TopRule", 0, 0, w, 1, edge * new Color(1, 1, 1, .65f));
             Box(background.transform, "LeftRule", 0, 0, 3, h, edge);
             Label(background.transform, "Title", title, 20, 0, w - 40, h, 22);
-            button.onClick.AddListener(() => { clickSound?.Invoke(); action?.Invoke(); });
+            button.onClick.AddListener(() => { if (playClickSound) clickSound?.Invoke(); action?.Invoke(); });
             var feedback = background.gameObject.AddComponent<InteractionFeedback>();
             feedback.Initialize(background.rectTransform);
             return button;

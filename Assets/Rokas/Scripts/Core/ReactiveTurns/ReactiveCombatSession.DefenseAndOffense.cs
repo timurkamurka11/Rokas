@@ -170,6 +170,9 @@ namespace Rokas.Core.ReactiveTurns
             return true;
         }
 
+        public long CurrentOffenseTimingEarlyUs => _definitions.FindSkill(CurrentPlayerSkillId)?.OffenseTimingEarlyUs ?? 0;
+        public long CurrentOffenseTimingLateUs => _definitions.FindSkill(CurrentPlayerSkillId)?.OffenseTimingLateUs ?? 0;
+
         private static CounterAttempt CounterRejected(string reason)
         {
             return new CounterAttempt { Accepted = false, Reason = reason };

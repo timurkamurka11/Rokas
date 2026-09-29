@@ -45,6 +45,16 @@ namespace Rokas.Presentation
         public string Detail;
         public string CommandPreview;
         public float ContactProgress;
+        public string ActionId;
+        public string HitId;
+        public long TimingStartUs;
+        public long TimingImpactUs;
+        public long TimingEndUs;
+        public DefenseWindowProfile DefenseWindow;
+        public bool IncomingHit;
+        public DefenseResponseMask AllowedResponses;
+        public long OffenseEarlyUs;
+        public long OffenseLateUs;
         public ReactiveDisplayPhase Phase;
     }
 
@@ -70,6 +80,12 @@ namespace Rokas.Presentation
         private readonly Text[] targetTexts = new Text[4];
         private readonly Text[] targetHpTexts = new Text[4];
         private readonly Image[] targetHpFills = new Image[4];
+        private readonly Image[] targetHighlights = new Image[4];
+        private readonly string[] hpOwners = new string[4];
+        private readonly float[] targetHpCurrent = new float[4];
+        private readonly float[] targetHpGoal = new float[4];
+        private readonly float[] targetHpStart = new float[4];
+        private readonly float[] targetHpTween = new float[4];
         private readonly RectTransform[] targetSlotRects = new RectTransform[4];
         private readonly Text[] hunterApPips = new Text[6];
         private RectTransform root;
@@ -100,6 +116,13 @@ namespace Rokas.Presentation
         private RawImage timingNearArt;
         private RawImage timingPerfectArt;
         private Text defenseHint;
+        private Image dodgeWindow;
+        private Image blockWindow;
+        private Image perfectWindow;
+        private RectTransform offenseTiming;
+        private Image offenseCursor;
+        private Image offenseSuccessWindow;
+        private Text offenseHint;
         private GameObject commandPanel;
         private GameObject defensePanel;
         private GameObject counterPanel;
@@ -113,6 +136,25 @@ namespace Rokas.Presentation
         private Color feedbackColor;
         private string selectedTargetId;
         private bool presentationLocked;
+        private float hunterHpCurrent;
+        private float hunterHpGoal;
+        private float hunterHpStart;
+        private float hunterHpTween;
+        private bool hunterHpInitialized;
+        private ReactiveBattleDisplay latestDisplay;
+        private string timingActionId;
+        private string timingHitId;
+        private string resolvedActionId;
+        private string resolvedHitId;
+        private float cursorFreezeTime;
+        private float frozenProgress;
+        private bool defenseAttemptAccepted;
+        private float resolutionHold;
+        private Vector2 feedbackOrigin;
+        private const float TimingX = 474f;
+        private const float TimingY = 637f;
+        private const float TimingWidth = 540f;
+        private const float HpTweenDuration = .30f;
 
         public string SelectedTargetId { get { return selectedTargetId; } }
         public int AnimatedEnemyCount { get { return arena == null ? 0 : arena.VisibleEnemyCount; } }
@@ -120,9 +162,9 @@ namespace Rokas.Presentation
         public bool HunterApproachComplete { get { return arena == null || arena.HunterApproachComplete; } }
         public bool HunterAtHome { get { return arena == null || arena.HunterAtHome; } }
 
-        public bool StartHunterApproach(string enemyId)
+        public bool StartHunterApproach(string enemyId, bool heavy = false)
         {
-            if (arena == null || !arena.StartHunterApproach(enemyId)) return false;
+            if (arena == null || !arena.StartHunterApproach(enemyId, heavy)) return false;
             SetPresentationLocked(true);
             return true;
         }
@@ -220,11 +262,14 @@ namespace Rokas.Presentation
 
             for (int i = 0; i < targetButtons.Length; i++)
             {
+                hpOwners[i] = null;
                 int slot = i;
                 targetSlotRects[i] = ui.Rect(root, "ReactiveEnemySlot" + (i + 1),
                     TargetSlotX(3, i), 605, 205, 91);
                 targetButtons[i] = ui.Button(targetSlotRects[i], "ReactiveTarget" + (i + 1), "",
                     0, 0, 205, 91, () => SelectTarget(slot));
+                targetHighlights[i] = ui.Box(targetButtons[i].transform, "SelectedTargetRule",
+                    0, 0, 205, 3, UiKit.Gold);
                 targetTexts[i] = targetButtons[i].GetComponentInChildren<Text>();
                 targetTexts[i].rectTransform.anchoredPosition = new Vector2(68, -11);
                 targetTexts[i].rectTransform.sizeDelta = new Vector2(128, 26);
@@ -253,32 +298,48 @@ namespace Rokas.Presentation
 
             attackWarningArt = AddArtwork(root, "ReactiveAttackWarningArt",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI ATTACK SHOWS WHEN ENEMY ATTACKS",
-                640, 300, 640, 206, new Rect(17, 4, 2138, 690), 2172, 724);
-            telegraph = ui.Label(root, "ReactiveTelegraph", "", 644, 438, 634, 62, 31,
+                474, 565, 180, 44, new Rect(17, 4, 2138, 690), 2172, 724);
+            telegraph = ui.Label(root, "ReactiveTelegraph", "", 666, 570, 348, 31, 20,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
-            detail = ui.Label(root, "ReactiveDetail", "", 620, 473, 681, 64, 21,
+            detail = ui.Label(root, "ReactiveDetail", "", 473, 669, 541, 28, 17,
                 UiKit.Gold, false, TextAnchor.MiddleCenter);
             timingPromptArt = AddArtwork(root, "ReactiveTimingPromptArt",
                 "Combat/ReactiveTurns/UI/DefenceReaction/TEXT UI SHOWS CLICK IN TIME",
-                690, 503, 540, 66, new Rect(170, 207, 1830, 307), 2172, 724);
+                617, 603, 254, 29, new Rect(170, 207, 1830, 307), 2172, 724);
             contactTrack = AddArtwork(root, "ReactiveContactTrack",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI TIMING BAR",
-                630, 566, 650, 48, new Rect(72, 288, 2027, 143), 2172, 724);
+                TimingX - 12, TimingY - 10, TimingWidth + 24, 43,
+                new Rect(72, 288, 2027, 143), 2172, 724);
             contactFill = AddArtwork(root, "ReactiveContactFill",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI MOVING BAR",
-                644, 578, 0, 23, new Rect(183, 268, 1408, 335), 1774, 887);
+                TimingX, TimingY, 0, 23, new Rect(183, 268, 1408, 335), 1774, 887);
+            dodgeWindow = ui.Box(root, "ReactiveDodgeWindow", TimingX, TimingY, 0, 23,
+                new Color(.18f, .74f, .83f, .42f));
+            blockWindow = ui.Box(root, "ReactiveBlockWindow", TimingX, TimingY, 0, 23,
+                new Color(.30f, .95f, .87f, .75f));
+            perfectWindow = ui.Box(root, "ReactivePerfectZone", TimingX, TimingY, 0, 23,
+                new Color(1f, .82f, .30f, .94f));
             timingPerfectArt = AddArtwork(root, "ReactivePerfectWindow",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI BAR CLICK ON RIGHT TIME",
-                1190, 558, 39, 61, new Rect(445, 352, 363, 592), 1254, 1254);
+                TimingX, TimingY - 7, 15, 37, new Rect(445, 352, 363, 592), 1254, 1254);
             timingNearArt = AddArtwork(root, "ReactiveNearBars",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI NEAR BARS",
-                1134, 568, 150, 42, new Rect(429, 259, 1314, 201), 2172, 724);
-            timingBeacon = ui.Box(root, "ReactiveTimingBeacon", 630, 572, 6, 35,
-                new Color(1f, .83f, .32f, .94f));
+                TimingX, TimingY - 2, 80, 28, new Rect(429, 259, 1314, 201), 2172, 724);
+            timingBeacon = ui.Box(root, "ReactiveTimingBeacon", TimingX, TimingY - 8, 6, 39,
+                Color.white);
+            ui.Box(timingBeacon.transform, "CursorTip", -4, -2, 14, 4, UiKit.Paper);
             defenseHint = ui.Label(root, "ReactiveDefenseHint",
                 "Q — УКЛОНЕНИЕ     E — БЛОК",
-                390, 703, 1485, 32, 18, UiKit.Paper, false, TextAnchor.MiddleCenter);
-            hitFeedback = ui.Label(root, "ReactiveHitFeedback", "", 645, 448, 631, 74, 35,
+                474, 675, 540, 25, 15, UiKit.Paper, false, TextAnchor.MiddleCenter);
+            offenseTiming = ui.Rect(root, "ReactiveOffenseTiming", 540, 666, 440, 55);
+            ui.Box(offenseTiming, "OffenseTrack", 0, 33, 440, 6,
+                new Color(.16f, .14f, .13f, .9f));
+            offenseSuccessWindow = ui.Box(offenseTiming, "OffenseSuccessWindow", 0, 29, 0, 14,
+                new Color(1f, .75f, .28f, .6f));
+            offenseCursor = ui.Box(offenseTiming, "OffenseCursor", 0, 26, 4, 20, UiKit.Gold);
+            offenseHint = ui.Label(offenseTiming, "OffenseHint", "SPACE / ЛКМ — ТЯЖЁЛЫЙ УДАР",
+                0, 0, 440, 25, 17, UiKit.Gold, true, TextAnchor.MiddleCenter);
+            hitFeedback = ui.Label(root, "ReactiveHitFeedback", "", 174, 426, 430, 44, 25,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             waveBanner = ui.Label(root, "ReactiveWaveBanner", "", 534, 324, 852, 135, 51,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
@@ -288,11 +349,11 @@ namespace Rokas.Presentation
             ui.Label(commandPanel.transform, "CommandTitle", "ВАШ ХОД  /  ВЫБЕРИТЕ ДЕЙСТВИЕ", 18, 4, 1444, 31, 17,
                 UiKit.Gold, false, TextAnchor.MiddleCenter);
             Button basicButton = ui.Button(commandPanel.transform, "ReactiveBasic", "Обычный удар",
-                15, 37, 230, 72, basic, true);
+                367, 33, 320, 94, basic, true, true, false);
             AttachButtonArtwork(basicButton, "Combat/ReactiveTurns/UI/Actions/Normal hit button",
                 new Rect(426, 144, 1320, 436), 2172, 724);
             sealStrikeButton = ui.Button(commandPanel.transform, "ReactiveSealStrike",
-                "Удар печати · 3 AP", 260, 37, 230, 72, sealStrike);
+                "Удар печати · 3 AP", 260, 37, 230, 72, sealStrike, false, true, false);
             AttachButtonArtwork(sealStrikeButton, "Combat/ReactiveTurns/UI/Actions/Pring impact",
                 new Rect(283, 142, 1607, 429), 2172, 724);
             AddCostLabel(sealStrikeButton, "3 AP");
@@ -301,7 +362,7 @@ namespace Rokas.Presentation
             AttachButtonArtwork(defendButton, "Combat/ReactiveTurns/UI/Actions/Defence button",
                 new Rect(398, 145, 1377, 418), 2172, 724);
             sweepButton = ui.Button(commandPanel.transform, "ReactiveSweep", "Размах · 3 AP",
-                750, 37, 230, 72, sweep);
+                750, 37, 230, 72, sweep, false, true, false);
             AttachButtonArtwork(sweepButton, "Combat/ReactiveTurns/UI/Actions/Whifh button",
                 new Rect(345, 163, 1482, 391), 2172, 724);
             AddCostLabel(sweepButton, "3 AP");
@@ -311,26 +372,30 @@ namespace Rokas.Presentation
                 new Rect(432, 170, 1308, 379), 2172, 724);
             AddCostLabel(anchorButton, "2 AP");
             heavyButton = ui.Button(commandPanel.transform, "ReactiveHeavy", "Тяжёлый · 5 AP",
-                1240, 37, 230, 72, heavy);
+                777, 33, 340, 94, heavy, false, true, false);
             AttachButtonArtwork(heavyButton, "Combat/ReactiveTurns/UI/Actions/Heavy hit",
                 new Rect(247, 142, 1678, 462), 2172, 724);
             AddCostLabel(heavyButton, "5 AP");
+            sealStrikeButton.gameObject.SetActive(false);
+            defendButton.gameObject.SetActive(false);
+            sweepButton.gameObject.SetActive(false);
+            anchorButton.gameObject.SetActive(false);
             commandPreview = ui.Label(commandPanel.transform, "ReactiveCommandPreview", "",
-                18, 111, 1450, 29, 16, UiKit.Muted, false, TextAnchor.MiddleCenter);
+                18, 127, 1450, 17, 13, UiKit.Muted, false, TextAnchor.MiddleCenter);
 
-            defensePanel = ui.Rect(root, "ReactiveDefense", 879, 738, 996, 144).gameObject;
-            ui.Box(defensePanel.transform, "DefenseShade", 0, 0, 996, 144,
+            defensePanel = ui.Rect(root, "ReactiveDefense", 424, 735, 636, 143).gameObject;
+            ui.Box(defensePanel.transform, "DefenseShade", 0, 0, 636, 143,
                 new Color(.014f, .026f, .051f, .92f));
-            ui.Box(defensePanel.transform, "DefenseRule", 0, 0, 996, 2, UiKit.Jade);
-            ui.Label(defensePanel.transform, "DefenseTitle", "РЕАКТИВНАЯ ЗАЩИТА", 14, 5, 968, 35, 21,
+            ui.Box(defensePanel.transform, "DefenseRule", 0, 0, 636, 2, UiKit.Jade);
+            ui.Label(defensePanel.transform, "DefenseTitle", "Q — УКЛОНЕНИЕ     E — БЛОК", 14, 5, 608, 31, 18,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             Button dodgeButton = ui.Button(defensePanel.transform, "ReactiveDodge", "Q — Уклонение",
-                78, 42, 395, 99, dodge, true);
+                24, 42, 276, 81, dodge, true);
             AttachButtonArtwork(dodgeButton,
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI DODGE BUTTON",
                 new Rect(65, 343, 1325, 443), 1448, 1086);
             Button blockButton = ui.Button(defensePanel.transform, "ReactiveParry", "E — Блок",
-                523, 42, 395, 99, parry, true);
+                336, 42, 276, 81, parry, true);
             AttachButtonArtwork(blockButton,
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI BLOCK BUTTON",
                 new Rect(56, 321, 1340, 446), 1448, 1086);
@@ -341,7 +406,7 @@ namespace Rokas.Presentation
             ui.Label(counterPanel.transform, "CounterTitle", "КОНТРАТАКА  /  ШАНС ОТКРЫТ",
                 20, 8, 640, 49, 24, UiKit.Gold, true, TextAnchor.MiddleCenter);
             ui.Button(counterPanel.transform, "ReactiveCounterConfirm", "Контратаковать",
-                145, 68, 390, 75, counter, true);
+                145, 68, 390, 75, counter, true, true, false);
 
             saveBlockedPanel = ui.Rect(root, "ReactiveSaveBlocked", 622, 712, 680, 170).gameObject;
             ui.Box(saveBlockedPanel.transform, "SaveBlockedShade", 0, 0, 680, 170,
@@ -363,9 +428,16 @@ namespace Rokas.Presentation
             contactFill.gameObject.SetActive(false);
             timingBeacon.gameObject.SetActive(false);
             defenseHint.gameObject.SetActive(false);
+            dodgeWindow.gameObject.SetActive(false);
+            blockWindow.gameObject.SetActive(false);
+            perfectWindow.gameObject.SetActive(false);
+            offenseTiming.gameObject.SetActive(false);
             hitFeedback.text = string.Empty;
             waveBanner.gameObject.SetActive(false);
             feedbackTime = 0f;
+            hunterHpInitialized = false;
+            timingActionId = timingHitId = resolvedActionId = resolvedHitId = null;
+            cursorFreezeTime = resolutionHold = 0f;
         }
 
         private RawImage AddArtwork(Transform parent, string objectName, string resourcePath,
@@ -449,17 +521,16 @@ namespace Rokas.Presentation
                 var panel = targetButtons[i].GetComponent<Image>();
                 panel.color = targetIds[i] == selectedTargetId
                     ? new Color(.27f, .13f, .22f, .96f) : new Color(.075f, .105f, .13f, .88f);
+                targetHighlights[i].gameObject.SetActive(targetIds[i] == selectedTargetId);
             }
         }
 
-        public void Present(CombatEvent combatEvent)
+        public void Present(CombatEvent combatEvent, AttackSequenceDefinition sequence = null)
         {
             if (root == null || combatEvent == null) return;
-            arena?.Present(combatEvent);
+            arena?.Present(combatEvent, sequence);
             if (combatEvent.Kind == CombatEventKind.AttackStarted)
             {
-                feedbackTime = 0f;
-                hitFeedback.text = string.Empty;
                 return;
             }
             if (combatEvent.Kind != CombatEventKind.HitResolved) return;
@@ -467,6 +538,10 @@ namespace Rokas.Presentation
             feedbackColor = feedbackOnHunter ? UiKit.Red : UiKit.Gold;
             if (feedbackOnHunter)
             {
+                resolvedActionId = combatEvent.ActionId;
+                resolvedHitId = combatEvent.HitId;
+                resolutionHold = .30f;
+                feedbackOrigin = new Vector2(174f, -426f);
                 switch (combatEvent.Detail)
                 {
                     case "Dodge": hitFeedback.text = "УКЛОНЕНИЕ"; feedbackColor = UiKit.Jade; break;
@@ -479,22 +554,73 @@ namespace Rokas.Presentation
                 }
             }
             else
+            {
+                int targetSlot = Array.IndexOf(targetIds, combatEvent.TargetId);
+                float x = targetSlot >= 0 ? targetSlotRects[targetSlot].anchoredPosition.x - 112f : 1120f;
+                feedbackOrigin = new Vector2(x, -422f);
                 hitFeedback.text = combatEvent.Detail == "Counter"
                     ? "КОНТРАТАКА  −" + combatEvent.Amount
                     : combatEvent.Detail == "TimedHeavy"
                     ? "ТОЧНЫЙ УДАР  −" + combatEvent.Amount
                     : "УДАР  −" + combatEvent.Amount;
+            }
             hitFeedback.color = feedbackColor;
-            feedbackTime = .8f;
+            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin;
+            feedbackTime = .45f;
+        }
+
+        public void PresentDefenseAttempt(DefenseAttempt attempt, long pressUs)
+        {
+            if (root == null || attempt == null || !latestDisplay.IncomingHit) return;
+            if (defenseAttemptAccepted && !attempt.Accepted) return;
+            long duration = latestDisplay.TimingEndUs - latestDisplay.TimingStartUs;
+            frozenProgress = duration > 0 ? Mathf.Clamp01((float)(pressUs - latestDisplay.TimingStartUs) / duration) : 1f;
+            cursorFreezeTime = .18f;
+            defenseAttemptAccepted = attempt.Accepted;
+            feedbackOnHunter = true;
+            feedbackOrigin = new Vector2(174f, -426f);
+            feedbackColor = UiKit.Red;
+            switch (attempt.Outcome)
+            {
+                case DefenseOutcome.Dodge: hitFeedback.text = "УКЛОНЕНИЕ"; feedbackColor = UiKit.Jade; break;
+                case DefenseOutcome.Parry: hitFeedback.text = "БЛОК"; feedbackColor = UiKit.Jade; break;
+                case DefenseOutcome.Perfect: hitFeedback.text = "ИДЕАЛЬНЫЙ БЛОК"; feedbackColor = UiKit.Gold; break;
+                case DefenseOutcome.EarlyFail: hitFeedback.text = "СЛИШКОМ РАНО"; break;
+                case DefenseOutcome.LateFail: hitFeedback.text = "СЛИШКОМ ПОЗДНО"; break;
+                case DefenseOutcome.WrongDefense: hitFeedback.text = "НЕВЕРНАЯ ЗАЩИТА"; break;
+                default:
+                    long acquireOpen = latestDisplay.TimingImpactUs -
+                        (latestDisplay.DefenseWindow ?? DefenseWindowProfile.Standard).AcquireEarlyUs;
+                    hitFeedback.text = pressUs < acquireOpen ? "СЛИШКОМ РАНО" :
+                        pressUs > latestDisplay.TimingEndUs ? "СЛИШКОМ ПОЗДНО" : "ЗАЩИТА НЕ ПРИНЯТА";
+                    break;
+            }
+            feedbackTime = .45f;
+            hitFeedback.color = feedbackColor;
+            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin;
+            RefreshTiming();
         }
 
         public void Refresh(ReactiveBattleDisplay display)
         {
             if (root == null) return;
+            latestDisplay = display;
             hunterHp.text = "HP " + display.HunterHp + " / 100";
             ap.text = "AP " + display.HunterAp + " / 6";
-            hunterHpFill.rectTransform.sizeDelta = new Vector2(
-                198f * Mathf.Clamp01(display.HunterHp / 100f), 8f);
+            float hunterGoal = Mathf.Clamp01(display.HunterHp / 100f);
+            if (!hunterHpInitialized)
+            {
+                hunterHpStart = hunterHpCurrent = hunterHpGoal = hunterGoal;
+                hunterHpTween = HpTweenDuration;
+                hunterHpInitialized = true;
+                hunterHpFill.rectTransform.sizeDelta = new Vector2(198f * hunterGoal, 8f);
+            }
+            else if (!Mathf.Approximately(hunterHpGoal, hunterGoal))
+            {
+                hunterHpStart = hunterHpCurrent;
+                hunterHpGoal = hunterGoal;
+                hunterHpTween = 0f;
+            }
             for (int i = 0; i < hunterApPips.Length; i++)
                 hunterApPips[i].color = i < display.HunterAp ? UiKit.Jade :
                     new Color(.25f, .31f, .34f, .84f);
@@ -502,10 +628,9 @@ namespace Rokas.Presentation
                         "    •    " + display.DefeatedCount + " / 8";
             forecast.text = string.IsNullOrEmpty(display.Forecast) ? "ОЧЕРЁДНОСТЬ  —" : display.Forecast;
             bool reacting = display.Phase == ReactiveDisplayPhase.Reacting;
-            bool warningAvailable = reacting && attackWarningArt.texture != null;
+            bool warningAvailable = reacting && display.IncomingHit && attackWarningArt.texture != null;
             attackWarningArt.gameObject.SetActive(warningAvailable);
-            telegraph.text = warningAvailable && display.Telegraph == "ВРАГ АТАКУЕТ"
-                ? string.Empty : display.Telegraph ?? string.Empty;
+            telegraph.text = display.Telegraph ?? string.Empty;
             detail.text = display.Phase == ReactiveDisplayPhase.Command || reacting ||
                 display.Phase == ReactiveDisplayPhase.OffenseTiming
                 ? string.Empty : display.Detail ?? string.Empty;
@@ -548,8 +673,20 @@ namespace Rokas.Presentation
                     targetIds[slot] = entry.Id;
                     targetTexts[slot].text = (entry.Id == display.ActingId ? "▶ " : "") + entry.Name;
                     targetHpTexts[slot].text = "HP " + entry.Hp + " / " + entry.MaxHp;
-                    targetHpFills[slot].rectTransform.sizeDelta = new Vector2(
-                        127f * Mathf.Clamp01((float)entry.Hp / Mathf.Max(1, entry.MaxHp)), 7f);
+                    float hpGoal = Mathf.Clamp01((float)entry.Hp / Mathf.Max(1, entry.MaxHp));
+                    if (hpOwners[slot] != entry.Id)
+                    {
+                        hpOwners[slot] = entry.Id;
+                        targetHpStart[slot] = targetHpCurrent[slot] = targetHpGoal[slot] = hpGoal;
+                        targetHpTween[slot] = HpTweenDuration;
+                        targetHpFills[slot].rectTransform.sizeDelta = new Vector2(127f * hpGoal, 7f);
+                    }
+                    else if (!Mathf.Approximately(targetHpGoal[slot], hpGoal))
+                    {
+                        targetHpStart[slot] = targetHpCurrent[slot];
+                        targetHpGoal[slot] = hpGoal;
+                        targetHpTween[slot] = 0f;
+                    }
                     targetSlotRects[slot].anchoredPosition = new Vector2(
                         TargetSlotX(waveSlotCount, slot), -605f);
                 }
@@ -564,30 +701,17 @@ namespace Rokas.Presentation
             }
             UpdateTargetHighlights();
 
-            float progress = Mathf.Clamp01(display.ContactProgress);
-            contactFill.rectTransform.sizeDelta = new Vector2(622f * progress, 23f);
-            contactFill.color = progress > .72f ? UiKit.Gold : UiKit.Jade;
-            bool offenseTiming = display.Phase == ReactiveDisplayPhase.OffenseTiming && !presentationLocked;
-            timingBeacon.color = offenseTiming ? UiKit.Gold :
-                reacting
-                    ? new Color(1f, .78f, .35f, .38f + .6f * progress) : Color.clear;
-            timingBeacon.rectTransform.anchoredPosition = new Vector2(
-                644f + 622f * progress - 3f, -572f);
-            float successX = 644f + 622f * (offenseTiming ? .8f : .93f);
-            timingPerfectArt.rectTransform.anchoredPosition = new Vector2(successX - 19f, -558f);
-            timingNearArt.rectTransform.anchoredPosition = new Vector2(successX - 75f, -568f);
-            bool timingVisible = reacting || offenseTiming;
-            contactTrack.gameObject.SetActive(timingVisible && contactTrack.texture != null);
-            contactFill.gameObject.SetActive(timingVisible && contactFill.texture != null);
-            timingPromptArt.gameObject.SetActive(timingVisible && timingPromptArt.texture != null);
-            timingPerfectArt.gameObject.SetActive(timingVisible && timingPerfectArt.texture != null);
-            timingNearArt.gameObject.SetActive(timingVisible && timingNearArt.texture != null);
-            timingBeacon.gameObject.SetActive(timingVisible);
-            defenseHint.gameObject.SetActive(timingVisible);
-            defenseHint.text = offenseTiming ? "SPACE / ЛКМ — ТЯЖЁЛЫЙ УДАР" :
-                "Q — УКЛОНЕНИЕ     E — БЛОК";
+            bool preserveSuspendedTiming = (display.Phase == ReactiveDisplayPhase.Suspended ||
+                display.Phase == ReactiveDisplayPhase.SaveBlocked) && timingActionId == display.ActionId;
+            if (!preserveSuspendedTiming && (timingActionId != display.ActionId || timingHitId != display.HitId))
+            {
+                timingActionId = display.ActionId;
+                timingHitId = display.HitId;
+                cursorFreezeTime = 0f;
+                defenseAttemptAccepted = false;
+            }
+            RefreshTiming();
             commandPanel.SetActive(display.Phase == ReactiveDisplayPhase.Command && !presentationLocked);
-            defensePanel.SetActive(reacting);
             counterPanel.SetActive(display.Phase == ReactiveDisplayPhase.CounterOffer);
             saveBlockedPanel.SetActive(display.Phase == ReactiveDisplayPhase.SaveBlocked);
             waveBanner.gameObject.SetActive(display.Phase == ReactiveDisplayPhase.WaveTransition);
@@ -599,17 +723,96 @@ namespace Rokas.Presentation
             anchorButton.interactable = display.CanAnchor;
         }
 
+        private void RefreshTiming()
+        {
+            bool reacting = latestDisplay.Phase == ReactiveDisplayPhase.Reacting && latestDisplay.IncomingHit;
+            bool resolved = latestDisplay.ActionId == resolvedActionId && latestDisplay.HitId == resolvedHitId;
+            bool visible = reacting && !resolved && resolutionHold <= 0f;
+            float progress = cursorFreezeTime > 0f || defenseAttemptAccepted
+                ? frozenProgress : Mathf.Clamp01(latestDisplay.ContactProgress);
+            contactFill.rectTransform.sizeDelta = new Vector2(TimingWidth * progress, 23f);
+            contactFill.color = new Color(.24f, .74f, .80f, .28f);
+            timingBeacon.rectTransform.anchoredPosition = new Vector2(
+                TimingX + TimingWidth * progress - 3f, -TimingY + 8f);
+            timingBeacon.color = cursorFreezeTime > 0f || defenseAttemptAccepted ? feedbackColor : Color.white;
+            DefenseWindowProfile profile = latestDisplay.DefenseWindow ?? DefenseWindowProfile.Standard;
+            SetTimingWindow(dodgeWindow, profile.DodgeEarlyUs, profile.DodgeLateUs);
+            SetTimingWindow(blockWindow, profile.ParryEarlyUs, profile.ParryLateUs);
+            SetTimingWindow(perfectWindow, profile.PerfectEarlyUs, profile.PerfectLateUs);
+            long duration = latestDisplay.TimingEndUs - latestDisplay.TimingStartUs;
+            float impact = duration > 0 ? Mathf.Clamp01((float)(latestDisplay.TimingImpactUs -
+                latestDisplay.TimingStartUs) / duration) : 1f;
+            timingPerfectArt.rectTransform.anchoredPosition = new Vector2(
+                TimingX + TimingWidth * impact - 7.5f, -TimingY + 7f);
+            contactTrack.gameObject.SetActive(visible && contactTrack.texture != null);
+            contactFill.gameObject.SetActive(visible && contactFill.texture != null);
+            timingPromptArt.gameObject.SetActive(visible && timingPromptArt.texture != null);
+            timingPerfectArt.gameObject.SetActive(visible && timingPerfectArt.texture != null);
+            // The imported ornaments do not define timing windows; Core's authored intervals do.
+            timingNearArt.gameObject.SetActive(false);
+            bool allowsDodge = (latestDisplay.AllowedResponses & DefenseResponseMask.Dodge) != 0;
+            bool allowsBlock = (latestDisplay.AllowedResponses & DefenseResponseMask.Parry) != 0;
+            dodgeWindow.gameObject.SetActive(visible && allowsDodge);
+            blockWindow.gameObject.SetActive(visible && allowsBlock);
+            perfectWindow.gameObject.SetActive(visible && allowsBlock);
+            timingBeacon.gameObject.SetActive(visible);
+            defenseHint.gameObject.SetActive(visible);
+            defenseHint.text = "Q — УКЛОНЕНИЕ     E — БЛОК     ЗОЛОТО — ИДЕАЛЬНО";
+            defensePanel.SetActive(visible && !defenseAttemptAccepted);
+            attackWarningArt.gameObject.SetActive(visible && attackWarningArt.texture != null);
+            telegraph.gameObject.SetActive(visible || latestDisplay.Phase == ReactiveDisplayPhase.OffenseTiming);
+            bool offenseVisible = latestDisplay.Phase == ReactiveDisplayPhase.OffenseTiming && !presentationLocked;
+            offenseTiming.gameObject.SetActive(offenseVisible);
+            offenseCursor.rectTransform.anchoredPosition = new Vector2(440f *
+                Mathf.Clamp01(latestDisplay.ContactProgress) - 2f, -26f);
+            float offenseOpen = duration > 0 ? Mathf.Clamp01((float)(latestDisplay.TimingImpactUs -
+                latestDisplay.OffenseEarlyUs - latestDisplay.TimingStartUs) / duration) : 0f;
+            float offenseClose = duration > 0 ? Mathf.Clamp01((float)(latestDisplay.TimingImpactUs +
+                latestDisplay.OffenseLateUs - latestDisplay.TimingStartUs) / duration) : 0f;
+            offenseSuccessWindow.rectTransform.anchoredPosition = new Vector2(440f * offenseOpen, -29f);
+            offenseSuccessWindow.rectTransform.sizeDelta = new Vector2(440f * (offenseClose - offenseOpen), 14f);
+            offenseHint.text = latestDisplay.Telegraph == "ТОЧНЫЙ ТАЙМИНГ" ? "ТОЧНЫЙ УДАР" :
+                "SPACE / ЛКМ — ТЯЖЁЛЫЙ УДАР";
+        }
+
+        private void SetTimingWindow(Image image, long earlyUs, long lateUs)
+        {
+            long duration = latestDisplay.TimingEndUs - latestDisplay.TimingStartUs;
+            float open = duration > 0 ? Mathf.Clamp01((float)(latestDisplay.TimingImpactUs - earlyUs -
+                latestDisplay.TimingStartUs) / duration) : 0f;
+            float close = duration > 0 ? Mathf.Clamp01((float)(latestDisplay.TimingImpactUs + lateUs -
+                latestDisplay.TimingStartUs) / duration) : 0f;
+            image.rectTransform.anchoredPosition = new Vector2(TimingX + TimingWidth * open, -TimingY);
+            image.rectTransform.sizeDelta = new Vector2(TimingWidth * (close - open), 23f);
+        }
+
         public void Tick(float seconds)
         {
             if (root == null) return;
             arena?.Tick(seconds);
+            cursorFreezeTime = Mathf.Max(0f, cursorFreezeTime - seconds);
+            resolutionHold = Mathf.Max(0f, resolutionHold - seconds);
+            RefreshTiming();
+            hunterHpTween = Mathf.Min(HpTweenDuration, hunterHpTween + seconds);
+            hunterHpCurrent = Mathf.Lerp(hunterHpStart, hunterHpGoal,
+                Mathf.Clamp01(hunterHpTween / HpTweenDuration));
+            hunterHpFill.rectTransform.sizeDelta = new Vector2(198f * hunterHpCurrent, 8f);
+            for (int i = 0; i < targetHpFills.Length; i++)
+            {
+                targetHpTween[i] = Mathf.Min(HpTweenDuration, targetHpTween[i] + seconds);
+                targetHpCurrent[i] = Mathf.Lerp(targetHpStart[i], targetHpGoal[i],
+                    Mathf.Clamp01(targetHpTween[i] / HpTweenDuration));
+                targetHpFills[i].rectTransform.sizeDelta = new Vector2(127f * targetHpCurrent[i], 7f);
+            }
             feedbackTime = Mathf.Max(0, feedbackTime - seconds);
-            float flash = Mathf.Clamp01(feedbackTime * 2.5f);
+            float flash = Mathf.Clamp01(feedbackTime / .15f);
             hitFeedback.color = new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash);
+            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin + new Vector2(0f,
+                (.45f - feedbackTime) * 35f);
             hunterFlash.color = feedbackOnHunter
-                ? new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .18f) : Color.clear;
+                ? new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .08f) : Color.clear;
             enemyFlash.color = feedbackOnHunter ? Color.clear
-                : new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .16f);
+                : new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .07f);
         }
 
         public void ClearReferences()
@@ -621,6 +824,9 @@ namespace Rokas.Presentation
             hunterHp = ap = targetName = targetHp = targetSeal = wave = forecast = telegraph = detail =
                 selectionHint = commandPreview = hitFeedback = waveBanner = null;
             hunterHpFill = timingBeacon = hunterFlash = enemyFlash = null;
+            dodgeWindow = blockWindow = perfectWindow = offenseCursor = offenseSuccessWindow = null;
+            offenseTiming = null;
+            offenseHint = null;
             contactFill = contactTrack = attackWarningArt = timingPromptArt = timingNearArt =
                 timingPerfectArt = null;
             defenseHint = null;
@@ -628,6 +834,10 @@ namespace Rokas.Presentation
             sealStrikeButton = sweepButton = heavyButton = anchorButton = null;
             selectedTargetId = null;
             presentationLocked = false;
+            latestDisplay = default(ReactiveBattleDisplay);
+            timingActionId = timingHitId = resolvedActionId = resolvedHitId = null;
+            cursorFreezeTime = resolutionHold = 0f;
+            defenseAttemptAccepted = hunterHpInitialized = false;
             activeIds.Clear();
             for (int i = 0; i < targetIds.Length; i++)
             {
@@ -636,6 +846,8 @@ namespace Rokas.Presentation
                 targetTexts[i] = null;
                 targetHpTexts[i] = null;
                 targetHpFills[i] = null;
+                targetHighlights[i] = null;
+                hpOwners[i] = null;
                 targetSlotRects[i] = null;
             }
             for (int i = 0; i < hunterApPips.Length; i++) hunterApPips[i] = null;
