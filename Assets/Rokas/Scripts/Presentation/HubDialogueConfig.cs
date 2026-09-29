@@ -189,6 +189,60 @@ namespace Rokas.Presentation
             data.uvWidth = uv.width;
             data.uvHeight = uv.height;
         }
+
+        public static void ApplySiblingOrder(
+            Transform parent,
+            string[] childNames,
+            HubDialogueRectData[] data)
+        {
+            if (!parent ||
+                childNames == null ||
+                data == null)
+                return;
+
+            int count =
+                Mathf.Min(
+                    childNames.Length,
+                    data.Length);
+            bool[] applied =
+                new bool[count];
+
+            // Move highest authored indices first. This preserves the final
+            // relative order even when optional siblings were deleted.
+            for (int pass = 0; pass < count; pass++)
+            {
+                int best = -1;
+                int bestIndex = int.MinValue;
+                for (int i = 0; i < count; i++)
+                {
+                    if (applied[i] ||
+                        data[i] == null ||
+                        !data[i].exists ||
+                        data[i].siblingIndex < 0)
+                        continue;
+
+                    if (data[i].siblingIndex > bestIndex)
+                    {
+                        best = i;
+                        bestIndex =
+                            data[i].siblingIndex;
+                    }
+                }
+
+                if (best < 0) break;
+                applied[best] = true;
+
+                Transform child =
+                    parent.Find(childNames[best]);
+                if (!child) continue;
+
+                child.SetSiblingIndex(
+                    Mathf.Clamp(
+                        data[best].siblingIndex,
+                        0,
+                        parent.childCount - 1));
+            }
+        }
     }
 
     [Serializable]

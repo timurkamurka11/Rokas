@@ -161,7 +161,8 @@ namespace Rokas.EditorTools.Tests
             try
             {
                 HubDialogueConfigData authored =
-                    new HubDialogueConfigData();
+                    HubDialogueConfig.NormalizeForAuthoring(
+                        new HubDialogueConfigData());
                 authored.speakerName = "Keiko";
                 authored.guildIntroText =
                     "Workshop persistence probe";
@@ -319,6 +320,53 @@ namespace Rokas.EditorTools.Tests
             Assert.That(
                 authored.plaqueArt.scaleY,
                 Is.EqualTo(1.14f).Within(.001f));
+        }
+
+        [Test]
+        public void Rebuild_PreservesAuthoredSiblingOrder()
+        {
+            HubDialogueConfigData authored =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
+
+            authored.speaker.siblingIndex = 0;
+            authored.dialogue.siblingIndex = 1;
+            authored.plaqueArt.siblingIndex = 2;
+            authored.portraitMask.siblingIndex = 3;
+            authored.arrowCover.siblingIndex = 4;
+            authored.completionArrow.siblingIndex = 5;
+            authored.muteButton.siblingIndex = 6;
+            authored.forwardButton.siblingIndex = 7;
+            authored.menuButton.siblingIndex = 8;
+
+            Scene scene =
+                HubDialogueWorkshopBuilder
+                    .CreateUnsavedWorkshopForTests(authored);
+            GameObject root =
+                scene.GetRootGameObjects()[0];
+
+            Transform speaker =
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "SpeakerName");
+            Transform dialogue =
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "DialogueText");
+            Transform plaque =
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "PlaqueArt");
+
+            Assert.That(
+                speaker.GetSiblingIndex(),
+                Is.EqualTo(0));
+            Assert.That(
+                dialogue.GetSiblingIndex(),
+                Is.EqualTo(1));
+            Assert.That(
+                plaque.GetSiblingIndex(),
+                Is.EqualTo(2));
         }
 
         [Test]

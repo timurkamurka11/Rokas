@@ -371,6 +371,33 @@ namespace Rokas.EditorTools
                     "HubMenuButton",
                     config.menuButton,
                     config.menuButtonEnabled);
+
+                HubDialogueLayout.ApplySiblingOrder(
+                    plaqueRoot,
+                    new[]
+                    {
+                        "PlaqueArt",
+                        "PortraitMask",
+                        "SpeakerName",
+                        "DialogueText",
+                        "BakedArrowCover",
+                        "CompletionArrow",
+                        "HubMuteButton",
+                        "HubForwardButton",
+                        "HubMenuButton"
+                    },
+                    new[]
+                    {
+                        config.plaqueArt,
+                        config.portraitMask,
+                        config.speaker,
+                        config.dialogue,
+                        config.arrowCover,
+                        config.completionArrow,
+                        config.muteButton,
+                        config.forwardButton,
+                        config.menuButton
+                    });
             }
 
             GameObject note =
@@ -1113,7 +1140,12 @@ namespace Rokas.EditorTools
                         .01f,
                         config.talkFramesPerSecond)) % 6;
             portrait.uvRect =
-                new Rect(frame / 6f, 0f, 1f / 6f, .5f);
+                new Rect(
+                    config.portrait.uvX +
+                        frame * config.portrait.uvWidth,
+                    config.portrait.uvY,
+                    config.portrait.uvWidth,
+                    config.portrait.uvHeight);
 
             if (visible >= previewLine.Length)
             {
@@ -1135,10 +1167,13 @@ namespace Rokas.EditorTools
             if (!portrait) return;
             portrait.uvRect =
                 new Rect(
-                    0f,
-                    idle ? .5f : 0f,
-                    1f / 6f,
-                    .5f);
+                    config.portrait.uvX,
+                    config.portrait.uvY +
+                        (idle
+                            ? config.portrait.uvHeight
+                            : 0f),
+                    config.portrait.uvWidth,
+                    config.portrait.uvHeight);
             SceneView.RepaintAll();
         }
 

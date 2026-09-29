@@ -558,6 +558,33 @@ namespace Rokas.Presentation
                     menuValue.gameObject.SetActive(
                         config.menuButtonEnabled &&
                         config.menuButton.active);
+
+                HubDialogueLayout.ApplySiblingOrder(
+                    plaqueRoot,
+                    new[]
+                    {
+                        "PlaqueArt",
+                        "PortraitMask",
+                        "SpeakerName",
+                        "DialogueText",
+                        "BakedArrowCover",
+                        "CompletionArrow",
+                        "HubMuteButton",
+                        "HubForwardButton",
+                        "HubMenuButton"
+                    },
+                    new[]
+                    {
+                        config.plaqueArt,
+                        config.portraitMask,
+                        config.speaker,
+                        config.dialogue,
+                        config.arrowCover,
+                        config.completionArrow,
+                        config.muteButton,
+                        config.forwardButton,
+                        config.menuButton
+                    });
             }
 
             portrait = portraitValue;
@@ -778,15 +805,19 @@ namespace Rokas.Presentation
             if (!force && frame == portraitFrame) return;
             portraitFrame = frame;
 
-            float rowY =
+            float rowOffset =
                 portraitState == HubDialoguePortraitState.Idle
-                    ? .5f
+                    ? config.portrait.uvHeight
                     : 0f;
-            portrait.uvRect = new Rect(
-                portraitFrame / 6f,
-                rowY,
-                1f / 6f,
-                .5f);
+            portrait.uvRect =
+                new Rect(
+                    config.portrait.uvX +
+                        portraitFrame *
+                        config.portrait.uvWidth,
+                    config.portrait.uvY +
+                        rowOffset,
+                    config.portrait.uvWidth,
+                    config.portrait.uvHeight);
         }
 
         private void SyncVoice()
