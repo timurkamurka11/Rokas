@@ -31,6 +31,20 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+
+      - name: Validate Hub Dialogue asset files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/Art/Home/HubDialogue/HubDialoguePlaque.png
+          test -s Assets/Rokas/Art/Home/HubDialogue/KeikoHubPortraitAtlas.png
+          test -s Assets/Rokas/Art/Home/HubDialogue/HubDialoguePlaque.png.meta
+          test -s Assets/Rokas/Art/Home/HubDialogue/KeikoHubPortraitAtlas.png.meta
+          grep -q 'guid: e3b0c44298fc4a0aa71f0d99d9a03f01' Assets/Rokas/Art/Home/HubDialogue/HubDialoguePlaque.png.meta
+          grep -q 'guid: 3c1e2b9652ca49f3b13f9723146fca02' Assets/Rokas/Art/Home/HubDialogue/KeikoHubPortraitAtlas.png.meta
+          grep -q 'guid: e3b0c44298fc4a0aa71f0d99d9a03f01' Assets/Rokas/Resources/RokasAssets.asset
+          grep -q 'guid: 3c1e2b9652ca49f3b13f9723146fca02' Assets/Rokas/Resources/RokasAssets.asset
+
       - name: Run Hub Dialogue EditMode tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -47,3 +61,28 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Hub Dialogue EditMode
           artifactsPath: artifacts-hub-dialogue-editmode
+
+  hub-playmode:
+    name: Hub Dialogue PlayMode
+    needs: hub-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Hub Dialogue PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HubDialoguePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hub Dialogue PlayMode
+          artifactsPath: artifacts-hub-dialogue-playmode
