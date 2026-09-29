@@ -13,6 +13,8 @@ on:
       - 'Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasAudio.cs'
       - 'Assets/Rokas/Scripts/Presentation/HubDialogueConfig.cs'
+      - 'Assets/Rokas/Scripts/Editor/HubDialogueWorkshop/**'
+      - 'Assets/Rokas/Tests/EditorWorkshop/HubDialogueWorkshopTests.cs'
       - 'Assets/Rokas/Scripts/Presentation/HomeView.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasAssets.cs'
@@ -66,6 +68,30 @@ jobs:
           checkName: R11 Hub Dialogue EditMode
           artifactsPath: artifacts-r11-hub-editmode
 
+  hub-workshop:
+    name: R11 Hub Dialogue Workshop
+    needs: hub-editmode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Hub Dialogue Workshop tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.EditorTools.Tests.HubDialogueWorkshopTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: R11 Hub Dialogue Workshop
+          artifactsPath: artifacts-r11-hub-workshop
+
   hub-vn-regression:
     name: R11 Shared VN Typewriter Regression
     needs: hub-editmode
@@ -92,7 +118,7 @@ jobs:
 
   hub-playmode:
     name: R11 Hub Dialogue PlayMode
-    needs: [hub-editmode, hub-vn-regression]
+    needs: [hub-editmode, hub-workshop, hub-vn-regression]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
