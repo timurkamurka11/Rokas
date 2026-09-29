@@ -7,6 +7,12 @@ on:
     paths:
       - 'Assets/Rokas/Art/Home/HubDialogue/**'
       - 'Assets/Rokas/Resources/RokasAssets.asset'
+      - 'Assets/Rokas/Resources/HubDialogue/**'
+      - 'Assets/Rokas/Scripts/Core/State.cs'
+      - 'Assets/Rokas/Scripts/Core/GameSession.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasAudio.cs'
+      - 'Assets/Rokas/Scripts/Presentation/HubDialogueConfig.cs'
       - 'Assets/Rokas/Scripts/Presentation/HomeView.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasAssets.cs'

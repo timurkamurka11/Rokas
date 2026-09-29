@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Rokas.Presentation;
+using UnityEngine;
 
 namespace Rokas.Core.Tests
 {
@@ -12,7 +13,7 @@ namespace Rokas.Core.Tests
             Assert.That(
                 state.Open(
                     new HubDialogueDefinition(
-                        "window", "КЕЙКО", "Тестовая строка."),
+                        "window", "Keiko", "Тестовая строка."),
                     FastSettings()),
                 Is.True);
 
@@ -30,7 +31,7 @@ namespace Rokas.Core.Tests
             var state = NewState();
             state.Open(
                 new HubDialogueDefinition(
-                    "window", "КЕЙКО", "Первая.", "Вторая."),
+                    "window", "Keiko", "Первая.", "Вторая."),
                 SlowSettings());
 
             HubDialogueAdvanceResult result = state.RequestAdvance();
@@ -53,7 +54,7 @@ namespace Rokas.Core.Tests
             var state = NewState();
             state.Open(
                 new HubDialogueDefinition(
-                    "window", "КЕЙКО", "Первая.", "Вторая."),
+                    "window", "Keiko", "Первая.", "Вторая."),
                 SlowSettings());
             state.RequestAdvance();
 
@@ -76,7 +77,7 @@ namespace Rokas.Core.Tests
             var state = NewState();
             var definition =
                 new HubDialogueDefinition(
-                    "cat", "КЕЙКО", "Мамэ довольно щурится.");
+                    "cat", "Keiko", "Мамэ довольно щурится.");
 
             state.Open(definition, SlowSettings());
             state.RequestAdvance();
@@ -98,16 +99,43 @@ namespace Rokas.Core.Tests
             var state = NewState();
             state.Open(
                 new HubDialogueDefinition(
-                    "window", "КЕЙКО", "Окно."),
+                    "window", "Keiko", "Окно."),
                 SlowSettings());
 
             bool opened = state.Open(
                 new HubDialogueDefinition(
-                    "cat", "КЕЙКО", "Кот."),
+                    "cat", "Keiko", "Кот."),
                 SlowSettings());
 
             Assert.That(opened, Is.False);
             Assert.That(state.Definition.Id, Is.EqualTo("window"));
+        }
+
+        [Test]
+        public void Config_DefaultsUseEnglishKeikoAndEditableGuildIntro()
+        {
+            HubDialogueConfig.ResetCache();
+            HubDialogueConfigData config = HubDialogueConfig.LoadFresh();
+
+            Assert.That(config.speakerName, Is.EqualTo("Keiko"));
+            Assert.That(config.guildIntroText, Does.Contain("ноутбук"));
+            Assert.That(config.speaker.y, Is.EqualTo(128f));
+            Assert.That(config.voiceEnabled, Is.True);
+            Assert.That(
+                config.voiceResourcePath,
+                Is.EqualTo("HubDialogue/KeikoTextVoice"));
+        }
+
+        [Test]
+        public void OldSaveShapeWithoutHubFlag_DefaultsToNotSeen()
+        {
+            var source = new SaveData();
+            string json = JsonUtility.ToJson(source);
+            json = json.Replace(",\"hubGuildIntroSeen\":false", string.Empty);
+            SaveData restored = JsonUtility.FromJson<SaveData>(json);
+
+            Assert.That(restored, Is.Not.Null);
+            Assert.That(restored.hubGuildIntroSeen, Is.False);
         }
 
         [Test]

@@ -21,3 +21,9 @@ __pycache__/
 # Private input and internal implementation notes
 Docs/MASTER_PROMPT_V2.md
 Docs/Plans/
+
+# Local Hub Dialogue Workshop authoring override.
+Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json
+Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json.meta
+Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity
+Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity.meta
