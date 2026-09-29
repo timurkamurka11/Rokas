@@ -272,6 +272,7 @@ namespace Rokas.Presentation
                 config.layoutRoot.width, config.layoutRoot.height);
             layoutRoot.localScale =
                 new Vector3(config.layoutScale, config.layoutScale, 1f);
+            ApplyRotation(layoutRoot, config.layoutRoot);
 
             Image blocker = ui.Box(
                 root, "HubDialogueAdvanceSurface",
@@ -291,10 +292,12 @@ namespace Rokas.Presentation
                 config.plaque.x, config.plaque.y,
                 config.plaque.width, config.plaque.height);
 
+            ApplyRotation(plaqueRoot, config.plaque);
             RectTransform maskRoot = ui.Rect(
                 plaqueRoot, "PortraitMask",
                 config.portraitMask.x, config.portraitMask.y,
                 config.portraitMask.width, config.portraitMask.height);
+            ApplyRotation(maskRoot, config.portraitMask);
             var maskGraphic =
                 maskRoot.gameObject.AddComponent<HubDialogueOctagonMaskGraphic>();
             maskGraphic.color = Color.white;
@@ -308,6 +311,7 @@ namespace Rokas.Presentation
                 config.portrait.x, config.portrait.y,
                 config.portrait.width, config.portrait.height);
             portrait.raycastTarget = false;
+            ApplyRotation(portrait.rectTransform, config.portrait);
 
             RawImage plaque = ui.Art(
                 plaqueRoot, "PlaqueArt",
@@ -315,6 +319,7 @@ namespace Rokas.Presentation
                 config.plaqueArt.x, config.plaqueArt.y,
                 config.plaqueArt.width, config.plaqueArt.height);
             plaque.raycastTarget = false;
+            ApplyRotation(plaque.rectTransform, config.plaqueArt);
 
             speaker = ui.Label(
                 plaqueRoot, "SpeakerName", string.Empty,
@@ -324,6 +329,7 @@ namespace Rokas.Presentation
                 new Color(.90f, .96f, 1f, 1f),
                 false, config.speakerAlignment);
             speaker.fontStyle = FontStyle.Bold;
+            ApplyRotation(speaker.rectTransform, config.speaker);
 
             dialogue = ui.Label(
                 plaqueRoot, "DialogueText", string.Empty,
@@ -331,6 +337,8 @@ namespace Rokas.Presentation
                 config.dialogue.width, config.dialogue.height,
                 config.dialogueFontSize, Color.white,
                 false, config.dialogueAlignment);
+            dialogue.lineSpacing = config.dialogueLineSpacing;
+            ApplyRotation(dialogue.rectTransform, config.dialogue);
 
             // PLANK.png contains a baked static arrow. Cover it with a nearby
             // sample of the same panel texture, then render the shared animated
@@ -344,6 +352,7 @@ namespace Rokas.Presentation
                 1680f / 2048f, 155f / 682f,
                 90f / 2048f, 90f / 682f);
             arrowCover.raycastTarget = false;
+            ApplyRotation(arrowCover.rectTransform, config.arrowCover);
 
             RectTransform triangleRect = ui.Rect(
                 plaqueRoot, "CompletionArrow",
@@ -353,6 +362,7 @@ namespace Rokas.Presentation
                 triangleRect.gameObject.AddComponent<HubDialogueTriangleGraphic>();
             completionTriangle.color = Color.white;
             completionTriangle.raycastTarget = false;
+            ApplyRotation(triangleRect, config.completionArrow);
             triangleBasePosition = triangleRect.anchoredPosition;
 
             muteButton = TransparentButton(
@@ -364,11 +374,15 @@ namespace Rokas.Presentation
                     audio.SetVnMuted(!audio.VnMuted);
                     Refresh();
                 });
+            muteButton.gameObject.SetActive(config.muteButtonEnabled);
+            ApplyRotation((RectTransform)muteButton.transform, config.muteButton);
             forwardButton = TransparentButton(
                 plaqueRoot, "HubForwardButton",
                 config.forwardButton.x, config.forwardButton.y,
                 config.forwardButton.width, config.forwardButton.height,
                 RequestAdvance);
+            forwardButton.gameObject.SetActive(config.forwardButtonEnabled);
+            ApplyRotation((RectTransform)forwardButton.transform, config.forwardButton);
             menuButton = TransparentButton(
                 plaqueRoot, "HubMenuButton",
                 config.menuButton.x, config.menuButton.y,
@@ -378,6 +392,8 @@ namespace Rokas.Presentation
                     Close();
                     openMenu?.Invoke();
                 });
+            menuButton.gameObject.SetActive(config.menuButtonEnabled);
+            ApplyRotation((RectTransform)menuButton.transform, config.menuButton);
 
             root.gameObject.SetActive(false);
         }
@@ -557,6 +573,15 @@ namespace Rokas.Presentation
                 rowY,
                 1f / 6f,
                 .5f);
+        }
+
+        private static void ApplyRotation(
+            RectTransform rect,
+            HubDialogueRectData data)
+        {
+            if (!rect || data == null) return;
+            rect.localEulerAngles =
+                new Vector3(0f, 0f, data.rotationZ);
         }
 
         private void SyncVoice()

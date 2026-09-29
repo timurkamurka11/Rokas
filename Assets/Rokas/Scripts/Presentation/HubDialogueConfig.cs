@@ -11,15 +11,22 @@ namespace Rokas.Presentation
         public float y;
         public float width;
         public float height;
+        public float rotationZ;
 
         public HubDialogueRectData() { }
 
-        public HubDialogueRectData(float x, float y, float width, float height)
+        public HubDialogueRectData(
+            float x,
+            float y,
+            float width,
+            float height,
+            float rotationZ = 0f)
         {
             this.x = x;
             this.y = y;
             this.width = width;
             this.height = height;
+            this.rotationZ = rotationZ;
         }
     }
 
@@ -55,6 +62,7 @@ namespace Rokas.Presentation
             new HubDialogueRectData(238f, 151f, 760f, 150f);
         public int dialogueFontSize = 20;
         public TextAnchor dialogueAlignment = TextAnchor.UpperLeft;
+        public float dialogueLineSpacing = 1f;
         public HubDialogueRectData arrowCover =
             new HubDialogueRectData(1057f, 249f, 52f, 54f);
         public HubDialogueRectData completionArrow =
@@ -67,6 +75,9 @@ namespace Rokas.Presentation
             new HubDialogueRectData(1021f, 73f, 49f, 49f);
         public HubDialogueRectData menuButton =
             new HubDialogueRectData(1075f, 73f, 49f, 49f);
+        public bool muteButtonEnabled = true;
+        public bool forwardButtonEnabled = true;
+        public bool menuButtonEnabled = true;
         public float idleFramesPerSecond = 6f;
         public float talkFramesPerSecond = 10f;
 
@@ -173,6 +184,9 @@ namespace Rokas.Presentation
             data.layoutScale = Mathf.Clamp(data.layoutScale <= 0f ? 1f : data.layoutScale, .2f, 3f);
             data.speakerFontSize = Mathf.Clamp(data.speakerFontSize <= 0 ? 21 : data.speakerFontSize, 8, 96);
             data.dialogueFontSize = Mathf.Clamp(data.dialogueFontSize <= 0 ? 20 : data.dialogueFontSize, 8, 96);
+            data.dialogueLineSpacing = Mathf.Clamp(
+                data.dialogueLineSpacing <= 0f ? 1f : data.dialogueLineSpacing,
+                .5f, 3f);
             data.idleFramesPerSecond = Mathf.Max(.01f, data.idleFramesPerSecond);
             data.talkFramesPerSecond = Mathf.Max(.01f, data.talkFramesPerSecond);
             data.voiceVolume = Mathf.Clamp01(data.voiceVolume);
