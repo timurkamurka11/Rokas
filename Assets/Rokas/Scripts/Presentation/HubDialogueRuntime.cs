@@ -151,7 +151,7 @@ namespace Rokas.Presentation
     }
 
     [RequireComponent(typeof(CanvasRenderer))]
-    internal sealed class HubDialogueOctagonMaskGraphic : MaskableGraphic
+    public sealed class HubDialogueOctagonMaskGraphic : MaskableGraphic
     {
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
@@ -189,7 +189,7 @@ namespace Rokas.Presentation
     }
 
     [RequireComponent(typeof(CanvasRenderer))]
-    internal sealed class HubDialogueTriangleGraphic : MaskableGraphic
+    public sealed class HubDialogueTriangleGraphic : MaskableGraphic
     {
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
@@ -211,13 +211,6 @@ namespace Rokas.Presentation
 
     public sealed class HubDialogueController : IDisposable
     {
-        private const float PlaqueX = 370f;
-        private const float PlaqueY = 635f;
-        private const float PlaqueWidth = 1180f;
-        private const float PlaqueHeight = 393f;
-        private const float IdleFramesPerSecond = 6f;
-        private const float TalkFramesPerSecond = 10f;
-
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly RokasAudio audio;
@@ -225,6 +218,8 @@ namespace Rokas.Presentation
         private readonly Action openMenu;
         private readonly HubDialoguePlaybackState playback =
             new HubDialoguePlaybackState();
+        private readonly HubDialogueConfigData config;
+        private readonly AudioClip voiceClip;
         private readonly RectTransform root;
         private readonly RawImage portrait;
         private readonly Text speaker;
@@ -239,6 +234,7 @@ namespace Rokas.Presentation
         private HubDialoguePortraitState portraitState;
         private int portraitFrame = -1;
         private int focusedControl;
+        private bool voiceActive;
 
         public bool IsOpen => playback.IsOpen;
         public HubDialoguePortraitState PortraitState => playback.PortraitState;
@@ -258,6 +254,10 @@ namespace Rokas.Presentation
             this.setSceneInteractable =
                 setSceneInteractable ?? throw new ArgumentNullException(nameof(setSceneInteractable));
             this.openMenu = openMenu;
+            config = HubDialogueConfig.Current;
+            voiceClip = config.voiceEnabled
+                ? Resources.Load<AudioClip>(config.voiceResourcePath)
+                : null;
 
             if (!assets.hubDialoguePlaque || !assets.hubDialoguePortraitAtlas)
                 throw new InvalidOperationException(
@@ -265,6 +265,13 @@ namespace Rokas.Presentation
 
             root = ui.Rect(parent, "HubDialogueRoot", 0, 0, 1920, 1080);
             root.SetAsLastSibling();
+
+            RectTransform layoutRoot = ui.Rect(
+                root, "HubDialogueLayoutRoot",
+                config.layoutRoot.x, config.layoutRoot.y,
+                config.layoutRoot.width, config.layoutRoot.height);
+            layoutRoot.localScale =
+                new Vector3(config.layoutScale, config.layoutScale, 1f);
 
             Image blocker = ui.Box(
                 root, "HubDialogueAdvanceSurface",
@@ -280,12 +287,14 @@ namespace Rokas.Presentation
             blockerButton.onClick.AddListener(RequestAdvance);
 
             RectTransform plaqueRoot = ui.Rect(
-                root, "HubDialoguePlaque",
-                PlaqueX, PlaqueY, PlaqueWidth, PlaqueHeight);
+                layoutRoot, "HubDialoguePlaque",
+                config.plaque.x, config.plaque.y,
+                config.plaque.width, config.plaque.height);
 
             RectTransform maskRoot = ui.Rect(
                 plaqueRoot, "PortraitMask",
-                34f, 112f, 178f, 184f);
+                config.portraitMask.x, config.portraitMask.y,
+                config.portraitMask.width, config.portraitMask.height);
             var maskGraphic =
                 maskRoot.gameObject.AddComponent<HubDialogueOctagonMaskGraphic>();
             maskGraphic.color = Color.white;
@@ -296,27 +305,32 @@ namespace Rokas.Presentation
             portrait = ui.Art(
                 maskRoot, "PortraitImage",
                 assets.hubDialoguePortraitAtlas,
-                -12f, -9f, 202f, 202f);
+                config.portrait.x, config.portrait.y,
+                config.portrait.width, config.portrait.height);
             portrait.raycastTarget = false;
 
             RawImage plaque = ui.Art(
                 plaqueRoot, "PlaqueArt",
                 assets.hubDialoguePlaque,
-                0f, 0f, PlaqueWidth, PlaqueHeight);
+                config.plaqueArt.x, config.plaqueArt.y,
+                config.plaqueArt.width, config.plaqueArt.height);
             plaque.raycastTarget = false;
 
             speaker = ui.Label(
                 plaqueRoot, "SpeakerName", string.Empty,
-                238f, 108f, 530f, 42f,
-                21, new Color(.90f, .96f, 1f, 1f),
-                false, TextAnchor.MiddleLeft);
+                config.speaker.x, config.speaker.y,
+                config.speaker.width, config.speaker.height,
+                config.speakerFontSize,
+                new Color(.90f, .96f, 1f, 1f),
+                false, config.speakerAlignment);
             speaker.fontStyle = FontStyle.Bold;
 
             dialogue = ui.Label(
                 plaqueRoot, "DialogueText", string.Empty,
-                238f, 151f, 760f, 150f,
-                20, Color.white,
-                false, TextAnchor.UpperLeft);
+                config.dialogue.x, config.dialogue.y,
+                config.dialogue.width, config.dialogue.height,
+                config.dialogueFontSize, Color.white,
+                false, config.dialogueAlignment);
 
             // PLANK.png contains a baked static arrow. Cover it with a nearby
             // sample of the same panel texture, then render the shared animated
@@ -324,7 +338,8 @@ namespace Rokas.Presentation
             RawImage arrowCover = ui.Art(
                 plaqueRoot, "BakedArrowCover",
                 assets.hubDialoguePlaque,
-                1057f, 249f, 52f, 54f);
+                config.arrowCover.x, config.arrowCover.y,
+                config.arrowCover.width, config.arrowCover.height);
             arrowCover.uvRect = new Rect(
                 1680f / 2048f, 155f / 682f,
                 90f / 2048f, 90f / 682f);
@@ -332,7 +347,8 @@ namespace Rokas.Presentation
 
             RectTransform triangleRect = ui.Rect(
                 plaqueRoot, "CompletionArrow",
-                1068f, 260f, 27f, 31f);
+                config.completionArrow.x, config.completionArrow.y,
+                config.completionArrow.width, config.completionArrow.height);
             completionTriangle =
                 triangleRect.gameObject.AddComponent<HubDialogueTriangleGraphic>();
             completionTriangle.color = Color.white;
@@ -341,7 +357,8 @@ namespace Rokas.Presentation
 
             muteButton = TransparentButton(
                 plaqueRoot, "HubMuteButton",
-                966f, 73f, 49f, 49f,
+                config.muteButton.x, config.muteButton.y,
+                config.muteButton.width, config.muteButton.height,
                 () =>
                 {
                     audio.SetVnMuted(!audio.VnMuted);
@@ -349,11 +366,13 @@ namespace Rokas.Presentation
                 });
             forwardButton = TransparentButton(
                 plaqueRoot, "HubForwardButton",
-                1021f, 73f, 49f, 49f,
+                config.forwardButton.x, config.forwardButton.y,
+                config.forwardButton.width, config.forwardButton.height,
                 RequestAdvance);
             menuButton = TransparentButton(
                 plaqueRoot, "HubMenuButton",
-                1075f, 73f, 49f, 49f,
+                config.menuButton.x, config.menuButton.y,
+                config.menuButton.width, config.menuButton.height,
                 () =>
                 {
                     Close();
@@ -382,6 +401,7 @@ namespace Rokas.Presentation
                 EventSystem.current.SetSelectedGameObject(null);
             RefreshPortrait(true);
             Refresh();
+            SyncVoice();
             return true;
         }
 
@@ -393,13 +413,14 @@ namespace Rokas.Presentation
             portraitElapsed += unscaledDeltaTime;
             RefreshPortrait(false);
             Refresh();
+            SyncVoice();
         }
 
         public void RequestAdvance()
         {
             if (!playback.IsOpen) return;
             HubDialogueAdvanceResult result = playback.RequestAdvance();
-            audio.Click();
+            SyncVoice();
 
             if (result == HubDialogueAdvanceResult.Closed)
             {
@@ -444,12 +465,14 @@ namespace Rokas.Presentation
         public void Dispose()
         {
             playback.Close();
+            StopVoice();
             if (root)
                 UnityEngine.Object.Destroy(root.gameObject);
         }
 
         private void FinishClose()
         {
+            StopVoice();
             root.gameObject.SetActive(false);
             speaker.text = string.Empty;
             dialogue.text = string.Empty;
@@ -485,9 +508,17 @@ namespace Rokas.Presentation
                     (RectTransform)completionTriangle.transform;
                 triangle.anchoredPosition =
                     triangleBasePosition +
-                    new Vector2(0f, sample.OffsetY);
+                    new Vector2(
+                        0f,
+                        sample.OffsetY * config.completionBobScale);
+                float completionScale =
+                    1f + (sample.Scale - 1f) *
+                    config.completionPulseScale;
                 triangle.localScale =
-                    new Vector3(sample.Scale, sample.Scale, 1f);
+                    new Vector3(
+                        completionScale,
+                        completionScale,
+                        1f);
                 completionTriangle.color =
                     new Color(1f, 1f, 1f, sample.Alpha);
             }
@@ -510,8 +541,8 @@ namespace Rokas.Presentation
 
             float fps =
                 portraitState == HubDialoguePortraitState.Talk
-                    ? TalkFramesPerSecond
-                    : IdleFramesPerSecond;
+                    ? config.talkFramesPerSecond
+                    : config.idleFramesPerSecond;
             int frame = Mathf.FloorToInt(
                 portraitElapsed * Mathf.Max(.01f, fps)) % 6;
             if (!force && frame == portraitFrame) return;
@@ -526,6 +557,36 @@ namespace Rokas.Presentation
                 rowY,
                 1f / 6f,
                 .5f);
+        }
+
+        private void SyncVoice()
+        {
+            bool shouldPlay =
+                playback.IsOpen &&
+                playback.IsTyping &&
+                config.voiceEnabled &&
+                voiceClip;
+
+            if (shouldPlay)
+            {
+                if (voiceActive) return;
+                audio.StartHubTextVoice(
+                    voiceClip,
+                    config.voiceVolume,
+                    config.voicePitch,
+                    config.voiceLoop);
+                voiceActive = true;
+                return;
+            }
+
+            StopVoice();
+        }
+
+        private void StopVoice()
+        {
+            if (!voiceActive && !audio.HubVoicePlaying) return;
+            audio.StopHubTextVoice();
+            voiceActive = false;
         }
 
         private static Button TransparentButton(

@@ -11,6 +11,7 @@ namespace Rokas.Presentation
         private readonly AudioSource ambience;
         private readonly AudioSource music;
         private readonly AudioSource[] effects = new AudioSource[4];
+        private readonly AudioSource hubVoice;
         private readonly AudioClip messageArrive;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
@@ -23,9 +24,12 @@ namespace Rokas.Presentation
         private bool lampStateKnown;
         private bool lampOn;
         private bool vnMuted;
+        private float hubVoiceScale = .34f;
 
         public float VideoVolume { get { return Mathf.Clamp01(settings.masterVolume * settings.sfxVolume); } }
         public bool VnMuted { get { return vnMuted; } }
+        public bool HubVoicePlaying { get { return hubVoice && hubVoice.isPlaying; } }
+        public int ClickCount { get; private set; }
 
         public RokasAudio(GameObject parent, RokasAssets assets, SettingsData settings)
         {
@@ -43,6 +47,7 @@ namespace Rokas.Presentation
             ambience = MakeSource(audioRoot, true);
             music = MakeSource(audioRoot, true);
             for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource(audioRoot, false);
+            hubVoice = MakeSource(audioRoot, true);
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
@@ -88,6 +93,7 @@ namespace Rokas.Presentation
             ambience.volume = 0f;
             music.volume = 0f;
             for (int i = 0; i < effects.Length; i++) effects[i].volume = 0f;
+            if (hubVoice) hubVoice.volume = 0f;
         }
 
         public void Tick(float dt, bool focused)
@@ -96,6 +102,10 @@ namespace Rokas.Presentation
             float weather = mission ? 1f : homeWeatherMix;
             ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
             music.volume = Mathf.MoveTowards(music.volume, master * settings.musicVolume * (combat ? .25f : .6f), dt);
+            if (hubVoice && hubVoice.isPlaying)
+                hubVoice.volume = vnMuted
+                    ? 0f
+                    : master * settings.sfxVolume * hubVoiceScale;
 
             if (bootstrap && bootstrap.Session != null)
             {
@@ -204,9 +214,43 @@ namespace Rokas.Presentation
             source.Play();
         }
 
+        public void StartHubTextVoice(
+            AudioClip clip,
+            float volumeScale,
+            float pitch,
+            bool loop)
+        {
+            if (!clip || !hubVoice) return;
+            hubVoiceScale = Mathf.Clamp01(volumeScale);
+            bool restart = hubVoice.clip != clip || !hubVoice.isPlaying;
+            hubVoice.clip = clip;
+            hubVoice.loop = loop;
+            hubVoice.pitch = Mathf.Clamp(pitch, .25f, 3f);
+            hubVoice.volume = vnMuted
+                ? 0f
+                : Mathf.Clamp01(
+                    settings.masterVolume *
+                    settings.sfxVolume *
+                    hubVoiceScale);
+            if (restart)
+            {
+                hubVoice.Stop();
+                hubVoice.Play();
+            }
+        }
+
+        public void StopHubTextVoice()
+        {
+            if (!hubVoice) return;
+            hubVoice.Stop();
+            hubVoice.clip = null;
+        }
+
         public void Click()
         {
-            if (!laptopMode) Play(assets.click);
+            if (laptopMode) return;
+            ClickCount++;
+            Play(assets.click);
         }
 
         public void EnterGame() { Play(assets.enterGame); }
@@ -215,6 +259,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            StopHubTextVoice();
             if (thunderBank == null) return;
             for (int i = 0; i < thunderBank.Length; i++)
                 if (thunderBank[i]) Object.Destroy(thunderBank[i]);

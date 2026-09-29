@@ -56,6 +56,8 @@ namespace Rokas.Presentation
             }
         }
         public bool HubDialogueOpen => hubDialogue != null && hubDialogue.IsOpen;
+        public bool HubVoicePlaying => audio != null && audio.HubVoicePlaying;
+        public int GenericClickCount => audio != null ? audio.ClickCount : 0;
         public bool CombatHitStop { get { return mission.HitStopRemaining > 0; } }
         public string SelectedReactiveTargetId { get { return mission.SelectedReactiveTargetId; } }
         public int AnimatedReactiveEnemyCount { get { return mission.AnimatedEnemyCount; } }
@@ -436,6 +438,12 @@ namespace Rokas.Presentation
                 toastTime -= dt;
                 if (toastTime <= 0) toast.text = "";
             }
+        }
+
+        public bool OpenGuildIntro()
+        {
+            return OpenHubDialogue(
+                HubDialogueConfig.GuildIntro());
         }
 
         private bool OpenHubDialogue(HubDialogueDefinition definition)

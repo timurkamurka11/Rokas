@@ -51,7 +51,8 @@ namespace Rokas.Presentation
 
             Action toggleFloorLamp = () =>
             {
-                string line = session.State.lampOn
+                bool wasOn = session.State.lampOn;
+                string fallback = wasOn
                     ? "За окном кто-то есть?.."
                     : "Комната снова наполнилась теплом.";
                 act(() =>
@@ -59,18 +60,22 @@ namespace Rokas.Presentation
                     session.SetLamp(!session.State.lampOn);
                     return true;
                 }, string.Empty);
-                OpenHub("home-floor-lamp", line);
+                openHubDialogue?.Invoke(
+                    HubDialogueConfig.ResolveFloorLamp(
+                        wasOn,
+                        fallback));
             };
 
             ScanActionMarker(parent, "LampHotspot", HomeScanGlyph.LightBulb,
-                138.5f, 400.1f, 48f, toggleFloorLamp);
+                138.5f, 400.1f, 48f, toggleFloorLamp, false);
             ScanActionMarker(parent, "WindowHotspot", HomeScanGlyph.Window,
                 696.6f, 128.8f, 56f,
                 () => OpenHub(
                     "home-window",
-                    "Поезд проходит без остановки. На этот раз — настоящий."));
+                    "Поезд проходит без остановки. На этот раз — настоящий."),
+                false);
             ScanActionMarker(parent, "DeskLampHotspot", HomeScanGlyph.DeskLamp,
-                1151.3f, 194.9f, 52f, toggleFloorLamp);
+                1151.3f, 194.9f, 52f, toggleFloorLamp, false);
             ScanActionMarker(parent, "WorkbenchHotspot", HomeScanGlyph.Swords,
                 1403.5f, 296.8f, 46f, () => open("workbench"));
 
@@ -88,12 +93,17 @@ namespace Rokas.Presentation
                     act(() => { session.PetMame(); return true; }, "");
                     mameReaction = 1;
                     audio.Play(assets.mame);
+                    string id =
+                        session.State.mameInteractions % 3 == 0
+                            ? "home-mame-third"
+                            : "home-mame";
                     OpenHub(
-                        "home-mame",
+                        id,
                         session.State.mameInteractions % 3 == 0
                             ? "Мамэ внимательно смотрит в пустой угол."
                             : "Мамэ довольно щурится. Почти как обычный питомец.");
-                });
+                },
+                false);
 
             ScanActionMarker(parent, "DoorHotspot", HomeScanGlyph.Exit,
                 1748f, 132.9f, 58f,
@@ -116,11 +126,12 @@ namespace Rokas.Presentation
         private void OpenHub(string id, string line)
         {
             openHubDialogue?.Invoke(
-                new HubDialogueDefinition(id, "КЕЙКО", line));
+                HubDialogueConfig.Resolve(id, line));
         }
 
         private Button ScanActionMarker(RectTransform parent, string name, HomeScanGlyph glyph,
-            float centerX, float centerY, float connectorLength, Action action)
+            float centerX, float centerY, float connectorLength, Action action,
+            bool playGenericClick = true)
         {
             if (HomeFinalUiPresenter.Enabled)
             {
@@ -141,7 +152,11 @@ namespace Rokas.Presentation
                 authoredButton.targetGraphic = authoredTarget;
                 authoredButton.transition = Selectable.Transition.None;
                 authoredButton.navigation = new Navigation { mode = Navigation.Mode.Automatic };
-                authoredButton.onClick.AddListener(() => { audio.Play(assets.click); action?.Invoke(); });
+                authoredButton.onClick.AddListener(() =>
+                {
+                    if (playGenericClick) audio.Click();
+                    action?.Invoke();
+                });
                 return authoredButton;
             }
 
@@ -186,7 +201,7 @@ namespace Rokas.Presentation
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             button.onClick.AddListener(() =>
             {
-                audio.Play(assets.click);
+                if (playGenericClick) audio.Click();
                 action?.Invoke();
             });
 
