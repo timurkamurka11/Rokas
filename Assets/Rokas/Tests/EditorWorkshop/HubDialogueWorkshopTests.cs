@@ -323,6 +323,145 @@ namespace Rokas.EditorTools.Tests
         }
 
         [Test]
+        public void SecondSave_SurvivesSerializedRebuildAndReopen()
+        {
+            HubDialogueConfigData authored =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    new HubDialogueConfigData());
+
+            Scene scene =
+                HubDialogueWorkshopBuilder
+                    .CreateUnsavedWorkshopForTests(authored);
+            GameObject root =
+                scene.GetRootGameObjects()[0];
+
+            RectTransform plaque =
+                (RectTransform)
+                    HubDialogueWorkshopBuilder.FindTransform(
+                        root.transform,
+                        "PlaqueArt");
+
+            // First authored save.
+            plaque.anchoredPosition =
+                new Vector2(401f, -222f);
+            plaque.localScale =
+                new Vector3(1.2f, .9f, 1f);
+            HubDialogueWorkshopBuilder.CaptureForTests(
+                scene,
+                authored);
+
+            HubDialogueConfigData firstSaved =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    JsonUtility.FromJson<HubDialogueConfigData>(
+                        JsonUtility.ToJson(authored)));
+
+            // Rebuild from exactly what the first save serialized.
+            HubDialogueWorkshopBuilder.RebuildSceneForTests(
+                scene,
+                firstSaved);
+            root =
+                scene.GetRootGameObjects()[0];
+            plaque =
+                (RectTransform)
+                    HubDialogueWorkshopBuilder.FindTransform(
+                        root.transform,
+                        "PlaqueArt");
+
+            // Second edit/save of the same object plus a deletion.
+            plaque.anchoredPosition =
+                new Vector2(477f, -255f);
+            plaque.sizeDelta =
+                new Vector2(933f, 355f);
+            plaque.localScale =
+                new Vector3(.83f, 1.14f, 1f);
+
+            Transform cover =
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "BakedArrowCover");
+            Assert.That(cover, Is.Not.Null);
+            Object.DestroyImmediate(cover.gameObject);
+
+            HubDialogueWorkshopBuilder.CaptureForTests(
+                scene,
+                firstSaved);
+
+            string secondJson =
+                JsonUtility.ToJson(firstSaved);
+            HubDialogueConfigData secondSaved =
+                HubDialogueConfig.NormalizeForAuthoring(
+                    JsonUtility.FromJson<HubDialogueConfigData>(
+                        secondJson));
+
+            Assert.That(
+                secondSaved.schemaVersion,
+                Is.EqualTo(2));
+            Assert.That(
+                secondSaved.arrowCover.exists,
+                Is.False);
+
+            // Explicit Rebuild Preview From Saved Config path.
+            HubDialogueWorkshopBuilder.RebuildSceneForTests(
+                scene,
+                secondSaved);
+            AssertSecondSaveState(scene);
+
+            // Reopen path: a stale generated scene must be discarded and
+            // rehydrated from the same authoritative saved config.
+            GameObject staleRoot =
+                scene.GetRootGameObjects()[0];
+            RectTransform stalePlaque =
+                (RectTransform)
+                    HubDialogueWorkshopBuilder.FindTransform(
+                        staleRoot.transform,
+                        "PlaqueArt");
+            stalePlaque.anchoredPosition =
+                new Vector2(99f, -99f);
+
+            HubDialogueWorkshopBuilder.RebuildSceneForTests(
+                scene,
+                secondSaved);
+            AssertSecondSaveState(scene);
+        }
+
+        private static void AssertSecondSaveState(Scene scene)
+        {
+            GameObject root =
+                scene.GetRootGameObjects()[0];
+            RectTransform plaque =
+                (RectTransform)
+                    HubDialogueWorkshopBuilder.FindTransform(
+                        root.transform,
+                        "PlaqueArt");
+
+            Assert.That(
+                plaque.anchoredPosition.x,
+                Is.EqualTo(477f).Within(.001f));
+            Assert.That(
+                plaque.anchoredPosition.y,
+                Is.EqualTo(-255f).Within(.001f));
+            Assert.That(
+                plaque.sizeDelta.x,
+                Is.EqualTo(933f).Within(.001f));
+            Assert.That(
+                plaque.sizeDelta.y,
+                Is.EqualTo(355f).Within(.001f));
+            Assert.That(
+                plaque.localScale.x,
+                Is.EqualTo(.83f).Within(.001f));
+            Assert.That(
+                plaque.localScale.y,
+                Is.EqualTo(1.14f).Within(.001f));
+
+            Assert.That(
+                HubDialogueWorkshopBuilder.FindTransform(
+                    root.transform,
+                    "BakedArrowCover"),
+                Is.Null,
+                "Serialized v2 deletion must survive rebuild/reopen.");
+        }
+
+        [Test]
         public void Rebuild_PreservesAuthoredSiblingOrder()
         {
             HubDialogueConfigData authored =

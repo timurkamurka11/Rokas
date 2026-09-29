@@ -36,7 +36,22 @@ namespace Rokas.EditorTools
 
             if (File.Exists(ToAbsoluteProjectPath(ScenePath)))
             {
-                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+                Scene scene =
+                    EditorSceneManager.OpenScene(
+                        ScenePath,
+                        OpenSceneMode.Single);
+
+                // The .unity Workshop scene is only a generated preview.
+                // The saved HubDialogue config is the authoritative source,
+                // so reopening must never resurrect stale transforms or
+                // tombstoned objects from an older scene file.
+                RebuildScene(
+                    scene,
+                    LoadEditableConfig());
+
+                if (!EditorSceneManager.SaveScene(scene, ScenePath))
+                    throw new InvalidOperationException(
+                        "Could not refresh " + ScenePath);
             }
             else
             {
@@ -82,11 +97,37 @@ namespace Rokas.EditorTools
                 return;
             }
 
-            GameObject root = FindRoot(scene, "HubDialogueWorkshop");
-            if (root) UnityEngine.Object.DestroyImmediate(root);
-            Populate(scene, LoadEditableConfig());
+            RebuildScene(
+                scene,
+                LoadEditableConfig());
             EditorSceneManager.MarkSceneDirty(scene);
             Select("HubDialoguePlaque");
+        }
+
+        public static void RebuildSceneForTests(
+            Scene scene,
+            HubDialogueConfigData config)
+        {
+            RebuildScene(
+                scene,
+                HubDialogueConfig.NormalizeForAuthoring(
+                    config ?? new HubDialogueConfigData()));
+        }
+
+        private static void RebuildScene(
+            Scene scene,
+            HubDialogueConfigData config)
+        {
+            GameObject root =
+                FindRoot(
+                    scene,
+                    "HubDialogueWorkshop");
+            if (root)
+                UnityEngine.Object.DestroyImmediate(root);
+
+            Populate(
+                scene,
+                config);
         }
 
         public static Scene CreateUnsavedWorkshopForTests()
