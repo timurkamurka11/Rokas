@@ -416,13 +416,13 @@ namespace Rokas.Presentation
             }
         }
 
-        public void Tick(float dt)
+        public void Tick(float dt, bool focused = true)
         {
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
-            mission.Tick(dt, Paused);
+            mission.Tick(dt, Paused || !focused);
             hubDialogue?.Tick(dt);
             if (panel == "laptop")
             {

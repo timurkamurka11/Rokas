@@ -160,7 +160,8 @@ namespace Rokas.Tests
                 GameObject target = Find("ReactiveTarget" + (i + 1));
                 Assert.That(target.activeInHierarchy, Is.EqualTo(i < expectedIds.Length));
                 if (i < expectedIds.Length)
-                    Assert.That(target.GetComponentInChildren<Text>().text, Does.Contain(expectedIds[i]));
+                    Assert.That(target.GetComponentInChildren<Text>().text,
+                        Does.Contain("ЁКАЙ " + expectedIds[i].Substring(1)));
             }
             Assert.That(boot.View.SelectedReactiveTargetId, Is.EqualTo(expectedIds[0]));
             boot.View.RefreshReactiveCombat();
@@ -201,8 +202,11 @@ namespace Rokas.Tests
                     Assert.That(combat.ActiveEnemyIds.Count, Is.InRange(1, 3));
                     string selected = combat.ActiveEnemyIds[0];
                     if (combat.SelectedTargetId != selected) boot.SelectReactiveTarget(selected);
-                    Press(combat.ActiveEnemyIds.Count >= 2 && combat.HunterAp >= 3
-                        ? "ReactiveSweep" : "ReactiveBasic");
+                    string actionName = combat.ActiveEnemyIds.Count >= 2 && combat.HunterAp >= 3
+                        ? "ReactiveSweep" : "ReactiveBasic";
+                    Button action = Find(actionName)?.GetComponent<Button>();
+                    if (action != null && action.gameObject.activeInHierarchy && action.IsInteractable())
+                        Press(actionName);
                 }
                 else if (combat.Phase == ReactivePhase.EnemyExecution &&
                          combat.CurrentActionId != guardedActionId)

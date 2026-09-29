@@ -567,7 +567,7 @@ namespace Rokas.Presentation
             float progress = Mathf.Clamp01(display.ContactProgress);
             contactFill.rectTransform.sizeDelta = new Vector2(622f * progress, 23f);
             contactFill.color = progress > .72f ? UiKit.Gold : UiKit.Jade;
-            bool offenseTiming = display.Phase == ReactiveDisplayPhase.OffenseTiming;
+            bool offenseTiming = display.Phase == ReactiveDisplayPhase.OffenseTiming && !presentationLocked;
             timingBeacon.color = offenseTiming ? UiKit.Gold :
                 reacting
                     ? new Color(1f, .78f, .35f, .38f + .6f * progress) : Color.clear;

@@ -39,15 +39,49 @@ namespace Rokas.Tests
 
                 Capture(root, 1920, 1080);
                 Capture(root, 1280, 720);
+                GameObject world = GameObject.Find("ReactiveCombatWorld");
+                Assert.That(world, Is.Not.Null);
+                Transform hunterActor = Find(world, "CombatActor_Keiko")?.transform;
+                Assert.That(hunterActor, Is.Not.Null);
+                Vector3 hunterHome = hunterActor.localPosition;
                 button = Find(root, "ReactiveSealStrike").GetComponent<Button>();
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(hunterActor.localPosition.x, Is.GreaterThan(hunterHome.x));
+                Capture(root, 1920, 1080, "-approach");
                 float deadline = Time.realtimeSinceStartup + 4f;
                 while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
                        Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
+                Capture(root, 1920, 1080, "-return");
+                AudioClip keikoImpact = Resources.Load<AudioClip>(
+                    "Combat/ReactiveTurns/Audio/Keiko/Keiko hit attack");
+                AudioClip monsterAttack = Resources.Load<AudioClip>(
+                    "Combat/ReactiveTurns/Audio/Monsters/Monster attack sound");
+                Assert.That(keikoImpact, Is.Not.Null);
+                Assert.That(monsterAttack, Is.Not.Null);
+                int impactCues = 0;
+                int monsterCues = 0;
+                foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
+                {
+                    if (source.clip == keikoImpact)
+                    {
+                        impactCues++;
+                        float expected = boot.Session.State.settings.masterVolume *
+                            boot.Session.State.settings.sfxVolume * .56f;
+                        Assert.That(source.volume, Is.EqualTo(expected).Within(.001f));
+                    }
+                    if (source.clip == monsterAttack) monsterCues++;
+                    Assert.That(source.clip, Is.Not.EqualTo(Resources.Load<RokasAssets>("RokasAssets").hit),
+                        "The imported Keiko impact must not be doubled by the generic hit cue.");
+                }
+                Assert.That(impactCues, Is.EqualTo(1));
+                Assert.That(monsterCues, Is.EqualTo(1));
                 long startUs = boot.Session.ReactiveCombat.CurrentActionStartUs;
                 while (boot.Session.ReactiveCombat.CurrentCombatUs - startUs < 800000 &&
                        Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(hunterActor.localPosition, Is.EqualTo(hunterHome),
+                    "The return animation must restore Keiko's exact home before enemy contact.");
                 Capture(root, 1920, 1080, "-windup");
             }
             finally
@@ -101,6 +135,57 @@ namespace Rokas.Tests
                 arena.Present(new CombatEvent(CombatEventKind.HitResolved,
                     targetId: "E1", actionId: "heavy-hunter", amount: 8));
                 Assert.That(enemyAnimation.IsPlaying("Stagger"), Is.True);
+            }
+            finally
+            {
+                arena?.Dispose();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ImportedRunClipsApproachAndReturnToTheSameHomeAcrossActions()
+        {
+            var root = new GameObject("ReactiveHunterMotionFixture", typeof(RectTransform));
+            ReactiveCombatArena arena = null;
+            try
+            {
+                arena = new ReactiveCombatArena(new UiKit(null, null), root.GetComponent<RectTransform>());
+                arena.SetEnemies(new[] { "E1", "E2" }, null, new[] { "E1", "E2" });
+                GameObject world = GameObject.Find("ReactiveCombatWorld");
+                Assert.That(world, Is.Not.Null);
+                ReactiveCombatActorVisual hunterActor = null;
+                foreach (ReactiveCombatActorVisual visual in world.GetComponentsInChildren<ReactiveCombatActorVisual>())
+                    if (visual.name == "CombatActor_Keiko") hunterActor = visual;
+                Assert.That(hunterActor, Is.Not.Null);
+                Animation animation = hunterActor.ModelRoot.GetComponent<Animation>();
+                Assert.That(animation.GetClip("Approach"), Is.Not.Null);
+                Assert.That(animation.GetClip("ReturnHome"), Is.Not.Null);
+                Vector3 home = hunterActor.transform.localPosition;
+
+                foreach (string enemyId in new[] { "E1", "E2", "E1" })
+                {
+                    Assert.That(arena.StartHunterApproach(enemyId), Is.True);
+                    arena.Tick(.35f);
+                    yield return null;
+                    Assert.That(hunterActor.transform.localPosition.x, Is.GreaterThan(home.x));
+                    Assert.That(animation.IsPlaying("Approach"), Is.True);
+                    arena.Tick(.35f);
+                    Assert.That(arena.HunterApproachComplete, Is.True);
+                    arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
+                        actorId: ReactiveDuelDefinitions.HunterId, actionId: enemyId,
+                        detail: "Basic"));
+                    yield return null;
+                    Assert.That(animation.IsPlaying("Attack"), Is.True);
+                    arena.Present(new CombatEvent(CombatEventKind.ActionSettled,
+                        actorId: ReactiveDuelDefinitions.HunterId, actionId: enemyId));
+                    arena.Tick(.31f);
+                    yield return null;
+                    Assert.That(animation.IsPlaying("ReturnHome"), Is.True);
+                    arena.Tick(.31f);
+                    Assert.That(arena.HunterAtHome, Is.True);
+                    Assert.That(hunterActor.transform.localPosition, Is.EqualTo(home));
+                }
             }
             finally
             {

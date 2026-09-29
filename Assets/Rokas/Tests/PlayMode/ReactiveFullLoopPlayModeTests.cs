@@ -61,11 +61,11 @@ namespace Rokas.Tests
             long firstAttackStart = combat.CurrentActionStartUs;
 
             yield return WaitForOffset(combat, firstAttackStart, 950000, 5f);
-            yield return PressKey(Key.F);
+            yield return PressKey(Key.E);
             yield return WaitForOffset(combat, firstAttackStart, 1300000, 5f);
-            yield return PressKey(Key.F); // Intentionally too early for h2.
+            yield return PressKey(Key.E); // Intentionally too early for h2.
             yield return WaitForOffset(combat, firstAttackStart, 2535000, 5f);
-            yield return PressKey(Key.F); // Perfect final defense.
+            yield return PressKey(Key.E); // Perfect final defense.
             yield return WaitForPhase(boot, ReactivePhase.CounterWindow, 3f);
 
             InputSystem.QueueStateEvent(mouse, new MouseState().WithButton(MouseButton.Left), InputState.currentTime);
@@ -82,14 +82,16 @@ namespace Rokas.Tests
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(47));
             Assert.That(combat.EnemyBroken, Is.False);
+            yield return WaitForCommandReady("ReactiveBasic", 2f);
             Press("ReactiveBasic");
             yield return WaitForPhase(boot, ReactivePhase.EnemyExecution, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(27));
             long secondAttackStart = combat.CurrentActionStartUs;
             yield return WaitForOffset(combat, secondAttackStart, 930000, 4f);
-            yield return PressKey(Key.D);
+            yield return PressKey(Key.Q);
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 4f);
             Assert.That(combat.HunterHp, Is.EqualTo(92));
+            yield return WaitForCommandReady("ReactiveSealStrike", 2f);
             Press("ReactiveSealStrike");
             yield return WaitForRunPhase(boot, RunPhase.Sealed, 4f);
             Assert.That(combat.TerminalResult, Is.EqualTo(CombatOutcome.Victory));
@@ -97,7 +99,7 @@ namespace Rokas.Tests
             Assert.That(combat.HunterAp, Is.EqualTo(2));
             long terminalRevision = combat.Revision;
             yield return null; // Let arena ownership release before a new physical key event.
-            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D), InputState.currentTime);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Q), InputState.currentTime);
             InputSystem.Update();
             yield return null;
             Assert.That(combat.Revision, Is.EqualTo(terminalRevision),
@@ -158,6 +160,18 @@ namespace Rokas.Tests
             while (boot.Session.State.phase != expected && Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.State.phase, Is.EqualTo(expected));
+        }
+
+        private IEnumerator WaitForCommandReady(string buttonName, float timeout)
+        {
+            float deadline = Time.realtimeSinceStartup + timeout;
+            Button button = Find(buttonName)?.GetComponent<Button>();
+            while (button != null && (!button.gameObject.activeInHierarchy || !button.IsInteractable()) &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(button, Is.Not.Null);
+            Assert.That(button.gameObject.activeInHierarchy && button.IsInteractable(), Is.True,
+                "The next command becomes available after Keiko returns home.");
         }
 
         private static IEnumerator WaitForOffset(ReactiveCombatSession combat, long startUs, long offsetUs, float timeout)

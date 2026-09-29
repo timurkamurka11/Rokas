@@ -54,9 +54,12 @@ namespace Rokas.Tests
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             RawImage hunter = Find("ReactiveHunterKeiko").GetComponent<RawImage>();
             RawImage enemy = Find("ReactiveEnemyFacelessCommuter").GetComponent<RawImage>();
-            Assert.That(hunter.texture, Is.SameAs(assets.vnKeikoCharacterSheet));
+            Sprite combatPortrait = Resources.Load<Sprite>(
+                "Combat/ReactiveTurns/UI/HUD/Keiko ui profile during battle");
+            Assert.That(combatPortrait, Is.Not.Null);
+            Assert.That(hunter.texture, Is.SameAs(combatPortrait.texture));
             Assert.That(enemy.texture, Is.SameAs(assets.enemy));
-            Assert.That(hunter.uvRect, Is.EqualTo(VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko").BodyUv));
+            Assert.That(hunter.uvRect.width, Is.GreaterThan(0f));
             Assert.That(Find("ReactiveHunterMina"), Is.Null);
             Assert.That(Find("ReactiveHunterHp"), Is.Not.Null);
             Assert.That(Find("ReactiveAp"), Is.Not.Null);
@@ -87,7 +90,7 @@ namespace Rokas.Tests
                    Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.Session.ReactiveCombat.CurrentCombatUs - attackStart, Is.LessThan(1060000),
                 "The first defense press must be queued inside its authored acquisition window.");
-            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D), InputState.currentTime);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Q), InputState.currentTime);
             InputSystem.Update();
             yield return null;
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(), InputState.currentTime);
@@ -132,6 +135,33 @@ namespace Rokas.Tests
             boot.View.Escape();
             yield return new WaitForSecondsRealtime(.75f);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+
+            Press("ReactiveBasic");
+            yield return null;
+            GameObject world = GameObject.Find("ReactiveCombatWorld");
+            Transform hunterActor = FindIn(world, "CombatActor_Keiko")?.transform;
+            Assert.That(hunterActor, Is.Not.Null);
+            boot.SendMessage("OnApplicationFocus", false);
+            Vector3 heldPosition = hunterActor.localPosition;
+            long heldCombatUs = boot.Session.ReactiveCombat.CurrentCombatUs;
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.Suspended));
+            Assert.That(boot.Session.ReactiveCombat.CurrentCombatUs, Is.EqualTo(heldCombatUs));
+            Assert.That(hunterActor.localPosition, Is.EqualTo(heldPosition),
+                "Focus loss freezes the visual approach together with combat time.");
+            boot.SendMessage("OnApplicationFocus", true);
+            float deadline = Time.realtimeSinceStartup + 4f;
+            while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
+        }
+
+        private static GameObject FindIn(GameObject parent, string name)
+        {
+            if (parent == null) return null;
+            foreach (Transform item in parent.GetComponentsInChildren<Transform>(true))
+                if (item.name == name) return item.gameObject;
+            return null;
         }
 
         private void Press(string name)

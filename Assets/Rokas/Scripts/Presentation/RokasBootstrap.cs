@@ -500,13 +500,16 @@ namespace Rokas.Presentation
 
         private void PauseReactiveCombat(string reason)
         {
-            if (reactiveClock == null || reactiveClock.IsPaused || reactiveBoundCombat == null) return;
+            if (reactiveClock == null || reactiveBoundCombat == null) return;
             long now = reactiveInput.DeviceNowUs;
-            reactiveClock.Pause(now);
-            reactiveBoundCombat.Suspend(reason);
-            reactiveInput.SetContext(false);
-            reactiveInput.ForceRearm();
-            reactivePrepareUntilUs = 0;
+            if (!reactiveClock.IsPaused) reactiveClock.Pause(now);
+            if (reactiveBoundCombat.Phase != ReactivePhase.Suspended)
+            {
+                reactiveBoundCombat.Suspend(reason);
+                reactiveInput.SetContext(false);
+                reactiveInput.ForceRearm();
+                reactivePrepareUntilUs = 0;
+            }
             lastReactiveDeviceUs = now;
         }
 
@@ -542,9 +545,16 @@ namespace Rokas.Presentation
                     View.RefreshReactiveCombat();
                     return;
                 }
-                reactiveClock.Resume(now);
-                reactiveInput.ForceRearm();
                 reactiveApproachHold = false;
+                reactiveMotionLocked = false;
+                View.SetReactivePresentationLocked(false);
+                if (combat.Phase == ReactivePhase.Suspended)
+                    reactivePrepareUntilUs = checked(now + 600000);
+                else
+                {
+                    reactiveClock.Resume(now);
+                    reactiveInput.ForceRearm();
+                }
                 lastReactiveDeviceUs = now;
             }
             if (reactiveMotionLocked && View.HunterAtHome)
@@ -602,6 +612,13 @@ namespace Rokas.Presentation
             long combatNowUs = reactiveClock.CombatTimeAt(now);
             CombatStep step = combat.Advance(combatNowUs, combatNowUs - 40000);
             View.PresentReactiveCombatStep(step);
+            foreach (CombatEvent combatEvent in step.Events)
+            {
+                if (combatEvent.Kind != CombatEventKind.ActionSettled ||
+                    combatEvent.ActorId != ReactiveDuelDefinitions.HunterId || View.HunterAtHome) continue;
+                reactiveMotionLocked = true;
+                View.SetReactivePresentationLocked(true);
+            }
             defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
             offenseContext = combat.CurrentPlayerSkillId == "heavy";
             reactiveInput.SetContext(defenseContext || offenseContext ||
@@ -648,7 +665,7 @@ namespace Rokas.Presentation
             if (focused && !saveBlocked && Session.CombatMode == CombatMode.Legacy)
                 View.HandleCombatInput(Input.GetMouseButtonDown(1), Input.GetKeyDown(KeyCode.Space), Input.GetKeyDown(KeyCode.R));
             if (focused && !saveBlocked && !View.Paused && !View.CombatHitStop) Session.Tick(Mathf.Min(Time.deltaTime, .1f));
-            View.Tick(dt);
+            View.Tick(dt, focused);
             sound.Tick(dt, focused);
 
             if (focused && Input.GetKeyDown(KeyCode.Tab)) View.FocusNext();

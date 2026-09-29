@@ -76,6 +76,9 @@ namespace Rokas.Tests
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),
                 "Target selection is locked to the committed action.");
             yield return null;
+            Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.False,
+                "Heavy timing starts after Keiko reaches the target.");
+            yield return WaitFor(boot, () => Find("ReactiveContactTrack").activeInHierarchy, 2f);
             Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.True);
             Assert.That(Find("ReactiveDefense").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveDefenseHint").GetComponent<Text>().text, Does.Contain("SPACE"));
