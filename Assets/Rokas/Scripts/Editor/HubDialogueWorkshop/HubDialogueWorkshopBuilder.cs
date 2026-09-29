@@ -553,7 +553,7 @@ namespace Rokas.EditorTools
             string assetFolder)
         {
             string normalized =
-                assetFolder.Replace('\', '/').TrimEnd('/');
+                assetFolder.Replace('\\\\', '/').TrimEnd('/');
             string[] parts = normalized.Split('/');
             string current = "Assets";
             for (int i = 1; i < parts.Length; i++)
