@@ -1,3 +1,4 @@
+using System.IO;
 using NUnit.Framework;
 using Rokas.Presentation;
 using UnityEditor;
@@ -83,6 +84,67 @@ namespace Rokas.EditorTools.Tests
             Assert.That(
                 data.speakerAlignment,
                 Is.EqualTo(TextAnchor.MiddleCenter));
+        }
+
+        [Test]
+        public void SaveReload_RuntimeReadsSameAuthoredConfig()
+        {
+            string projectRoot =
+                Directory.GetParent(Application.dataPath).FullName;
+            string absolute = Path.Combine(
+                projectRoot,
+                HubDialogueWorkshopBuilder.UserConfigPath);
+            string metaAbsolute = absolute + ".meta";
+            bool hadConfig = File.Exists(absolute);
+            bool hadMeta = File.Exists(metaAbsolute);
+            string previousConfig =
+                hadConfig ? File.ReadAllText(absolute) : null;
+            string previousMeta =
+                hadMeta ? File.ReadAllText(metaAbsolute) : null;
+
+            try
+            {
+                HubDialogueConfigData authored =
+                    new HubDialogueConfigData();
+                authored.speakerName = "Keiko";
+                authored.guildIntroText =
+                    "Workshop persistence probe";
+                authored.speaker.x = 333f;
+                authored.speaker.y = 177f;
+                authored.voiceVolume = .27f;
+
+                HubDialogueWorkshopBuilder.WriteUserConfig(authored);
+                HubDialogueConfig.ResetCache();
+                HubDialogueConfigData runtime =
+                    HubDialogueConfig.LoadFresh();
+
+                Assert.That(
+                    runtime.speakerName,
+                    Is.EqualTo("Keiko"));
+                Assert.That(
+                    runtime.guildIntroText,
+                    Is.EqualTo("Workshop persistence probe"));
+                Assert.That(runtime.speaker.x, Is.EqualTo(333f));
+                Assert.That(runtime.speaker.y, Is.EqualTo(177f));
+                Assert.That(
+                    runtime.voiceVolume,
+                    Is.EqualTo(.27f).Within(.001f));
+            }
+            finally
+            {
+                if (hadConfig)
+                File.WriteAllText(absolute, previousConfig);
+                else if (File.Exists(absolute))
+                    File.Delete(absolute);
+
+                if (hadMeta)
+                    File.WriteAllText(metaAbsolute, previousMeta);
+                else if (File.Exists(metaAbsolute))
+                    File.Delete(metaAbsolute);
+
+                AssetDatabase.Refresh();
+                HubDialogueConfig.ResetCache();
+            }
         }
 
         [Test]
