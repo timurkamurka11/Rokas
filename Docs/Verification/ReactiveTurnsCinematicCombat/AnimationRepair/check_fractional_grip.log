@@ -1,0 +1,83 @@
+00:00.438  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\cinematic\Normal attack corrected.blend"
+00:00.657  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\cinematic\Hard jump attack corrected.blend"
+00:00.828  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\cinematic\Two handed battle idle.blend"
+00:00.985  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\cinematic\Enter battle corrected.blend"
+FRACTION Normal attack corrected blend 0 0.0 6.374671719064672e-08
+FRACTION Normal attack corrected blend 1 16.5 8.095230783591833e-05
+FRACTION Normal attack corrected blend 2 33.0 9.912352782227151e-08
+FRACTION Normal attack corrected blend 3 49.5 0.0001747702947175988
+FRACTION Normal attack corrected blend 4 66.0 9.912352782227151e-08
+FRACTION Normal attack corrected blend 5 82.5 1.1809327717913462e-05
+FRACTION Normal attack corrected blend 6 99.0 1.0543295516136963e-07
+FRACTION Normal attack corrected blend 7 115.5 0.00010354475956345283
+FRACTION Normal attack corrected blend 8 132.0 1.544788771880316e-07
+FBX version: 7400
+FRACTION Normal attack corrected fbx 0 1.0 9.253429135959015e-08
+FRACTION Normal attack corrected fbx 1 17.5 8.083578897399193e-05
+FRACTION Normal attack corrected fbx 2 34.0 1.213009667036305e-07
+FRACTION Normal attack corrected fbx 3 50.5 0.00017477225380831458
+FRACTION Normal attack corrected fbx 4 67.0 1.9556887072930765e-07
+FRACTION Normal attack corrected fbx 5 83.5 1.1862531692190076e-05
+FRACTION Normal attack corrected fbx 6 100.0 2.5790741936372184e-07
+FRACTION Normal attack corrected fbx 7 116.5 0.00010355592470021605
+FRACTION Normal attack corrected fbx 8 133.0 3.0405221729744713e-07
+FRACTION Hard jump attack corrected blend 0 0.0 6.590711330232818e-08
+FRACTION Hard jump attack corrected blend 1 21.5 5.355557767224748e-05
+FRACTION Hard jump attack corrected blend 2 43.0 1.11886692525906e-07
+FRACTION Hard jump attack corrected blend 3 64.5 6.083353432106391e-06
+FRACTION Hard jump attack corrected blend 4 86.0 1.2202813740193247e-07
+FRACTION Hard jump attack corrected blend 5 107.5 5.816867977456838e-05
+FRACTION Hard jump attack corrected blend 6 129.0 4.470348358154297e-08
+FRACTION Hard jump attack corrected blend 7 150.5 6.908299966839286e-05
+FRACTION Hard jump attack corrected blend 8 172.0 1.5359765386647212e-07
+FBX version: 7400
+FRACTION Hard jump attack corrected fbx 0 1.0 1.221986075256521e-07
+FRACTION Hard jump attack corrected fbx 1 22.5 5.344015968408611e-05
+FRACTION Hard jump attack corrected fbx 2 44.0 2.807115005383792e-07
+FRACTION Hard jump attack corrected fbx 3 65.5 6.1621121252071255e-06
+FRACTION Hard jump attack corrected fbx 4 87.0 6.223911078088479e-07
+FRACTION Hard jump attack corrected fbx 5 108.5 5.822056067101318e-05
+FRACTION Hard jump attack corrected fbx 6 130.0 2.7028258364226004e-07
+FRACTION Hard jump attack corrected fbx 7 151.5 6.908746862835465e-05
+FRACTION Hard jump attack corrected fbx 8 173.0 3.4377789482651136e-07
+FRACTION Two handed battle idle blend 0 0.0 1.9853560592786628e-07
+FRACTION Two handed battle idle blend 1 30.0 1.6829903420919952e-07
+FRACTION Two handed battle idle blend 2 60.0 2.3836218376019794e-07
+FRACTION Two handed battle idle blend 3 90.0 1.6829903420919952e-07
+FRACTION Two handed battle idle blend 4 120.0 1.9853560592786628e-07
+FRACTION Two handed battle idle blend 5 150.0 1.6193500987928275e-07
+FRACTION Two handed battle idle blend 6 180.0 2.062432713876729e-07
+FRACTION Two handed battle idle blend 7 210.0 1.6193500987928275e-07
+FRACTION Two handed battle idle blend 8 240.0 1.9853560592786628e-07
+FBX version: 7400
+FRACTION Two handed battle idle fbx 0 1.0 3.767565303286437e-07
+FRACTION Two handed battle idle fbx 1 31.0 3.3242998010914194e-07
+FRACTION Two handed battle idle fbx 2 61.0 3.864259266820532e-07
+FRACTION Two handed battle idle fbx 3 91.0 3.3242998010914194e-07
+FRACTION Two handed battle idle fbx 4 121.0 3.767565303286437e-07
+FRACTION Two handed battle idle fbx 5 151.0 4.04654032114028e-07
+FRACTION Two handed battle idle fbx 6 181.0 3.746834683620977e-07
+FRACTION Two handed battle idle fbx 7 211.0 4.04654032114028e-07
+FRACTION Two handed battle idle fbx 8 241.0 3.767565303286437e-07
+FRACTION Enter battle corrected blend 0 0.0 1.2255299202796802e-07
+FRACTION Enter battle corrected blend 1 18.0 3.003425057343598e-08
+FRACTION Enter battle corrected blend 2 36.0 1.7928866670777111e-07
+FRACTION Enter battle corrected blend 3 54.0 1.3099429435514437e-07
+FRACTION Enter battle corrected blend 4 72.0 1.145223857598271e-07
+FRACTION Enter battle corrected blend 5 90.0 5.963374150388733e-08
+FRACTION Enter battle corrected blend 6 108.0 2.7939677238464355e-08
+FRACTION Enter battle corrected blend 7 126.0 1.2013700229374393e-07
+FRACTION Enter battle corrected blend 8 144.0 2.0489096641540527e-08
+FBX version: 7400
+FRACTION Enter battle corrected fbx 0 1.0 3.6053131633041556e-07
+FRACTION Enter battle corrected fbx 1 19.0 6.302790461364624e-08
+FRACTION Enter battle corrected fbx 2 37.0 1.9173486877169864e-07
+FRACTION Enter battle corrected fbx 3 55.0 5.608294324687844e-07
+FRACTION Enter battle corrected fbx 4 73.0 1.3115268988445996e-06
+FRACTION Enter battle corrected fbx 5 91.0 3.779391463895587e-07
+FRACTION Enter battle corrected fbx 6 109.0 4.0068956456165095e-07
+FRACTION Enter battle corrected fbx 7 127.0 1.2383438750054435e-07
+FRACTION Enter battle corrected fbx 8 145.0 4.5185560046935154e-07
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

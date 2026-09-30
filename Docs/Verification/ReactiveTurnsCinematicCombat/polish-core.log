@@ -1,0 +1,50 @@
+warning CS2023: Параметр /noconfig пропущен, т. к. он задан в файле ответов
+PASS Combat2: Combo
+PASS Combat2: Spam
+PASS Combat2: ComboExpiry
+PASS Combat2: EarlyCharge
+PASS Combat2: Charged
+PASS Combat2: PerfectCut
+PASS Combat2: OverheldCharge
+PASS Combat2: Dodge
+PASS Combat2: Deflect
+PASS Combat2: DefenseCooldown
+PASS Combat2: SealBreak
+PASS Combat2: RitualSuccess
+PASS Combat2: RitualReleaseFailure
+PASS Combat2: RitualOrderFailure
+PASS Combat2: RitualTimeout
+PASS Combat2: Resonance
+PASS Combat2: ResonanceExpiry
+PASS Combat2: Phases
+PASS Combat2: CancelCharge
+PASS Combat2: RetryReset
+PASS Combat2: InactiveGuards
+PASS Combat2: TickPartition
+PASS Combat2: CancelledCombo
+PASS: idle attacks removed
+PASS: spam blocked before combo recovery
+PASS: timed third strike rewards combo
+PASS: old timed seal button retired
+PASS ReactiveTurns: valid definitions
+PASS ReactiveTurns: invalid definitions identify fields
+PASS ReactiveTurns: invalid timing and active cap
+PASS ReactiveTurns: clock pause and epochs
+PASS ReactiveTurns: clock speed segments
+PASS ReactiveTurns: queue ordering and budget
+PASS ReactiveTurns: forecast uses live scheduler
+PASS ReactiveTurns: enemy sequence fixed at turn start
+PASS ReactiveTurns: command idempotency and revision
+PASS ReactiveTurns: stable player command restores without turn gain
+PASS ReactiveTurns: invalid command leaves state untouched
+PASS ReactiveTurns: queue ties death and summon notice
+PASS ReactiveTurns: attack and break policy are validated data
+PASS ReactiveTurns: player dispatch advances queue time
+PASS ReactiveTurns: committed command ID survives stable reload
+PASS ReactiveTurns: rejected command ID keeps first response
+PASS ReactiveTurns: input epoch only moves forward
+PASS ReactiveTurns: content hash changes with authored timing
+PASS ReactiveTurns: corrupt checkpoint enters safe error
+PASS ReactiveTurns: defeat checkpoint reloads as terminal
+PASS ReactiveTurns: multi-enemy targeting, queue, AoE, waves, and eight-enemy encounter
+PASS: all Rokas.Core behavior tests

@@ -1,0 +1,672 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.19f1 (7689f4515d75) revision 7768564'; Using compiler version '194234433'; Build Type 'Release'
+OS: 'Windows 10  (10.0.19044) 64bit EnterpriseS' Language: 'ru' Physical Memory: 32536 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-tim" at "2026-09-30T08:32:30.4788504Z"
+Process architecture: x64
+Date: 2026-09-30T08:32:30Z
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 18444, path: "D:/BOT/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.3+d7ffd15
+  Session Id:              9ab44d9d5ec241a8b50871c1afc9bacb
+  Correlation Id:          3e8994e4b2b40360d5fd196aa2b663d9
+  External correlation Id: 3173711796950686047
+  Machine Id:              oTNjJO4DzpMymFT5Gtg2J/cBqjA=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-tim" (connect: 0.00s, validation: 0.00s, handshake: 0.03s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-tim-notifications" at "2026-09-30T08:32:30.507671Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Module] Licensing Background thread has ended after 0.03s
+
+COMMAND LINE ARGUMENTS:
+D:\BOT\6000.3.19f1\Editor\Unity.exe
+-batchmode
+-nographics
+-quit
+-projectPath
+D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY
+-executeMethod
+Rokas.Editor.ReactiveCombatActorLibraryBuilder.Build
+-logFile
+D:\Rokas\reactiveturns-b2-staging\builder.log
+Successfully changed project path to: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY
+D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+Player connection [9984]  Target information:
+
+Player connection [9984]  * "[IP] 192.168.0.104 [Port] 55504 [Flags] 2 [Guid] 3794629218 [EditorId] 3794629218 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [9984]  * "[IP] 172.22.0.1 [Port] 55504 [Flags] 2 [Guid] 3794629218 [EditorId] 3794629218 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [9984]  * "[IP] 172.19.0.1 [Port] 55504 [Flags] 2 [Guid] 3794629218 [EditorId] 3794629218 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-D93MEKN) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor"
+
+Player connection [9984] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [9984] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-10840" after 0.2 seconds.
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 0.06 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.3.19f1 (7689f4515d75)
+[Subsystems] Discovering subsystems at path D:/BOT/6000.3.19f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = 'D:/BOT/6000.3.19f1/Editor/Data/Managed'
+Mono path[1] = 'D:/BOT/6000.3.19f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'D:/BOT/6000.3.19f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56840
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: D:/BOT/6000.3.19f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.000947 seconds.
+- Loaded All Assemblies, in  0.341 seconds
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.344 seconds
+Domain Reload Profiling: 684ms
+	BeginReloadAssembly (119ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (18ms)
+	RebuildCommonClasses (30ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (39ms)
+	LoadAllAssembliesAndSetupDomain (141ms)
+		LoadAssemblies (100ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (138ms)
+			TypeCache.Refresh (137ms)
+				TypeCache.ScanAssembly (126ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (345ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (310ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (43ms)
+			SetLoadedEditorAssemblies (7ms)
+			BeforeProcessingInitializeOnLoad (73ms)
+			ProcessInitializeOnLoadAttributes (120ms)
+			ProcessInitializeOnLoadMethodAttributes (68ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: F4-B2VC-NVKS-U9WP-P4Q7-XXXX
+  Product: Unity Personal
+  Type: ULF
+  Expiration: Unlimited
+[Licensing::Module] License group:
+  Id: 11270668014681-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 18 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.inputsystem@1.20.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194)
+  Built-in packages:
+    com.unity.test-framework@1.6.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.test-framework@bd7f943e9647)
+    com.unity.ugui@2.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.ugui@b95364aab964)
+    com.unity.modules.animation@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.audio@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.imageconversion@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.screencapture@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.ui@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.video@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.unitywebrequest@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.hierarchycore@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.hierarchycore)
+    com.unity.modules.physics@1.0.0 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.modules.physics)
+    com.unity.ext.nunit@2.0.5 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\com.unity.ext.nunit@d8c07649098d)
+  Git packages:
+    dev.yarnspinner.unity@https://github.com/YarnSpinnerTool/YarnSpinner-Unity.git#v3.1.2 (location: D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Library\PackageCache\dev.yarnspinner.unity@e1ba6f471d92)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+Starting: D:\BOT\6000.3.19f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s83ms
+*** Tundra build success (0.06 seconds), 0 items updated, 342 evaluated
+AssetDatabase: script compilation time: 0.396507s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.591 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Native extension for WindowsStandalone target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.432 seconds
+Domain Reload Profiling: 1021ms
+	BeginReloadAssembly (274ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (18ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (147ms)
+	RebuildCommonClasses (30ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (21ms)
+	LoadAllAssembliesAndSetupDomain (254ms)
+		LoadAssemblies (209ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (124ms)
+			TypeCache.Refresh (109ms)
+				TypeCache.ScanAssembly (102ms)
+			BuildScriptInfoCaches (11ms)
+			ResolveRequiredComponents (2ms)
+	FinalizeReload (432ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (291ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (19ms)
+			SetLoadedEditorAssemblies (2ms)
+			BeforeProcessingInitializeOnLoad (99ms)
+			ProcessInitializeOnLoadAttributes (131ms)
+			ProcessInitializeOnLoadMethodAttributes (37ms)
+			AfterProcessingInitializeOnLoad (3ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (20ms)
+Asset Pipeline Refresh (id=d23e639f7f3c4e54d826d896b8548abc): Total: 1.614 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=554 ms
+		Asset DB Callback time: managed=53 ms, native=3 ms
+		Scripting: domain reloads=1, domain reload time=591 ms, compile time=398 ms, other=12 ms
+		Project Asset Count: scripts=432, non-scripts=585
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 4.142ms
+	ApplyChangesToAssetFolders: 0.236ms
+	Scan: 21.213ms
+	OnSourceAssetsModified: 0.002ms
+	CategorizeAssetsWithTransientArtifact: 9.982ms
+	ProcessAssetsWithTransientArtifactChanges: 17.395ms
+	CategorizeAssets: 7.543ms
+	ImportOutOfDateAssets: 433.967ms (35.448ms without children)
+		CompileScripts: 398.090ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.082ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.127ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.220ms
+	PostProcessAllAssets: 54.036ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.001ms
+	UnloadStreamsBegin: 1.176ms
+	PersistCurrentRevisions: 0.033ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 2.309ms
+	Untracked: 1064.217ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 1.631ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-ROKAS
+Unloading 7 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 1639 unused Assets / (1.3 MB). Loaded Objects now: 2247.
+Memory consumption went from 114.7 MB to 113.4 MB.
+Total: 4.852200 ms (FindLiveObjects: 0.171900 ms CreateObjectMapping: 0.076900 ms MarkObjects: 3.993300 ms  DeleteObjects: 0.609300 ms)
+
+Asset Pipeline Refresh (id=f8b034cc9ef441e418c5b89be50d96b2): Total: 0.006 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Two handed battle idle.fbx using Guid(713ad9e54ad708b48a27d14c78f420ba) (FBXImporter) -> (artifact id: '728ce5612aa449d0e5c0523e61892dd7') in 0.2074711 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=cff7d6c33fed1764f88db954c55c4fe7): Total: 0.257 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Normal preparation.fbx using Guid(4f4e95bff7e69ea40916afb1287ad76d) (FBXImporter) -> (artifact id: '4f437ee63b822a2efd2986349f320c60') in 0.0830873 seconds
+Refreshing native plugins compatible for Editor in 0.30 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=b52b48a304c8c63489476d878b5963bc): Total: 0.094 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Heavy preparation.fbx using Guid(b62e22cd747a6e44cb27ef76ac8c91dd) (FBXImporter) -> (artifact id: 'cfc3a2571549c49673348156ae1aaa41') in 0.0912545 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=3b3e7e7a1a30d8f44a6a9aeb2f9c5ae9): Total: 0.100 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Normal attack corrected.fbx using Guid(03c0a76511c2f214cb643781672524e1) (FBXImporter) -> (artifact id: '286e2d06f36c3428a7993dab2c059811') in 0.1372662 seconds
+Refreshing native plugins compatible for Editor in 0.14 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=58d3284bcdcf1be4b847922f7b2693d8): Total: 0.147 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack corrected.fbx using Guid(0a4766549b4195543bd567b5d928f128) (FBXImporter) -> (artifact id: '11c506802f58afd7ee472dafc7b1c705') in 0.1590032 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=25f7e0041af590c42af428447d619dcf): Total: 0.169 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Two handed approach.fbx using Guid(c4fd55a39614c274f9e21c54c4a962b3) (FBXImporter) -> (artifact id: 'b1809ad4dc4d3f2e5cce0d3f0e9b32c1') in 0.1195535 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=cdbd76c25ae85d74c944d9052b4f92a9): Total: 0.129 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Two handed return.fbx using Guid(ccf0584bad5d12340974a417218ded47) (FBXImporter) -> (artifact id: '5bbedb9aab79d241d8796c6931d2e400') in 0.1178604 seconds
+Refreshing native plugins compatible for Editor in 0.14 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=aef50e433c118a44b94fb7cbaea84750): Total: 0.127 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Enter battle corrected.fbx using Guid(21c42e9312317a243a76d4b5688c5b90) (FBXImporter) -> (artifact id: 'eb2a38f9dccec296c897482602fd54ac') in 0.1468259 seconds
+Refreshing native plugins compatible for Editor in 0.16 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=8f6f4a6dedfdd994dbae31eb84515b75): Total: 0.156 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Keiko/Enter the batle.fbx using Guid(4bf69016d1d825844b2dca9372105841) (FBXImporter)Keyframe reduction: Ratio: 53.383453%;
+ -> (artifact id: '8900b6f42a10b4f947f0591807251f0c') in 0.0778737 seconds
+Refreshing native plugins compatible for Editor in 0.16 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=9052b432365e0ab4bb6fa4932dd79049): Total: 0.100 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model.fbx using Guid(f6a04fc5b9beb964fb743a3cb9fa9c56) (FBXImporter) -> (artifact id: 'd74eed1d319fe22a3d4596d9d58b8b44') in 0.2049155 seconds
+Refreshing native plugins compatible for Editor in 0.15 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=29e3045165e17f8478f49c7a8f83433e): Total: 0.219 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 seconds
+Asset Pipeline Refresh (id=2ba2f523daac29345bdd40728fc7fcc0): Total: 0.004 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Combat actor Keiko: transforms=35, renderer bounds=(0.856, 1.111, 0.857), source materials=1, source textured=0, runtime material=Keiko, runtime textured=True
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:338)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 338)
+
+Combat clip Keiko/Keiko_Two_handed_battle_idle: legacy=True, length=2,000s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Normal_attack_corrected: legacy=True, length=1,100s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Hard_jump_attack_corrected: legacy=True, length=1,433s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Two_handed_approach: legacy=True, length=0,800s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Two_handed_return: legacy=True, length=0,800s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Normal_preparation: legacy=True, length=0,267s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Heavy_preparation: legacy=True, length=0,400s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Keiko/Keiko_Enter_battle_corrected: legacy=True, length=1,200s, bindings=295, matching model paths=295
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:94)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat actor Mina: transforms=35, renderer bounds=(0.995, 1.066, 0.942), source materials=1, source textured=0, runtime material=Mina, runtime textured=True
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:338)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 338)
+
+Combat clip Mina/Mina_anime_girl_character_3d_model_Standing_Idle: legacy=True, length=1,833s, bindings=175, matching model paths=175
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Mina/Mina_Attack: legacy=True, length=2,300s, bindings=175, matching model paths=175
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Mina/Mina_Magic_attack: legacy=True, length=2,667s, bindings=175, matching model paths=175
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Mina/Mina_hit: legacy=True, length=1,333s, bindings=175, matching model paths=175
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Mina/Mina_hit_2: legacy=True, length=1,333s, bindings=175, matching model paths=175
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:95)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat actor Yokai: transforms=67, renderer bounds=(0.658, 1.207, 0.890), source materials=1, source textured=0, runtime material=Yokai, runtime textured=True
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:338)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 338)
+
+Combat clip Yokai/Yokai_Still_stance: legacy=True, length=5,333s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_Attack: legacy=True, length=3,567s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_Jump_attack: legacy=True, length=2,467s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_Hit: legacy=True, length=1,433s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_hit_2: legacy=True, length=1,200s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_Death: legacy=True, length=2,767s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Combat clip Yokai/Yokai_Walking_to_attack: legacy=True, length=0,467s, bindings=355, matching model paths=355
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Verify (string,Rokas.Presentation.ReactiveCombatActorClips) (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:352)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:96)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 352)
+
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_return.anim using Guid(d0b82b37909837647a2d576b6e298e9f) (NativeFormatImporter) -> (artifact id: '3c54711095ea5c0bae588089931fa6fe') in 0.0226767 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Hard_jump_attack_corrected.anim using Guid(4225f8323ea2cac4a80a4303654349fb) (NativeFormatImporter) -> (artifact id: '366338280cbaf66ecbf29d016466b71a') in 0.0380721 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_battle_idle.anim using Guid(c38a261cac4830a4eb474bad1784a2f0) (NativeFormatImporter) -> (artifact id: 'dd0f7a0c2f2721c25d4764b77696557b') in 0.0497659 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_preparation.anim using Guid(f4d671ebf4f41fd49a685f3fa8f42c57) (NativeFormatImporter) -> (artifact id: '1b3f725bd9ddb6b394ce6e2910d78ea0') in 0.008125 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Enter_battle_corrected.anim using Guid(f55a97cafee5c3d4c9bc92f600902418) (NativeFormatImporter) -> (artifact id: 'c11b60b060db616735f1e804905a25f6') in 0.032084 seconds
+Start importing Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/KeikoSword.mat using Guid(a6030b6603d76eb43b6cf4fce97ab99a) (NativeFormatImporter) -> (artifact id: 'ab2266679e5bd0dbae75b7c8d302a05d') in 0.0009414 seconds
+Start importing Assets/Rokas/Art/CombatActors/Materials/Keiko.mat using Guid(a7eb21dd960e73943a37f19140f63ce0) (NativeFormatImporter) -> (artifact id: 'af52e3fd3dcc16173236626f0ab6c49a') in 0.0008063 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_attack_corrected.anim using Guid(c8b0335b350cfb54d8b360bbcb8e26b3) (NativeFormatImporter) -> (artifact id: '2e73a329649f9958d95b82e3f972417a') in 0.0293768 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Heavy_preparation.anim using Guid(bacd886575acfcb488bb62c682354ffc) (NativeFormatImporter) -> (artifact id: 'ca1aee90bdbbdbdcffdab6ee3fc435f8') in 0.010997 seconds
+Start importing Assets/Rokas/Art/CombatActors/Materials/Mina.mat using Guid(eb85fd7513569204991315f9cd84ec74) (NativeFormatImporter) -> (artifact id: 'b9c4562dc762e1e92228caa651b3b0c6') in 0.0008716 seconds
+Start importing Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_approach.anim using Guid(9ddd0d9165a12ee4d9bf96ddb27ffb3f) (NativeFormatImporter) -> (artifact id: '868255a35d8a52d0cb41f2904bd46f03') in 0.02161 seconds
+Start importing Assets/Rokas/Art/CombatActors/Materials/Yokai.mat using Guid(ce76816c2418c414b8eaa22619cc21aa) (NativeFormatImporter) -> (artifact id: 'ef5cd964f8d04a7488c5f1c23fd8d6da') in 0.0009032 seconds
+Start importing Assets/Rokas/Resources/Combat/ReactiveCombatActorLibrary.asset using Guid(6b147f2214d73a74d9c07417e08a2558) (NativeFormatImporter) -> (artifact id: '0ba457026bc3aabb1f6000674c23b823') in 0.0008245 seconds
+Refreshing native plugins compatible for Editor in 0.14 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=ba6970be4c9ed92429622aa0dcf33d69): Total: 0.241 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+ReactiveCombatActorLibrary built at Assets/Rokas/Resources/Combat/ReactiveCombatActorLibrary.asset
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Rokas.Editor.ReactiveCombatActorLibraryBuilder:Build () (at Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs:99)
+
+(Filename: Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs Line: 99)
+
+Batchmode quit successfully invoked - shutting down!
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-tim-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-tim channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0

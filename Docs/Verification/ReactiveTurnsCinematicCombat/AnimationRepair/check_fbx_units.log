@@ -1,0 +1,25 @@
+FILE Normal attack.fbx 7700
+GLOBAL [b'UpAxis', b'int', b'Integer', b'', 1]
+GLOBAL [b'FrontAxis', b'int', b'Integer', b'', 2]
+GLOBAL [b'CoordAxis', b'int', b'Integer', b'', 0]
+GLOBAL [b'UnitScaleFactor', b'double', b'Number', b'', 100.0]
+GLOBAL [b'OriginalUnitScaleFactor', b'double', b'Number', b'', 100.0]
+NODE [443830768, b'mixamorig:Hips\x00\x01Model', b'LimbNode']
+PROP [b'Lcl Translation', b'Lcl Translation', b'', b'A+', 5.960464477539063e-08, 0.5978139638900757, 0.00648469477891922]
+FILE Normal attack corrected.fbx 7400
+GLOBAL [b'UpAxis', b'int', b'Integer', b'', 1]
+GLOBAL [b'FrontAxis', b'int', b'Integer', b'', 2]
+GLOBAL [b'CoordAxis', b'int', b'Integer', b'', 0]
+GLOBAL [b'UnitScaleFactor', b'double', b'Number', b'', 100.0]
+GLOBAL [b'OriginalUnitScaleFactor', b'double', b'Number', b'', 100.0]
+NODE [928935194, b'Armature\x00\x01Model', b'Null']
+PROP [b'Lcl Translation', b'Lcl Translation', b'', b'A+', 0.0, 0.0, 0.0]
+PROP [b'Lcl Rotation', b'Lcl Rotation', b'', b'A+', -4.3257111045250854e-06, 0.0, 0.0]
+PROP [b'Lcl Scaling', b'Lcl Scaling', b'', b'A+', 1.0, 1.0, 1.0]
+NODE [903127131, b'mixamorig:Hips\x00\x01Model', b'LimbNode']
+PROP [b'Lcl Translation', b'Lcl Translation', b'', b'A+', 0.002801386872306466, 0.5691848993301392, -0.009885799139738083]
+PROP [b'Lcl Rotation', b'Lcl Rotation', b'', b'A+', 5.236190784253263, -15.587739903039918, -1.3964177683788264]
+PROP [b'Lcl Scaling', b'Lcl Scaling', b'', b'A+', 1.0, 1.0, 0.9999998807907104]
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

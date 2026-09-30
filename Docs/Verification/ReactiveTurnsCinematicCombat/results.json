@@ -1,0 +1,473 @@
+{
+  "unity": "6000.3.19f1",
+  "tests": {
+    "edit-results.xml": {
+      "summary": {
+        "id": "2",
+        "testcasecount": "30",
+        "result": "Passed",
+        "total": "30",
+        "passed": "30",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-30 08:34:51Z",
+        "end-time": "2026-09-30 08:34:53Z",
+        "duration": "2,1303543"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Combo\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Spam\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"ComboExpiry\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"EarlyCharge\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Charged\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"PerfectCut\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"OverheldCharge\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Dodge\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Deflect\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"DefenseCooldown\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"SealBreak\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"RitualSuccess\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"RitualReleaseFailure\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"RitualOrderFailure\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"RitualTimeout\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Resonance\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"ResonanceExpiry\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"Phases\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"CancelCharge\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"RetryReset\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"InactiveGuards\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"TickPartition\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.CombatFoundationTests.ApprovedCombatBehavior(\"CancelledCombo\")",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.CombatReloadPreservesHealthWithoutLegacyAutoDamage",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.ContractRewardCannotBeClaimedTwice",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.FirstLoopDomainTests.HomeCannotSkipPhaseGuardIntoCombat",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Core.Tests.ReactiveUnitySaveCodecTests.ActiveReactiveCheckpointRoundTripsThroughUnityJsonAndResumesOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(False)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.AuthoredSwordClipBindsFullyWithoutWorldDriftOrAudioEvents(True)",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordAssetEditModeTests.ReusableWeaponPrefabResolvesItsMeshMaterialAndTexture",
+          "result": "Passed"
+        }
+      ]
+    },
+    "playfocus-results.xml": {
+      "summary": {
+        "id": "2",
+        "testcasecount": "34",
+        "result": "Passed",
+        "total": "34",
+        "passed": "34",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-09-30 08:26:46Z",
+        "end-time": "2026-09-30 08:31:43Z",
+        "duration": "296,6456864"
+      },
+      "tests": [
+        {
+          "name": "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.EnemyKeepsOtherSlotsAndCorpseFallsHoldsThenDissolvesWithoutMoving",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.FiveNormalFiveHeavyAndTenAlternatingAttacksStaySettledWithoutDrift",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaUsesActionSpecificImportedClips",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ImportedRunClipsApproachAndReturnToTheSameHomeAcrossActions",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ArenaRetainsCorpsePositionThroughAshThenCleansTheActor",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshActuallyClipsTheRenderedActorAsProgressAdvances",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshClonesMaterialsPreservesSurfaceAndRestoresOwnedSlots",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalActuallyRendersVisibleCoverageIntoTransparentActorTexture",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalOnlyAdvancesWhenItsPresentationClockTicks",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionDefeatWithoutActionSettledReturnsAttackerWhileHunterIsDead",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionVictoryWithoutActionSettledStillReturnsHunterAndSettles",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicHudPlayModeTests.ActualBootstrapWaitsForFullReturnsAndAnnouncementsBeforeNextActor",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicHudPlayModeTests.CoreAheadTurnHoldSuppressesReactionUntilPresentationStarts",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicHudPlayModeTests.FocusPauseDuringInitialPresentationHoldFreezesThenResumesFreshEpoch",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCinematicHudPlayModeTests.RealEntranceAndFadingTurnAnnouncementGatePlayerControls",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests.LiveContactDefenseReturnAndCorpseLifecycleAreRendered",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveDuelPlayModeTests.FocusAndSettingsPauseFreezeCombatThenResume",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveDuelPlayModeTests.PortalOffersPlayableReactiveDuelWithProjectArt",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveEightEnemyPlayModeTests.PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveFullLoopPlayModeTests.PortalDuelVictoryHomePaymentAndReload",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyRejectsEarlyAndLateDevicePressesAndStillSettles",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DefenseInputIsOwnedOnlyByActiveArenaAndDoesNotDuplicate",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DevicePressKeepsItsTimestampAndNeedsReleaseAfterRearm",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.HpTextIsImmediateBarsTweenAndReplacementSlotOwnerSnaps",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.IncomingCursorUsesRealPressTimestampThenResolvesAndReopensForNextHit",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveReactionPolishPlayModeTests.MainCommandsOnlyExposeNormalAndHeavyAndHeavyDoesNotOpenEnemyReactionUi",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.NormalHeavyAndSweepEmitOneContactCueEachThroughExistingVolumeControls",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.AuthoredTwoHandTakesKeepBothPalmsOnTheHandleAndAccelerateIntoContact",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.ExistingActorEquipsOneReplaceableSwordAndUsesDistinctAuthoredClips",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.RenderSwordGripAndAuthoredAttackFramesInPlayMode",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveSwordPlayModeTests.RuntimeSupportPalmStaysOnTheSwordAcrossAuthoredPoseBlends",
+          "result": "Passed"
+        },
+        {
+          "name": "Rokas.Tests.ReactiveWaveTransitionPlayModeTests.ThreeWavesRefreshTheLiveArenaHudAndQueueThenReachVictory",
+          "result": "Passed"
+        }
+      ]
+    }
+  },
+  "core": {
+    "console_runner_passed": 1,
+    "console_runner_total": 1,
+    "individually_logged_combat_foundation_passes": 23,
+    "completed_RunAll_groups": 16
+  },
+  "validator": {
+    "baseline_head": "53aa206a99d52bcb3f3234239fa7289fa6ba6ce2",
+    "baseline_method": "Read-only initial working tree reconstruction: HEAD tracked inventory/content plus four preexisting ignored HubDialogue user assets (untouched by this iteration); validator unchanged.",
+    "preexisting_ignored_assets": [
+      {
+        "path": "Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity",
+        "sha256": "8384ee44422f13d5645cfc6009de69299c5fa7e123299167fa811c5703da3636",
+        "mtime_utc": "2026-09-29T14:39:08.785821+00:00"
+      },
+      {
+        "path": "Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity.meta",
+        "sha256": "b6e22d2db09af2db58219ed5d5ca87e325cff2353f8c32e8b64cc7b67deb6a11",
+        "mtime_utc": "2026-09-29T12:45:25.417008+00:00"
+      },
+      {
+        "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json",
+        "sha256": "33167b1d03d1aca0b1f5410c3519ee8a5afbcac8aac20d8b358ae036bdf63585",
+        "mtime_utc": "2026-09-29T14:39:17.153389+00:00"
+      },
+      {
+        "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json.meta",
+        "sha256": "47d2e2f73ee8f5fde9b48d840cd601ff2bae0ab35d7136b80049e9e451583a7d",
+        "mtime_utc": "2026-09-29T12:45:25.367238+00:00"
+      }
+    ],
+    "baseline_exit": 1,
+    "final_exit": 1,
+    "baseline_findings": 132,
+    "final_findings": 132,
+    "added": [],
+    "removed": []
+  },
+  "compilation_runtime_shader_error_scan": {
+    "builder.log": [],
+    "edit-tests.log": [],
+    "playfocus-tests.log": []
+  },
+  "source_sha256": {
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Enter_battle_corrected.anim": "28f7be354d830d647de0990f9d0840fc45bf58de3420172e0d5a50a2fb3bfac4",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Enter_battle_corrected.anim.meta": "3000e6c8374cc2127a733076c426657819cdf6459769a6c06ebe96e2a351295b",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Hard_jump_attack_corrected.anim": "ba30b62def51c991d270b11f5967db0a7502078c91f97e1529022e53df08d3c4",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Hard_jump_attack_corrected.anim.meta": "9186909822ca938bb0f5b0030cd523f0b737ead516e1eea81641d90fe2c4f6d1",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Heavy_preparation.anim": "9c7f89807a6e07a531fc752c84efbe74427ab3a5360220b2a0b02171c9ae9f02",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Heavy_preparation.anim.meta": "68635e41b4e570b6c5ee4aa33ee9697634acb7c82b7acb74d2ae205b921a7b40",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_attack_corrected.anim": "1a2f09edd1b21a1e854524092f875018bb6f3207c73dfde1c49faa22c0be5792",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_attack_corrected.anim.meta": "11a89ea110cff254143beabfb98e2f258f004fab6bd87485b113c19049d8b3c3",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_preparation.anim": "6c7bf7e43783ab4bad98a9cab7e4415585cd29ff489998a0390ade37d82f733f",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Normal_preparation.anim.meta": "7b89dd7ef6fde3e36bf497238973978e474e6dc8a6700873beed54c519cf5e60",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_approach.anim": "233a2129d23ae9c705e0f3c58d064d06efcd4fd9ea2665a318fda1227c3dcb44",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_approach.anim.meta": "ecb1262416971b2a8c512a0bccbfa5cb24f1a85ec73a7b98984210117218d2cd",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_battle_idle.anim": "1d30f425f89ec1154eb3052a0b02311d437c2d95f94ddec509a9097e43603d30",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_battle_idle.anim.meta": "654d1049a427f20e6e57d2dda664c8df3a21d6890b95d9ec3c12d60c1f4f3324",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_return.anim": "6f83fb5bfb53c7413d666f3fe67a96b0954b80c46a8968629331e84259c93495",
+    "Assets/Rokas/Art/CombatActors/Clips/Keiko_Two_handed_return.anim.meta": "b46077cdc47be61f370b47ff239de6c72b2b596be1864d3acadfa39b05962924",
+    "Assets/Rokas/Art/CombatActors/Keiko/Enter battle corrected.fbx": "65013336379530de55d2572e57734baaf4e195425bad7dccb1e95480d4267054",
+    "Assets/Rokas/Art/CombatActors/Keiko/Enter battle corrected.fbx.meta": "1ceafeb27a5bd9462692edda8371990dc90719994871fd873aabb4a0fefb40cd",
+    "Assets/Rokas/Art/CombatActors/Keiko/Enter the batle.fbx": "eb72b484790f050e4e0cb2eed21b3f6c5783a0bafc769e7340e17b7b6cbd22db",
+    "Assets/Rokas/Art/CombatActors/Keiko/Enter the batle.fbx.meta": "c37f72ece845aa7c2572080cbce808f35baf7695361d4ff31f1110b7b6102fee",
+    "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack corrected.fbx": "5adc4028e03e674ac0962d39c4455b68b2a4a7b4369cf29a29f05289de1f751b",
+    "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack corrected.fbx.meta": "efa39075fdf9af29e0d353eb5ccfb060f5bf6640b2b38cda8febd3d4e824bf21",
+    "Assets/Rokas/Art/CombatActors/Keiko/Heavy preparation.fbx": "9b8740567877ae4ca6800ddbe5a7f99ebf1fd62ee69fcb1da52c23cb04da4756",
+    "Assets/Rokas/Art/CombatActors/Keiko/Heavy preparation.fbx.meta": "f8af605a272621a8e8a21c5605a23988fb3d803a86bed4bc0c2adce235b5176b",
+    "Assets/Rokas/Art/CombatActors/Keiko/Normal attack corrected.fbx": "915c82054dee739ba1a1a46dcd503aaddaf8fca5ca4e57998e64936f6e795ac2",
+    "Assets/Rokas/Art/CombatActors/Keiko/Normal attack corrected.fbx.meta": "1b7f29400b5986614605a82470191eeebeea2ee6704072ed4d2cb855af580aa0",
+    "Assets/Rokas/Art/CombatActors/Keiko/Normal preparation.fbx": "f3e135f8123a163ed2b09151d4ff8430003b40a40b15960c9c04cf67c031f5c0",
+    "Assets/Rokas/Art/CombatActors/Keiko/Normal preparation.fbx.meta": "c4de31d19b3e640f1df9a550027ee23e94f16bfc6fd520a4902cea49f07b2e73",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed approach.fbx": "2a3a3368f424b2b2e1a5648484e6a4b7d95777db7409a263a6f7493ca91c26de",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed approach.fbx.meta": "30a9e958f630dbc8ff760f67e5c413c890c51dd6c30b7ffb0e2812bb6befb114",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed battle idle.fbx": "7491a234ca68d6735e02f163f927a0938795ec2ab0d89848aa8e192b6a714c46",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed battle idle.fbx.meta": "8365f2e5c4dde1f0c1624e173aced96f1ad31f7b3885443e62046c462d683fdb",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed return.fbx": "a98628e0900e385a8ed752e7235214df3768342b484adb9c8610135e1655c593",
+    "Assets/Rokas/Art/CombatActors/Keiko/Two handed return.fbx.meta": "47a1beb56833e6da56c87dce98a318157a4acb9aff97eb6cb8e63fb1f21af605",
+    "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/KeikoSword.prefab": "6f5ffa340b0c52ea461c92e9affad8c58993e96fccc0a1da4e36aa60fc5e60a7",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatActorLibrary.asset": "9ad8a1be7898cee0dac11f96c489c23f60ea9c46d44e0daaa18f85b46ebf7abf",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatAshDissolve.shader": "8590da7c463cad1652c4b2bc8eee9094fc93db4de191e374f9dba46174c1514e",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatAshDissolve.shader.meta": "8fe8dc2c85d5fd0e70b23208010f3bc32328d558abc55842d36ac34edd6bc903",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatQuietFx.shader": "0e96ccc95a90b09564430f9231ee64a20efd0f26b74bb3197ca9ca39009bd86b",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatQuietFx.shader.meta": "98c50ac3e9717dc26431397148fd946da074720f449c10fe628a2f5eef99074f",
+    "Assets/Rokas/Scripts/Editor/ReactiveCombatActorLibraryBuilder.cs": "4d49e846b975dce09f444cf8135eb2abba99843adf6f11fa54de335138c9b389",
+    "Assets/Rokas/Scripts/Editor/ReactiveCombatModelImporter.cs": "aecb24c83e190ff0d453955e196386d9ccb7066b970172f20689fdfe08d3ac62",
+    "Assets/Rokas/Scripts/Presentation/MissionView.cs": "73468ba875adaf9c26bba39538e458deef28ccff61b9fa6d50427cfb1f39c02a",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatActorLibrary.cs": "179e2c30b198b3d4092f434887fb5903f6db0583bbb06f19da9ab61577e06af9",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatActorVisual.cs": "c3868a45670362dade815041857eb1d02d5a7143a178a73a5ec3ade03db10324",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatArena.cs": "d0ced1d2b061beed40735495b61138f9e325841bbcd94ab16f49b1ca8a0d12aa",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatAshDissolve.cs": "c5f051a9b3e8c61cc39e92696d7caed2fde6c2e87451d824f0d746a1c06b4034",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatAshDissolve.cs.meta": "5ee116c247d3d07bea52a5356e371e2b54fffca1d5017a17387d5f27966ec552",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs": "ffc28e3d0beca33f888c6dd2eb8ce0eeff4b4ab6a2cae9a760f2687b5a6d1816",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs.meta": "32182df1d8aae734914cb7b5f309f294ff6af9523c1a94d8ff67d244ecfd206b",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatTwoHandGrip.cs": "0a7c00051920bf19cb3da0028dd13149ba2da2d020a187963b9ffafd78830b1e",
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatTwoHandGrip.cs.meta": "5e2f474fa062d13d8782bacffb2556e97edc4a83b94c059f47a3359e55453134",
+    "Assets/Rokas/Scripts/Presentation/ReactiveMissionView.cs": "30afb520e7beb468b3dc684efa106c523babc393468bab131d1596b9e1b339f6",
+    "Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs": "f055a534d0c8d61fb5d5db79c9bab9b9396efa485f6004a658c4529da304bf5b",
+    "Assets/Rokas/Scripts/Presentation/RokasView.cs": "de444896a580d9f09ff35238ce81cc8e93a5c879c4b66af11ecd558ba041f0a3",
+    "Assets/Rokas/Tests/EditMode/ReactiveSwordAssetEditModeTests.cs": "174555a98cb68183ec7e2d8cdcb64995d449fbc189559c61b30fed166ef0a98b",
+    "Assets/Rokas/Tests/PlayMode/ReactiveArenaMotionPolishPlayModeTests.cs": "f056e8168b19e982ec6c9b45db66bfe78ed66e4c678fc10e4a4291f2c0091dc0",
+    "Assets/Rokas/Tests/PlayMode/ReactiveArenaVisualPlayModeTests.cs": "adf4a6c839a190bba60e4695253b34bf39e9b4b38cc498a31aeced81b0e3e939",
+    "Assets/Rokas/Tests/PlayMode/ReactiveCinematicFxPlayModeTests.cs": "74e88a96c8809f8f2f9453167f9de7b69617b7e658cf3fbb53b525e72ee0cb1d",
+    "Assets/Rokas/Tests/PlayMode/ReactiveCinematicFxPlayModeTests.cs.meta": "d89beb9a6e10d33e5cd44246b9c0f7d82ca8d91ceef45134c85add4c96f78e31",
+    "Assets/Rokas/Tests/PlayMode/ReactiveCinematicHudPlayModeTests.cs": "63c168efeab9f2a36f2fa1ddbf03203fbfe34d01ffc35b564ea9dfd2a4cc5e58",
+    "Assets/Rokas/Tests/PlayMode/ReactiveCinematicHudPlayModeTests.cs.meta": "2f3fedce5069543dba5f6650869b2ebd3c97740038d215c7845d3edace402383",
+    "Assets/Rokas/Tests/PlayMode/ReactiveCombatPolishCapturePlayModeTests.cs": "0dc0e91f9843a1f9a6f4aff18eff9c1d00cb50f113964aa0d9b1fcd71c892dd8",
+    "Assets/Rokas/Tests/PlayMode/ReactiveDuelPlayModeTests.cs": "f95001eb6202c160d5e72ff4663acaba81becc331b1609aa2ac2387f452c5042",
+    "Assets/Rokas/Tests/PlayMode/ReactiveEightEnemyPlayModeTests.cs": "202dd7b51de2ea9cd480b0a656e347140c2446c87bcfe27fed59ec174b29f97b",
+    "Assets/Rokas/Tests/PlayMode/ReactiveFullLoopPlayModeTests.cs": "8bb4876639a07e3ae3c9b04b86936062fbede7d9c5c6758711ac5d7e37aa9a93",
+    "Assets/Rokas/Tests/PlayMode/ReactiveHeavyTimingPlayModeTests.cs": "3044de59a36a3b4f33c45a6303528a3566ffd5ffdb1f1aeed172110b76c27ba3",
+    "Assets/Rokas/Tests/PlayMode/ReactiveReactionPolishPlayModeTests.cs": "19ebc8e185226b710739d58a5ee6370f10c02afe20104f7097649c5f14b80fb0",
+    "Assets/Rokas/Tests/PlayMode/ReactiveSwordPlayModeTests.cs": "01bda2ba73dc339b1435d4f1d556e8708c94f8185e2ad9aa67a14f8c5e9b391e",
+    "Assets/Rokas/Tests/PlayMode/ReactiveWaveTransitionPlayModeTests.cs": "712040cc12a884d5ba206861a376ad15c5ab0b6b65d3703a9d4ae6f5b40e64e3"
+  },
+  "visual_capture_count": 108,
+  "visual_review_method": "Actual Unity PlayMode Graphics rendering from the existing bootstrap, Core and Input System; chronological motion frames and model-relative front/side/three-quarter/grip studies inspected.",
+  "long_run": "5 Normal + 5 Heavy + 10 alternating, 4 further enemy actions; actual input capture includes Dodge/Block and later missed hits.",
+  "editable_blend_files": {
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Enter battle corrected.blend": "fe8c9b8838affd3f4875ae4f185914efcde0e6a87a17145658497dd1aa0f9ecd",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Hard jump attack corrected.blend": "e162671570b627e050b6a8c7fbdc2ff353b847d0102009e92fd760e50dc33ae7",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Heavy preparation.blend": "baddb9ddb5542d384acde9cf16c82aab6e77b0893688a35ad580af6a0db9aedf",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Normal attack corrected.blend": "c5b8d72faac276c1c2fc186469b5bef115438098f964a549394e61d0cf1fe5e9",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Normal preparation.blend": "7b263a67987c1d942283c89df3c29d35fb7029b423237a23a22a05d084f2e319",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Two handed approach.blend": "3c3fe2cdca9c7043208d2a7d7d5eb186bf22571158b36d460bb48aae5e5f1773",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Two handed battle idle.blend": "6da3781b97cb49dc914fb2affa29972b65cfb5fe5aa7ac9d9c02375c47e21c8f",
+    "D:\\Rokas\\reactiveturns-b2-staging\\cinematic\\Two handed return.blend": "0da0ce07daec429f60a779011856bf06842f077625dba3a9d187e053a618f940"
+  },
+  "screenshot_sha256": {
+    "block-result.png": "5bfe093082219704f44b511641fe3aa989c319a1d083ef8ac21ceab99f06d193",
+    "corpse-dissolve.png": "2cd72fadb076c8eeb20d92f543ace3c0cfdfda985059639800270c9506963db0",
+    "corpse-fallen.png": "0e7c9d2261cc640ca204ba04f31eb8c0e4ef7d4c4c324d7a8ad68b1372a5f6c2",
+    "corpse-hold.png": "3a10bd13499d55e1235341aaa2fcde9777ea32175018a3fdeab58b4884ddf5c4",
+    "dodge-result.png": "b04e53435213fcaf9e8f14307f2b4da8fd85e61bbce7620537467b283e49d238",
+    "enemy-reaction-cursor.png": "91338b3b8792f17f4e794cec384744ba778576ea81eead73dfda2f8824b12d3b",
+    "fx-ash-gone.png": "8164e6611cbfa9009b7222c1fc43e1de811c899e49f5fab72bb5d7241daa1e10",
+    "fx-ash-intact.png": "92d05c05ad8f07f8b4bfb37bda29f904a39e20f9192c033f5b52577a6f1a44ea",
+    "fx-ash-partial.png": "83142a977fb636dd6a2687115824b3534a0e42b91737d17a204ba9956b6360af",
+    "fx-portal-closed.png": "8164e6611cbfa9009b7222c1fc43e1de811c899e49f5fab72bb5d7241daa1e10",
+    "fx-portal-open.png": "281229c412a8ae45a344a084c52fb538e404c4b4404363c29739c34e41eb54a5",
+    "heavy-contact.png": "99349235af26132e06587b41f48f577bd23cc93b636cb0677e230b3a31f47ee8",
+    "heavy-final-orientation.png": "81ae9e43614a871216fa663c79b4c970e165764bfb35dbef8bbc8b84d3bfc2cf",
+    "heavy-motion-015.png": "9569b2a51d2d915b1ed67c0a2a4cfcea592bd14eb0afc52fe6f5886afa482d9a",
+    "heavy-motion-sequence.png": "7df2299a676acd6c5e68c3db54b7b1e871ab337c9c76ae83497e2c2e4d978548",
+    "heavy-motion.gif": "5e70c5cf29d493db09846e0324e35d7b012c3caec4d1cb6787adf9993771be1d",
+    "heavy-return.png": "539db1a4a8f146cbd9567e17460e69ad88be782868c71a0e3d1acd1737dca614",
+    "intro-006.png": "6fc9f2c0d196f619e86c0899d738ed7518841054549b7185293a9f60f1c8e7c0",
+    "intro-017.png": "e01bbc167595657815fc577e0f859c7aa707c2ac03b3a7a505aea9752b8e0ec2",
+    "intro-018.png": "0118000e57a76825c34cd32ebc3bf152fcb008fdda65d9b72d5651798ca750f4",
+    "intro-027.png": "2fa2d3a41b763366143e7689a6235696ebc35c5cd4491ae1ab090d0f341fd783",
+    "intro-040.png": "cc40a2a7aa0e69cb1ff07ebb6c094305b185ed7cc776f51a149d8c5096deada9",
+    "intro-sequence.png": "1bd4348b2398d152a4be74f041d2ea52e0deadffad77018cb7837389e917580f",
+    "normal-contact.png": "cfe9ce8af9884ce0e9ac08b55891ce988c2fee729c9bbb583171ba61e504e377",
+    "normal-motion-015.png": "618be91922ca7c42525adc9c5be9c35906290e142bf3c002213efb549ca9800a",
+    "normal-motion-sequence.png": "937c989142827e87c1852cfbd2dfc0ca3d6dec4b71098b0620bbce37704f32be",
+    "normal-motion.gif": "11336d67ac6afcc1cd0697a9154ec36572ec7fb817981ab03c22bfa559cdda10",
+    "normal-return.png": "e7dc1c051938e3bb88de705e8ea6b51e4daa490c3f0a96519be49f5638a4669b",
+    "rokas-reactive-arena-1280x720.png": "cc991a568ff2cd7d86fa5046b93ca4751ec76e0d1c8f47597499d65c1b8ed338",
+    "rokas-reactive-arena-1920x1080.png": "ca54dbd56998a7239b2966cfd200533a7210795261ddecabb9fca83910b93fb6",
+    "rokas-sword-grip-close.png": "58b9fe260b241e812f2117a4981edad2be480909f8fcbf8861381c7a112de6e2",
+    "rokas-sword-idle-front.png": "9619b14076f67ae64d9c7ca7af4f80c20ff8ac6141c7279128925e84ca97b924",
+    "rokas-sword-idle-side.png": "2f821eda4fa4d79675c298d7c51387afb7bffae3909443c585c3cb272dff3655",
+    "rokas-sword-idle-threequarter.png": "89379e9e6f627e1bd83bb2f6ca3c45bbc53acf8b85ef79f5405f7546c8ca4081",
+    "rokas-sword-Keiko_Enter_battle_corrected-frames.png": "117dd5ae9a8060c72207e7b2e805f1dced25c035888ee7ade26b8734ab36bfcd",
+    "rokas-sword-Keiko_Hard_jump_attack_corrected-frames.png": "835edc5a6756782b10dbb66c2c04406500d0c917a3b92760e1df1ffd20d3e59f",
+    "rokas-sword-Keiko_Heavy_preparation-frames.png": "276155fb2842131279834da86c6e526cabacfbaee193a973f8e2cf8ba59e0b30",
+    "rokas-sword-Keiko_Normal_attack_corrected-frames.png": "7fd327f709f562a79f5870eee0a59126ffc992fa03a328ffe129a32290a92137",
+    "rokas-sword-Keiko_Normal_preparation-frames.png": "34944efe6dfc700e81451fedb57a554e9f7600c16af63392a9b41fc30f7d3393",
+    "rokas-sword-Keiko_Two_handed_battle_idle-frames.png": "9c870902da10fb299ba753f09938597ade463453f2fcc2a5aa13050a8663b608",
+    "stable-idle-after-dodge-block.png": "f95817ebacb7c585969723db419e9a998140d2467f190099cc392183c02ae680"
+  },
+  "staging_helpers": "Verification/authoring helpers and one-off migration edits remain outside Assets in D:/Rokas/reactiveturns-b2-staging. No new runtime build tooling."
+}
