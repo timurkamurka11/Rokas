@@ -31,7 +31,10 @@ namespace Rokas.Tests
                 Button button = Find(root, "EnterReactivePortal").GetComponent<Button>();
                 var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
-                yield return new WaitForSecondsRealtime(2f);
+                float introDeadline = Time.realtimeSinceStartup + 18f;
+                while ((boot.Session.State.phase != RunPhase.Combat ||
+                    !boot.View.ReactivePresentationReady || boot.ReactivePresentationHeld) &&
+                    Time.realtimeSinceStartup < introDeadline) yield return null;
                 Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
                 Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(Rokas.Core.ReactiveTurns.ReactivePhase.PlayerCommand));
                 Assert.That(Find(root, "MessagesNotification")?.activeInHierarchy, Is.Not.True,
@@ -55,14 +58,18 @@ namespace Rokas.Tests
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
                 Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeAttack),
                     "Normal attack has its single impact sound, without a UI click cue.");
-                yield return new WaitForSecondsRealtime(.25f);
+                yield return new WaitForSecondsRealtime(.5f);
                 Assert.That(hunterActor.localPosition.x, Is.GreaterThan(hunterHome.x));
                 Capture(root, 1920, 1080, "-approach");
                 float deadline = Time.realtimeSinceStartup + 6f;
                 while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
                        Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
+                Assert.That(boot.ReactivePresentationHeld, Is.True);
                 Capture(root, 1920, 1080, "-return");
+                deadline = Time.realtimeSinceStartup + 5f;
+                while (boot.ReactivePresentationHeld && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(boot.ReactivePresentationHeld, Is.False);
                 AudioClip keikoImpact = Resources.Load<AudioClip>(
                     "Combat/ReactiveTurns/Audio/Keiko/Keiko hit attack");
                 AudioClip monsterAttack = Resources.Load<AudioClip>(
@@ -143,7 +150,7 @@ namespace Rokas.Tests
                     actorId: "E1", actionId: "heavy-enemy", detail: "heavy"));
                 Assert.That(enemyAnimation.IsPlaying("Heavy"), Is.False,
                     "The enemy approaches before its strike pose starts.");
-                arena.Tick(arena.EnemyApproachDuration + .01f);
+                for (int tick = 0; !arena.EnemyApproachComplete("E1") && tick < 100; tick++) arena.Tick(.02f);
                 yield return null;
                 Assert.That(enemyAnimation.IsPlaying("Heavy"), Is.True);
                 arena.Present(new CombatEvent(CombatEventKind.HitResolved,
@@ -175,11 +182,13 @@ namespace Rokas.Tests
                 Animation animation = hunterActor.ModelRoot.GetComponent<Animation>();
                 Assert.That(animation.GetClip("Approach"), Is.Not.Null);
                 Assert.That(animation.GetClip("ReturnHome"), Is.Not.Null);
+                for (int warmup = 0; !arena.PresentationReady && warmup < 100; warmup++) arena.Tick(.02f);
                 Vector3 home = hunterActor.transform.localPosition;
 
                 foreach (string enemyId in new[] { "E1", "E2", "E1" })
                 {
                     Assert.That(arena.StartHunterApproach(enemyId), Is.True);
+                    arena.Tick(hunterActor.PreparationDuration(false));
                     arena.Tick(arena.HunterApproachDuration * .4f);
                     yield return null;
                     Assert.That(hunterActor.transform.localPosition.x, Is.GreaterThan(home.x));
@@ -206,7 +215,7 @@ namespace Rokas.Tests
                         yield return null;
                     }
                     Assert.That(animation.IsPlaying("ReturnHome"), Is.True);
-                    while (!arena.HunterAtHome && Time.realtimeSinceStartup < deadline)
+                    while (!arena.PresentationReady && Time.realtimeSinceStartup < deadline)
                     {
                         arena.Tick(.04f);
                         yield return null;

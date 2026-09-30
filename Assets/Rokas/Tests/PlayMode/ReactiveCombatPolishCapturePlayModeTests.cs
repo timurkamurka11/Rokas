@@ -20,7 +20,7 @@ namespace Rokas.Tests
     public sealed class ReactiveCombatPolishCapturePlayModeTests
     {
         private static readonly string CaptureDirectory =
-            Path.Combine(Path.GetTempPath(), "rokas-combat-polish-visuals");
+            Path.Combine(Path.GetTempPath(), "rokas-cinematic-combat-visuals");
         private GameObject root;
         private string profileDirectory;
         private Keyboard keyboard;
@@ -53,6 +53,8 @@ namespace Rokas.Tests
             yield return WaitFor(boot, () => boot.Session.ReactiveCombat != null &&
                 boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand, 8f);
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
+            yield return CaptureUntil(boot, () => boot.View.ReactivePresentationReady &&
+                !boot.ReactivePresentationHeld, 15f, "intro", "E1", .18f);
             ReactiveCombatActorVisual hunter = FindHunter();
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.Not.Null);
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E1"));
@@ -63,13 +65,19 @@ namespace Rokas.Tests
             Vector3 corpseScale = dyingTarget.transform.localScale;
 
             Press("ReactiveBasic");
-            yield return WaitFor(boot, () => combat.GetActorState("E1").Hp == 40, 5f);
+            yield return CaptureUntil(boot, () => combat.GetActorState("E1").Hp == 40,
+                5f, "normal-motion", "E1", .05f);
             Assert.That(hunter.HitStopRemaining, Is.GreaterThan(0f),
                 "Normal contact capture must occur at the authoritative resolved impact.");
             Capture(boot, "normal-contact", "E1");
-            yield return WaitFor(boot, () => hunter.CurrentPose == "ReturnHome", 4f);
+            yield return CaptureUntil(boot, () => hunter.CurrentPose == "ReturnHome", 4f,
+                "normal-motion-recovery", "E1", .08f);
             yield return new WaitForSecondsRealtime(.2f);
             Assert.That(hunter.CurrentPose, Is.EqualTo("ReturnHome"));
+            Assert.That(boot.ReactivePresentationHeld, Is.True);
+            Assert.That((FindEnemyAt(new Vector3(2.3f, -.66f, 0f)).transform.localPosition -
+                new Vector3(2.3f, -.66f, 0f)).sqrMagnitude, Is.LessThan(.0001f),
+                "The next enemy must remain at home while Keiko is returning.");
             Capture(boot, "normal-return", "E1");
 
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.EnemyExecution &&
@@ -108,15 +116,20 @@ namespace Rokas.Tests
             Capture(boot, "block-result", blockingEnemy);
 
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand &&
-                Find("ReactiveHeavy").GetComponent<Button>().IsInteractable(), 12f);
+                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld &&
+                Find("ReactiveHeavy").activeInHierarchy &&
+                Find("ReactiveHeavy").GetComponent<Button>().IsInteractable(), 18f);
             Assert.That(combat.HunterAp, Is.GreaterThanOrEqualTo(5));
+            Assert.That(hunter.CurrentPose, Is.EqualTo("Idle"));
+            Assert.That(hunter.transform.localPosition, Is.EqualTo(hunterHome));
+            Capture(boot, "stable-idle-after-dodge-block", "E1");
             Press("ReactiveTarget2");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"));
             Assert.That((dyingTarget.transform.localPosition - corpseOrigin).sqrMagnitude,
-                Is.GreaterThan(.001f), "Heavy is deliberately submitted while E2 is still returning.");
+                Is.LessThan(.0001f), "Player controls appear only after E2 returns exactly and settles.");
             Press("ReactiveHeavy");
-            yield return WaitFor(boot, () => combat.GetActorState("E2").Hp == 0, 6f);
-            float deathStarted = Time.realtimeSinceStartup;
+            yield return CaptureUntil(boot, () => combat.GetActorState("E2").Hp == 0,
+                6f, "heavy-motion", "E2", .065f);
             Assert.That(hunter.HitStopRemaining, Is.GreaterThan(0f),
                 "Heavy contact capture must occur at the authoritative resolved impact.");
             Assert.That(dyingTarget.IsDead, Is.True);
@@ -126,29 +139,54 @@ namespace Rokas.Tests
                 Is.LessThan(.0001f),
                 "Keiko must strike at E2's durable home, not chase its moving return position.");
             Capture(boot, "heavy-contact", "E2");
-            yield return WaitFor(boot, () => hunter.CurrentPose == "ReturnHome", 4f);
+            yield return CaptureUntil(boot, () => hunter.CurrentPose == "ReturnHome", 4f,
+                "heavy-motion-recovery", "E2", .08f);
             yield return new WaitForSecondsRealtime(.2f);
             Assert.That(hunter.CurrentPose, Is.EqualTo("ReturnHome"));
             Capture(boot, "heavy-return", "E2");
-            yield return WaitFor(boot, () => Time.realtimeSinceStartup - deathStarted >= 1.55f, 4f);
+            yield return WaitFor(boot, () => boot.View.ReactiveCorpseElapsed("E2") >= 1.55f, 5f);
             Assert.That(dyingTarget.transform.localPosition, Is.EqualTo(corpseOrigin));
             Capture(boot, "corpse-fallen", "E2");
-            yield return WaitFor(boot, () => Time.realtimeSinceStartup - deathStarted >= 2.55f, 3f);
+            yield return WaitFor(boot, () => boot.View.ReactiveCorpseElapsed("E2") >= 1.95f, 4f);
             Assert.That(dyingTarget.transform.localPosition, Is.EqualTo(corpseOrigin));
             Assert.That(dyingTarget.transform.localScale, Is.EqualTo(corpseScale));
             Capture(boot, "corpse-hold", "E2");
-            yield return WaitFor(boot, () => dyingTarget.transform.localPosition.y < corpseOrigin.y - .25f, 3f);
+            yield return WaitFor(boot, () => boot.View.ReactiveCorpseElapsed("E2") >= 2.9f, 5f);
+            Assert.That(dyingTarget.transform.localPosition, Is.EqualTo(corpseOrigin));
             Assert.That(dyingTarget.transform.localScale, Is.EqualTo(corpseScale));
-            Capture(boot, "corpse-sink", "E2");
+            Capture(boot, "corpse-dissolve", "E2");
             yield return WaitFor(boot, () => dyingTarget == null, 3f);
+            yield return WaitFor(boot, () => boot.View.HunterAtHome && hunter.IdleSettled, 4f);
+            Assert.That(hunter.transform.localPosition, Is.EqualTo(hunterHome));
+            Capture(boot, "heavy-final-orientation", "E1");
             File.WriteAllText(Path.Combine(CaptureDirectory, "capture-manifest.json"),
                 JsonUtility.ToJson(new CaptureManifest { captures = records.ToArray() }, true));
-            Assert.That(records.Count, Is.EqualTo(10));
+            Assert.That(records.Count, Is.GreaterThan(45));
+        }
+
+        private IEnumerator CaptureUntil(RokasBootstrap boot, Func<bool> ready, float seconds,
+            string prefix, string target, float interval)
+        {
+            float deadline = Time.realtimeSinceStartup + seconds;
+            float next = 0f;
+            int frame = 0;
+            while (!ready() && Time.realtimeSinceStartup < deadline)
+            {
+                if (Time.realtimeSinceStartup >= next)
+                {
+                    Capture(boot, prefix + "-" + (frame++).ToString("D3"), target);
+                    next = Time.realtimeSinceStartup + interval;
+                }
+                yield return null;
+            }
+            Assert.That(ready(), Is.True, "Timed out during cinematic motion review: " + prefix);
         }
 
         private void Capture(RokasBootstrap boot, string name, string committedTarget)
         {
-            const int width = 1920, height = 1080;
+            bool motionFrame = name.StartsWith("intro-") || name.Contains("-motion-");
+            int width = motionFrame ? 960 : 1920;
+            int height = motionFrame ? 540 : 1080;
             Canvas canvas = root.GetComponentInChildren<Canvas>();
             RectTransform stage = Find("AuthoredStage").GetComponent<RectTransform>();
             var actorCamera = GameObject.Find("ReactiveActorCamera").GetComponent<Camera>();
@@ -171,7 +209,7 @@ namespace Rokas.Tests
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = camera;
                 canvas.planeDistance = 1f;
-                stage.localScale = Vector3.one;
+                stage.localScale = Vector3.one * (width / 1920f);
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
                 RenderTexture.active = render;
@@ -185,13 +223,17 @@ namespace Rokas.Tests
                 finally { UnityEngine.Object.DestroyImmediate(texture); }
                 ReactiveCombatSession combat = boot.Session.ReactiveCombat;
                 records.Add(new CaptureRecord { image = path, phase = combat.Phase.ToString(),
-                    combatUs = combat.CurrentCombatUs, actionId = combat.CurrentActionId,
+                    combatUs = combat.CurrentCombatUs, realtime = Time.realtimeSinceStartup,
+                    presentationHeld = boot.ReactivePresentationHeld, actionId = combat.CurrentActionId,
                     committedTarget = committedTarget, selectedTarget = combat.SelectedTargetId,
                     targetHp = combat.GetActorState(committedTarget).Hp, hunterHp = combat.HunterHp,
+                    corpseElapsed = boot.View.ReactiveCorpseElapsed(committedTarget),
+                    portalActive = GameObject.Find("ReactiveEnemyPortal") != null,
                     hunterPose = FindHunter().CurrentPose, hunterPosition = FindHunter().transform.localPosition,
                     feedback = Feedback() });
                 Assert.That(new FileInfo(path).Length, Is.GreaterThan(10000));
-                TestContext.WriteLine(path);
+                TestContext.WriteLine(path + " phase=" + combat.Phase + " time=" + combat.CurrentCombatUs +
+                    " pose=" + FindHunter().CurrentPose + " held=" + boot.ReactivePresentationHeld);
             }
             finally
             {
@@ -278,6 +320,10 @@ namespace Rokas.Tests
         {
             public string image, phase, actionId, committedTarget, selectedTarget, hunterPose, feedback;
             public long combatUs;
+            public float realtime;
+            public float corpseElapsed;
+            public bool presentationHeld;
+            public bool portalActive;
             public int hunterHp, targetHp;
             public Vector3 hunterPosition;
         }

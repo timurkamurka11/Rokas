@@ -10,8 +10,14 @@ namespace Rokas.Presentation
         private ReactiveCombatActorClips clips;
         private Transform modelRoot;
         private Animation animationPlayer;
+        private Transform[] poseTransforms;
+        private Vector3[] blendPositions;
+        private Quaternion[] blendRotations;
+        private Vector3[] blendScales;
         private Renderer[] actorRenderers;
         private ReactiveCombatWeaponAttachment weaponAttachment;
+        private ReactiveCombatTwoHandGrip twoHandGrip;
+        private GameObject grippedWeapon;
         private readonly Transform[] gripFingers = new Transform[4];
         private readonly Quaternion[] sampledFingerRotations = new Quaternion[4];
         private bool gripApplied;
@@ -42,8 +48,24 @@ namespace Rokas.Presentation
         public bool IsFacingRight => facingRight;
         public float HitStopRemaining => hitStopRemaining;
         public string CurrentPose => activeAlias;
+        public bool ActionRecoveryComplete => poseSecondsLeft <= 0f && hitStopRemaining <= 0f;
+        public bool IdleSettled => activeAlias == "Idle" &&
+            (previousAlias == null || blendElapsed >= BlendDuration) && hitStopRemaining <= 0f;
         public ReactiveCombatWeaponAttachment WeaponAttachment => weaponAttachment;
         public float WeaponGripCurlDegrees { get; set; } = 28f;
+        public float EnterBattleDuration => clips.enterBattle == null ? 1.2f : clips.enterBattle.length;
+
+        public float PreparationDuration(bool heavy)
+        {
+            AnimationClip clip = heavy ? clips.heavyPreparation : clips.preparation;
+            return clip == null ? (heavy ? .4f : .27f) : clip.length;
+        }
+
+        public float AttackDuration(bool heavy)
+        {
+            AnimationClip clip = heavy ? clips.heavy : clips.attack;
+            return clip == null ? (heavy ? .8f : .55f) : clip.length;
+        }
 
         public float AttackContactSeconds(bool heavy)
         {
@@ -87,9 +109,22 @@ namespace Rokas.Presentation
             actorRenderers = model.GetComponentsInChildren<Renderer>(true);
             animationPlayer = model.GetComponent<Animation>();
             if (animationPlayer == null) animationPlayer = model.AddComponent<Animation>();
+            // Imported models carry their own autoplay take. Only the arena's
+            // explicit sample may write the rig, including after Update and on
+            // paused frames; native animation would overwrite the authored grip.
+            animationPlayer.Stop();
+            animationPlayer.playAutomatically = false;
+            animationPlayer.enabled = false;
+            poseTransforms = model.GetComponentsInChildren<Transform>(true);
+            blendPositions = new Vector3[poseTransforms.Length];
+            blendRotations = new Quaternion[poseTransforms.Length];
+            blendScales = new Vector3[poseTransforms.Length];
             AddClip(clips.idle, "Idle", WrapMode.Loop);
             AddClip(clips.attack, "Attack", WrapMode.Once);
             AddClip(clips.heavy, "Heavy", WrapMode.Once);
+            AddClip(clips.preparation, "Preparation", WrapMode.ClampForever);
+            AddClip(clips.heavyPreparation, "HeavyPreparation", WrapMode.ClampForever);
+            AddClip(clips.enterBattle, "EnterBattle", WrapMode.Once);
             AddClip(clips.hit, "Hit", WrapMode.Once);
             AddClip(clips.stagger, "Stagger", WrapMode.Once);
             AddClip(clips.death, "Death", WrapMode.ClampForever);
@@ -104,6 +139,9 @@ namespace Rokas.Presentation
             {
                 weaponAttachment = gameObject.AddComponent<ReactiveCombatWeaponAttachment>();
                 weaponAttachment.Configure(modelRoot, clips);
+                grippedWeapon = weaponAttachment.CurrentWeapon;
+                twoHandGrip = new ReactiveCombatTwoHandGrip(modelRoot,
+                    weaponAttachment.CurrentWeapon == null ? null : weaponAttachment.CurrentWeapon.transform);
                 foreach (Transform bone in weaponAttachment.Socket.parent.GetComponentsInChildren<Transform>(true))
                     for (int i = 0; i < gripFingers.Length; i++)
                         if (bone.name.EndsWith("RightHandIndex" + (i + 1), StringComparison.Ordinal))
@@ -176,6 +214,20 @@ namespace Rokas.Presentation
             PlayOneShot("Attack", .55f, -7f, null, playbackSeconds);
         public void PlayHeavy(float playbackSeconds = 0f) =>
             PlayOneShot("Heavy", .8f, -12f, "Attack", playbackSeconds);
+        public void PlayPreparation(bool heavy)
+        {
+            if (dead) return;
+            string alias = heavy ? "HeavyPreparation" : "Preparation";
+            AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
+            if (clip == null) { PlayIdle(); return; }
+            BeginPose(alias, 1f);
+            // The stage advances into approach once this authored take ends.
+            // Hold its final ready pose if that transition waits on another beat.
+            poseSecondsLeft = 0f;
+            proceduralSecondsLeft = 0f;
+        }
+        public void PlayEnterBattle(float duration = 0f) =>
+            PlayOneShot("EnterBattle", 1.2f, 0f, "Idle", duration > 0f ? duration : EnterBattleDuration);
         public void PlayAttackToContact(float secondsUntilContact) =>
             PlayAttack(ContactPlaybackSeconds(false, secondsUntilContact));
         public void PlayHeavyToContact(float secondsUntilContact) =>
@@ -385,16 +437,50 @@ namespace Rokas.Presentation
 
         private void SamplePose()
         {
+            twoHandGrip?.RestoreSample();
             // Restore the last authored sample before a fresh one so a missing finger
             // curve or a repeated paused render can never accumulate the grip offset.
             if (gripApplied)
                 for (int i = 0; i < gripFingers.Length; i++)
                     if (gripFingers[i] != null) gripFingers[i].localRotation = sampledFingerRotations[i];
             gripApplied = false;
-            animationPlayer.Sample();
+            // Sample the authored take directly. Native Animation.Sample can
+            // retain the imported model's default take, and a live Animation
+            // component can write the rig again after the arena's Update.
+            // Keep state times for inspection while blending only this rig's
+            // transform poses under the single presentation clock.
+            if (previousAlias != null)
+            {
+                AnimationState previous = animationPlayer[previousAlias];
+                animationPlayer.GetClip(previousAlias).SampleAnimation(modelRoot.gameObject, previous.time);
+                for (int i = 0; i < poseTransforms.Length; i++)
+                {
+                    blendPositions[i] = poseTransforms[i].localPosition;
+                    blendRotations[i] = poseTransforms[i].localRotation;
+                    blendScales[i] = poseTransforms[i].localScale;
+                }
+            }
+            AnimationState current = animationPlayer[activeAlias];
+            animationPlayer.GetClip(activeAlias).SampleAnimation(modelRoot.gameObject, current.time);
+            if (previousAlias != null)
+                for (int i = 0; i < poseTransforms.Length; i++)
+                {
+                    Transform bone = poseTransforms[i];
+                    bone.localPosition = Vector3.Lerp(blendPositions[i], bone.localPosition, current.weight);
+                    bone.localRotation = Quaternion.Slerp(blendRotations[i], bone.localRotation, current.weight);
+                    bone.localScale = Vector3.Lerp(blendScales[i], bone.localScale, current.weight);
+                }
             if (weaponAttachment == null || weaponAttachment.CurrentWeapon == null) return;
-            if (activeAlias != "Idle" && activeAlias != "Walk" && activeAlias != "Approach" &&
-                activeAlias != "ReturnHome") return;
+            if (grippedWeapon != weaponAttachment.CurrentWeapon)
+            {
+                grippedWeapon = weaponAttachment.CurrentWeapon;
+                twoHandGrip = new ReactiveCombatTwoHandGrip(modelRoot, grippedWeapon.transform);
+            }
+            // Attack/preparation/entrance FBX takes already contain both hands
+            // and the closed index fingers. Keep extra finger curl for legacy
+            // movement only; the support palm correction also covers blends.
+            twoHandGrip?.Apply();
+            if (activeAlias != "Walk") return;
             for (int i = 0; i < gripFingers.Length; i++)
                 if (gripFingers[i] != null) sampledFingerRotations[i] = gripFingers[i].localRotation;
             gripApplied = true;

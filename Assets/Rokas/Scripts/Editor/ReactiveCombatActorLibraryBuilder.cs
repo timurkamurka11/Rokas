@@ -38,22 +38,25 @@ namespace Rokas.Editor
             library.keiko.material = ActorMaterial("Keiko",
                 "Keiko/anime_character_3d_model_basecolor.JPEG",
                 "Keiko/anime_character_3d_model_normal.JPEG");
-            library.keiko.idle = Clip("Keiko/Keiko@Idle.fbx");
-            library.keiko.attack = Clip("Keiko/Normal attack.fbx", true);
-            library.keiko.heavy = Clip("Keiko/Hard jump attack.fbx", true);
-            library.keiko.attackContactNormalized = 20f / 38f;
-            library.keiko.heavyContactNormalized = 31f / 57f;
+            library.keiko.idle = Clip("Keiko/Two handed battle idle.fbx", true);
+            library.keiko.attack = Clip("Keiko/Normal attack corrected.fbx", true);
+            library.keiko.heavy = Clip("Keiko/Hard jump attack corrected.fbx", true);
+            library.keiko.preparation = Clip("Keiko/Normal preparation.fbx", true);
+            library.keiko.heavyPreparation = Clip("Keiko/Heavy preparation.fbx", true);
+            library.keiko.enterBattle = Clip("Keiko/Enter battle corrected.fbx", true);
+            library.keiko.attackContactNormalized = 18f / 33f;
+            library.keiko.heavyContactNormalized = 26f / 43f;
             library.keiko.weaponPrefab = SwordPrefab();
             library.keiko.weaponBonePath = "mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2/mixamorig:RightShoulder/mixamorig:RightArm/mixamorig:RightForeArm/mixamorig:RightHand";
-            library.keiko.weaponSocketPosition = new Vector3(0f, .033f, .006f);
-            library.keiko.weaponSocketEuler = new Vector3(0f, 180f, 0f);
+            library.keiko.weaponSocketPosition = new Vector3(0f, .033f, 0f);
+            library.keiko.weaponSocketEuler = Vector3.zero;
             library.keiko.weaponSocketScale = Vector3.one;
             library.keiko.hit = null;
             library.keiko.stagger = null;
             library.keiko.death = null;
             library.keiko.walk = null;
-            library.keiko.approach = Clip("Keiko/Run to hit enemies.fbx", true);
-            library.keiko.returnHome = Clip("Keiko/Run Back after hit.fbx", true);
+            library.keiko.approach = Clip("Keiko/Two handed approach.fbx", true);
+            library.keiko.returnHome = Clip("Keiko/Two handed return.fbx", true);
             library.keiko.standingHeight = 2f;
             library.keiko.forwardYaw = 65f;
 
@@ -88,11 +91,11 @@ namespace Rokas.Editor
             library.yokai.forwardYaw = 65f;
 
             EditorUtility.SetDirty(library);
-            AssetDatabase.SaveAssets();
             Verify("Keiko", library.keiko);
             Verify("Mina", library.mina);
             Verify("Yokai", library.yokai);
             VerifyClipSeparation(library);
+            AssetDatabase.SaveAssets();
             Debug.Log("ReactiveCombatActorLibrary built at " + Output);
         }
 
@@ -116,6 +119,10 @@ namespace Rokas.Editor
                 string group = relative.Substring(0, relative.IndexOf('/'));
                 string output = ClipOutput + group + "_" + filename + ".anim";
                 AnimationClip copy = AssetDatabase.LoadAssetAtPath<AnimationClip>(output);
+                // This repair authors Keiko sources. Preserve already verified
+                // Mina/Yokai extracted clips instead of serializing unrelated
+                // compressed curves again when rebuilding the sword library.
+                if (copy != null && group != "Keiko") return copy;
                 if (copy == null)
                 {
                     copy = UnityEngine.Object.Instantiate(source);
@@ -130,6 +137,7 @@ namespace Rokas.Editor
                     copy.legacy = true;
                     EditorUtility.SetDirty(copy);
                 }
+                RemoveBlenderArmatureWrapper(copy);
                 if (inPlaceHorizontal) RemoveHorizontalHipTranslation(copy);
                 AnimationUtility.SetAnimationEvents(copy, new AnimationEvent[0]);
                 return copy;
@@ -137,11 +145,48 @@ namespace Rokas.Editor
             throw new InvalidOperationException("Missing combat animation " + relative);
         }
 
+        private static void RemoveBlenderArmatureWrapper(AnimationClip clip)
+        {
+            // Blender keeps an FBX Armature object above the same existing Hips.
+            // The runtime Keiko model starts at Hips. Wrapper transform curves
+            // must not overwrite the stage's actor sizing or orientation.
+            const string wrapper = "Armature";
+            const string prefix = wrapper + "/";
+            foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(clip))
+            {
+                if (binding.path == wrapper)
+                {
+                    AnimationUtility.SetEditorCurve(clip, binding, null);
+                    continue;
+                }
+                if (!binding.path.StartsWith(prefix + "mixamorig:Hips", StringComparison.Ordinal)) continue;
+                AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, binding);
+                EditorCurveBinding mapped = binding;
+                mapped.path = binding.path.Substring(prefix.Length);
+                AnimationUtility.SetEditorCurve(clip, binding, null);
+                AnimationUtility.SetEditorCurve(clip, mapped, curve);
+            }
+            EditorUtility.SetDirty(clip);
+        }
+
         private static void ConfigureSwordSources()
         {
             AssetDatabase.Refresh();
-            foreach (string file in new[] { "Normal attack.fbx", "Hard jump attack.fbx" })
+            var frameCounts = new Dictionary<string, float>
             {
+                { "Two handed battle idle.fbx", 240f },
+                { "Normal preparation.fbx", 32f },
+                { "Heavy preparation.fbx", 48f },
+                { "Normal attack corrected.fbx", 132f },
+                { "Hard jump attack corrected.fbx", 172f },
+                { "Two handed approach.fbx", 96f },
+                { "Two handed return.fbx", 96f },
+                { "Enter battle corrected.fbx", 144f },
+                { "Enter the batle.fbx", 18f }
+            };
+            foreach (KeyValuePair<string, float> take in frameCounts)
+            {
+                string file = take.Key;
                 var importer = AssetImporter.GetAtPath(Source + "Keiko/" + file) as ModelImporter;
                 if (importer == null) throw new InvalidOperationException("Missing sword attack source: " + file);
                 importer.animationType = ModelImporterAnimationType.Legacy;
@@ -149,11 +194,12 @@ namespace Rokas.Editor
                 importer.materialImportMode = ModelImporterMaterialImportMode.None;
                 importer.optimizeGameObjects = false;
                 importer.animationCompression = ModelImporterAnimationCompression.Off;
+                importer.resampleCurves = false;
                 var takes = importer.defaultClipAnimations;
                 if (takes.Length != 1) throw new InvalidOperationException("Expected one authored attack take: " + file);
                 takes[0].firstFrame = 0f;
-                takes[0].lastFrame = file.StartsWith("Normal", StringComparison.Ordinal) ? 38f : 57f;
-                takes[0].loopTime = false;
+                takes[0].lastFrame = take.Value;
+                takes[0].loopTime = file == "Two handed battle idle.fbx";
                 takes[0].loopPose = false;
                 importer.clipAnimations = takes;
                 importer.SaveAndReimport();
@@ -197,6 +243,10 @@ namespace Rokas.Editor
                 mesh.transform.localScale = Vector3.one * .55f;
                 mesh.transform.localPosition = -(orientation * grip) * .55f;
                 foreach (Renderer renderer in mesh.GetComponentsInChildren<Renderer>(true)) renderer.sharedMaterial = material;
+                Transform leftHandGrip = new GameObject("LeftHandGrip").transform;
+                leftHandGrip.SetParent(root.transform, false);
+                leftHandGrip.localPosition = new Vector3(0f, 0f, -.055f);
+                leftHandGrip.localRotation = Quaternion.Euler(0f, 0f, 180f);
                 return PrefabUtility.SaveAsPrefabAsset(root, path);
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
@@ -291,7 +341,8 @@ namespace Rokas.Editor
                     ", runtime material=" + (clips.material == null ? "null" : clips.material.name) +
                     ", runtime textured=" + (clips.material != null && clips.material.mainTexture != null));
                 foreach (AnimationClip clip in new[] { clips.idle, clips.attack, clips.heavy, clips.hit,
-                             clips.stagger, clips.death, clips.walk, clips.approach, clips.returnHome })
+                             clips.stagger, clips.death, clips.walk, clips.approach, clips.returnHome,
+                             clips.preparation, clips.heavyPreparation, clips.enterBattle })
                 {
                     if (clip == null) continue;
                     var bindings = AnimationUtility.GetCurveBindings(clip);
@@ -301,8 +352,9 @@ namespace Rokas.Editor
                     Debug.Log("Combat clip " + name + "/" + clip.name + ": legacy=" + clip.legacy +
                         ", length=" + clip.length.ToString("F3") + "s, bindings=" + bindings.Length +
                         ", matching model paths=" + matching);
-                    if (!clip.legacy || matching == 0)
-                        Debug.LogError("Combat animation does not bind to model: " + name + "/" + clip.name);
+                    if (!clip.legacy || bindings.Length == 0 || matching != bindings.Length)
+                        throw new InvalidOperationException("Combat animation must bind every curve to the existing model: " +
+                            name + "/" + clip.name + " matched " + matching + "/" + bindings.Length);
                 }
             }
             finally { UnityEngine.Object.DestroyImmediate(instance); }
@@ -313,12 +365,13 @@ namespace Rokas.Editor
             foreach (ReactiveCombatActorClips actor in new[] { library.keiko, library.mina, library.yokai })
             {
                 foreach (AnimationClip clip in new[] { actor.idle, actor.attack, actor.heavy, actor.hit,
-                             actor.stagger, actor.death, actor.walk, actor.approach, actor.returnHome })
+                             actor.stagger, actor.death, actor.walk, actor.approach, actor.returnHome,
+                             actor.preparation, actor.heavyPreparation, actor.enterBattle })
                 {
                     if (clip == null) continue;
                     string path = AssetDatabase.GetAssetPath(clip);
                     if (!path.StartsWith(ClipOutput, StringComparison.Ordinal))
-                        Debug.LogError("Combat clip still references mesh-bearing FBX: " + path);
+                        throw new InvalidOperationException("Combat clip still references mesh-bearing FBX: " + path);
                 }
             }
         }

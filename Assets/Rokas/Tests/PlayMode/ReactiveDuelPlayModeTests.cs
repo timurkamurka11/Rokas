@@ -70,7 +70,7 @@ namespace Rokas.Tests
             Assert.That(Find("ReactiveSealStrike"), Is.Not.Null);
             Assert.That(Find("ReactiveDefend"), Is.Not.Null);
 
-            yield return new WaitForSecondsRealtime(.8f);
+            yield return WaitForCommandReady(boot);
             Assert.That(boot.View.Paused, Is.False);
             long revision = boot.Session.ReactiveCombat.Revision;
             Press("ReactiveBasic");
@@ -81,7 +81,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.ReactiveCombat.Revision, Is.EqualTo(revision),
                 "A second command cannot enter the already committed turn.");
 
-            float deadline = Time.realtimeSinceStartup + 5f;
+            float deadline = Time.realtimeSinceStartup + 12f;
             while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
                    Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
@@ -136,6 +136,7 @@ namespace Rokas.Tests
             yield return new WaitForSecondsRealtime(.75f);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
 
+            yield return WaitForCommandReady(boot);
             Press("ReactiveBasic");
             yield return null;
             GameObject world = GameObject.Find("ReactiveCombatWorld");
@@ -150,10 +151,19 @@ namespace Rokas.Tests
             Assert.That(hunterActor.localPosition, Is.EqualTo(heldPosition),
                 "Focus loss freezes the visual approach together with combat time.");
             boot.SendMessage("OnApplicationFocus", true);
-            float deadline = Time.realtimeSinceStartup + 4f;
+            float deadline = Time.realtimeSinceStartup + 8f;
             while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
                    Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
+        }
+
+        private static IEnumerator WaitForCommandReady(RokasBootstrap boot)
+        {
+            float deadline = Time.realtimeSinceStartup + 20f;
+            while ((boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand ||
+                    boot.View.Paused || boot.ReactivePresentationHeld || !boot.View.ReactivePresentationReady) &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, Is.True);
         }
 
         private static GameObject FindIn(GameObject parent, string name)

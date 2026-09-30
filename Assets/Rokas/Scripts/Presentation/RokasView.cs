@@ -66,6 +66,12 @@ namespace Rokas.Presentation
         public bool ReactiveActorsReady { get { return mission.AnimatedActorsReady; } }
         public bool HunterApproachComplete { get { return mission.HunterApproachComplete; } }
         public bool HunterAtHome { get { return mission.HunterAtHome; } }
+        public bool ReactiveArenaSettled => mission.ReactiveArenaSettled;
+        public float ReactiveCorpseElapsed(string id) => mission.ReactiveCorpseElapsed(id);
+        public bool ReactiveAnnouncementActive => mission.ReactiveAnnouncementActive;
+        public bool ReactivePresentationReady => mission.ReactivePresentationReady;
+        public void ShowReactiveAnnouncement(string text) { mission.ShowReactiveAnnouncement(text); }
+        public void ShowReactiveTurnAnnouncement(bool playerTurn) { mission.ShowReactiveTurnAnnouncement(playerTurn); }
         public bool StartHunterApproach(string enemyId, bool heavy = false) { return mission.StartHunterApproach(enemyId, heavy); }
         public void CancelHunterMotion() { mission.CancelHunterMotion(); }
         public void SetReactivePresentationLocked(bool value) { mission.SetReactivePresentationLocked(value); }
@@ -287,6 +293,8 @@ namespace Rokas.Presentation
 
         public void RefreshReactiveCombat() { mission.Refresh(); }
         public void PresentReactiveCombatStep(CombatStep step) { mission.PresentReactiveCombatStep(step); }
+        public void PresentReactiveCombatEvent(CombatEvent combatEvent, AttackSequenceDefinition sequence = null)
+        { mission.PresentReactiveCombatEvent(combatEvent, sequence); }
         public void PresentReactiveDefenseAttempt(DefenseAttempt attempt, long pressUs) { mission.PresentReactiveDefenseAttempt(attempt, pressUs); }
 
         private static bool IsHomeLocation(RunPhase value)
@@ -303,7 +311,11 @@ namespace Rokas.Presentation
             mission.ClearReferences();
             bool otherSide = phase == RunPhase.Combat || phase == RunPhase.Sealed || phase == RunPhase.Failed;
             bool homeLocation = !otherSide && phase != RunPhase.Portal;
-            globalChrome.gameObject.SetActive(!homeLocation);
+            bool reactiveBattle = phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns;
+            globalChrome.gameObject.SetActive(!homeLocation && !reactiveBattle);
+            toast.rectTransform.anchoredPosition = reactiveBattle ? new Vector2(410f, -1013f) : new Vector2(310f, -925f);
+            toast.rectTransform.sizeDelta = reactiveBattle ? new Vector2(1100f, 33f) : new Vector2(1300f, 60f);
+            toast.fontSize = reactiveBattle ? 17 : 23;
             Texture2D reactiveBackground = phase == RunPhase.Combat &&
                 session.CombatMode == CombatMode.ReactiveTurns
                 ? Resources.Load<Texture2D>("CombatB/AbyssArenaBackground") : null;
@@ -446,7 +458,7 @@ namespace Rokas.Presentation
             if (reactiveResultPending && focused && !Paused && !session.SaveBlocked)
             {
                 reactiveResultRemaining = Mathf.Max(0f, reactiveResultRemaining - dt);
-                if (reactiveResultRemaining <= 0f)
+                if (reactiveResultRemaining <= 0f && mission.ReactivePresentationReady)
                 {
                     reactiveResultPending = false;
                     phase = session.State.phase;
@@ -461,7 +473,7 @@ namespace Rokas.Presentation
                 laptop.Tick(dt);
             }
             messageNotifications.SetSuppressed(session.CombatMode == CombatMode.ReactiveTurns &&
-                session.State.phase == RunPhase.Combat);
+                (phase == RunPhase.Combat || reactiveResultPending));
             messageNotifications.Tick(dt);
             if (toastTime > 0)
             {

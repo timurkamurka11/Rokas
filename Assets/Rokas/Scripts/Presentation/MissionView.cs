@@ -39,6 +39,12 @@ namespace Rokas.Presentation
         public bool AnimatedActorsReady { get { return reactiveView.AnimatedActorsReady; } }
         public bool HunterApproachComplete { get { return reactiveView.HunterApproachComplete; } }
         public bool HunterAtHome { get { return reactiveView.HunterAtHome; } }
+        public bool ReactiveArenaSettled => reactiveView.ArenaSettled;
+        public float ReactiveCorpseElapsed(string id) => reactiveView.ReactiveCorpseElapsed(id);
+        public bool ReactiveAnnouncementActive => reactiveView.AnnouncementActive;
+        public bool ReactivePresentationReady => reactiveView.PresentationReady;
+        public void ShowReactiveAnnouncement(string text) { reactiveView.ShowAnnouncement(text); }
+        public void ShowReactiveTurnAnnouncement(bool playerTurn) { reactiveView.ShowTurnAnnouncement(playerTurn); }
         public bool StartHunterApproach(string enemyId, bool heavy = false) { return reactiveView.StartHunterApproach(enemyId, heavy); }
         public void PresentReactiveDefenseAttempt(DefenseAttempt attempt, long pressUs)
         { reactiveView.PresentDefenseAttempt(attempt, pressUs); }
@@ -345,17 +351,21 @@ namespace Rokas.Presentation
         {
             if (step == null || session.CombatMode != CombatMode.ReactiveTurns) return;
             foreach (CombatEvent combatEvent in step.Events)
-            {
-                reactiveView.Present(combatEvent, combatEvent.Kind == CombatEventKind.AttackStarted
+                PresentReactiveCombatEvent(combatEvent, combatEvent.Kind == CombatEventKind.AttackStarted
                     ? session.ReactiveCombat?.CurrentAttack : null);
-                bool combatCueHandled = reactiveAudio.Present(combatEvent);
-                if (combatEvent.Kind != CombatEventKind.HitResolved) continue;
-                bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
-                bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
-                if (combatEvent.Amount > 0 && !combatCueHandled)
-                    audio.Play(perfect ? assets.critical : assets.hit);
-                world.Impact(perfect ? .35f : defended ? .08f : .20f);
-            }
+        }
+
+        public void PresentReactiveCombatEvent(CombatEvent combatEvent, AttackSequenceDefinition sequence = null)
+        {
+            if (combatEvent == null || session.CombatMode != CombatMode.ReactiveTurns) return;
+            reactiveView.Present(combatEvent, sequence);
+            bool combatCueHandled = reactiveAudio.Present(combatEvent);
+            if (combatEvent.Kind != CombatEventKind.HitResolved) return;
+            bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
+            bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
+            if (combatEvent.Amount > 0 && !combatCueHandled)
+                audio.Play(perfect ? assets.critical : assets.hit);
+            world.Impact(perfect ? .35f : defended ? .08f : .20f);
         }
 
         public void Tick(float dt, bool paused)

@@ -19,7 +19,7 @@ namespace Rokas.Presentation
         private readonly Dictionary<string, CorpseState> corpses =
             new Dictionary<string, CorpseState>(StringComparer.Ordinal);
         private readonly List<string> retired = new List<string>();
-        private enum MotionPhase { None, Approach, AtStrike, Return }
+        private enum MotionPhase { None, Prepare, Entrance, Approach, AtStrike, Return }
         private enum HunterCommandPose { None, Attack, Heavy, Defend }
         private sealed class ActorMotion
         {
@@ -33,6 +33,7 @@ namespace Rokas.Presentation
             public bool Heavy;
             public float StrikeLead;
             public float ReturnDelay;
+            public bool ReturnRequested;
             public float ActionElapsed;
             public int NextHitIndex;
             public AttackSequenceDefinition AttackSequence;
@@ -42,6 +43,7 @@ namespace Rokas.Presentation
         {
             public ReactiveCombatActorVisual Actor;
             public Vector3 Origin;
+            public ReactiveCombatAshDissolve Ash;
             public float Elapsed;
         }
 
@@ -59,6 +61,32 @@ namespace Rokas.Presentation
         private ReactiveCombatActorVisual hunter;
         private string heavyHunterActionId;
         private string heavyEnemyActionId;
+        private float settleRemaining;
+        private bool cinematicEnabled;
+        private enum IntroPhase { None, HunterWalk, HunterStance, PortalOpen, EnemyWalk, PortalClose }
+        private IntroPhase introPhase;
+        private float introElapsed;
+        private readonly Queue<string> entranceQueue = new Queue<string>();
+        private string enteringEnemy;
+        private ReactiveCombatPortalEffect portal;
+        private Vector3 entranceStart;
+        private Vector3 cameraFocus;
+        private float cameraEmphasis;
+        private const float HunterEntranceSeconds = 2.4f;
+        public bool IntroComplete => introPhase == IntroPhase.None && entranceQueue.Count == 0;
+        public bool PresentationReady
+        {
+            get
+            {
+                if (!IntroComplete || settleRemaining > 0f ||
+                    hunterMotion.Phase != MotionPhase.None || hunterMotion.ReturnRequested ||
+                    hunter != null && !hunter.IsDead && !hunter.IdleSettled) return false;
+                foreach (var motion in enemyMotions.Values)
+                    if (motion.Phase != MotionPhase.None ||
+                        motion.Actor != null && !motion.Actor.IsDead && !motion.Actor.IdleSettled) return false;
+                return true;
+            }
+        }
 
         // Presentation timing is independent of Core's attack and defense windows.
         public float HunterApproachDuration { get; set; } = .84f;
@@ -68,14 +96,18 @@ namespace Rokas.Presentation
         public float EnemyReturnDuration { get; set; } = .68f;
         public float EnemyAttackDistance { get; set; } = 1.3f;
         public float DeathFallDuration { get; set; } = 1.35f;
-        public float CorpseHoldDuration { get; set; } = 1.7f;
-        public float CorpseSinkDuration { get; set; } = 1.2f;
-        public float CorpseSinkDepth { get; set; } = 3.2f;
+        public float CorpseHoldDuration { get; set; } = 1.0f;
+        public float CorpseDissolveDuration { get; set; } = 1.2f;
         public float HitStopDuration { get; set; } = .08f;
+        public float HeavyHitStopDuration { get; set; } = .10f;
         public float ResultLingerDuration { get; set; } = .26f;
 
         public bool Ready { get { return world != null && hunter != null && texture != null; } }
-        public int VisibleEnemyCount { get { return enemies.Count; } }
+        public int VisibleEnemyCount
+        {
+            get { int count = 0; foreach (var actor in enemies.Values)
+                if (actor != null && actor.gameObject.activeSelf && !actor.IsDead) count++; return count; }
+        }
         public int CorpseCount => corpses.Count;
         public float HitStopRemaining => hitStopRemaining;
         public Vector3 HunterHome => hunterMotion.Home;
@@ -189,6 +221,92 @@ namespace Rokas.Presentation
             }
         }
 
+        // The encounter owns the horizontal entrance. The imported clip supplies the final stance.
+        public void BeginEncounterIntro()
+        {
+            if (hunter == null || cinematicEnabled) return;
+            cinematicEnabled = true;
+            introPhase = IntroPhase.HunterWalk;
+            introElapsed = 0f;
+            entranceStart = hunterMotion.Home + Vector3.left * 6f;
+            hunter.transform.localPosition = entranceStart;
+            hunterMotion.Phase = MotionPhase.Entrance;
+            hunter.PlayApproach(HunterEntranceSeconds);
+        }
+
+        private void TickIntro(float step)
+        {
+            if (introPhase == IntroPhase.None) return;
+            introElapsed += step;
+            if (introPhase == IntroPhase.HunterWalk)
+            {
+                hunter.transform.localPosition = Vector3.Lerp(entranceStart, hunterMotion.Home,
+                    Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(introElapsed / HunterEntranceSeconds)));
+                if (introElapsed < HunterEntranceSeconds) return;
+                hunter.transform.localPosition = hunterMotion.Home;
+                hunter.PlayEnterBattle(hunter.EnterBattleDuration);
+                introPhase = IntroPhase.HunterStance;
+                introElapsed = 0f;
+            }
+            else if (introPhase == IntroPhase.HunterStance)
+            {
+                if (introElapsed < hunter.EnterBattleDuration + .16f) return;
+                hunterMotion.Phase = MotionPhase.None;
+                hunter.PlayIdle();
+                OpenNextPortal();
+            }
+            else if (introPhase == IntroPhase.PortalOpen)
+            {
+                portal.SetProgress(Mathf.Clamp01(introElapsed / .35f));
+                portal.Tick(step);
+                if (introElapsed < .35f) return;
+                ActorMotion motion = enemyMotions[enteringEnemy];
+                entranceStart = motion.Home + Vector3.right * 1.5f;
+                motion.Actor.transform.localPosition = entranceStart;
+                motion.Actor.gameObject.SetActive(true);
+                motion.Actor.PlayApproach(.75f);
+                introPhase = IntroPhase.EnemyWalk;
+                introElapsed = 0f;
+            }
+            else if (introPhase == IntroPhase.EnemyWalk)
+            {
+                portal.Tick(step);
+                ActorMotion motion = enemyMotions[enteringEnemy];
+                motion.Actor.transform.localPosition = Vector3.Lerp(entranceStart, motion.Home,
+                    Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(introElapsed / .75f)));
+                if (introElapsed < .75f) return;
+                motion.Actor.transform.localPosition = motion.Home;
+                motion.Phase = MotionPhase.None;
+                motion.Actor.PlayIdle();
+                introPhase = IntroPhase.PortalClose;
+                introElapsed = 0f;
+            }
+            else if (introPhase == IntroPhase.PortalClose)
+            {
+                portal.SetProgress(1f - Mathf.Clamp01(introElapsed / .3f));
+                portal.Tick(step);
+                if (introElapsed < .3f + .16f) return;
+                portal.Dispose(); portal = null;
+                OpenNextPortal();
+            }
+        }
+
+        private void OpenNextPortal()
+        {
+            if (entranceQueue.Count == 0)
+            {
+                introPhase = IntroPhase.None;
+                enteringEnemy = null;
+                settleRemaining = .16f;
+                return;
+            }
+            enteringEnemy = entranceQueue.Dequeue();
+            Vector3 origin = enemyMotions[enteringEnemy].Home + new Vector3(1.5f, 0f, .4f);
+            portal = new ReactiveCombatPortalEffect(world.transform, origin, ActorLayer);
+            introPhase = IntroPhase.PortalOpen;
+            introElapsed = 0f;
+        }
+
         public void SetEnemies(IReadOnlyList<string> activeIds, string actingId)
         {
             SetEnemies(activeIds, actingId, activeIds);
@@ -216,6 +334,11 @@ namespace Rokas.Presentation
                         SetLayerRecursive(actor.gameObject, ActorLayer);
                         actor.SetFacing(false);
                         actor.PlayWaveEnter();
+                        if (cinematicEnabled)
+                        {
+                            actor.gameObject.SetActive(false);
+                            entranceQueue.Enqueue(id);
+                        }
                     }
                 }
             }
@@ -224,6 +347,11 @@ namespace Rokas.Presentation
                 if (!active.Contains(pair.Key) && !corpses.ContainsKey(pair.Key)) retired.Add(pair.Key);
             for (int i = 0; i < retired.Count; i++) Retire(retired[i]);
             Layout(activeIds, waveEnemyIds != null && waveEnemyIds.Count > 0 ? waveEnemyIds : activeIds);
+            if (cinematicEnabled && entranceQueue.Count > 0)
+            {
+                foreach (string pending in entranceQueue) enemyMotions[pending].Phase = MotionPhase.Entrance;
+                if (introPhase == IntroPhase.None) OpenNextPortal();
+            }
             if (hunterMotion.Phase == MotionPhase.Approach && hunterMotionTargetId != null &&
                 !active.Contains(hunterMotionTargetId)) CancelHunterMotion();
         }
@@ -293,8 +421,8 @@ namespace Rokas.Presentation
                 !enemies.TryGetValue(targetId, out target) || target == null ||
                 target.IsDead || corpses.ContainsKey(targetId)) return false;
             if (hunterMotion.Phase == MotionPhase.Approach && hunterMotionTargetId == targetId) return true;
-            // A new player turn may begin while the previous enemy is returning.
-            // Aim at its durable slot; its return finishes before Keiko's approach.
+            // Input is gated until every actor has returned to its permanent slot.
+            if (!PresentationReady) return false;
             Vector3 targetPosition = enemyMotions.TryGetValue(targetId, out ActorMotion targetMotion)
                 ? targetMotion.Home : target.transform.localPosition;
             Vector3 attackPoint = new Vector3(targetPosition.x - HunterAttackDistance, hunterMotion.Home.y,
@@ -305,14 +433,17 @@ namespace Rokas.Presentation
             hunterMotion.Heavy = heavy;
             hunterCommandPose = heavy ? HunterCommandPose.Heavy : HunterCommandPose.Attack;
             hunterAnticipationRemaining = Mathf.Max(0f, hunter.AttackContactSeconds(heavy) - .2f);
-            BeginMotion(hunterMotion, MotionPhase.Approach, attackPoint, HunterApproachDuration);
-            hunter.PlayApproach(hunterMotion.Duration);
+            BeginMotion(hunterMotion, MotionPhase.Prepare, attackPoint, hunter.PreparationDuration(heavy));
+            hunter.PlayPreparation(heavy);
+            cameraFocus = (hunterMotion.Home + targetPosition) * .5f;
+            cameraEmphasis = heavy ? .09f : .065f;
             return true;
         }
 
         public void StartHunterReturn()
         {
             if (hunter == null || hunterMotion.Phase == MotionPhase.Return) return;
+            hunterMotion.ReturnRequested = false;
             hunterCommandPose = HunterCommandPose.None;
             hunterMotionTargetId = null;
             hunterApproachComplete = false;
@@ -332,6 +463,7 @@ namespace Rokas.Presentation
         {
             hunterMotion.Phase = MotionPhase.None;
             hunterMotion.ReturnDelay = 0f;
+            hunterMotion.ReturnRequested = false;
             hunterCommandPose = HunterCommandPose.None;
             hunterMotionTargetId = null;
             hunterApproachComplete = false;
@@ -350,6 +482,7 @@ namespace Rokas.Presentation
             motion.Elapsed = 0f;
             motion.Duration = Mathf.Max(.1f, seconds);
             motion.ReturnDelay = 0f;
+            motion.ReturnRequested = false;
         }
 
         private void StartEnemyApproach(string id, bool heavy, AttackSequenceDefinition sequence)
@@ -362,12 +495,13 @@ namespace Rokas.Presentation
             motion.ActionElapsed = 0f;
             motion.NextHitIndex = 0;
             motion.StrikeLead = Mathf.Max(.1f, (heavy ? 1.45f : 1f) - EnemyApproachDuration);
-            // The defender's durable home is used even if a previous player action is
-            // still returning. Each attacker keeps its own independent stable slot.
+            // AttackStarted is delivered only after the prior actor has settled at home.
             Vector3 goal = new Vector3(hunterMotion.Home.x + EnemyAttackDistance,
                 motion.Home.y, hunterMotion.Home.z + .1f);
-            BeginMotion(motion, MotionPhase.Approach, goal, EnemyApproachDuration);
-            motion.Actor.PlayApproach(motion.Duration);
+            cameraFocus = (motion.Home + hunterMotion.Home) * .5f;
+            cameraEmphasis = .065f;
+            BeginMotion(motion, MotionPhase.Prepare, goal, .16f);
+            motion.Actor.PlayAttackToContact(heavy ? 1.45f : 1f);
         }
 
         private void StartEnemyReturn(string id)
@@ -399,6 +533,8 @@ namespace Rokas.Presentation
                     StartEnemyApproach(combatEvent.ActorId, combatEvent.Detail == "heavy", attackSequence);
                     break;
                 case CombatEventKind.HitResolved:
+                    bool heavyContact = IsHeavyContact(combatEvent);
+                    float contactStop = heavyContact ? HeavyHitStopDuration : HitStopDuration;
                     if (combatEvent.TargetId == ReactiveDuelDefinitions.HunterId)
                     {
                         if (hunter != null)
@@ -413,11 +549,11 @@ namespace Rokas.Presentation
                                 else hunter.PlayHit();
                                 hunter.Recoil(.24f);
                             }
-                            hunter.HoldPresentation(HitStopDuration);
+                            hunter.HoldPresentation(contactStop);
                         }
                         if (combatEvent.ActorId != null && enemies.TryGetValue(combatEvent.ActorId, out actor) && actor != null)
                         {
-                            actor.HoldAttackAtContact(combatEvent.ActionId == heavyEnemyActionId, HitStopDuration);
+                            actor.HoldAttackAtContact(heavyContact, contactStop);
                         }
                     }
                     else if (combatEvent.TargetId != null && enemies.TryGetValue(combatEvent.TargetId, out actor) && actor != null)
@@ -429,15 +565,20 @@ namespace Rokas.Presentation
                             else actor.PlayHit();
                             actor.Recoil(combatEvent.ActionId == heavyHunterActionId ? .32f : .2f);
                         }
-                        actor.HoldPresentation(HitStopDuration);
+                        actor.HoldPresentation(contactStop);
                         if (hunter != null)
-                            hunter.HoldAttackAtContact(combatEvent.ActionId == heavyHunterActionId, HitStopDuration);
+                            hunter.HoldAttackAtContact(heavyContact, contactStop);
                     }
-                    hitStopRemaining = Mathf.Max(hitStopRemaining, HitStopDuration);
+                    hitStopRemaining = Mathf.Max(hitStopRemaining, contactStop);
                     break;
                 case CombatEventKind.Defeat:
                     CancelHunterMotion();
                     if (hunter != null) hunter.PlayDeath(DeathFallDuration);
+                    foreach (var pair in enemyMotions)
+                        if (pair.Value.Phase != MotionPhase.None) StartEnemyReturn(pair.Key);
+                    break;
+                case CombatEventKind.Victory:
+                    QueueHunterReturn();
                     break;
                 case CombatEventKind.WaveCleared:
                     QueueHunterReturn();
@@ -453,6 +594,17 @@ namespace Rokas.Presentation
             }
         }
 
+        private bool IsHeavyContact(CombatEvent evt)
+        {
+            if (evt.ActionId != null && (evt.ActionId == heavyHunterActionId ||
+                evt.ActionId == heavyEnemyActionId)) return true;
+            if (evt.ActorId == null || !enemyMotions.TryGetValue(evt.ActorId, out ActorMotion motion) ||
+                motion.AttackSequence == null) return false;
+            foreach (HitDefinition hit in motion.AttackSequence.Hits)
+                if (hit.Id == evt.HitId) return hit.IsHeavy;
+            return false;
+        }
+
         private void QueueHunterReturn()
         {
             if (hunter == null || hunter.IsDead || hunterMotion.Phase == MotionPhase.Return) return;
@@ -462,6 +614,7 @@ namespace Rokas.Presentation
                 return;
             }
             hunterMotion.ReturnDelay = Mathf.Max(hunterMotion.ReturnDelay, ResultLingerDuration);
+            hunterMotion.ReturnRequested = true;
         }
 
         private void PlayHunterCommandPose(float secondsUntilContact)
@@ -485,7 +638,8 @@ namespace Rokas.Presentation
             ActorMotion motion;
             if (enemyMotions.TryGetValue(id, out motion)) motion.Phase = MotionPhase.None;
             actor.PlayDeath(DeathFallDuration);
-            corpses[id] = new CorpseState { Actor = actor, Origin = actor.transform.localPosition };
+            corpses[id] = new CorpseState { Actor = actor, Origin = actor.transform.localPosition,
+                Ash = new ReactiveCombatAshDissolve(actor) };
         }
 
         public void Tick(float deltaTime)
@@ -499,14 +653,39 @@ namespace Rokas.Presentation
                 hitStopRemaining -= held;
                 motionStep -= held;
             }
+            settleRemaining = Mathf.Max(0f, settleRemaining - motionStep);
+            TickIntro(motionStep);
+            bool actionVisible = hunterMotion.Phase == MotionPhase.Prepare ||
+                hunterMotion.Phase == MotionPhase.Approach || hunterMotion.Phase == MotionPhase.AtStrike;
+            foreach (var motion in enemyMotions.Values)
+                actionVisible |= motion.Phase == MotionPhase.Prepare || motion.Phase == MotionPhase.Approach ||
+                    motion.Phase == MotionPhase.AtStrike;
+            float desiredZoom = actionVisible ? cameraEmphasis : 0f;
+            camera.orthographicSize = Mathf.Lerp(camera.orthographicSize, 4.6f * (1f - desiredZoom),
+                1f - Mathf.Exp(-motionStep * 6f));
+            Vector3 desiredFrame = new Vector3(actionVisible ? cameraFocus.x * .22f : 0f, 2.25f, -20f);
+            camera.transform.localPosition = Vector3.Lerp(camera.transform.localPosition, desiredFrame,
+                1f - Mathf.Exp(-motionStep * 6f));
             hunter?.TickPresentation(step);
             foreach (var pair in enemies) pair.Value?.TickPresentation(step);
             if (hunter != null)
             {
-                if (hunterMotion.ReturnDelay > 0f)
+                if (hunterMotion.Phase == MotionPhase.Prepare)
+                {
+                    hunterMotion.Elapsed += motionStep;
+                    if (hunterMotion.Elapsed >= hunterMotion.Duration)
+                    {
+                        Vector3 goal = hunterMotion.Goal;
+                        float remainder = hunterMotion.Elapsed - hunterMotion.Duration;
+                        BeginMotion(hunterMotion, MotionPhase.Approach, goal, HunterApproachDuration);
+                        hunter.PlayApproach(hunterMotion.Duration);
+                        TickMotion(hunterMotion, remainder);
+                    }
+                }
+                else if (hunterMotion.ReturnRequested)
                 {
                     hunterMotion.ReturnDelay = Mathf.Max(0f, hunterMotion.ReturnDelay - motionStep);
-                    if (hunterMotion.ReturnDelay <= 0f) StartHunterReturn();
+                    if (hunterMotion.ReturnDelay <= 0f && hunter.ActionRecoveryComplete) StartHunterReturn();
                 }
                 else if (TickMotion(hunterMotion, motionStep))
                 {
@@ -517,7 +696,7 @@ namespace Rokas.Presentation
                         hunterPosePreplayed = true;
                         hunterApproachComplete = hunterAnticipationRemaining <= 0f;
                     }
-                    else hunter.PlayIdle();
+                    else { hunter.PlayIdle(); settleRemaining = .16f; }
                 }
                 else if (hunterMotion.Phase == MotionPhase.AtStrike && !hunterApproachComplete)
                 {
@@ -529,13 +708,24 @@ namespace Rokas.Presentation
             {
                 ActorMotion motion = pair.Value;
                 if (corpses.ContainsKey(pair.Key) || motion.Actor == null) continue;
-                if (motion.Phase == MotionPhase.Approach || motion.Phase == MotionPhase.AtStrike)
+                if (motion.Phase == MotionPhase.Prepare || motion.Phase == MotionPhase.Approach ||
+                    motion.Phase == MotionPhase.AtStrike)
                     motion.ActionElapsed += step;
-                if (TickMotion(motion, motionStep))
+                float travelStep = motionStep;
+                if (motion.Phase == MotionPhase.Prepare)
+                {
+                    motion.Elapsed += motionStep;
+                    if (motion.Elapsed < motion.Duration) continue;
+                    travelStep = motion.Elapsed - motion.Duration;
+                    Vector3 goal = motion.Goal;
+                    BeginMotion(motion, MotionPhase.Approach, goal, EnemyApproachDuration);
+                    motion.Actor.PlayApproach(motion.Duration);
+                }
+                if (TickMotion(motion, travelStep))
                 {
                     if (motion.Phase == MotionPhase.AtStrike)
                         PlayEnemyStrike(motion);
-                    else motion.Actor.PlayIdle();
+                    else { motion.Actor.PlayIdle(); settleRemaining = .16f; }
                 }
                 else if (motion.Phase == MotionPhase.AtStrike && motion.AttackSequence != null &&
                     motion.NextHitIndex < motion.AttackSequence.Hits.Count &&
@@ -548,16 +738,19 @@ namespace Rokas.Presentation
                 }
             }
             retired.Clear();
-            float sinkStarts = Mathf.Max(.1f, DeathFallDuration) + Mathf.Max(0f, CorpseHoldDuration);
-            float sinkDuration = Mathf.Max(.1f, CorpseSinkDuration);
+            float dissolveStarts = Mathf.Max(.1f, DeathFallDuration) + Mathf.Max(0f, CorpseHoldDuration);
+            float dissolveDuration = Mathf.Max(.1f, CorpseDissolveDuration);
             foreach (var pair in corpses)
             {
                 CorpseState corpse = pair.Value;
                 corpse.Elapsed += motionStep;
-                if (corpse.Elapsed >= sinkStarts + sinkDuration) { retired.Add(pair.Key); continue; }
-                if (corpse.Actor != null && corpse.Elapsed >= sinkStarts)
-                    corpse.Actor.transform.localPosition = corpse.Origin - Vector3.up *
-                        (CorpseSinkDepth * Mathf.Clamp01((corpse.Elapsed - sinkStarts) / sinkDuration));
+                if (corpse.Elapsed >= dissolveStarts + dissolveDuration) { retired.Add(pair.Key); continue; }
+                if (corpse.Actor != null && corpse.Elapsed >= dissolveStarts)
+                {
+                    corpse.Ash.Begin();
+                    corpse.Ash.SetProgress(Mathf.Clamp01((corpse.Elapsed - dissolveStarts) / dissolveDuration));
+                    corpse.Actor.transform.localPosition = corpse.Origin;
+                }
             }
             for (int i = 0; i < retired.Count; i++)
             {
@@ -565,6 +758,7 @@ namespace Rokas.Presentation
                 ReactiveCombatActorVisual actor;
                 if (enemies.TryGetValue(id, out actor) && actor != null)
                     UnityEngine.Object.Destroy(actor.gameObject);
+                corpses[id].Ash.Dispose();
                 enemies.Remove(id);
                 corpses.Remove(id);
                 enemyMotions.Remove(id);
@@ -609,6 +803,9 @@ namespace Rokas.Presentation
         {
             if (camera != null) camera.targetTexture = null;
             if (image != null) image.texture = null;
+            portal?.Dispose(); portal = null;
+            foreach (var corpse in corpses.Values) corpse.Ash?.Dispose();
+            entranceQueue.Clear();
             if (world != null) UnityEngine.Object.Destroy(world);
             if (texture != null)
             {

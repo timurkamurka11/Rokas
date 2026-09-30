@@ -29,12 +29,23 @@ namespace Rokas.Tests
                     (binding.propertyName == "m_LocalPosition.x" || binding.propertyName == "m_LocalPosition.z"),
                     Is.False, "Only the arena controller may add horizontal travel.");
             }
-            string source = "Assets/Rokas/Art/CombatActors/Keiko/" + (heavy ? "Hard jump attack.fbx" : "Normal attack.fbx");
+            string source = "Assets/Rokas/Art/CombatActors/Keiko/" + (heavy ? "Hard jump attack corrected.fbx" : "Normal attack corrected.fbx");
             var importer = (ModelImporter)AssetImporter.GetAtPath(source);
             Assert.That(importer.animationType, Is.EqualTo(ModelImporterAnimationType.Legacy));
             Assert.That(importer.optimizeGameObjects, Is.False);
             Assert.That(importer.clipAnimations.Length, Is.EqualTo(1));
-            Assert.That(importer.clipAnimations[0].lastFrame, Is.EqualTo(heavy ? 57f : 38f));
+            Assert.That(importer.clipAnimations[0].firstFrame, Is.Zero);
+            Assert.That(importer.clipAnimations[0].lastFrame, Is.EqualTo(heavy ? 172f : 132f));
+            Assert.That(importer.animationCompression, Is.EqualTo(ModelImporterAnimationCompression.Off));
+            var animatedSupportArmPaths = new HashSet<string>();
+            foreach (EditorCurveBinding binding in bindings)
+                if (binding.path.EndsWith("mixamorig:LeftArm") ||
+                    binding.path.EndsWith("mixamorig:LeftForeArm") ||
+                    binding.path.EndsWith("mixamorig:LeftHand"))
+                    if (binding.propertyName.Contains("Rotation") || binding.propertyName.Contains("Euler"))
+                        animatedSupportArmPaths.Add(binding.path);
+            Assert.That(animatedSupportArmPaths.Count, Is.EqualTo(3),
+                "The FBX take must author the support arm and palm, including recovery.");
         }
 
         [Test]
@@ -56,6 +67,7 @@ namespace Rokas.Tests
             Assert.That(dependencies, Has.Some.EndsWith("metal+sword+3d+model.fbx"));
             Assert.That(dependencies, Has.Some.EndsWith("metal+sword+3d+model_basecolor.jpg"));
             Assert.That(library.keiko.model.transform.Find(library.keiko.weaponBonePath), Is.Not.Null);
+            Assert.That(weapon.transform.Find("LeftHandGrip"), Is.Not.Null);
         }
     }
 }

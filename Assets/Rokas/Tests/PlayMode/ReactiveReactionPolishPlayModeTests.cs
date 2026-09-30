@@ -31,6 +31,14 @@ namespace Rokas.Tests
                 () => heavyCommands++, () => { }, () => { }, () => { },
                 () => { }, () => { }, id => { });
             view.Build(root.GetComponent<RectTransform>());
+            ReactiveBattleDisplay initial = IdleDisplay("E1", 100, 100);
+            view.Refresh(initial);
+            for (int step = 0; step < 400 && !view.PresentationReady; step++)
+            {
+                view.Tick(.05f);
+                view.Refresh(initial);
+            }
+            Assert.That(view.PresentationReady, Is.True, "The fixture finishes the real encounter entrance before reaction assertions.");
             yield return null;
         }
 
@@ -73,7 +81,7 @@ namespace Rokas.Tests
             Assert.That(attempt.Accepted, Is.True);
             Assert.That(attempt.Outcome, Is.EqualTo(DefenseOutcome.Parry));
             view.PresentDefenseAttempt(attempt, pressUs);
-            float expectedPressX = 474f + 540f * (940000f / 1060000f) - 3f;
+            float expectedPressX = 690f + 540f * (940000f / 1060000f) - 3f;
             Assert.That(cursor.anchoredPosition.x, Is.EqualTo(expectedPressX).Within(.01f),
                 "Feedback must use the submitted timestamp rather than the later rendered frame.");
             Assert.That(Find("ReactiveHitFeedback").GetComponent<Text>().text, Is.EqualTo("БЛОК"));

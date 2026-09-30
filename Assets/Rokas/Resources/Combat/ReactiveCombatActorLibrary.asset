@@ -15,23 +15,26 @@ MonoBehaviour:
   keiko:
     model: {fileID: 919132149155446097, guid: e7b631b390af57f4ab2a82c95b079622, type: 3}
     material: {fileID: 2100000, guid: a7eb21dd960e73943a37f19140f63ce0, type: 2}
-    idle: {fileID: 7400000, guid: e5a163ef5767c3e41b771d0e42ead535, type: 2}
-    attack: {fileID: 7400000, guid: aa77631668d93e5459ecf9b0d6c54c9a, type: 2}
-    heavy: {fileID: 7400000, guid: 6f04fdd0f7bc63f4e940879d2fa242bb, type: 2}
+    idle: {fileID: 7400000, guid: c38a261cac4830a4eb474bad1784a2f0, type: 2}
+    attack: {fileID: 7400000, guid: c8b0335b350cfb54d8b360bbcb8e26b3, type: 2}
+    heavy: {fileID: 7400000, guid: 4225f8323ea2cac4a80a4303654349fb, type: 2}
+    preparation: {fileID: 7400000, guid: f4d671ebf4f41fd49a685f3fa8f42c57, type: 2}
+    heavyPreparation: {fileID: 7400000, guid: bacd886575acfcb488bb62c682354ffc, type: 2}
+    enterBattle: {fileID: 7400000, guid: f55a97cafee5c3d4c9bc92f600902418, type: 2}
     hit: {fileID: 0}
     stagger: {fileID: 0}
     death: {fileID: 0}
     walk: {fileID: 0}
-    approach: {fileID: 7400000, guid: b28cbddd192513449b913d9e1ff83422, type: 2}
-    returnHome: {fileID: 7400000, guid: 23699d70a5a5e4246a8c361d514e8ad6, type: 2}
+    approach: {fileID: 7400000, guid: 9ddd0d9165a12ee4d9bf96ddb27ffb3f, type: 2}
+    returnHome: {fileID: 7400000, guid: d0b82b37909837647a2d576b6e298e9f, type: 2}
     standingHeight: 2
     forwardYaw: 65
-    attackContactNormalized: 0.5263158
-    heavyContactNormalized: 0.54385966
+    attackContactNormalized: 0.54545456
+    heavyContactNormalized: 0.60465115
     weaponPrefab: {fileID: 1730584887549084084, guid: e77b4611c18fac34f999f43b784bda00, type: 3}
     weaponBonePath: mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2/mixamorig:RightShoulder/mixamorig:RightArm/mixamorig:RightForeArm/mixamorig:RightHand
-    weaponSocketPosition: {x: 0, y: 0.033, z: 0.006}
-    weaponSocketEuler: {x: 0, y: 180, z: 0}
+    weaponSocketPosition: {x: 0, y: 0.033, z: 0}
+    weaponSocketEuler: {x: 0, y: 0, z: 0}
     weaponSocketScale: {x: 1, y: 1, z: 1}
   mina:
     model: {fileID: 919132149155446097, guid: 2574abaf510bb6d4fbd8d34111fbe549, type: 3}
@@ -39,6 +42,9 @@ MonoBehaviour:
     idle: {fileID: 7400000, guid: 33c2a82f9b580434bbe342946acd0610, type: 2}
     attack: {fileID: 7400000, guid: cd5d0fa225462c84a82d1c821b13ad91, type: 2}
     heavy: {fileID: 7400000, guid: 006ade6f1ccad204fa7f503835a9363d, type: 2}
+    preparation: {fileID: 0}
+    heavyPreparation: {fileID: 0}
+    enterBattle: {fileID: 0}
     hit: {fileID: 7400000, guid: b94e7bf8ffdb2574cb0c6f8ac88f6f33, type: 2}
     stagger: {fileID: 7400000, guid: 258bc4b087533a64e9ce3b4af8b488c2, type: 2}
     death: {fileID: 0}
@@ -60,6 +66,9 @@ MonoBehaviour:
     idle: {fileID: 7400000, guid: 576ad4a8390dd6347bd4fd5bfa463862, type: 2}
     attack: {fileID: 7400000, guid: cc57d2b9f38e6d747a6a1505256271d6, type: 2}
     heavy: {fileID: 7400000, guid: 0bab50ef231bac940a718725d605efd2, type: 2}
+    preparation: {fileID: 0}
+    heavyPreparation: {fileID: 0}
+    enterBattle: {fileID: 0}
     hit: {fileID: 7400000, guid: 034136f787a5af849bedf3bbbdbb2a78, type: 2}
     stagger: {fileID: 7400000, guid: 46672f096a514f34da7814def8b9c5c1, type: 2}
     death: {fileID: 7400000, guid: a3c3c9383fb756a419660b33c37f108b, type: 2}

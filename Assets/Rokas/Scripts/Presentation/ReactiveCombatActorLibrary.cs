@@ -13,6 +13,9 @@ namespace Rokas.Presentation
         public AnimationClip idle;
         public AnimationClip attack;
         public AnimationClip heavy;
+        public AnimationClip preparation;
+        public AnimationClip heavyPreparation;
+        public AnimationClip enterBattle;
         public AnimationClip hit;
         public AnimationClip stagger;
         public AnimationClip death;

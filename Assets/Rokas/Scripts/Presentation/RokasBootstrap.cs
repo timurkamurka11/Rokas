@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Rokas.Core;
 using Rokas.Core.ReactiveTurns;
@@ -36,7 +37,17 @@ namespace Rokas.Presentation
         private long lastReactiveDeviceUs;
         private long reactivePrepareUntilUs;
         private bool reactiveApproachHold;
-        private bool reactiveMotionLocked;
+        private bool reactivePresentationHold;
+        private bool reactiveAnnouncementRequested;
+        private bool reactiveExternalPause;
+        private string reactiveWaveAnnouncement;
+        private readonly Queue<DeferredReactiveEvent> reactiveDeferredEvents = new Queue<DeferredReactiveEvent>();
+        private sealed class DeferredReactiveEvent
+        {
+            public CombatEvent Event;
+            public AttackSequenceDefinition Sequence;
+        }
+        public bool ReactivePresentationHeld => reactivePresentationHold || reactiveApproachHold;
 
         private void Start()
         {
@@ -396,7 +407,8 @@ namespace Rokas.Presentation
 
         public void SubmitReactiveCommand(CommandKind kind, string skillId)
         {
-            if (!CanUseReactiveCombat() || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            if (!CanUseReactiveCombat() || ReactivePresentationHeld ||
+                !View.ReactivePresentationReady || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
             ReactiveCombatSession combat = Session.ReactiveCombat;
             string[] targets = new string[0];
             if (kind == CommandKind.Basic || kind == CommandKind.Skill && skillId != "sweep")
@@ -427,7 +439,7 @@ namespace Rokas.Presentation
                     // the visual approach reaches the target, without changing combat rules.
                     reactiveClock.Pause(reactiveInput.DeviceNowUs);
                     reactiveApproachHold = true;
-                    reactiveMotionLocked = true;
+                    View.SetReactivePresentationLocked(true);
                     reactiveInput.SetContext(false);
                 }
             }
@@ -436,7 +448,8 @@ namespace Rokas.Presentation
 
         public void SelectReactiveTarget(string actorId)
         {
-            if (!CanUseReactiveCombat() || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            if (!CanUseReactiveCombat() || ReactivePresentationHeld ||
+                !View.ReactivePresentationReady || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
             if (Session.ReactiveCombat.SelectTarget(actorId))
             {
                 Session.SaveReactiveCheckpoint();
@@ -496,7 +509,11 @@ namespace Rokas.Presentation
             lastReactiveDeviceUs = 0;
             reactivePrepareUntilUs = 0;
             reactiveApproachHold = false;
-            reactiveMotionLocked = false;
+            reactivePresentationHold = false;
+            reactiveAnnouncementRequested = false;
+            reactiveExternalPause = false;
+            reactiveWaveAnnouncement = null;
+            reactiveDeferredEvents.Clear();
         }
 
         private void PauseReactiveCombat(string reason)
@@ -509,9 +526,83 @@ namespace Rokas.Presentation
                 reactiveBoundCombat.Suspend(reason);
                 reactiveInput.SetContext(false);
                 reactiveInput.ForceRearm();
-                reactivePrepareUntilUs = 0;
             }
+            reactivePrepareUntilUs = 0;
+            reactiveExternalPause = true;
             lastReactiveDeviceUs = now;
+        }
+
+        private void BeginReactivePresentationHold(long deviceUs)
+        {
+            if (!reactiveClock.IsPaused) reactiveClock.Pause(deviceUs);
+            reactivePresentationHold = true;
+            reactiveAnnouncementRequested = false;
+            reactiveInput.SetContext(false);
+            reactiveInput.ForceRearm();
+            View.SetReactivePresentationLocked(true);
+        }
+
+        private void PresentReactiveStep(CombatStep step, ReactiveCombatSession combat, long deviceUs)
+        {
+            foreach (CombatEvent evt in step.Events)
+            {
+                AttackSequenceDefinition sequence = evt.Kind == CombatEventKind.AttackStarted
+                    ? combat.CurrentAttack : null;
+                // Death/results remain immediate. Only the next turn's presentation is queued.
+                if (reactivePresentationHold && evt.Kind != CombatEventKind.Victory &&
+                    evt.Kind != CombatEventKind.Defeat &&
+                    !(evt.Kind == CombatEventKind.WaveCleared && combat.TerminalResult.HasValue))
+                {
+                    reactiveDeferredEvents.Enqueue(new DeferredReactiveEvent { Event = evt, Sequence = sequence });
+                    if (evt.Kind == CombatEventKind.WaveCleared) reactiveWaveAnnouncement = "ВОЛНА ЗАВЕРШЕНА";
+                    continue;
+                }
+                View.PresentReactiveCombatEvent(evt, sequence);
+                if (evt.Kind == CombatEventKind.WaveCleared && combat.TerminalResult.HasValue)
+                    View.ShowReactiveAnnouncement("ВОЛНА ЗАВЕРШЕНА");
+                if (evt.Kind == CombatEventKind.ActionSettled || evt.Kind == CombatEventKind.WaveStarted)
+                {
+                    BeginReactivePresentationHold(deviceUs);
+                    if (evt.Kind == CombatEventKind.WaveStarted) reactiveWaveAnnouncement = "НОВАЯ ВОЛНА";
+                }
+            }
+        }
+
+        private bool TickReactivePresentationHold(long deviceUs, ReactiveCombatSession combat)
+        {
+            if (!reactivePresentationHold) return false;
+            reactiveInput.SetContext(false);
+            lastReactiveDeviceUs = deviceUs;
+            View.RefreshReactiveCombat();
+            if (!View.ReactiveArenaSettled) return true;
+            if (View.ReactiveAnnouncementActive) return true;
+            if (!reactiveAnnouncementRequested)
+            {
+                if (reactiveWaveAnnouncement != null)
+                {
+                    View.ShowReactiveAnnouncement(reactiveWaveAnnouncement);
+                    reactiveWaveAnnouncement = null;
+                }
+                else
+                {
+                    if (combat.Phase == ReactivePhase.PlayerCommand || combat.Phase == ReactivePhase.EnemyExecution)
+                        View.ShowReactiveTurnAnnouncement(combat.Phase == ReactivePhase.PlayerCommand);
+                    reactiveAnnouncementRequested = true;
+                }
+                return true;
+            }
+            if (!View.ReactivePresentationReady) return true;
+            while (reactiveDeferredEvents.Count > 0)
+            {
+                DeferredReactiveEvent next = reactiveDeferredEvents.Dequeue();
+                View.PresentReactiveCombatEvent(next.Event, next.Sequence);
+            }
+            reactivePresentationHold = false;
+            reactiveAnnouncementRequested = false;
+            View.SetReactivePresentationLocked(false);
+            if (reactiveClock.IsPaused) reactiveClock.Resume(deviceUs);
+            reactiveInput.ForceRearm();
+            return false;
         }
 
         private void TickReactiveCombat()
@@ -527,7 +618,9 @@ namespace Rokas.Presentation
                 lastReactiveDeviceUs = now;
                 reactivePrepareUntilUs = 0;
                 reactiveApproachHold = false;
-                reactiveMotionLocked = false;
+                reactiveExternalPause = false;
+                reactiveDeferredEvents.Clear();
+                BeginReactivePresentationHold(now);
             }
 
             if (!focused || saveBlocked || Session.SaveBlocked || View.Paused)
@@ -536,6 +629,25 @@ namespace Rokas.Presentation
                 View.RefreshReactiveCombat();
                 return;
             }
+
+            // Focus/storage interruptions are separate from intentional staging pauses.
+            if (reactiveExternalPause)
+            {
+                if (reactivePrepareUntilUs == 0) reactivePrepareUntilUs = checked(now + 600000);
+                if (now < reactivePrepareUntilUs)
+                {
+                    lastReactiveDeviceUs = now;
+                    View.RefreshReactiveCombat();
+                    return;
+                }
+                combat.Resume(Math.Max(checked(combat.InputEpoch + 1), reactiveClock.CurrentEpoch));
+                reactiveExternalPause = false;
+                reactivePrepareUntilUs = 0;
+                if (!ReactivePresentationHeld && reactiveClock.IsPaused) reactiveClock.Resume(now);
+                reactiveInput.ForceRearm();
+                lastReactiveDeviceUs = now;
+            }
+            if (TickReactivePresentationHold(now, combat)) return;
 
             if (reactiveApproachHold)
             {
@@ -547,7 +659,6 @@ namespace Rokas.Presentation
                     return;
                 }
                 reactiveApproachHold = false;
-                reactiveMotionLocked = false;
                 View.SetReactivePresentationLocked(false);
                 if (combat.Phase == ReactivePhase.Suspended)
                     reactivePrepareUntilUs = checked(now + 600000);
@@ -558,12 +669,6 @@ namespace Rokas.Presentation
                 }
                 lastReactiveDeviceUs = now;
             }
-            if (reactiveMotionLocked && View.HunterAtHome)
-            {
-                reactiveMotionLocked = false;
-                View.SetReactivePresentationLocked(false);
-            }
-
             if (reactiveClock.IsPaused)
             {
                 if (reactivePrepareUntilUs == 0) reactivePrepareUntilUs = checked(now + 600000);
@@ -573,7 +678,7 @@ namespace Rokas.Presentation
                     return;
                 }
                 reactiveClock.Resume(now);
-                combat.Resume(reactiveClock.CurrentEpoch);
+                combat.Resume(Math.Max(checked(combat.InputEpoch + 1), reactiveClock.CurrentEpoch));
                 reactiveInput.ForceRearm();
                 reactivePrepareUntilUs = 0;
                 lastReactiveDeviceUs = now;
@@ -612,18 +717,11 @@ namespace Rokas.Presentation
 
             long combatNowUs = reactiveClock.CombatTimeAt(now);
             CombatStep step = combat.Advance(combatNowUs, combatNowUs - 40000);
-            View.PresentReactiveCombatStep(step);
-            foreach (CombatEvent combatEvent in step.Events)
-            {
-                if (combatEvent.Kind != CombatEventKind.ActionSettled ||
-                    combatEvent.ActorId != ReactiveDuelDefinitions.HunterId || View.HunterAtHome) continue;
-                reactiveMotionLocked = true;
-                View.SetReactivePresentationLocked(true);
-            }
+            PresentReactiveStep(step, combat, now);
             defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
             offenseContext = combat.CurrentPlayerSkillId == "heavy";
-            reactiveInput.SetContext(defenseContext || offenseContext ||
-                combat.Phase == ReactivePhase.CounterWindow);
+            reactiveInput.SetContext(!ReactivePresentationHeld && (defenseContext || offenseContext ||
+                combat.Phase == ReactivePhase.CounterWindow));
             reactiveInput.SetDefenseEnabled(defenseContext);
             reactiveInput.SetOffenseEnabled(offenseContext);
 
@@ -670,7 +768,7 @@ namespace Rokas.Presentation
             // A frame-gap/focus preparation pause also freezes the arena's visual clock.
             // The intentional approach/windup hold must keep moving until its gate opens.
             bool presentationCanAdvance = focused &&
-                (reactiveClock == null || !reactiveClock.IsPaused || reactiveApproachHold);
+                !reactiveExternalPause && (reactiveClock == null || !reactiveClock.IsPaused || ReactivePresentationHeld);
             View.Tick(dt, presentationCanAdvance);
             sound.Tick(dt, focused);
 

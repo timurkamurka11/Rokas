@@ -56,14 +56,16 @@ namespace Rokas.Tests
             yield return null;
             Press("EnterReactivePortal");
             yield return WaitFor(boot, () => boot.Session.ReactiveCombat != null &&
-                boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand, 8f);
+                boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand &&
+                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 18f);
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             Assert.That(combat.HunterAp, Is.EqualTo(4));
 
             // Basic earns the two AP needed for Heavy. The live encounter, clock and UI keep running.
             Press("ReactiveBasic");
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
-            yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand, 12f);
+            yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand &&
+                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 18f);
             Assert.That(combat.HunterAp, Is.GreaterThanOrEqualTo(5));
             Assert.That(combat.GetActorState("E1").Hp, Is.EqualTo(40));
             Assert.That(combat.GetActorState("E2").Hp, Is.EqualTo(60));

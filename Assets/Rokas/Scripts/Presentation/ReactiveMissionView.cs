@@ -75,6 +75,7 @@ namespace Rokas.Presentation
         private readonly Action retrySave;
         private readonly Action<string> chooseTarget;
         private readonly List<string> activeIds = new List<string>(4);
+        private readonly List<GameObject> hunterStatusElements = new List<GameObject>();
         private readonly string[] targetIds = new string[4];
         private readonly Button[] targetButtons = new Button[4];
         private readonly Text[] targetTexts = new Text[4];
@@ -106,6 +107,9 @@ namespace Rokas.Presentation
         private Text commandPreview;
         private Text hitFeedback;
         private Text waveBanner;
+        private Text announcement;
+        private float announcementRemaining;
+        private const float AnnouncementDuration = .85f;
         private Image hunterFlash;
         private Image enemyFlash;
         private Image timingBeacon;
@@ -151,8 +155,8 @@ namespace Rokas.Presentation
         private bool defenseAttemptAccepted;
         private float resolutionHold;
         private Vector2 feedbackOrigin;
-        private const float TimingX = 474f;
-        private const float TimingY = 637f;
+        private const float TimingX = 690f;
+        private const float TimingY = 668f;
         private const float TimingWidth = 540f;
         private const float HpTweenDuration = .30f;
 
@@ -161,6 +165,27 @@ namespace Rokas.Presentation
         public bool AnimatedActorsReady { get { return arena != null && arena.Ready; } }
         public bool HunterApproachComplete { get { return arena == null || arena.HunterApproachComplete; } }
         public bool HunterAtHome { get { return arena == null || arena.HunterAtHome; } }
+        public bool ArenaSettled => arena == null || arena.PresentationReady;
+        public bool AnnouncementActive => announcementRemaining > 0f;
+        public bool PresentationReady => ArenaSettled && !AnnouncementActive;
+        public float ReactiveCorpseElapsed(string id) => arena == null ? -1f : arena.CorpseElapsed(id);
+
+        public void ShowAnnouncement(string message)
+        {
+            if (announcement == null || string.IsNullOrEmpty(message)) return;
+            announcement.text = message;
+            announcementRemaining = AnnouncementDuration;
+            announcement.color = new Color(UiKit.Paper.r, UiKit.Paper.g, UiKit.Paper.b, 0f);
+            announcement.gameObject.SetActive(true);
+            commandPanel?.SetActive(false);
+            counterPanel?.SetActive(false);
+            for (int i = 0; i < targetButtons.Length; i++)
+                targetButtons[i]?.gameObject.SetActive(false);
+            RefreshTiming();
+        }
+
+        public void ShowTurnAnnouncement(bool playerTurn)
+        { ShowAnnouncement(playerTurn ? "ВАШ ХОД" : "ЁКАЙ АТАКУЕТ"); }
 
         public bool StartHunterApproach(string enemyId, bool heavy = false)
         {
@@ -186,9 +211,14 @@ namespace Rokas.Presentation
             presentationLocked = value;
             if (commandPanel != null && value) commandPanel.SetActive(false);
             if (selectionHint != null && value) selectionHint.gameObject.SetActive(false);
+            if (root != null) RefreshTiming();
             if (!value) return;
             for (int i = 0; i < targetButtons.Length; i++)
-                if (targetButtons[i] != null) targetButtons[i].interactable = false;
+                if (targetButtons[i] != null)
+                {
+                    targetButtons[i].interactable = false;
+                    targetButtons[i].gameObject.SetActive(false);
+                }
         }
 
         public ReactiveMissionView(UiKit ui, RokasAssets assets, Action basic, Action sealStrike,
@@ -214,6 +244,7 @@ namespace Rokas.Presentation
         {
             root = ui.Rect(parent, "ReactiveArena", 0, 100, 1920, 906);
             arena = new ReactiveCombatArena(ui, root);
+            arena.BeginEncounterIntro();
             Sprite enemyCardSprite = Resources.Load<Sprite>(
                 "Combat/ReactiveTurns/UI/HUD/Hp bar button ui of monscter");
             Sprite keikoProfileSprite = Resources.Load<Sprite>(
@@ -250,7 +281,7 @@ namespace Rokas.Presentation
             hunter = ui.Art(root, "ReactiveHunterKeiko", assets.vnKeikoCharacterSheet, 40, 749, 104, 124);
             hunter.uvRect = VnCharacterVisualCatalog.ResolveOrNeutral("keiko_neutral", "Keiko").BodyUv;
             ApplyArtwork(hunter, keikoProfileSprite, new Rect(170, 0, 700, 790), 1920, 819);
-            ui.Label(root, "ReactiveHunterName", "КЕЙКО  /  ОХОТНИК", 155, 746, 211, 29, 18, UiKit.Gold);
+            ui.Label(root, "ReactiveHunterName", "КЕЙКО", 155, 746, 211, 29, 18, UiKit.Gold);
             hunterHp = ui.Label(root, "ReactiveHunterHp", "HP —", 155, 778, 211, 30, 22, UiKit.Paper, true);
             ui.Box(root, "ReactiveHunterHpTrack", 155, 813, 198, 8, new Color(.21f, .12f, .15f));
             hunterHpFill = ui.Box(root, "ReactiveHunterHpFill", 155, 813, 198, 8,
@@ -265,29 +296,30 @@ namespace Rokas.Presentation
                 hpOwners[i] = null;
                 int slot = i;
                 targetSlotRects[i] = ui.Rect(root, "ReactiveEnemySlot" + (i + 1),
-                    TargetSlotX(3, i), 605, 205, 91);
+                    TargetSlotX(3, i), 320, 205, 43);
                 targetButtons[i] = ui.Button(targetSlotRects[i], "ReactiveTarget" + (i + 1), "",
-                    0, 0, 205, 91, () => SelectTarget(slot));
+                    0, 0, 205, 43, () => SelectTarget(slot));
                 targetHighlights[i] = ui.Box(targetButtons[i].transform, "SelectedTargetRule",
                     0, 0, 205, 3, UiKit.Gold);
                 targetTexts[i] = targetButtons[i].GetComponentInChildren<Text>();
-                targetTexts[i].rectTransform.anchoredPosition = new Vector2(68, -11);
-                targetTexts[i].rectTransform.sizeDelta = new Vector2(128, 26);
-                targetTexts[i].fontSize = 17;
+                targetTexts[i].rectTransform.anchoredPosition = new Vector2(8, -2);
+                targetTexts[i].rectTransform.sizeDelta = new Vector2(118, 24);
+                targetTexts[i].fontSize = 13;
                 targetTexts[i].color = UiKit.Gold;
                 RawImage cardTop = ui.Art(targetButtons[i].transform, "EnemyCardOrnament",
-                    null, 1, 0, 203, 11);
+                    null, 1, 0, 203, 3);
                 ApplyArtwork(cardTop, enemyCardSprite, new Rect(270, 295, 1240, 44), 1774, 887);
                 RawImage portrait = ui.Art(targetButtons[i].transform, "EnemyPortrait",
                     assets.enemy, 7, 10, 53, 57);
                 ApplyArtwork(portrait, enemyCardSprite, new Rect(318, 337, 284, 260), 1774, 887);
+                portrait.gameObject.SetActive(false);
                 targetHpTexts[i] = ui.Label(targetButtons[i].transform, "EnemyHp", "HP —",
-                    68, 34, 130, 25, 17, UiKit.Paper, true);
-                ui.Box(targetButtons[i].transform, "EnemyHpTrack", 68, 65, 127, 7,
+                    126, 2, 72, 24, 11, UiKit.Paper, true);
+                ui.Box(targetButtons[i].transform, "EnemyHpTrack", 39, 29, 127, 7,
                     new Color(.22f, .10f, .15f));
-                targetHpFills[i] = ui.Box(targetButtons[i].transform, "EnemyHpFill", 68, 65,
+                targetHpFills[i] = ui.Box(targetButtons[i].transform, "EnemyHpFill", 39, 29,
                     127, 7, new Color(.89f, .13f, .27f));
-                ui.Box(targetButtons[i].transform, "EnemyCardBottomRule", 7, 83,
+                ui.Box(targetButtons[i].transform, "EnemyCardBottomRule", 7, 41,
                     191, 2, UiKit.Gold);
                 targetButtons[i].gameObject.SetActive(false);
             }
@@ -299,7 +331,7 @@ namespace Rokas.Presentation
             attackWarningArt = AddArtwork(root, "ReactiveAttackWarningArt",
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI ATTACK SHOWS WHEN ENEMY ATTACKS",
                 474, 565, 180, 44, new Rect(17, 4, 2138, 690), 2172, 724);
-            telegraph = ui.Label(root, "ReactiveTelegraph", "", 666, 570, 348, 31, 20,
+            telegraph = ui.Label(root, "ReactiveTelegraph", "", TimingX, TimingY - 52, TimingWidth, 31, 19,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             detail = ui.Label(root, "ReactiveDetail", "", 473, 669, 541, 28, 17,
                 UiKit.Gold, false, TextAnchor.MiddleCenter);
@@ -330,8 +362,8 @@ namespace Rokas.Presentation
             ui.Box(timingBeacon.transform, "CursorTip", -4, -2, 14, 4, UiKit.Paper);
             defenseHint = ui.Label(root, "ReactiveDefenseHint",
                 "Q — УКЛОНЕНИЕ     E — БЛОК",
-                474, 675, 540, 25, 15, UiKit.Paper, false, TextAnchor.MiddleCenter);
-            offenseTiming = ui.Rect(root, "ReactiveOffenseTiming", 540, 666, 440, 55);
+                TimingX - 20, TimingY + 35, TimingWidth + 40, 25, 14, UiKit.Paper, false, TextAnchor.MiddleCenter);
+            offenseTiming = ui.Rect(root, "ReactiveOffenseTiming", 740, 716, 440, 55);
             ui.Box(offenseTiming, "OffenseTrack", 0, 33, 440, 6,
                 new Color(.16f, .14f, .13f, .9f));
             offenseSuccessWindow = ui.Box(offenseTiming, "OffenseSuccessWindow", 0, 29, 0, 14,
@@ -343,6 +375,13 @@ namespace Rokas.Presentation
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             waveBanner = ui.Label(root, "ReactiveWaveBanner", "", 534, 324, 852, 135, 51,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
+            announcement = ui.Label(root, "ReactiveAnnouncement", "", 480, -56, 960, 68, 32,
+                UiKit.Paper, true, TextAnchor.MiddleCenter);
+            var announcementOutline = announcement.gameObject.AddComponent<Outline>();
+            announcementOutline.effectColor = new Color(.005f, .008f, .012f, .8f);
+            announcementOutline.effectDistance = new Vector2(1.5f, -1.5f);
+            announcement.gameObject.SetActive(false);
+            announcementRemaining = 0f;
 
             commandPanel = ui.Rect(root, "ReactiveCommands", 390, 738, 1485, 144).gameObject;
             ui.Box(commandPanel.transform, "CommandShade", 0, 0, 1485, 144, new Color(.018f, .028f, .049f, .95f));
@@ -383,22 +422,27 @@ namespace Rokas.Presentation
             commandPreview = ui.Label(commandPanel.transform, "ReactiveCommandPreview", "",
                 18, 127, 1450, 17, 13, UiKit.Muted, false, TextAnchor.MiddleCenter);
 
-            defensePanel = ui.Rect(root, "ReactiveDefense", 424, 735, 636, 143).gameObject;
-            ui.Box(defensePanel.transform, "DefenseShade", 0, 0, 636, 143,
-                new Color(.014f, .026f, .051f, .92f));
+            defensePanel = ui.Rect(root, "ReactiveDefense", 642, 730, 636, 114).gameObject;
+            ui.Box(defensePanel.transform, "DefenseShade", 0, 0, 636, 114,
+                new Color(.014f, .026f, .051f, .66f));
             ui.Box(defensePanel.transform, "DefenseRule", 0, 0, 636, 2, UiKit.Jade);
             ui.Label(defensePanel.transform, "DefenseTitle", "Q — УКЛОНЕНИЕ     E — БЛОК", 14, 5, 608, 31, 18,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             Button dodgeButton = ui.Button(defensePanel.transform, "ReactiveDodge", "Q — Уклонение",
-                24, 42, 276, 81, dodge, true);
+                24, 14, 276, 81, dodge, true);
             AttachButtonArtwork(dodgeButton,
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI DODGE BUTTON",
                 new Rect(65, 343, 1325, 443), 1448, 1086);
             Button blockButton = ui.Button(defensePanel.transform, "ReactiveParry", "E — Блок",
-                336, 42, 276, 81, parry, true);
+                336, 14, 276, 81, parry, true);
             AttachButtonArtwork(blockButton,
                 "Combat/ReactiveTurns/UI/DefenceReaction/UI BLOCK BUTTON",
                 new Rect(56, 321, 1340, 446), 1448, 1086);
+            ui.Label(dodgeButton.transform, "DefenseKeyQ", "Q", 12, 6, 28, 27, 18,
+                UiKit.Paper, true, TextAnchor.MiddleCenter);
+            ui.Label(blockButton.transform, "DefenseKeyE", "E", 12, 6, 28, 27, 18,
+                UiKit.Paper, true, TextAnchor.MiddleCenter);
+            defensePanel.transform.Find("DefenseTitle").gameObject.SetActive(false);
 
             counterPanel = ui.Rect(root, "ReactiveCounter", 622, 712, 680, 170).gameObject;
             ui.Box(counterPanel.transform, "CounterShade", 0, 0, 680, 170,
@@ -438,6 +482,27 @@ namespace Rokas.Presentation
             hunterHpInitialized = false;
             timingActionId = timingHitId = resolvedActionId = resolvedHitId = null;
             cursorFreezeTime = resolutionHold = 0f;
+            foreach (string clutter in new[] { "ReactiveTopShade", "ReactiveLowerShade", "ReactiveEnemyGround",
+                "ReactiveForecastPanel", "ReactiveForecastRule", "ReactiveForecastTitle", "ReactiveForecast",
+                "ReactiveWavePanel", "ReactiveWaveRule", "ReactiveWave", "ReactiveEnemyFacelessCommuter",
+                "ReactiveTargetName", "ReactiveTargetHp", "ReactiveTargetSeal", "ReactiveSelectionHint" })
+                root.Find(clutter).gameObject.SetActive(false);
+            commandPanel.transform.Find("CommandShade").gameObject.SetActive(false);
+            commandPanel.transform.Find("CommandTitle").gameObject.SetActive(false);
+            commandPreview.gameObject.SetActive(false);
+            hunterStatusElements.Clear();
+            foreach (string statusName in new[] { "ReactiveHunterPanel", "ReactiveHunterRule", "ReactiveHunterBottomRule",
+                "ReactiveHunterPortraitFrame", "ReactiveHunterKeiko", "ReactiveHunterName", "ReactiveHunterHp",
+                "ReactiveHunterHpTrack", "ReactiveHunterHpFill", "ReactiveAp" })
+                hunterStatusElements.Add(root.Find(statusName).gameObject);
+            for (int i = 0; i < hunterApPips.Length; i++) hunterStatusElements.Add(hunterApPips[i].gameObject);
+            SetHunterStatusVisible(false);
+        }
+
+        private void SetHunterStatusVisible(bool visible)
+        {
+            for (int i = 0; i < hunterStatusElements.Count; i++)
+                if (hunterStatusElements[i].activeSelf != visible) hunterStatusElements[i].SetActive(visible);
         }
 
         private RawImage AddArtwork(Transform parent, string objectName, string resourcePath,
@@ -508,7 +573,7 @@ namespace Rokas.Presentation
 
         private void SelectTarget(int slot)
         {
-            if (presentationLocked || slot < 0 || slot >= targetIds.Length ||
+            if (presentationLocked || !PresentationReady || slot < 0 || slot >= targetIds.Length ||
                 string.IsNullOrEmpty(targetIds[slot])) return;
             chooseTarget?.Invoke(targetIds[slot]);
         }
@@ -571,7 +636,7 @@ namespace Rokas.Presentation
 
         public void PresentDefenseAttempt(DefenseAttempt attempt, long pressUs)
         {
-            if (root == null || attempt == null || !latestDisplay.IncomingHit) return;
+            if (root == null || presentationLocked || attempt == null || !latestDisplay.IncomingHit) return;
             if (defenseAttemptAccepted && !attempt.Accepted) return;
             long duration = latestDisplay.TimingEndUs - latestDisplay.TimingStartUs;
             frozenProgress = duration > 0 ? Mathf.Clamp01((float)(pressUs - latestDisplay.TimingStartUs) / duration) : 1f;
@@ -628,14 +693,13 @@ namespace Rokas.Presentation
                         "    •    " + display.DefeatedCount + " / 8";
             forecast.text = string.IsNullOrEmpty(display.Forecast) ? "ОЧЕРЁДНОСТЬ  —" : display.Forecast;
             bool reacting = display.Phase == ReactiveDisplayPhase.Reacting;
-            bool warningAvailable = reacting && display.IncomingHit && attackWarningArt.texture != null;
-            attackWarningArt.gameObject.SetActive(warningAvailable);
-            telegraph.text = display.Telegraph ?? string.Empty;
+            attackWarningArt.gameObject.SetActive(false);
+            telegraph.text = reacting ? "ЗАЩИТИСЬ" : display.Phase == ReactiveDisplayPhase.OffenseTiming
+                ? "ТЯЖЁЛЫЙ УДАР" : string.Empty;
             detail.text = display.Phase == ReactiveDisplayPhase.Command || reacting ||
                 display.Phase == ReactiveDisplayPhase.OffenseTiming
                 ? string.Empty : display.Detail ?? string.Empty;
-            selectionHint.gameObject.SetActive(display.Phase == ReactiveDisplayPhase.Command &&
-                !presentationLocked);
+            selectionHint.gameObject.SetActive(false);
             commandPreview.text = display.CommandPreview ?? string.Empty;
 
             activeIds.Clear();
@@ -646,6 +710,8 @@ namespace Rokas.Presentation
                         activeIds.Add(displays[i].Id);
             selectedTargetId = display.SelectedTargetId;
             arena?.SetEnemies(activeIds, display.ActingId, display.WaveEnemyIds);
+            bool entranceComplete = arena == null || arena.IntroComplete;
+            SetHunterStatusVisible(entranceComplete);
 
             ReactiveEnemyDisplay selected = null;
             if (displays != null)
@@ -688,16 +754,17 @@ namespace Rokas.Presentation
                         targetHpTween[slot] = 0f;
                     }
                     targetSlotRects[slot].anchoredPosition = new Vector2(
-                        TargetSlotX(waveSlotCount, slot), -605f);
+                        TargetSlotX(waveSlotCount, slot), -320f);
                 }
             }
             for (int i = 0; i < targetButtons.Length; i++)
             {
-                bool visible = targetIds[i] != null;
+                bool visible = targetIds[i] != null && entranceComplete &&
+                    display.Phase == ReactiveDisplayPhase.Command && !presentationLocked && PresentationReady;
                 if (targetButtons[i].gameObject.activeSelf != visible)
                     targetButtons[i].gameObject.SetActive(visible);
                 if (visible) targetButtons[i].interactable =
-                    display.Phase == ReactiveDisplayPhase.Command && !presentationLocked;
+                    display.Phase == ReactiveDisplayPhase.Command && !presentationLocked && PresentationReady;
             }
             UpdateTargetHighlights();
 
@@ -711,12 +778,10 @@ namespace Rokas.Presentation
                 defenseAttemptAccepted = false;
             }
             RefreshTiming();
-            commandPanel.SetActive(display.Phase == ReactiveDisplayPhase.Command && !presentationLocked);
-            counterPanel.SetActive(display.Phase == ReactiveDisplayPhase.CounterOffer);
+            commandPanel.SetActive(display.Phase == ReactiveDisplayPhase.Command && !presentationLocked && PresentationReady);
+            counterPanel.SetActive(display.Phase == ReactiveDisplayPhase.CounterOffer && !presentationLocked && !AnnouncementActive);
             saveBlockedPanel.SetActive(display.Phase == ReactiveDisplayPhase.SaveBlocked);
-            waveBanner.gameObject.SetActive(display.Phase == ReactiveDisplayPhase.WaveTransition);
-            waveBanner.text = display.Phase == ReactiveDisplayPhase.WaveTransition
-                ? "ВОЛНА " + display.Wave + " ЗАВЕРШЕНА" : string.Empty;
+            waveBanner.gameObject.SetActive(false);
             sealStrikeButton.interactable = display.CanSealStrike;
             sweepButton.interactable = display.CanSweep;
             heavyButton.interactable = display.CanHeavy;
@@ -727,7 +792,7 @@ namespace Rokas.Presentation
         {
             bool reacting = latestDisplay.Phase == ReactiveDisplayPhase.Reacting && latestDisplay.IncomingHit;
             bool resolved = latestDisplay.ActionId == resolvedActionId && latestDisplay.HitId == resolvedHitId;
-            bool visible = reacting && !resolved && resolutionHold <= 0f;
+            bool visible = reacting && !presentationLocked && !AnnouncementActive && !resolved && resolutionHold <= 0f;
             float progress = cursorFreezeTime > 0f || defenseAttemptAccepted
                 ? frozenProgress : Mathf.Clamp01(latestDisplay.ContactProgress);
             contactFill.rectTransform.sizeDelta = new Vector2(TimingWidth * progress, 23f);
@@ -746,7 +811,7 @@ namespace Rokas.Presentation
                 TimingX + TimingWidth * impact - 7.5f, -TimingY + 7f);
             contactTrack.gameObject.SetActive(visible && contactTrack.texture != null);
             contactFill.gameObject.SetActive(visible && contactFill.texture != null);
-            timingPromptArt.gameObject.SetActive(visible && timingPromptArt.texture != null);
+            timingPromptArt.gameObject.SetActive(false);
             timingPerfectArt.gameObject.SetActive(visible && timingPerfectArt.texture != null);
             // The imported ornaments do not define timing windows; Core's authored intervals do.
             timingNearArt.gameObject.SetActive(false);
@@ -757,11 +822,11 @@ namespace Rokas.Presentation
             perfectWindow.gameObject.SetActive(visible && allowsBlock);
             timingBeacon.gameObject.SetActive(visible);
             defenseHint.gameObject.SetActive(visible);
-            defenseHint.text = "Q — УКЛОНЕНИЕ     E — БЛОК     ЗОЛОТО — ИДЕАЛЬНО";
+            defenseHint.text = "ГОЛУБОЕ — УКЛОНЕНИЕ    ·    ЗОЛОТО — ТОЧНЫЙ БЛОК";
             defensePanel.SetActive(visible && !defenseAttemptAccepted);
-            attackWarningArt.gameObject.SetActive(visible && attackWarningArt.texture != null);
-            telegraph.gameObject.SetActive(visible || latestDisplay.Phase == ReactiveDisplayPhase.OffenseTiming);
+            attackWarningArt.gameObject.SetActive(false);
             bool offenseVisible = latestDisplay.Phase == ReactiveDisplayPhase.OffenseTiming && !presentationLocked;
+            telegraph.gameObject.SetActive(visible || offenseVisible);
             offenseTiming.gameObject.SetActive(offenseVisible);
             offenseCursor.rectTransform.anchoredPosition = new Vector2(440f *
                 Mathf.Clamp01(latestDisplay.ContactProgress) - 2f, -26f);
@@ -790,6 +855,14 @@ namespace Rokas.Presentation
         {
             if (root == null) return;
             arena?.Tick(seconds);
+            if (announcementRemaining > 0f)
+            {
+                announcementRemaining = Mathf.Max(0f, announcementRemaining - seconds);
+                float elapsed = AnnouncementDuration - announcementRemaining;
+                float fade = Mathf.Min(Mathf.Clamp01(elapsed / .14f), Mathf.Clamp01(announcementRemaining / .22f));
+                announcement.color = new Color(UiKit.Paper.r, UiKit.Paper.g, UiKit.Paper.b, fade);
+                if (announcementRemaining <= 0f) announcement.gameObject.SetActive(false);
+            }
             cursorFreezeTime = Mathf.Max(0f, cursorFreezeTime - seconds);
             resolutionHold = Mathf.Max(0f, resolutionHold - seconds);
             RefreshTiming();
@@ -823,6 +896,8 @@ namespace Rokas.Presentation
             hunter = enemy = null;
             hunterHp = ap = targetName = targetHp = targetSeal = wave = forecast = telegraph = detail =
                 selectionHint = commandPreview = hitFeedback = waveBanner = null;
+            announcement = null;
+            announcementRemaining = 0f;
             hunterHpFill = timingBeacon = hunterFlash = enemyFlash = null;
             dodgeWindow = blockWindow = perfectWindow = offenseCursor = offenseSuccessWindow = null;
             offenseTiming = null;
@@ -839,6 +914,7 @@ namespace Rokas.Presentation
             cursorFreezeTime = resolutionHold = 0f;
             defenseAttemptAccepted = hunterHpInitialized = false;
             activeIds.Clear();
+            hunterStatusElements.Clear();
             for (int i = 0; i < targetIds.Length; i++)
             {
                 targetIds[i] = null;

@@ -71,6 +71,7 @@ namespace Rokas.Tests
             yield return null;
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+            yield return WaitForFirstCommand(boot);
             AssertWave(boot, 0, new[] { "E1", "E2", "E3" }, 3);
             string firstInstance = boot.Session.ReactiveCombat.WaveInstanceId;
 
@@ -91,7 +92,7 @@ namespace Rokas.Tests
             yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.WaveTransition));
             Assert.That(boot.Session.ReactiveCombat.ActiveEnemyIds, Is.Empty);
-            yield return WaitForWave(boot, 1, 9f);
+            yield return WaitForWave(boot, 1, 20f);
             AssertWave(boot, 1, new[] { "E4", "E5", "E6" }, 3);
             Assert.That(boot.Session.ReactiveCombat.WaveInstanceId, Is.Not.EqualTo(firstInstance));
             Assert.That(boot.Session.ReactiveCombat.SelectedTargetId, Is.EqualTo("E4"));
@@ -110,7 +111,7 @@ namespace Rokas.Tests
             yield return DriveUntil(boot, ReactivePhase.WaveTransition, 45f);
             AssertTransition(boot, 1, 6, 7);
             string secondInstance = boot.Session.ReactiveCombat.WaveInstanceId;
-            yield return WaitForWave(boot, 2, 9f);
+            yield return WaitForWave(boot, 2, 20f);
             yield return WaitForRetiredModels(3, 5f);
             AssertWave(boot, 2, new[] { "E7", "E8" }, 2);
             Assert.That(boot.Session.ReactiveCombat.WaveInstanceId, Is.Not.EqualTo(secondInstance));
@@ -180,9 +181,9 @@ namespace Rokas.Tests
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             Assert.That(combat.CurrentWaveIndex, Is.EqualTo(completedWave));
             Assert.That(combat.ActiveEnemyIds, Is.Empty);
-            Assert.That(Find("ReactiveWaveBanner").activeInHierarchy, Is.True);
-            Assert.That(Find("ReactiveWaveBanner").GetComponent<Text>().text,
-                Does.Contain("ВОЛНА " + (completedWave + 1)));
+            Assert.That(Find("ReactiveWaveBanner").activeInHierarchy, Is.False,
+                "Wave notices use the transient contextual announcement, not a persistent banner.");
+            Assert.That(Find("ReactiveBasic").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveWave").GetComponent<Text>().text,
                 Does.Contain(deadCount + " / 8"));
             Assert.That(combat.Queue.GetEntry("E" + nextReserveId).Active, Is.False);
@@ -284,10 +285,11 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForFirstCommand(RokasBootstrap boot)
         {
-            float deadline = Time.realtimeSinceStartup + 8f;
+            float deadline = Time.realtimeSinceStartup + 18f;
             while ((boot.Session.State.phase != RunPhase.Combat || boot.View.Paused ||
                     boot.Session.ReactiveCombat == null ||
-                    boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) &&
+                    boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand ||
+                    boot.ReactivePresentationHeld || !boot.View.ReactivePresentationReady) &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
@@ -305,7 +307,8 @@ namespace Rokas.Tests
         private static IEnumerator WaitForWave(RokasBootstrap boot, int waveIndex, float timeout)
         {
             float deadline = Time.realtimeSinceStartup + timeout;
-            while (boot.Session.ReactiveCombat.CurrentWaveIndex != waveIndex &&
+            while ((boot.Session.ReactiveCombat.CurrentWaveIndex != waveIndex ||
+                    boot.ReactivePresentationHeld || !boot.View.ReactivePresentationReady) &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.ReactiveCombat.CurrentWaveIndex, Is.EqualTo(waveIndex));

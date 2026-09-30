@@ -48,7 +48,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.LeaveHome(), Is.True);
             yield return null;
             Assert.That(boot.Session.EnterReactiveDuelTestEncounter(), Is.True);
-            yield return new WaitForSecondsRealtime(1.9f);
+            yield return WaitForCommandReady("ReactiveBasic", 12f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
             Assert.That(boot.View.Paused, Is.False);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
@@ -85,7 +85,7 @@ namespace Rokas.Tests
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(47));
             Assert.That(combat.EnemyBroken, Is.False);
-            yield return WaitForCommandReady("ReactiveBasic", 2f);
+            yield return WaitForCommandReady("ReactiveBasic", 4f);
             Press("ReactiveBasic");
             yield return WaitForPhase(boot, ReactivePhase.EnemyExecution, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(27));

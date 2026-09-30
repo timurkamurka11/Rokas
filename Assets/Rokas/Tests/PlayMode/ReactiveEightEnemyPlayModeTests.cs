@@ -96,6 +96,7 @@ namespace Rokas.Tests
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"));
             Assert.That(combat.ActiveEnemyIds, Is.EqualTo(new[] { "E1", "E2", "E3" }));
             Assert.That(boot.View.SelectedReactiveTargetId, Is.EqualTo("E2"));
+            yield return WaitForCombat(boot);
             Press("ReactiveBasic");
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
             boot.SelectReactiveTarget("E3");
@@ -112,10 +113,11 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForCombat(RokasBootstrap boot)
         {
-            float deadline = Time.realtimeSinceStartup + 8f;
+            float deadline = Time.realtimeSinceStartup + 20f;
             while ((boot.Session.State.phase != RunPhase.Combat || boot.View.Paused ||
                     boot.Session.ReactiveCombat == null ||
-                    boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) &&
+                    boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand ||
+                    boot.ReactivePresentationHeld || !boot.View.ReactivePresentationReady) &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
