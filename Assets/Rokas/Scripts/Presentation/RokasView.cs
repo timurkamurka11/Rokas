@@ -321,7 +321,7 @@ namespace Rokas.Presentation
                 ? Resources.Load<Texture2D>("CombatB/AbyssArenaBackground") : null;
             background.texture = reactiveBackground != null ? reactiveBackground :
                 otherSide ? assets.subway : phase == RunPhase.Portal ? assets.portal : assets.home;
-            audio.SetLocation(otherSide || phase == RunPhase.Portal, phase == RunPhase.Combat);
+            audio.SetLocation(otherSide || phase == RunPhase.Portal, phase == RunPhase.Combat, reactiveBattle);
             effects.SetLocation(!otherSide && phase != RunPhase.Portal, phase == RunPhase.Portal);
             if (otherSide || phase == RunPhase.Portal) mission.Build(scene);
             else home.Build(scene);

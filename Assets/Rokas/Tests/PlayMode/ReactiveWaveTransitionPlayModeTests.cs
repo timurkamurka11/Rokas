@@ -158,10 +158,13 @@ namespace Rokas.Tests
             Assert.That(combat.SelectedTargetId, Is.EqualTo(expectedIds[0]));
             Assert.That(Find("ReactiveWave").GetComponent<Text>().text,
                 Does.Contain((waveIndex + 1) + " / 3"));
+            bool commandReady = combat.Phase == ReactivePhase.PlayerCommand &&
+                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld;
             for (int i = 0; i < 4; i++)
             {
                 GameObject target = Find("ReactiveTarget" + (i + 1));
-                Assert.That(target.activeInHierarchy, Is.EqualTo(i < expectedIds.Length));
+                Assert.That(target.activeInHierarchy, Is.EqualTo(i < expectedIds.Length && commandReady),
+                    "Target controls appear only in a settled player command phase; a new wave may begin with an enemy turn.");
                 if (i < expectedIds.Length)
                     Assert.That(target.GetComponentInChildren<Text>().text,
                         Does.Contain("ЁКАЙ " + expectedIds[i].Substring(1)));
@@ -308,12 +311,18 @@ namespace Rokas.Tests
         {
             float deadline = Time.realtimeSinceStartup + timeout;
             while ((boot.Session.ReactiveCombat.CurrentWaveIndex != waveIndex ||
-                    boot.ReactivePresentationHeld || !boot.View.ReactivePresentationReady) &&
+                    boot.View.AnimatedReactiveEnemyCount != boot.Session.ReactiveCombat.ActiveEnemyIds.Count ||
+                    GameObject.Find("ReactiveEnemyPortal") != null || !boot.View.HunterAtHome) &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.ReactiveCombat.CurrentWaveIndex, Is.EqualTo(waveIndex));
             Assert.That(boot.Session.ReactiveCombat.ActiveEnemyIds.Count,
                 Is.GreaterThan(0));
+            Assert.That(boot.View.AnimatedReactiveEnemyCount,
+                Is.EqualTo(boot.Session.ReactiveCombat.ActiveEnemyIds.Count));
+            Assert.That(GameObject.Find("ReactiveEnemyPortal"), Is.Null,
+                "All sequential entrances must complete and close their portals before checking the live wave.");
+            Assert.That(boot.View.HunterAtHome, Is.True);
         }
 
         private static IEnumerator WaitForRetiredModels(int expectedTotal, float timeout)

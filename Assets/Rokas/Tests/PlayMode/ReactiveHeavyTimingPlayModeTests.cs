@@ -85,21 +85,23 @@ namespace Rokas.Tests
                 "The reaction bar belongs only to incoming enemy attacks.");
             Assert.That(Find("ReactiveOffenseTiming").activeInHierarchy, Is.False,
                 "Heavy timing starts after Keiko reaches the target.");
+            long start = combat.CurrentActionStartUs;
+            // Selection/approach is the real early-input phase. Waiting for the
+            // timing HUD's first rendered frame can already enter its window.
+            Assert.That(combat.CurrentCombatUs - start, Is.LessThan(100000),
+                "The first keyboard press must precede the Heavy timing window.");
+            PressSpace();
+            yield return null;
+            Assert.That(combat.CurrentOffenseTimingAccepted, Is.False,
+                "Early device input before the strike-range timing phase is rejected.");
+            ReleaseSpace();
+            yield return null;
             yield return WaitFor(boot, () => Find("ReactiveOffenseTiming").activeInHierarchy, 4f);
             Assert.That(Find("ReactiveOffenseTiming").activeInHierarchy, Is.True);
             Assert.That(Find("ReactiveContactTrack").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveDefense").activeInHierarchy, Is.False);
             Assert.That(Find("OffenseHint").GetComponent<Text>().text, Does.Contain("SPACE"));
             Assert.That(Find("ReactiveTelegraph").GetComponent<Text>().text, Does.Contain("ТЯЖЁЛЫЙ"));
-
-            long start = combat.CurrentActionStartUs;
-            Assert.That(combat.CurrentCombatUs - start, Is.LessThan(100000),
-                "The first keyboard press must precede the Heavy timing window.");
-            PressSpace();
-            yield return null;
-            Assert.That(combat.CurrentOffenseTimingAccepted, Is.False, "Early input is rejected.");
-            ReleaseSpace();
-            yield return null;
 
             long secondPressAt = timed ? 150000 : 260000;
             yield return WaitFor(boot, () => combat.CurrentCombatUs - start >= secondPressAt, 2f);

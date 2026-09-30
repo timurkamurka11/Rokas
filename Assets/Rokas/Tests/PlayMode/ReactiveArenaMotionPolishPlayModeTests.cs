@@ -11,6 +11,72 @@ namespace Rokas.Tests.PlayMode
     public sealed class ReactiveArenaMotionPolishPlayModeTests
     {
         [UnityTest]
+        public IEnumerator CancelledPendingSuffixKeepsItsSampleThenRecoversAndSettlesWithoutFakeContact()
+        {
+            var parent = new GameObject("CancelledPendingContactFixture");
+            try
+            {
+                var actor = ReactiveCombatActorVisual.Spawn(CombatActorKind.Yokai, parent.transform);
+                actor.PlayAttack(); actor.AwaitAttackContact(false);
+                actor.TickPresentation(2f);
+                float heldSample = actor.CurrentPoseSeconds;
+                Assert.That(actor.AwaitingAttackContact, Is.True);
+                actor.CancelPendingAttackContact();
+                Assert.That(actor.AwaitingAttackContact, Is.False);
+                Assert.That(actor.CurrentPoseSeconds, Is.EqualTo(heldSample).Within(.0001f),
+                    "Cancellation releases the sampled pose without snapping or dispatching contact.");
+                Assert.That(actor.HitStopRemaining, Is.Zero);
+                Assert.That(actor.ActionRecoveryComplete, Is.False,
+                    "Cancelled contact still owns its authored follow-through and recovery tail.");
+                actor.TickPresentation(.1f);
+                Assert.That(actor.CurrentPoseSeconds, Is.GreaterThan(heldSample));
+                for (int tick = 0; !actor.IdleSettled && tick < 100; tick++) actor.TickPresentation(.02f);
+                Assert.That(actor.ActionRecoveryComplete, Is.True);
+                Assert.That(actor.IdleSettled, Is.True);
+                yield return null;
+            }
+            finally { Object.Destroy(parent); }
+        }
+
+        [UnityTest]
+        public IEnumerator ResizingExistingRigsAndWaveSlotsPreservesDistanceBasedFootCadence()
+        {
+            var parent = new GameObject("ScaledCadenceFixture");
+            try
+            {
+                foreach (CombatActorKind kind in new[] { CombatActorKind.Keiko, CombatActorKind.Yokai })
+                {
+                    ReactiveCombatActorVisual actor = ReactiveCombatActorVisual.Spawn(kind, parent.transform);
+                    actor.PlayApproach(5f);
+                    actor.SetLocomotionSpeed(2f);
+                    actor.TickPresentation(.1f);
+                    float referenceTime = actor.CurrentPoseSeconds;
+                    Assert.That(referenceTime, Is.GreaterThan(0f));
+                    actor.PlayIdle();
+                    actor.ModelRoot.localScale *= 2f;
+                    actor.PlayApproach(5f);
+                    actor.SetLocomotionSpeed(2f);
+                    actor.TickPresentation(.1f);
+                    Assert.That(actor.CurrentPoseSeconds, Is.EqualTo(referenceTime / 2f).Within(.0001f),
+                        "Doubling the same rig doubles its physical stride at the same travel speed.");
+                    actor.PlayIdle();
+                    actor.transform.localScale = Vector3.one * .83f;
+                    actor.PlayApproach(5f);
+                    actor.SetLocomotionSpeed(2f);
+                    actor.TickPresentation(.1f);
+                    Assert.That(actor.CurrentPoseSeconds, Is.EqualTo(referenceTime / (2f * .83f)).Within(.0001f),
+                        "Wave slot scale must also affect cadence; it must not use only model-local scale.");
+                    float stoppedTime = actor.CurrentPoseSeconds;
+                    actor.SetLocomotionSpeed(0f);
+                    actor.TickPresentation(.1f);
+                    Assert.That(actor.CurrentPoseSeconds, Is.EqualTo(stoppedTime).Within(.0001f));
+                }
+                yield return null;
+            }
+            finally { Object.Destroy(parent); }
+        }
+
+        [UnityTest]
         public IEnumerator FiveNormalFiveHeavyAndTenAlternatingAttacksStaySettledWithoutDrift()
         {
             var root = new GameObject("ReactiveMotionPolishFixture", typeof(RectTransform));
@@ -41,7 +107,7 @@ namespace Rokas.Tests.PlayMode
                     arena.SetEnemies(new[] { "E1", "E2" }, null, new[] { "E1", "E2" });
                     Assert.That(hunter.transform.localPosition, Is.EqualTo(approaching));
                     int ticks = 0;
-                    while (!arena.HunterApproachComplete && ticks++ < 100) arena.Tick(.025f);
+                    while (!arena.HunterApproachComplete && ticks++ < 160) arena.Tick(.025f);
                     Assert.That(arena.HunterApproachComplete, Is.True);
                     string alias = heavy ? "Heavy" : "Attack";
                     Assert.That(hunter.CurrentPose, Is.EqualTo(alias));
@@ -96,6 +162,9 @@ namespace Rokas.Tests.PlayMode
                     arena.Present(new CombatEvent(CombatEventKind.AttackStarted,
                         actorId: enemy, actionId: "long-enemy-" + action));
                     for (int tick = 0; !arena.EnemyApproachComplete(enemy) && tick < 100; tick++) arena.Tick(.02f);
+                    arena.Tick(.35f);
+                    arena.Present(new CombatEvent(CombatEventKind.HitResolved, actorId: enemy,
+                        targetId: ReactiveDuelDefinitions.HunterId, actionId: "long-enemy-" + action, amount: 8));
                     arena.Present(new CombatEvent(CombatEventKind.ActionSettled,
                         actorId: enemy, actionId: "long-enemy-" + action));
                     for (int tick = 0; !arena.PresentationReady && tick < 300; tick++) arena.Tick(.02f);
@@ -124,6 +193,11 @@ namespace Rokas.Tests.PlayMode
                 Vector3 home = arena.EnemyHome("E1");
                 Vector3 other2 = arena.EnemyPosition("E2");
                 Vector3 other3 = arena.EnemyPosition("E3");
+                GameObject world = GameObject.Find("ReactiveCombatWorld");
+                ReactiveCombatActorVisual attacker = null;
+                foreach (var actor in world.GetComponentsInChildren<ReactiveCombatActorVisual>())
+                    if (actor.name == "CombatActor_Yokai" && actor.transform.localPosition == home) attacker = actor;
+                Assert.That(attacker, Is.Not.Null);
                 var sequence = new AttackSequenceDefinition("polish-sequence", 3000000,
                     new[] { new HitDefinition("hit-1", 1000000, 10, DefenseResponseMask.Dodge | DefenseResponseMask.Parry),
                         new HitDefinition("hit-2", 1650000, 10, DefenseResponseMask.Dodge | DefenseResponseMask.Parry) });
@@ -138,19 +212,31 @@ namespace Rokas.Tests.PlayMode
                 Assert.That(arena.EnemyApproachComplete("E1"), Is.True);
                 Assert.That(arena.EnemyPosition("E2"), Is.EqualTo(other2));
                 Assert.That(arena.EnemyPosition("E3"), Is.EqualTo(other3));
-                arena.Tick(1f);
+                // Resolve at the Core watermark, then allow the next authored
+                // strike to begin after the first contact's hit-stop ends.
+                for (int tick = 0; tick < 29; tick++) arena.Tick(.01f);
                 Assert.That(arena.EnemyApproachComplete("E1"), Is.True,
                     "A multi-hit attacker stays at the defender until its whole action settles.");
+                Assert.That(attacker.AwaitingAttackContact, Is.True);
+                arena.Present(new CombatEvent(CombatEventKind.HitResolved, actorId: "E1",
+                    targetId: ReactiveDuelDefinitions.HunterId, actionId: "enemy-polish", hitId: "hit-1", amount: 8));
+                Assert.That(attacker.AwaitingAttackContact, Is.False);
+                for (int tick = 0; tick < 65; tick++) arena.Tick(.01f);
+                Assert.That(attacker.AwaitingAttackContact, Is.True,
+                    "The second hit must have its own pending swing before its resolution arrives.");
+                arena.Present(new CombatEvent(CombatEventKind.HitResolved, actorId: "E1",
+                    targetId: ReactiveDuelDefinitions.HunterId, actionId: "enemy-polish", hitId: "hit-2", amount: 8));
                 arena.Present(new CombatEvent(CombatEventKind.ActionSettled,
                     actorId: "E1", actionId: "enemy-polish"));
                 arena.Tick(.1f);
                 Assert.That(arena.EnemyAtHome("E1"), Is.False);
                 Assert.That(arena.StartHunterApproach("E1"), Is.False,
                     "Player presentation cannot begin before the enemy completes its return and settle.");
-                while (!arena.PresentationReady) arena.Tick(.025f);
+                for (int tick = 0; !arena.PresentationReady && tick < 200; tick++) arena.Tick(.025f);
+                Assert.That(arena.PresentationReady, Is.True,
+                    "Both resolved contacts must release their holds and permit return completion.");
                 Assert.That(arena.EnemyAtHome("E1"), Is.True);
                 Assert.That(arena.EnemyPosition("E1"), Is.EqualTo(home));
-                GameObject world = GameObject.Find("ReactiveCombatWorld");
                 ReactiveCombatActorVisual corpse = null;
                 foreach (var actor in world.GetComponentsInChildren<ReactiveCombatActorVisual>())
                     if (actor.name == "CombatActor_Yokai" && actor.transform.localPosition == home) corpse = actor;

@@ -1,0 +1,10 @@
+FBX version: 7700
+
+FBX export starting... 'D:\\Rokas\\reactiveturns-b2-staging\\polish-ii-animation\\scaled-dodge-staging\\Two handed dodge backstep.fbx'
+export finished in 0.1603 sec.
+Info: Saved as "Two handed dodge backstep.blend"
+BAKED Two handed dodge backstep 0.8 GRIP ERROR 1.818250807924088e-07 TIP PEAK 1.908036917643964
+DODGE METRICS {'requestedStageHeight': 4.0, 'sourceStandingHeight': 0.9435441207315307, 'scaleRatio': 3.6006691455841064, 'forwardYaw': 65.0, 'backstepWorldDistance': 0.78, 'runtimeScaleSource': 'Unity PlayMode capture manifest (snapshot preserved)', 'runtimeScaleManifestSha256': '2f41aa85d8dbd5312f688cb0d63d99a31d828335695cacb67a0c71d1559913ef', 'runtimeScaleCapture': 'C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-000.png'}
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

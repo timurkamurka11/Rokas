@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342,0385026">
+  <test-suite type="TestSuite" id="1256" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="200" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.038503" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1250" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="200" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.030659" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="17376" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1251" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="200" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.029243" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1252" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="200" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.028032" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1136" name="ReactivePolishIILiveLongRunPlayModeTests" fullname="Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests" classname="Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.022380" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1137" name="FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns" fullname="Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests.FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns" methodname="FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns" classname="Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests" runstate="Runnable" seed="814104759" result="Passed" start-time="2026-09-30 14:08:32Z" end-time="2026-09-30 14:14:14Z" duration="342.012819" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="Timeout" value="660000" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[POLISH II LONGRUN] completed=0 filler=0 phase=PlayerCommand clock=0 held=True ready=False controls=False home=True pose=Idle settled=True hp=100
+[POLISH II LONGRUN] completed=0 filler=0 phase=PlayerCommand clock=5998130 held=True ready=False controls=False home=True pose=Idle settled=True hp=100
+completed=1 fillerNormals=0 wave=0 hunterHp=100
+completed=2 fillerNormals=0 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=2 filler=0 phase=PlayerExecution clock=9752353 held=True ready=False controls=False home=False pose=Approach settled=False hp=100
+completed=3 fillerNormals=0 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=3 filler=0 phase=EnemyExecution clock=13947091 held=True ready=False controls=False home=False pose=ReturnHome settled=False hp=100
+completed=4 fillerNormals=0 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=4 filler=0 phase=EnemyExecution clock=19946132 held=True ready=False controls=False home=True pose=Idle settled=True hp=100
+completed=5 fillerNormals=0 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=5 filler=0 phase=EnemyExecution clock=24644396 held=False ready=False controls=False home=True pose=Dodge settled=False hp=100
+completed=6 fillerNormals=0 wave=0 hunterHp=100
+completed=6 fillerNormals=1 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=6 filler=1 phase=WaveTransition clock=27889924 held=True ready=False controls=False home=False pose=Heavy settled=False hp=100
+[POLISH II LONGRUN] completed=6 filler=1 phase=EnemyExecution clock=30956613 held=False ready=False controls=False home=True pose=Dodge settled=False hp=100
+completed=7 fillerNormals=1 wave=1 hunterHp=100
+[POLISH II LONGRUN] completed=7 filler=1 phase=EnemyExecution clock=35906606 held=True ready=False controls=False home=True pose=Idle settled=True hp=100
+completed=7 fillerNormals=2 wave=1 hunterHp=100
+[POLISH II LONGRUN] completed=7 filler=2 phase=EnemyExecution clock=40789778 held=False ready=False controls=False home=True pose=Guard settled=False hp=100
+completed=8 fillerNormals=2 wave=1 hunterHp=100
+[POLISH II LONGRUN] completed=8 filler=2 phase=EnemyExecution clock=47073273 held=False ready=False controls=False home=True pose=Guard settled=False hp=100
+completed=8 fillerNormals=3 wave=1 hunterHp=94
+[POLISH II LONGRUN] completed=8 filler=3 phase=EnemyExecution clock=52731612 held=False ready=False controls=False home=True pose=Idle settled=True hp=94
+completed=9 fillerNormals=3 wave=1 hunterHp=88
+completed=9 fillerNormals=4 wave=1 hunterHp=88
+[POLISH II LONGRUN] completed=9 filler=4 phase=PlayerExecution clock=58847977 held=True ready=False controls=False home=False pose=HeavyPreparation settled=False hp=88
+completed=10 fillerNormals=4 wave=1 hunterHp=88
+[POLISH II LONGRUN] completed=10 filler=4 phase=EnemyExecution clock=61774647 held=True ready=False controls=False home=True pose=Idle settled=True hp=88
+completed=11 fillerNormals=4 wave=2 hunterHp=88
+[POLISH II LONGRUN] completed=11 filler=4 phase=EnemyExecution clock=66374541 held=True ready=False controls=False home=False pose=ReturnHome settled=False hp=88
+completed=12 fillerNormals=4 wave=2 hunterHp=82
+[POLISH II LONGRUN] completed=12 filler=4 phase=EnemyExecution clock=73224722 held=True ready=False controls=False home=False pose=ReturnHome settled=False hp=82
+completed=13 fillerNormals=4 wave=2 hunterHp=82
+[POLISH II LONGRUN] completed=13 filler=4 phase=PlayerExecution clock=79624799 held=True ready=False controls=False home=False pose=Heavy settled=False hp=82
+completed=14 fillerNormals=4 wave=2 hunterHp=76
+[POLISH II LONGRUN] completed=14 filler=4 phase=PlayerExecution clock=86467904 held=True ready=False controls=False home=False pose=Approach settled=False hp=76
+completed=15 fillerNormals=4 wave=2 hunterHp=76
+[POLISH II LONGRUN] completed=15 filler=4 phase=EnemyExecution clock=91509117 held=True ready=False controls=False home=True pose=Idle settled=True hp=76
+completed=16 fillerNormals=4 wave=2 hunterHp=70
+completed=17 fillerNormals=4 wave=2 hunterHp=70
+completed=18 fillerNormals=4 wave=2 hunterHp=70
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[POLISH II LONGRUN] completed=18 filler=4 phase=Suspended clock=0 held=True ready=False controls=False home=False pose=EntranceWalk settled=False hp=100
+[POLISH II LONGRUN] completed=18 filler=4 phase=PlayerExecution clock=0 held=True ready=False controls=False home=False pose=Approach settled=False hp=100
+completed=19 fillerNormals=4 wave=0 hunterHp=100
+[POLISH II LONGRUN] completed=19 filler=4 phase=PlayerExecution clock=6004043 held=True ready=False controls=False home=False pose=Approach settled=False hp=100
+completed=20 fillerNormals=4 wave=0 hunterHp=100
+Saving results to: D:\Rokas\reactiveturns-b2-staging\polish-ii-unity\play-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="39" result="Failed(Child)" total="39" passed="27" failed="12" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:43Z" duration="28,680664">
+  <test-suite type="TestSuite" id="1261" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="205" result="Failed" site="Child" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:43Z" duration="28.680664" total="39" passed="27" failed="12" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1255" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="205" result="Failed" site="Child" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:43Z" duration="28.673984" total="39" passed="27" failed="12" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="29336" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1256" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="205" result="Failed" site="Child" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:43Z" duration="28.673497" total="39" passed="27" failed="12" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1257" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="205" result="Failed" site="Child" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:43Z" duration="28.673163" total="39" passed="27" failed="12" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1001" name="CombatFoundationPlayModeTests" fullname="Rokas.Tests.CombatFoundationPlayModeTests" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:21Z" duration="5.764410" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1017" name="ChargeRingHasRenderableGeometryAndChangesWhileHeld" fullname="Rokas.Tests.CombatFoundationPlayModeTests.ChargeRingHasRenderableGeometryAndChangesWhileHeld" methodname="ChargeRingHasRenderableGeometryAndChangesWhileHeld" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1227427582" result="Passed" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:15Z" duration="0.523969" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1009" name="DisabledCombatSurfaceCancelsCharge" fullname="Rokas.Tests.CombatFoundationPlayModeTests.DisabledCombatSurfaceCancelsCharge" methodname="DisabledCombatSurfaceCancelsCharge" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1437983977" result="Passed" start-time="2026-09-30 14:50:15Z" end-time="2026-09-30 14:50:16Z" duration="0.330136" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1002" name="FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" fullname="Rokas.Tests.CombatFoundationPlayModeTests.FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" methodname="FightShowsSealChargeAndResonanceInsteadOfWeakPointButton" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="951778543" result="Passed" start-time="2026-09-30 14:50:16Z" end-time="2026-09-30 14:50:16Z" duration="0.333788" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1008" name="FocusLossCancelsChargeAndFreezesEnemyClock" fullname="Rokas.Tests.CombatFoundationPlayModeTests.FocusLossCancelsChargeAndFreezesEnemyClock" methodname="FocusLossCancelsChargeAndFreezesEnemyClock" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1041069763" result="Passed" start-time="2026-09-30 14:50:16Z" end-time="2026-09-30 14:50:16Z" duration="0.329846" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1004" name="HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" fullname="Rokas.Tests.CombatFoundationPlayModeTests.HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" methodname="HeldReleaseMakesPerfectCutWithoutDoubleClickDamage" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="811658994" result="Passed" start-time="2026-09-30 14:50:16Z" end-time="2026-09-30 14:50:17Z" duration="0.330112" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1010" name="HunterDeathClearsHeldInputAndCombatHud" fullname="Rokas.Tests.CombatFoundationPlayModeTests.HunterDeathClearsHeldInputAndCombatHud" methodname="HunterDeathClearsHeldInputAndCombatHud" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="574141314" result="Passed" start-time="2026-09-30 14:50:17Z" end-time="2026-09-30 14:50:17Z" duration="0.333745" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1015" name="LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" fullname="Rokas.Tests.CombatFoundationPlayModeTests.LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" methodname="LethalHeldReleaseClearsResonanceHudAndRewardRemainsExactlyOnce" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1133346146" result="Passed" start-time="2026-09-30 14:50:17Z" end-time="2026-09-30 14:50:18Z" duration="0.569655" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1012" name="LiveCueMatchesDodgeAndBarsMatchActualDamage" fullname="Rokas.Tests.CombatFoundationPlayModeTests.LiveCueMatchesDodgeAndBarsMatchActualDamage" methodname="LiveCueMatchesDodgeAndBarsMatchActualDamage" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="669724334" result="Passed" start-time="2026-09-30 14:50:18Z" end-time="2026-09-30 14:50:18Z" duration="0.344698" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1005" name="PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" methodname="PauseCancelsHeldInputAndGuardsDefenseAndResonanceKeys" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1196057536" result="Passed" start-time="2026-09-30 14:50:18Z" end-time="2026-09-30 14:50:18Z" duration="0.329102" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1016" name="PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" methodname="PauseDuringRitualFailsOnceAndResumeCannotPayOffStaleTrace" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1176325226" result="Passed" start-time="2026-09-30 14:50:18Z" end-time="2026-09-30 14:50:19Z" duration="0.329984" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1014" name="PauseInterruptsComboBeforeResume" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PauseInterruptsComboBeforeResume" methodname="PauseInterruptsComboBeforeResume" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1016370713" result="Passed" start-time="2026-09-30 14:50:19Z" end-time="2026-09-30 14:50:19Z" duration="0.334368" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1007" name="PointerExitCancelsChargeWithoutGhostRelease" fullname="Rokas.Tests.CombatFoundationPlayModeTests.PointerExitCancelsChargeWithoutGhostRelease" methodname="PointerExitCancelsChargeWithoutGhostRelease" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="162744942" result="Passed" start-time="2026-09-30 14:50:19Z" end-time="2026-09-30 14:50:19Z" duration="0.329749" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1006" name="RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" methodname="RealDeflectInputOpensOrderedHeldRitualAndEnablesResonance" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="2088137686" result="Passed" start-time="2026-09-30 14:50:19Z" end-time="2026-09-30 14:50:20Z" duration="0.333595" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1003" name="RealPointerTapDamagesOnReleaseAndPauseBlocksIt" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RealPointerTapDamagesOnReleaseAndPauseBlocksIt" methodname="RealPointerTapDamagesOnReleaseAndPauseBlocksIt" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="1588770276" result="Passed" start-time="2026-09-30 14:50:20Z" end-time="2026-09-30 14:50:20Z" duration="0.331707" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1013" name="RitualPointsAreReachableThroughTheRealGraphicRaycaster" fullname="Rokas.Tests.CombatFoundationPlayModeTests.RitualPointsAreReachableThroughTheRealGraphicRaycaster" methodname="RitualPointsAreReachableThroughTheRealGraphicRaycaster" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="731250995" result="Passed" start-time="2026-09-30 14:50:20Z" end-time="2026-09-30 14:50:20Z" duration="0.338044" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1011" name="SealBreakCannotReuseTheChargeHeldBeforeDeflect" fullname="Rokas.Tests.CombatFoundationPlayModeTests.SealBreakCannotReuseTheChargeHeldBeforeDeflect" methodname="SealBreakCannotReuseTheChargeHeldBeforeDeflect" classname="Rokas.Tests.CombatFoundationPlayModeTests" runstate="Runnable" seed="2045556169" result="Passed" start-time="2026-09-30 14:50:20Z" end-time="2026-09-30 14:50:21Z" duration="0.329949" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1061" name="LaptopFullContractLifecyclePlayModeTests" fullname="Rokas.Tests.LaptopFullContractLifecyclePlayModeTests" classname="Rokas.Tests.LaptopFullContractLifecyclePlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-09-30 14:50:21Z" end-time="2026-09-30 14:50:28Z" duration="7.268984" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1062" name="FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment" fullname="Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment" methodname="FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment" classname="Rokas.Tests.LaptopFullContractLifecyclePlayModeTests" runstate="Runnable" seed="155033271" result="Passed" start-time="2026-09-30 14:50:21Z" end-time="2026-09-30 14:50:28Z" duration="7.254112" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\LaptopBoot.mp4
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\LaptopBoot.mp4
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1074" name="MainMenuInteractionAudioTransitionPlayModeTests" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" testcasecount="8" result="Failed" site="Child" start-time="2026-09-30 14:50:28Z" end-time="2026-09-30 14:50:33Z" duration="4.717100" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1078" name="EnterWorldSkipsGenericClickAndConsumesRepeatedClicks" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.EnterWorldSkipsGenericClickAndConsumesRepeatedClicks" methodname="EnterWorldSkipsGenericClickAndConsumesRepeatedClicks" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="748478228" result="Passed" start-time="2026-09-30 14:50:28Z" end-time="2026-09-30 14:50:28Z" duration="0.087574" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+]]></output>
+            </test-case>
+            <test-case id="1077" name="GenericAndLaptopAssetsUseApprovedIndependentClips" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.GenericAndLaptopAssetsUseApprovedIndependentClips" methodname="GenericAndLaptopAssetsUseApprovedIndependentClips" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="2016154574" result="Passed" start-time="2026-09-30 14:50:28Z" end-time="2026-09-30 14:50:28Z" duration="0.033187" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1082" name="MainMenuAboutAndSupportPlayApprovedGenericClip" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.MainMenuAboutAndSupportPlayApprovedGenericClip" methodname="MainMenuAboutAndSupportPlayApprovedGenericClip" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1971504288" result="Passed" start-time="2026-09-30 14:50:28Z" end-time="2026-09-30 14:50:28Z" duration="0.278579" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StartupPreview.mp4
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StoryIntro.mp4
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+]]></output>
+            </test-case>
+            <test-case id="1075" name="MainMenuButtonsReuseLaptopHoverFeedbackAndReturnSmoothly" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.MainMenuButtonsReuseLaptopHoverFeedbackAndReturnSmoothly" methodname="MainMenuButtonsReuseLaptopHoverFeedbackAndReturnSmoothly" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1685014714" result="Passed" start-time="2026-09-30 14:50:28Z" end-time="2026-09-30 14:50:30Z" duration="1.422957" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+]]></output>
+            </test-case>
+            <test-case id="1081" name="OrdinaryHomeUiUsesApprovedGenericOutsideLaptopClick" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.OrdinaryHomeUiUsesApprovedGenericOutsideLaptopClick" methodname="OrdinaryHomeUiUsesApprovedGenericOutsideLaptopClick" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1343146862" result="Failed" start-time="2026-09-30 14:50:30Z" end-time="2026-09-30 14:50:30Z" duration="0.208783" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Ordinary Home UI outside Laptop must use the approved ButtonClick.wav through the existing generic path.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests+<OrdinaryHomeUiUsesApprovedGenericOutsideLaptopClick>d__11.MoveNext () [0x000c3] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\MainMenuInteractionAudioTransitionPlayModeTests.cs:213
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1079" name="RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn" methodname="RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1804766010" result="Failed" start-time="2026-09-30 14:50:30Z" end-time="2026-09-30 14:50:31Z" duration="1.351004" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Home handoff did not occur.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests+<RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn>d__9.MoveNext () [0x001be] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\MainMenuInteractionAudioTransitionPlayModeTests.cs:148
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StartupPreview.mp4
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StoryIntro.mp4
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1080" name="RealEnterWorldUsesApprovedPersistentSpecialAudioOnlyOnce" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.RealEnterWorldUsesApprovedPersistentSpecialAudioOnlyOnce" methodname="RealEnterWorldUsesApprovedPersistentSpecialAudioOnlyOnce" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1954858417" result="Failed" start-time="2026-09-30 14:50:31Z" end-time="2026-09-30 14:50:32Z" duration="1.228372" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for: HomeTitle
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests+<WaitFor>d__17.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\MainMenuInteractionAudioTransitionPlayModeTests.cs:284
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StartupPreview.mp4
+ROKAS video media missing; continuing through safe fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\StoryIntro.mp4
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1076" name="SecondaryButtonsUseGenericClickAndRemainNoOps" fullname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.SecondaryButtonsUseGenericClickAndRemainNoOps" methodname="SecondaryButtonsUseGenericClickAndRemainNoOps" classname="Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests" runstate="Runnable" seed="1167919468" result="Passed" start-time="2026-09-30 14:50:32Z" end-time="2026-09-30 14:50:33Z" duration="0.089761" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+ROKAS main-menu loop media missing; keeping menu usable over black fallback: D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Assets/StreamingAssets\RokasVideo\MainMenuLoop.mp4
+There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1086" name="MessagesLifecyclePlayModeTests" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-09-30 14:50:33Z" end-time="2026-09-30 14:50:35Z" duration="2.434116" total="4" passed="0" failed="4" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1088" name="CompletedDialogueDoesNotAutoReplayAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.CompletedDialogueDoesNotAutoReplayAfterReload" methodname="CompletedDialogueDoesNotAutoReplayAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="1508465586" result="Failed" start-time="2026-09-30 14:50:33Z" end-time="2026-09-30 14:50:34Z" duration="1.034859" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:327)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:146)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:338)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:81)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:73)
+Rokas.Tests.MessagesLifecyclePlayModeTests:Initialize (string) (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:211)
+Rokas.Tests.MessagesLifecyclePlayModeTests/<CompletedDialogueDoesNotAutoReplayAfterReload>d__3:MoveNext () (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:45)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1089" name="ConsumedCoordinateAttachmentRemainsDisabledAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.ConsumedCoordinateAttachmentRemainsDisabledAfterReload" methodname="ConsumedCoordinateAttachmentRemainsDisabledAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="769217396" result="Failed" start-time="2026-09-30 14:50:34Z" end-time="2026-09-30 14:50:34Z" duration="0.594502" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:327)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:146)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:338)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:81)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:73)
+Rokas.Tests.MessagesLifecyclePlayModeTests:Initialize (string) (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:211)
+Rokas.Tests.MessagesLifecyclePlayModeTests/<ConsumedCoordinateAttachmentRemainsDisabledAfterReload>d__4:MoveNext () (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:114)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1087" name="DestroyAndReloadPersistsDirtyMessageHistory" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.DestroyAndReloadPersistsDirtyMessageHistory" methodname="DestroyAndReloadPersistsDirtyMessageHistory" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="1398670472" result="Failed" start-time="2026-09-30 14:50:34Z" end-time="2026-09-30 14:50:35Z" duration="0.326534" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:327)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:146)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:338)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:81)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:73)
+Rokas.Tests.MessagesLifecyclePlayModeTests:Initialize (string) (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:211)
+Rokas.Tests.MessagesLifecyclePlayModeTests/<DestroyAndReloadPersistsDirtyMessageHistory>d__2:MoveNext () (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:22)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1090" name="HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" fullname="Rokas.Tests.MessagesLifecyclePlayModeTests.HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" methodname="HistoricalUnreadDoesNotCreateFreshNotificationAfterReload" classname="Rokas.Tests.MessagesLifecyclePlayModeTests" runstate="Runnable" seed="345209516" result="Failed" start-time="2026-09-30 14:50:35Z" end-time="2026-09-30 14:50:35Z" duration="0.464326" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect]]></message>
+                <stack-trace><![CDATA[Rokas.Presentation.HomeFinalUiPresenter:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs:448)
+Rokas.Presentation.HomeView:Build (UnityEngine.RectTransform) (at Assets/Rokas/Scripts/Presentation/HomeView.cs:50)
+Rokas.Presentation.RokasView:RebuildScene () (at Assets/Rokas/Scripts/Presentation/RokasView.cs:327)
+Rokas.Presentation.RokasView:.ctor (Rokas.Presentation.RokasBootstrap,Rokas.Presentation.RokasAssets,Rokas.Core.GameSession,Rokas.Presentation.RokasAudio,System.Action) (at Assets/Rokas/Scripts/Presentation/RokasView.cs:146)
+Rokas.Presentation.RokasBootstrap:BuildPresentation () (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:338)
+Rokas.Presentation.RokasBootstrap:Initialize (string,bool) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:81)
+Rokas.Presentation.RokasBootstrap:Initialize (string) (at Assets/Rokas/Scripts/Presentation/RokasBootstrap.cs:73)
+Rokas.Tests.MessagesLifecyclePlayModeTests:Initialize (string) (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:211)
+Rokas.Tests.MessagesLifecyclePlayModeTests/<HistoricalUnreadDoesNotCreateFreshNotificationAfterReload>d__5:MoveNext () (at Assets/Rokas/Tests/PlayMode/MessagesLifecyclePlayModeTests.cs:153)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1209" name="VnIntroPlayModeTests" fullname="Rokas.Tests.VnIntroPlayModeTests" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" testcasecount="10" result="Failed" site="Child" start-time="2026-09-30 14:50:35Z" end-time="2026-09-30 14:50:43Z" duration="8.469939" total="10" passed="5" failed="5" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1212" name="CompletedIntroPreservesTheOldDirectHomePath" fullname="Rokas.Tests.VnIntroPlayModeTests.CompletedIntroPreservesTheOldDirectHomePath" methodname="CompletedIntroPreservesTheOldDirectHomePath" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="1366907495" result="Failed" start-time="2026-09-30 14:50:35Z" end-time="2026-09-30 14:50:37Z" duration="1.588546" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for launch object: RokasMainMenu.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.VnIntroPlayModeTests+<WaitForLaunchObject>d__22.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\VnIntroPlayModeTests.cs:515
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1210" name="FirstEnterWorldBuildsPackagedVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete" fullname="Rokas.Tests.VnIntroPlayModeTests.FirstEnterWorldBuildsPackagedVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete" methodname="FirstEnterWorldBuildsPackagedVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="1103659442" result="Failed" start-time="2026-09-30 14:50:37Z" end-time="2026-09-30 14:50:38Z" duration="1.577220" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for launch object: RokasMainMenu.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.VnIntroPlayModeTests+<WaitForLaunchObject>d__22.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\VnIntroPlayModeTests.cs:515
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1211" name="NaturalCompletionUsesPackagedBeatsThenBuildsHomeBeforeMarkingComplete" fullname="Rokas.Tests.VnIntroPlayModeTests.NaturalCompletionUsesPackagedBeatsThenBuildsHomeBeforeMarkingComplete" methodname="NaturalCompletionUsesPackagedBeatsThenBuildsHomeBeforeMarkingComplete" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="1078363296" result="Failed" start-time="2026-09-30 14:50:38Z" end-time="2026-09-30 14:50:40Z" duration="1.576542" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for launch object: RokasMainMenu.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.VnIntroPlayModeTests+<WaitForLaunchObject>d__22.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\VnIntroPlayModeTests.cs:515
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1213" name="PackagedMuteIsVnLocalAndCleanupReturnsAudioOwnershipToGameplay" fullname="Rokas.Tests.VnIntroPlayModeTests.PackagedMuteIsVnLocalAndCleanupReturnsAudioOwnershipToGameplay" methodname="PackagedMuteIsVnLocalAndCleanupReturnsAudioOwnershipToGameplay" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="279580293" result="Failed" start-time="2026-09-30 14:50:40Z" end-time="2026-09-30 14:50:41Z" duration="1.573964" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for launch object: RokasMainMenu.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.VnIntroPlayModeTests+<WaitForLaunchObject>d__22.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\VnIntroPlayModeTests.cs:515
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1219" name="RokasAssetsExposeExactlyTheTenRequiredVnTextures" fullname="Rokas.Tests.VnIntroPlayModeTests.RokasAssetsExposeExactlyTheTenRequiredVnTextures" methodname="RokasAssetsExposeExactlyTheTenRequiredVnTextures" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="258411856" result="Passed" start-time="2026-09-30 14:50:41Z" end-time="2026-09-30 14:50:41Z" duration="0.001574" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1214" name="RuntimeMenuBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale" fullname="Rokas.Tests.VnIntroPlayModeTests.RuntimeMenuBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale" methodname="RuntimeMenuBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="144990263" result="Failed" start-time="2026-09-30 14:50:41Z" end-time="2026-09-30 14:50:43Z" duration="1.590448" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  Timed out waiting for launch object: RokasMainMenu.
+  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at Rokas.Tests.VnIntroPlayModeTests+<WaitForLaunchObject>d__22.MoveNext () [0x0006a] in D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY\Assets\Rokas\Tests\PlayMode\VnIntroPlayModeTests.cs:515
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[
+IgnoreFailingMessages:true
+]]></output>
+            </test-case>
+            <test-case id="1215" name="TransientMuteDoesNotMutateSavedVolumeSettings" fullname="Rokas.Tests.VnIntroPlayModeTests.TransientMuteDoesNotMutateSavedVolumeSettings" methodname="TransientMuteDoesNotMutateSavedVolumeSettings" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="1478673410" result="Passed" start-time="2026-09-30 14:50:43Z" end-time="2026-09-30 14:50:43Z" duration="0.052620" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+]]></output>
+            </test-case>
+            <test-case id="1216" name="TransientMuteSilencesAndRestoresLoopOutput" fullname="Rokas.Tests.VnIntroPlayModeTests.TransientMuteSilencesAndRestoresLoopOutput" methodname="TransientMuteSilencesAndRestoresLoopOutput" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="489927667" result="Passed" start-time="2026-09-30 14:50:43Z" end-time="2026-09-30 14:50:43Z" duration="0.066582" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[There are no audio listeners in the scene. Please ensure there is always one audio listener in the scene
+]]></output>
+            </test-case>
+            <test-case id="1218" name="VnControlsUseTransparentHitTargetsAndNeverCreateASecondAdvancePath" fullname="Rokas.Tests.VnIntroPlayModeTests.VnControlsUseTransparentHitTargetsAndNeverCreateASecondAdvancePath" methodname="VnControlsUseTransparentHitTargetsAndNeverCreateASecondAdvancePath" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="752122598" result="Passed" start-time="2026-09-30 14:50:43Z" end-time="2026-09-30 14:50:43Z" duration="0.091929" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1217" name="VnViewUsesApprovedPanelsAndPortraitFreeCharacterStaging" fullname="Rokas.Tests.VnIntroPlayModeTests.VnViewUsesApprovedPanelsAndPortraitFreeCharacterStaging" methodname="VnViewUsesApprovedPanelsAndPortraitFreeCharacterStaging" classname="Rokas.Tests.VnIntroPlayModeTests" runstate="Runnable" seed="456151375" result="Passed" start-time="2026-09-30 14:50:43Z" end-time="2026-09-30 14:50:43Z" duration="0.333241" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\reactiveturns-b2-staging\polish-ii-unity\smoke-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

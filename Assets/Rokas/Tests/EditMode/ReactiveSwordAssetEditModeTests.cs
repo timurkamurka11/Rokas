@@ -69,5 +69,41 @@ namespace Rokas.Tests
             Assert.That(library.keiko.model.transform.Find(library.keiko.weaponBonePath), Is.Not.Null);
             Assert.That(weapon.transform.Find("LeftHandGrip"), Is.Not.Null);
         }
+
+        [TestCase("Guard")]
+        [TestCase("Dodge")]
+        [TestCase("EntranceWalk")]
+        [TestCase("EntrySettle")]
+        [TestCase("ClawNormal")]
+        [TestCase("ClawHeavy")]
+        [TestCase("ClawLocomotion")]
+        public void PolishTwoTakesBindToExistingRigWithOneHorizontalMovementOwner(string take)
+        {
+            var library = Resources.Load<ReactiveCombatActorLibrary>("Combat/ReactiveCombatActorLibrary");
+            bool enemy = take.StartsWith("Claw");
+            ReactiveCombatActorClips actor = enemy ? library.yokai : library.keiko;
+            AnimationClip clip = take == "Guard" ? actor.guard : take == "Dodge" ? actor.dodge :
+                take == "EntranceWalk" ? actor.entranceWalk : take == "EntrySettle" ? actor.enterBattle :
+                take == "ClawNormal" ? actor.attack : take == "ClawHeavy" ? actor.heavy : actor.approach;
+            Assert.That(clip, Is.Not.Null);
+            Assert.That(clip.legacy, Is.True);
+            Assert.That(clip.events, Is.Empty, "Presentation has a single explicit event owner.");
+            Assert.That(AssetDatabase.GetAssetPath(clip), Does.EndWith(".anim"));
+            var paths = new HashSet<string> { string.Empty };
+            foreach (Transform bone in actor.model.GetComponentsInChildren<Transform>(true))
+                paths.Add(AnimationUtility.CalculateTransformPath(bone, actor.model.transform));
+            foreach (EditorCurveBinding binding in AnimationUtility.GetCurveBindings(clip))
+            {
+                Assert.That(paths.Contains(binding.path), Is.True, take + ":" + binding.path);
+                Assert.That(binding.path == "mixamorig:Hips" &&
+                    (binding.propertyName == "m_LocalPosition.x" || binding.propertyName == "m_LocalPosition.z"),
+                    Is.False, "Arena owns horizontal travel, including emergence and defence.");
+            }
+            Assert.That(clip.isLooping, Is.EqualTo(take == "EntranceWalk" || take == "ClawLocomotion"));
+            if (take == "ClawNormal")
+                Assert.That(clip.length * actor.attackContactNormalized, Is.EqualTo(.55f).Within(.01f));
+            if (take == "ClawHeavy")
+                Assert.That(clip.length * actor.heavyContactNormalized, Is.EqualTo(.8f).Within(.01f));
+        }
     }
 }

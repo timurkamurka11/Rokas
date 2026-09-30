@@ -30,7 +30,12 @@ namespace Rokas.Presentation
         private float hitStopRemaining;
         private float recoilRemaining;
         private float recoilDistance;
-        private float dodgeRemaining;
+        private bool defenseActive;
+        private bool defenseDodge;
+        private bool defenseContactResolved;
+        private float defenseContactTime;
+        private float locomotionStrideDistance;
+        private string pendingAttackContactAlias;
         private float anchoredY;
         private float poseSecondsLeft;
         private float proceduralSecondsLeft;
@@ -48,12 +53,57 @@ namespace Rokas.Presentation
         public bool IsFacingRight => facingRight;
         public float HitStopRemaining => hitStopRemaining;
         public string CurrentPose => activeAlias;
-        public bool ActionRecoveryComplete => poseSecondsLeft <= 0f && hitStopRemaining <= 0f;
+        public bool ActionRecoveryComplete => poseSecondsLeft <= 0f && hitStopRemaining <= 0f &&
+            !AwaitingAttackContact && !defenseActive;
         public bool IdleSettled => activeAlias == "Idle" &&
             (previousAlias == null || blendElapsed >= BlendDuration) && hitStopRemaining <= 0f;
         public ReactiveCombatWeaponAttachment WeaponAttachment => weaponAttachment;
         public float WeaponGripCurlDegrees { get; set; } = 28f;
         public float EnterBattleDuration => clips.enterBattle == null ? 1.2f : clips.enterBattle.length;
+        public bool DefenseRecoveryComplete => !defenseActive && ActionRecoveryComplete;
+        public bool DefenseActive => defenseActive;
+        public float CurrentPoseSeconds => animationPlayer == null || activeAlias == null
+            ? 0f : animationPlayer[activeAlias].time;
+        public bool AwaitingAttackContact => pendingAttackContactAlias != null &&
+            pendingAttackContactAlias == activeAlias;
+        public float DodgeDisplacement => defenseActive && defenseDodge
+            ? DodgeOffset(CurrentPoseSeconds) : 0f;
+        public Vector3 DefenseContactPoint => weaponAttachment == null || weaponAttachment.CurrentWeapon == null
+            ? transform.position + Vector3.up * 1.2f
+            : weaponAttachment.CurrentWeapon.transform.position +
+                weaponAttachment.CurrentWeapon.transform.forward * .32f;
+
+        public Bounds BodyBounds
+        {
+            get
+            {
+                var bounds = new Bounds(transform.position + Vector3.up, Vector3.zero);
+                bool found = false;
+                foreach (Renderer renderer in actorRenderers)
+                {
+                    if (renderer == null) continue;
+                    if (!found) { bounds = renderer.bounds; found = true; }
+                    else bounds.Encapsulate(renderer.bounds);
+                }
+                return bounds;
+            }
+        }
+
+        public Vector3 ClawPointNearest(Vector3 target)
+        {
+            Vector3 nearest = transform.position + Vector3.up * 1.5f;
+            float distance = float.MaxValue;
+            foreach (Transform bone in poseTransforms)
+            {
+                if (!bone.name.EndsWith(":RightHand") && !bone.name.EndsWith(":LeftHand") &&
+                    !bone.name.EndsWith(":RightHandMiddle3") && !bone.name.EndsWith(":LeftHandMiddle3")) continue;
+                float candidate = (bone.position - target).sqrMagnitude;
+                if (candidate >= distance) continue;
+                nearest = bone.position;
+                distance = candidate;
+            }
+            return nearest;
+        }
 
         public float PreparationDuration(bool heavy)
         {
@@ -73,6 +123,9 @@ namespace Rokas.Presentation
             float contact = heavy ? clips.heavyContactNormalized : clips.attackContactNormalized;
             return clip == null ? .2f : Mathf.Max(.2f, clip.length * Mathf.Clamp(contact, .01f, 1f));
         }
+
+        public float AttackSwingStartSeconds(bool heavy) => AttackContactSeconds(heavy) *
+            (clips.weaponPrefab == null ? (heavy ? .675f : .636f) : (heavy ? .79f : .7333f));
 
         public static ReactiveCombatActorVisual Spawn(CombatActorKind kind, Transform parent)
         {
@@ -125,6 +178,9 @@ namespace Rokas.Presentation
             AddClip(clips.preparation, "Preparation", WrapMode.ClampForever);
             AddClip(clips.heavyPreparation, "HeavyPreparation", WrapMode.ClampForever);
             AddClip(clips.enterBattle, "EnterBattle", WrapMode.Once);
+            AddClip(clips.entranceWalk, "EntranceWalk", WrapMode.Loop);
+            AddClip(clips.guard, "Guard", WrapMode.ClampForever);
+            AddClip(clips.dodge, "Dodge", WrapMode.ClampForever);
             AddClip(clips.hit, "Hit", WrapMode.Once);
             AddClip(clips.stagger, "Stagger", WrapMode.Once);
             AddClip(clips.death, "Death", WrapMode.ClampForever);
@@ -201,6 +257,10 @@ namespace Rokas.Presentation
         public void PlayIdle()
         {
             if (dead) return;
+            defenseActive = false;
+            defenseContactResolved = false;
+            locomotionStrideDistance = 0f;
+            pendingAttackContactAlias = null;
             poseSecondsLeft = 0f;
             proceduralSecondsLeft = 0f;
             fallbackDeathAngle = 0f;
@@ -234,14 +294,66 @@ namespace Rokas.Presentation
             PlayHeavy(ContactPlaybackSeconds(true, secondsUntilContact));
         public void PlayHit() => PlayOneShot("Hit", .42f, 12f);
         public void PlayStagger() => PlayOneShot("Stagger", .65f, 18f, "Hit");
-        public void PlayDefend() => PlayOneShot(null, .45f, 14f);
+        public void PlayDefend() => PlayGuard();
         public void PlayDodge()
         {
-            PlayOneShot(null, .38f, -20f);
-            dodgeRemaining = .38f;
+            BeginDefense(true, .24f);
+            ResolveDefenseContact(true, 0f);
         }
 
-        public void PlayGuard() => PlayOneShot(null, .36f, 13f);
+        public void PlayGuard()
+        {
+            BeginDefense(false, .34f);
+            ResolveDefenseContact(false, 0f);
+        }
+
+        // Only an accepted successful reaction enters this lifecycle. Failed input
+        // stays in its current stance and gets the ordinary hit reaction.
+        public void BeginDefense(bool dodge, float secondsToContact)
+        {
+            if (dead) return;
+            string alias = dodge ? "Dodge" : "Guard";
+            AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
+            if (clip == null) return;
+            defenseActive = true;
+            defenseDodge = dodge;
+            defenseContactResolved = false;
+            defenseContactTime = Mathf.Clamp(dodge ? clips.dodgeContactSeconds : clips.guardContactSeconds,
+                .01f, clip.length);
+            BeginPose(alias, defenseContactTime / Mathf.Max(.06f, secondsToContact));
+            blendElapsed = Mathf.Max(0f, BlendDuration - Mathf.Max(.06f, secondsToContact));
+            poseSecondsLeft = 0f;
+            proceduralSecondsLeft = 0f;
+            locomotionStrideDistance = 0f;
+        }
+
+        // Continue from the same guard/hop at contact: never restart the raise or
+        // backstep from a HitResolved callback after the enemy has already swung.
+        public void ResolveDefenseContact(bool dodge, float hitStopSeconds)
+        {
+            if (!defenseActive || defenseDodge != dodge) return;
+            animationPlayer[activeAlias].time = defenseContactTime;
+            defenseContactResolved = true;
+            blendElapsed = Mathf.Max(blendElapsed, BlendDuration);
+            if (previousAlias != null)
+            {
+                animationPlayer[previousAlias].enabled = false;
+                previousAlias = null;
+            }
+            animationPlayer[activeAlias].weight = 1f;
+            activeSpeed = 1f;
+            poseSecondsLeft = Mathf.Max(.01f, animationPlayer.GetClip(activeAlias).length - defenseContactTime);
+            SamplePose();
+            HoldPresentation(hitStopSeconds);
+        }
+
+        private static float DodgeOffset(float time)
+        {
+            if (time < .08f) return 0f;
+            if (time < .24f) return .78f * Mathf.SmoothStep(0f, 1f, (time - .08f) / .16f);
+            if (time <= .38f) return .78f;
+            return .78f * (1f - Mathf.SmoothStep(0f, 1f, (time - .38f) / .42f));
+        }
 
         public void Recoil(float distance = .2f)
         {
@@ -261,11 +373,39 @@ namespace Rokas.Presentation
             AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
             if (clip != null && activeAlias == alias)
             {
-                animationPlayer[alias].time = clip.length * Mathf.Clamp01(heavy
+                float contact = clip.length * Mathf.Clamp01(heavy
                     ? clips.heavyContactNormalized : clips.attackContactNormalized);
+                animationPlayer[alias].time = contact;
+                pendingAttackContactAlias = null;
+                // A Core watermark may leave the pose waiting at contact. That
+                // wait must not consume the authored follow-through/recovery.
+                poseSecondsLeft = Mathf.Max(poseSecondsLeft,
+                    (clip.length - contact) / Mathf.Max(.01f, activeSpeed));
                 SamplePose();
             }
             HoldPresentation(seconds);
+        }
+
+        public void AwaitAttackContact(bool heavy)
+        {
+            string alias = heavy ? "Heavy" : "Attack";
+            if (animationPlayer == null || animationPlayer.GetClip(alias) == null) return;
+            pendingAttackContactAlias = alias;
+        }
+
+        // Core can settle an interrupted multi-hit action without resolving its
+        // cancelled suffix. Release that visual wait without inventing contact,
+        // damage or audio, and preserve the recovery from the current sample.
+        public void CancelPendingAttackContact()
+        {
+            bool wasAwaiting = AwaitingAttackContact;
+            pendingAttackContactAlias = null;
+            if (!wasAwaiting || animationPlayer == null || activeAlias == null) return;
+            AnimationClip clip = animationPlayer.GetClip(activeAlias);
+            if (clip == null) return;
+            poseSecondsLeft = Mathf.Max(.01f,
+                (clip.length - Mathf.Clamp(animationPlayer[activeAlias].time, 0f, clip.length)) /
+                Mathf.Max(.01f, activeSpeed));
         }
 
         private float ContactPlaybackSeconds(bool heavy, float secondsUntilContact)
@@ -280,6 +420,7 @@ namespace Rokas.Presentation
             AnimationClip walk = animationPlayer == null ? null : animationPlayer.GetClip("Walk");
             if (walk == null) { PlayOneShot(null, seconds, -4f); return; }
             BeginPose("Walk", 1f);
+            locomotionStrideDistance = Mathf.Max(.1f, clips.approachStrideDistance);
             poseSecondsLeft = Mathf.Max(.1f, seconds);
             proceduralSecondsLeft = 0f;
         }
@@ -290,13 +431,33 @@ namespace Rokas.Presentation
 
         public void PlayReturnHome(float seconds) => PlayMovement("ReturnHome", seconds);
 
+        public void PlayEntranceWalk(float seconds) => PlayMovement("EntranceWalk", seconds);
+
+        // Match foot cycle progress to distance travelled, including acceleration
+        // and deceleration. The arena owns translation; this method owns cadence.
+        public void SetLocomotionSpeed(float worldUnitsPerSecond)
+        {
+            if (locomotionStrideDistance <= 0f || animationPlayer == null || activeAlias == null) return;
+            AnimationClip clip = animationPlayer.GetClip(activeAlias);
+            if (clip == null) return;
+            float rigScale = modelRoot.localToWorldMatrix.MultiplyVector(Vector3.forward).magnitude;
+            // Stored strides are original FBX rig units. Scaling the actual rig
+            // converts them to world distance, including stature and slot scale.
+            float worldStride = locomotionStrideDistance * rigScale;
+            activeSpeed = Mathf.Max(0f, worldUnitsPerSecond) * clip.length / Mathf.Max(.0001f, worldStride);
+        }
+
         private void PlayMovement(string alias, float seconds)
         {
             if (dead) return;
+            defenseActive = false;
             float duration = Mathf.Max(.1f, seconds);
             AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
             if (clip == null) { PlayWalk(duration); return; }
             BeginPose(alias, Mathf.Max(.1f, clip.length / duration));
+            locomotionStrideDistance = Mathf.Max(.1f, alias == "ReturnHome"
+                ? clips.returnStrideDistance : alias == "EntranceWalk"
+                    ? clips.entranceStrideDistance : clips.approachStrideDistance);
             poseSecondsLeft = duration;
             proceduralSecondsLeft = 0f;
         }
@@ -304,6 +465,8 @@ namespace Rokas.Presentation
         public void PlayDeath(float seconds = 1.35f)
         {
             if (dead) return;
+            defenseActive = false;
+            pendingAttackContactAlias = null;
             dead = true;
             poseSecondsLeft = 0f;
             proceduralSecondsLeft = 0f;
@@ -330,7 +493,10 @@ namespace Rokas.Presentation
             proceduralSecondsLeft = 0f;
             hitStopRemaining = 0f;
             recoilRemaining = 0f;
-            dodgeRemaining = 0f;
+            defenseActive = false;
+            defenseContactResolved = false;
+            locomotionStrideDistance = 0f;
+            pendingAttackContactAlias = null;
             PlayIdle();
         }
 
@@ -338,6 +504,8 @@ namespace Rokas.Presentation
             string alternate = null, float playbackSeconds = 0f)
         {
             if (dead) return;
+            defenseActive = false;
+            locomotionStrideDistance = 0f;
             AnimationClip clip = animationPlayer == null || string.IsNullOrEmpty(alias)
                 ? null : animationPlayer.GetClip(alias);
             if (clip == null && alternate != null) { alias = alternate; clip = animationPlayer.GetClip(alias); }
@@ -363,6 +531,7 @@ namespace Rokas.Presentation
         {
             if (animationPlayer == null || animationPlayer.GetClip(alias) == null) return;
             previousAlias = activeAlias == alias ? null : activeAlias;
+            pendingAttackContactAlias = null;
             previousSpeed = activeSpeed;
             float previousTime = previousAlias == null ? 0f : animationPlayer[previousAlias].time;
             activeAlias = alias;
@@ -403,6 +572,14 @@ namespace Rokas.Presentation
             {
                 AnimationState current = animationPlayer[activeAlias];
                 AdvancePose(current, step * activeSpeed);
+                if (AwaitingAttackContact)
+                {
+                    bool heavy = activeAlias == "Heavy";
+                    current.time = Mathf.Min(current.time, animationPlayer.GetClip(activeAlias).length *
+                        Mathf.Clamp01(heavy ? clips.heavyContactNormalized : clips.attackContactNormalized));
+                }
+                if (defenseActive && !defenseContactResolved)
+                    current.time = Mathf.Min(current.time, defenseContactTime);
                 current.weight = previousAlias == null ? 1f : Mathf.Clamp01(blendElapsed / BlendDuration);
                 if (previousAlias != null)
                 {
@@ -420,12 +597,11 @@ namespace Rokas.Presentation
             if (poseSecondsLeft > 0f)
             {
                 poseSecondsLeft -= step;
-                if (poseSecondsLeft <= 0f && !dead) PlayIdle();
+                if (poseSecondsLeft <= 0f && !dead && !AwaitingAttackContact) PlayIdle();
             }
             if (proceduralSecondsLeft > 0f)
                 proceduralSecondsLeft = Mathf.Max(0f, proceduralSecondsLeft - step);
             recoilRemaining = Mathf.Max(0f, recoilRemaining - step);
-            dodgeRemaining = Mathf.Max(0f, dodgeRemaining - step);
         }
 
         private static void AdvancePose(AnimationState state, float seconds)
@@ -521,8 +697,7 @@ namespace Rokas.Presentation
             // Imported walk and attack root curves may move the model. The stage owns position.
             float recoil = recoilRemaining > 0f
                 ? Mathf.Sin(recoilRemaining / .28f * Mathf.PI) * recoilDistance : 0f;
-            float dodge = dodgeRemaining > 0f
-                ? Mathf.Sin(dodgeRemaining / .38f * Mathf.PI) * .5f : 0f;
+            float dodge = DodgeDisplacement;
             // Ground only when sizing the standing model. Per-frame bounds grounding
             // removes authored jumps and death falls. Bone-local Y animation remains.
             modelRoot.localPosition = new Vector3(anchoredXZ.x +

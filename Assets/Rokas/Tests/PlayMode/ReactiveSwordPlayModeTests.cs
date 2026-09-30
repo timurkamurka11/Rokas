@@ -23,7 +23,8 @@ namespace Rokas.Tests
                 Assert.That(library.keiko.heavy.name, Is.EqualTo("Keiko_Hard_jump_attack_corrected"));
                 Assert.That(library.keiko.preparation.name, Is.EqualTo("Keiko_Normal_preparation"));
                 Assert.That(library.keiko.heavyPreparation.name, Is.EqualTo("Keiko_Heavy_preparation"));
-                Assert.That(library.keiko.enterBattle.name, Is.EqualTo("Keiko_Enter_battle_corrected"));
+                Assert.That(library.keiko.entranceWalk.name, Is.EqualTo("Keiko_Enter_battle_corrected"));
+                Assert.That(library.keiko.enterBattle.name, Is.EqualTo("Keiko_Enter_battle_settle"));
                 Assert.That(library.keiko.attack.length, Is.EqualTo(33f / 30f).Within(.02f));
                 Assert.That(library.keiko.heavy.length, Is.EqualTo(43f / 30f).Within(.02f));
                 Assert.That(library.keiko.attack.events, Is.Empty);
@@ -31,9 +32,9 @@ namespace Rokas.Tests
                 var actor = ReactiveCombatActorVisual.Spawn(CombatActorKind.Keiko, root.transform);
                 Assert.That(actor.AttackContactSeconds(false), Is.EqualTo(.6f).Within(.02f));
                 Assert.That(actor.AttackContactSeconds(true), Is.EqualTo(26f / 30f).Within(.02f));
-                Assert.That(actor.PreparationDuration(false), Is.EqualTo(8f / 30f).Within(.02f));
-                Assert.That(actor.PreparationDuration(true), Is.EqualTo(12f / 30f).Within(.02f));
-                Assert.That(actor.EnterBattleDuration, Is.EqualTo(36f / 30f).Within(.02f));
+                Assert.That(actor.PreparationDuration(false), Is.EqualTo(9f / 30f).Within(.02f));
+                Assert.That(actor.PreparationDuration(true), Is.EqualTo(14f / 30f).Within(.02f));
+                Assert.That(actor.EnterBattleDuration, Is.EqualTo(14f / 30f).Within(.02f));
                 var attachment = actor.GetComponent<ReactiveCombatWeaponAttachment>();
                 Assert.That(attachment, Is.Not.Null);
                 Assert.That(attachment.Socket.parent.name, Is.EqualTo("mixamorig:RightHand"));

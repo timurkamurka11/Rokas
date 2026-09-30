@@ -1,0 +1,283 @@
+{
+  "method": "Latest actual result per test case; this is an aggregate, not a separate Unity run.",
+  "total": 55,
+  "passed": 55,
+  "failed": 0,
+  "cases": {
+    "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.CancelledPendingSuffixKeepsItsSampleThenRecoversAndSettlesWithoutFakeContact": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.EnemyKeepsOtherSlotsAndCorpseFallsHoldsThenDissolvesWithoutMoving": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.FiveNormalFiveHeavyAndTenAlternatingAttacksStaySettledWithoutDrift": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.PlayMode.ReactiveArenaMotionPolishPlayModeTests.ResizingExistingRigsAndWaveSlotsPreservesDistanceBasedFootCadence": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ArenaUsesActionSpecificImportedClips": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveArenaVisualPlayModeTests.ImportedRunClipsApproachAndReturnToTheSameHomeAcrossActions": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ArenaRetainsCorpsePositionThroughAshThenCleansTheActor": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshActuallyClipsTheRenderedActorAsProgressAdvances": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshClonesMaterialsPreservesSurfaceAndRestoresOwnedSlots": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalActuallyRendersVisibleCoverageIntoTransparentActorTexture": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalOnlyAdvancesWhenItsPresentationClockTicks": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionDefeatWithoutActionSettledReturnsAttackerWhileHunterIsDead": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionVictoryWithoutActionSettledStillReturnsHunterAndSettles": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicHudPlayModeTests.ActualBootstrapWaitsForFullReturnsAndAnnouncementsBeforeNextActor": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicHudPlayModeTests.CoreAheadTurnHoldSuppressesReactionUntilPresentationStarts": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicHudPlayModeTests.FocusPauseDuringInitialPresentationHoldFreezesThenResumesFreshEpoch": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCinematicHudPlayModeTests.RealEntranceAndFadingTurnAnnouncementGatePlayerControls": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveCombatPolishCapturePlayModeTests.LiveContactDefenseReturnAndCorpseLifecycleAreRendered": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveDuelPlayModeTests.FocusAndSettingsPauseFreezeCombatThenResume": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveDuelPlayModeTests.PortalOffersPlayableReactiveDuelWithProjectArt": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveEightEnemyPlayModeTests.PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveFullLoopPlayModeTests.PortalDuelVictoryHomePaymentAndReload": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget": {
+      "result": "Passed",
+      "actual_run_xml": "play-results.xml",
+      "end_utc": "2026-09-30 14:47:21Z"
+    },
+    "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyRejectsEarlyAndLateDevicePressesAndStillSettles": {
+      "result": "Passed",
+      "actual_run_xml": "play-results.xml",
+      "end_utc": "2026-09-30 14:47:21Z"
+    },
+    "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DefenseInputIsOwnedOnlyByActiveArenaAndDoesNotDuplicate": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveInputAdapterPlayModeTests.DevicePressKeepsItsTimestampAndNeedsReleaseAfterRearm": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIFxPlayModeTests.ActualSkinnedBodyAppearsInsideApertureBeforeCrossingAndRestoresAfterExit": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIFxPlayModeTests.BladeRibbonEmitsOnlyDuringSwingAndStopsAfterBladeStops": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIFxPlayModeTests.DodgeProducesFootDustWithoutBodyContactAndParticlesPause": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIFxPlayModeTests.LayeredPortalAnimatesActualPixelsAndLeavesCarrierCornersClear": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIFxPlayModeTests.PortalEmergenceUsesOwnedLitMaterialsAndRestoresThem": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.AcceptedGuardAndDodgeKeepAuthoredPosesThroughContactThenRecoverWithoutRootDrift": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.CounterAfterHeavyEnemyUsesHuntersNormalContactWindow": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.EntryCompletesAtExactSlotAndIdleBeforeMusicAndSequentialEnemies": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.InterruptedSuffixSettlesWithoutAwaitingCancelledContactOrEmittingLaterSwing": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.PendingContactPreservesContactPoseAndRecoveryUntilAuthoritativeResult": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactivePolishIIPlayModeTests.SelectionStancesReadAtHomeAndCameraRestoresBeforeTravelForBothActions": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveReactionPolishPlayModeTests.HpTextIsImmediateBarsTweenAndReplacementSlotOwnerSnaps": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveReactionPolishPlayModeTests.IncomingCursorUsesRealPressTimestampThenResolvesAndReopensForNextHit": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveReactionPolishPlayModeTests.MainCommandsOnlyExposeNormalAndHeavyAndHeavyDoesNotOpenEnemyReactionUi": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.EnemyTwoHitSequenceHasOneVocalAndSeparateOnceOnlyContacts": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.ImportedPolishIILayersContainReadableStereoPcmData": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.PlayerCounterDoesNotInheritEnemyHeavyContactForSharedActionId": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.SuccessfulDefenseSuppressesFleshEvenWhenContractCarriesDamage(\"Parry\",GuardMetalContact)": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.SuccessfulDefenseSuppressesFleshEvenWhenContractCarriesDamage(\"Perfect\",GuardMetalContact)": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.SuccessfulDefenseSuppressesFleshEvenWhenContractCarriesDamage(\"Dodge\",DodgeBackstep)": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.SweepGroupsTargetsWhileDifferentActionsAndResetCanSoundAgain": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.VocalSwingAndContactStayDistinctAndPlayOnceAcrossCoreAliases(False)": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSingleAttackAudioPlayModeTests.VocalSwingAndContactStayDistinctAndPlayOnceAcrossCoreAliases(True)": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSwordPlayModeTests.AuthoredTwoHandTakesKeepBothPalmsOnTheHandleAndAccelerateIntoContact": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSwordPlayModeTests.ExistingActorEquipsOneReplaceableSwordAndUsesDistinctAuthoredClips": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSwordPlayModeTests.RenderSwordGripAndAuthoredAttackFramesInPlayMode": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveSwordPlayModeTests.RuntimeSupportPalmStaysOnTheSwordAcrossAuthoredPoseBlends": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    },
+    "Rokas.Tests.ReactiveWaveTransitionPlayModeTests.ThreeWavesRefreshTheLiveArenaHudAndQueueThenReachVictory": {
+      "result": "Passed",
+      "actual_run_xml": "final-results.xml",
+      "end_utc": "2026-09-30 14:41:30Z"
+    }
+  }
+}

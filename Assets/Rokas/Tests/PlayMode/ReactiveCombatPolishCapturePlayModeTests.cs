@@ -20,7 +20,7 @@ namespace Rokas.Tests
     public sealed class ReactiveCombatPolishCapturePlayModeTests
     {
         private static readonly string CaptureDirectory =
-            Path.Combine(Path.GetTempPath(), "rokas-cinematic-combat-visuals");
+            Path.Combine(Path.GetTempPath(), "rokas-polish-ii-combat-visuals");
         private GameObject root;
         private string profileDirectory;
         private Keyboard keyboard;
@@ -54,7 +54,7 @@ namespace Rokas.Tests
                 boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand, 8f);
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             yield return CaptureUntil(boot, () => boot.View.ReactivePresentationReady &&
-                !boot.ReactivePresentationHeld, 15f, "intro", "E1", .18f);
+                !boot.ReactivePresentationHeld, 24f, "intro", "E1", .18f);
             ReactiveCombatActorVisual hunter = FindHunter();
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.Not.Null);
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E1"));
@@ -84,26 +84,28 @@ namespace Rokas.Tests
                 combat.ActiveActorId == "E1", 5f);
             string firstEnemyAction = combat.CurrentActionId;
             long firstStart = combat.CurrentActionStartUs;
-            yield return WaitFor(boot, () => combat.CurrentCombatUs - firstStart >= 550000, 3f);
+            yield return WaitFor(boot, () => combat.CurrentCombatUs - firstStart >= 550000, 8f);
             Capture(boot, "enemy-reaction-cursor", "E1");
-            yield return WaitFor(boot, () => combat.CurrentCombatUs - firstStart >= 820000, 3f);
+            yield return WaitFor(boot, () => combat.CurrentCombatUs - firstStart >= 820000, 8f);
             Assert.That(combat.CurrentCombatUs - firstStart, Is.LessThan(980000));
             PressKey(Key.Q);
             yield return null;
             ReleaseKeys();
-            yield return WaitFor(boot, () => hunter.HitStopRemaining > 0f &&
+            yield return WaitFor(boot, () => hunter.DefenseActive &&
                 Feedback().Contains("УКЛОНЕНИЕ"), 2f);
+            yield return WaitFor(boot, () => hunter.DodgeDisplacement > .55f, 1f);
+            Capture(boot, "dodge-backstep", "E1");
             Assert.That(combat.HunterHp, Is.EqualTo(100));
             yield return new WaitForSecondsRealtime(.18f);
             Assert.That(Feedback(), Does.Contain("УКЛОНЕНИЕ"));
             Capture(boot, "dodge-result", "E1");
 
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.EnemyExecution &&
-                combat.CurrentActionId != firstEnemyAction, 7f);
+                combat.CurrentActionId != firstEnemyAction, 12f);
             long blockStart = combat.CurrentActionStartUs;
             string blockingEnemy = combat.ActiveActorId;
             long firstImpact = combat.CurrentAttack.Hits[0].ImpactUs;
-            yield return WaitFor(boot, () => combat.CurrentCombatUs - blockStart >= firstImpact - 85000, 3f);
+            yield return WaitFor(boot, () => combat.CurrentCombatUs - blockStart >= firstImpact - 85000, 8f);
             Assert.That(combat.CurrentCombatUs - blockStart, Is.LessThan(firstImpact - 40000),
                 "This capture intentionally uses ordinary Block, outside the inner Perfect window.");
             PressKey(Key.E);
@@ -111,9 +113,17 @@ namespace Rokas.Tests
             ReleaseKeys();
             yield return WaitFor(boot, () => hunter.HitStopRemaining > 0f && Feedback() == "БЛОК", 2f);
             Assert.That(combat.HunterHp, Is.EqualTo(100));
+            Capture(boot, "block-contact", blockingEnemy);
             yield return new WaitForSecondsRealtime(.18f);
             Assert.That(Feedback(), Is.EqualTo("БЛОК"));
             Capture(boot, "block-result", blockingEnemy);
+
+            // The following unguarded enemy strike must produce a real body contact,
+            // while successful Dodge/Block above exercised the separate miss/guard paths.
+            int beforeEnemyHit = combat.HunterHp;
+            yield return CaptureUntil(boot, () => combat.HunterHp < beforeEnemyHit, 12f,
+                "enemy-hit-motion", combat.ActiveActorId, .1f);
+            Capture(boot, "enemy-body-contact", combat.ActiveActorId);
 
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand &&
                 boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld &&
@@ -230,6 +240,8 @@ namespace Rokas.Tests
                     corpseElapsed = boot.View.ReactiveCorpseElapsed(committedTarget),
                     portalActive = GameObject.Find("ReactiveEnemyPortal") != null,
                     hunterPose = FindHunter().CurrentPose, hunterPosition = FindHunter().transform.localPosition,
+                    hunterModelScale = FindHunter().ModelRoot.localScale,
+                    hunterWorldScale = FindHunter().ModelRoot.lossyScale,
                     feedback = Feedback() });
                 Assert.That(new FileInfo(path).Length, Is.GreaterThan(10000));
                 TestContext.WriteLine(path + " phase=" + combat.Phase + " time=" + combat.CurrentCombatUs +
@@ -271,12 +283,19 @@ namespace Rokas.Tests
             InputSystem.Update();
         }
 
-        private static IEnumerator WaitFor(RokasBootstrap boot, Func<bool> ready, float seconds)
+        private static IEnumerator WaitFor(RokasBootstrap boot, Func<bool> ready, float seconds,
+            [System.Runtime.CompilerServices.CallerLineNumber] int callerLine = 0)
         {
             float deadline = Time.realtimeSinceStartup + seconds;
             while ((!ready() || boot.View.Paused) && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.View.Paused, Is.False);
-            Assert.That(ready(), Is.True, "Timed out waiting for a live visual capture state.");
+            var combat = boot.Session.ReactiveCombat;
+            var hunter = FindHunter();
+            Assert.That(ready(), Is.True, "Timed out at capture line " + callerLine +
+                ": phase=" + combat.Phase + " actor=" + combat.ActiveActorId +
+                " elapsed=" + (combat.CurrentCombatUs - combat.CurrentActionStartUs) +
+                " pose=" + hunter.CurrentPose + " defense=" + hunter.DefenseActive +
+                " contactPending=" + hunter.AwaitingAttackContact + " held=" + boot.ReactivePresentationHeld);
         }
 
         private GameObject Find(string name)
@@ -326,6 +345,7 @@ namespace Rokas.Tests
             public bool portalActive;
             public int hunterHp, targetHp;
             public Vector3 hunterPosition;
+            public Vector3 hunterModelScale, hunterWorldScale;
         }
     }
 }

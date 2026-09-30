@@ -1,195 +1,220 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Rokas.Presentation
 {
-    // A small vertical tear behind an entering enemy. Progress is visibility
-    // (zero closed, one open); Arena supplies both opening and animation time.
+    // Arena advances the aperture, filaments and particles with one paused clock.
     public sealed class ReactiveCombatPortalEffect : IDisposable
     {
-        private const int Segments = 64;
+        private const int Segments = 80;
+        private const int FilamentCount = 5;
+        private static readonly int PhaseId = Shader.PropertyToID("_Phase");
+        private static readonly int OpacityId = Shader.PropertyToID("_Opacity");
         private readonly GameObject root;
         private readonly Mesh discMesh;
         private readonly Material discMaterial;
         private readonly Material rimMaterial;
         private readonly Material particlesMaterial;
+        private readonly Material smokeMaterial;
         private readonly LineRenderer outerRim;
         private readonly LineRenderer innerRim;
+        private readonly LineRenderer[] filaments = new LineRenderer[FilamentCount];
         private readonly ParticleSystem particles;
+        private readonly ParticleSystem smoke;
         private readonly Vector3[] outerPositions = new Vector3[Segments];
         private readonly Vector3[] innerPositions = new Vector3[Segments];
+        private readonly Vector3[] filamentPositions = new Vector3[32];
         private float elapsed;
         private float emissionElapsed;
         private float visibility;
         private int emittedCount;
         private bool disposed;
-
         public Transform Transform => root == null ? null : root.transform;
         public float Visibility => visibility;
         public bool IsClosed => visibility <= .001f;
         public float PresentationElapsed => elapsed;
-        public int ParticleCount => particles == null ? 0 : particles.particleCount;
+        public int ParticleCount => particles == null ? 0 : particles.particleCount + smoke.particleCount;
+        public Vector3 FloorPosition => root.transform.position - Vector3.up * 1.7f;
+        public Vector3 ApertureCenter => root.transform.position;
+        public Vector3 PlaneNormal => -root.transform.forward;
+        public Vector3 PlaneRight => root.transform.right;
 
-        // position is the local floor point where the enemy steps out.
         public ReactiveCombatPortalEffect(Transform parent, Vector3 position, int layer)
         {
             root = new GameObject("ReactiveEnemyPortal");
             root.transform.SetParent(parent, false);
             root.transform.localPosition = position + Vector3.up * 1.7f;
+            root.transform.localRotation = Quaternion.Euler(0f, 30f, 0f);
             root.layer = layer;
-            discMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Interior",
-                new Color(.025f, .012f, .036f, 1f), 0f);
-            discMaterial.SetFloat("_PortalCore", 1f);
-            rimMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Rim",
-                new Color(.42f, .19f, .32f, 1f), 0f);
+            Shader shader = Resources.Load<Shader>("Combat/ReactiveCombatPortalVolume");
+            if (shader == null) throw new InvalidOperationException("Missing layered combat portal shader.");
+            discMaterial = new Material(shader) { name = "Combat Moving Portal Depth" };
+            rimMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Energy",
+                new Color(.48f, .36f, .69f, 1f), 0f);
             rimMaterial.SetFloat("_SoftShape", 2f);
-            particlesMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Dust",
-                Color.white, 0f);
+            particlesMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Sparks", Color.white, 0f);
             particlesMaterial.SetFloat("_SoftShape", 1f);
-
-            var disc = new GameObject("PortalDarkInterior", typeof(MeshFilter), typeof(MeshRenderer));
+            smokeMaterial = ReactiveCombatAshDissolve.CreateQuietMaterial("Combat Portal Wisps", Color.white, 0f);
+            smokeMaterial.SetFloat("_SoftShape", 3f);
+            var disc = new GameObject("PortalMovingDepth", typeof(MeshFilter), typeof(MeshRenderer));
             disc.transform.SetParent(root.transform, false);
             disc.layer = layer;
             discMesh = MakeDisc();
             disc.GetComponent<MeshFilter>().sharedMesh = discMesh;
-            var discRenderer = disc.GetComponent<MeshRenderer>();
-            discRenderer.sharedMaterial = discMaterial;
-            discRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            discRenderer.receiveShadows = false;
-            outerRim = MakeRim("PortalOuterRim", layer, .065f, Color.white);
-            innerRim = MakeRim("PortalInnerRim", layer, .03f,
-                new Color(.72f, .7f, .82f, .55f));
-
-            var dust = new GameObject("PortalDriftingDust", typeof(ParticleSystem));
-            dust.transform.SetParent(root.transform, false);
-            dust.layer = layer;
-            particles = dust.GetComponent<ParticleSystem>();
-            var main = particles.main;
-            main.playOnAwake = false;
-            main.loop = false;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.startSpeed = 0f;
-            main.startLifetime = .65f;
-            main.startSize = .045f;
-            main.maxParticles = 32;
-            var emission = particles.emission;
-            emission.enabled = false;
-            var shape = particles.shape;
-            shape.enabled = false;
-            var fade = particles.colorOverLifetime;
-            fade.enabled = true;
-            var gradient = new Gradient();
-            gradient.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(.6f, .2f), new GradientAlphaKey(0f, 1f) });
-            fade.color = gradient;
-            var particleRenderer = particles.GetComponent<ParticleSystemRenderer>();
-            particleRenderer.sharedMaterial = particlesMaterial;
-            particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
-            particleRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            particleRenderer.receiveShadows = false;
-            particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
-            particles.Pause(false);
-            UpdateRim();
+            var renderer = disc.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = discMaterial;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            outerRim = MakeLine("PortalBrokenEnergyRim", layer, .055f, Segments, true, Color.white);
+            innerRim = MakeLine("PortalInnerVortexRim", layer, .027f, Segments, true, new Color(.64f, .8f, .88f, .7f));
+            for (int i = 0; i < FilamentCount; i++)
+                filaments[i] = MakeLine("PortalSwirlFilament" + i, layer, .026f, 32, false,
+                    i % 2 == 0 ? new Color(.85f, .6f, 1f, .72f) : new Color(.42f, .76f, .8f, .5f));
+            particles = MakeParticles("PortalOrbitingSparks", layer, particlesMaterial, 48, .055f);
+            smoke = MakeParticles("PortalResidualWisps", layer, smokeMaterial, 48, .3f);
+            UpdateGeometry();
             SetProgress(0f);
         }
-
         public void SetProgress(float value)
         {
             if (disposed || root == null) return;
             visibility = Mathf.Clamp01(value);
-            root.transform.localScale = new Vector3(Mathf.Lerp(.45f, 1f, visibility),
-                Mathf.Lerp(.2f, 1f, visibility), 1f);
-            discMaterial.SetFloat("_Opacity", visibility * .95f);
-            rimMaterial.SetFloat("_Opacity", visibility * .8f);
-            particlesMaterial.SetFloat("_Opacity", visibility * .7f);
+            float scale = Mathf.SmoothStep(0f, 1f, visibility);
+            root.transform.localScale = new Vector3(Mathf.Lerp(.1f, 1f, scale), Mathf.Lerp(.08f, 1f, scale), 1f);
+            discMaterial.SetFloat(OpacityId, visibility * .99f);
+            rimMaterial.SetFloat(OpacityId, visibility * .88f);
+            particlesMaterial.SetFloat(OpacityId, visibility * .8f);
+            smokeMaterial.SetFloat(OpacityId, visibility * .65f);
         }
-
         public void Tick(float deltaTime)
         {
             if (disposed || root == null) return;
             float step = Mathf.Max(0f, deltaTime);
             if (step <= 0f) return;
             elapsed += step;
-            discMaterial.SetFloat("_Phase", elapsed * .7f);
-            UpdateRim();
-            if (visibility > .35f)
+            discMaterial.SetFloat(PhaseId, elapsed);
+            smokeMaterial.SetFloat(PhaseId, elapsed);
+            UpdateGeometry();
+            if (visibility > .12f)
             {
                 emissionElapsed += step;
-                // Cap catch-up emissions after a long frame; this is a quiet entrance,
-                // not a burst that covers the actor or the battlefield.
-                int count = Mathf.Min(3, Mathf.FloorToInt(emissionElapsed / .075f));
-                emissionElapsed %= .075f;
-                for (int i = 0; i < count; i++) EmitDust();
+                int count = Mathf.Min(3, Mathf.FloorToInt(emissionElapsed / .06f));
+                emissionElapsed %= .06f;
+                for (int i = 0; i < count; i++) EmitWisps();
             }
             else emissionElapsed = 0f;
             particles.Simulate(step, false, false, false);
+            smoke.Simulate(step, false, false, false);
             particles.Pause(false);
+            smoke.Pause(false);
         }
-
-        private void EmitDust()
+        private void EmitWisps()
         {
-            float angle = emittedCount++ * 2.399963f + elapsed * .25f;
-            float fraction = .8f + .13f * Mathf.Sin(emittedCount * 1.7f);
+            float angle = emittedCount++ * 2.399963f + elapsed * .6f;
             var emit = new ParticleSystem.EmitParams
             {
-                position = new Vector3(Mathf.Cos(angle) * .78f * fraction,
-                    Mathf.Sin(angle) * 1.9f * fraction, -.025f),
-                velocity = new Vector3(Mathf.Cos(angle) * .04f, .06f, -.01f),
-                startLifetime = .45f + .2f * Mathf.Abs(Mathf.Sin(angle)),
-                startSize = .025f + .035f * Mathf.Abs(Mathf.Cos(angle)),
-                startColor = new Color(.18f, .13f, .19f, .6f)
+                position = new Vector3(Mathf.Cos(angle) * .86f, Mathf.Sin(angle) * 1.9f, -.11f),
+                velocity = new Vector3(-Mathf.Sin(angle) * .15f, .07f + Mathf.Cos(angle) * .14f, -.06f),
+                startLifetime = .35f + .25f * Mathf.Abs(Mathf.Sin(angle)),
+                startSize = .025f + .02f * Mathf.Abs(Mathf.Cos(angle)),
+                startColor = new Color(.61f, .47f, .84f, .7f)
             };
             particles.Emit(emit, 1);
+            if (emittedCount % 2 != 0) return;
+            emit.position *= 1.08f;
+            emit.velocity *= .7f;
+            emit.startLifetime = .75f;
+            emit.startSize = .27f + .15f * Mathf.Abs(Mathf.Sin(angle));
+            emit.rotation = angle * Mathf.Rad2Deg;
+            emit.startColor = new Color(.16f, .11f, .24f, .5f);
+            smoke.Emit(emit, 1);
         }
-
-        private void UpdateRim()
+        private void UpdateGeometry()
         {
             for (int i = 0; i < Segments; i++)
             {
                 float angle = i * Mathf.PI * 2f / Segments;
-                float wobble = 1f + .02f * Mathf.Sin(angle * 4f + elapsed * 1.3f);
-                outerPositions[i] = new Vector3(Mathf.Cos(angle) * .78f * wobble,
-                    Mathf.Sin(angle) * 1.9f * wobble, .12f);
-                innerPositions[i] = new Vector3(Mathf.Cos(angle) * .735f / wobble,
-                    Mathf.Sin(angle) * 1.82f / wobble, .11f);
+                float wobble = 1f + .027f * Mathf.Sin(angle * 7f + elapsed * 3.1f) + .018f * Mathf.Sin(angle * 13f - elapsed * 2.3f);
+                outerPositions[i] = new Vector3(Mathf.Cos(angle) * .9f * wobble, Mathf.Sin(angle) * 1.9f * wobble, -.02f);
+                innerPositions[i] = new Vector3(Mathf.Cos(angle) * .84f / wobble, Mathf.Sin(angle) * 1.82f / wobble, .01f);
             }
             outerRim.SetPositions(outerPositions);
             innerRim.SetPositions(innerPositions);
+            for (int f = 0; f < FilamentCount; f++)
+            {
+                for (int i = 0; i < filamentPositions.Length; i++)
+                {
+                    float t = (float)i / (filamentPositions.Length - 1);
+                    float angle = f * Mathf.PI * 2f / FilamentCount + elapsed * .85f + t * 2.6f;
+                    float radius = Mathf.Lerp(.3f, 1.15f, t);
+                    filamentPositions[i] = new Vector3(Mathf.Cos(angle) * .9f * radius,
+                        Mathf.Sin(angle) * 1.9f * radius, -.015f - Mathf.Sin(t * Mathf.PI) * .05f);
+                }
+                filaments[f].SetPositions(filamentPositions);
+            }
         }
-
-        private LineRenderer MakeRim(string name, int layer, float width, Color color)
+        private LineRenderer MakeLine(string name, int layer, float width, int count, bool loop, Color color)
         {
             var item = new GameObject(name, typeof(LineRenderer));
             item.transform.SetParent(root.transform, false);
             item.layer = layer;
             var line = item.GetComponent<LineRenderer>();
             line.useWorldSpace = false;
-            line.loop = true;
-            line.positionCount = Segments;
-            line.startWidth = line.endWidth = width;
-            line.startColor = line.endColor = color;
+            line.loop = loop;
+            line.positionCount = count;
+            line.startWidth = width;
+            line.endWidth = loop ? width : .001f;
+            line.startColor = loop ? color : new Color(color.r, color.g, color.b, 0f);
+            line.endColor = color;
             line.textureMode = LineTextureMode.Stretch;
             line.sharedMaterial = rimMaterial;
-            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.shadowCastingMode = ShadowCastingMode.Off;
             line.receiveShadows = false;
             return line;
         }
-
+        private ParticleSystem MakeParticles(string name, int layer, Material material, int cap, float size)
+        {
+            var item = new GameObject(name, typeof(ParticleSystem));
+            item.transform.SetParent(root.transform, false);
+            item.layer = layer;
+            var system = item.GetComponent<ParticleSystem>();
+            var main = system.main;
+            main.playOnAwake = false;
+            main.loop = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.startSpeed = 0f;
+            main.startLifetime = .65f;
+            main.startSize = size;
+            main.maxParticles = cap;
+            var emission = system.emission; emission.enabled = false;
+            var shape = system.shape; shape.enabled = false;
+            var fade = system.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(.85f, .13f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+            var renderer = system.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            system.Pause(false);
+            return system;
+        }
         private static Mesh MakeDisc()
         {
             var vertices = new Vector3[Segments + 2];
             var uv = new Vector2[vertices.Length];
-            var colors = new Color[vertices.Length];
             var triangles = new int[Segments * 3];
-            vertices[0] = new Vector3(0f, 0f, .16f);
             uv[0] = Vector2.one * .5f;
-            colors[0] = Color.white;
             for (int i = 0; i <= Segments; i++)
             {
                 float angle = i * Mathf.PI * 2f / Segments;
-                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * .78f, Mathf.Sin(angle) * 1.9f, .16f);
+                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * 1.04f, Mathf.Sin(angle) * 2.19f, 0f);
                 uv[i + 1] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * .5f + Vector2.one * .5f;
-                colors[i + 1] = Color.white;
                 if (i < Segments)
                 {
                     triangles[i * 3] = 0;
@@ -197,15 +222,13 @@ namespace Rokas.Presentation
                     triangles[i * 3 + 2] = i + 2;
                 }
             }
-            var mesh = new Mesh { name = "Reactive Portal Ellipse" };
+            var mesh = new Mesh { name = "Reactive Portal Aperture" };
             mesh.vertices = vertices;
             mesh.uv = uv;
-            mesh.colors = colors;
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
             return mesh;
         }
-
         public void Dispose()
         {
             if (disposed) return;
@@ -215,6 +238,7 @@ namespace Rokas.Presentation
             ReactiveCombatAshDissolve.DestroyOwned(discMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(rimMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(particlesMaterial);
+            ReactiveCombatAshDissolve.DestroyOwned(smokeMaterial);
         }
     }
 }

@@ -1,0 +1,19 @@
+{
+  "boneCount": 33,
+  "maxBindRestMatrixError": 1.2099742889404297e-05,
+  "maxExportedGripError": 5.547087350329126e-07,
+  "plantedFootWorldDrift": {
+    "Right": 0.00014837679646259982,
+    "Left": 1.2635596012514794e-05
+  },
+  "rigMetrics": {
+    "requestedStageHeight": 4.0,
+    "sourceStandingHeight": 0.9435441207315307,
+    "scaleRatio": 3.6006691455841064,
+    "forwardYaw": 65.0,
+    "backstepWorldDistance": 0.78,
+    "runtimeScaleSource": "Unity PlayMode capture manifest (snapshot preserved)",
+    "runtimeScaleManifestSha256": "2f41aa85d8dbd5312f688cb0d63d99a31d828335695cacb67a0c71d1559913ef",
+    "runtimeScaleCapture": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-000.png"
+  }
+}

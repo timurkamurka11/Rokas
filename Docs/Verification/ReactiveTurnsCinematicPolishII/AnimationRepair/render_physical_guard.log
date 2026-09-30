@@ -1,0 +1,33 @@
+00:00.438  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+<string>:8: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+<string>:8: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+00:02.860  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_0_threequarter.png'
+00:02.860  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:03.891  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_22_threequarter.png'
+00:03.907  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:04.829  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_threequarter.png'
+00:04.829  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:05.813  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_56_threequarter.png'
+00:05.813  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:06.875  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_94_threequarter.png'
+00:06.875  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:07.813  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_front.png'
+00:07.813  blend            | Read blend: "D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two handed sword block.blend"
+00:08.735  render           | Saved: 'D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_side.png'
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_0_threequarter.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_22_threequarter.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_threequarter.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_56_threequarter.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_94_threequarter.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_front.png
+FBX version: 7400
+RENDER D:\Rokas\reactiveturns-b2-staging\polish-ii-animation\Two_handed_sword_block_41_side.png
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67,84708">
+  <test-suite type="TestSuite" id="1261" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="205" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67.847080" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1255" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="205" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67.839521" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="9800" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1256" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="205" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67.838180" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1257" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="205" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67.837039" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1124" name="ReactiveHeavyTimingPlayModeTests" fullname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests" classname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:47:21Z" duration="67.831580" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1125" name="HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget" fullname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget" methodname="HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget" classname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests" runstate="Runnable" seed="1439148532" result="Passed" start-time="2026-09-30 14:46:13Z" end-time="2026-09-30 14:46:48Z" duration="34.914628" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1126" name="HeavyRejectsEarlyAndLateDevicePressesAndStillSettles" fullname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyRejectsEarlyAndLateDevicePressesAndStillSettles" methodname="HeavyRejectsEarlyAndLateDevicePressesAndStillSettles" classname="Rokas.Tests.ReactiveHeavyTimingPlayModeTests" runstate="Runnable" seed="1440732168" result="Passed" start-time="2026-09-30 14:46:48Z" end-time="2026-09-30 14:47:21Z" duration="32.907214" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6
+Saving results to: D:\Rokas\reactiveturns-b2-staging\polish-ii-unity\play-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

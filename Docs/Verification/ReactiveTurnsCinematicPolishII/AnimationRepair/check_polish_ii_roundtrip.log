@@ -1,0 +1,27 @@
+FBX version: 7700
+FBX version: 7400
+Two handed sword block {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 5.953941650392725e-07, 'actionFrameRange': [1.0, 97.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Two handed dodge backstep {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 5.547087350329126e-07, 'actionFrameRange': [1.0, 97.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Normal preparation {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 4.896675874624052e-07, 'actionFrameRange': [1.0, 37.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Heavy preparation {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 5.084475398022097e-07, 'actionFrameRange': [1.0, 57.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Two handed approach {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 8.204050968592278e-07, 'actionFrameRange': [1.0, 109.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Two handed return {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 8.134792153631367e-07, 'actionFrameRange': [1.0, 93.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Enter battle corrected {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 1.480456096448221e-06, 'actionFrameRange': [1.0, 73.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Enter battle settle {'maxBindRestMatrixError': 1.2099742889404297e-05, 'boneCount': 33, 'maxExportedGripError': 4.916959847303368e-07, 'actionFrameRange': [1.0, 57.0], 'armatureName': 'Armature'}
+FBX version: 7700
+FBX version: 7400
+Claw attack corrected {'maxBindRestMatrixError': 1.2636184692382812e-05, 'boneCount': 65, 'maxExportedGripError': None, 'actionFrameRange': [1.0, 145.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Claw heavy corrected {'maxBindRestMatrixError': 1.2636184692382812e-05, 'boneCount': 65, 'maxExportedGripError': None, 'actionFrameRange': [1.0, 181.0], 'armatureName': 'Armature'}
+FBX version: 7400
+Claw locomotion corrected {'maxBindRestMatrixError': 1.2636184692382812e-05, 'boneCount': 65, 'maxExportedGripError': None, 'actionFrameRange': [1.0, 57.0], 'armatureName': 'Armature'}
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

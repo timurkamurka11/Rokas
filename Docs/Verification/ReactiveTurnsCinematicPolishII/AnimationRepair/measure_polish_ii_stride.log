@@ -1,0 +1,11 @@
+FBX version: 7700
+Keiko {'sourceStandingHeight': 0.9435441207315307, 'requestedRuntimeHeight': 2, 'scaleRatio': 2.1196677039854777}
+FBX version: 7700
+Yokai {'sourceStandingHeight': 0.9603439731145045, 'requestedRuntimeHeight': 2.7, 'scaleRatio': 2.811492627213137}
+RUNTIME STRIDE Keiko/Run to hit enemies.fbx 3.4356845946819012
+RUNTIME STRIDE Keiko/Run Back after hit.fbx 1.9249762253744116
+RUNTIME STRIDE Keiko/Enter the batle.fbx 3.102218471490906
+RUNTIME STRIDE Yokai/Walking to attack.fbx 1.9273344258071496
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:37:04)
+
+Blender quit

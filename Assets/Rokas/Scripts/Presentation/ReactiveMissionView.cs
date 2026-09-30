@@ -106,12 +106,11 @@ namespace Rokas.Presentation
         private Text selectionHint;
         private Text commandPreview;
         private Text hitFeedback;
+        private Text selectedAction;
         private Text waveBanner;
         private Text announcement;
         private float announcementRemaining;
         private const float AnnouncementDuration = .85f;
-        private Image hunterFlash;
-        private Image enemyFlash;
         private Image timingBeacon;
         private RawImage contactTrack;
         private RawImage contactFill;
@@ -166,6 +165,10 @@ namespace Rokas.Presentation
         public bool HunterApproachComplete { get { return arena == null || arena.HunterApproachComplete; } }
         public bool HunterAtHome { get { return arena == null || arena.HunterAtHome; } }
         public bool ArenaSettled => arena == null || arena.PresentationReady;
+        public bool HunterEntryComplete => arena != null && arena.HunterEntryComplete;
+        public string HunterPresentationActionId => arena?.HunterPresentationActionId;
+        public event Action<string, string, bool> AttackPresentationStarted;
+        public event Action<string, string, bool, string> SwingStarted;
         public bool AnnouncementActive => announcementRemaining > 0f;
         public bool PresentationReady => ArenaSettled && !AnnouncementActive;
         public float ReactiveCorpseElapsed(string id) => arena == null ? -1f : arena.CorpseElapsed(id);
@@ -244,6 +247,8 @@ namespace Rokas.Presentation
         {
             root = ui.Rect(parent, "ReactiveArena", 0, 100, 1920, 906);
             arena = new ReactiveCombatArena(ui, root);
+            arena.AttackPresentationStarted += (id, actor, heavy) => AttackPresentationStarted?.Invoke(id, actor, heavy);
+            arena.SwingStarted += (id, actor, heavy, hit) => SwingStarted?.Invoke(id, actor, heavy, hit);
             arena.BeginEncounterIntro();
             Sprite enemyCardSprite = Resources.Load<Sprite>(
                 "Combat/ReactiveTurns/UI/HUD/Hp bar button ui of monscter");
@@ -254,8 +259,6 @@ namespace Rokas.Presentation
             ui.Box(root, "ReactiveLowerShade", 0, 702, 1920, 204, new Color(.015f, .02f, .04f, .77f));
             ui.Box(root, "ReactiveTopShade", 0, 0, 1920, 127, new Color(.015f, .02f, .045f, .69f));
             ui.Box(root, "ReactiveEnemyGround", 1110, 674, 616, 4, new Color(.94f, .19f, .36f, .5f));
-            hunterFlash = ui.Box(root, "ReactiveHunterImpact", 135, 295, 480, 365, Color.clear);
-            enemyFlash = ui.Box(root, "ReactiveEnemyImpact", 1100, 273, 652, 395, Color.clear);
 
             ui.Box(root, "ReactiveForecastPanel", 450, 11, 891, 97, new Color(.018f, .027f, .052f, .88f));
             ui.Box(root, "ReactiveForecastRule", 450, 11, 891, 2, UiKit.Gold);
@@ -373,6 +376,9 @@ namespace Rokas.Presentation
                 0, 0, 440, 25, 17, UiKit.Gold, true, TextAnchor.MiddleCenter);
             hitFeedback = ui.Label(root, "ReactiveHitFeedback", "", 174, 426, 430, 44, 25,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
+            selectedAction = ui.Label(root, "ReactiveSelectedAction", "", 670, 808, 580, 45, 24,
+                UiKit.Gold, true, TextAnchor.MiddleCenter);
+            selectedAction.gameObject.SetActive(false);
             waveBanner = ui.Label(root, "ReactiveWaveBanner", "", 534, 324, 852, 135, 51,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
             announcement = ui.Label(root, "ReactiveAnnouncement", "", 480, -56, 960, 68, 32,
@@ -642,6 +648,10 @@ namespace Rokas.Presentation
             frozenProgress = duration > 0 ? Mathf.Clamp01((float)(pressUs - latestDisplay.TimingStartUs) / duration) : 1f;
             cursorFreezeTime = .18f;
             defenseAttemptAccepted = attempt.Accepted;
+            if (attempt.Accepted && (attempt.Outcome == DefenseOutcome.Dodge ||
+                attempt.Outcome == DefenseOutcome.Parry || attempt.Outcome == DefenseOutcome.Perfect))
+                arena?.BeginDefense(attempt.Outcome == DefenseOutcome.Dodge,
+                    Mathf.Max(0f, (float)((latestDisplay.TimingImpactUs - pressUs) / 1000000d)));
             feedbackOnHunter = true;
             feedbackOrigin = new Vector2(174f, -426f);
             feedbackColor = UiKit.Red;
@@ -670,6 +680,8 @@ namespace Rokas.Presentation
         {
             if (root == null) return;
             latestDisplay = display;
+            if (arena != null) arena.EnemyContactResolutionDelay =
+                (float)((display.DefenseWindow ?? DefenseWindowProfile.Standard).AcquireLateUs / 1000000d) + .04f;
             hunterHp.text = "HP " + display.HunterHp + " / 100";
             ap.text = "AP " + display.HunterAp + " / 6";
             float hunterGoal = Mathf.Clamp01(display.HunterHp / 100f);
@@ -855,6 +867,11 @@ namespace Rokas.Presentation
         {
             if (root == null) return;
             arena?.Tick(seconds);
+            if (selectedAction != null)
+            {
+                selectedAction.gameObject.SetActive(arena != null && arena.SelectionVisible);
+                selectedAction.text = arena != null && arena.SelectedHeavy ? "ТЯЖЁЛЫЙ УДАР" : "ОБЫЧНЫЙ УДАР";
+            }
             if (announcementRemaining > 0f)
             {
                 announcementRemaining = Mathf.Max(0f, announcementRemaining - seconds);
@@ -882,10 +899,6 @@ namespace Rokas.Presentation
             hitFeedback.color = new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash);
             hitFeedback.rectTransform.anchoredPosition = feedbackOrigin + new Vector2(0f,
                 (.45f - feedbackTime) * 35f);
-            hunterFlash.color = feedbackOnHunter
-                ? new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .08f) : Color.clear;
-            enemyFlash.color = feedbackOnHunter ? Color.clear
-                : new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash * .07f);
         }
 
         public void ClearReferences()
@@ -897,8 +910,9 @@ namespace Rokas.Presentation
             hunterHp = ap = targetName = targetHp = targetSeal = wave = forecast = telegraph = detail =
                 selectionHint = commandPreview = hitFeedback = waveBanner = null;
             announcement = null;
+            selectedAction = null;
             announcementRemaining = 0f;
-            hunterHpFill = timingBeacon = hunterFlash = enemyFlash = null;
+            hunterHpFill = timingBeacon = null;
             dodgeWindow = blockWindow = perfectWindow = offenseCursor = offenseSuccessWindow = null;
             offenseTiming = null;
             offenseHint = null;

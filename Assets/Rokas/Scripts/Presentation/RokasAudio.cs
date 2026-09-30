@@ -19,6 +19,7 @@ namespace Rokas.Presentation
         private int voice;
         private bool mission;
         private bool combat;
+        private bool combatEntryReady = true;
         private bool hasLocation;
         private bool laptopMode;
         private bool lampStateKnown;
@@ -30,6 +31,8 @@ namespace Rokas.Presentation
         public bool VnMuted { get { return vnMuted; } }
         public bool HubVoicePlaying { get { return hubVoice && hubVoice.isPlaying; } }
         public int ClickCount { get; private set; }
+        public bool CombatMusicPlaying => combat && music && music.isPlaying;
+        public bool CombatEntryReady => combatEntryReady;
 
         public RokasAudio(GameObject parent, RokasAssets assets, SettingsData settings)
         {
@@ -62,11 +65,12 @@ namespace Rokas.Presentation
             return source;
         }
 
-        public void SetLocation(bool isMission, bool isCombat = false)
+        public void SetLocation(bool isMission, bool isCombat = false, bool delayCombatMusic = false)
         {
             if (hasLocation && mission == isMission && combat == isCombat) return;
             mission = isMission;
             combat = isCombat;
+            combatEntryReady = !combat || !delayCombatMusic;
             hasLocation = true;
             ambience.Stop();
             music.Stop();
@@ -74,6 +78,13 @@ namespace Rokas.Presentation
             music.clip = combat ? assets.combatMusic : mission ? assets.missionMusic : assets.homeMusic;
             ambience.volume = music.volume = 0;
             if (ambience.clip) ambience.Play();
+            if (music.clip && combatEntryReady) music.Play();
+        }
+
+        public void SetCombatEntryReady(bool ready)
+        {
+            if (!combat || combatEntryReady || !ready) return;
+            combatEntryReady = true;
             if (music.clip) music.Play();
         }
 
@@ -101,7 +112,9 @@ namespace Rokas.Presentation
             float master = focused && !vnMuted ? Mathf.Clamp01(settings.masterVolume) : 0;
             float weather = mission ? 1f : homeWeatherMix;
             ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
-            music.volume = Mathf.MoveTowards(music.volume, master * settings.musicVolume * (combat ? .25f : .6f), dt);
+            float musicTarget = combat && !combatEntryReady ? 0f :
+                master * settings.musicVolume * (combat ? .25f : .6f);
+            music.volume = Mathf.MoveTowards(music.volume, musicTarget, dt * (combat ? .35f : 1f));
             if (hubVoice && hubVoice.isPlaying)
                 hubVoice.volume = vnMuted
                     ? 0f

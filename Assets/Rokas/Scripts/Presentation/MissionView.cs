@@ -69,6 +69,10 @@ namespace Rokas.Presentation
                 () => reactiveDefense(ReactivePressKind.Dodge),
                 () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave, reactiveTarget);
             reactiveAudio = new ReactiveCombatAudio(audio);
+            reactiveView.AttackPresentationStarted += (id, actor, heavy) =>
+                { reactiveAudio.PresentAttackStarted(id, actor, heavy); };
+            reactiveView.SwingStarted += (id, actor, heavy, hit) =>
+                { reactiveAudio.PresentSwing(id, actor, heavy, hit); };
         }
 
         public void CancelInput() { combatHud?.CancelInput(); }
@@ -359,13 +363,16 @@ namespace Rokas.Presentation
         {
             if (combatEvent == null || session.CombatMode != CombatMode.ReactiveTurns) return;
             reactiveView.Present(combatEvent, sequence);
+            if (combatEvent.Kind == CombatEventKind.CommandCommitted &&
+                !string.IsNullOrEmpty(reactiveView.HunterPresentationActionId))
+                reactiveAudio.BindActionId(combatEvent.ActionId, reactiveView.HunterPresentationActionId);
             bool combatCueHandled = reactiveAudio.Present(combatEvent);
             if (combatEvent.Kind != CombatEventKind.HitResolved) return;
             bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
             bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
             if (combatEvent.Amount > 0 && !combatCueHandled)
                 audio.Play(perfect ? assets.critical : assets.hit);
-            world.Impact(perfect ? .35f : defended ? .08f : .20f);
+            if (combatEvent.Detail != "Dodge") world.Impact(perfect ? .25f : defended ? .06f : .16f);
         }
 
         public void Tick(float dt, bool paused)
@@ -375,9 +382,10 @@ namespace Rokas.Presentation
                 (session.State.phase == RunPhase.Combat || reactiveView.AnimatedActorsReady))
             {
                 reactiveView.Tick(dt);
+                audio.SetCombatEntryReady(reactiveView.HunterEntryComplete);
                 ReactiveCombatSession combat = session.ReactiveCombat;
                 reactiveAudio.Tick(dt, combat != null && !session.SaveBlocked &&
-                    combat.Phase == ReactivePhase.PlayerCommand && combat.ActiveEnemyIds.Count > 0);
+                    combat.Phase == ReactivePhase.PlayerCommand && combat.ActiveEnemyIds.Count > 0 && reactiveView.PresentationReady);
                 return;
             }
             HitStopRemaining = Mathf.Max(0, HitStopRemaining - dt);

@@ -1,0 +1,28 @@
+{
+  "Keiko": {
+    "sourceStandingHeight": 0.9435441207315307,
+    "requestedRuntimeHeight": 2,
+    "scaleRatio": 2.1196677039854777
+  },
+  "Yokai": {
+    "sourceStandingHeight": 0.9603439731145045,
+    "requestedRuntimeHeight": 2.7,
+    "scaleRatio": 2.811492627213137
+  },
+  "Keiko/Run to hit enemies.fbx": {
+    "runtimeStride": 3.4356845946819012,
+    "sourceStride": 1.62086
+  },
+  "Keiko/Run Back after hit.fbx": {
+    "runtimeStride": 1.9249762253744116,
+    "sourceStride": 0.90815
+  },
+  "Keiko/Enter the batle.fbx": {
+    "runtimeStride": 3.102218471490906,
+    "sourceStride": 1.46354
+  },
+  "Yokai/Walking to attack.fbx": {
+    "runtimeStride": 1.9273344258071496,
+    "sourceStride": 0.68552
+  }
+}

@@ -63,6 +63,12 @@ namespace Rokas.Editor
                 case "Keiko/Two handed approach.fbx":
                 case "Keiko/Two handed return.fbx":
                 case "Keiko/Enter battle corrected.fbx":
+                case "Keiko/Enter battle settle.fbx":
+                case "Keiko/Two handed sword block.fbx":
+                case "Keiko/Two handed dodge backstep.fbx":
+                case "Yokai/Claw attack corrected.fbx":
+                case "Yokai/Claw heavy corrected.fbx":
+                case "Yokai/Claw locomotion corrected.fbx":
                     return true;
                 default:
                     return false;

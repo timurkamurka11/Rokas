@@ -1,0 +1,152 @@
+{
+  "edit": {
+    "total": 943,
+    "passed": 938,
+    "failed": 5,
+    "skipped": 0,
+    "start_utc": "2026-09-30 13:18:38Z",
+    "end_utc": "2026-09-30 13:19:28Z",
+    "duration": "49,6395496",
+    "failures": [
+      {
+        "name": "Rokas.Core.Tests.HubDialoguePlaybackTests.Config_DefaultsUseEnglishKeikoAndEditableGuildIntro",
+        "message": "  Expected: 128.0f\n  But was:  232.0f\n"
+      },
+      {
+        "name": "Rokas.EditorTools.Tests.VnRuntimeIntroPackageTests.ProjectOwnedExternalPngPreservesNativeWidthThroughPreviewAndRuntimeExport",
+        "message": "System.IO.IOException : Could not copy VN asset into runtime package: Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/Background/RokasVnProjectOwnedNative2305-31baf1b08a004b6fa1eefad7ce96094a.png -> Assets/Rokas/Tests/EditorWorkshop/__RuntimeProjectOwnedNativeImageFixture/Runtime/Assets/4f373e80e83dce740b32d4b376af6552.png"
+      },
+      {
+        "name": "Rokas.EditorTools.Tests.VnSceneComposerMgTests.MG_InspectorKeepsRecognizableSectionsAndDedicatedSelector",
+        "message": "  Expected: property Length equal to 11\n  But was:  13\n"
+      },
+      {
+        "name": "Rokas.EditorTools.Tests.VnSceneComposerPlaybackTests.FocusedAnimationPreviewButtonsAreWiredToFocusedPreviewAction",
+        "message": "  Expected: String containing \"ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.BackgroundTransition);\"\n  But was:  \"{\n            EditorGUILayout.LabelField(\"Анимация сцены\", EditorStyles.boldLabel);\n            DrawSceneComposerAnimationScope();\n            VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);\n            VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);\n\n            VnSceneComposerTran"
+      },
+      {
+        "name": "Rokas.EditorTools.Tests.VnSceneComposerWindowTests.AuthoredCharacterPickerOnlyReturnsCatalogStatesAndAddCharacterUsesSelectedState",
+        "message": "  Expected: True\n  But was:  False\n"
+      }
+    ]
+  },
+  "focus": {
+    "total": 51,
+    "passed": 50,
+    "failed": 1,
+    "skipped": 0,
+    "start_utc": "2026-09-30 13:50:55Z",
+    "end_utc": "2026-09-30 13:56:54Z",
+    "duration": "358,9988385",
+    "failures": [
+      {
+        "name": "Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests.FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns",
+        "message": "  Expected: not null\n  But was:  null\n"
+      }
+    ]
+  },
+  "longrun": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "start_utc": "2026-09-30 14:08:32Z",
+    "end_utc": "2026-09-30 14:14:14Z",
+    "duration": "342,0385026",
+    "failures": []
+  },
+  "play": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "start_utc": "2026-09-30 14:46:13Z",
+    "end_utc": "2026-09-30 14:47:21Z",
+    "duration": "67,84708",
+    "failures": []
+  },
+  "relevant-edit": {
+    "total": 37,
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "start_utc": "2026-09-30 14:52:31Z",
+    "end_utc": "2026-09-30 14:52:34Z",
+    "duration": "2,7144325",
+    "failures": []
+  },
+  "final": {
+    "total": 55,
+    "passed": 54,
+    "failed": 1,
+    "skipped": 0,
+    "start_utc": "2026-09-30 14:35:31Z",
+    "end_utc": "2026-09-30 14:41:30Z",
+    "duration": "358,7218544",
+    "failures": [
+      {
+        "name": "Rokas.Tests.ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget",
+        "message": "  The first keyboard press must precede the Heavy timing window.\n  Expected: less than 100000\n  But was:  131253\n"
+      }
+    ]
+  },
+  "smoke": {
+    "total": 39,
+    "passed": 27,
+    "failed": 12,
+    "skipped": 0,
+    "start_utc": "2026-09-30 14:50:15Z",
+    "end_utc": "2026-09-30 14:50:43Z",
+    "duration": "28,680664",
+    "failures": [
+      {
+        "name": "Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.OrdinaryHomeUiUsesApprovedGenericOutsideLaptopClick",
+        "message": "  Ordinary Home UI outside Laptop must use the approved ButtonClick.wav through the existing generic path.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.RealEnterWorldHandsHomeOffOnlyAtFullBlackThenFadesIn",
+        "message": "  Home handoff did not occur.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.MainMenuInteractionAudioTransitionPlayModeTests.RealEnterWorldUsesApprovedPersistentSpecialAudioOnlyOnce",
+        "message": "  Timed out waiting for: HomeTitle\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.CompletedDialogueDoesNotAutoReplayAfterReload",
+        "message": "Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect"
+      },
+      {
+        "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.ConsumedCoordinateAttachmentRemainsDisabledAfterReload",
+        "message": "Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect"
+      },
+      {
+        "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.DestroyAndReloadPersistsDirtyMessageHistory",
+        "message": "Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect"
+      },
+      {
+        "name": "Rokas.Tests.MessagesLifecyclePlayModeTests.HistoricalUnreadDoesNotCreateFreshNotificationAfterReload",
+        "message": "Unhandled log message: '[Log] [ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=2 icons=6'. Use UnityEngine.TestTools.LogAssert.Expect"
+      },
+      {
+        "name": "Rokas.Tests.VnIntroPlayModeTests.CompletedIntroPreservesTheOldDirectHomePath",
+        "message": "  Timed out waiting for launch object: RokasMainMenu.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.VnIntroPlayModeTests.FirstEnterWorldBuildsPackagedVnUnderFullBlackBeforeHomeAndKeepsFlagIncomplete",
+        "message": "  Timed out waiting for launch object: RokasMainMenu.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.VnIntroPlayModeTests.NaturalCompletionUsesPackagedBeatsThenBuildsHomeBeforeMarkingComplete",
+        "message": "  Timed out waiting for launch object: RokasMainMenu.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.VnIntroPlayModeTests.PackagedMuteIsVnLocalAndCleanupReturnsAudioOwnershipToGameplay",
+        "message": "  Timed out waiting for launch object: RokasMainMenu.\n  Expected: not null\n  But was:  null\n"
+      },
+      {
+        "name": "Rokas.Tests.VnIntroPlayModeTests.RuntimeMenuBlocksOnlyVnAdvanceWithoutChangingGlobalTimeScale",
+        "message": "  Timed out waiting for launch object: RokasMainMenu.\n  Expected: not null\n  But was:  null\n"
+      }
+    ]
+  }
+}

@@ -44,7 +44,16 @@ Shader "Rokas/ReactiveCombat/QuietFx"
                     color.a *= pow(saturate(1.0 - dot(p,p) * 4.0), 1.5);
                 }
                 else if (_SoftShape > 1.5)
-                    color.a *= saturate(1.0 - abs(i.uv.y - .5) * 2.0);
+                {
+                    if (_SoftShape < 2.5)
+                        color.a *= saturate(1.0 - abs(i.uv.y - .5) * 2.0);
+                    else
+                    {
+                        float2 p = (i.uv - .5) * 2.0;
+                        float wisps = .72 + .28 * sin(p.x * 12.0 + sin(p.y * 9.0 + _Phase) * 2.0);
+                        color.a *= pow(saturate(1.0-length(p)),1.3) * wisps;
+                    }
+                }
                 if (_PortalCore > .5)
                 {
                     float2 p = (i.uv - .5) * 2.0;
@@ -53,6 +62,7 @@ Shader "Rokas/ReactiveCombat/QuietFx"
                     color.rgb *= swirl;
                     color.a *= 1.0 - smoothstep(.82, 1.0, radius);
                 }
+                clip(color.a - .001);
                 return color;
             }
             ENDCG

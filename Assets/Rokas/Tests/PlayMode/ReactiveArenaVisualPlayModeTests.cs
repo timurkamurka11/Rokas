@@ -57,8 +57,9 @@ namespace Rokas.Tests
                 int clicksBeforeAttack = boot.View.GenericClickCount;
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
                 Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeAttack),
-                    "Normal attack has its single impact sound, without a UI click cue.");
-                yield return new WaitForSecondsRealtime(.5f);
+                    "Attack selection must not add a generic UI click to its presentation layers.");
+                float travelDeadline = Time.realtimeSinceStartup + 3f;
+                while (hunterActor.localPosition.x <= hunterHome.x && Time.realtimeSinceStartup < travelDeadline) yield return null;
                 Assert.That(hunterActor.localPosition.x, Is.GreaterThan(hunterHome.x));
                 Capture(root, 1920, 1080, "-approach");
                 float deadline = Time.realtimeSinceStartup + 6f;
@@ -71,7 +72,7 @@ namespace Rokas.Tests
                 while (boot.ReactivePresentationHeld && Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(boot.ReactivePresentationHeld, Is.False);
                 AudioClip keikoImpact = Resources.Load<AudioClip>(
-                    "Combat/ReactiveTurns/Audio/Keiko/Keiko hit attack");
+                    "Combat/ReactiveTurns/Audio/PolishII/NormalFleshContact");
                 AudioClip monsterAttack = Resources.Load<AudioClip>(
                     "Combat/ReactiveTurns/Audio/Monsters/Monster attack sound");
                 Assert.That(keikoImpact, Is.Not.Null);
@@ -188,8 +189,10 @@ namespace Rokas.Tests
                 foreach (string enemyId in new[] { "E1", "E2", "E1" })
                 {
                     Assert.That(arena.StartHunterApproach(enemyId), Is.True);
-                    arena.Tick(hunterActor.PreparationDuration(false));
-                    arena.Tick(arena.HunterApproachDuration * .4f);
+                    int approachTicks = 0;
+                    while ((hunterActor.CurrentPose != "Approach" ||
+                            hunterActor.transform.localPosition.x <= home.x + .01f) && approachTicks++ < 150)
+                        arena.Tick(.02f);
                     yield return null;
                     Assert.That(hunterActor.transform.localPosition.x, Is.GreaterThan(home.x));
                     Assert.That(animation.IsPlaying("Approach"), Is.True);
@@ -205,6 +208,10 @@ namespace Rokas.Tests
                         detail: "Basic"));
                     yield return null;
                     Assert.That(animation.IsPlaying("Attack"), Is.True);
+                    arena.Tick(.2f);
+                    arena.Present(new CombatEvent(CombatEventKind.HitResolved,
+                        actorId: ReactiveDuelDefinitions.HunterId, targetId: enemyId,
+                        actionId: enemyId, amount: 8));
                     arena.Present(new CombatEvent(CombatEventKind.ActionSettled,
                         actorId: ReactiveDuelDefinitions.HunterId, actionId: enemyId));
                     deadline = Time.realtimeSinceStartup + 3f;

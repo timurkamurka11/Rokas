@@ -43,7 +43,12 @@ namespace Rokas.Editor
             library.keiko.heavy = Clip("Keiko/Hard jump attack corrected.fbx", true);
             library.keiko.preparation = Clip("Keiko/Normal preparation.fbx", true);
             library.keiko.heavyPreparation = Clip("Keiko/Heavy preparation.fbx", true);
-            library.keiko.enterBattle = Clip("Keiko/Enter battle corrected.fbx", true);
+            library.keiko.entranceWalk = Clip("Keiko/Enter battle corrected.fbx", true);
+            library.keiko.enterBattle = Clip("Keiko/Enter battle settle.fbx", true);
+            library.keiko.guard = Clip("Keiko/Two handed sword block.fbx", true);
+            library.keiko.dodge = Clip("Keiko/Two handed dodge backstep.fbx", true);
+            library.keiko.guardContactSeconds = .34f;
+            library.keiko.dodgeContactSeconds = .24f;
             library.keiko.attackContactNormalized = 18f / 33f;
             library.keiko.heavyContactNormalized = 26f / 43f;
             library.keiko.weaponPrefab = SwordPrefab();
@@ -57,6 +62,9 @@ namespace Rokas.Editor
             library.keiko.walk = null;
             library.keiko.approach = Clip("Keiko/Two handed approach.fbx", true);
             library.keiko.returnHome = Clip("Keiko/Two handed return.fbx", true);
+            library.keiko.approachStrideDistance = 1.62086f;
+            library.keiko.returnStrideDistance = .90815f;
+            library.keiko.entranceStrideDistance = 1.46354f;
             library.keiko.standingHeight = 2f;
             library.keiko.forwardYaw = 65f;
 
@@ -79,14 +87,20 @@ namespace Rokas.Editor
             library.yokai.material = ActorMaterial("Yokai",
                 "Yokai/fantasy+creature+3d+model_basecolor.jpg", null);
             library.yokai.idle = Clip("Yokai/Still stance.fbx");
-            library.yokai.attack = Clip("Yokai/Attack.fbx");
-            library.yokai.heavy = Clip("Yokai/Jump attack.fbx");
+            library.yokai.attack = Clip("Yokai/Claw attack corrected.fbx", true);
+            library.yokai.heavy = Clip("Yokai/Claw heavy corrected.fbx", true);
+            library.yokai.attackContactNormalized = .55f / 1.2f;
+            library.yokai.heavyContactNormalized = .8f / 1.5f;
             library.yokai.hit = Clip("Yokai/Hit.fbx");
             library.yokai.stagger = Clip("Yokai/hit 2.fbx");
             library.yokai.death = Clip("Yokai/Death.fbx");
-            library.yokai.walk = Clip("Yokai/Walking to attack.fbx");
-            library.yokai.approach = null;
-            library.yokai.returnHome = null;
+            library.yokai.walk = Clip("Yokai/Claw locomotion corrected.fbx", true);
+            library.yokai.approach = library.yokai.walk;
+            library.yokai.returnHome = library.yokai.walk;
+            library.yokai.entranceWalk = library.yokai.walk;
+            library.yokai.approachStrideDistance = .68552f;
+            library.yokai.returnStrideDistance = .68552f;
+            library.yokai.entranceStrideDistance = .68552f;
             library.yokai.standingHeight = 2.7f;
             library.yokai.forwardYaw = 65f;
 
@@ -122,7 +136,7 @@ namespace Rokas.Editor
                 // This repair authors Keiko sources. Preserve already verified
                 // Mina/Yokai extracted clips instead of serializing unrelated
                 // compressed curves again when rebuilding the sword library.
-                if (copy != null && group != "Keiko") return copy;
+                if (copy != null && group != "Keiko" && !relative.Contains("corrected.fbx")) return copy;
                 if (copy == null)
                 {
                     copy = UnityEngine.Object.Instantiate(source);
@@ -175,13 +189,16 @@ namespace Rokas.Editor
             var frameCounts = new Dictionary<string, float>
             {
                 { "Two handed battle idle.fbx", 240f },
-                { "Normal preparation.fbx", 32f },
-                { "Heavy preparation.fbx", 48f },
+                { "Normal preparation.fbx", 36f },
+                { "Heavy preparation.fbx", 56f },
                 { "Normal attack corrected.fbx", 132f },
                 { "Hard jump attack corrected.fbx", 172f },
-                { "Two handed approach.fbx", 96f },
-                { "Two handed return.fbx", 96f },
-                { "Enter battle corrected.fbx", 144f },
+                { "Two handed approach.fbx", 108f },
+                { "Two handed return.fbx", 92f },
+                { "Enter battle corrected.fbx", 72f },
+                { "Enter battle settle.fbx", 56f },
+                { "Two handed sword block.fbx", 96f },
+                { "Two handed dodge backstep.fbx", 96f },
                 { "Enter the batle.fbx", 18f }
             };
             foreach (KeyValuePair<string, float> take in frameCounts)
@@ -199,7 +216,33 @@ namespace Rokas.Editor
                 if (takes.Length != 1) throw new InvalidOperationException("Expected one authored attack take: " + file);
                 takes[0].firstFrame = 0f;
                 takes[0].lastFrame = take.Value;
-                takes[0].loopTime = file == "Two handed battle idle.fbx";
+                takes[0].loopTime = file == "Two handed battle idle.fbx" ||
+                    file == "Two handed approach.fbx" || file == "Two handed return.fbx" ||
+                    file == "Enter battle corrected.fbx";
+                takes[0].loopPose = false;
+                importer.clipAnimations = takes;
+                importer.SaveAndReimport();
+            }
+            foreach (KeyValuePair<string, float> take in new Dictionary<string, float>
+            {
+                { "Claw attack corrected.fbx", 144f },
+                { "Claw heavy corrected.fbx", 180f },
+                { "Claw locomotion corrected.fbx", 56f }
+            })
+            {
+                var importer = AssetImporter.GetAtPath(Source + "Yokai/" + take.Key) as ModelImporter;
+                if (importer == null) throw new InvalidOperationException("Missing authored monster source: " + take.Key);
+                importer.animationType = ModelImporterAnimationType.Legacy;
+                importer.importAnimation = true;
+                importer.materialImportMode = ModelImporterMaterialImportMode.None;
+                importer.optimizeGameObjects = false;
+                importer.animationCompression = ModelImporterAnimationCompression.Off;
+                importer.resampleCurves = false;
+                var takes = importer.defaultClipAnimations;
+                if (takes.Length != 1) throw new InvalidOperationException("Expected one monster take: " + take.Key);
+                takes[0].firstFrame = 0f;
+                takes[0].lastFrame = take.Value;
+                takes[0].loopTime = take.Key == "Claw locomotion corrected.fbx";
                 takes[0].loopPose = false;
                 importer.clipAnimations = takes;
                 importer.SaveAndReimport();
@@ -342,7 +385,8 @@ namespace Rokas.Editor
                     ", runtime textured=" + (clips.material != null && clips.material.mainTexture != null));
                 foreach (AnimationClip clip in new[] { clips.idle, clips.attack, clips.heavy, clips.hit,
                              clips.stagger, clips.death, clips.walk, clips.approach, clips.returnHome,
-                             clips.preparation, clips.heavyPreparation, clips.enterBattle })
+                             clips.preparation, clips.heavyPreparation, clips.enterBattle,
+                             clips.entranceWalk, clips.guard, clips.dodge })
                 {
                     if (clip == null) continue;
                     var bindings = AnimationUtility.GetCurveBindings(clip);
@@ -366,7 +410,8 @@ namespace Rokas.Editor
             {
                 foreach (AnimationClip clip in new[] { actor.idle, actor.attack, actor.heavy, actor.hit,
                              actor.stagger, actor.death, actor.walk, actor.approach, actor.returnHome,
-                             actor.preparation, actor.heavyPreparation, actor.enterBattle })
+                             actor.preparation, actor.heavyPreparation, actor.enterBattle,
+                             actor.entranceWalk, actor.guard, actor.dodge })
                 {
                     if (clip == null) continue;
                     string path = AssetDatabase.GetAssetPath(clip);

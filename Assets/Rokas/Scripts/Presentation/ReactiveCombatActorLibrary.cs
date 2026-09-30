@@ -16,12 +16,21 @@ namespace Rokas.Presentation
         public AnimationClip preparation;
         public AnimationClip heavyPreparation;
         public AnimationClip enterBattle;
+        public AnimationClip entranceWalk;
+        public AnimationClip guard;
+        public AnimationClip dodge;
         public AnimationClip hit;
         public AnimationClip stagger;
         public AnimationClip death;
         public AnimationClip walk;
         public AnimationClip approach;
         public AnimationClip returnHome;
+        // Original FBX rig units per complete cycle, before any stage/slot scale.
+        public float approachStrideDistance = 1.8f;
+        public float returnStrideDistance = 1.8f;
+        public float entranceStrideDistance = 1.8f;
+        public float guardContactSeconds = .34f;
+        public float dodgeContactSeconds = .24f;
         public float standingHeight = 2f;
         public float forwardYaw;
         [Range(0f, 1f)] public float attackContactNormalized = .5f;

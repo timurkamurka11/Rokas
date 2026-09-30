@@ -1,0 +1,91 @@
+{
+  "assets": [
+    {
+      "name": "DodgeBackstep.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 3969,
+      "header_and_data_valid": true,
+      "guid": "836dedc350274157a4dbb4f96a977ceb",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "GuardMetalContact.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 6835,
+      "header_and_data_valid": true,
+      "guid": "f4ecf337f2bf4e81bab1991defcf38ca",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "HeavyFleshContact.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 16074,
+      "header_and_data_valid": true,
+      "guid": "cc0d740cf42b4a4580ee54f505c6f478",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "HeavyWhoosh.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 11025,
+      "header_and_data_valid": true,
+      "guid": "3ed3d1049d0a4d029db2189b5994ff69",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "MonsterFleshContact.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 17640,
+      "header_and_data_valid": true,
+      "guid": "8dc4dba123e8417a94727d67d032efa1",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "NormalFleshContact.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 13163,
+      "header_and_data_valid": true,
+      "guid": "d1cd1439331d4975a39a18a682d36b05",
+      "guid_unique": true,
+      "pass": true
+    },
+    {
+      "name": "NormalWhoosh.wav",
+      "channels": 2,
+      "sample_rate": 22050,
+      "bit_depth": 16,
+      "compression": "NONE",
+      "frames": 8379,
+      "header_and_data_valid": true,
+      "guid": "2560f2856d4f4de9ba51c2bf5d5fd726",
+      "guid_unique": true,
+      "pass": true
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "unity_import": "Verified separately by Unity runtime clip loads and test/log evidence"
+}
