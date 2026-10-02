@@ -46,6 +46,9 @@ namespace Rokas.Tests
             Assert.That(upgrade, Is.Not.Null);
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
             Assert.That(upgrade.IsInteractable(), Is.True);
+            Assert.That(Find("WorkbenchHud").GetComponent<RectTransform>().pivot, Is.EqualTo(new Vector2(.5f, .5f)));
+            Assert.That(Find("WorkbenchWeaponPreview").GetComponent<RectTransform>().pivot, Is.EqualTo(new Vector2(.5f, .5f)),
+                "Animated weapon preview must rotate and scale around its visual center.");
 
             dagger.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.32f);
