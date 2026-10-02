@@ -10,9 +10,13 @@ on:
       - Assets/Rokas/Scripts/Presentation/ContractPanels.cs
       - Assets/Rokas/Scripts/Presentation/LaptopView.cs
       - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs.meta
       - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs.meta
       - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs
+      - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs.meta
       - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs.meta
 
 permissions:
   contents: read
