@@ -302,7 +302,7 @@ namespace Rokas.Presentation
 
         private static Vector2 Map(Rect rect, Vector2 normalized)
         {
-            return new Vector2(rect.xMin + normalized.x * rect.width, rect.yMin + normalized.y * rect.height);
+            return new Vector2(rect.xMin + normalized.x * rect.width, rect.yMax - normalized.y * rect.height);
         }
     }
 }
