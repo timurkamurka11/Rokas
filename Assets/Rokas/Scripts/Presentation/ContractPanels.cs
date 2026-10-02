@@ -12,24 +12,46 @@ namespace Rokas.Presentation
         private readonly Action refresh;
         private readonly Action<Func<bool>, string> travel;
         private readonly Action close;
+        private readonly LaptopWorkbenchView workbench;
 
         public ContractPanels(UiKit ui, GameSession session, Action<Func<bool>, string> act, Action refresh,
             Action<Func<bool>, string> travel, Action close)
-        { this.ui = ui; this.session = session; this.act = act; this.refresh = refresh; this.travel = travel; this.close = close; }
+        {
+            this.ui = ui;
+            this.session = session;
+            this.act = act;
+            this.refresh = refresh;
+            this.travel = travel;
+            this.close = close;
+            workbench = new LaptopWorkbenchView(ui, session, act);
+        }
+
+        public string WorkbenchPreferredControlName => workbench.PreferredControlName;
 
         public void Build(RectTransform root, string kind)
         {
-            var panel = ui.Panel(root, "InWorldPanel", 330, 180, 1260, 700);
-            ui.Button(panel, "ClosePanel", "Закрыть  ×", 1025, 27, 202, 48, close);
-            if (kind == "tea") Tea(panel);
-            else Workbench(panel);
+            if (kind == "tea")
+            {
+                var panel = ui.Panel(root, "InWorldPanel", 330, 180, 1260, 700);
+                ui.Button(panel, "ClosePanel", "Закрыть  ×", 1025, 27, 202, 48, close);
+                Tea(panel);
+                return;
+            }
+
+            var workbenchRoot = ui.Rect(root, "WorkbenchModal", 300, 155, 1320, 770);
+            workbench.Build(workbenchRoot, close);
         }
 
         public void BuildLaptopPage(RectTransform panel, string kind)
         {
             if (kind == "contracts") Laptop(panel);
             else if (kind == "tea") Tea(panel);
-            else Workbench(panel);
+            else workbench.Build(panel, close);
+        }
+
+        public void BuildLaptopWorkbenchPage(RectTransform panel, Action back)
+        {
+            workbench.Build(panel, back);
         }
 
         private void Laptop(RectTransform panel)
@@ -81,19 +103,5 @@ namespace Rokas.Presentation
             else if (!ready && session.State.yen < FoodService.GreenTeaCost) ui.Label(panel, "TeaFunds", "Недостаточно иен", 660, 573, 530, 66, 22, UiKit.Gold);
         }
 
-        private void Workbench(RectTransform panel)
-        {
-            int level = session.State.weaponLevel;
-            long cost = 300L * level;
-            ui.Label(panel, "WorkbenchEyebrow", "ВЕРСТАК  /  РИТУАЛЬНОЕ СНАРЯЖЕНИЕ", 45, 33, 925, 49, 21, UiKit.Gold);
-            ui.Label(panel, "WeaponTitle", level < 2 ? "Сталь без имени." : "Клинок под защитой.", 45, 172, 1140, 90, 46, UiKit.Paper, true);
-            ui.Label(panel, "WeaponStats", "УРОВЕНЬ  " + level + "\n\nРучные и автоматические атаки: +" + ((level - 1) * 20) + "% урона.\nСледующее улучшение: ещё +20% к базовому урону.\nНа втором уровне на клинке появляется защитная печать.",
-                47, 278, 1130, 236, 26);
-            ui.Button(panel, "UpgradeWeapon", "Улучшить  /  ¥ " + cost.ToString("N0"), 47, 572, 580, 66,
-                () => { act(session.UpgradeWeapon, "Клинок стал сильнее. Печать тихо шуршит."); refresh(); }, true,
-                session.State.phase == RunPhase.Home && session.State.yen >= cost && level < SaveData.MaxWeaponLevel);
-            if (session.State.phase != RunPhase.Home)
-                ui.Label(panel, "WorkbenchLocked", "Обслуживание — между контрактами.\nТекущий заказ можно отменить в YOMI.", 660, 558, 535, 108, 21, UiKit.Gold);
-        }
     }
 }

@@ -13,7 +13,7 @@ namespace Rokas.Presentation
         private static readonly Color White = new Color(.94f, .94f, .91f);
         private static readonly Color Soft = new Color(.64f, .71f, .75f);
         private static readonly string[] Titles =
-            { "Контракты", "Новости", "Еда", "Магазин", "Бестиарий", "Гайды", "Сообщения", "Профиль", "Скидки" };
+            { "Контракты", "Новости", "Еда", "Верстак", "Бестиарий", "Гайды", "Сообщения", "Профиль", "Скидки" };
         private static readonly string[] Names =
             { "LaptopContracts", "LaptopNews", "LaptopFood", "LaptopShop", "LaptopBestiary", "LaptopGuides", "LaptopMessages", "LaptopProfile", "LaptopDiscounts" };
         private static readonly Color[] TileColors =
@@ -186,6 +186,13 @@ namespace Rokas.Presentation
                     !EventSystem.current.currentSelectedGameObject.transform.IsChildOf(page)) Select(messagesBack);
                 return;
             }
+            if (section == 3)
+            {
+                ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.012f, .028f, .052f, .76f));
+                contracts.BuildLaptopWorkbenchPage(page, Back);
+                FocusPreferred(page, contracts.WorkbenchPreferredControlName, "UpgradeWeapon", "WorkbenchClose");
+                return;
+            }
             ui.Box(page, "AppShade", 0, 0, 1744, 812, new Color(.018f, .038f, .065f, .60f));
             var back = ChromeButton(page, "LaptopBack", "Назад", 42, 24, 158, 48, Back);
             Icon(back.transform, "BackGlyph", LaptopGlyph.Back, 8, 9, 28, White);
@@ -193,8 +200,8 @@ namespace Rokas.Presentation
             ui.Label(page, "AppTitle", Titles[section], 302, 21, 950, 50, 28, White);
             var card = Surface(page, "LaptopAppCard", 242, 102, 1260, 674, 20,
                 new Color(.035f, .065f, .085f, .97f), true).rectTransform;
-            if (section == 0 || section == 2 || section == 3)
-                contracts.BuildLaptopPage(card, section == 0 ? "contracts" : section == 2 ? "tea" : "workbench");
+            if (section == 0)
+                contracts.BuildLaptopPage(card, "contracts");
             else BuildPlaceholder(card);
             RestyleActions(card);
             FocusPreferred(card, "AcceptContract", "ClaimPayment", "PrepareTea", "ContractAccepted", "UpgradeWeapon");
