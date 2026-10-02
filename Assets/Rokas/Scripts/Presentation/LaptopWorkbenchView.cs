@@ -468,6 +468,7 @@ namespace Rokas.Presentation
             WorkbenchWeaponViewData data = WorkbenchPresentationModel.Create(session, selected);
             if (selected != WorkbenchWeaponKind.TwoHanded || !data.CanUpgrade) return;
             act(session.UpgradeWeapon, "Клинок стал сильнее. Печать тихо шуршит.");
+            ApplyModel(selected, true);
         }
 
         private IEnumerator SwitchRoutine(WorkbenchWeaponKind kind)
