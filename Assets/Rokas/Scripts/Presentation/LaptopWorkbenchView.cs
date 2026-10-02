@@ -210,12 +210,14 @@ namespace Rokas.Presentation
             AddPanel(viewer.transform, "WorkbenchViewerInner", 16, 16, 578, 538, 15,
                 new Color(.015f, .043f, .071f, .62f), new Color(Cyan.r, Cyan.g, Cyan.b, .18f), 1f);
             var hudRect = ui.Rect(viewer.transform, "WorkbenchHud", 97, 93, 416, 416);
+            CenterPivot(hudRect);
             var hud = hudRect.gameObject.AddComponent<WorkbenchHudGraphic>();
             hud.color = new Color(Cyan.r, Cyan.g, Cyan.b, .42f);
             ui.Box(viewer.transform, "ViewerTopTick", 278, 19, 54, 2, CyanSoft);
             ui.Box(viewer.transform, "ViewerBottomTick", 278, 548, 54, 2, CyanSoft);
 
             var previewRect = ui.Rect(viewer.transform, "WorkbenchWeaponPreview", 170, 58, 270, 455);
+            CenterPivot(previewRect);
             previewRect.localEulerAngles = new Vector3(0, 0, -34f);
             var preview = previewRect.gameObject.AddComponent<WorkbenchWeaponGraphic>();
             preview.color = Color.white;
@@ -287,6 +289,7 @@ namespace Rokas.Presentation
             Button button = DecoratedButton(parent, name, string.Empty, x, y, 168, 214,
                 () => target?.Select(kind), out face, out glow);
             var iconRect = ui.Rect(button.transform, "WeaponCardPreview", 34, 17, 100, 137);
+            CenterPivot(iconRect);
             iconRect.localEulerAngles = new Vector3(0, 0, kind == WorkbenchWeaponKind.TwoHanded ? -35f : -28f);
             var icon = iconRect.gameObject.AddComponent<WorkbenchWeaponGraphic>();
             icon.Kind = kind;
@@ -338,6 +341,13 @@ namespace Rokas.Presentation
             for (int i = 1; i < 6; i++)
                 ui.Box(parent, "GridH" + i, 0, i * height / 6f, width, 1,
                     new Color(Cyan.r, Cyan.g, Cyan.b, .022f));
+        }
+
+        private static void CenterPivot(RectTransform rect)
+        {
+            Vector2 size = rect.sizeDelta;
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition += new Vector2(size.x * .5f, -size.y * .5f);
         }
 
         private WorkbenchPanelGraphic AddPanel(Transform parent, string name, float x, float y, float w, float h,
