@@ -63,6 +63,10 @@ namespace Rokas.Tests
             Assert.That(session.State.weaponLevel, Is.EqualTo(2),
                 "The CTA must call the existing GameSession upgrade path instead of a local UI counter.");
             Assert.That(session.State.yen, Is.EqualTo(1700));
+            Assert.That(FindText("WorkbenchInfoLevel").text, Does.Contain("2"),
+                "Open Workbench must refresh its visible level immediately after a successful upgrade.");
+            Assert.That(FindButton("UpgradeWeapon").GetComponentInChildren<Text>().text, Does.Contain("600"),
+                "The next authoritative upgrade cost must refresh without closing the screen.");
 
             FindButton("WorkbenchClose").onClick.Invoke();
             Assert.That(closed, Is.True);
