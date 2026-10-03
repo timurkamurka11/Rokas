@@ -88,7 +88,7 @@ namespace Rokas.Tests
             foreach (Renderer renderer in hunter.GetComponentsInChildren<Renderer>())
                 Assert.That(renderer.bounds.max.x, Is.LessThan(cam.transform.position.x - cam.orthographicSize * cam.aspect));
             int priorCount = 0;
-            for (int tick = 0; tick < 900 && !arena.PresentationReady; tick++)
+            for (int tick = 0; tick < 1600 && !arena.PresentationReady; tick++)
             {
                 arena.Tick(.02f);
                 if (!arena.HunterEntryComplete) Assert.That(audio.CombatMusicPlaying, Is.False);

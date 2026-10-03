@@ -16,6 +16,7 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
         _PortalNormal ("Plane Normal", Vector) = (0,0,-1,0)
         _PortalRight ("Plane Right", Vector) = (1,0,0,0)
         _PortalRadius ("Radius and Depth", Vector) = (.9,1.9,.65,0)
+        _PortalPhase ("Presentation Phase", Float) = 0
     }
     SubShader
     {
@@ -29,10 +30,12 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
         #pragma shader_feature_local _EMISSION
         #pragma shader_feature_local _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
         #include "UnityStandardUtils.cginc"
+        #include "ReactiveCombatPortalBoundary.cginc"
         sampler2D _MainTex, _BumpMap, _MetallicGlossMap, _EmissionMap;
         fixed4 _Color, _EmissionColor;
         float _Glossiness, _GlossMapScale, _Metallic, _BumpScale;
         float4 _PortalCenter, _PortalNormal, _PortalRight, _PortalRadius;
+        float _PortalPhase;
         struct Input { float2 uv_MainTex; float2 uv_BumpMap; float3 worldPos; };
         void surf(Input IN, inout SurfaceOutputStandard o)
         {
@@ -43,7 +46,8 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
             {
                 // The back volume is visible only through the aperture. The moving
                 // skinned mesh crosses this fixed plane continuously, fragment by fragment.
-                clip(1-dot(aperture,aperture));
+                float boundary=portalAngularBoundary(atan2(aperture.y,aperture.x),_PortalPhase);
+                clip(boundary-length(aperture));
                 clip(depth+_PortalRadius.z);
             }
             fixed4 albedo=tex2D(_MainTex,IN.uv_MainTex)*_Color;

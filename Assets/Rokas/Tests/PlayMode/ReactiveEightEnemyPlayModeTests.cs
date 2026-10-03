@@ -120,7 +120,7 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForCombat(RokasBootstrap boot)
         {
-            float deadline = Time.realtimeSinceStartup + 20f;
+            float deadline = Time.realtimeSinceStartup + 35f;
             while ((boot.Session.State.phase != RunPhase.Combat || boot.View.Paused ||
                     boot.Session.ReactiveCombat == null ||
                     boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand ||

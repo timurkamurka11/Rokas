@@ -1,0 +1,62 @@
+{
+  "initial_head": "33fd9a9f03f54283dd6b51f1c208ded152eac0a6",
+  "branch": "r11-finished-ui",
+  "focused_playmode": {
+    "file": "visual-final-20261003-192149-results.xml",
+    "sha256": "436f32f64b2c9329533ccc5f7a949a3b2dc72587579d6cdd8fc58b7a2c9740b8",
+    "result": "Passed",
+    "total": "19",
+    "passed": "19",
+    "failed": "0",
+    "skipped": "0",
+    "duration": "191,8589531"
+  },
+  "full_relevant_playmode": {
+    "file": "regression-20261003-192537-results.xml",
+    "sha256": "c614e203223480af397b3d292706673f7cfc54940d1d2f21c6bea625f1a61294",
+    "result": "Passed",
+    "total": "80",
+    "passed": "80",
+    "failed": "0",
+    "skipped": "0",
+    "duration": "1022,5767678"
+  },
+  "core_named_passes": 49,
+  "long_run": {
+    "test": "Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests.FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns",
+    "result": "Passed",
+    "duration": "355.786758",
+    "counts": [
+      "completed=1 normal=1 heavy=0 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=2 normal=2 heavy=0 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=3 normal=3 heavy=0 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=4 normal=4 heavy=0 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=5 normal=5 heavy=0 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=6 normal=5 heavy=1 throw=0 fillerNormals=0 wave=0 hunterHp=100",
+      "completed=6 normal=5 heavy=1 throw=0 fillerNormals=1 wave=0 hunterHp=100",
+      "completed=7 normal=5 heavy=2 throw=0 fillerNormals=1 wave=1 hunterHp=100",
+      "completed=7 normal=5 heavy=2 throw=0 fillerNormals=2 wave=1 hunterHp=100",
+      "completed=8 normal=5 heavy=3 throw=0 fillerNormals=2 wave=1 hunterHp=100",
+      "completed=8 normal=5 heavy=3 throw=0 fillerNormals=3 wave=1 hunterHp=94",
+      "completed=9 normal=5 heavy=4 throw=0 fillerNormals=3 wave=1 hunterHp=88",
+      "completed=9 normal=5 heavy=4 throw=0 fillerNormals=4 wave=1 hunterHp=88",
+      "completed=10 normal=5 heavy=5 throw=0 fillerNormals=4 wave=1 hunterHp=88",
+      "completed=11 normal=6 heavy=5 throw=0 fillerNormals=4 wave=2 hunterHp=88",
+      "completed=12 normal=6 heavy=6 throw=0 fillerNormals=4 wave=2 hunterHp=82",
+      "completed=13 normal=6 heavy=6 throw=1 fillerNormals=4 wave=2 hunterHp=82",
+      "completed=14 normal=7 heavy=6 throw=1 fillerNormals=4 wave=2 hunterHp=82",
+      "completed=15 normal=7 heavy=7 throw=1 fillerNormals=4 wave=2 hunterHp=76",
+      "completed=16 normal=7 heavy=7 throw=2 fillerNormals=4 wave=2 hunterHp=70",
+      "completed=17 normal=8 heavy=7 throw=2 fillerNormals=4 wave=2 hunterHp=70",
+      "completed=18 normal=8 heavy=8 throw=2 fillerNormals=4 wave=2 hunterHp=70",
+      "completed=19 normal=8 heavy=8 throw=3 fillerNormals=4 wave=2 hunterHp=70",
+      "completed=20 normal=9 heavy=8 throw=3 fillerNormals=4 wave=0 hunterHp=100"
+    ]
+  },
+  "portal_capture": {
+    "portals": 3,
+    "maximumParticles": 68,
+    "maximumMaterials": 16
+  },
+  "runtime_frames": 207
+}

@@ -1,0 +1,136 @@
+FAIL: Unresolved GUID 71c1514a6bd24e1e882cebbe1904ce04 in Assets\Rokas\Resources\RokasSans TMP.asset
+FAIL: Unresolved GUID 71c1514a6bd24e1e882cebbe1904ce04 in Assets\Rokas\Resources\Fonts\TMP\Corbel-Bold-fa008372f8a9 SDF.asset
+FAIL: Unresolved GUID 2705215ac5b84b70bacc50632be6e391 in Assets\TextMesh Pro\Resources\TMP Settings.asset
+FAIL: Unresolved GUID 84a92b25f83d49b9bc132d206b370281 in Assets\TextMesh Pro\Resources\Sprite Assets\EmojiOne.asset
+FAIL: Unresolved GUID ab2114bdc8544297b417dfefe9f1e410 in Assets\TextMesh Pro\Resources\Style Sheets\Default Style Sheet.asset
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 5f7201a12d95ffc409449d95f23cf332 in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 1344c3c82d62a2a41a3576d8abb8e3ea in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 31a19414c41e5ae4aae2af33fee712f6 in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID dc42784cf147c0c48a680349fa168899 in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 0cd44c1031e13a943bb63640046fad76 in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 1344c3c82d62a2a41a3576d8abb8e3ea in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 1344c3c82d62a2a41a3576d8abb8e3ea in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID 5f7201a12d95ffc409449d95f23cf332 in Assets\Rokas\EditorWorkshops\HubDialogueWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID dc42784cf147c0c48a680349fa168899 in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID 0cd44c1031e13a943bb63640046fad76 in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID 1344c3c82d62a2a41a3576d8abb8e3ea in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID fe87c0e1cc204ed48ad3b37840f39efc in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID 1344c3c82d62a2a41a3576d8abb8e3ea in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Unresolved GUID f4688fdb7df04437aeb418b961361dc5 in Assets\Rokas\EditorWorkshops\MainRoomOverlayWorkshop.unity
+FAIL: Invalid JSON: Assets\Rokas\Scripts\Editor\VnUiWorkshop\OnboardedAssets\ROKAS_VN_SCENE_COMPOSER_ASSET_CATALOG.json: 'charmap' codec can't decode byte 0x98 in position 7939: character maps to <undefined>
+FAIL: Background below HD: HubDialoguePlaque.png
+FAIL: Background below HD: KeikoHubPortraitAtlas.png
+FAIL: Background below HD: HazeLong_01.png
+FAIL: Background below HD: HazeLong_02.png
+FAIL: Background below HD: HazeLong_03.png
+FAIL: Background below HD: HazeLong_04.png
+FAIL: Background below HD: HazeLong_05.png
+FAIL: Background below HD: HazeLong_06.png
+FAIL: Background below HD: HazeShort_01.png
+FAIL: Background below HD: HazeShort_02.png
+FAIL: Background below HD: BentLineA.png
+FAIL: Background below HD: BentLineB.png
+FAIL: Background below HD: CornerLeft.png
+FAIL: Background below HD: CornerRight.png
+FAIL: Background below HD: CurvedLine.png
+FAIL: Background below HD: DotStackLong.png
+FAIL: Background below HD: DotStackShort.png
+FAIL: Background below HD: LongHorizontal.png
+FAIL: Background below HD: LongVertical.png
+FAIL: Background below HD: MediumHorizontal.png
+FAIL: Background below HD: RoundedFrame.png
+FAIL: Background below HD: ShortVertical.png
+FAIL: Background below HD: SingleDot.png
+FAIL: Background below HD: Cat.png
+FAIL: Background below HD: Exit.png
+FAIL: Background below HD: Laptop.png
+FAIL: Background below HD: LightBulb.png
+FAIL: Background below HD: Swords.png
+FAIL: Background below HD: Window.png
+FAIL: Background below HD: Keiko_CharacterSheet.png
+FAIL: Background below HD: Mina_CharacterSheet.png
+FAIL: Background below HD: VN_Icon_Mute.png
+FAIL: Background below HD: VN_Icon_Pause.png
+FAIL: Background below HD: VN_Icon_Skip.png
+FAIL: Background below HD: VN_DialoguePanel_Keiko_Dark.png
+FAIL: Background below HD: VN_DialoguePanel_Mina_Light.png
+FAIL: Background below HD: Ancot button.png
+FAIL: Background below HD: Defence button.png
+FAIL: Background below HD: Heavy hit.png
+FAIL: Background below HD: Normal hit button.png
+FAIL: Background below HD: Pring impact.png
+FAIL: Background below HD: Whifh button.png
+FAIL: Background below HD: TEXT UI SHOWS CLICK IN TIME.png
+FAIL: Background below HD: UI ATTACK SHOWS WHEN ENEMY ATTACKS.png
+FAIL: Background below HD: UI BAR CLICK ON RIGHT TIME.png
+FAIL: Background below HD: UI BLOCK BUTTON.png
+FAIL: Background below HD: UI DODGE BUTTON.png
+FAIL: Background below HD: UI MOVING BAR.png
+FAIL: Background below HD: UI NEAR BARS.png
+FAIL: Background below HD: UI TIMING BAR.png
+FAIL: Background below HD: Hp bar button ui of monscter.png
+FAIL: Background below HD: Keiko ui profile during battle.png
+FAIL: Background below HD: GreenTea.png
+FAIL: Background below HD: HunterTempura.png
+FAIL: Background below HD: MoonMochi.png
+FAIL: Background below HD: SpicyMiso.png
+FAIL: Background below HD: TravelerOnigiri.png
+FAIL: Background below HD: HomeActionIcons.png
+FAIL: Background below HD: Cat.png
+FAIL: Background below HD: Exit.png
+FAIL: Background below HD: Laptop.png
+FAIL: Background below HD: LightBulb.png
+FAIL: Background below HD: Swords.png
+FAIL: Background below HD: Window.png
+FAIL: Background below HD: StartupSkipHint.png
+FAIL: Background below HD: DaggerReference.png
+FAIL: Background below HD: DaggerVideoRef.png
+FAIL: Background below HD: SwordReference.png
+FAIL: Background below HD: SwordVideoRef.png
+FAIL: Background below HD: 6bbf22755fe125c4482a7fd9e8f351ca.png
+FAIL: Background below HD: keiko_neutral.png
+FAIL: Background below HD: mina_happy.png
+FAIL: Background below HD: mina_neutral.png
+FAIL: Background below HD: onboarded_keiko_keiki_funny.png
+FAIL: Background below HD: onboarded_mina_9f18a6e3_9df2_4c27_9dbd_fe48df06b114.png
+FAIL: Background below HD: onboarded_mina_mina_serious.png
+FAIL: Background below HD: onboarded_mina_mina_shy_not_happy.png
+FAIL: Background below HD: RokasCompletionArrow.png
+FAIL: Background below HD: RokasDefaultPlaque.png
+FAIL: Background below HD: RokasFinalControlSheet.png
+FAIL: Background below HD: RokasMutedSpeaker.png
+FAIL: Background below HD: ColdSpillMask.png
+FAIL: Background below HD: DistantHaze.png
+FAIL: Background below HD: NearMist.png
+FAIL: Background below HD: RainStreakAuthored.png
+FAIL: Background below HD: StormCloudMask.png
+FAIL: Background below HD: StormRoomLiftMask.png
+FAIL: Background below HD: WarmPracticalMask.png
+FAIL: Background below HD: WetGlassDroplets.png
+FAIL: Background below HD: WetGlassStreaks.png
+FAIL: Background below HD: WindowGlazingMask.png
+FAIL: Background below HD: Keiki funny.png
+FAIL: Background below HD: 9f18a6e3-9df2-4c27-9dbd-fe48df06b114.png
+FAIL: Background below HD: b5a221a0-4101-40f0-bc9c-cb2ad4563b9f.png
+FAIL: Background below HD: Mina serious.png
+FAIL: Background below HD: Mina shy not happy.png
+FAIL: Background below HD: 5d19febc-b512-43d2-bb34-a4db4e4e2e1a.png
+FAIL: Background below HD: EmojiOne.png
+FAIL: Invalid stereo PCM source: EnterGame.wav
+FAIL: Invalid stereo PCM source: LaptopMouseClick.wav
+FAIL: Invalid stereo PCM source: UIWood.wav
+FAIL: Invalid stereo PCM source: Keiko attack sound 2.wav
+FAIL: Invalid stereo PCM source: Keiko attack sound 3.wav
+FAIL: Invalid stereo PCM source: Keiko attack sound 4.wav
+FAIL: Invalid stereo PCM source: Keiko hit attack.wav

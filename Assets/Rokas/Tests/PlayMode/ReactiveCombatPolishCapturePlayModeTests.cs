@@ -54,7 +54,7 @@ namespace Rokas.Tests
                 boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand, 8f);
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             yield return CaptureUntil(boot, () => boot.View.ReactivePresentationReady &&
-                !boot.ReactivePresentationHeld, 24f, "intro", "E1", .18f);
+                !boot.ReactivePresentationHeld, 35f, "intro", "E1", .18f);
             ReactiveCombatActorVisual hunter = FindHunter();
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.Not.Null);
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E1"));

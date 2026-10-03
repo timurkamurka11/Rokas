@@ -46,16 +46,34 @@ namespace Rokas.Presentation
                     // body after it so an inside silhouette remains readable; once
                     // crossing, its opaque surface correctly covers the portal rim.
                     material.renderQueue = 3001;
-                    material.SetVector("_PortalCenter", portal.ApertureCenter);
-                    material.SetVector("_PortalNormal", portal.PlaneNormal);
-                    material.SetVector("_PortalRight", portal.PlaneRight);
-                    material.SetVector("_PortalRadius", new Vector4(.9f, 1.9f, .65f, 0f));
+                    SetPortalFrame(material);
                     owned[i] = material;
                 }
                 renderer.sharedMaterials = owned;
                 bindings.Add(new Binding { Renderer = renderer, Original = original, Owned = owned });
             }
             begun = true;
+        }
+
+        // Movement crosses a fixed plane; only the living boundary changes.
+        // Both the depth surface and actor mask use the same presentation clock.
+        public void Tick()
+        {
+            if (!begun || disposed) return;
+            foreach (Binding binding in bindings)
+                foreach (Material material in binding.Owned)
+                    if (material != null) SetPortalFrame(material);
+        }
+
+        private void SetPortalFrame(Material material)
+        {
+            material.SetVector("_PortalCenter", portal.ApertureCenter);
+            material.SetVector("_PortalNormal", portal.PlaneNormal);
+            material.SetVector("_PortalRight", portal.PlaneRight);
+            Vector2 radius = portal.ApertureRadii;
+            material.SetVector("_PortalRadius", new Vector4(Mathf.Max(.001f, radius.x),
+                Mathf.Max(.001f, radius.y), portal.MaskDepth, 0f));
+            material.SetFloat("_PortalPhase", portal.PresentationElapsed);
         }
 
         public void Dispose()

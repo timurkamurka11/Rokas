@@ -1,0 +1,330 @@
+{
+  "source": "D:\\3DMODELS\\Example of monsterr apper and animations of portal.MP4",
+  "source_sha256": "93f1254f391c4d055a2793a2c4900cee3858ee27b24712ac1a4c1d182fba190f",
+  "native_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\manifest.json",
+  "source_resolution": [
+    1280,
+    720
+  ],
+  "source_duration_seconds": 9.9,
+  "native_frames": 238,
+  "native_first_pts": 0.0,
+  "native_last_pts": 9.866667,
+  "time_basis": "Native decoded FFmpeg PTS; source has variable intervals. Do not use frame / metadata fps or the CFR duplicate sheet labels.",
+  "local_time_zero": {
+    "frame": 19,
+    "absolute_seconds": 0.8,
+    "meaning": "first confirmed visible floor seed"
+  },
+  "reviewed_native_sheets": [
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0000-0023.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0024-0047.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0048-0071.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0072-0095.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0096-0119.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0120-0143.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0144-0167.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0168-0191.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0192-0215.jpg",
+    "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frames-0216-0237.jpg"
+  ],
+  "reviewed_individual_native_frames": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    34,
+    35,
+    36,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    70,
+    85,
+    86,
+    87,
+    90,
+    96,
+    120,
+    128,
+    136,
+    144,
+    145,
+    146,
+    147,
+    148,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174
+  ],
+  "markers": [
+    {
+      "key": "floor_seed",
+      "frame": 19,
+      "absolute_seconds": 0.8,
+      "local_seconds_from_seed": 0.0,
+      "kind": "confirmed visual marker",
+      "description": "First confirmed pink/lavender thin floor ellipse; preceding frame 18 is clear.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0019.png",
+      "onset_bracket_absolute_seconds": [
+        0.733333,
+        0.8
+      ],
+      "onset_bracket_semantics": "(previous frame, confirmed frame]"
+    },
+    {
+      "key": "black_core",
+      "frame": 22,
+      "absolute_seconds": 0.9,
+      "local_seconds_from_seed": 0.1,
+      "kind": "confirmed visual marker",
+      "description": "First confirmed black kernel with violet edge above the floor ellipse.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0022.png",
+      "onset_bracket_absolute_seconds": [
+        0.866667,
+        0.9
+      ],
+      "onset_bracket_semantics": "(previous frame, confirmed frame]"
+    },
+    {
+      "key": "ribbon_unfurl",
+      "frame": 36,
+      "absolute_seconds": 1.5,
+      "local_seconds_from_seed": 0.7,
+      "kind": "confirmed visual marker",
+      "description": "First broad magenta/cyan tapered ribbons unfurl around the growing dark vortex.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0036.png",
+      "onset_bracket_absolute_seconds": [
+        1.466667,
+        1.5
+      ],
+      "onset_bracket_semantics": "(previous frame, confirmed frame]"
+    },
+    {
+      "key": "formed_open",
+      "frame": 70,
+      "absolute_seconds": 2.9,
+      "local_seconds_from_seed": 2.1,
+      "kind": "phase representative, gradual formation",
+      "description": "Clean large vertical aperture with white/lavender irregular electric edge; formative broad ribbons have mostly receded.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0070.png"
+    },
+    {
+      "key": "first_creature_reveal",
+      "frame": 86,
+      "absolute_seconds": 3.566667,
+      "local_seconds_from_seed": 2.766667,
+      "kind": "confirmed visual marker",
+      "description": "First green head sliver in the lower inner aperture; frame 85 remains empty.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0086.png",
+      "onset_bracket_absolute_seconds": [
+        3.533333,
+        3.566667
+      ],
+      "onset_bracket_semantics": "(previous frame, confirmed frame]"
+    },
+    {
+      "key": "partial_emergence",
+      "frame": 87,
+      "absolute_seconds": 3.633333,
+      "local_seconds_from_seed": 2.833333,
+      "kind": "phase representative",
+      "description": "Head, shoulder and one forearm visible while most body is hidden. Useful half-emergence capture; not a measurable 50% 3D crossing.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0087.png"
+    },
+    {
+      "key": "full_body_inside",
+      "frame": 96,
+      "absolute_seconds": 4.0,
+      "local_seconds_from_seed": 3.2,
+      "kind": "phase representative",
+      "description": "Full small body is readable inside the aperture, before outward movement is complete.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0096.png"
+    },
+    {
+      "key": "exit_overlap",
+      "frame": 120,
+      "absolute_seconds": 5.0,
+      "local_seconds_from_seed": 4.2,
+      "kind": "phase representative",
+      "description": "Creature overlaps the front/left edge, HP label is visible, movement toward slot continues.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0120.png"
+    },
+    {
+      "key": "clearly_exited",
+      "frame": 136,
+      "absolute_seconds": 5.666667,
+      "local_seconds_from_seed": 4.866667,
+      "kind": "conservative fully-exited representative; exact plane crossing not observable from 2D",
+      "description": "Creature clearly stands forward-left of portal and has left its center; still in locomotion pose.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0136.png"
+    },
+    {
+      "key": "settled_residual",
+      "frame": 144,
+      "absolute_seconds": 6.0,
+      "local_seconds_from_seed": 5.2,
+      "kind": "phase representative, settled by this time",
+      "description": "Crouched slot pose; portal remains fully open behind the creature.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0144.png"
+    },
+    {
+      "key": "collapse_onset",
+      "frame": 146,
+      "absolute_seconds": 6.066667,
+      "local_seconds_from_seed": 5.266667,
+      "kind": "confirmed visual marker",
+      "description": "First confirmed inward shrink after full-size frame 145; outer electric ghost outline remains.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0146.png",
+      "onset_bracket_absolute_seconds": [
+        6.033333,
+        6.066667
+      ],
+      "onset_bracket_semantics": "(previous frame, confirmed frame]"
+    },
+    {
+      "key": "core_gone",
+      "frame": 160,
+      "absolute_seconds": 6.666667,
+      "local_seconds_from_seed": 5.866667,
+      "kind": "phase representative",
+      "description": "Opaque black kernel is gone; residual electric ghost wisps remain.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0160.png"
+    },
+    {
+      "key": "residual_gone",
+      "frame": 165,
+      "absolute_seconds": 6.866667,
+      "local_seconds_from_seed": 6.066667,
+      "kind": "conservative clean frame; very faint tail before this time",
+      "description": "No portal kernel, ring, or surrounding electric trace is visibly remaining.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0165.png"
+    },
+    {
+      "key": "final_lineup",
+      "frame": 237,
+      "absolute_seconds": 9.866667,
+      "local_seconds_from_seed": 9.066667,
+      "kind": "end frame",
+      "description": "Three enemy lineup at the end; later enemies appeared without a fresh full portal formation.",
+      "image": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\reference-native-pts\\frame-0237.png"
+    }
+  ],
+  "phases": [
+    {
+      "name": "seed_growth",
+      "start_marker": "floor_seed",
+      "end_marker": "ribbon_unfurl",
+      "absolute_start_seconds": 0.8,
+      "absolute_end_seconds": 1.5,
+      "local_start_seconds": 0.0,
+      "local_end_seconds": 0.7,
+      "duration_seconds": 0.7
+    },
+    {
+      "name": "ribbon_formation",
+      "start_marker": "ribbon_unfurl",
+      "end_marker": "formed_open",
+      "absolute_start_seconds": 1.5,
+      "absolute_end_seconds": 2.9,
+      "local_start_seconds": 0.7,
+      "local_end_seconds": 2.1,
+      "duration_seconds": 1.4
+    },
+    {
+      "name": "open_before_reveal",
+      "start_marker": "formed_open",
+      "end_marker": "first_creature_reveal",
+      "absolute_start_seconds": 2.9,
+      "absolute_end_seconds": 3.566667,
+      "local_start_seconds": 2.1,
+      "local_end_seconds": 2.766667,
+      "duration_seconds": 0.666667
+    },
+    {
+      "name": "creature_reveal_and_exit",
+      "start_marker": "first_creature_reveal",
+      "end_marker": "clearly_exited",
+      "absolute_start_seconds": 3.566667,
+      "absolute_end_seconds": 5.666667,
+      "local_start_seconds": 2.766667,
+      "local_end_seconds": 4.866667,
+      "duration_seconds": 2.1
+    },
+    {
+      "name": "exit_to_settled",
+      "start_marker": "clearly_exited",
+      "end_marker": "settled_residual",
+      "absolute_start_seconds": 5.666667,
+      "absolute_end_seconds": 6.0,
+      "local_start_seconds": 4.866667,
+      "local_end_seconds": 5.2,
+      "duration_seconds": 0.333333
+    },
+    {
+      "name": "residual_hold_after_settled",
+      "start_marker": "settled_residual",
+      "end_marker": "collapse_onset",
+      "absolute_start_seconds": 6.0,
+      "absolute_end_seconds": 6.066667,
+      "local_start_seconds": 5.2,
+      "local_end_seconds": 5.266667,
+      "duration_seconds": 0.066667
+    },
+    {
+      "name": "core_collapse",
+      "start_marker": "collapse_onset",
+      "end_marker": "core_gone",
+      "absolute_start_seconds": 6.066667,
+      "absolute_end_seconds": 6.666667,
+      "local_start_seconds": 5.266667,
+      "local_end_seconds": 5.866667,
+      "duration_seconds": 0.6
+    },
+    {
+      "name": "electric_tail",
+      "start_marker": "core_gone",
+      "end_marker": "residual_gone",
+      "absolute_start_seconds": 6.666667,
+      "absolute_end_seconds": 6.866667,
+      "local_start_seconds": 5.866667,
+      "local_end_seconds": 6.066667,
+      "duration_seconds": 0.2
+    }
+  ],
+  "silhouette_and_palette": {
+    "seed": "Thin horizontal pink/lavender ellipse on the floor before the vertical kernel.",
+    "formation": "Growing black/purple kernel; broad tapered curved ribbons in cyan/teal, magenta, violet unfurl around it like a pinwheel.",
+    "open": "Large vertical oval, irregular lively white/lavender electric edge; near-black/navy depth and inward-curving violet/cyan fine filaments. Sparse golden external sparks.",
+    "size": "Approximately 2 to 2.4 crouched-monster heights. Open silhouette approx x640..1140 y90..540 in a 1280x720 image, visual estimate only.",
+    "emergence": "Small head first, then shoulder/arm/body, then forward-left locomotion. The creature remains readable against the dark inner depth.",
+    "collapse": "Black center and rim contract inward; previous-size ghost electric outline survives briefly, then fades. Not a single uniform alpha fade.",
+    "smoke": "Restrained supporting wisps; broad opaque grey smoke must not replace the dark vortex and electric edge."
+  },
+  "limitations": [
+    "These are visual reference annotations, not exact world-space portal plane intersections. Some transitions are continuous; phase representatives are labelled explicitly.",
+    "Second and third monsters fade/appear after the main portal closes, without an observable fresh formation. Use first-monster emergence as design target; do not copy that shortcut.",
+    "The review establishes source presentation direction, not Unity result quality or automated-test proof."
+  ],
+  "product_changes": "None. This script writes review evidence only outside the Unity project."
+}

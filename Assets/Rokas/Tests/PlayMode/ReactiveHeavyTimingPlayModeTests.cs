@@ -57,7 +57,7 @@ namespace Rokas.Tests
             Press("EnterReactivePortal");
             yield return WaitFor(boot, () => boot.Session.ReactiveCombat != null &&
                 boot.Session.ReactiveCombat.Phase == ReactivePhase.PlayerCommand &&
-                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 18f);
+                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 35f);
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             Assert.That(combat.HunterAp, Is.EqualTo(4));
 

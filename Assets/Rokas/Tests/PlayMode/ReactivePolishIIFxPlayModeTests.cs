@@ -107,9 +107,10 @@ namespace Rokas.Tests
             var portal = new ReactiveCombatPortalEffect(parent.transform, Vector3.zero, 30);
             var item = new GameObject("PortalPixelCamera", typeof(Camera));
             item.transform.SetParent(parent.transform, false);
-            item.transform.localPosition = new Vector3(0, 1.7f, -10);
+            // Frame the new reference-sized aperture including its outer ribbons.
+            item.transform.localPosition = new Vector3(0, 2.9f, -10);
             var camera = item.GetComponent<Camera>();
-            camera.orthographic = true; camera.orthographicSize = 2.5f;
+            camera.orthographic = true; camera.orthographicSize = 5f;
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.clear;
             camera.cullingMask = 1 << 30; camera.allowHDR = false;
             var target = new RenderTexture(160, 240, 24, RenderTextureFormat.ARGB32);
@@ -134,6 +135,9 @@ namespace Rokas.Tests
                 Assert.That(second[159].a, Is.Zero);
                 Assert.That(second[second.Length - 1].a, Is.Zero);
                 portal.SetProgress(0);
+                // A reference collapse leaves a short ghost edge and motes after
+                // the aperture closes; only the completed residual must be empty.
+                portal.Tick(.81f);
                 Color32[] closed = Pixels(camera, readback);
                 foreach (Color32 pixel in closed) Assert.That(pixel.a, Is.Zero);
                 yield return null;

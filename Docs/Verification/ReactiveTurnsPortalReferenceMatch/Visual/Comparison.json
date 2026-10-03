@@ -1,0 +1,56 @@
+{
+  "reference_source": "D:/3DMODELS/Example of monsterr apper and animations of portal.MP4",
+  "reference_sha256": "93f1254f391c4d055a2793a2c4900cee3858ee27b24712ac1a4c1d182fba190f",
+  "runtime_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\runtime\\20261003-164012\\manifest.json",
+  "runtime_frames": 207,
+  "runtime_performance": {
+    "portals": 3,
+    "maximumParticles": 68,
+    "maximumMaterials": 16
+  },
+  "selected_frames": [
+    {
+      "phase": "forming",
+      "reference_native_frame": 53,
+      "reference_local_seconds": 1.4,
+      "runtime_local_seconds": 1.4125784635543823,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-forming.png"
+    },
+    {
+      "phase": "open",
+      "reference_native_frame": 70,
+      "reference_local_seconds": 2.1,
+      "runtime_local_seconds": 2.1517515182495117,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-open.png"
+    },
+    {
+      "phase": "partial-reveal",
+      "reference_native_frame": 87,
+      "reference_local_seconds": 2.833333,
+      "runtime_local_seconds": 2.769627094268799,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-partial-reveal.png"
+    },
+    {
+      "phase": "crossing",
+      "reference_native_frame": 120,
+      "reference_local_seconds": 4.2,
+      "runtime_local_seconds": 4.220867156982422,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-crossing.png"
+    },
+    {
+      "phase": "exited",
+      "reference_native_frame": 136,
+      "reference_local_seconds": 4.866667,
+      "runtime_local_seconds": 4.809917449951172,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-exited.png"
+    },
+    {
+      "phase": "collapse",
+      "reference_native_frame": 151,
+      "reference_local_seconds": 5.466667,
+      "runtime_local_seconds": 5.5019145011901855,
+      "runtime_image": "Docs/Verification/ReactiveTurnsPortalReferenceMatch/Visual/ROKAS-collapse.png"
+    }
+  ],
+  "motion_review": "Full real Unity encounter recording played at 1x in local browser; all three sequential entrance sheets and six native-PTS comparisons inspected. No authored/reposed screenshot scenes. Native captured realtime frame durations used for encoded motion. PNG readback limits capture rate; this is not a game FPS measurement."
+}

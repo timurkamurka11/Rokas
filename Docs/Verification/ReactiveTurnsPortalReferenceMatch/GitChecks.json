@@ -1,0 +1,11 @@
+{
+  "literal_full_command": "git diff --check",
+  "full_exit": 0,
+  "full_output_empty": true,
+  "preserved_files_check_exit": 0,
+  "same_full_stdout_as_preserved": true,
+  "scope_exit": 0,
+  "scope_stdout_empty": true,
+  "protected_files": 84,
+  "protected_changed": []
+}

@@ -31,7 +31,7 @@ namespace Rokas.Tests
                 Button button = Find(root, "EnterReactivePortal").GetComponent<Button>();
                 var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
-                float introDeadline = Time.realtimeSinceStartup + 18f;
+                float introDeadline = Time.realtimeSinceStartup + 35f;
                 while ((boot.Session.State.phase != RunPhase.Combat ||
                     !boot.View.ReactivePresentationReady || boot.ReactivePresentationHeld) &&
                     Time.realtimeSinceStartup < introDeadline) yield return null;

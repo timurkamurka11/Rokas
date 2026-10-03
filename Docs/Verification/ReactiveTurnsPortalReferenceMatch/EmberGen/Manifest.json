@@ -1,0 +1,81 @@
+{
+  "atlases": [
+    {
+      "name": "Portal_Wisps",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_Wisps\\Portal_Wisps.ember",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_Wisps\\exports\\run_1791041739217204200\\ExportImage_0\\output_#####.png",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_Wisps.png",
+      "sha256": "ee5a059483d158699e19c218ed464238cf54e81c95568013beb07e29944802b7",
+      "size": [
+        1024,
+        1024
+      ],
+      "frames": 64,
+      "premultiplied": true,
+      "edge_alpha_max": 0,
+      "minimum_frame_coverage_over16": 0.02789306640625,
+      "export_exit": 0,
+      "elapsed_seconds": 9.515,
+      "executable": "D:/3DMODELS/EmberGen/EmberGen.exe",
+      "version": "1.2.6"
+    },
+    {
+      "name": "Portal_InnerVapor",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_InnerVapor\\Portal_InnerVapor.ember",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_InnerVapor\\exports\\run_1791041760527109300\\ExportImage_0\\output_#####.png",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_InnerVapor.png",
+      "sha256": "58086776e7f9c8e103fee6a9ac6f381e201361799c0efb4e06f2c4459c8f69f2",
+      "size": [
+        1024,
+        1024
+      ],
+      "frames": 64,
+      "premultiplied": true,
+      "edge_alpha_max": 0,
+      "minimum_frame_coverage_over16": 0.03759765625,
+      "export_exit": 0,
+      "elapsed_seconds": 9.61,
+      "executable": "D:/3DMODELS/EmberGen/EmberGen.exe",
+      "version": "1.2.6"
+    },
+    {
+      "name": "Portal_EdgeSmoke",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_EdgeSmoke\\Portal_EdgeSmoke.ember",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_EdgeSmoke\\exports\\run_1791041781737086700\\ExportImage_0\\output_#####.png",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_EdgeSmoke.png",
+      "sha256": "23749a7fffe5239ac311e4bcf672cf1760746aa69d44b08dab82a9ca500d09d6",
+      "size": [
+        1024,
+        1024
+      ],
+      "frames": 64,
+      "premultiplied": true,
+      "edge_alpha_max": 0,
+      "minimum_frame_coverage_over16": 0.058837890625,
+      "export_exit": 0,
+      "elapsed_seconds": 10.5,
+      "executable": "D:/3DMODELS/EmberGen/EmberGen.exe",
+      "version": "1.2.6"
+    },
+    {
+      "name": "Portal_Collapse",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_Collapse\\Portal_Collapse.ember",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\embergen\\Portal_Collapse\\exports\\run_1791041942027975900\\ExportImage_0\\output_#####.png",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_Collapse.png",
+      "sha256": "b7d963d9c9a6e6fd70d270d6df91fb79fadd212a924d72a4f39a8035beaf7bcc",
+      "size": [
+        1024,
+        1024
+      ],
+      "frames": 64,
+      "premultiplied": true,
+      "edge_alpha_max": 0,
+      "minimum_frame_coverage_over16": 0.0714111328125,
+      "export_exit": 0,
+      "elapsed_seconds": 10.797,
+      "executable": "D:/3DMODELS/EmberGen/EmberGen.exe",
+      "version": "1.2.6"
+    }
+  ],
+  "import": "BC7 sRGB premultRGBA; alphaIsTransparency false; clamp/bilinear/no mipmaps"
+}

@@ -73,7 +73,7 @@ namespace Rokas.Presentation
         private string heavyEnemyActionId;
         private float settleRemaining;
         private bool cinematicEnabled;
-        private enum IntroPhase { None, HunterWalk, HunterStance, HunterSettle, PortalOpen, EnemyWalk, PortalClose }
+        private enum IntroPhase { None, HunterWalk, HunterStance, HunterSettle, PortalOpen, EnemyWalk, PortalResidual, PortalClose }
         private IntroPhase introPhase;
         private float introElapsed;
         private readonly Queue<string> entranceQueue = new Queue<string>();
@@ -91,9 +91,13 @@ namespace Rokas.Presentation
         private float cameraImpulseRemaining;
         private float cameraImpulseStrength;
         private const float HunterEntranceSeconds = 3.2f;
-        private const float PortalOpeningSeconds = .7f;
-        private const float EnemyEntranceSeconds = 1.35f;
-        private const float PortalClosingSeconds = .45f;
+        // Native reference PTS measured from the first floor seed at .800 seconds:
+        // reveal 2.7667, exit 4.8667, contraction 5.2667, core gone 5.8667.
+        private const float PortalOpeningSeconds = 2.766667f;
+        private const float EnemyEntranceSeconds = 2.1f;
+        private const float PortalResidualSeconds = .4f;
+        private const float PortalClosingSeconds = .6f;
+        private const float PortalGhostSeconds = .2f;
         private const float SelectionFrameReturnSeconds = .26f;
         public bool HunterEntryComplete { get; private set; }
         public string HunterPresentationActionId { get; private set; }
@@ -335,6 +339,7 @@ namespace Rokas.Presentation
             else if (introPhase == IntroPhase.EnemyWalk)
             {
                 portal.Tick(step);
+                emergence?.Tick();
                 ActorMotion motion = enemyMotions[enteringEnemy];
                 MoveEntrance(motion.Actor, entranceStart, motion.Home, introElapsed, EnemyEntranceSeconds, step);
                 if (introElapsed < EnemyEntranceSeconds) return;
@@ -342,6 +347,13 @@ namespace Rokas.Presentation
                 emergence.Dispose(); emergence = null;
                 motion.Phase = MotionPhase.None;
                 motion.Actor.PlayIdle();
+                introPhase = IntroPhase.PortalResidual;
+                introElapsed = 0f;
+            }
+            else if (introPhase == IntroPhase.PortalResidual)
+            {
+                portal.Tick(step);
+                if (introElapsed < PortalResidualSeconds) return;
                 introPhase = IntroPhase.PortalClose;
                 introElapsed = 0f;
             }
@@ -349,7 +361,7 @@ namespace Rokas.Presentation
             {
                 portal.SetProgress(1f - Mathf.Clamp01(introElapsed / PortalClosingSeconds));
                 portal.Tick(step);
-                if (introElapsed < PortalClosingSeconds + .16f || !enemyMotions[enteringEnemy].Actor.IdleSettled) return;
+                if (introElapsed < PortalClosingSeconds + PortalGhostSeconds || !enemyMotions[enteringEnemy].Actor.IdleSettled) return;
                 portal.Dispose(); portal = null;
                 OpenNextPortal();
             }
@@ -374,7 +386,11 @@ namespace Rokas.Presentation
                 return;
             }
             enteringEnemy = entranceQueue.Dequeue();
-            Vector3 origin = enemyMotions[enteringEnemy].Home + new Vector3(1.5f, 0f, .4f);
+            Vector3 origin = enemyMotions[enteringEnemy].Home + new Vector3(1.5f, 0f, .9f);
+            // The larger aperture stays inside the normal combat composition.
+            // Extra depth keeps the final slot in front of the clipping plane,
+            // including the rightmost actor whose portal is framed farther left.
+            origin.x = Mathf.Min(origin.x, 6.15f);
             portal = new ReactiveCombatPortalEffect(world.transform, origin, ActorLayer);
             introPhase = IntroPhase.PortalOpen;
             introElapsed = 0f;

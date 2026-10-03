@@ -203,7 +203,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.AcceptContract() && boot.Session.LeaveHome(), Is.True);
             yield return null;
             Click("EnterReactivePortal");
-            float deadline = Time.realtimeSinceStartup + 20f;
+            float deadline = Time.realtimeSinceStartup + 35f;
             while ((boot.Session.ReactiveCombat == null || !Ready("ReactiveBasic")) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(Ready("ReactiveBasic"), Is.True, "Entrance/announcement must finish before selection.");
@@ -339,7 +339,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.AcceptContract() && boot.Session.LeaveHome(), Is.True);
             yield return null;
             Click("EnterReactivePortal");
-            float deadline = Time.realtimeSinceStartup + 20f;
+            float deadline = Time.realtimeSinceStartup + 35f;
             while ((boot.Session.ReactiveCombat == null || !Ready("ReactiveBasic")) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(Ready("ReactiveBasic"), Is.True, "Entrance/announcement must finish before selection.");

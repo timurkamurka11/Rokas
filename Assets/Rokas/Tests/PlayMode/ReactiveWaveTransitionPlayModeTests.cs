@@ -92,7 +92,7 @@ namespace Rokas.Tests
             yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.WaveTransition));
             Assert.That(boot.Session.ReactiveCombat.ActiveEnemyIds, Is.Empty);
-            yield return WaitForWave(boot, 1, 20f);
+            yield return WaitForWave(boot, 1, 35f);
             AssertWave(boot, 1, new[] { "E4", "E5", "E6" }, 3);
             Assert.That(boot.Session.ReactiveCombat.WaveInstanceId, Is.Not.EqualTo(firstInstance));
             Assert.That(boot.Session.ReactiveCombat.SelectedTargetId, Is.EqualTo("E4"));
@@ -111,7 +111,7 @@ namespace Rokas.Tests
             yield return DriveUntil(boot, ReactivePhase.WaveTransition, 45f);
             AssertTransition(boot, 1, 6, 7);
             string secondInstance = boot.Session.ReactiveCombat.WaveInstanceId;
-            yield return WaitForWave(boot, 2, 20f);
+            yield return WaitForWave(boot, 2, 35f);
             yield return WaitForRetiredModels(3, 5f);
             AssertWave(boot, 2, new[] { "E7", "E8" }, 2);
             Assert.That(boot.Session.ReactiveCombat.WaveInstanceId, Is.Not.EqualTo(secondInstance));
@@ -292,7 +292,7 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForFirstCommand(RokasBootstrap boot)
         {
-            float deadline = Time.realtimeSinceStartup + 18f;
+            float deadline = Time.realtimeSinceStartup + 35f;
             while ((boot.Session.State.phase != RunPhase.Combat || boot.View.Paused ||
                     boot.Session.ReactiveCombat == null ||
                     boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand ||
