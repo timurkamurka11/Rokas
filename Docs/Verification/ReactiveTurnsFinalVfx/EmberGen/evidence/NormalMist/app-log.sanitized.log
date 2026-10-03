@@ -1,0 +1,268 @@
+
+
+
+[INFO : /main.odin:756]
+                ___.
+    ____   _____\_ |__   ___________  ____   ____   ____
+  _/ __ \ /     \| __ \_/ __ \_  __ \/ ___\_/ __ \ /    \
+  \  ___/|  Y Y  \ \_\ \  ___/|  | \/ /_/  >  ___/|   |  \
+   \___  >__|_|  /___  /\___  >__|  \___  / \___  >___|  /
+       \/      \/    \/     \/     /_____/      \/     \/
+
+[DEBUG: /context.odin:238] Initialized JTS in 282.7µs
+[INFO : /context.odin:117] Mounted 'sys'
+[INFO : /context.odin:117] Mounted 'dev'
+[INFO : /context.odin:117] Mounted 'mem'
+[INFO : /context.odin:302] Detected path EXE = D:/3DMODELS/EmberGen
+[INFO : /context.odin:302] Detected path CWD = D:/3DMODELS/EmberGen
+[INFO : /context.odin:302] Detected path HOME = C:/Users/tim/AppData/Local
+[INFO : /context.odin:117] Mounted 'exe'
+[INFO : /context.odin:117] Mounted 'cwd'
+[INFO : /context.odin:117] Mounted 'home'
+[INFO : /context.odin:117] Mounted 'net-cache'
+[INFO : /context.odin:117] Mounted 'net'
+[INFO : /context.odin:396] Initialized JIO in 23.7431ms
+[INFO : /context.odin:302] Initialized JLF in 101.4µs
+[INFO : /context.odin:779] Initialized JAM in 14.1µs
+[INFO : /main.odin:34] Initialized AMP in 64.8µs
+[INFO : /backend_jls.odin:287] Created context
+[INFO : /backend_jls.odin:287] node: Attempting to connect to root server (license0.jangafx.com on port 10105)
+[DEBUG: /context.odin:380] Initialized JLM in 229.5µs
+[INFO : /main.odin:831] Version: 1.2.6
+[INFO : /context.odin:64] Using 'win32' session type
+[DEBUG: /main.odin:575] Initialized JUI in 250.5281ms
+[INFO : /main.odin:1217] Content scale: 1
+[DEBUG: /d3dkmt.odin:37] Successfully loaded D3DKMT.
+[DEBUG: /setupapi.odin:63] Successfully loaded SetupAPI.
+[INFO : /backend_jls.odin:287] node: Connected to root server (license0.jangafx.com on port 10105)
+[DEBUG: /main.odin:648] gl.GetUnsignedBytevEXT: proc(u32, ^u8) @ 0x7FF70441F570
+[DEBUG: /main.odin:649] monitor.D3DKMTOpenAdapterFromLuid: proc(^D3DKMT_OPENADAPTERFROMLUID) -> i32 @ 0x7FFFD3A65190
+[DEBUG: /main.odin:650] GL_EXT_external_objects: false
+[DEBUG: /main.odin:651] GL_EXT_semaphore: true
+[DEBUG: /main.odin:652] GL_EXT_memory_object_win32: true
+[DEBUG: /main.odin:653] GL_EXT_semaphore_win32: true
+[DEBUG: /main.odin:664] LUID: LUID{
+	LowPart = 76548,
+	HighPart = 0,
+}
+
+[DEBUG: /main.odin:686] 0: Device{
+	name = "NVIDIA GeForce RTX 5060 Ti",
+	wide_path = 0x1BE0DA384B0,
+	luid = LUID{
+		LowPart = 76548,
+		HighPart = 0,
+	},
+	diff = 0,
+	used = 0,
+	capacity = 0,
+	current_usage = 0,
+	average_usage = 0,
+}
+
+[DEBUG: /main.odin:686] 1: Device{
+	name = "Intel(R) UHD Graphics 730",
+	wide_path = 0x1BE0DA33800,
+	luid = LUID{
+		LowPart = 80458,
+		HighPart = 0,
+	},
+	diff = 0,
+	used = 0,
+	capacity = 0,
+	current_usage = 0,
+	average_usage = 0,
+}
+
+[INFO : /main.odin:691] Detected Device: "NVIDIA GeForce RTX 5060 Ti".
+[INFO : /config.odin:22] Trying to load config file: exe://config.ini
+[INFO : /config.odin:277] Loaded config
+[INFO : /process.odin:32] Spawning: ["D:/3DMODELS/EmberGen/wyUpdate.exe", "/quickcheck", "/justcheck"]
+[INFO : /backend_jls.odin:287] node: Verified authenticity of root server
+[INFO : /backend_jls.odin:287] node: Disconnected from root server (Normal)
+[INFO : /context.odin:117] Mounted 'splash'
+[INFO : /backend_jls.odin:287] node: Attempting to connect to root server (license0.jangafx.com on port 10105)
+[INFO : /shader_programs.odin:841] Total processing time: 	545.9431999999999 ms
+[DEBUG: /texture.odin:1151] Debug 8 8 8 Single RGBA16F true Border false [1]
+[DEBUG: /texture.odin:1151] Workgroup_Mask_8 8 8 8 Single R32UI false Clamp false [2]
+[DEBUG: /texture.odin:1151] Workgroup_Mask_16 8 8 8 Single R32UI false Clamp false [3]
+[DEBUG: /texture.odin:1151] Collision0 8 8 8 Single R8UI false Clamp false [4]
+[DEBUG: /texture.odin:1151] Collision1 8 8 8 Single R8UI false Clamp false [5]
+[DEBUG: /texture.odin:1151] Collision2 8 8 8 Single R8UI false Clamp false [6]
+[DEBUG: /texture.odin:1151] Collision3 8 8 8 Single R8UI false Clamp false [7]
+[DEBUG: /texture.odin:1151] Collision4 8 8 8 Single R8UI false Clamp false [8]
+[DEBUG: /texture.odin:1151] Velocity 8 8 8 Double RGBA16F true Clamp false [9, 10]
+[DEBUG: /texture.odin:1151] Advection 8 8 8 Double RGBA16F true Border false [11, 12]
+[DEBUG: /texture.odin:1151] Advection_Upscaled 8 8 8 Double RGBA16F true Border false [13, 14]
+[DEBUG: /texture.odin:1151] SDF_Activity 8 8 8 Double R8 true Border false [15, 16]
+[DEBUG: /texture.odin:1151] Velocity_Sync 8 8 8 Double RGBA16F true Clamp false [17, 18]
+[DEBUG: /texture.odin:1151] Advection_Sync 8 8 8 Double RGBA16F true Border false [19, 20]
+[DEBUG: /texture.odin:1151] Velocity_Sync 8 8 8 Single RGBA16F true Clamp false [21]
+[DEBUG: /texture.odin:1151] Advection_Sync 8 8 8 Single RGBA16F true Border false [22]
+[DEBUG: /texture.odin:1151] Velocity_Sync 8 8 8 Single RGBA16F true Clamp false [23]
+[DEBUG: /texture.odin:1151] Advection_Sync 8 8 8 Single RGBA16F true Border false [24]
+[DEBUG: /texture.odin:1151] Animation_SDF_Velocity0 8 8 8 Single RGBA16F true Clamp false [25]
+[DEBUG: /texture.odin:1151] Animation_SDF_Velocity1 8 8 8 Single RGBA16F true Clamp false [26]
+[DEBUG: /texture.odin:1151] Animation_SDF_Velocity2 8 8 8 Single RGBA16F true Clamp false [27]
+[DEBUG: /texture.odin:1151] Animation_SDF_Velocity3 8 8 8 Single RGBA16F true Clamp false [28]
+[DEBUG: /texture.odin:1151] Animation_Mask 8 8 8 Single RGBA8 true Border false [29]
+[DEBUG: /texture.odin:1151] Animation_Mask0 8 8 8 Single RGBA8 true Border false [30]
+[DEBUG: /texture.odin:1151] Animation_Mask1 8 8 8 Single RGBA8 true Border false [31]
+[DEBUG: /texture.odin:1151] Animation_Mask2 8 8 8 Single RGBA8 true Border false [32]
+[DEBUG: /texture.odin:1151] Animation_Mask3 8 8 8 Single RGBA8 true Border false [33]
+[DEBUG: /texture.odin:1151] Pressure_Accumulate 8 8 8 Single R16F true Border false [34]
+[DEBUG: /texture.odin:1151] Pressure 8 8 8 Double R16F true Border false [35, 36]
+[DEBUG: /texture.odin:1151] Divergence 8 8 8 Single R16F true Border false [37]
+[DEBUG: /texture.odin:1151] X1 8 8 8 Double R16F true Border false [38, 39]
+[DEBUG: /texture.odin:1151] B1 8 8 8 Single R16F true Border false [40]
+[DEBUG: /texture.odin:1151] X2 8 8 8 Double R16F true Border false [41, 42]
+[DEBUG: /texture.odin:1151] B2 8 8 8 Single R16F true Border false [43]
+[DEBUG: /texture.odin:1151] X3 8 8 8 Double R16F true Border false [44, 45]
+[DEBUG: /texture.odin:1151] B3 8 8 8 Single R16F true Border false [46]
+[DEBUG: /texture.odin:1151] X4 8 8 8 Double R16F true Border false [47, 48]
+[DEBUG: /texture.odin:1151] B4 8 8 8 Single R16F true Border false [49]
+[DEBUG: /texture.odin:1151] Velocity_Coarse 8 8 8 Double RGBA16F true Border false [50, 51]
+[DEBUG: /texture.odin:1151] Mip0 8 8 8 Double RGBA16F true Border false [52, 53]
+[DEBUG: /texture.odin:1151] Mip1 8 8 8 Double RGBA16F true Border false [54, 55]
+[DEBUG: /texture.odin:1151] Mip2 8 8 8 Double RGBA16F true Border false [56, 57]
+[DEBUG: /texture.odin:1151] Mip3 8 8 8 Double RGBA16F true Border false [58, 59]
+[DEBUG: /texture.odin:1151] Mip0_Ext 8 8 8 Single R16F true Border false [60]
+[DEBUG: /texture.odin:1151] Mip0_Adv 8 8 8 Double R8 true Border false [61, 62]
+[DEBUG: /texture.odin:1151] Mip_Adv_Upscale 8 8 8 Double R8 true Border false [63, 64]
+[DEBUG: /texture.odin:1151] Mip2_Shadow 8 8 8 Single RGBA16F true Clamp false [65]
+[DEBUG: /texture.odin:1151] Shadow 8 8 8 Single RGBA16F true Clamp false [66]
+[DEBUG: /texture.odin:1151] Render_Flipbook 4 4 0 Triple RGBA16F true Clamp false [67, 68, 69]
+[DEBUG: /texture.odin:1151] Render_Flipbook_Lightdir 4 4 0 Septuple RGBA16F true Clamp false [70, 71, 72, 73, 74, 75, 76]
+[DEBUG: /texture.odin:1151] Render 4 4 0 Double RGBA32F false Clamp false [77, 78]
+[DEBUG: /texture.odin:1151] Render_Opaque 4 4 0 Single RGBA32F false Clamp false [79]
+[DEBUG: /texture.odin:1151] Render_Final 4 4 0 Double RGBA32F true Clamp false [80, 81]
+[DEBUG: /texture.odin:1151] Render_Extra 4 4 0 Triple RGBA32F true Clamp false [82, 83, 84]
+[DEBUG: /texture.odin:1151] Render_Accelerator 4 4 0 Double RG32F false Clamp false [85, 86]
+[DEBUG: /texture.odin:1151] Render_Final_Capture 4 4 0 Single RGBA8 false Clamp false [87]
+[DEBUG: /texture.odin:1151] Render_Sky_Palette 16 16 0 Single RGBA32F false Clamp false [88]
+[DEBUG: /texture.odin:1151] Render_Bloom0 4 4 0 Double RGBA32F true Clamp false [89, 90]
+[DEBUG: /texture.odin:1151] Render_Bloom1 4 4 0 Double RGBA32F true Clamp false [91, 92]
+[DEBUG: /texture.odin:1151] Render_Bloom2 4 4 0 Double RGBA32F true Clamp false [93, 94]
+[DEBUG: /texture.odin:1151] Render_Bloom3 4 4 0 Double RGBA32F true Clamp false [95, 96]
+[DEBUG: /texture.odin:1151] Render_Bloom4 4 4 0 Double RGBA32F true Clamp false [97, 98]
+[DEBUG: /texture.odin:1151] Render_Bloom5 4 4 0 Double RGBA32F true Clamp false [99, 100]
+[DEBUG: /texture.odin:1151] Render_Particles 4 4 0 Double RGBA32F false Clamp false [101, 102]
+[DEBUG: /texture.odin:1151] Render_Particles_Occl 4 4 0 Quadruple RGBA16F false Clamp false [103, 104, 105, 106]
+[DEBUG: /texture.odin:1151] Vector_Field 1 1 1 Single RGBA32F true Border false [107]
+[DEBUG: /texture.odin:1151] Particle_System 4 4 0 Single RGBA32F true Border false [108]
+[DEBUG: /texture.odin:1151] Gradient_Texture 256 1 0 Single RGBA32F true Clamp false [109]
+[DEBUG: /texture.odin:1151] Gradient_Array_Texture 256 64 0 Single RGBA32F true Clamp true [110]
+[DEBUG: /texture.odin:1151] Curve_Array_Texture 256 64 0 Single R32F true Clamp true [111]
+[DEBUG: /texture.odin:1151] Extra_Divergence 8 8 8 Single R16F true Clamp false [112]
+[DEBUG: /texture.odin:1151] Mask_Texture 32 32 0 Single RGBA8 true Clamp false [113]
+[DEBUG: /texture.odin:1151] Backplate_Texture 32 32 0 Single RGBA8 true Clamp false [114]
+[DEBUG: /texture.odin:1151] K0_Texture 32 32 0 Triple RGBA32F true Clamp false [115, 116, 117]
+[DEBUG: /texture.odin:1151] Limited_Triangles_Counter 1 0 0 Single R32UI false Clamp false [118]
+[DEBUG: /texture.odin:1151] Voxelization_Multi_Viewport 1024 1024 0 Single RGBA16F true Clamp false [119]
+[DEBUG: /texture.odin:1151] Voxelization_Mask_R 8 8 8 Single R32UI false Border false [120]
+[DEBUG: /texture.odin:1151] Voxelization_Mask_G 8 8 8 Single R32UI false Border false [121]
+[DEBUG: /texture.odin:1151] Voxelization_Mask_B 8 8 8 Single R32UI false Border false [122]
+[DEBUG: /texture.odin:1151] Voxelization_Mask_A 8 8 8 Single R32UI false Border false [123]
+[DEBUG: /texture.odin:1151] Voxelization_Dist_Tri 8 8 8 Single R32UI false Border false [124]
+[DEBUG: /texture.odin:1151] JFA 8 8 8 Double R16UI false Border false [125, 126]
+[DEBUG: /texture.odin:1151] Auxiliary_8x8x8_Mask 8 8 8 Double R8 true Border false [127, 128]
+[DEBUG: /texture.odin:1151] Voxelization_16x16x16_Clear_Mask 8 8 8 Single R8UI false Border false [129]
+[DEBUG: /texture.odin:1151] Voxelization_8x8x8_Masked_Neighboring_Masks 8 8 8 Single R32UI false Border false [130]
+[DEBUG: /texture.odin:1151] Voxelization_16x16x16_Masked_Neighboring_Masks 8 8 8 Single R32UI false Border false [131]
+[DEBUG: /texture.odin:1151] JFA_8x8x8_Combined_Collision_Mask 8 8 8 Single R8 true Border false [132]
+[DEBUG: /texture.odin:1151] JFA_16x16x16_Clear_Mask_Previous 8 8 8 Quadruple R8UI false Border false [133, 134, 135, 136]
+[DEBUG: /texture.odin:453] size = 8.559894561767578
+[INFO : /simulator_run_parts.odin:1506] Init vorticles
+[INFO : /backend_jls.odin:287] node: Connected to root server (license0.jangafx.com on port 10105)
+[ERROR: /render.odin:58] Timestamp [placeholder_vs.glsl, placeholder_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [overlay_accum_vs.glsl, overlay_accum_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_move_vs.glsl, shaders/overlay_move_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_rotate_vs.glsl, shaders/overlay_rotate_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_scale_vs.glsl, shaders/overlay_scale_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_manipdot_vs.glsl, shaders/overlay_manipdot_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_point_light_vs.glsl, shaders/overlay_point_light_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_dir_light_vs.glsl, shaders/overlay_dir_light_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_ambient_light_vs.glsl, shaders/overlay_ambient_light_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_spot_light_vs.glsl, shaders/overlay_spot_light_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_point_force_vs.glsl, shaders/overlay_point_force_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_line_force_vs.glsl, shaders/overlay_line_force_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_torus_force_vs.glsl, shaders/overlay_torus_force_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_vector_force_vs.glsl, shaders/overlay_vector_force_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_vector_force_arrow_vs.glsl, shaders/overlay_vector_force_arrow_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_vector_force_2d_vs.glsl, shaders/overlay_vector_force_2d_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_vector_force_3d_vs.glsl, shaders/overlay_vector_force_3d_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_bbox_vs.glsl, shaders/overlay_bbox_fs.glsl] cannot be read.
+[ERROR: /render.odin:58] Timestamp [shaders/overlay_shape_vs.glsl, shaders/overlay_shape_fs.glsl] cannot be read.
+[INFO : /project.odin:529] load project
+[ERROR: /read.odin:400] serialization: unable to find parameter minimum_bounds
+[ERROR: /read.odin:400] serialization: unable to find parameter maximum_bounds
+[ERROR: /read.odin:400] serialization: unable to find parameter requested_minimum_bounds
+[ERROR: /read.odin:400] serialization: unable to find parameter requested_maximum_bounds
+[ERROR: /read.odin:400] serialization: unable to find parameter pause_after_exporting
+[ERROR: /read.odin:400] serialization: unable to find parameter disable_sticky_colliders
+[ERROR: /read.odin:400] serialization: unable to find parameter vorticity_pre_advection
+[ERROR: /read.odin:400] serialization: unable to find parameter part_particle_limit_M
+[ERROR: /read.odin:400] serialization: unable to find parameter projection_controls.solver_iterations
+[ERROR: /read.odin:400] serialization: unable to find parameter projection_controls.max_depth
+[ERROR: /read.odin:400] serialization: unable to find parameter projection_controls.pre_smooth_iterations
+[ERROR: /read.odin:400] serialization: unable to find parameter projection_controls.post_smooth_iterations
+[ERROR: /read.odin:400] serialization: unable to find parameter scale
+[ERROR: /read.odin:400] serialization: unable to find parameter export_forces
+[ERROR: /read.odin:400] serialization: unable to find parameter auto_frames
+[INFO : /project.odin:529] load project
+[ERROR: /read.odin:400] serialization: unable to find parameter part_particle_limit_M
+[DEBUG: /icons.odin:124] Total icons: 1158
+[INFO : /backend_jls.odin:287] node: Verified authenticity of root server
+[DEBUG: /texture.odin:970] Changing Backplate_Texture from 32 32 0 to 4 4 0 from do_simulation_setup line 1140 [114]
+[DEBUG: /texture.odin:970] Changing Advection from 8 8 8 to 128 256 256 from resize_volume_textures line 569 [11, 12]
+[DEBUG: /texture.odin:970] Changing Collision0 from 8 8 8 to 128 256 256 from resize_volume_textures line 570 [4]
+[DEBUG: /texture.odin:970] Changing Collision1 from 8 8 8 to 64 128 128 from resize_volume_textures line 571 [5]
+[DEBUG: /texture.odin:970] Changing Collision2 from 8 8 8 to 32 64 64 from resize_volume_textures line 572 [6]
+[DEBUG: /texture.odin:970] Changing Collision3 from 8 8 8 to 16 32 32 from resize_volume_textures line 573 [7]
+[DEBUG: /texture.odin:970] Changing Collision4 from 8 8 8 to 8 16 16 from resize_volume_textures line 574 [8]
+[DEBUG: /texture.odin:970] Changing Workgroup_Mask_8 from 8 8 8 to 16 32 32 from resize_volume_textures line 575 [2]
+[DEBUG: /texture.odin:970] Changing Workgroup_Mask_16 from 8 8 8 to 8 16 16 from resize_volume_textures line 576 [3]
+[DEBUG: /texture.odin:970] Changing Velocity from 8 8 8 to 128 256 256 from resize_volume_textures line 577 [9, 10]
+[DEBUG: /texture.odin:970] Changing Pressure from 8 8 8 to 128 256 256 from resize_volume_textures line 578 [35, 36]
+[DEBUG: /texture.odin:970] Changing Divergence from 8 8 8 to 128 256 256 from resize_volume_textures line 579 [37]
+[DEBUG: /texture.odin:970] Changing Extra_Divergence from 8 8 8 to 128 256 256 from resize_volume_textures line 580 [112]
+[DEBUG: /texture.odin:970] Changing X1 from 8 8 8 to 64 128 128 from resize_volume_textures line 581 [38, 39]
+[DEBUG: /texture.odin:970] Changing B1 from 8 8 8 to 64 128 128 from resize_volume_textures line 582 [40]
+[DEBUG: /texture.odin:970] Changing X2 from 8 8 8 to 32 64 64 from resize_volume_textures line 583 [41, 42]
+[DEBUG: /texture.odin:970] Changing B2 from 8 8 8 to 32 64 64 from resize_volume_textures line 584 [43]
+[DEBUG: /texture.odin:970] Changing X3 from 8 8 8 to 16 32 32 from resize_volume_textures line 585 [44, 45]
+[DEBUG: /texture.odin:970] Changing B3 from 8 8 8 to 16 32 32 from resize_volume_textures line 586 [46]
+[DEBUG: /texture.odin:970] Changing X4 from 8 8 8 to 8 16 16 from resize_volume_textures line 587 [47, 48]
+[DEBUG: /texture.odin:970] Changing B4 from 8 8 8 to 8 16 16 from resize_volume_textures line 588 [49]
+[DEBUG: /texture.odin:970] Changing Velocity_Coarse from 8 8 8 to 32 64 64 from resize_volume_textures line 589 [50, 51]
+[DEBUG: /texture.odin:970] Changing Mip0 from 8 8 8 to 64 128 128 from resize_volume_textures line 590 [52, 53]
+[DEBUG: /texture.odin:970] Changing Mip0_Adv from 8 8 8 to 64 128 128 from resize_volume_textures line 591 [61, 62]
+[DEBUG: /texture.odin:970] Changing Mip1 from 8 8 8 to 32 64 64 from resize_volume_textures line 592 [54, 55]
+[DEBUG: /texture.odin:970] Changing Mip2 from 8 8 8 to 16 32 32 from resize_volume_textures line 593 [56, 57]
+[DEBUG: /texture.odin:970] Changing Mip3 from 8 8 8 to 8 16 16 from resize_volume_textures line 594 [58, 59]
+[DEBUG: /texture.odin:970] Changing Mip2_Shadow from 8 8 8 to 8 16 16 from resize_volume_textures line 595 [65]
+[DEBUG: /texture.odin:970] Changing Shadow from 8 8 8 to 128 256 256 from resize_volume_textures line 596 [66]
+[DEBUG: /texture.odin:970] Changing SDF_Activity from 8 8 8 to 16 32 32 from resize_volume_textures line 597 [15, 16]
+[DEBUG: /texture.odin:970] Changing Mip_Adv_Upscale from 8 8 8 to 128 256 256 from resize_volume_textures line 614 [63, 64]
+[DEBUG: /texture.odin:970] Changing Advection_Upscaled from 8 8 8 to 256 512 512 from resize_volume_textures line 623 [13, 14]
+[DEBUG: /texture.odin:970] Changing Auxiliary_8x8x8_Mask from 8 8 8 to 1 1 1 from resize_volume_textures line 677 [127, 128]
+[DEBUG: /texture.odin:970] Changing Voxelization_16x16x16_Clear_Mask from 8 8 8 to 0 0 0 from resize_volume_textures line 678 [129]
+[DEBUG: /texture.odin:970] Changing Voxelization_8x8x8_Masked_Neighboring_Masks from 8 8 8 to 1 1 1 from resize_volume_textures line 679 [130]
+[DEBUG: /texture.odin:970] Changing Voxelization_16x16x16_Masked_Neighboring_Masks from 8 8 8 to 0 0 0 from resize_volume_textures line 680 [131]
+[DEBUG: /texture.odin:970] Changing JFA_8x8x8_Combined_Collision_Mask from 8 8 8 to 1 1 1 from resize_volume_textures line 681 [132]
+[DEBUG: /texture.odin:970] Changing JFA_16x16x16_Clear_Mask_Previous from 8 8 8 to 0 0 0 from resize_volume_textures line 682 [133, 134, 135, 136]
+[INFO : /simulator_run.odin:62] Hard reset state 0 0
+[INFO : /simulator_run_parts.odin:1506] Init vorticles
+[INFO : /backend_jls.odin:287] node: Disconnected from root server (Normal)
+[DEBUG: /texture.odin:1151] External 128 128 0 Single RGBA16F true Clamp false [148]
+[DEBUG: /texture.odin:1151] External 128 128 0 Triple RGBA16F true Clamp false [149, 150, 151]
+[DEBUG: /texture.odin:970] Changing Render_Bloom0 from 4 4 0 to 64 64 0 from resize_bloom_textures line 512 [89, 90]
+[DEBUG: /texture.odin:970] Changing Render_Bloom1 from 4 4 0 to 32 32 0 from resize_bloom_textures line 513 [91, 92]
+[DEBUG: /texture.odin:970] Changing Render_Bloom2 from 4 4 0 to 16 16 0 from resize_bloom_textures line 514 [93, 94]
+[DEBUG: /texture.odin:970] Changing Render_Bloom3 from 4 4 0 to 8 8 0 from resize_bloom_textures line 515 [95, 96]
+[DEBUG: /texture.odin:970] Changing Render_Opaque from 4 4 0 to 128 128 0 from resize_render_opaque_texture line 492 [79]
+[DEBUG: /texture.odin:970] Changing Render_Accelerator from 4 4 0 to 32 32 0 from do_preraymarch_sdf line 3741 [85, 86]
+[DEBUG: /texture.odin:970] Changing Render_Extra from 4 4 0 to 128 128 0 from render_image line 4840 [82, 83, 84]
+[INFO : /export_simulation.odin:1197] Export took 5.4162421226501465 seconds
+[DEBUG: /texture.odin:1151] External 1024 1024 0 Single RGBA8 false Clamp false [148]
+[DEBUG: /texture.odin:1151] External 1024 1024 0 Single RGBA8 true Clamp false [149]

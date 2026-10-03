@@ -58,6 +58,10 @@ namespace Rokas.Tests
                 Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
                 Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeAttack),
                     "Attack selection must not add a generic UI click to its presentation layers.");
+                Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+                Assert.That(hunterActor.localPosition, Is.EqualTo(hunterHome), "First click is a stationary preview.");
+                Assert.That(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler), Is.True);
+                Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeAttack));
                 float travelDeadline = Time.realtimeSinceStartup + 3f;
                 while (hunterActor.localPosition.x <= hunterHome.x && Time.realtimeSinceStartup < travelDeadline) yield return null;
                 Assert.That(hunterActor.localPosition.x, Is.GreaterThan(hunterHome.x));

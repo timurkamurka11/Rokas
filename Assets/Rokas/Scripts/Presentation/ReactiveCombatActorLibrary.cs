@@ -15,6 +15,13 @@ namespace Rokas.Presentation
         public AnimationClip heavy;
         public AnimationClip preparation;
         public AnimationClip heavyPreparation;
+        public AnimationClip throwPreparation;
+        public AnimationClip throwAttack;
+        public GameObject throwingDaggerPrefab;
+        public float throwReleaseSeconds = .42f;
+        public float throwContactSeconds = .78f;
+        public Vector3 daggerSocketPosition = new Vector3(0f, .025f, 0f);
+        public Vector3 daggerSocketEuler;
         public AnimationClip enterBattle;
         public AnimationClip entranceWalk;
         public AnimationClip guard;

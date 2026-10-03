@@ -13,6 +13,11 @@ namespace Rokas.Presentation
         private readonly Material smokeMaterial;
         private readonly ParticleSystem sparks;
         private readonly ParticleSystem smoke;
+        private readonly ReactiveCombatEmberLayer normalVapor;
+        private readonly ReactiveCombatEmberLayer heavyVapor;
+        private readonly ReactiveCombatEmberLayer throwVapor;
+        private readonly ReactiveCombatEmberLayer guardVapor;
+        private readonly ReactiveCombatEmberLayer clawVapor;
         private readonly LineRenderer[] rays = new LineRenderer[10];
         private readonly Vector3[] directions = new Vector3[10];
         private readonly float[] rayLengths = new float[10];
@@ -37,6 +42,11 @@ namespace Rokas.Presentation
             smokeMaterial.SetFloat("_SoftShape", 3f);
             sparks = CreateParticles("ContactSparks", layer, sparkMaterial, 96, true);
             smoke = CreateParticles("ContactVapor", layer, smokeMaterial, 40, false);
+            normalVapor = new ReactiveCombatEmberLayer(parent, layer, "NormalMist");
+            heavyVapor = new ReactiveCombatEmberLayer(parent, layer, "HeavyBurst");
+            throwVapor = new ReactiveCombatEmberLayer(parent, layer, "ThrowImpact");
+            guardVapor = new ReactiveCombatEmberLayer(parent, layer, "BlockBurst");
+            clawVapor = new ReactiveCombatEmberLayer(parent, layer, "ClawImpact");
             for (int i = 0; i < rays.Length; i++)
             {
                 var item = new GameObject("ContactStreak" + i, typeof(LineRenderer));
@@ -58,14 +68,35 @@ namespace Rokas.Presentation
         {
             if (disposed) return;
             FleshDispatches++;
-            Burst(point, heavy ? new Color(.76f, .7f, 1f, 1f) : new Color(.69f, .9f, 1f, 1f), heavy ? 1.35f : .8f, false);
+            Burst(point, heavy ? new Color(.76f, .7f, 1f, 1f) : new Color(.69f, .9f, 1f, 1f), heavy ? 1.35f : .8f, false, normal);
+            (heavy ? heavyVapor : normalVapor).Play(contact,
+                Vector2.one * (heavy ? 1.35f : .65f), contactColor, heavy ? .52f : .26f,
+                ContactAngle(normal));
+        }
+        public void Claw(Vector3 point, bool heavy, Vector3 normal)
+        {
+            if (disposed) return;
+            FleshDispatches++;
+            Burst(point, new Color(.94f, .61f, .73f, 1f), heavy ? 1.1f : .75f, false, normal);
+            clawVapor.Play(contact, Vector2.one * (heavy ? 1.05f : .75f), contactColor,
+                heavy ? .38f : .26f, ContactAngle(normal));
         }
         public void Guard(Vector3 point, Vector3 normal = default(Vector3))
         {
             if (disposed) return;
             GuardDispatches++;
-            Burst(point, new Color(1f, .81f, .4f, 1f), .85f, true);
+            Burst(point, new Color(1f, .81f, .4f, 1f), .85f, true, normal);
+            guardVapor.Play(contact, new Vector2(.7f, .5f), contactColor, .24f, ContactAngle(normal));
         }
+        public void Throw(Vector3 point, Vector3 direction)
+        {
+            if (disposed) return;
+            FleshDispatches++;
+            Burst(point, new Color(.57f, .67f, 1f, 1f), .65f, false, direction);
+            throwVapor.Play(contact, Vector2.one * .7f, contactColor, .28f, ContactAngle(direction));
+        }
+        private static float ContactAngle(Vector3 direction) =>
+            direction.sqrMagnitude < .0001f ? 0f : Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         public void DodgeDust(Vector3 feet)
         {
             if (disposed) return;
@@ -83,7 +114,7 @@ namespace Rokas.Presentation
                 smoke.Emit(emit, 1);
             }
         }
-        private void Burst(Vector3 point, Color color, float strength, bool guard)
+        private void Burst(Vector3 point, Color color, float strength, bool guard, Vector3 normal)
         {
             // Camera looks +Z; keep the tiny burst just in front of contact geometry.
             contact = point + Vector3.back * .08f;
@@ -93,7 +124,8 @@ namespace Rokas.Presentation
             for (int i = 0; i < rays.Length; i++)
             {
                 float angle = i * 2.399963f;
-                directions[i] = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * .72f, -.05f).normalized;
+                Vector3 spread = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * .72f, -.05f);
+                directions[i] = (spread + normal.normalized * (guard ? .85f : .35f)).normalized;
                 rayLengths[i] = strength * (.25f + .2f * Mathf.Abs(Mathf.Sin(i * 1.71f)));
                 rays[i].startWidth = strength * .028f;
                 rays[i].SetPosition(0, contact);
@@ -109,7 +141,8 @@ namespace Rokas.Presentation
                 var emit = new ParticleSystem.EmitParams
                 {
                     position = contact,
-                    velocity = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * .8f, -.08f) * strength * (guard ? 2.4f : 1.5f),
+                    velocity = (new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * .8f, -.08f) +
+                        normal.normalized * (guard ? 1.2f : .5f)) * strength * (guard ? 2.4f : 1.5f),
                     startSize = guard ? .027f : .035f,
                     startLifetime = .16f + .2f * Mathf.Abs(Mathf.Cos(angle)),
                     startColor = color
@@ -137,6 +170,8 @@ namespace Rokas.Presentation
             if (disposed) return;
             float step = Mathf.Max(0f, deltaTime);
             if (step <= 0f) return;
+            normalVapor.Tick(step); heavyVapor.Tick(step); throwVapor.Tick(step);
+            guardVapor.Tick(step); clawVapor.Tick(step);
             burstElapsed += step;
             float t = Mathf.Clamp01(burstElapsed / Mathf.Max(.01f, burstDuration));
             for (int i = 0; i < rays.Length; i++)
@@ -187,6 +222,8 @@ namespace Rokas.Presentation
             ReactiveCombatAshDissolve.DestroyOwned(root);
             ReactiveCombatAshDissolve.DestroyOwned(sparkMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(smokeMaterial);
+            normalVapor.Dispose(); heavyVapor.Dispose(); throwVapor.Dispose();
+            guardVapor.Dispose(); clawVapor.Dispose();
         }
     }
 }

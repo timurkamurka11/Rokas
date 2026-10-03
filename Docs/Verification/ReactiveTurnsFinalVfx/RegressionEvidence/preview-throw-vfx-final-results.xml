@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="21" result="Passed" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:22Z" duration="108,2207616">
+  <test-suite type="TestSuite" id="1286" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="226" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:22Z" duration="108.220762" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1280" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="226" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:22Z" duration="108.213051" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="34548" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1281" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="226" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:22Z" duration="108.211773" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1282" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="226" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:22Z" duration="108.210398" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1098" name="ReactiveActionPreviewPlayModeTests" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:48:21Z" duration="107.299111" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1104" name="FirstClickNormalKeepsTurnApHpAndSlotWhileShowingPersistentPreview" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.FirstClickNormalKeepsTurnApHpAndSlotWhileShowingPersistentPreview" methodname="FirstClickNormalKeepsTurnApHpAndSlotWhileShowingPersistentPreview" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="2067095139" result="Passed" start-time="2026-10-03 05:46:33Z" end-time="2026-10-03 05:46:52Z" duration="18.309240" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1100" name="FocusLossCancelsPendingConfirmationWithoutSpendingAp" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.FocusLossCancelsPendingConfirmationWithoutSpendingAp" methodname="FocusLossCancelsPendingConfirmationWithoutSpendingAp" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="1747846391" result="Passed" start-time="2026-10-03 05:46:52Z" end-time="2026-10-03 05:47:10Z" duration="18.075262" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1101" name="FrameGapDuringCameraConfirmationSuspendsBeforeThrowCommitAndResumesAtClockTime" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.FrameGapDuringCameraConfirmationSuspendsBeforeThrowCommitAndResumesAtClockTime" methodname="FrameGapDuringCameraConfirmationSuspendsBeforeThrowCommitAndResumesAtClockTime" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="2005293944" result="Passed" start-time="2026-10-03 05:47:10Z" end-time="2026-10-03 05:47:26Z" duration="15.895074" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1103" name="SecondClickWaitsForCameraThenExecutesOnlyOnce" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.SecondClickWaitsForCameraThenExecutesOnlyOnce" methodname="SecondClickWaitsForCameraThenExecutesOnlyOnce" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="1721209145" result="Passed" start-time="2026-10-03 05:47:26Z" end-time="2026-10-03 05:47:42Z" duration="15.955740" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1102" name="SwitchingAndCancelPreserveAuthorityAndRestoreCamera" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.SwitchingAndCancelPreserveAuthorityAndRestoreCamera" methodname="SwitchingAndCancelPreserveAuthorityAndRestoreCamera" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="186842422" result="Passed" start-time="2026-10-03 05:47:42Z" end-time="2026-10-03 05:47:58Z" duration="16.591430" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+]]></output>
+            </test-case>
+            <test-case id="1099" name="ThreePreviewsThrowFlightContactAndRecoveryAreRenderedWithoutEarlyDamage" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.ThreePreviewsThrowFlightContactAndRecoveryAreRenderedWithoutEarlyDamage" methodname="ThreePreviewsThrowFlightContactAndRecoveryAreRenderedWithoutEarlyDamage" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="1389910609" result="Passed" start-time="2026-10-03 05:47:58Z" end-time="2026-10-03 05:48:21Z" duration="22.461814" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+base-battle pose=Idle seconds=1,249975 camera=4,6 hand=(995.21, 1002.18, 1000.14) phase=PlayerCommand
+ReactiveBasic-preview pose=Preparation seconds=0,3 camera=4,301 hand=(995.13, 1002.43, 1000.02) phase=PlayerCommand
+ReactiveHeavy-preview pose=HeavyPreparation seconds=0,4666577 camera=4,186 hand=(994.92, 1002.69, 1000.01) phase=PlayerCommand
+ReactiveThrow-preview pose=ThrowPreparation seconds=0,3999927 camera=4,301 hand=(994.68, 1002.86, 999.24) phase=PlayerCommand
+throw-motion-000 pose=Throw seconds=0,01666309 camera=4,6 hand=(994.67, 1002.86, 999.24) phase=PlayerExecution
+throw-motion-001 pose=Throw seconds=0,1051302 camera=4,6 hand=(994.51, 1002.78, 999.20) phase=PlayerExecution
+throw-motion-002 pose=Throw seconds=0,193715 camera=4,6 hand=(994.46, 1002.75, 999.21) phase=PlayerExecution
+throw-motion-003 pose=Throw seconds=0,2794003 camera=4,6 hand=(994.47, 1002.75, 999.26) phase=PlayerExecution
+throw-motion-004 pose=Throw seconds=0,3665962 camera=4,6 hand=(994.80, 1002.62, 999.62) phase=PlayerExecution
+throw-motion-005 pose=Throw seconds=0,4525469 camera=4,6 hand=(995.27, 1002.36, 1000.14) phase=PlayerExecution
+throw-motion-006 pose=Throw seconds=0,5436096 camera=4,6 hand=(995.25, 1002.19, 1000.09) phase=PlayerExecution
+throw-motion-007 pose=Throw seconds=0,6292251 camera=4,6 hand=(995.25, 1002.16, 1000.01) phase=PlayerExecution
+throw-motion-008 pose=Throw seconds=0,7184082 camera=4,6 hand=(995.27, 1002.15, 999.84) phase=PlayerExecution
+throw-motion-009 pose=Throw seconds=0,8048694 camera=4,6 hand=(995.28, 1002.16, 999.78) phase=PlayerExecution
+throw-impact pose=Throw seconds=0,8048694 camera=4,6 hand=(995.28, 1002.16, 999.78) phase=PlayerExecution
+throw-impact-burst pose=Throw seconds=0,8791859 camera=4,6 hand=(995.27, 1002.13, 999.84) phase=PlayerExecution
+throw-recovery pose=Idle seconds=0,016684 camera=4,6 hand=(995.21, 1002.19, 1000.14) phase=EnemyExecution
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1122" name="ReactiveCombatCompositePlayModeTests" fullname="Rokas.Tests.ReactiveCombatCompositePlayModeTests" classname="Rokas.Tests.ReactiveCombatCompositePlayModeTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.287212" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1123" name="ActorRenderTexturePreservesPremultipliedRgbOnTheRealRawImage" fullname="Rokas.Tests.ReactiveCombatCompositePlayModeTests.ActorRenderTexturePreservesPremultipliedRgbOnTheRealRawImage" methodname="ActorRenderTexturePreservesPremultipliedRgbOnTheRealRawImage" classname="Rokas.Tests.ReactiveCombatCompositePlayModeTests" runstate="Runnable" seed="687039235" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.062628" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Colour space=Gamma; source=RGBA(0.400, 0.200, 0.100, 0.500); premultiplied UI=RGBA(0.400, 0.200, 0.100, 1.000); previous UI=RGBA(0.200, 0.100, 0.050, 1.000)
+]]></output>
+            </test-case>
+            <test-case id="1125" name="RectMaskAndStencilClipBothColourAndCoverage" fullname="Rokas.Tests.ReactiveCombatCompositePlayModeTests.RectMaskAndStencilClipBothColourAndCoverage" methodname="RectMaskAndStencilClipBothColourAndCoverage" classname="Rokas.Tests.ReactiveCombatCompositePlayModeTests" runstate="Runnable" seed="517118900" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.113975" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[RectMask2D keeps the left half and clears the right half.
+Stencil Mask keeps the left half and clears the right half.
+]]></output>
+            </test-case>
+            <test-case id="1124" name="TransparentPixelsAndUiFadesPreservePremultipliedCoverage" fullname="Rokas.Tests.ReactiveCombatCompositePlayModeTests.TransparentPixelsAndUiFadesPreservePremultipliedCoverage" methodname="TransparentPixelsAndUiFadesPreservePremultipliedCoverage" classname="Rokas.Tests.ReactiveCombatCompositePlayModeTests" runstate="Runnable" seed="628681251" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.100572" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1133" name="ReactiveEmberLayerPlayModeTests" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.323508" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1136" name="HeldLoopPersistsUntilStoppedAndDoesNotReactivateOnTicks" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.HeldLoopPersistsUntilStoppedAndDoesNotReactivateOnTicks" methodname="HeldLoopPersistsUntilStoppedAndDoesNotReactivateOnTicks" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="413915747" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.002668" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1139" name="MissingExportCannotShowAnOpaqueFallbackCarrier" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.MissingExportCannotShowAnOpaqueFallbackCarrier" methodname="MissingExportCannotShowAnOpaqueFallbackCarrier" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="582593650" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.000546" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1138" name="NewFollowStartsAtFirstFrameWithoutResettingAnAlreadyHeldLoop" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.NewFollowStartsAtFirstFrameWithoutResettingAnAlreadyHeldLoop" methodname="NewFollowStartsAtFirstFrameWithoutResettingAnAlreadyHeldLoop" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="1339425423" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.001116" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1135" name="OneShotUsesOnlyTheManualPresentationClockAndRetires" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.OneShotUsesOnlyTheManualPresentationClockAndRetires" methodname="OneShotUsesOnlyTheManualPresentationClockAndRetires" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="1281142205" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.195665" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1137" name="ReplayAfterStopStartsAtFirstFrameAndNewContactPoint" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.ReplayAfterStopStartsAtFirstFrameAndNewContactPoint" methodname="ReplayAfterStopStartsAtFirstFrameAndNewContactPoint" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="989035128" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.001560" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1134" name="RequiredAtlasesHaveUsableAlphaAndSafeRuntimeImportSettings" fullname="Rokas.Tests.ReactiveEmberLayerPlayModeTests.RequiredAtlasesHaveUsableAlphaAndSafeRuntimeImportSettings" methodname="RequiredAtlasesHaveUsableAlphaAndSafeRuntimeImportSettings" classname="Rokas.Tests.ReactiveEmberLayerPlayModeTests" runstate="Runnable" seed="954114036" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.105254" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[PortalVapor 2048x2048 BC7 alphaMax=255 visiblePixels=503064 transparentPixels=3673197
+NormalMist 1024x1024 BC7 alphaMax=255 visiblePixels=126861 transparentPixels=917282
+HeavyBurst 1024x1024 BC7 alphaMax=255 visiblePixels=83635 transparentPixels=927502
+ThrowEnergy 1024x1024 BC7 alphaMax=255 visiblePixels=144703 transparentPixels=886344
+ThrowImpact 1024x1024 BC7 alphaMax=255 visiblePixels=110200 transparentPixels=923354
+BlockBurst 1024x1024 BC7 alphaMax=255 visiblePixels=59677 transparentPixels=979672
+ClawImpact 1024x1024 BC7 alphaMax=255 visiblePixels=24972 transparentPixels=1007559
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1184" name="ReactiveThrowPresentationPlayModeTests" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:22Z" duration="0.282731" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1189" name="CancelledThrowRetiresReleasedBladeWithoutContact" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.CancelledThrowRetiresReleasedBladeWithoutContact" methodname="CancelledThrowRetiresReleasedBladeWithoutContact" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="1139950174" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.089743" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1186" name="ReleaseAndContactAreDistinctAndIdempotent" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ReleaseAndContactAreDistinctAndIdempotent" methodname="ReleaseAndContactAreDistinctAndIdempotent" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="1345624681" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.001372" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1188" name="ThreeHeldPreviewClipsChangeTheActualRigPose" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ThreeHeldPreviewClipsChangeTheActualRigPose" methodname="ThreeHeldPreviewClipsChangeTheActualRigPose" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="746931578" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.091321" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[normal time=0,3 hand=(995.13, 1002.43, 1000.02) idle=(995.21, 1002.19, 1000.14)
+heavy time=0,4666667 hand=(994.92, 1002.69, 1000.01) idle=(995.21, 1002.19, 1000.14)
+throw_blade time=0,4 hand=(994.68, 1002.86, 999.24) idle=(995.21, 1002.19, 1000.14)
+]]></output>
+            </test-case>
+            <test-case id="1187" name="ThrowAudioUsesOneReleaseAndOneContactAcrossAliases" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ThrowAudioUsesOneReleaseAndOneContactAcrossAliases" methodname="ThrowAudioUsesOneReleaseAndOneContactAcrossAliases" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="1891384983" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.002998" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1185" name="ThrowReadinessRequiresInitializedPropAndRegisteredClips" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ThrowReadinessRequiresInitializedPropAndRegisteredClips" methodname="ThrowReadinessRequiresInitializedPropAndRegisteredClips" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="1537580679" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:21Z" duration="0.022950" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[ThrowPreparation source=26108 runtime=-34102 ThrowPreparation legacy=True length=0,4 sourceLegacy=True sourceLength=0,4
+Throw source=26132 runtime=-34104 Throw legacy=True length=1,1 sourceLegacy=True sourceLength=1,1
+]]></output>
+            </test-case>
+            <test-case id="1190" name="ZeroDamageThrowStillResolvesAndRetiresItsVisualProjectile" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ZeroDamageThrowStillResolvesAndRetiresItsVisualProjectile" methodname="ZeroDamageThrowStillResolvesAndRetiresItsVisualProjectile" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="730666900" result="Passed" start-time="2026-10-03 05:48:21Z" end-time="2026-10-03 05:48:22Z" duration="0.070775" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\reactiveturns-b2-staging\final-vfx-unity\preview-throw-vfx-final-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

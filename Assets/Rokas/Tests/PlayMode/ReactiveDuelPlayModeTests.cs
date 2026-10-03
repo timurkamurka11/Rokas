@@ -74,6 +74,14 @@ namespace Rokas.Tests
             Assert.That(boot.View.Paused, Is.False);
             long revision = boot.Session.ReactiveCombat.Revision;
             Press("ReactiveBasic");
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand),
+                "The first action press only selects its preview.");
+            Assert.That(boot.Session.ReactiveCombat.Revision, Is.EqualTo(revision),
+                "Selecting an action cannot commit a Core command.");
+            Press("ReactiveBasic");
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand),
+                "Confirmation restores the camera before committing the command.");
+            yield return WaitForCommittedAction(boot);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
             Assert.That(boot.Session.ReactiveCombat.Revision, Is.GreaterThan(revision));
             revision = boot.Session.ReactiveCombat.Revision;
@@ -138,10 +146,15 @@ namespace Rokas.Tests
 
             yield return WaitForCommandReady(boot);
             Press("ReactiveBasic");
-            yield return null;
+            Press("ReactiveBasic");
+            yield return WaitForCommittedAction(boot);
             GameObject world = GameObject.Find("ReactiveCombatWorld");
             Transform hunterActor = FindIn(world, "CombatActor_Keiko")?.transform;
             Assert.That(hunterActor, Is.Not.Null);
+            Vector3 home = hunterActor.localPosition;
+            float approachDeadline = Time.realtimeSinceStartup + 3f;
+            while (hunterActor.localPosition == home && Time.realtimeSinceStartup < approachDeadline) yield return null;
+            Assert.That(hunterActor.localPosition.x, Is.GreaterThan(home.x), "Pause must exercise the actual committed approach.");
             boot.SendMessage("OnApplicationFocus", false);
             Vector3 heldPosition = hunterActor.localPosition;
             long heldCombatUs = boot.Session.ReactiveCombat.CurrentCombatUs;
@@ -155,6 +168,16 @@ namespace Rokas.Tests
             while (boot.Session.ReactiveCombat.Phase != ReactivePhase.EnemyExecution &&
                    Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.EnemyExecution));
+        }
+
+        private static IEnumerator WaitForCommittedAction(RokasBootstrap boot)
+        {
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while ((boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerExecution || boot.View.Paused) &&
+                Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
+            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize,
+                Is.EqualTo(4.6f).Within(.001f), "Camera restore precedes command execution.");
         }
 
         private static IEnumerator WaitForCommandReady(RokasBootstrap boot)

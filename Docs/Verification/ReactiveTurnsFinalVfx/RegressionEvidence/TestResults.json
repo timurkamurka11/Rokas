@@ -1,0 +1,82 @@
+{
+  "focused-recovery": {
+    "result": "Passed",
+    "total": "23",
+    "passed": "23",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:15:12Z",
+    "end-time": "2026-10-03 10:25:24Z",
+    "duration": "611,604473"
+  },
+  "reactive-final": {
+    "result": "Passed",
+    "total": "78",
+    "passed": "78",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:40:14Z",
+    "end-time": "2026-10-03 10:53:15Z",
+    "duration": "780,5118667"
+  },
+  "edit": {
+    "result": "Passed",
+    "total": "34",
+    "passed": "34",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:30:14Z",
+    "end-time": "2026-10-03 10:30:16Z",
+    "duration": "2,7634572"
+  },
+  "longrun-final": {
+    "result": "Passed",
+    "total": "1",
+    "passed": "1",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:30:36Z",
+    "end-time": "2026-10-03 10:35:57Z",
+    "duration": "320,7724218"
+  },
+  "throw-switch-final": {
+    "result": "Passed",
+    "total": "1",
+    "passed": "1",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:38:37Z",
+    "end-time": "2026-10-03 10:38:58Z",
+    "duration": "20,8258952"
+  },
+  "throw-torso-red": {
+    "result": "Failed(Child)",
+    "total": "1",
+    "passed": "0",
+    "failed": "1",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:13:28Z",
+    "end-time": "2026-10-03 10:13:30Z",
+    "duration": "1,8026644"
+  },
+  "throw-torso-green": {
+    "result": "Passed",
+    "total": "1",
+    "passed": "1",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 10:14:02Z",
+    "end-time": "2026-10-03 10:14:03Z",
+    "duration": "1,7969185"
+  },
+  "preview-throw-vfx-final": {
+    "result": "Passed",
+    "total": "21",
+    "passed": "21",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-10-03 05:46:33Z",
+    "end-time": "2026-10-03 05:48:22Z",
+    "duration": "108,2207616"
+  }
+}

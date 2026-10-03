@@ -65,6 +65,7 @@ namespace Rokas.Tests
             Vector3 corpseScale = dyingTarget.transform.localScale;
 
             Press("ReactiveBasic");
+            Press("ReactiveBasic");
             yield return CaptureUntil(boot, () => combat.GetActorState("E1").Hp == 40,
                 5f, "normal-motion", "E1", .05f);
             Assert.That(hunter.HitStopRemaining, Is.GreaterThan(0f),
@@ -113,8 +114,12 @@ namespace Rokas.Tests
             ReleaseKeys();
             yield return WaitFor(boot, () => hunter.HitStopRemaining > 0f && Feedback() == "БЛОК", 2f);
             Assert.That(combat.HunterHp, Is.EqualTo(100));
+            float blockContactPoseTime = hunter.CurrentPoseSeconds;
             Capture(boot, "block-contact", blockingEnemy);
-            yield return new WaitForSecondsRealtime(.18f);
+            // PNG readback can suspend the production clock. A wall-time sleep
+            // alone can capture the same frozen frame; wait for actual recovery.
+            yield return WaitFor(boot, () => combat.Phase != ReactivePhase.Suspended &&
+                hunter.HitStopRemaining <= 0f && hunter.CurrentPoseSeconds >= blockContactPoseTime + .04f, 4f);
             Assert.That(Feedback(), Is.EqualTo("БЛОК"));
             Capture(boot, "block-result", blockingEnemy);
 
@@ -137,6 +142,7 @@ namespace Rokas.Tests
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"));
             Assert.That((dyingTarget.transform.localPosition - corpseOrigin).sqrMagnitude,
                 Is.LessThan(.0001f), "Player controls appear only after E2 returns exactly and settles.");
+            Press("ReactiveHeavy");
             Press("ReactiveHeavy");
             yield return CaptureUntil(boot, () => combat.GetActorState("E2").Hp == 0,
                 6f, "heavy-motion", "E2", .065f);

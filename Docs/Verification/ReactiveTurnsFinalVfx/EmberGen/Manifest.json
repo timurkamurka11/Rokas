@@ -1,0 +1,505 @@
+{
+  "authoring_application": "EmberGen 1.2.6",
+  "verification_date": "2026-10-03",
+  "categories": [
+    {
+      "category": "PortalVapor",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\PortalVapor.png",
+      "atlas_sha256": "c172add6d179bfe7a3f9dbd6c8d124f04750a04813870b9916a05e947e42ee48",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\PortalVapor\\exports\\run_1791004784538701600\\ExportImage_0\\output_#####.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\PortalVapor.ember",
+      "source_sha256": "94be01717ecbdf38e86db3a0031d5b4266ee034651b2408925e56dc0de0f3a7c",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\wispy_smoke_1.ember",
+      "original_preset_sha256": "d69fbb28b76ddfe491a17c75fe0e9144e6b437be4c61d01c592d2893ddde3755",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\PortalVapor-changes.json",
+      "settings_sha256": "77f2b132a53952cab7af96981301e519c94d9a2363511a02de8167d748add94d",
+      "raw_settings": null,
+      "raw_settings_sha256": null,
+      "camera_position": [
+        [
+          42.0,
+          -4.0,
+          10.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 17,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 60.0,
+        "last": 123.0,
+        "stride": 1.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 9.547,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 9.24700927734375,
+      "last_mean_alpha": 26.172119140625,
+      "last_alpha_max": 255,
+      "peak_mean_alpha": 26.172119140625,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\PortalVapor\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\PortalVapor\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\PortalVapor\\exports\\run_1791004784538701600",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\PortalVapor\\PortalVapor.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\PortalVapor\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/PortalVapor.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/PortalVapor.ember"
+    },
+    {
+      "category": "NormalMist",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\NormalMist.png",
+      "atlas_sha256": "d6d73711e2b77afc95fa9845d2ee9bc398b90306769f285c5d634ec4319a88fd",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\NormalMist\\exports\\run_1791005495145880000\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\NormalMist.ember",
+      "source_sha256": "2d707eb00f5602fc131a583e6fa37321d8ecd4a119d04d42a90246ded1d7b32b",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\wispy_smoke_1.ember",
+      "original_preset_sha256": "d69fbb28b76ddfe491a17c75fe0e9144e6b437be4c61d01c592d2893ddde3755",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\NormalMist-changes.json",
+      "settings_sha256": "3f5a66555de5698ab2a43399d55dc13a7ec0e5f7e132040bbd56f5c65d8d57e4",
+      "raw_settings": null,
+      "raw_settings_sha256": null,
+      "camera_position": [
+        [
+          42.0,
+          -4.0,
+          10.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 17,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 60.0,
+        "last": 123.0,
+        "stride": 1.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 9.157,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 9.26275634765625,
+      "last_mean_alpha": 26.21826171875,
+      "last_alpha_max": 254,
+      "peak_mean_alpha": 26.21826171875,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\NormalMist\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\NormalMist\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\NormalMist\\exports\\run_1791005495145880000",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\NormalMist\\NormalMist.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\NormalMist\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/NormalMist.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/NormalMist.ember"
+    },
+    {
+      "category": "HeavyBurst",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\HeavyBurst.png",
+      "atlas_sha256": "35ea6b2e66c241585cfffd50741d4038ab000ab7832f5897e26633e609e87a29",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\HeavyBurst\\exports\\run_1791006078373508000\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\HeavyBurst.ember",
+      "source_sha256": "58204a98b13f702a2b23bf7c14594e5633605c9014282f7a8a81c3dc2590d161",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\gas_explosion_01.ember",
+      "original_preset_sha256": "a036197824fd37e6eb2331a0fd5c61282ab7a066b3fccffd7838b1bcbd626d6c",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\HeavyBurst-changes.json",
+      "settings_sha256": "621f5cf0dc8404447a20b88c3c787b0637b83c0841eebd0ddbc84e32fadf5c97",
+      "raw_settings": null,
+      "raw_settings_sha256": null,
+      "camera_position": [
+        [
+          15.0,
+          -300.0,
+          75.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 6,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 4.0,
+        "last": 256.0,
+        "stride": 4.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 32.016,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 6.89385986328125,
+      "last_mean_alpha": 0.000244140625,
+      "last_alpha_max": 1,
+      "peak_mean_alpha": 39.1031494140625,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\HeavyBurst\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\HeavyBurst\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\HeavyBurst\\exports\\run_1791006078373508000",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\HeavyBurst\\HeavyBurst.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\HeavyBurst\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/HeavyBurst.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/HeavyBurst.ember"
+    },
+    {
+      "category": "ThrowEnergy",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\ThrowEnergy.png",
+      "atlas_sha256": "4ded4642a44829de67016f7d373197cbc9540c27225d3143c010fb01d276b81e",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowEnergy\\exports\\run_1791005504513157000\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\ThrowEnergy.ember",
+      "source_sha256": "407f463b2c86f0cfd506d6f4a5b3d4b97daca7bc976c64c10e16d82faa421578",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\magic_projectile.ember",
+      "original_preset_sha256": "c6ef2027a4a22019f1cda3fc69d05aa04d536d7322d25b765eec54ce7c61f930",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\ThrowEnergy-changes.json",
+      "settings_sha256": "12b0b4abc3c1bfa1bb8757996de6f6ada8f824f0c71164ff5c5cdf83bae616c4",
+      "raw_settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\ThrowEnergy-raw-cyan-gradient-changes.json",
+      "raw_settings_sha256": "277142ed5d1fbbee1da7004e92b24c29f3a2c738fb8df481054777b2780865d7",
+      "camera_position": [
+        [
+          250.0,
+          0.0,
+          125.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 16,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 60.0,
+        "last": 123.0,
+        "stride": 1.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 12.484,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        12,
+        29,
+        32,
+        0
+      ],
+      "first_mean_alpha": 19.76739501953125,
+      "last_mean_alpha": 20.879638671875,
+      "last_alpha_max": 255,
+      "peak_mean_alpha": 22.97552490234375,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowEnergy\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowEnergy\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowEnergy\\exports\\run_1791005504513157000",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowEnergy\\ThrowEnergy.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowEnergy\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ThrowEnergy.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/ThrowEnergy.ember"
+    },
+    {
+      "category": "ThrowImpact",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\ThrowImpact.png",
+      "atlas_sha256": "ea8b7ba5f835c44a6dcbbaddeb3827f0eb696e724aa1bd67bd770544e739b011",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowImpact\\exports\\run_1791006110591223900\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\ThrowImpact.ember",
+      "source_sha256": "66051c05ec1d37ce3f9269e121010227b3a93e017ccb918f9cd4c9bb8f476ae3",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\game_explosion_magic_1.ember",
+      "original_preset_sha256": "b23985597ca81b6ac225289417c0d4eb9f153a7fea870cc13820b49d7897e8a8",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\ThrowImpact-changes.json",
+      "settings_sha256": "b67aa62530312564bba7af710ad7e311d17a070bcf9b1d486796c64801ee9995",
+      "raw_settings": null,
+      "raw_settings_sha256": null,
+      "camera_position": [
+        [
+          0.0,
+          0.0,
+          85.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 13,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 8.0,
+        "last": 260.0,
+        "stride": 4.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 16.234,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 9.120849609375,
+      "last_mean_alpha": 0.0,
+      "last_alpha_max": 0,
+      "peak_mean_alpha": 56.2509765625,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowImpact\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowImpact\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowImpact\\exports\\run_1791006110591223900",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ThrowImpact\\ThrowImpact.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ThrowImpact\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ThrowImpact.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/ThrowImpact.ember"
+    },
+    {
+      "category": "BlockBurst",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\BlockBurst.png",
+      "atlas_sha256": "9c3e91b7346f5eeaaba7898413260b26ed5932f7e7a120d1e1fb76d5e148f44a",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\BlockBurst\\exports\\run_1791006127041327500\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\BlockBurst.ember",
+      "source_sha256": "bc3d5450f4ad97daa9eac036e346020e926b1ed1c8d7c9038424d15d35edcb74",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\smoke_shockwave_2.ember",
+      "original_preset_sha256": "5f5fc3948bd9e8d7a10c2a6117516a5429d3a72a38ce5431287095594a259de5",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\BlockBurst-changes.json",
+      "settings_sha256": "05bb8bcbd0a95bce237dfb04d287ff767dbd9dd0f08279fdfa92385d30a88316",
+      "raw_settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\BlockBurst-raw-gradient-changes.json",
+      "raw_settings_sha256": "d8fe06c76eeee50f8d4e000464c76b412ced40a065336e6ce01bf77f5cbccce9",
+      "camera_position": [
+        [
+          0.0,
+          0.0,
+          320.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 13,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 12.0,
+        "last": 264.0,
+        "stride": 4.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 20.781,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 13.0361328125,
+      "last_mean_alpha": 0.0,
+      "last_alpha_max": 0,
+      "peak_mean_alpha": 47.47186279296875,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\BlockBurst\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\BlockBurst\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\BlockBurst\\exports\\run_1791006127041327500",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\BlockBurst\\BlockBurst.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\BlockBurst\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/BlockBurst.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/BlockBurst.ember"
+    },
+    {
+      "category": "ClawImpact",
+      "atlas": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\atlases\\ClawImpact.png",
+      "atlas_sha256": "1a55e80a9c430ba92356f4e1c6553df1aeaeb55caaad34cbb30bf6675a0f4c60",
+      "native_export": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ClawImpact\\exports\\run_1791006148026081100\\ExportImage_0\\output_#####.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "source": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\sources\\ClawImpact.ember",
+      "source_sha256": "73fe3b2aa3695087fd4c5bdb90bb8500fede7acb27cf66e0c82d99e6c05749a9",
+      "original_preset": "D:\\3DMODELS\\EmberGen\\presets_1_1_0\\bullet_impact_concrete.ember",
+      "original_preset_sha256": "2a5b64f85505addec539c8f336fafecb53444ef31282682c94423335fa288a34",
+      "settings": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\settings\\ClawImpact-changes.json",
+      "settings_sha256": "c3894ff1554f51c9ee35db6d9604d8eb39cf323b143df69d463a92fbdab91c55",
+      "raw_settings": null,
+      "raw_settings_sha256": null,
+      "camera_position": [
+        [
+          45.0,
+          -10.0,
+          10.0
+        ]
+      ],
+      "render_blend_field": {
+        "node": 14,
+        "key": "render.common.blend_mode",
+        "kind": 13,
+        "value": "Premultiplied_Alpha"
+      },
+      "source_range": {
+        "first": 4.0,
+        "last": 256.0,
+        "stride": 4.0
+      },
+      "export_exit": 0,
+      "elapsed_seconds": 12.469,
+      "edge_alpha_max": 0,
+      "frames_with_nonzero_alpha_edge": 0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "first_mean_alpha": 4.13916015625,
+      "last_mean_alpha": 0.0,
+      "last_alpha_max": 0,
+      "peak_mean_alpha": 7.703369140625,
+      "per_frame_report": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ClawImpact\\per-frame-rgba-borders.json",
+      "visual_review": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ClawImpact\\native-premult-review.jpg",
+      "export_command": [
+        "D:\\3DMODELS\\EmberGen\\EmberGen.exe",
+        "--export-image",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ClawImpact\\exports\\run_1791006148026081100",
+        "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\ClawImpact\\ClawImpact.ember"
+      ],
+      "cwd": "D:\\3DMODELS\\EmberGen",
+      "executable_sha256": "a0da6c8b5e9f03fd36d032569cef5b425a202333e45b973ed80ee6ee87c30129",
+      "evidence_manifest": "D:\\Rokas\\reactiveturns-b2-staging\\final-vfx-embergen\\library-2026-10-03\\native-ready\\evidence\\ClawImpact\\manifest.json",
+      "unity_asset": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ClawImpact.png",
+      "repository_source": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/sources/ClawImpact.ember"
+    }
+  ],
+  "scope": "Genuine customized business .ember projects and native CLI PNG exports; no pixel synthesis, crop, scaling, opacity envelope, or temporal resampling applied.",
+  "atlas_contract": {
+    "columns": 8,
+    "rows": 8,
+    "frames": 64,
+    "order": "left-to-right, top-to-bottom in PNG",
+    "unity_uv_frame0_min": [
+      0,
+      0.875
+    ],
+    "unity_uv_frame0_center": [
+      0.0625,
+      0.9375
+    ],
+    "unity_uv_formula": "min=(frame%8/8, (7-floor(frame/8))/8); tile size=(1/8,1/8)",
+    "source_blend_mode": "Premultiplied_Alpha",
+    "png_color_encoding": "sRGB RGB of native rendered premultiplied radiance; alpha linear coverage",
+    "recommended_unity_srgb": true,
+    "blend": "One, OneMinusSrcAlpha; multiply source RGB and A by layer opacity together; do not multiply RGB by texture A a second time"
+  },
+  "loop_roles": [
+    "PortalVapor",
+    "NormalMist",
+    "ThrowEnergy"
+  ],
+  "one_shot_roles": [
+    "HeavyBurst",
+    "ThrowImpact",
+    "BlockBurst",
+    "ClawImpact"
+  ],
+  "one_shot_contact_policy": {
+    "HeavyBurst": 4,
+    "ThrowImpact": 8,
+    "BlockBurst": 12,
+    "ClawImpact": 4,
+    "note": "Native export begins on a readable simulated frame so a frozen contact clock samples visible VFX; tail alpha is zero. All four use stride4 and64frames."
+  },
+  "genuine_native_glow_note": "Native fire/emissive pixels can contain RGB radiance at zero alpha. Per-frame border RGBA maxima are preserved and reported, including faint ThrowEnergy border glow.",
+  "unity_import_contract": {
+    "sRGB": true,
+    "alpha_source": "FromInput",
+    "alpha_is_transparency": false,
+    "mipmaps": false,
+    "filter": "Bilinear",
+    "wrap": "Clamp",
+    "standalone_format": "BC7",
+    "shader": "Combat/ReactiveCombatEmberFlipbook",
+    "blend": "One OneMinusSrcAlpha",
+    "zero_alpha_glow_handling": "Carrier discards zero coverage; per-cell transparent inset and fade prevent cell bleed."
+  }
+}

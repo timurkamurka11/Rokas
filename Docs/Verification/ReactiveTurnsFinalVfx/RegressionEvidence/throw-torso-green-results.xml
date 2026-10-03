@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1,7969185">
+  <test-suite type="TestSuite" id="1287" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.796919" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1281" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.786771" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33096" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1282" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.784844" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1283" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.783159" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1184" name="ReactiveThrowPresentationPlayModeTests" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.777225" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1190" name="ThrowAimsAtLiveTorsoInsteadOfInflatedSkinBoundsOrReleaseHandHeight" fullname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests.ThrowAimsAtLiveTorsoInsteadOfInflatedSkinBoundsOrReleaseHandHeight" methodname="ThrowAimsAtLiveTorsoInsteadOfInflatedSkinBoundsOrReleaseHandHeight" classname="Rokas.Tests.ReactiveThrowPresentationPlayModeTests" runstate="Runnable" seed="1384346877" result="Passed" start-time="2026-10-03 10:14:02Z" end-time="2026-10-03 10:14:03Z" duration="1.768235" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[THROW torso=(1004.07, 1001.99, 999.99) endpoint=(1004.07, 1001.99, 997.99) headY=1002,274
+Saving results to: D:\Rokas\reactiveturns-b2-staging\final-vfx-unity\throw-torso-green-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,121 @@
+[
+  {
+    "node": 12,
+    "key": "exposed.position",
+    "value": [
+      42,
+      -4,
+      10
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.yaw",
+    "value": [
+      90
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.pitch",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 12,
+    "key": "use_back_plate",
+    "value": false
+  },
+  {
+    "node": 17,
+    "key": "first_frame",
+    "value": [
+      60
+    ]
+  },
+  {
+    "node": 17,
+    "key": "stride_frames",
+    "value": [
+      1
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.flipbook_col_row",
+    "value": [
+      8,
+      8
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.sprite_size",
+    "value": [
+      128,
+      128
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.flipbook_size",
+    "value": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "node": 8,
+    "key": "color_thin_smoke",
+    "value": [
+      0.2,
+      0.38,
+      0.56,
+      1
+    ]
+  },
+  {
+    "node": 8,
+    "key": "color_dense_smoke",
+    "value": [
+      0.58,
+      0.79,
+      0.88,
+      1
+    ]
+  },
+  {
+    "node": 3,
+    "key": "burst_duration",
+    "value": [
+      0.5
+    ]
+  },
+  {
+    "node": 3,
+    "key": "burst_interval",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 15,
+    "key": "part_emitter_active",
+    "value": true
+  },
+  {
+    "node": 4,
+    "key": "master_smoke_dissipation",
+    "value": [
+      30
+    ]
+  },
+  {
+    "node": 4,
+    "key": "adv_parameters.smoke_dissipation_rate",
+    "value": [
+      28.5
+    ]
+  }
+]

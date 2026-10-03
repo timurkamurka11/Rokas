@@ -22,6 +22,8 @@ namespace Rokas.Presentation
         private readonly LineRenderer[] filaments = new LineRenderer[FilamentCount];
         private readonly ParticleSystem particles;
         private readonly ParticleSystem smoke;
+        private readonly ReactiveCombatEmberLayer vapor;
+        private readonly ReactiveCombatEmberLayer innerVapor;
         private readonly Vector3[] outerPositions = new Vector3[Segments];
         private readonly Vector3[] innerPositions = new Vector3[Segments];
         private readonly Vector3[] filamentPositions = new Vector3[32];
@@ -73,6 +75,8 @@ namespace Rokas.Presentation
                     i % 2 == 0 ? new Color(.85f, .6f, 1f, .72f) : new Color(.42f, .76f, .8f, .5f));
             particles = MakeParticles("PortalOrbitingSparks", layer, particlesMaterial, 48, .055f);
             smoke = MakeParticles("PortalResidualWisps", layer, smokeMaterial, 48, .3f);
+            vapor = new ReactiveCombatEmberLayer(root.transform, layer, "PortalVapor");
+            innerVapor = new ReactiveCombatEmberLayer(root.transform, layer, "PortalVapor");
             UpdateGeometry();
             SetProgress(0f);
         }
@@ -86,6 +90,10 @@ namespace Rokas.Presentation
             rimMaterial.SetFloat(OpacityId, visibility * .88f);
             particlesMaterial.SetFloat(OpacityId, visibility * .8f);
             smokeMaterial.SetFloat(OpacityId, visibility * .65f);
+            vapor.FollowLocal(new Vector3(0, 0, -.11f), new Vector2(2.7f, 4.8f),
+                new Color(.62f, .46f, .95f, 1f), visibility * .65f, 12f);
+            innerVapor.FollowLocal(new Vector3(.08f, -.08f, -.045f), new Vector2(1.75f, 3.3f),
+                new Color(.35f, .62f, .85f, 1f), visibility * .38f, -18f);
         }
         public void Tick(float deltaTime)
         {
@@ -93,6 +101,8 @@ namespace Rokas.Presentation
             float step = Mathf.Max(0f, deltaTime);
             if (step <= 0f) return;
             elapsed += step;
+            vapor.Tick(step);
+            innerVapor.Tick(step * .72f);
             discMaterial.SetFloat(PhaseId, elapsed);
             smokeMaterial.SetFloat(PhaseId, elapsed);
             UpdateGeometry();
@@ -239,6 +249,8 @@ namespace Rokas.Presentation
             ReactiveCombatAshDissolve.DestroyOwned(rimMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(particlesMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(smokeMaterial);
+            vapor.Dispose();
+            innerVapor.Dispose();
         }
     }
 }

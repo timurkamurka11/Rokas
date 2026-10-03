@@ -63,6 +63,12 @@ namespace Rokas.Tests
 
             // Basic earns the two AP needed for Heavy. The live encounter, clock and UI keep running.
             Press("ReactiveBasic");
+            Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand),
+                "The first Basic press only selects its preview.");
+            Assert.That(combat.HunterAp, Is.EqualTo(4),
+                "Selecting Basic cannot spend or grant AP.");
+            Press("ReactiveBasic");
+            yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerExecution, 3f);
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand &&
                 boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 18f);
@@ -73,9 +79,17 @@ namespace Rokas.Tests
             Press("ReactiveTarget2");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"));
             int clicksBeforeHeavy = boot.View.GenericClickCount;
+            int apBeforeHeavy = combat.HunterAp;
+            Press("ReactiveHeavy");
+            Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand),
+                "The first Heavy press only selects its preview.");
+            Assert.That(combat.HunterAp, Is.EqualTo(apBeforeHeavy),
+                "Selecting Heavy cannot spend AP.");
             Press("ReactiveHeavy");
             Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeHeavy),
                 "The Heavy command must not layer a generic UI click over its single contact cue.");
+            yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerExecution, 3f);
+            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize, Is.EqualTo(4.6f).Within(.001f));
             Assert.That(combat.CurrentPlayerSkillId, Is.EqualTo("heavy"));
             boot.SelectReactiveTarget("E3");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),

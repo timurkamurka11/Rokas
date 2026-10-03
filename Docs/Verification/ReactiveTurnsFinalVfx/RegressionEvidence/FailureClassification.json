@@ -1,0 +1,75 @@
+{
+  "source_xml": "RegressionEvidence/previous-70-of-77.xml",
+  "result": {
+    "total": 77,
+    "passed": 70,
+    "failed": 7
+  },
+  "failures": [
+    {
+      "test": "ReactiveArenaVisualPlayModeTests.ArenaCanBeCapturedAtAuthoredAndSmallScreenSizes",
+      "category": "B",
+      "expected": "hunter X > -5.25",
+      "actual": "-5.25",
+      "root_cause": "A single click now enters stationary preview. Test never confirmed.",
+      "fix": "Assert stationary preview and unchanged generic-click count, confirm via second real UI click, then retain approach/return/audio assertions."
+    },
+    {
+      "test": "ReactiveDuelPlayModeTests.FocusAndSettingsPauseFreezeCombatThenResume",
+      "category": "B",
+      "expected": "EnemyExecution",
+      "actual": "PlayerCommand",
+      "root_cause": "Focus loss occurred before asynchronous camera restore committed the command. Product correctly cancelled pending confirmation.",
+      "fix": "Wait for committed PlayerExecution and actual approach before exercising focus pause; retain frozen position/clock and enemy transition assertions."
+    },
+    {
+      "test": "ReactiveDuelPlayModeTests.PortalOffersPlayableReactiveDuelWithProjectArt",
+      "category": "B",
+      "expected": "PlayerExecution",
+      "actual": "PlayerCommand",
+      "root_cause": "Second click begins camera restore and does not synchronously commit.",
+      "fix": "Assert camera-confirm PlayerCommand, await real commit and restored framing; preserve revision/repeated-command/defense checks."
+    },
+    {
+      "test": "ReactiveEightEnemyPlayModeTests.PortalBuildsThreeAnimatedEnemiesAndPersistsTheChosenCommandTarget",
+      "category": "B",
+      "expected": "PlayerExecution",
+      "actual": "PlayerCommand",
+      "root_cause": "Immediate second-click phase assertion precedes camera restoration.",
+      "fix": "Assert preview does not change Core revision, await actual commit and camera framing, preserve save/reload and committed-target damage checks."
+    },
+    {
+      "test": "ReactiveHeavyTimingPlayModeTests.HeavyAcceptsOneTimedDevicePressAndKeepsItsCommittedTarget",
+      "category": "B",
+      "expected": "PlayerExecution",
+      "actual": "PlayerCommand",
+      "root_cause": "Both Basic setup and Heavy confirmation assumed synchronous commit.",
+      "fix": "Wait for real commit after camera restoration. Preserve real InputSystem early/timed press, AP, damage, target and timing UI assertions."
+    },
+    {
+      "test": "ReactiveHeavyTimingPlayModeTests.HeavyRejectsEarlyAndLateDevicePressesAndStillSettles",
+      "category": "B",
+      "expected": "PlayerExecution",
+      "actual": "PlayerCommand",
+      "root_cause": "Same synchronous confirmation expectation.",
+      "fix": "Same lifecycle wait, retain early/late rejection and settlement checks."
+    },
+    {
+      "test": "ReactivePolishIILiveLongRunPlayModeTests.FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns",
+      "category": "C",
+      "expected": "10 inactive owned Ember carriers",
+      "actual": "7",
+      "root_cause": "previewChecked persisted across encounters. Fresh arena owns 7 baseline carriers; Throw lazily adds 3. New encounter had not warmed Throw.",
+      "fix": "Reset per-encounter preview warm check; keep exact count10 and disabled-renderer assertions. Verify previous arena/carriers destroyed before new encounter."
+    }
+  ],
+  "additional_real_product_bug": {
+    "test": "ReactiveThrowPresentationPlayModeTests.ThrowAimsAtLiveTorsoInsteadOfInflatedSkinBoundsOrReleaseHandHeight",
+    "category": "A",
+    "root_cause": "VisibleBodyContact(target, dagger.position) preserved release-hand height and closest bounds edge; projectile and impact passed above body.",
+    "fix": "Cache live Spine2 with Spine1/Spine fallback; sample torso at release and preserve existing front-Z effect exposure. Melee/Block helper semantics unchanged.",
+    "red": "Expected torso X1004.06561, actual1001.14648; torso Y1001.99 vs endpoint1002.41, above Head1002.274.",
+    "green": "Actual projectile endpoint X/Y equals sampled torso X/Y; release/contact once, slots unchanged.",
+    "harness_correction": "Arena 3D world is separate from UI root; lookup actual ReactiveCombatWorld. Bone suffix lookup tolerates namespace formatting without falling back in the test. Actual chest/head are required."
+  }
+}

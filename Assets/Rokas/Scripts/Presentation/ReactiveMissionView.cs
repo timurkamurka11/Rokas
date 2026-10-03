@@ -39,6 +39,9 @@ namespace Rokas.Presentation
         public bool CanSealStrike;
         public bool CanSweep;
         public bool CanHeavy;
+        public bool CanPreviewHeavy;
+        public bool CanThrow;
+        public bool CanPreviewThrow;
         public bool CanAnchor;
         public string Forecast;
         public string Telegraph;
@@ -133,6 +136,9 @@ namespace Rokas.Presentation
         private Button sealStrikeButton;
         private Button sweepButton;
         private Button heavyButton;
+        private Button throwButton;
+        private Image normalSelected, heavySelected, throwSelected;
+        private readonly Action throwingBlade;
         private Button anchorButton;
         private float feedbackTime;
         private bool feedbackOnHunter;
@@ -169,8 +175,15 @@ namespace Rokas.Presentation
         public string HunterPresentationActionId => arena?.HunterPresentationActionId;
         public event Action<string, string, bool> AttackPresentationStarted;
         public event Action<string, string, bool, string> SwingStarted;
+        public event Action<string> ThrowReleased;
         public bool AnnouncementActive => announcementRemaining > 0f;
-        public bool PresentationReady => ArenaSettled && !AnnouncementActive;
+        public bool PresentationReady => (arena == null || arena.CommandReady) && !AnnouncementActive;
+        public bool PreviewConfirmed => arena != null && arena.PreviewConfirmed;
+        public bool ThrowReady => arena != null && arena.ThrowReady;
+        public bool SelectHunterPreview(string action) => arena != null && arena.SelectHunterPreview(action);
+        public bool StartHunterThrow(string target) { if (arena == null || !arena.StartHunterThrow(target)) return false; SetPresentationLocked(true); return true; }
+        public bool ConfirmHunterPreview() => arena != null && arena.ConfirmHunterPreview();
+        public void CancelHunterPreview() { arena?.CancelHunterPreview(); }
         public float ReactiveCorpseElapsed(string id) => arena == null ? -1f : arena.CorpseElapsed(id);
 
         public void ShowAnnouncement(string message)
@@ -226,7 +239,7 @@ namespace Rokas.Presentation
 
         public ReactiveMissionView(UiKit ui, RokasAssets assets, Action basic, Action sealStrike,
             Action defend, Action sweep, Action heavy, Action anchor, Action dodge, Action parry,
-            Action counter, Action retrySave, Action<string> chooseTarget)
+            Action counter, Action retrySave, Action<string> chooseTarget, Action throwingBlade = null)
         {
             this.ui = ui;
             this.assets = assets;
@@ -235,6 +248,7 @@ namespace Rokas.Presentation
             this.defend = defend;
             this.sweep = sweep;
             this.heavy = heavy;
+            this.throwingBlade = throwingBlade;
             this.anchor = anchor;
             this.dodge = dodge;
             this.parry = parry;
@@ -249,6 +263,7 @@ namespace Rokas.Presentation
             arena = new ReactiveCombatArena(ui, root);
             arena.AttackPresentationStarted += (id, actor, heavy) => AttackPresentationStarted?.Invoke(id, actor, heavy);
             arena.SwingStarted += (id, actor, heavy, hit) => SwingStarted?.Invoke(id, actor, heavy, hit);
+            arena.ThrowReleased += id => ThrowReleased?.Invoke(id);
             arena.BeginEncounterIntro();
             Sprite enemyCardSprite = Resources.Load<Sprite>(
                 "Combat/ReactiveTurns/UI/HUD/Hp bar button ui of monscter");
@@ -376,7 +391,7 @@ namespace Rokas.Presentation
                 0, 0, 440, 25, 17, UiKit.Gold, true, TextAnchor.MiddleCenter);
             hitFeedback = ui.Label(root, "ReactiveHitFeedback", "", 174, 426, 430, 44, 25,
                 UiKit.Paper, true, TextAnchor.MiddleCenter);
-            selectedAction = ui.Label(root, "ReactiveSelectedAction", "", 670, 808, 580, 45, 24,
+            selectedAction = ui.Label(root, "ReactiveSelectedAction", "", 390, 704, 1485, 31, 18,
                 UiKit.Gold, true, TextAnchor.MiddleCenter);
             selectedAction.gameObject.SetActive(false);
             waveBanner = ui.Label(root, "ReactiveWaveBanner", "", 534, 324, 852, 135, 51,
@@ -394,7 +409,7 @@ namespace Rokas.Presentation
             ui.Label(commandPanel.transform, "CommandTitle", "ВАШ ХОД  /  ВЫБЕРИТЕ ДЕЙСТВИЕ", 18, 4, 1444, 31, 17,
                 UiKit.Gold, false, TextAnchor.MiddleCenter);
             Button basicButton = ui.Button(commandPanel.transform, "ReactiveBasic", "Обычный удар",
-                367, 33, 320, 94, basic, true, true, false);
+                170, 33, 320, 94, basic, true, true, false);
             AttachButtonArtwork(basicButton, "Combat/ReactiveTurns/UI/Actions/Normal hit button",
                 new Rect(426, 144, 1320, 436), 2172, 724);
             sealStrikeButton = ui.Button(commandPanel.transform, "ReactiveSealStrike",
@@ -417,10 +432,27 @@ namespace Rokas.Presentation
                 new Rect(432, 170, 1308, 379), 2172, 724);
             AddCostLabel(anchorButton, "2 AP");
             heavyButton = ui.Button(commandPanel.transform, "ReactiveHeavy", "Тяжёлый · 5 AP",
-                777, 33, 340, 94, heavy, false, true, false);
+                566, 33, 340, 94, heavy, false, true, false);
             AttachButtonArtwork(heavyButton, "Combat/ReactiveTurns/UI/Actions/Heavy hit",
                 new Rect(247, 142, 1678, 462), 2172, 724);
             AddCostLabel(heavyButton, "5 AP");
+            throwButton = ui.Button(commandPanel.transform, "ReactiveThrow", "БРОСОК КИНЖАЛА",
+                996, 33, 302, 94, throwingBlade, false, true, false);
+            throwButton.GetComponent<Image>().color = new Color(.015f, .025f, .038f, .96f);
+            throwButton.transform.Find("Title").gameObject.SetActive(false);
+            throwButton.transform.Find("LeftRule").gameObject.SetActive(false);
+            ui.Box(throwButton.transform, "RightRule", 301, 0, 1, 94, UiKit.Gold);
+            ui.Box(throwButton.transform, "DaggerLeftRule", 0, 0, 1, 94, UiKit.Gold);
+            ui.Box(throwButton.transform, "BottomRule", 0, 93, 302, 1, UiKit.Gold);
+            ui.Label(throwButton.transform, "ThrowTitle", "Бросок\nкинжала", 78, 8, 204, 70, 26,
+                UiKit.Paper, true, TextAnchor.MiddleCenter);
+            ui.Label(throwButton.transform, "ThrowGlyph", "➶", 14, 9, 62, 72, 46,
+                UiKit.Gold, true, TextAnchor.MiddleCenter);
+            ui.Label(throwButton.transform, "ActionCost", "2 AP", 240, 75, 53, 16, 13,
+                UiKit.Jade, true, TextAnchor.MiddleRight);
+            normalSelected = ui.Box(commandPanel.transform, "NormalSelected", 195, 123, 270, 3, UiKit.Jade);
+            heavySelected = ui.Box(commandPanel.transform, "HeavySelected", 596, 123, 280, 3, UiKit.Jade);
+            throwSelected = ui.Box(commandPanel.transform, "ThrowSelected", 1010, 123, 270, 3, UiKit.Jade);
             sealStrikeButton.gameObject.SetActive(false);
             defendButton.gameObject.SetActive(false);
             sweepButton.gameObject.SetActive(false);
@@ -796,7 +828,9 @@ namespace Rokas.Presentation
             waveBanner.gameObject.SetActive(false);
             sealStrikeButton.interactable = display.CanSealStrike;
             sweepButton.interactable = display.CanSweep;
-            heavyButton.interactable = display.CanHeavy;
+            heavyButton.interactable = display.CanPreviewHeavy || display.CanHeavy;
+            throwButton.gameObject.SetActive(display.CanPreviewThrow && ThrowReady);
+            throwButton.interactable = display.CanPreviewThrow;
             anchorButton.interactable = display.CanAnchor;
         }
 
@@ -870,7 +904,14 @@ namespace Rokas.Presentation
             if (selectedAction != null)
             {
                 selectedAction.gameObject.SetActive(arena != null && arena.SelectionVisible);
-                selectedAction.text = arena != null && arena.SelectedHeavy ? "ТЯЖЁЛЫЙ УДАР" : "ОБЫЧНЫЙ УДАР";
+                bool visible = arena != null && arena.SelectionVisible;
+                selectedAction.text = visible && arena.SelectedThrow ? "БРОСОК КИНЖАЛА" :
+                    visible && arena.SelectedHeavy ? "ТЯЖЁЛЫЙ УДАР" : "ОБЫЧНЫЙ УДАР";
+                normalSelected.gameObject.SetActive(visible && !arena.SelectedHeavy && !arena.SelectedThrow);
+                heavySelected.gameObject.SetActive(visible && arena.SelectedHeavy);
+                throwSelected.gameObject.SetActive(visible && arena.SelectedThrow);
+                commandPreview.gameObject.SetActive(visible);
+                commandPreview.text = "ПОВТОРНЫЙ КЛИК — ПОДТВЕРДИТЬ   ·   ESC / ПКМ — ОТМЕНА";
             }
             if (announcementRemaining > 0f)
             {

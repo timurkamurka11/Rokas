@@ -20,6 +20,13 @@ MonoBehaviour:
     heavy: {fileID: 7400000, guid: 4225f8323ea2cac4a80a4303654349fb, type: 2}
     preparation: {fileID: 7400000, guid: f4d671ebf4f41fd49a685f3fa8f42c57, type: 2}
     heavyPreparation: {fileID: 7400000, guid: bacd886575acfcb488bb62c682354ffc, type: 2}
+    throwPreparation: {fileID: 7400000, guid: 41f792f90b1e6c24a9ae19bca40a5654, type: 2}
+    throwAttack: {fileID: 7400000, guid: fcfab73c99a7d76408d11f784bf7f4ef, type: 2}
+    throwingDaggerPrefab: {fileID: 4859787311392223373, guid: 57b7583746e9ce245a1b392b9a025e7e, type: 3}
+    throwReleaseSeconds: 0.425
+    throwContactSeconds: 0.785
+    daggerSocketPosition: {x: 0, y: 0.033, z: 0}
+    daggerSocketEuler: {x: 0, y: 0, z: 0}
     enterBattle: {fileID: 7400000, guid: 006708600efe8344dbe6f7a31a3093c4, type: 2}
     entranceWalk: {fileID: 7400000, guid: f55a97cafee5c3d4c9bc92f600902418, type: 2}
     guard: {fileID: 7400000, guid: b39f9b9446ea6214282f82d141d5dc7f, type: 2}
@@ -52,6 +59,13 @@ MonoBehaviour:
     heavy: {fileID: 7400000, guid: 006ade6f1ccad204fa7f503835a9363d, type: 2}
     preparation: {fileID: 0}
     heavyPreparation: {fileID: 0}
+    throwPreparation: {fileID: 0}
+    throwAttack: {fileID: 0}
+    throwingDaggerPrefab: {fileID: 0}
+    throwReleaseSeconds: 0.42
+    throwContactSeconds: 0.78
+    daggerSocketPosition: {x: 0, y: 0.025, z: 0}
+    daggerSocketEuler: {x: 0, y: 0, z: 0}
     enterBattle: {fileID: 0}
     entranceWalk: {fileID: 0}
     guard: {fileID: 0}
@@ -84,6 +98,13 @@ MonoBehaviour:
     heavy: {fileID: 7400000, guid: d96f6811a5c256e4abd7d75d27bc7ead, type: 2}
     preparation: {fileID: 0}
     heavyPreparation: {fileID: 0}
+    throwPreparation: {fileID: 0}
+    throwAttack: {fileID: 0}
+    throwingDaggerPrefab: {fileID: 0}
+    throwReleaseSeconds: 0.42
+    throwContactSeconds: 0.78
+    daggerSocketPosition: {x: 0, y: 0.025, z: 0}
+    daggerSocketEuler: {x: 0, y: 0, z: 0}
     enterBattle: {fileID: 0}
     entranceWalk: {fileID: 7400000, guid: 763a0241b807596409e755cdfc0d5f23, type: 2}
     guard: {fileID: 0}

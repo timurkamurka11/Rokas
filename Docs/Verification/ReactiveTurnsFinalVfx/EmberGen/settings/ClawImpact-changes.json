@@ -1,0 +1,131 @@
+[
+  {
+    "node": 9,
+    "key": "exposed.position",
+    "value": [
+      45,
+      -10,
+      10
+    ]
+  },
+  {
+    "node": 9,
+    "key": "exposed.yaw",
+    "value": [
+      90
+    ]
+  },
+  {
+    "node": 9,
+    "key": "exposed.pitch",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 9,
+    "key": "use_back_plate",
+    "value": false
+  },
+  {
+    "node": 14,
+    "key": "first_frame",
+    "value": [
+      4
+    ]
+  },
+  {
+    "node": 14,
+    "key": "stride_frames",
+    "value": [
+      4
+    ]
+  },
+  {
+    "node": 14,
+    "key": "sizes.flipbook_col_row",
+    "value": [
+      8,
+      8
+    ]
+  },
+  {
+    "node": 14,
+    "key": "sizes.sprite_size",
+    "value": [
+      128,
+      128
+    ]
+  },
+  {
+    "node": 14,
+    "key": "sizes.flipbook_size",
+    "value": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "node": 5,
+    "key": "color_thin_smoke",
+    "value": [
+      0.6,
+      0.2,
+      0.3,
+      1
+    ]
+  },
+  {
+    "node": 5,
+    "key": "color_dense_smoke",
+    "value": [
+      1,
+      0.4,
+      0.54,
+      1
+    ]
+  },
+  {
+    "node": 13,
+    "key": "particles_lifetime_limits",
+    "value": [
+      0.1,
+      0.35
+    ]
+  },
+  {
+    "node": 1,
+    "key": "master_smoke_dissipation",
+    "value": [
+      90
+    ]
+  },
+  {
+    "node": 1,
+    "key": "adv_parameters.smoke_dissipation_rate",
+    "value": [
+      85.5
+    ]
+  },
+  {
+    "node": 5,
+    "key": "smoke_density_scale",
+    "value": [
+      78
+    ]
+  },
+  {
+    "node": 13,
+    "key": "part_emission_burst_size",
+    "value": [
+      1000
+    ]
+  },
+  {
+    "node": 13,
+    "key": "part_inject_smoke",
+    "value": [
+      200
+    ]
+  }
+]

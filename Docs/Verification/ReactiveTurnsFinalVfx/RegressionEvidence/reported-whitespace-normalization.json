@@ -1,0 +1,29 @@
+[
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs",
+    "lines": [
+      410,
+      417,
+      421,
+      1069,
+      1123,
+      1126,
+      1134,
+      1140,
+      1146,
+      1149,
+      1156,
+      1185,
+      1202,
+      1212,
+      1219,
+      1225,
+      1227,
+      1232,
+      1266
+    ],
+    "changes_limited_to_blank_or_comment_trailing_spaces": true,
+    "before_sha256": "d40fa1c8d0b507f675c41263cdea91c8b93a47b697a7dc14c69ba5be3bc1180c",
+    "after_sha256": "1c9c7f5612f58ce81ef01ce480502042c1edd5f6e0226aeb4eb56fce5704026a"
+  }
+]

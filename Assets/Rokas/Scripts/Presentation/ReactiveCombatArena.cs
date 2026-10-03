@@ -19,8 +19,8 @@ namespace Rokas.Presentation
         private readonly Dictionary<string, CorpseState> corpses =
             new Dictionary<string, CorpseState>(StringComparer.Ordinal);
         private readonly List<string> retired = new List<string>();
-        private enum MotionPhase { None, Prepare, FrameRestore, Entrance, Approach, AtStrike, ReturnOrient, Return, HomeOrient }
-        private enum HunterCommandPose { None, Attack, Heavy, Defend }
+        private enum MotionPhase { None, Preview, PreviewRestore, PreviewConfirmed, CancelRestore, Prepare, FrameRestore, Entrance, Approach, AtStrike, ReturnOrient, Return, HomeOrient }
+        private enum HunterCommandPose { None, Attack, Heavy, Throw, Defend }
         private sealed class ActorMotion
         {
             public ReactiveCombatActorVisual Actor;
@@ -31,6 +31,8 @@ namespace Rokas.Presentation
             public float Duration;
             public MotionPhase Phase;
             public bool Heavy;
+            public bool Throw;
+            public bool Released;
             public float StrikeLead;
             public float ReturnDelay;
             public bool ReturnRequested;
@@ -63,8 +65,11 @@ namespace Rokas.Presentation
         private Camera camera;
         private RenderTexture texture;
         private RawImage image;
+        private Material actorComposite;
         private ReactiveCombatActorVisual hunter;
         private string heavyHunterActionId;
+        private string throwHunterActionId;
+        public bool ThrowReady => hunter != null && hunter.ThrowReady;
         private string heavyEnemyActionId;
         private float settleRemaining;
         private bool cinematicEnabled;
@@ -77,6 +82,7 @@ namespace Rokas.Presentation
         private ReactiveCombatPortalEmergence emergence;
         private ReactiveCombatSwordEffect swordEffect;
         private ReactiveCombatImpactEffect impactEffect;
+        private ReactiveCombatThrowEffect throwEffect;
         private Vector3 entranceStart;
         private Vector3 cameraFocus;
         private float cameraEmphasis;
@@ -91,8 +97,15 @@ namespace Rokas.Presentation
         private const float SelectionFrameReturnSeconds = .26f;
         public bool HunterEntryComplete { get; private set; }
         public string HunterPresentationActionId { get; private set; }
-        public bool SelectionVisible => hunterMotion.Phase == MotionPhase.Prepare || hunterMotion.Phase == MotionPhase.FrameRestore;
+        public bool SelectionVisible => hunterMotion.Phase == MotionPhase.Preview || hunterMotion.Phase == MotionPhase.PreviewRestore ||
+            hunterMotion.Phase == MotionPhase.PreviewConfirmed || hunterMotion.Phase == MotionPhase.Prepare || hunterMotion.Phase == MotionPhase.FrameRestore;
+        public bool PreviewConfirmed => hunterMotion.Phase == MotionPhase.PreviewConfirmed && CameraAtHome;
+        public bool CommandReady => PresentationReady || hunterMotion.Phase == MotionPhase.Preview || PreviewConfirmed;
         public bool SelectedHeavy => hunterMotion.Heavy;
+        public bool SelectedThrow => hunterMotion.Throw;
+        public event Action<string> ThrowReleased;
+        public int ThrowReleaseCount => throwEffect == null ? 0 : throwEffect.ReleaseCount;
+        public int ThrowContactCount => throwEffect == null ? 0 : throwEffect.ContactCount;
         public float EnemyContactResolutionDelay { get; set; } = .10f;
         public float PlayerContactResolutionDelay { get; set; } = .04f;
         public float HeavyContactResolutionDelay { get; set; } = .09f;
@@ -184,6 +197,14 @@ namespace Rokas.Presentation
         {
             image = ui.Art(parent, "ReactiveAnimatedWorld", null, 0, 0, 1920, 906);
             image.color = Color.white;
+            // The transparent actor camera already stores premultiplied RGB.
+            // Keep that RGB intact when placing its render texture over the arena.
+            var compositeShader = Resources.Load<Shader>("Combat/ReactiveCombatPremultipliedUi");
+            if (compositeShader != null)
+            {
+                actorComposite = new Material(compositeShader) { name = "Reactive actor UI composite" };
+                image.material = actorComposite;
+            }
             world = new GameObject("ReactiveCombatWorld");
             // Keep models outside all normal cameras, including PlayMode screenshot cameras.
             world.transform.position = new Vector3(1000f, 1000f, 1000f);
@@ -466,6 +487,72 @@ namespace Rokas.Presentation
         }
 
         // Movement precedes the committed command. Core still owns the impact and damage.
+        public bool SelectHunterPreview(string action)
+        {
+            if (hunter == null || !CommandReady) return false;
+            bool heavy = action == "heavy";
+            selectionFrameSize = camera.orthographicSize;
+            selectionFramePosition = camera.transform.localPosition;
+            hunterMotion.Phase = MotionPhase.Preview;
+            hunterMotion.Elapsed = 0f;
+            hunterMotion.Heavy = heavy;
+            hunterMotion.Throw = action == "throw_blade";
+            if (hunterMotion.Throw) hunter.PlayThrowPreparation();
+            else hunter.PlayPreparation(heavy);
+            if (hunterMotion.Throw && hunter.ThrowingDaggerPrefab != null)
+                throwEffect ??= new ReactiveCombatThrowEffect(world.transform, ActorLayer, hunter.ThrowingDaggerPrefab);
+            cameraFocus = hunterMotion.Home;
+            cameraEmphasis = heavy ? .09f : .065f;
+            return true;
+        }
+
+        public bool StartHunterThrow(string targetId)
+        {
+            if (hunter == null || !hunter.ThrowReady || hunter.HeldDagger == null || !CommandReady ||
+                !enemies.TryGetValue(targetId ?? "", out ReactiveCombatActorVisual target) || target.IsDead) return false;
+            hunterMotionTargetId = targetId;
+            hunterApproachComplete = false;
+            hunterPosePreplayed = true;
+            hunterMotion.Heavy = false;
+            hunterMotion.Throw = true;
+            hunterMotion.Released = false;
+            hunterMotion.StrikeElapsed = 0f;
+            hunterMotion.StrikeContact = hunter.ThrowContactSeconds;
+            hunterMotion.SwingSent = false;
+            hunterMotion.Phase = MotionPhase.AtStrike;
+            hunterCommandPose = HunterCommandPose.Throw;
+            HunterPresentationActionId = "presentation-" + Guid.NewGuid().ToString("N");
+            hunterMotion.ActionId = HunterPresentationActionId;
+            hunterAnticipationRemaining = Mathf.Max(0f, hunter.ThrowContactSeconds - .2f);
+            throwEffect ??= new ReactiveCombatThrowEffect(world.transform, ActorLayer, hunter.ThrowingDaggerPrefab);
+            hunter.PlayThrow();
+            return true;
+        }
+
+        public bool ConfirmHunterPreview()
+        {
+            if (hunterMotion.Phase != MotionPhase.Preview) return false;
+            RestorePreviewFrame(MotionPhase.PreviewRestore);
+            return true;
+        }
+
+        public void CancelHunterPreview()
+        {
+            if (hunterMotion.Phase != MotionPhase.Preview && hunterMotion.Phase != MotionPhase.PreviewRestore &&
+                hunterMotion.Phase != MotionPhase.PreviewConfirmed) return;
+            hunter.PlayIdle();
+            RestorePreviewFrame(MotionPhase.CancelRestore);
+        }
+
+        private void RestorePreviewFrame(MotionPhase phase)
+        {
+            selectionFrameSize = camera.orthographicSize;
+            selectionFramePosition = camera.transform.localPosition;
+            hunterMotion.Phase = phase;
+            hunterMotion.Elapsed = 0f;
+            hunterMotion.Duration = SelectionFrameReturnSeconds;
+        }
+
         public bool StartHunterApproach(string targetId, bool heavy = false)
         {
             ReactiveCombatActorVisual target;
@@ -474,7 +561,8 @@ namespace Rokas.Presentation
                 target.IsDead || corpses.ContainsKey(targetId)) return false;
             if (hunterMotion.Phase == MotionPhase.Approach && hunterMotionTargetId == targetId) return true;
             // Input is gated until every actor has returned to its permanent slot.
-            if (!PresentationReady) return false;
+            if (!CommandReady) return false;
+            bool prepared = PreviewConfirmed;
             Vector3 targetPosition = enemyMotions.TryGetValue(targetId, out ActorMotion targetMotion)
                 ? targetMotion.Home : target.transform.localPosition;
             Vector3 attackPoint = new Vector3(targetPosition.x - HunterAttackDistance, hunterMotion.Home.y,
@@ -483,13 +571,22 @@ namespace Rokas.Presentation
             hunterApproachComplete = false;
             hunterPosePreplayed = false;
             hunterMotion.Heavy = heavy;
+            hunterMotion.Throw = false;
             HunterPresentationActionId = "presentation-" + Guid.NewGuid().ToString("N");
             hunterMotion.ActionId = HunterPresentationActionId;
             hunterCommandPose = heavy ? HunterCommandPose.Heavy : HunterCommandPose.Attack;
             hunterAnticipationRemaining = Mathf.Max(0f, hunter.AttackContactSeconds(heavy) - .2f);
-            BeginMotion(hunterMotion, MotionPhase.Prepare, attackPoint,
-                Mathf.Max(hunter.PreparationDuration(heavy), heavy ? .9f : .65f));
-            hunter.PlayPreparation(heavy);
+            if (prepared)
+            {
+                BeginMotion(hunterMotion, MotionPhase.Approach, attackPoint, HunterApproachDuration);
+                hunter.PlayApproach(hunterMotion.Duration);
+            }
+            else
+            {
+                BeginMotion(hunterMotion, MotionPhase.Prepare, attackPoint,
+                    Mathf.Max(hunter.PreparationDuration(heavy), heavy ? .9f : .65f));
+                hunter.PlayPreparation(heavy);
+            }
             cameraFocus = hunterMotion.Home;
             cameraEmphasis = heavy ? .09f : .065f;
             return true;
@@ -504,11 +601,14 @@ namespace Rokas.Presentation
             hunterApproachComplete = false;
             hunterPosePreplayed = false;
             hunterAnticipationRemaining = 0f;
+            hunterMotion.Throw = hunterMotion.Released = false;
             ResetCamera();
             if ((hunter.transform.localPosition - hunterMotion.Home).sqrMagnitude < .0001f)
             {
                 hunter.transform.localPosition = hunterMotion.Home;
                 hunterMotion.Phase = MotionPhase.None;
+                hunter.PlayIdle();
+                settleRemaining = .16f;
                 return;
             }
             BeginMotion(hunterMotion, MotionPhase.Return, hunterMotion.Home, HunterReturnDuration);
@@ -517,6 +617,9 @@ namespace Rokas.Presentation
 
         public void CancelHunterMotion()
         {
+            throwEffect?.Cancel();
+            hunterMotion.Throw = hunterMotion.Released = false;
+            throwHunterActionId = null;
             hunterMotion.Phase = MotionPhase.None;
             hunterMotion.ReturnDelay = 0f;
             hunterMotion.ReturnRequested = false;
@@ -605,8 +708,10 @@ namespace Rokas.Presentation
             {
                 case CombatEventKind.CommandCommitted:
                     heavyHunterActionId = combatEvent.Detail == "heavy" ? combatEvent.ActionId : null;
+                    throwHunterActionId = combatEvent.Detail == "throw_blade" ? combatEvent.ActionId : null;
                     if (hunter == null) break;
-                    hunterCommandPose = combatEvent.Detail == "heavy" ? HunterCommandPose.Heavy :
+                    hunterCommandPose = combatEvent.Detail == "throw_blade" ? HunterCommandPose.Throw :
+                        combatEvent.Detail == "heavy" ? HunterCommandPose.Heavy :
                         combatEvent.Detail == "Defend" ? HunterCommandPose.Defend :
                         combatEvent.Detail == "Retreat" ? HunterCommandPose.None : HunterCommandPose.Attack;
                     if (hunterMotion.Phase != MotionPhase.Approach && !hunterPosePreplayed)
@@ -655,7 +760,7 @@ namespace Rokas.Presentation
                                     actor != null ? actor.BodyBounds.min.z : point.z) - .1f;
                                 impactEffect.Guard(point, Vector3.left);
                             }
-                            else if (combatEvent.Amount > 0) impactEffect.Flesh(point, heavyContact, Vector3.left);
+                            else if (combatEvent.Amount > 0) impactEffect.Claw(point, heavyContact, Vector3.left);
                         }
                     }
                     else if (combatEvent.TargetId != null && enemies.TryGetValue(combatEvent.TargetId, out actor) && actor != null)
@@ -670,13 +775,23 @@ namespace Rokas.Presentation
                         actor.HoldPresentation(contactStop);
                         if (hunter != null)
                             hunter.HoldAttackAtContact(heavyContact, contactStop);
-                        Vector3 bladeContact = swordEffect == null ? actor.BodyBounds.center :
+                        bool thrownContact = throwHunterActionId != null && combatEvent.ActionId == throwHunterActionId &&
+                            combatEvent.ActorId == ReactiveDuelDefinitions.HunterId;
+                        Vector3 bladeContact = thrownContact && throwEffect != null ? throwEffect.ContactPosition : swordEffect == null ? actor.BodyBounds.center :
                             swordEffect.BladePointNearest(actor.BodyBounds.center);
                         Vector3 point = VisibleBodyContact(actor, bladeContact);
+                        bool projectileResolved = thrownContact && throwEffect != null && throwEffect.ResolveContact();
                         if (combatEvent.Amount > 0)
                         {
-                            swordEffect?.Contact(point, heavyContact);
-                            impactEffect.Flesh(point, heavyContact, Vector3.right);
+                            if (thrownContact)
+                            {
+                                if (projectileResolved) impactEffect.Throw(point, Vector3.right);
+                            }
+                            else
+                            {
+                                swordEffect?.Contact(point, heavyContact);
+                                impactEffect.Flesh(point, heavyContact, Vector3.right);
+                            }
                         }
                     }
                     hitStopRemaining = Mathf.Max(hitStopRemaining, contactStop);
@@ -704,6 +819,8 @@ namespace Rokas.Presentation
                     else QueueEnemyReturn(combatEvent.ActorId, combatEvent.ActionId);
                     break;
                 case CombatEventKind.CommandCancelled:
+                    throwEffect?.Cancel();
+                    throwHunterActionId = null;
                     StartHunterReturn();
                     break;
             }
@@ -737,7 +854,7 @@ namespace Rokas.Presentation
         private void QueueHunterReturn()
         {
             if (hunter == null || hunter.IsDead || hunterMotion.Phase == MotionPhase.Return) return;
-            if ((hunter.transform.localPosition - hunterMotion.Home).sqrMagnitude < .0001f)
+            if (!hunterMotion.Throw && (hunter.transform.localPosition - hunterMotion.Home).sqrMagnitude < .0001f)
             {
                 StartHunterReturn();
                 return;
@@ -753,6 +870,7 @@ namespace Rokas.Presentation
             {
                 case HunterCommandPose.Attack: hunter.PlayAttackToContact(secondsUntilContact); break;
                 case HunterCommandPose.Heavy: hunter.PlayHeavyToContact(secondsUntilContact); break;
+                case HunterCommandPose.Throw: hunter.PlayThrow(); break;
                 case HunterCommandPose.Defend: hunter.PlayDefend(); break;
             }
         }
@@ -784,14 +902,23 @@ namespace Rokas.Presentation
             }
             settleRemaining = Mathf.Max(0f, settleRemaining - motionStep);
             TickIntro(motionStep);
-            if (hunterMotion.Phase == MotionPhase.Prepare)
+            if (hunterMotion.Phase == MotionPhase.Preview)
+            {
+                hunterMotion.Elapsed += motionStep;
+                float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
+                camera.orthographicSize = Mathf.Lerp(selectionFrameSize, 4.6f * (1f - cameraEmphasis), push);
+                camera.transform.localPosition = Vector3.Lerp(selectionFramePosition,
+                    new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
+            }
+            else if (hunterMotion.Phase == MotionPhase.Prepare)
             {
                 float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
                 camera.orthographicSize = Mathf.Lerp(4.6f, 4.6f * (1f - cameraEmphasis), push);
                 camera.transform.localPosition = Vector3.Lerp(new Vector3(0f, 2.25f, -20f),
                     new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
             }
-            else if (hunterMotion.Phase == MotionPhase.FrameRestore)
+            else if (hunterMotion.Phase == MotionPhase.FrameRestore || hunterMotion.Phase == MotionPhase.PreviewRestore ||
+                hunterMotion.Phase == MotionPhase.CancelRestore)
             {
                 float restore = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hunterMotion.Elapsed + motionStep) / SelectionFrameReturnSeconds));
                 camera.orthographicSize = Mathf.Lerp(selectionFrameSize, 4.6f, restore);
@@ -804,7 +931,18 @@ namespace Rokas.Presentation
                     (Mathf.Sin((.13f - cameraImpulseRemaining) * 72f) * cameraImpulseStrength * cameraImpulseRemaining / .13f);
             if (hunter != null)
             {
-                if (hunterMotion.Phase == MotionPhase.Prepare)
+                if (hunterMotion.Phase == MotionPhase.PreviewRestore || hunterMotion.Phase == MotionPhase.CancelRestore)
+                {
+                    hunterMotion.Elapsed += motionStep;
+                    if (hunterMotion.Elapsed >= hunterMotion.Duration)
+                    {
+                        bool cancelled = hunterMotion.Phase == MotionPhase.CancelRestore;
+                        ResetCamera();
+                        hunterMotion.Phase = cancelled ? MotionPhase.None : MotionPhase.PreviewConfirmed;
+                    }
+                }
+                else if (hunterMotion.Phase == MotionPhase.Preview || hunterMotion.Phase == MotionPhase.PreviewConfirmed) { }
+                else if (hunterMotion.Phase == MotionPhase.Prepare)
                 {
                     hunterMotion.Elapsed += motionStep;
                     if (hunterMotion.Elapsed >= hunterMotion.Duration)
@@ -860,7 +998,25 @@ namespace Rokas.Presentation
                 if (hunterMotion.Phase == MotionPhase.AtStrike)
                 {
                     hunterMotion.StrikeElapsed += motionStep;
-                    EmitSwing(hunterMotion, ReactiveDuelDefinitions.HunterId);
+                    if (hunterMotion.Throw)
+                    {
+                        if (!hunterMotion.Released && hunter.CurrentPoseSeconds >= hunter.ThrowReleaseSeconds)
+                        {
+                            Transform dagger = hunter.HeldDagger;
+                            if (dagger != null && enemies.TryGetValue(hunterMotionTargetId, out ReactiveCombatActorVisual target))
+                            {
+                                Vector3 point = VisibleBodyContact(target, target.TorsoPoint);
+                                if (throwEffect.Release(HunterPresentationActionId, dagger.position, point, dagger.lossyScale,
+                                    Mathf.Max(.08f, hunter.ThrowContactSeconds - hunter.ThrowReleaseSeconds)))
+                                {
+                                    hunter.ReleaseThrowWeapon();
+                                    hunterMotion.Released = true;
+                                    ThrowReleased?.Invoke(HunterPresentationActionId);
+                                }
+                            }
+                        }
+                    }
+                    else EmitSwing(hunterMotion, ReactiveDuelDefinitions.HunterId);
                 }
             }
             foreach (var pair in enemyMotions)
@@ -941,13 +1097,19 @@ namespace Rokas.Presentation
             float swingStart = hunter != null && hunter.AttackContactSeconds(hunterMotion.Heavy) > 0f
                 ? hunter.AttackSwingStartSeconds(hunterMotion.Heavy) * hunterMotion.StrikeContact /
                     hunter.AttackContactSeconds(hunterMotion.Heavy) : float.MaxValue;
-            bool swordSwing = hunterMotion.Phase == MotionPhase.AtStrike &&
+            bool swordSwing = !hunterMotion.Throw && hunterMotion.Phase == MotionPhase.AtStrike &&
                 hunterMotion.StrikeElapsed >= swingStart &&
                 beforeContact >= -.15f && !hunterMotion.ReturnRequested;
             float charge = hunterMotion.Phase == MotionPhase.Prepare && hunterMotion.Heavy
-                ? Mathf.Clamp01(hunterMotion.Elapsed / hunterMotion.Duration) : 0f;
+                ? Mathf.Clamp01(hunterMotion.Elapsed / hunterMotion.Duration)
+                : hunterMotion.Phase == MotionPhase.Preview && hunterMotion.Heavy ? .45f : 0f;
             swordEffect?.Tick(motionStep, swordSwing, hunterMotion.Heavy, charge);
             impactEffect?.Tick(motionStep);
+            throwEffect?.Tick(motionStep);
+            if (throwEffect != null && hunter != null)
+                throwEffect.PreviewCharge(hunter.HeldDagger == null ? hunter.transform.position : hunter.HeldDagger.position,
+                    hunterMotion.Throw && (hunterMotion.Phase == MotionPhase.Preview ||
+                    hunterMotion.Phase == MotionPhase.AtStrike && !hunterMotion.Released));
             retired.Clear();
             float dissolveStarts = Mathf.Max(.1f, DeathFallDuration) + Mathf.Max(0f, CorpseHoldDuration);
             float dissolveDuration = Mathf.Max(.1f, CorpseDissolveDuration);
@@ -1036,11 +1198,14 @@ namespace Rokas.Presentation
         public void Dispose()
         {
             if (camera != null) camera.targetTexture = null;
-            if (image != null) image.texture = null;
+            if (image != null) { image.texture = null; image.material = null; }
+            ReactiveCombatAshDissolve.DestroyOwned(actorComposite);
+            actorComposite = null;
             portal?.Dispose(); portal = null;
             emergence?.Dispose(); emergence = null;
             swordEffect?.Dispose(); swordEffect = null;
             impactEffect?.Dispose(); impactEffect = null;
+            throwEffect?.Dispose(); throwEffect = null;
             foreach (var corpse in corpses.Values) corpse.Ash?.Dispose();
             entranceQueue.Clear();
             if (world != null) UnityEngine.Object.Destroy(world);

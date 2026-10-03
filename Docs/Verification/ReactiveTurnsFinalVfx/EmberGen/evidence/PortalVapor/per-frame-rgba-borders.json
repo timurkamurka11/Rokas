@@ -1,0 +1,1157 @@
+{
+  "category": "PortalVapor",
+  "frames": [
+    {
+      "frame": 0,
+      "source_frame": 60.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 9.24700927734375,
+      "rgba_max": [
+        202,
+        147,
+        239,
+        255
+      ]
+    },
+    {
+      "frame": 1,
+      "source_frame": 61.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 9.494522094726562,
+      "rgba_max": [
+        201,
+        146,
+        239,
+        255
+      ]
+    },
+    {
+      "frame": 2,
+      "source_frame": 62.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 9.72308349609375,
+      "rgba_max": [
+        199,
+        144,
+        238,
+        255
+      ]
+    },
+    {
+      "frame": 3,
+      "source_frame": 63.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 9.970260620117188,
+      "rgba_max": [
+        203,
+        149,
+        238,
+        255
+      ]
+    },
+    {
+      "frame": 4,
+      "source_frame": 64.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 10.2178955078125,
+      "rgba_max": [
+        203,
+        149,
+        238,
+        255
+      ]
+    },
+    {
+      "frame": 5,
+      "source_frame": 65.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 10.492218017578125,
+      "rgba_max": [
+        207,
+        152,
+        239,
+        255
+      ]
+    },
+    {
+      "frame": 6,
+      "source_frame": 66.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 10.786544799804688,
+      "rgba_max": [
+        210,
+        156,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 7,
+      "source_frame": 67.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.042770385742188,
+      "rgba_max": [
+        211,
+        156,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 8,
+      "source_frame": 68.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.271987915039062,
+      "rgba_max": [
+        210,
+        155,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 9,
+      "source_frame": 69.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.485794067382812,
+      "rgba_max": [
+        213,
+        158,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 10,
+      "source_frame": 70.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.6640625,
+      "rgba_max": [
+        212,
+        158,
+        243,
+        255
+      ]
+    },
+    {
+      "frame": 11,
+      "source_frame": 71.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.81109619140625,
+      "rgba_max": [
+        215,
+        160,
+        243,
+        255
+      ]
+    },
+    {
+      "frame": 12,
+      "source_frame": 72.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 11.959213256835938,
+      "rgba_max": [
+        214,
+        159,
+        243,
+        255
+      ]
+    },
+    {
+      "frame": 13,
+      "source_frame": 73.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 12.141586303710938,
+      "rgba_max": [
+        217,
+        162,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 14,
+      "source_frame": 74.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 12.327926635742188,
+      "rgba_max": [
+        220,
+        166,
+        246,
+        255
+      ]
+    },
+    {
+      "frame": 15,
+      "source_frame": 75.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 12.531982421875,
+      "rgba_max": [
+        224,
+        171,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 16,
+      "source_frame": 76.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 12.738662719726562,
+      "rgba_max": [
+        222,
+        169,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 17,
+      "source_frame": 77.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 12.95416259765625,
+      "rgba_max": [
+        215,
+        160,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 18,
+      "source_frame": 78.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 13.143264770507812,
+      "rgba_max": [
+        222,
+        169,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 19,
+      "source_frame": 79.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 13.363693237304688,
+      "rgba_max": [
+        223,
+        171,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 20,
+      "source_frame": 80.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 13.578765869140625,
+      "rgba_max": [
+        226,
+        174,
+        248,
+        255
+      ]
+    },
+    {
+      "frame": 21,
+      "source_frame": 81.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 13.802993774414062,
+      "rgba_max": [
+        223,
+        170,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 22,
+      "source_frame": 82.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 14.030792236328125,
+      "rgba_max": [
+        221,
+        168,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 23,
+      "source_frame": 83.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 14.263092041015625,
+      "rgba_max": [
+        210,
+        155,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 24,
+      "source_frame": 84.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 14.518768310546875,
+      "rgba_max": [
+        197,
+        143,
+        237,
+        255
+      ]
+    },
+    {
+      "frame": 25,
+      "source_frame": 85.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 14.804290771484375,
+      "rgba_max": [
+        196,
+        142,
+        237,
+        255
+      ]
+    },
+    {
+      "frame": 26,
+      "source_frame": 86.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 15.094131469726562,
+      "rgba_max": [
+        198,
+        144,
+        236,
+        255
+      ]
+    },
+    {
+      "frame": 27,
+      "source_frame": 87.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 15.420028686523438,
+      "rgba_max": [
+        205,
+        150,
+        239,
+        255
+      ]
+    },
+    {
+      "frame": 28,
+      "source_frame": 88.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 15.746597290039062,
+      "rgba_max": [
+        212,
+        157,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 29,
+      "source_frame": 89.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 16.107864379882812,
+      "rgba_max": [
+        213,
+        158,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 30,
+      "source_frame": 90.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 16.439727783203125,
+      "rgba_max": [
+        212,
+        157,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 31,
+      "source_frame": 91.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 16.748092651367188,
+      "rgba_max": [
+        216,
+        161,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 32,
+      "source_frame": 92.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 17.0535888671875,
+      "rgba_max": [
+        216,
+        161,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 33,
+      "source_frame": 93.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 17.34600830078125,
+      "rgba_max": [
+        215,
+        161,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 34,
+      "source_frame": 94.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 17.619888305664062,
+      "rgba_max": [
+        220,
+        166,
+        246,
+        255
+      ]
+    },
+    {
+      "frame": 35,
+      "source_frame": 95.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 17.902908325195312,
+      "rgba_max": [
+        222,
+        168,
+        247,
+        255
+      ]
+    },
+    {
+      "frame": 36,
+      "source_frame": 96.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 18.168548583984375,
+      "rgba_max": [
+        219,
+        164,
+        245,
+        255
+      ]
+    },
+    {
+      "frame": 37,
+      "source_frame": 97.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 18.43707275390625,
+      "rgba_max": [
+        218,
+        164,
+        245,
+        255
+      ]
+    },
+    {
+      "frame": 38,
+      "source_frame": 98.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 18.717056274414062,
+      "rgba_max": [
+        220,
+        165,
+        246,
+        255
+      ]
+    },
+    {
+      "frame": 39,
+      "source_frame": 99.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 19.0245361328125,
+      "rgba_max": [
+        218,
+        163,
+        245,
+        255
+      ]
+    },
+    {
+      "frame": 40,
+      "source_frame": 100.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 19.318115234375,
+      "rgba_max": [
+        215,
+        160,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 41,
+      "source_frame": 101.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 19.620880126953125,
+      "rgba_max": [
+        218,
+        164,
+        246,
+        255
+      ]
+    },
+    {
+      "frame": 42,
+      "source_frame": 102.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 19.933944702148438,
+      "rgba_max": [
+        212,
+        157,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 43,
+      "source_frame": 103.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 20.252304077148438,
+      "rgba_max": [
+        207,
+        152,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 44,
+      "source_frame": 104.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 20.581771850585938,
+      "rgba_max": [
+        208,
+        152,
+        240,
+        255
+      ]
+    },
+    {
+      "frame": 45,
+      "source_frame": 105.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 20.936752319335938,
+      "rgba_max": [
+        209,
+        154,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 46,
+      "source_frame": 106.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 21.274566650390625,
+      "rgba_max": [
+        207,
+        152,
+        240,
+        255
+      ]
+    },
+    {
+      "frame": 47,
+      "source_frame": 107.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 21.60418701171875,
+      "rgba_max": [
+        210,
+        155,
+        240,
+        255
+      ]
+    },
+    {
+      "frame": 48,
+      "source_frame": 108.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 21.8919677734375,
+      "rgba_max": [
+        214,
+        159,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 49,
+      "source_frame": 109.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 22.199569702148438,
+      "rgba_max": [
+        217,
+        162,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 50,
+      "source_frame": 110.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 22.5076904296875,
+      "rgba_max": [
+        218,
+        164,
+        245,
+        255
+      ]
+    },
+    {
+      "frame": 51,
+      "source_frame": 111.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 22.817916870117188,
+      "rgba_max": [
+        218,
+        163,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 52,
+      "source_frame": 112.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 23.130889892578125,
+      "rgba_max": [
+        218,
+        164,
+        245,
+        255
+      ]
+    },
+    {
+      "frame": 53,
+      "source_frame": 113.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 23.433013916015625,
+      "rgba_max": [
+        215,
+        161,
+        244,
+        255
+      ]
+    },
+    {
+      "frame": 54,
+      "source_frame": 114.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 23.731597900390625,
+      "rgba_max": [
+        209,
+        154,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 55,
+      "source_frame": 115.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 24.035919189453125,
+      "rgba_max": [
+        212,
+        157,
+        243,
+        255
+      ]
+    },
+    {
+      "frame": 56,
+      "source_frame": 116.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 24.3436279296875,
+      "rgba_max": [
+        209,
+        155,
+        242,
+        255
+      ]
+    },
+    {
+      "frame": 57,
+      "source_frame": 117.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 24.623504638671875,
+      "rgba_max": [
+        206,
+        151,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 58,
+      "source_frame": 118.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 24.917190551757812,
+      "rgba_max": [
+        207,
+        152,
+        241,
+        255
+      ]
+    },
+    {
+      "frame": 59,
+      "source_frame": 119.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 25.213165283203125,
+      "rgba_max": [
+        214,
+        159,
+        244,
+        254
+      ]
+    },
+    {
+      "frame": 60,
+      "source_frame": 120.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 25.49334716796875,
+      "rgba_max": [
+        206,
+        151,
+        241,
+        254
+      ]
+    },
+    {
+      "frame": 61,
+      "source_frame": 121.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 25.742904663085938,
+      "rgba_max": [
+        203,
+        148,
+        240,
+        255
+      ]
+    },
+    {
+      "frame": 62,
+      "source_frame": 122.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 25.941162109375,
+      "rgba_max": [
+        202,
+        147,
+        238,
+        255
+      ]
+    },
+    {
+      "frame": 63,
+      "source_frame": 123.0,
+      "edge_rgba_max": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edge_alpha_nonzero_pixels": 0,
+      "mean_alpha": 26.172119140625,
+      "rgba_max": [
+        201,
+        146,
+        236,
+        255
+      ]
+    }
+  ]
+}

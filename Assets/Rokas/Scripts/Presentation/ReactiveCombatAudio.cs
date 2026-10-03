@@ -9,7 +9,7 @@ namespace Rokas.Presentation
     {
         KeikoNormalVocal, KeikoHeavyVocal, NormalWhoosh, HeavyWhoosh,
         NormalFleshContact, HeavyFleshContact, MonsterVocal, MonsterSwing,
-        MonsterFleshContact, GuardMetalContact, DodgeBackstep
+        MonsterFleshContact, GuardMetalContact, DodgeBackstep, ThrowRelease, ThrowFleshContact
     }
 
     public sealed class ReactiveCombatAudioDispatch
@@ -38,6 +38,8 @@ namespace Rokas.Presentation
         private readonly AudioClip[] normalVocals, heavyVocals, monsterAttacks, monsterIdle;
         private readonly AudioClip normalSwing, heavySwing, normalContact, heavyContact;
         private readonly AudioClip monsterContact, guardContact, dodgeMovement;
+        private readonly AudioClip throwRelease, throwContact;
+        private readonly HashSet<string> throwActions = new HashSet<string>();
         private readonly Dictionary<string, string> actionAliases = new Dictionary<string, string>();
         private readonly Dictionary<string, bool> heavyActions = new Dictionary<string, bool>();
         private readonly HashSet<string> played = new HashSet<string>();
@@ -66,6 +68,8 @@ namespace Rokas.Presentation
             monsterContact = Load("PolishII/MonsterFleshContact");
             guardContact = Load("PolishII/GuardMetalContact");
             dodgeMovement = Load("PolishII/DodgeBackstep");
+            throwRelease = Load("FinalVfx/ThrowRelease");
+            throwContact = Load("FinalVfx/ThrowContact");
             Reset();
         }
 
@@ -106,6 +110,14 @@ namespace Rokas.Presentation
                 heavy ? heavySwing : normalSwing, heavy ? .43f : .30f);
         }
 
+        public bool PresentThrowRelease(string actionId)
+        {
+            string sequence = Canonical(actionId);
+            throwActions.Add(sequence);
+            DelayIdle(5f);
+            return PlayOnce(sequence, HunterId, null, ReactiveCombatAudioEvent.ThrowRelease, throwRelease, .32f);
+        }
+
         /// <summary>All resolved contacts are handled here, including silent misses and defended damage.</summary>
         public bool PresentContact(string attackSequenceId, string actorId, bool heavy,
             string defenseOutcome, int amount, string hitId = null)
@@ -114,6 +126,11 @@ namespace Rokas.Presentation
             DelayIdle(5f);
             if (actorId == HunterId)
             {
+                if (throwActions.Contains(sequence))
+                {
+                    if (amount > 0) PlayOnce(sequence, actorId, null, ReactiveCombatAudioEvent.ThrowFleshContact, throwContact, .49f);
+                    return true;
+                }
                 // Sweep resolves several logical targets but owns one visual sword contact.
                 if (amount <= 0) return true;
                 PlayOnce(sequence, actorId, null,
@@ -145,6 +162,12 @@ namespace Rokas.Presentation
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.CommandCommitted:
+                    if (combatEvent.Detail == "throw_blade")
+                    {
+                        throwActions.Add(sequence);
+                        DelayIdle(5f);
+                        return true;
+                    }
                     if (!IsOffensiveCommand(combatEvent.Detail)) return false;
                     return PresentAttackStarted(sequence, combatEvent.ActorId,
                         string.Equals(combatEvent.Detail, "heavy", StringComparison.OrdinalIgnoreCase));
@@ -192,7 +215,7 @@ namespace Rokas.Presentation
         public void Reset()
         {
             idleCountdown = 6f;
-            actionAliases.Clear(); heavyActions.Clear(); played.Clear(); dispatches.Clear();
+            actionAliases.Clear(); heavyActions.Clear(); throwActions.Clear(); played.Clear(); dispatches.Clear();
             PlaybackCount = 0;
             normalVocalIndex = heavyVocalIndex = attackIndex = idleIndex = 0;
         }

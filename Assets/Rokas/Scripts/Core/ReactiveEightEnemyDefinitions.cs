@@ -9,6 +9,7 @@ namespace Rokas.Core
         public const string SweepId = "sweep";
         public const string HeavyId = "heavy";
         public const string AnchorId = "anchor";
+        public const string ThrowId = "throw_blade";
 
         public static CombatDefinitions Create(ContractDefinition contract, SaveData profile)
         {
@@ -18,15 +19,27 @@ namespace Rokas.Core
                 throw new ArgumentException("Contract ID is required.", "contract");
             double attack = DamageResolver.AttackFromLegacyClickDamage(contract.clickDamage,
                 profile.weaponLevel);
-            return Build(contract.id + ":reactive-eight-v1", attack);
+            return Build(contract.id + ":reactive-eight-v1", attack, true);
+        }
+
+        // Existing encounters keep the exact catalog they started with until a new entry.
+        public static CombatDefinitions CreatePreviousCatalog(ContractDefinition contract, SaveData profile)
+        {
+            if (contract == null) throw new ArgumentNullException("contract");
+            if (profile == null) throw new ArgumentNullException("profile");
+            if (string.IsNullOrWhiteSpace(contract.id))
+                throw new ArgumentException("Contract ID is required.", "contract");
+            double attack = DamageResolver.AttackFromLegacyClickDamage(contract.clickDamage,
+                profile.weaponLevel);
+            return Build(contract.id + ":reactive-eight-v1", attack, false);
         }
 
         public static CombatDefinitions CreateForTests()
         {
-            return Build("reactive-eight-test-v1", 20);
+            return Build("reactive-eight-test-v1", 20, true);
         }
 
-        private static CombatDefinitions Build(string id, double hunterAttack)
+        private static CombatDefinitions Build(string id, double hunterAttack, bool includeThrow)
         {
             const DefenseResponseMask both = DefenseResponseMask.Dodge | DefenseResponseMask.Parry;
             var sequences = new[] {
@@ -60,7 +73,7 @@ namespace Rokas.Core
                 new ActorDefinition("E8", false, 8, 100, 90, 120, 100, "final_triple", 0,
                     new[] { "final_triple", "heavy" })
             };
-            var skills = new[] {
+            var previousSkills = new[] {
                 new SkillDefinition("seal_strike", 3, 115, 2.4, 35),
                 new SkillDefinition(SweepId, 3, 130, 1.2, 12,
                     TargetingMode.AllActiveEnemies),
@@ -71,6 +84,13 @@ namespace Rokas.Core
                     delayTargetTicks: 35),
                 new SkillDefinition("defend", 0, 80, 0, 0)
             };
+            SkillDefinition[] skills = previousSkills;
+            if (includeThrow)
+            {
+                skills = new SkillDefinition[previousSkills.Length + 1];
+                Array.Copy(previousSkills, skills, previousSkills.Length);
+                skills[previousSkills.Length] = new SkillDefinition(ThrowId, 2, 110, 1.0, 0);
+            }
             var waves = new[] {
                 new WaveDefinition("wave-1", new[] { "E1", "E2", "E3" }),
                 new WaveDefinition("wave-2", new[] { "E4", "E5", "E6" }),

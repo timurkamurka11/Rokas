@@ -68,6 +68,8 @@ namespace Rokas.Core
         {
             CombatDefinitions eight = ReactiveEightEnemyDefinitions.Create(Contract, State);
             if (checkpoint == null || checkpoint.contentHash == eight.ContentHash) return eight;
+            CombatDefinitions previousEight = ReactiveEightEnemyDefinitions.CreatePreviousCatalog(Contract, State);
+            if (checkpoint.contentHash == previousEight.ContentHash) return previousEight;
             // Existing Milestone A duel saves remain loadable with their original content.
             CombatDefinitions duel = ReactiveDuelDefinitions.Create(Contract, State);
             return checkpoint.contentHash == duel.ContentHash ? duel : eight;

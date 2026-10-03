@@ -1,0 +1,88 @@
+[
+  {
+    "node": 12,
+    "key": "exposed.position",
+    "value": [
+      42,
+      -4,
+      10
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.yaw",
+    "value": [
+      90
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.pitch",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 12,
+    "key": "use_back_plate",
+    "value": false
+  },
+  {
+    "node": 17,
+    "key": "first_frame",
+    "value": [
+      60
+    ]
+  },
+  {
+    "node": 17,
+    "key": "stride_frames",
+    "value": [
+      1
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.flipbook_col_row",
+    "value": [
+      8,
+      8
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.sprite_size",
+    "value": [
+      256,
+      256
+    ]
+  },
+  {
+    "node": 17,
+    "key": "sizes.flipbook_size",
+    "value": [
+      2048,
+      2048
+    ]
+  },
+  {
+    "node": 8,
+    "key": "color_thin_smoke",
+    "value": [
+      0.24,
+      0.16,
+      0.42,
+      1
+    ]
+  },
+  {
+    "node": 8,
+    "key": "color_dense_smoke",
+    "value": [
+      0.65,
+      0.48,
+      0.84,
+      1
+    ]
+  }
+]

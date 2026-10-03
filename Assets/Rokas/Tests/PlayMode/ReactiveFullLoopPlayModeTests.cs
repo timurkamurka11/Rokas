@@ -87,6 +87,7 @@ namespace Rokas.Tests
             Assert.That(combat.EnemyBroken, Is.False);
             yield return WaitForCommandReady("ReactiveBasic", 4f);
             Press("ReactiveBasic");
+            Press("ReactiveBasic");
             yield return WaitForPhase(boot, ReactivePhase.EnemyExecution, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(27));
             long secondAttackStart = combat.CurrentActionStartUs;

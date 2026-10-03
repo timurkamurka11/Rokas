@@ -70,6 +70,12 @@ namespace Rokas.Presentation
         public float ReactiveCorpseElapsed(string id) => mission.ReactiveCorpseElapsed(id);
         public bool ReactiveAnnouncementActive => mission.ReactiveAnnouncementActive;
         public bool ReactivePresentationReady => mission.ReactivePresentationReady;
+        public bool ReactivePreviewConfirmed => mission.ReactivePreviewConfirmed;
+        public bool ReactiveThrowReady => mission.ReactiveThrowReady;
+        public bool SelectHunterPreview(string action) => mission.SelectHunterPreview(action);
+        public bool StartHunterThrow(string target) => mission.StartHunterThrow(target);
+        public bool ConfirmHunterPreview() => mission.ConfirmHunterPreview();
+        public void CancelHunterPreview() { mission.CancelHunterPreview(); }
         public void ShowReactiveAnnouncement(string text) { mission.ShowReactiveAnnouncement(text); }
         public void ShowReactiveTurnAnnouncement(bool playerTurn) { mission.ShowReactiveTurnAnnouncement(playerTurn); }
         public bool StartHunterApproach(string enemyId, bool heavy = false) { return mission.StartHunterApproach(enemyId, heavy); }
@@ -128,7 +134,7 @@ namespace Rokas.Presentation
                 ui, assets, session, audio,
                 OpenPanel, Act, Travel, ToastShort, OpenHubDialogue);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused,
-                owner.SubmitReactiveCommand, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter,
+                owner.ClickReactiveAction, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter,
                 owner.RetryReactiveSave, owner.SelectReactiveTarget);
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,

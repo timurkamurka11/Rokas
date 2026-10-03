@@ -43,6 +43,12 @@ namespace Rokas.Presentation
         public float ReactiveCorpseElapsed(string id) => reactiveView.ReactiveCorpseElapsed(id);
         public bool ReactiveAnnouncementActive => reactiveView.AnnouncementActive;
         public bool ReactivePresentationReady => reactiveView.PresentationReady;
+        public bool ReactivePreviewConfirmed => reactiveView.PreviewConfirmed;
+        public bool ReactiveThrowReady => reactiveView.ThrowReady;
+        public bool SelectHunterPreview(string action) => reactiveView.SelectHunterPreview(action);
+        public bool StartHunterThrow(string target) => reactiveView.StartHunterThrow(target);
+        public bool ConfirmHunterPreview() => reactiveView.ConfirmHunterPreview();
+        public void CancelHunterPreview() { reactiveView.CancelHunterPreview(); }
         public void ShowReactiveAnnouncement(string text) { reactiveView.ShowAnnouncement(text); }
         public void ShowReactiveTurnAnnouncement(bool playerTurn) { reactiveView.ShowTurnAnnouncement(playerTurn); }
         public bool StartHunterApproach(string enemyId, bool heavy = false) { return reactiveView.StartHunterApproach(enemyId, heavy); }
@@ -67,12 +73,14 @@ namespace Rokas.Presentation
                 () => reactiveCommand(CommandKind.Skill, "heavy"),
                 () => reactiveCommand(CommandKind.Skill, "anchor"),
                 () => reactiveDefense(ReactivePressKind.Dodge),
-                () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave, reactiveTarget);
+                () => reactiveDefense(ReactivePressKind.Parry), reactiveCounter, reactiveRetrySave, reactiveTarget,
+                () => reactiveCommand(CommandKind.Skill, ReactiveEightEnemyDefinitions.ThrowId));
             reactiveAudio = new ReactiveCombatAudio(audio);
             reactiveView.AttackPresentationStarted += (id, actor, heavy) =>
                 { reactiveAudio.PresentAttackStarted(id, actor, heavy); };
             reactiveView.SwingStarted += (id, actor, heavy, hit) =>
                 { reactiveAudio.PresentSwing(id, actor, heavy, hit); };
+            reactiveView.ThrowReleased += id => reactiveAudio.PresentThrowRelease(id);
         }
 
         public void CancelInput() { combatHud?.CancelInput(); }
@@ -261,6 +269,8 @@ namespace Rokas.Presentation
                     combat.PreviewCommandImpact(CommandKind.Skill, "sweep", selectedId);
                 CommandImpactPreview heavy = selectedId == null ? null :
                     combat.PreviewCommandImpact(CommandKind.Skill, "heavy", selectedId);
+                CommandImpactPreview throwingBlade = selectedId == null ? null :
+                    combat.PreviewCommandImpact(CommandKind.Skill, ReactiveEightEnemyDefinitions.ThrowId, selectedId);
                 CommandImpactPreview anchor = selectedId == null ? null :
                     combat.PreviewCommandImpact(CommandKind.Skill, "anchor", selectedId);
                 string commandPreview = basic == null || seal == null ? string.Empty :
@@ -295,6 +305,9 @@ namespace Rokas.Presentation
                     CanSealStrike = seal != null && seal.CanAfford,
                     CanSweep = sweep != null && sweep.CanAfford,
                     CanHeavy = heavy != null && heavy.CanAfford,
+                    CanPreviewHeavy = heavy != null,
+                    CanThrow = throwingBlade != null && throwingBlade.CanAfford,
+                    CanPreviewThrow = throwingBlade != null,
                     CanAnchor = anchor != null && anchor.CanAfford,
                     Forecast = forecastText,
                     Telegraph = telegraph,

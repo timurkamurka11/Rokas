@@ -1,0 +1,998 @@
+[
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\base-battle.png",
+    "sha256": "e4ba592fac765c17b989b8db833db57443dd2f9e5ba949da02fec83a26a30d0b",
+    "mtime_utc": "2026-10-03T10:42:00.373177+00:00",
+    "bytes": 2901887
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\ReactiveBasic-preview.png",
+    "sha256": "fe483c7069998ff077efcc3702e896ded31df636d0153eeff99e924f8a525da8",
+    "mtime_utc": "2026-10-03T10:42:01.422628+00:00",
+    "bytes": 2913041
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\ReactiveHeavy-preview.png",
+    "sha256": "04bc52f4826976b268248bd9dd9ea90bcb9ade5c91dbaa566c0f8278dd2346b1",
+    "mtime_utc": "2026-10-03T10:42:02.638934+00:00",
+    "bytes": 2917147
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\ReactiveThrow-preview.png",
+    "sha256": "afccc1da67caef4687f0510a572e1a81f3967c5f12224fa84168bc826c84b55e",
+    "mtime_utc": "2026-10-03T10:42:03.788482+00:00",
+    "bytes": 2911717
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-impact-burst.png",
+    "sha256": "8534d36cc0203ecc744dc57b2d5ce192fe6ee452d4ce09269ffa52928103cda0",
+    "mtime_utc": "2026-10-03T10:42:06.511591+00:00",
+    "bytes": 2922710
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-impact.png",
+    "sha256": "19abdfb9855b2fee555bf88a037ead0f29641f839190549158925d948de0c216",
+    "mtime_utc": "2026-10-03T10:42:05.658396+00:00",
+    "bytes": 2922641
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-000.png",
+    "sha256": "ccccc821c413881238715daee5c840f2c3cfef67f6eb24fd69bc423094a8c64c",
+    "mtime_utc": "2026-10-03T10:42:04.726112+00:00",
+    "bytes": 877157
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-001.png",
+    "sha256": "4d1ff09c680475a370b5b5b8c23a76381452ab5c7ef3f531189ecdbabc43d01a",
+    "mtime_utc": "2026-10-03T10:42:04.811855+00:00",
+    "bytes": 877262
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-002.png",
+    "sha256": "3df0a5a0519699ad3795f733c00a0346622d80905edc6133ffd9ace07a4259fd",
+    "mtime_utc": "2026-10-03T10:42:04.898040+00:00",
+    "bytes": 877297
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-003.png",
+    "sha256": "07e17da67536d2b9d792881f2547db36df5e6bf73fddccf3c1a1ab8a4e9ae504",
+    "mtime_utc": "2026-10-03T10:42:04.983805+00:00",
+    "bytes": 877312
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-004.png",
+    "sha256": "9a01bb00b4f418305ad2225a39c467b160f0b0a835821fa8267342f13a439ee3",
+    "mtime_utc": "2026-10-03T10:42:05.069176+00:00",
+    "bytes": 876802
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-005.png",
+    "sha256": "5389edb98327994916aea86b1fd29682f6699c415da952fd45333e53659e1e73",
+    "mtime_utc": "2026-10-03T10:42:05.156780+00:00",
+    "bytes": 876998
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-006.png",
+    "sha256": "3f1c24a0b3d3d81f29c5064ed4c71351f5b2512186b1aad450685409312bfe5f",
+    "mtime_utc": "2026-10-03T10:42:05.242592+00:00",
+    "bytes": 877253
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-007.png",
+    "sha256": "2d6b8f97c2b4e0e595ee0d6e7411469885d809a7eacdb6de323e4e1887f58024",
+    "mtime_utc": "2026-10-03T10:42:05.331339+00:00",
+    "bytes": 877032
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-008.png",
+    "sha256": "90af218cb98effba5203d021e0dc0f0b4bc873351d86946191b1357c8effc7ba",
+    "mtime_utc": "2026-10-03T10:42:05.420810+00:00",
+    "bytes": 877053
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-motion-009.png",
+    "sha256": "7c3bd47b2fdc4584c5adf96ae2e55a48efd40fc1d7384207847dd888e3560005",
+    "mtime_utc": "2026-10-03T10:42:05.508024+00:00",
+    "bytes": 877058
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-final-vfx-visuals\\throw-recovery.png",
+    "sha256": "0b3110531747e28367929f7ed9168086f89937078ff5d640c7e7faeebf6bcecd",
+    "mtime_utc": "2026-10-03T10:42:07.647992+00:00",
+    "bytes": 2921075
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\block-contact.png",
+    "sha256": "7360bc6b733d959d9d07c35fc62a001abef2510763b795fa4a41b67f8b63cd46",
+    "mtime_utc": "2026-10-03T10:43:28.037300+00:00",
+    "bytes": 2919341
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\block-result.png",
+    "sha256": "900d270014e60a4de0182cf0c0c7deb4eb6071ebd683f5ed38fae67167058e2e",
+    "mtime_utc": "2026-10-03T10:43:28.869240+00:00",
+    "bytes": 2920965
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-dissolve.png",
+    "sha256": "6591266d59acbcbba96faad89a90e21409b814a16822604b7adb28bfb8bdd6ec",
+    "mtime_utc": "2026-10-03T10:43:42.165114+00:00",
+    "bytes": 2918712
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-fallen.png",
+    "sha256": "d5bf7117aff18dfbf544676ca04f76ae6fab66ca927efb3913682dd5f0676515",
+    "mtime_utc": "2026-10-03T10:43:40.708095+00:00",
+    "bytes": 2917790
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-hold.png",
+    "sha256": "0612a18415a99b38483e6b31fe46b29eb0327c6a2b2872f2579a284ac7b9376d",
+    "mtime_utc": "2026-10-03T10:43:41.158484+00:00",
+    "bytes": 2924071
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\dodge-backstep.png",
+    "sha256": "e5b3f941b1c265bd2830a7682335012ace20e8679c306dadc0d578549fd0e188",
+    "mtime_utc": "2026-10-03T10:43:23.334490+00:00",
+    "bytes": 2925449
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\dodge-result.png",
+    "sha256": "e447566095290c79dffee679a6882796aac7d6b7a7347d0ce0c222407b39facf",
+    "mtime_utc": "2026-10-03T10:43:23.666506+00:00",
+    "bytes": 2927358
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-body-contact.png",
+    "sha256": "b6837771df124e55ec06228967c69b8707578b1fe05018b8877484040604061e",
+    "mtime_utc": "2026-10-03T10:43:30.291092+00:00",
+    "bytes": 2922556
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-000.png",
+    "sha256": "b077fdbada58a608bf68416a4e4886f40e4fc2c8c6cdf43a2477cb0817928791",
+    "mtime_utc": "2026-10-03T10:43:28.915399+00:00",
+    "bytes": 876616
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-001.png",
+    "sha256": "221d5b4df55a02b077a7cee5a383c052469ee344ced3302b5eb653f2c22fc0ae",
+    "mtime_utc": "2026-10-03T10:43:29.067417+00:00",
+    "bytes": 878448
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-002.png",
+    "sha256": "6e98fa883104dff093a4efdf416bffc433913a36543bf0d229bb255da61d5fd3",
+    "mtime_utc": "2026-10-03T10:43:29.219807+00:00",
+    "bytes": 878448
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-003.png",
+    "sha256": "221d5b4df55a02b077a7cee5a383c052469ee344ced3302b5eb653f2c22fc0ae",
+    "mtime_utc": "2026-10-03T10:43:29.374080+00:00",
+    "bytes": 878448
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-004.png",
+    "sha256": "221d5b4df55a02b077a7cee5a383c052469ee344ced3302b5eb653f2c22fc0ae",
+    "mtime_utc": "2026-10-03T10:43:29.526096+00:00",
+    "bytes": 878448
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-005.png",
+    "sha256": "5cd1374b941edee8721be317141020e770c60f06ee78ca7898551c604c85683c",
+    "mtime_utc": "2026-10-03T10:43:29.679430+00:00",
+    "bytes": 876259
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-006.png",
+    "sha256": "7704b633bfa54c706ccaa22dab4a941d963e3f8b6ff7f8f619a2006f74ecb215",
+    "mtime_utc": "2026-10-03T10:43:29.833989+00:00",
+    "bytes": 876101
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-007.png",
+    "sha256": "d27ed62c6592634e15dff68cc40970c08ebaf62f8733161401c817a14fd3d11d",
+    "mtime_utc": "2026-10-03T10:43:29.987989+00:00",
+    "bytes": 877077
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-008.png",
+    "sha256": "5e14483c871274c7d5bc32adb9cdb93e62a8766e9dd599cb0d706dc1d9dcf8f5",
+    "mtime_utc": "2026-10-03T10:43:30.139607+00:00",
+    "bytes": 876508
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-reaction-cursor.png",
+    "sha256": "e1a146a7f71f628f32d5dfe5b3ef5589e56ca351ca3aa78dc9db624133d71f63",
+    "mtime_utc": "2026-10-03T10:43:22.160029+00:00",
+    "bytes": 2926754
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-contact.png",
+    "sha256": "92487b18258fdc1f88232b9f0fb72793799600d6778a18dc5bd1c4ba3331eed7",
+    "mtime_utc": "2026-10-03T10:43:38.266237+00:00",
+    "bytes": 2919859
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-final-orientation.png",
+    "sha256": "89b7737d449fa3917263d8cccd36ac4d42cf5e61f3189c4b90158d7ce52a6696",
+    "mtime_utc": "2026-10-03T10:43:43.630195+00:00",
+    "bytes": 2905356
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-000.png",
+    "sha256": "9006a3bc82ed639c5df9dcc4a67bd58f5c0e1f8dbbce30790e6612fd434a9f4d",
+    "mtime_utc": "2026-10-03T10:43:35.375148+00:00",
+    "bytes": 877058
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-001.png",
+    "sha256": "66aeb0120d50384c5213f3bf1cf446b0a3b1cc3e25c050f61527ad8ed55d7684",
+    "mtime_utc": "2026-10-03T10:43:35.495876+00:00",
+    "bytes": 878441
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-002.png",
+    "sha256": "1c01b7e57f11bbb485f21ca274fa0b59be89e66729ffbad969b6c1b9ad0229a6",
+    "mtime_utc": "2026-10-03T10:43:35.614635+00:00",
+    "bytes": 878440
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-003.png",
+    "sha256": "987ad09a6d6db229fb57d13caaf96b6a82d3a2240413c5c72bbcfbf99fa9a5a4",
+    "mtime_utc": "2026-10-03T10:43:35.732968+00:00",
+    "bytes": 878440
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-004.png",
+    "sha256": "66aeb0120d50384c5213f3bf1cf446b0a3b1cc3e25c050f61527ad8ed55d7684",
+    "mtime_utc": "2026-10-03T10:43:35.851888+00:00",
+    "bytes": 878441
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-005.png",
+    "sha256": "987ad09a6d6db229fb57d13caaf96b6a82d3a2240413c5c72bbcfbf99fa9a5a4",
+    "mtime_utc": "2026-10-03T10:43:35.969934+00:00",
+    "bytes": 878440
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-006.png",
+    "sha256": "2118a0695460ce584ba04a4d0c798d91cd8146de619044d16094b0e639cfe364",
+    "mtime_utc": "2026-10-03T10:43:36.089491+00:00",
+    "bytes": 878031
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-007.png",
+    "sha256": "cf0ec90694c75bc178381a587f9c70df8916cef22832af22b8a16adbe6e6df05",
+    "mtime_utc": "2026-10-03T10:43:36.209605+00:00",
+    "bytes": 877168
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-008.png",
+    "sha256": "02ab732e078a2d3200ebe71bdb5420caa5f85260a72d3e68ad963f54754f315d",
+    "mtime_utc": "2026-10-03T10:43:36.329135+00:00",
+    "bytes": 876503
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-009.png",
+    "sha256": "12754f10df7bdbbd5ab3f1b5957bac88e85ff7f1b6d96f801c8fbb9a8ade0c78",
+    "mtime_utc": "2026-10-03T10:43:36.447437+00:00",
+    "bytes": 877555
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-010.png",
+    "sha256": "6eec96629d7b2882812f9b769bd3f012654c2ba043cb5b6959c30f96dac7474d",
+    "mtime_utc": "2026-10-03T10:43:36.566723+00:00",
+    "bytes": 876515
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-011.png",
+    "sha256": "ae603ae9bd5c5d5641d893a80defc5c4ab28737978651832fb1deb9bc69e0cc7",
+    "mtime_utc": "2026-10-03T10:43:36.685814+00:00",
+    "bytes": 877614
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-012.png",
+    "sha256": "1f9f5dd85e76ed6dd38c30b5d60e092f237b9f278e0e0ca14fb1c170cb0ca67f",
+    "mtime_utc": "2026-10-03T10:43:36.804027+00:00",
+    "bytes": 877160
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-013.png",
+    "sha256": "81d51abc32a3374c2a1fe60d89cf7b7b8d8b5f869902c996fe517ee7baa0cc65",
+    "mtime_utc": "2026-10-03T10:43:36.924020+00:00",
+    "bytes": 876985
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-014.png",
+    "sha256": "161345f2742af50253f306346e46ad2fb671ee28519b0d40831cd290fe356cf0",
+    "mtime_utc": "2026-10-03T10:43:37.042020+00:00",
+    "bytes": 875528
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-015.png",
+    "sha256": "1b560b0722fdc0c3630361f83c318b1370ccbe47b17a29794f36d2c60fc670f2",
+    "mtime_utc": "2026-10-03T10:43:37.161020+00:00",
+    "bytes": 876718
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-016.png",
+    "sha256": "5bda09d5e8832b5f9bff268fd10359220cc10f26a8199150305c8655b47ba7ae",
+    "mtime_utc": "2026-10-03T10:43:37.280312+00:00",
+    "bytes": 876444
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-017.png",
+    "sha256": "75a45b39428f6ec0d03db016bf3e35ff844144b49a79ea7868be989e4ca5278e",
+    "mtime_utc": "2026-10-03T10:43:37.399864+00:00",
+    "bytes": 876083
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-018.png",
+    "sha256": "5793b3d00e0ade4b344b25a34ea1558c5a08288c295f9ab8a335a83f70de05c6",
+    "mtime_utc": "2026-10-03T10:43:37.518128+00:00",
+    "bytes": 875168
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-019.png",
+    "sha256": "8ce76751350dbc2a284cdf26f042ee7c5b47c713d60eaf10b12f6ba8414af836",
+    "mtime_utc": "2026-10-03T10:43:37.637306+00:00",
+    "bytes": 875255
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-020.png",
+    "sha256": "a0d9e88dcff73b7df3f7b464d1aa29148dc3f1ab62e16c14085a55d4c0a4e833",
+    "mtime_utc": "2026-10-03T10:43:37.757835+00:00",
+    "bytes": 875926
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-021.png",
+    "sha256": "b12b5c869f9ee6e889bc35c50e54de43d52a02f1e505f432150c251c21558ced",
+    "mtime_utc": "2026-10-03T10:43:37.876859+00:00",
+    "bytes": 877700
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-022.png",
+    "sha256": "e28d567f85d6772848d77edc45689482a01412f43c0d1db3a7898148b475aa4e",
+    "mtime_utc": "2026-10-03T10:43:37.996815+00:00",
+    "bytes": 876453
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-023.png",
+    "sha256": "25ed186c13f85bcd040418c4a0bdad2455d65acb853282b334fb24dc2b930a9c",
+    "mtime_utc": "2026-10-03T10:43:38.116236+00:00",
+    "bytes": 876049
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-000.png",
+    "sha256": "a6ac6fdddb77a3205786681368249c68b3e91efc9894f3731c7e47c023471a7c",
+    "mtime_utc": "2026-10-03T10:43:38.311242+00:00",
+    "bytes": 876017
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-001.png",
+    "sha256": "8f88d6a51cb92e132b5afe6abbc8f0feef56b0541c6cd9dba8cbc0895c6b0f5e",
+    "mtime_utc": "2026-10-03T10:43:38.447085+00:00",
+    "bytes": 876729
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-002.png",
+    "sha256": "3e90365b8ede959f32171fa5c75272167b0fc197133bfe60b1cb929abb36e39d",
+    "mtime_utc": "2026-10-03T10:43:38.583085+00:00",
+    "bytes": 876734
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-003.png",
+    "sha256": "66d1eba239e5b7396b5101c00cec215be2bc01eb492eba232f18be2c78480ade",
+    "mtime_utc": "2026-10-03T10:43:38.718583+00:00",
+    "bytes": 876735
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-004.png",
+    "sha256": "66d1eba239e5b7396b5101c00cec215be2bc01eb492eba232f18be2c78480ade",
+    "mtime_utc": "2026-10-03T10:43:38.856258+00:00",
+    "bytes": 876735
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-005.png",
+    "sha256": "7b45368f84dd4ce3e610dbd056a45380cfb0f1b50e3e7ca7ed8505000e97799a",
+    "mtime_utc": "2026-10-03T10:43:38.993157+00:00",
+    "bytes": 876298
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-006.png",
+    "sha256": "ad28549058f29c3c31c523b465fcfd4233ac1286b012e63cea014eea66f495be",
+    "mtime_utc": "2026-10-03T10:43:39.129645+00:00",
+    "bytes": 876010
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-007.png",
+    "sha256": "0779945d601dcef97fb48b67a091d71f048fbadcdda5616e71dbc857c4e20f1e",
+    "mtime_utc": "2026-10-03T10:43:39.267989+00:00",
+    "bytes": 875968
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-008.png",
+    "sha256": "46014c495cda51571c4dd1f263b7b103310cfee641f4a21d827decbfd3de7ebd",
+    "mtime_utc": "2026-10-03T10:43:39.403518+00:00",
+    "bytes": 874649
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-009.png",
+    "sha256": "50068b45f441ce879d066a4c802cef22a3c51e35bc5a0380dcd6d6b7f778782e",
+    "mtime_utc": "2026-10-03T10:43:39.539593+00:00",
+    "bytes": 875968
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-010.png",
+    "sha256": "dd898c675a8b33a4697633ffe7d1716117875a4e4e6e2e9937a2d4ff3f914b9e",
+    "mtime_utc": "2026-10-01T19:23:15.390404+00:00",
+    "bytes": 875628
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-return.png",
+    "sha256": "80a4d9485d4fb0d2acd329e2ede1021e7a8108fdd959e008d755193a084b5336",
+    "mtime_utc": "2026-10-03T10:43:39.973970+00:00",
+    "bytes": 2916371
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-000.png",
+    "sha256": "0c020e111dbeabb1842c24d9156fd84d95f7810c7e84c37673345249d4bb8fd6",
+    "mtime_utc": "2026-10-03T10:43:03.431851+00:00",
+    "bytes": 860742
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-001.png",
+    "sha256": "0c020e111dbeabb1842c24d9156fd84d95f7810c7e84c37673345249d4bb8fd6",
+    "mtime_utc": "2026-10-03T10:43:03.664432+00:00",
+    "bytes": 860742
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-002.png",
+    "sha256": "0c020e111dbeabb1842c24d9156fd84d95f7810c7e84c37673345249d4bb8fd6",
+    "mtime_utc": "2026-10-03T10:43:03.897830+00:00",
+    "bytes": 860742
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-003.png",
+    "sha256": "0c020e111dbeabb1842c24d9156fd84d95f7810c7e84c37673345249d4bb8fd6",
+    "mtime_utc": "2026-10-03T10:43:04.130069+00:00",
+    "bytes": 860742
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-004.png",
+    "sha256": "f19eef34065dae500fc017d11ad0323420e72ccd7ae0b36fb141c7cc04f98cdd",
+    "mtime_utc": "2026-10-03T10:43:04.362283+00:00",
+    "bytes": 861559
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-005.png",
+    "sha256": "bc25ca852a7e41a84fa6232f49929d6adf4c1c4464595066cfe46f0d3aeeb9fb",
+    "mtime_utc": "2026-10-03T10:43:04.597850+00:00",
+    "bytes": 862343
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-006.png",
+    "sha256": "17935da0626693ee335edde7715584b6bbafdec733a2042c4d09a34f0c427078",
+    "mtime_utc": "2026-10-03T10:43:04.832597+00:00",
+    "bytes": 866291
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-007.png",
+    "sha256": "c3add938426af91a77f5a290f8977f7c57be1205ae4019995eea296df544fbb4",
+    "mtime_utc": "2026-10-03T10:43:05.068305+00:00",
+    "bytes": 867306
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-008.png",
+    "sha256": "e017a97e8238f3eaf4e52edbb840bdad4f97c4d8d274d5ad1450218e0101838a",
+    "mtime_utc": "2026-10-03T10:43:05.309680+00:00",
+    "bytes": 867011
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-009.png",
+    "sha256": "a13fbc10218ad9b33ebff3c57f1c30e92c28f7286cbf41b685fccfcf5ce155f6",
+    "mtime_utc": "2026-10-03T10:43:05.546002+00:00",
+    "bytes": 867553
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-010.png",
+    "sha256": "398ec9a8fad7668f25b796e961e3ba2eabff143b28203d7d1a8d3a775e5d8c39",
+    "mtime_utc": "2026-10-03T10:43:05.781688+00:00",
+    "bytes": 867133
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-011.png",
+    "sha256": "e4dfc12b859e131a5dffe2c4f9c786c260482ef7a8e3af28b81a835024b07441",
+    "mtime_utc": "2026-10-03T10:43:06.018951+00:00",
+    "bytes": 866854
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-012.png",
+    "sha256": "99062a2856340c3b70d1af4e25df5370a18f4257c15c1ff3358288e652231dd3",
+    "mtime_utc": "2026-10-03T10:43:06.255896+00:00",
+    "bytes": 867448
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-013.png",
+    "sha256": "5a8c30ec0a1f8bcd62612318500f8a608e55020c494cb535a3c3820cfcb342c5",
+    "mtime_utc": "2026-10-03T10:43:06.490368+00:00",
+    "bytes": 867760
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-014.png",
+    "sha256": "28c68efc7ecbda70a78a56160fac0f8fe888cdc4bcaa0a039a82f5f58a479694",
+    "mtime_utc": "2026-10-03T10:43:06.726759+00:00",
+    "bytes": 866857
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-015.png",
+    "sha256": "065891651459ea22b381ea205fc0cd864064d76ed23e073136758d68293fe7b6",
+    "mtime_utc": "2026-10-03T10:43:06.963437+00:00",
+    "bytes": 867019
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-016.png",
+    "sha256": "829310c28241c106324c6dcf0eebb970f4b5b21d274fc44f100e84a0fd8fdfd0",
+    "mtime_utc": "2026-10-03T10:43:07.200577+00:00",
+    "bytes": 867093
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-017.png",
+    "sha256": "6af9cf4ebb78a7e15a9b83144852e934a4605af0572d82c535a2f72891184d03",
+    "mtime_utc": "2026-10-03T10:43:07.438875+00:00",
+    "bytes": 867461
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-018.png",
+    "sha256": "49c17dc377cd925e5337d74583cf0c516eeaa7bf19868907f2467c2dd0f450ef",
+    "mtime_utc": "2026-10-03T10:43:07.675830+00:00",
+    "bytes": 868356
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-019.png",
+    "sha256": "781c94e293480282310bd60997fb9627f03b2c089247a3dd3a8dfe9814372329",
+    "mtime_utc": "2026-10-03T10:43:07.910790+00:00",
+    "bytes": 867120
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-020.png",
+    "sha256": "336c53d977ade8d3dc3c958d8ca7f622f85921d3ec0196d964d8d69b33b4d92f",
+    "mtime_utc": "2026-10-03T10:43:08.153116+00:00",
+    "bytes": 869019
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-021.png",
+    "sha256": "48098c5a14cdbb870786a8c4ea34fd6e8430e924b8c3cdabb585c31abc55fbed",
+    "mtime_utc": "2026-10-03T10:43:08.382332+00:00",
+    "bytes": 869897
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-022.png",
+    "sha256": "a03e1c55e0747d18c58417a18f80907b9cc87ba5d99c97d1f7996b98f08816de",
+    "mtime_utc": "2026-10-03T10:43:08.615406+00:00",
+    "bytes": 870694
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-023.png",
+    "sha256": "738d8c8445e509bc7f7670aedf1cd25f6a054bc9e8b63a43b3854f612ee07e3f",
+    "mtime_utc": "2026-10-03T10:43:08.843895+00:00",
+    "bytes": 871274
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-024.png",
+    "sha256": "8f18711a0214414cd6e14997b7966d45c39192c798841c4af4f3a5daa24f1640",
+    "mtime_utc": "2026-10-03T10:43:09.074266+00:00",
+    "bytes": 871621
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-025.png",
+    "sha256": "bfe3a9f1f132d7545e9c53d2edd727909d7dcd60e09ca3cab4733ca23a465df9",
+    "mtime_utc": "2026-10-03T10:43:09.305023+00:00",
+    "bytes": 872134
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-026.png",
+    "sha256": "13ccb9fd0edab81a4cec5b672fa11a302789c673b7f4b65464856fed3022668e",
+    "mtime_utc": "2026-10-03T10:43:09.534132+00:00",
+    "bytes": 873082
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-027.png",
+    "sha256": "b33294430e3d1da49e09d2ed56416fb0614a0ae0378e7988a042ef457d98f859",
+    "mtime_utc": "2026-10-03T10:43:09.763521+00:00",
+    "bytes": 871655
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-028.png",
+    "sha256": "6d4cf2063e22799a82ea266a5df362a2e600bb66d3040e5d6b5e4d0c37607a5d",
+    "mtime_utc": "2026-10-03T10:43:09.992096+00:00",
+    "bytes": 871512
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-029.png",
+    "sha256": "2585d9b2e32021c451b4db48fd03172c3aba4ad04abb8e979809f26e73017936",
+    "mtime_utc": "2026-10-03T10:43:10.222699+00:00",
+    "bytes": 872185
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-030.png",
+    "sha256": "b367b7f429ba38584d7b2a410eb2b8483c76676c2a88350a1bfc959447eccee5",
+    "mtime_utc": "2026-10-03T10:43:10.454112+00:00",
+    "bytes": 873399
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-031.png",
+    "sha256": "9792596a7019daac8f3e96b40c992ad3ba968ff0749ba7eb8fe2384e98b01760",
+    "mtime_utc": "2026-10-03T10:43:10.687436+00:00",
+    "bytes": 874303
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-032.png",
+    "sha256": "07c07ff1f207922e98ef337c03f50636eaed672665374f696c7901adf94e9a1d",
+    "mtime_utc": "2026-10-03T10:43:10.922779+00:00",
+    "bytes": 875131
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-033.png",
+    "sha256": "15f5b306b35d862b3e9e724fc942d3ee7629a591b470c3ccc27de405d20dd3e4",
+    "mtime_utc": "2026-10-03T10:43:11.157081+00:00",
+    "bytes": 876263
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-034.png",
+    "sha256": "65fc8eee1c43f6fd98e65dc99119c3fd597984247fab363f2f5d1c361396a1e0",
+    "mtime_utc": "2026-10-03T10:43:11.391870+00:00",
+    "bytes": 877298
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-035.png",
+    "sha256": "d7167d0d258c25340bd4aefb89f59069c8ad09b071d851eac7a56b27c2fd8841",
+    "mtime_utc": "2026-10-03T10:43:11.626761+00:00",
+    "bytes": 876989
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-036.png",
+    "sha256": "82df46de80766232b7b54cf0fbb24b374a2384481d38936d0a92ae29e409a526",
+    "mtime_utc": "2026-10-03T10:43:11.861536+00:00",
+    "bytes": 877421
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-037.png",
+    "sha256": "8a79fe8cd91ec9452fe217ec941eec11901d109181ac9343a94082fc57ab406e",
+    "mtime_utc": "2026-10-03T10:43:12.095709+00:00",
+    "bytes": 877846
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-038.png",
+    "sha256": "20a7fddbd9ef283047c90f7f50da491f3f06a3440dfe7251ff457100745ef9e0",
+    "mtime_utc": "2026-10-03T10:43:12.329583+00:00",
+    "bytes": 876191
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-039.png",
+    "sha256": "c7f9748d1e7cbe4a7d28d258039a7b7106641d25785661aabbbca6b7d9f89d42",
+    "mtime_utc": "2026-10-03T10:43:12.562136+00:00",
+    "bytes": 875262
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-040.png",
+    "sha256": "3739afe8af4aee287b8dba12ee984de6c33a13d5bdf5a0f4697345b13d6aa4f3",
+    "mtime_utc": "2026-10-03T10:43:12.800027+00:00",
+    "bytes": 875532
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-041.png",
+    "sha256": "6d53c3aa6fda5bac8bb7fea67a583ca6e748c0fb1bdfccf208c8c10ff5c78c91",
+    "mtime_utc": "2026-10-03T10:43:13.032411+00:00",
+    "bytes": 876847
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-042.png",
+    "sha256": "57eb1c17edd19e1e733be279ef06c94e45e4cf4b1392c4ac9062a7140e0ad4b9",
+    "mtime_utc": "2026-10-03T10:43:13.267274+00:00",
+    "bytes": 877643
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-043.png",
+    "sha256": "43485d0694de3d761ae5d6ec61a5e061585e2dd482fce5d0f98690cf42287ac8",
+    "mtime_utc": "2026-10-03T10:43:13.506982+00:00",
+    "bytes": 879410
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-044.png",
+    "sha256": "e60f7596a0e8068e96de1afff707067e9a62d03de130f970be927bea2e56b297",
+    "mtime_utc": "2026-10-03T10:43:13.744369+00:00",
+    "bytes": 880179
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-045.png",
+    "sha256": "9f20644a39915da7163149f61f7445557f9be12e6bb93411ef0088817ea8d4d1",
+    "mtime_utc": "2026-10-03T10:43:13.981581+00:00",
+    "bytes": 880880
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-046.png",
+    "sha256": "7b951e0e86b817a08bc927b08d42e7a26efcba4d6f872dbd2d433a6a0b73eadf",
+    "mtime_utc": "2026-10-03T10:43:14.222887+00:00",
+    "bytes": 881686
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-047.png",
+    "sha256": "922aacf3f89bd46f16867d73f59854825596c384da2813f0252b90f8b91dc835",
+    "mtime_utc": "2026-10-03T10:43:14.459088+00:00",
+    "bytes": 882494
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-048.png",
+    "sha256": "da7d11d2c6ab438719567746409748c4b616a274adea76d1b13f8ba8904c7b96",
+    "mtime_utc": "2026-10-03T10:43:14.696396+00:00",
+    "bytes": 882802
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-049.png",
+    "sha256": "547501482486bbd2a7797762aa65d26f3ddf1f45f2d0ff370841064a8702179f",
+    "mtime_utc": "2026-10-03T10:43:14.932304+00:00",
+    "bytes": 882087
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-050.png",
+    "sha256": "93303a120bd32afd849e2eec3655105d00988e922a68f3324a0bdca4da9b414c",
+    "mtime_utc": "2026-10-03T10:43:15.168922+00:00",
+    "bytes": 880129
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-051.png",
+    "sha256": "d62f7dcdbb600a6edf3eccca24a2a677ac25590693f4b5a164b1c68489f7d873",
+    "mtime_utc": "2026-10-03T10:43:15.411855+00:00",
+    "bytes": 877330
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-052.png",
+    "sha256": "34606dcc2efc477e93f93db56595835857b9c3b61c438add026d541e2773eecf",
+    "mtime_utc": "2026-10-03T10:43:15.646552+00:00",
+    "bytes": 878536
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-053.png",
+    "sha256": "c07f9c15f63b800aa02d0dd8a74f0cab91a9d93c1b6d13cabeef083f7ba92529",
+    "mtime_utc": "2026-10-03T10:43:15.883698+00:00",
+    "bytes": 878876
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-054.png",
+    "sha256": "4d46f25ecea2f3f9e68ad86dad1bd7242b8eb486c7b0d7b96e11258993cb7515",
+    "mtime_utc": "2026-10-03T10:43:16.121612+00:00",
+    "bytes": 879028
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-055.png",
+    "sha256": "12b256a91512758628572606abfcf8c1876b23eb9f5ee433ae856187778bee76",
+    "mtime_utc": "2026-10-03T10:43:16.358962+00:00",
+    "bytes": 878017
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-contact.png",
+    "sha256": "60224d5f14199537ed38d2d3d9dd1e4be5a5877e32f656dab6ec40a0660667db",
+    "mtime_utc": "2026-10-03T10:43:18.337541+00:00",
+    "bytes": 2915789
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-000.png",
+    "sha256": "2d5946a4c03c3affc6fa7acca0b0faabad2a11c03b23440a7abe936fb75edd0f",
+    "mtime_utc": "2026-10-03T10:43:16.442664+00:00",
+    "bytes": 877329
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-001.png",
+    "sha256": "44195d11e05602e38e4268c9064a75fc8332c2ec05f2644e48318650f7631b63",
+    "mtime_utc": "2026-10-03T10:43:16.544026+00:00",
+    "bytes": 878039
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-002.png",
+    "sha256": "e1c297062af3e162eb6eaca5268be4c648411f63857f936824a86daa0688401b",
+    "mtime_utc": "2026-10-03T10:43:16.645824+00:00",
+    "bytes": 878370
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-003.png",
+    "sha256": "2e4ca0459bac7f69e0ef17841a737e1c5e20865706705cd4a028d59177929946",
+    "mtime_utc": "2026-10-03T10:43:16.749830+00:00",
+    "bytes": 877515
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-004.png",
+    "sha256": "4177e4ed829cdc4e9f059ad457161a10e8b213e912641be0bd39905a8ae22282",
+    "mtime_utc": "2026-10-03T10:43:16.852306+00:00",
+    "bytes": 877676
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-005.png",
+    "sha256": "696b5882a3a81ce444b04973b5c8db8dfb88e8c1ba8326bc3b72578192e99f08",
+    "mtime_utc": "2026-10-03T10:43:16.954771+00:00",
+    "bytes": 877247
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-006.png",
+    "sha256": "e86349ae5e538c60819b22a426b4b7856d71a8716316f2327ddf618cf6d9c4c2",
+    "mtime_utc": "2026-10-03T10:43:17.056326+00:00",
+    "bytes": 876922
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-007.png",
+    "sha256": "2d0d8df51e2460f4e75e9e14eb91fbe1a4be33d2baf7881116923c2f0c51a99c",
+    "mtime_utc": "2026-10-03T10:43:17.160332+00:00",
+    "bytes": 877852
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-008.png",
+    "sha256": "5e82db2834d57a6a81d5418a01686fe98cdc5b09ec21c3dec9c35c39d9a2a771",
+    "mtime_utc": "2026-10-03T10:43:17.263816+00:00",
+    "bytes": 877122
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-009.png",
+    "sha256": "bdfcc4594b5ae6b7059d17bbb46811e9a8a225350fcb72df0d4c19e022306f51",
+    "mtime_utc": "2026-10-03T10:43:17.367048+00:00",
+    "bytes": 877028
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-010.png",
+    "sha256": "7d1092c06a4e09ab581431071e3c4ab517cf969c462cafcef0f0bc930748a167",
+    "mtime_utc": "2026-10-03T10:43:17.470324+00:00",
+    "bytes": 876700
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-011.png",
+    "sha256": "7d2337951d018df36619f20cf2dcfec4b8576fba90e3540a21b094e752583405",
+    "mtime_utc": "2026-10-03T10:43:17.572452+00:00",
+    "bytes": 877538
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-012.png",
+    "sha256": "bc99addda21c3ccf22b9ce9cafbd3fcae09f0f903def58371683f9db234f332b",
+    "mtime_utc": "2026-10-03T10:43:17.676008+00:00",
+    "bytes": 877265
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-013.png",
+    "sha256": "8dd345bd5e19f716abae72030789e6313c72874f1773923233df27599323d8f0",
+    "mtime_utc": "2026-10-03T10:43:17.778036+00:00",
+    "bytes": 876921
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-014.png",
+    "sha256": "dd430fcdfc2ed961d7dbbb16bf60d8150c4950d3da0a2a97f25902a5c865e75f",
+    "mtime_utc": "2026-10-03T10:43:17.879982+00:00",
+    "bytes": 876630
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-015.png",
+    "sha256": "9d5a6a3c1a133bcccc04af22968972c75f973826f825982334d312619ccef783",
+    "mtime_utc": "2026-10-03T10:43:17.982326+00:00",
+    "bytes": 876974
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-016.png",
+    "sha256": "3a89f2c5db0067f6f69a016acc4579363418c084df105c876456a3bc06002067",
+    "mtime_utc": "2026-10-03T10:43:18.086005+00:00",
+    "bytes": 876456
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-017.png",
+    "sha256": "9f2a9538d40f7f8a6a55cddaed96ddd133a0576b5c167795a8e93b7c2953ad03",
+    "mtime_utc": "2026-10-03T10:43:18.187998+00:00",
+    "bytes": 874358
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-018.png",
+    "sha256": "27d99e636c028a187636f44fffaa0e8ed64bfa4426da8a0ffe01df0c2112f43c",
+    "mtime_utc": "2026-09-30T14:36:47.314819+00:00",
+    "bytes": 877256
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-019.png",
+    "sha256": "1807386419b8192b87eef258e34e269e380ba7e30448973b6c3eaf01e549f679",
+    "mtime_utc": "2026-09-30T14:36:47.416378+00:00",
+    "bytes": 877143
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-020.png",
+    "sha256": "c3d7f9450dbf3784505097e580e25d2492fed0966ef21338be2a4a2989c2457d",
+    "mtime_utc": "2026-09-30T14:36:47.518830+00:00",
+    "bytes": 875888
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-021.png",
+    "sha256": "70b9d79cf776043583035ec08e2eeb9fd42acecc96e0c9340dbaf0e6775df79a",
+    "mtime_utc": "2026-09-30T14:36:47.620721+00:00",
+    "bytes": 876840
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-022.png",
+    "sha256": "851e20aa0d77de21e2a1f99bc78ad674561abede915779ef75d38ad0df743c6f",
+    "mtime_utc": "2026-09-30T14:36:47.724630+00:00",
+    "bytes": 875434
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-023.png",
+    "sha256": "198e192a3b1f128e3cfb7dd5e80bb9ab13a93fc28b3964d7b419911aa52b00c1",
+    "mtime_utc": "2026-09-30T14:36:47.827844+00:00",
+    "bytes": 874076
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-000.png",
+    "sha256": "350f7e2dd3a51e67eb1c8bf18ac8aacb7d699f4c64156143a72472690fb09893",
+    "mtime_utc": "2026-10-03T10:43:18.382116+00:00",
+    "bytes": 874633
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-001.png",
+    "sha256": "e8acb4b320fa5da68c7ce128877d8bbf424517531558cbf7d670be81f45af3a2",
+    "mtime_utc": "2026-10-03T10:43:18.519224+00:00",
+    "bytes": 876341
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-002.png",
+    "sha256": "911ea867f80ab86bd33e43cf6b3736659ddda602f37552b0a7c02c74ee83f668",
+    "mtime_utc": "2026-10-03T10:43:18.654970+00:00",
+    "bytes": 876344
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-003.png",
+    "sha256": "54fac5d5b3c8d90ee3fcbee53800054c4cefb0113eb92b9e1a237dc0559e46d1",
+    "mtime_utc": "2026-10-03T10:43:18.791049+00:00",
+    "bytes": 876342
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-004.png",
+    "sha256": "54fac5d5b3c8d90ee3fcbee53800054c4cefb0113eb92b9e1a237dc0559e46d1",
+    "mtime_utc": "2026-10-03T10:43:18.928893+00:00",
+    "bytes": 876342
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-005.png",
+    "sha256": "1582d6975a94f931c80ee0d4f107bebe2b304fc9303467ba263c5c33a4f0dfce",
+    "mtime_utc": "2026-10-03T10:43:19.067159+00:00",
+    "bytes": 874645
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-006.png",
+    "sha256": "5eab04ce001a30ec165eed6d0f5be9d6fbf369d2f23882235fadd198a465c206",
+    "mtime_utc": "2026-10-03T10:43:19.205070+00:00",
+    "bytes": 875279
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-007.png",
+    "sha256": "ce59498bdc4968ee02105d1ee6b4119bfee6d0e2e9eedd4dc808cbb63c18bbca",
+    "mtime_utc": "2026-10-03T10:43:19.341986+00:00",
+    "bytes": 875049
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-008.png",
+    "sha256": "8e00627865482b3a0fa2ac36b515884ca45841ecd9d2ff6491b26bfdf7c1b9af",
+    "mtime_utc": "2026-10-03T10:43:19.476345+00:00",
+    "bytes": 874847
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-009.png",
+    "sha256": "1805eed8b3686c55abfdb73e90b295ecf297e137b8e32fb516d001a4cd904dcd",
+    "mtime_utc": "2026-10-03T05:51:45.800170+00:00",
+    "bytes": 876134
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-return.png",
+    "sha256": "5f0ce91f8da1ab6f6a88d11b9594914de85bc62b71b108ab6ddbd4e6d0832e27",
+    "mtime_utc": "2026-10-03T10:43:19.927383+00:00",
+    "bytes": 2919892
+  },
+  {
+    "path": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\stable-idle-after-dodge-block.png",
+    "sha256": "678898fc7636930bbe29d98a3d41f62c262d0725f5e30a95a0bc517c16c6b231",
+    "mtime_utc": "2026-10-03T10:43:35.314187+00:00",
+    "bytes": 2901956
+  }
+]

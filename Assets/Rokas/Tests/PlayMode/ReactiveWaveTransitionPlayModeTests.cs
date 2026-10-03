@@ -213,7 +213,11 @@ namespace Rokas.Tests
                     {
                         if (combat.ActiveEnemyIds.Count >= 2 && combat.HunterAp >= 3)
                             boot.SubmitReactiveCommand(CommandKind.Skill, "sweep");
-                        else Press("ReactiveBasic");
+                        else
+                        {
+                            Press("ReactiveBasic");
+                            Press("ReactiveBasic");
+                        }
                     }
                 }
                 else if (combat.Phase == ReactivePhase.EnemyExecution &&

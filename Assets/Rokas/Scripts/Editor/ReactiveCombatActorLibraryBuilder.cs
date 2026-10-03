@@ -43,6 +43,13 @@ namespace Rokas.Editor
             library.keiko.heavy = Clip("Keiko/Hard jump attack corrected.fbx", true);
             library.keiko.preparation = Clip("Keiko/Normal preparation.fbx", true);
             library.keiko.heavyPreparation = Clip("Keiko/Heavy preparation.fbx", true);
+            library.keiko.throwPreparation = Clip("Keiko/Throw preparation.fbx", true);
+            library.keiko.throwAttack = Clip("Keiko/Throw attack corrected.fbx", true);
+            library.keiko.throwReleaseSeconds = 51f / 120f;
+            library.keiko.throwContactSeconds = .785f;
+            library.keiko.throwingDaggerPrefab = ThrowingDaggerPrefab();
+            library.keiko.daggerSocketPosition = new Vector3(0f, .033f, 0f);
+            library.keiko.daggerSocketEuler = Vector3.zero;
             library.keiko.entranceWalk = Clip("Keiko/Enter battle corrected.fbx", true);
             library.keiko.enterBattle = Clip("Keiko/Enter battle settle.fbx", true);
             library.keiko.guard = Clip("Keiko/Two handed sword block.fbx", true);
@@ -191,6 +198,8 @@ namespace Rokas.Editor
                 { "Two handed battle idle.fbx", 240f },
                 { "Normal preparation.fbx", 36f },
                 { "Heavy preparation.fbx", 56f },
+                { "Throw preparation.fbx", 48f },
+                { "Throw attack corrected.fbx", 132f },
                 { "Normal attack corrected.fbx", 132f },
                 { "Hard jump attack corrected.fbx", 172f },
                 { "Two handed approach.fbx", 108f },
@@ -295,6 +304,56 @@ namespace Rokas.Editor
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
+        private static GameObject ThrowingDaggerPrefab()
+        {
+            const string folder = Source + "Weapons/KeikoThrowingDagger/";
+            const string path = folder + "KeikoThrowingDagger.prefab";
+            var importer = AssetImporter.GetAtPath(folder + "KeikoThrowingDagger.fbx") as ModelImporter;
+            if (importer == null) throw new InvalidOperationException("Missing authored throwing dagger.");
+            importer.importAnimation = false;
+            importer.materialImportMode = ModelImporterMaterialImportMode.None;
+            importer.SaveAndReimport();
+            var root = new GameObject("KeikoThrowingDagger");
+            try
+            {
+                GameObject mesh = UnityEngine.Object.Instantiate(Model("Weapons/KeikoThrowingDagger/KeikoThrowingDagger.fbx"), root.transform, false);
+                mesh.name = "DaggerMesh";
+                var renderers = mesh.GetComponentsInChildren<Renderer>();
+                var bounds = renderers[0].bounds;
+                foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
+                Vector3 axis = bounds.size.y > bounds.size.z && bounds.size.y > bounds.size.x ? Vector3.up :
+                    bounds.size.x > bounds.size.z ? Vector3.right : Vector3.forward;
+                if (Vector3.Dot(bounds.center - root.transform.position, axis) < 0f) axis = -axis;
+                mesh.transform.localRotation = Quaternion.FromToRotation(axis, Vector3.forward) * mesh.transform.localRotation;
+                var colors = new[] { new Color(.12f, .16f, .2f), new Color(.55f, .65f, .71f),
+                    new Color(.36f, .25f, .12f), new Color(.055f, .058f, .068f), new Color(.24f, .65f, .74f) };
+                var names = new[] { "ObsidianSteel", "HonedSteel", "AgedBronze", "CharcoalWrap", "FrostRune" };
+                var materials = new Material[names.Length];
+                for (int i = 0; i < names.Length; i++)
+                {
+                    string materialPath = folder + names[i] + ".mat";
+                    materials[i] = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+                    if (materials[i] == null)
+                    {
+                        materials[i] = new Material(Shader.Find("Standard")) { name = names[i] };
+                        AssetDatabase.CreateAsset(materials[i], materialPath);
+                    }
+                    materials[i].color = colors[i];
+                    materials[i].SetFloat("_Metallic", i == 3 ? 0f : .7f);
+                    materials[i].SetFloat("_Glossiness", i == 3 ? .18f : .4f);
+                    if (i == 4)
+                    {
+                        materials[i].EnableKeyword("_EMISSION");
+                        materials[i].SetColor("_EmissionColor", colors[i] * .4f);
+                    }
+                    EditorUtility.SetDirty(materials[i]);
+                }
+                foreach (Renderer renderer in renderers) renderer.sharedMaterials = materials;
+                return PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         // The arena moves the actor root; keep the imported run cycle in place.
         private static void RemoveHorizontalHipTranslation(AnimationClip clip)
         {
@@ -386,7 +445,7 @@ namespace Rokas.Editor
                 foreach (AnimationClip clip in new[] { clips.idle, clips.attack, clips.heavy, clips.hit,
                              clips.stagger, clips.death, clips.walk, clips.approach, clips.returnHome,
                              clips.preparation, clips.heavyPreparation, clips.enterBattle,
-                             clips.entranceWalk, clips.guard, clips.dodge })
+                             clips.entranceWalk, clips.guard, clips.dodge, clips.throwPreparation, clips.throwAttack })
                 {
                     if (clip == null) continue;
                     var bindings = AnimationUtility.GetCurveBindings(clip);
@@ -411,7 +470,7 @@ namespace Rokas.Editor
                 foreach (AnimationClip clip in new[] { actor.idle, actor.attack, actor.heavy, actor.hit,
                              actor.stagger, actor.death, actor.walk, actor.approach, actor.returnHome,
                              actor.preparation, actor.heavyPreparation, actor.enterBattle,
-                             actor.entranceWalk, actor.guard, actor.dodge })
+                             actor.entranceWalk, actor.guard, actor.dodge, actor.throwPreparation, actor.throwAttack })
                 {
                     if (clip == null) continue;
                     string path = AssetDatabase.GetAssetPath(clip);

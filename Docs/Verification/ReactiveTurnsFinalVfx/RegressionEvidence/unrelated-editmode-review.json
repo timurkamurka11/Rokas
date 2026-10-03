@@ -1,0 +1,487 @@
+{
+  "baseline": "0eecaaf7ab62afbf5c949430f08cd1b175c9edc4",
+  "current_head": "0eecaaf7ab62afbf5c949430f08cd1b175c9edc4",
+  "normalization": "UTF-8 BOM removed; all CR removed; spaces and LF preserved",
+  "xml_sha256": "9e823a543f6a2a9f042f0cdab4bd6ec6ea84fa38872131fd8a402149151d0c72",
+  "xml_run": {
+    "id": "2",
+    "testcasecount": "943",
+    "result": "Failed(Child)",
+    "total": "943",
+    "passed": "938",
+    "failed": "5",
+    "inconclusive": "0",
+    "skipped": "0",
+    "asserts": "0",
+    "engine-version": "3.5.0.0",
+    "clr-version": "4.0.30319.42000",
+    "start-time": "2026-10-03 10:26:32Z",
+    "end-time": "2026-10-03 10:27:21Z",
+    "duration": "49,4487614"
+  },
+  "failed_cases": [
+    {
+      "fullname": "Rokas.Core.Tests.HubDialoguePlaybackTests.Config_DefaultsUseEnglishKeikoAndEditableGuildIntro",
+      "message": "  Expected: 128.0f\n  But was:  232.0f\n",
+      "stack_trace": "at Rokas.Core.Tests.HubDialoguePlaybackTests.Config_DefaultsUseEnglishKeikoAndEditableGuildIntro () [0x00034] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Tests\\EditMode\\HubDialoguePlaybackTests.cs:122\n"
+    },
+    {
+      "fullname": "Rokas.EditorTools.Tests.VnRuntimeIntroPackageTests.ProjectOwnedExternalPngPreservesNativeWidthThroughPreviewAndRuntimeExport",
+      "message": "System.IO.IOException : Could not copy VN asset into runtime package: Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/Background/RokasVnProjectOwnedNative2305-e698cbba078149bb8be0d15bce5f6bd9.png -> Assets/Rokas/Tests/EditorWorkshop/__RuntimeProjectOwnedNativeImageFixture/Runtime/Assets/a777f3fe68e33d04fbb188fef7268685.png",
+      "stack_trace": "  at Rokas.EditorTools.VnUiWorkshop.RokasVnRuntimeIntroExporter.CopyAssetObject (System.String sourcePath, System.String destinationPath) [0x000ab] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Scripts\\Editor\\VnUiWorkshop\\RokasVnRuntimeIntroExporter.cs:839 \n  at Rokas.EditorTools.VnUiWorkshop.RokasVnRuntimeIntroExporter.AddGuidBinding (System.String guid, System.String runtimeRoot, System.Collections.Generic.List`1[T] bindings, System.Collections.Generic.HashSet`1[T] boundKeys) [0x0008b] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Scripts\\Editor\\VnUiWorkshop\\RokasVnRuntimeIntroExporter.cs:629 \n  at Rokas.EditorTools.VnUiWorkshop.RokasVnRuntimeIntroExporter.ExportProjectOwnedPackage (Rokas.EditorTools.VnUiWorkshop.VnSceneComposerProject project, System.String portableJson, System.String sourceProjectSha256, System.String packagePath, System.String runtimeRoot) [0x00111] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Scripts\\Editor\\VnUiWorkshop\\RokasVnRuntimeIntroExporter.cs:100 \n  at Rokas.EditorTools.Tests.VnRuntimeIntroPackageTests.ProjectOwnedExternalPngPreservesNativeWidthThroughPreviewAndRuntimeExport () [0x00219] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Tests\\EditorWorkshop\\VnRuntimeIntroPackageTests.cs:1003 \n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <41d29b352f6a475ab1bf7c6628b82790>:0 "
+    },
+    {
+      "fullname": "Rokas.EditorTools.Tests.VnSceneComposerMgTests.MG_InspectorKeepsRecognizableSectionsAndDedicatedSelector",
+      "message": "  Expected: property Length equal to 11\n  But was:  13\n",
+      "stack_trace": "at Rokas.EditorTools.Tests.VnSceneComposerMgTests.MG_InspectorKeepsRecognizableSectionsAndDedicatedSelector () [0x00032] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Tests\\EditorWorkshop\\VnSceneComposerMgTests.cs:88\n"
+    },
+    {
+      "fullname": "Rokas.EditorTools.Tests.VnSceneComposerPlaybackTests.FocusedAnimationPreviewButtonsAreWiredToFocusedPreviewAction",
+      "message": "  Expected: String containing \"ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.BackgroundTransition);\"\n  But was:  \"{\n            EditorGUILayout.LabelField(\"Анимация сцены\", EditorStyles.boldLabel);\n            DrawSceneComposerAnimationScope();\n            VnPresentationWorkshopPreset effective = GetSceneComposerAnimationDisplayPreset(scene);\n            VnWorkshopSpeakerFocusValues focus = VnPresentationWorkshopVn10Resolver.ResolveSpeakerFocus(effective);\n\n            VnSceneComposerTransition boundary = GetSceneComposerBoundaryTransitionForAuthoring(scene);\n            EditorGUILayout.LabelField(\n                new GUIContent(\"Переход между сценами\", \"Кинематографический переход при входе в эту сцену с предыдущей.\"),\n                EditorStyles.miniBoldLabel);\n            EditorGUILayout.HelpBox(\n                \"Настройка входа в эту сцену. Прямой запуск сцены переход не проигрывает.\",\n                MessageType.None);\n            string[] sceneTransitionLabels = { \"Без перехода\", \"Плавный переход\", \"Тёмная шторка\" };\n            string[] sceneTransitionDirectionLabels = { \"Слева направо\", \"Справа налево\" };\n            EditorGUI.BeginChangeCheck();\n            int sceneTransitionType = EditorGUILayout.Popup(\n                \"Способ\",\n                boundary.sceneTransitionType == VnSceneComposerSceneTransitionType.DarkCurtain ? 2 :\n                    boundary.sceneTransitionType == VnSceneComposerSceneTransitionType.Fade ? 1 : 0,\n                sceneTransitionLabels);\n            VnSceneComposerSceneTransitionDirection sceneTransitionDirection =\n                boundary.sceneTransitionDirection;\n            float sceneTransitionDuration = boundary.sceneTransitionDuration;\n            if (sceneTransitionType == 2)\n            {\n                int directionIndex = sceneTransitionDirection == VnSceneComposerSceneTransitionDirection.RightToLeft ? 1 : 0;\n                directionIndex = EditorGUILayout.Popup(\"Направление\", directionIndex, sceneTransitionDirectionLabels);\n                sceneTransitionDirection = directionIndex == 1\n                    ? VnSceneComposerSceneTransitionDirection.RightToLeft\n                    : VnSceneComposerSceneTransitionDirection.LeftToRight;\n            }\n            if (sceneTransitionType != 0)\n            {\n                sceneTransitionDuration = DrawSceneComposerDurationControl(\n                    \"Длительность\", sceneTransitionDuration, 0f);\n            }\n            if (EditorGUI.EndChangeCheck())\n            {\n                ComposerSetSelectedSceneBoundaryTransition(\n                    sceneTransitionType == 2 ? VnSceneComposerSceneTransitionType.DarkCurtain :\n                        sceneTransitionType == 1 ? VnSceneComposerSceneTransitionType.Fade :\n                            VnSceneComposerSceneTransitionType.None,\n                    sceneTransitionDirection,\n                    sceneTransitionDuration);\n            }\n            using (new EditorGUI.DisabledScope(GetSelectedSceneIndexOrThrow() == 0))\n            {\n                if (GUILayout.Button(\"▶ Проверить переход\"))\n                    ComposerPreviewSelectedSceneBoundaryTransition();\n            }\n\n            EditorGUILayout.Space();\n            EditorGUILayout.LabelField(new GUIContent(\"Фокус говорящего\", \"Выделяет говорящего персонажа и приглушает остальных.\"), EditorStyles.miniBoldLabel);\n            EditorGUILayout.HelpBox(\"Фокус автоматически следует за полем «Говорящий» при нескольких персонажах.\", MessageType.None);\n            EditorGUI.BeginChangeCheck();\n            float inactiveBrightness = EditorGUILayout.Slider(\"Яркость остальных\", focus.InactiveBrightness, 0f, 1.5f);\n            float focusDuration = DrawSceneComposerDurationControl(\"Длительность фокуса\", focus.TransitionDuration, 0f);\n            if (EditorGUI.EndChangeCheck()) ComposerSetSpeakerFocus(focus.ActiveScale, focus.ActiveBrightness, focus.ActiveForwardOffset, focus.InactiveScale, inactiveBrightness, focus.InactiveAlpha, focusDuration, focus.Easing);\n            if (GUILayout.Button(\"▶ Проверить\")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);\n            EditorGUILayout.Space();\n            EditorGUILayout.LabelField(new GUIContent(\"Тайминг сцены\", \"Продолжительность сцены и переход к следующей сцене.\"), EditorStyles.miniBoldLabel);\n            VnSceneComposerTiming advanceTiming = GetSceneComposerAdvanceTimingForAuthoring(scene);\n            string[] advanceLabels = { \"Вручную\", \"Автоматически\" };\n            int currentAdvance = advanceTiming.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;\n            EditorGUI.BeginChangeCheck();\n            int nextAdvance = EditorGUILayout.Popup(new GUIContent(\"Переход к следующей сцене\", \"Как продолжается воспроизведение после этой сцены.\"), currentAdvance, advanceLabels);\n            float nextAutoDuration = advanceTiming.previewAutoDuration;\n            if (nextAdvance == 1) nextAutoDuration = EditorGUILayout.FloatField(\"Длительность сцены, с\", Mathf.Max(0f, nextAutoDuration));\n            if (EditorGUI.EndChangeCheck())\n                ComposerSetSelectedSceneAdvanceTiming(\n                    nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration :\n                        VnSceneComposerPreviewAdvanceMode.ManualBeat,\n                    nextAutoDuration);\n        }\"\n",
+      "stack_trace": "at Rokas.EditorTools.Tests.VnSceneComposerPlaybackTests.FocusedAnimationPreviewButtonsAreWiredToFocusedPreviewAction () [0x0008b] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Tests\\EditorWorkshop\\VnSceneComposerPlaybackTests.FocusedAnimationPreview.cs:113\n"
+    },
+    {
+      "fullname": "Rokas.EditorTools.Tests.VnSceneComposerWindowTests.AuthoredCharacterPickerOnlyReturnsCatalogStatesAndAddCharacterUsesSelectedState",
+      "message": "  Expected: True\n  But was:  False\n",
+      "stack_trace": "at Rokas.EditorTools.Tests.VnSceneComposerWindowTests.AuthoredCharacterPickerOnlyReturnsCatalogStatesAndAddCharacterUsesSelectedState () [0x0008c] in D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Tests\\EditorWorkshop\\VnSceneComposerWindowTests.cs:331\n"
+    }
+  ],
+  "comparisons": [
+    {
+      "path": "Assets/Rokas/Tests/EditMode/HubDialoguePlaybackTests.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "8f846c6c89099e5dff353c759c98c20cd6753236c9951b0f8816beba5b503f03",
+      "current_sha256": "b4956c6da114016bd74eb7362b84d40437eaacec07c777f2a9f0d9de05ac086e",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "8f846c6c89099e5dff353c759c98c20cd6753236c9951b0f8816beba5b503f03",
+      "current_normalized_sha256": "8f846c6c89099e5dff353c759c98c20cd6753236c9951b0f8816beba5b503f03"
+    },
+    {
+      "path": "Assets/Rokas/Tests/EditorWorkshop/VnRuntimeIntroPackageTests.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "32b1d08984f4570ca06d229b1838e22f998b315e7ae082713692350c60458816",
+      "current_sha256": "9f9f010333c388288b084ff980ea3a7178342ed4b8af2c2f4c2e94b529d02cc2",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "32b1d08984f4570ca06d229b1838e22f998b315e7ae082713692350c60458816",
+      "current_normalized_sha256": "32b1d08984f4570ca06d229b1838e22f998b315e7ae082713692350c60458816"
+    },
+    {
+      "path": "Assets/Rokas/Tests/EditorWorkshop/VnSceneComposerMgTests.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "aaa8cb68fc8e34643908e589604d5470fc91437a1ca8e179109a9fdacb2018d4",
+      "current_sha256": "a7833d5c1e41527a9c57a36ee9ff6f355d8ac56c048ce9ce275e531eddb3cff8",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "aaa8cb68fc8e34643908e589604d5470fc91437a1ca8e179109a9fdacb2018d4",
+      "current_normalized_sha256": "aaa8cb68fc8e34643908e589604d5470fc91437a1ca8e179109a9fdacb2018d4"
+    },
+    {
+      "path": "Assets/Rokas/Tests/EditorWorkshop/VnSceneComposerPlaybackTests.FocusedAnimationPreview.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "8423ad2cf4a047dab20f7eaf3f6db1b7b355322be73d1886553238ca622df8a1",
+      "current_sha256": "3b6b58347c75d16801036d1e784c7ba95af25d119a724f19dcaff092322d1720",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "8423ad2cf4a047dab20f7eaf3f6db1b7b355322be73d1886553238ca622df8a1",
+      "current_normalized_sha256": "8423ad2cf4a047dab20f7eaf3f6db1b7b355322be73d1886553238ca622df8a1"
+    },
+    {
+      "path": "Assets/Rokas/Tests/EditorWorkshop/VnSceneComposerWindowTests.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "c2d113a065e3572ac0b53339631d0ecae1f02b327e359c7bcea295844fb1b54d",
+      "current_sha256": "e830e11a0cd6fa5f66a1835cf08c254baa2e43bba119ba2c45fb3c060fc0e225",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "c2d113a065e3572ac0b53339631d0ecae1f02b327e359c7bcea295844fb1b54d",
+      "current_normalized_sha256": "c2d113a065e3572ac0b53339631d0ecae1f02b327e359c7bcea295844fb1b54d"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Presentation/HubDialogueConfig.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "90c6c7b5d2ac5b9bd774c6f6598712297ab401c075083e9d5525254caf1df68e",
+      "current_sha256": "bd6121710725b41e48366f4b2f31e5977710d96df0aadc160aaeba883361783c",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "90c6c7b5d2ac5b9bd774c6f6598712297ab401c075083e9d5525254caf1df68e",
+      "current_normalized_sha256": "90c6c7b5d2ac5b9bd774c6f6598712297ab401c075083e9d5525254caf1df68e"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Presentation/VnCharacterVisualStates.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "ccae11be9aa55bd095a39a45719ea4e0f2da18e36276ed6d5850b2d3e4adb7da",
+      "current_sha256": "e0a42b81ea581a00426134871788a777c847b0dee0aececbcce92fd97821efd9",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "ccae11be9aa55bd095a39a45719ea4e0f2da18e36276ed6d5850b2d3e4adb7da",
+      "current_normalized_sha256": "ccae11be9aa55bd095a39a45719ea4e0f2da18e36276ed6d5850b2d3e4adb7da"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "320c0ffdf14492780f76db006f174167990b0b54638d49dbcc9dc0f06e5454d4",
+      "current_sha256": "3c20475df26e2f0bf88529ecdc495f1d5871f6711b0cca3c8e48131e851409e2",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "320c0ffdf14492780f76db006f174167990b0b54638d49dbcc9dc0f06e5454d4",
+      "current_normalized_sha256": "320c0ffdf14492780f76db006f174167990b0b54638d49dbcc9dc0f06e5454d4"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerCharacterStateResolver.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "2cb7112fab17c95f669726c8533f2ef03e1a93ab7f7df815f0ac8f5e24bfed72",
+      "current_sha256": "9af7373ec2a6e00b8d1bf85104852bc270a683bd9e4145a2049aced7f27de2ee",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "2cb7112fab17c95f669726c8533f2ef03e1a93ab7f7df815f0ac8f5e24bfed72",
+      "current_normalized_sha256": "2cb7112fab17c95f669726c8533f2ef03e1a93ab7f7df815f0ac8f5e24bfed72"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerAssetLibrary.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "fa7984afbb7fb27a301daca10fc887c80019d781bbd18a8da4600490e5609534",
+      "current_sha256": "7d568433ea85e706705f54ad8252af6337b924253bdbbbdb6a1653e76ec7de58",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "fa7984afbb7fb27a301daca10fc887c80019d781bbd18a8da4600490e5609534",
+      "current_normalized_sha256": "fa7984afbb7fb27a301daca10fc887c80019d781bbd18a8da4600490e5609534"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerMediaEditing.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "dcb4c7b8d6aa97bdf4386012d8e6ef809dca4993992fe2ec1171b1e9e3d348f7",
+      "current_sha256": "00069ede7a5569dbda97493f161055192e321df5161cf38919291fc1d441d220",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "dcb4c7b8d6aa97bdf4386012d8e6ef809dca4993992fe2ec1171b1e9e3d348f7",
+      "current_normalized_sha256": "dcb4c7b8d6aa97bdf4386012d8e6ef809dca4993992fe2ec1171b1e9e3d348f7"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RokasVnRuntimeIntroExporter.cs",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "52c02147d551cb8d2fda1a343c26f61ad9ab6c3c4bd231bd4b53ab24e1cd52dd",
+      "current_sha256": "e23194935b147522f33c8915d9ea790d8045e4339d1fc034b6f86b8550bab0ab",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "52c02147d551cb8d2fda1a343c26f61ad9ab6c3c4bd231bd4b53ab24e1cd52dd",
+      "current_normalized_sha256": "52c02147d551cb8d2fda1a343c26f61ad9ab6c3c4bd231bd4b53ab24e1cd52dd"
+    },
+    {
+      "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.json",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "c2ddf8aacc2fa91b7264b6119141f1dbf41433f825539b4e012dd2c05c23cd59",
+      "current_sha256": "6330bcfee2c663bebb73920b27a7309090afbb741451c86d0e64dbede3d3b758",
+      "raw_equal": false,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "c2ddf8aacc2fa91b7264b6119141f1dbf41433f825539b4e012dd2c05c23cd59",
+      "current_normalized_sha256": "c2ddf8aacc2fa91b7264b6119141f1dbf41433f825539b4e012dd2c05c23cd59"
+    },
+    {
+      "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json",
+      "head_exists": false,
+      "current_exists": true,
+      "head_sha256": null,
+      "current_sha256": "33167b1d03d1aca0b1f5410c3519ee8a5afbcac8aac20d8b358ae036bdf63585",
+      "raw_equal": false
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/ROKAS_VN_SCENE_COMPOSER_ASSET_CATALOG.json",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "618ffd49b4d19bf250a3be868a410b4bb51a26efb376b514f0db7e9210b459c2",
+      "current_sha256": "618ffd49b4d19bf250a3be868a410b4bb51a26efb376b514f0db7e9210b459c2",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "618ffd49b4d19bf250a3be868a410b4bb51a26efb376b514f0db7e9210b459c2",
+      "current_normalized_sha256": "618ffd49b4d19bf250a3be868a410b4bb51a26efb376b514f0db7e9210b459c2"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/ROKAS_VN_SCENE_COMPOSER_ASSET_CATALOG.json.meta",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "f34bff08a81509deedfa3252609a901dfc21ee26c764e2bbf07dcf9eb8ddb043",
+      "current_sha256": "f34bff08a81509deedfa3252609a901dfc21ee26c764e2bbf07dcf9eb8ddb043",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "f34bff08a81509deedfa3252609a901dfc21ee26c764e2bbf07dcf9eb8ddb043",
+      "current_normalized_sha256": "f34bff08a81509deedfa3252609a901dfc21ee26c764e2bbf07dcf9eb8ddb043"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/9f18a6e3-9df2-4c27-9dbd-fe48df06b114.png",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "242deebca2fda071754059b0947f20f2679f6f01f805280ff066666ed95f08e3",
+      "current_sha256": "242deebca2fda071754059b0947f20f2679f6f01f805280ff066666ed95f08e3",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": null
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/9f18a6e3-9df2-4c27-9dbd-fe48df06b114.png.meta",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "b86b24fb27881e40a0b542342849e4e25bb2546085cacd9f86571593b257a8d6",
+      "current_sha256": "b86b24fb27881e40a0b542342849e4e25bb2546085cacd9f86571593b257a8d6",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "b86b24fb27881e40a0b542342849e4e25bb2546085cacd9f86571593b257a8d6",
+      "current_normalized_sha256": "b86b24fb27881e40a0b542342849e4e25bb2546085cacd9f86571593b257a8d6"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina serious.png",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "de70ff660225de308e60aa7bd7fc9851a49e936b63d91718c49b14a742f28cde",
+      "current_sha256": "de70ff660225de308e60aa7bd7fc9851a49e936b63d91718c49b14a742f28cde",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": null
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina serious.png.meta",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "0f72e36ee5bf0cda1425b13dfb8092c7274c3681765e3007f3116488a58005b7",
+      "current_sha256": "0f72e36ee5bf0cda1425b13dfb8092c7274c3681765e3007f3116488a58005b7",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "0f72e36ee5bf0cda1425b13dfb8092c7274c3681765e3007f3116488a58005b7",
+      "current_normalized_sha256": "0f72e36ee5bf0cda1425b13dfb8092c7274c3681765e3007f3116488a58005b7"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina shy not happy.png",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "d0c4d23f67d517cde5671ef72b970880fde63e6197ab40b6672c6f3980127429",
+      "current_sha256": "d0c4d23f67d517cde5671ef72b970880fde63e6197ab40b6672c6f3980127429",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": null
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina shy not happy.png.meta",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "0f6c86588a27da9ca6f5685f980e7a4240eadb765b728700b9b51b0c6ee9a9aa",
+      "current_sha256": "0f6c86588a27da9ca6f5685f980e7a4240eadb765b728700b9b51b0c6ee9a9aa",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "0f6c86588a27da9ca6f5685f980e7a4240eadb765b728700b9b51b0c6ee9a9aa",
+      "current_normalized_sha256": "0f6c86588a27da9ca6f5685f980e7a4240eadb765b728700b9b51b0c6ee9a9aa"
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/b5a221a0-4101-40f0-bc9c-cb2ad4563b9f.png",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "16ed8d8fd1829f412c18c0d2f5004920ae469e08d60713bd506fe57c48e96b30",
+      "current_sha256": "16ed8d8fd1829f412c18c0d2f5004920ae469e08d60713bd506fe57c48e96b30",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": null
+    },
+    {
+      "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/b5a221a0-4101-40f0-bc9c-cb2ad4563b9f.png.meta",
+      "head_exists": true,
+      "current_exists": true,
+      "head_sha256": "6f4ed2374cef9d90c78d32b12ee7b121d666eb32a288087e075001ff3f8f172e",
+      "current_sha256": "6f4ed2374cef9d90c78d32b12ee7b121d666eb32a288087e075001ff3f8f172e",
+      "raw_equal": true,
+      "bom_cr_normalized_equal": true,
+      "head_normalized_sha256": "6f4ed2374cef9d90c78d32b12ee7b121d666eb32a288087e075001ff3f8f172e",
+      "current_normalized_sha256": "6f4ed2374cef9d90c78d32b12ee7b121d666eb32a288087e075001ff3f8f172e"
+    }
+  ],
+  "static_contracts": {
+    "hub_resource_speaker_y_head_current": {
+      "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.json": [
+        {
+          "exists": true,
+          "speaker_y": 128.0
+        },
+        {
+          "exists": true,
+          "speaker_y": 128.0
+        }
+      ],
+      "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json": [
+        {
+          "exists": false,
+          "speaker_y": null
+        },
+        {
+          "exists": true,
+          "speaker_y": 232.0
+        }
+      ]
+    },
+    "inspector_sections_head_current": [
+      [
+        "Фон",
+        "Персонажи",
+        "Текст",
+        "Анимация персонажа",
+        "Анимация сцены",
+        "Медиа",
+        "Настройки сцены",
+        "Дополнительно",
+        "Декорации",
+        "Звуки",
+        "Музыка",
+        "Движение",
+        "Эффекты"
+      ],
+      [
+        "Фон",
+        "Персонажи",
+        "Текст",
+        "Анимация персонажа",
+        "Анимация сцены",
+        "Медиа",
+        "Настройки сцены",
+        "Дополнительно",
+        "Декорации",
+        "Звуки",
+        "Музыка",
+        "Движение",
+        "Эффекты"
+      ]
+    ],
+    "focused_preview_method_head_current": [
+      {
+        "expected_background_call_present": false,
+        "method_normalized_sha256": "c04dbdceceda6a49b110d8af14a6621ec21ac167be94df113abd2e27c4518d66",
+        "preview_lines": [
+          "ComposerPreviewSelectedSceneBoundaryTransition();",
+          "if (GUILayout.Button(\"▶ Проверить\")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);",
+          "int currentAdvance = advanceTiming.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;",
+          "nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration :",
+          "VnSceneComposerPreviewAdvanceMode.ManualBeat,"
+        ]
+      },
+      {
+        "expected_background_call_present": false,
+        "method_normalized_sha256": "c04dbdceceda6a49b110d8af14a6621ec21ac167be94df113abd2e27c4518d66",
+        "preview_lines": [
+          "ComposerPreviewSelectedSceneBoundaryTransition();",
+          "if (GUILayout.Button(\"▶ Проверить\")) ComposerPreviewFocusedEffect(VnWorkshopPreviewEffect.SpeakerSwitch);",
+          "int currentAdvance = advanceTiming.previewAdvanceMode == VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration ? 1 : 0;",
+          "nextAdvance == 1 ? VnSceneComposerPreviewAdvanceMode.PreviewAutoDuration :",
+          "VnSceneComposerPreviewAdvanceMode.ManualBeat,"
+        ]
+      }
+    ],
+    "mina_project_states_head_current": [
+      [
+        {
+          "state_id": "onboarded:mina:9f18a6e3_9df2_4c27_9dbd_fe48df06b114",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/9f18a6e3-9df2-4c27-9dbd-fe48df06b114.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:b5a221a0_4101_40f0_bc9c_cb2ad4563b9f",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/b5a221a0-4101-40f0-bc9c-cb2ad4563b9f.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:mina_serious",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina serious.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:mina_shy_not_happy",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina shy not happy.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        }
+      ],
+      [
+        {
+          "state_id": "onboarded:mina:9f18a6e3_9df2_4c27_9dbd_fe48df06b114",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/9f18a6e3-9df2-4c27-9dbd-fe48df06b114.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:b5a221a0_4101_40f0_bc9c_cb2ad4563b9f",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/b5a221a0-4101-40f0-bc9c-cb2ad4563b9f.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:mina_serious",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina serious.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        },
+        {
+          "state_id": "onboarded:mina:mina_shy_not_happy",
+          "asset_path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/OnboardedAssets/CharacterState/mina/Mina shy not happy.png",
+          "in_legacy_catalog": false,
+          "current_file_exists": true,
+          "head_file_exists": true
+        }
+      ]
+    ],
+    "ember_importer_texture_prefix_guard": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/"
+  },
+  "classification": [
+    {
+      "test": "Config_DefaultsUseEnglishKeikoAndEditableGuildIntro",
+      "scope": "Protected Home/Hub dialogue; local ignored user override",
+      "evidence": "Default resource has speaker.y=128 at HEAD and current. Local user resource, absent from tracked HEAD, has y=232 and is selected first by unchanged LoadFresh.",
+      "historical_failure_proven": false
+    },
+    {
+      "test": "ProjectOwnedExternalPngPreservesNativeWidthThroughPreviewAndRuntimeExport",
+      "scope": "Protected VN export IO/AssetDatabase fixture",
+      "evidence": "Test/exporter/media/library are BOM/CR normalized identical to HEAD; generated source imported successfully and CopyAsset returned false. Log imports numbered fixture siblings 7..12. EnsureAssetFolder ignores CreateFolder's returned GUID and advances the requested path; this is unchanged baseline code. Specific runtime cause remains unproven.",
+      "historical_failure_proven": false
+    },
+    {
+      "test": "MG_InspectorKeepsRecognizableSectionsAndDedicatedSelector",
+      "scope": "Protected VN stale static assertion",
+      "evidence": "Identical HEAD/current source has 13 sections (including Movement/Effects), while identical test requires 11.",
+      "static_baseline_contract_mismatch_proven": true
+    },
+    {
+      "test": "FocusedAnimationPreviewButtonsAreWiredToFocusedPreviewAction",
+      "scope": "Protected VN stale source-string assertion",
+      "evidence": "Exact tested method is identical after BOM/CR normalization at HEAD/current. It calls ComposerPreviewSelectedSceneBoundaryTransition, and lacks the test's BackgroundTransition literal at both states.",
+      "static_baseline_contract_mismatch_proven": true
+    },
+    {
+      "test": "AuthoredCharacterPickerOnlyReturnsCatalogStatesAndAddCharacterUsesSelectedState",
+      "scope": "Protected VN stale legacy-catalog assertion",
+      "evidence": "Unchanged resolver combines production and onboarded states. Tracked HEAD/current catalog and assets already include four valid onboarded Mina ids not present in unchanged legacy VnCharacterVisualCatalog. Test requires every returned id to resolve in the legacy catalog.",
+      "static_baseline_contract_mismatch_proven": true
+    }
+  ],
+  "hub_user_override_ignore_rule": ".gitignore:26:Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json\tAssets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json",
+  "unity_log_sha256": "edff322d956bff6dd813a9c5741f92aacbdc6c1733e526e603337473817841f2",
+  "limitations": [
+    "No Unity baseline run was performed. Source/resource equality alone does not prove historical runtime test failure.",
+    "AssetDatabase.CopyAsset returned false in the tested run; the XML does not expose the underlying IO/AssetDatabase cause.",
+    "Generated VN runtime PNG fixture files were cleaned up by the test, so their post-failure contents are not available.",
+    "The actual first rejected character state id is not included in the failure message; static catalog mismatches are identified separately."
+  ]
+}

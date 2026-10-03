@@ -1,0 +1,4375 @@
+{
+    "captures": [
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-000.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 170.85130310058595,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -13.433416366577149,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-001.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 171.0836639404297,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -13.285348892211914,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-002.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 171.3170623779297,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -12.886261940002442,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-003.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 171.55023193359376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -12.231666564941407,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-004.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 171.78182983398438,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -11.46866226196289,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-005.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 172.01748657226563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -10.709285736083985,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-006.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 172.25274658203126,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -9.935661315917969,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-007.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 172.48753356933595,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -9.165933609008789,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-008.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 172.73052978515626,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -8.394879341125489,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-009.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 172.96536254882813,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -7.597962856292725,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-010.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 173.20169067382813,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -6.828634738922119,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-011.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 173.43881225585938,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -6.080053806304932,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-012.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 173.67530822753907,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.551577568054199,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-013.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EntranceWalk",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 173.9103240966797,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.285533428192139,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-014.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EnterBattle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 174.14773559570313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-015.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "EnterBattle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 174.3831329345703,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-016.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 174.62022399902345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-017.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 174.85867309570313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-018.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 175.09552001953126,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-019.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 175.33074951171876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-020.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 175.5730438232422,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-021.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 175.80233764648438,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-022.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 176.03492736816407,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-023.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 176.26377868652345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-024.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 176.49392700195313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-025.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 176.72506713867188,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-026.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 176.95352172851563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-027.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 177.1829071044922,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-028.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 177.41171264648438,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-029.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 177.64248657226563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-030.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 177.87353515625,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-031.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 178.10736083984376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-032.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 178.34222412109376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-033.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 178.5768585205078,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-034.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 178.81167602539063,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-035.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 179.04617309570313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-036.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 179.28074645996095,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-037.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 179.51502990722657,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-038.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 179.7489776611328,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-039.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 179.9838104248047,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-040.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 180.21934509277345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-041.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 180.45260620117188,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-042.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 180.68728637695313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-043.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 180.92706298828126,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-044.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 181.16439819335938,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-045.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 181.40127563476563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-046.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 181.64268493652345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-047.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 181.87924194335938,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-048.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 182.1158905029297,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-049.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 182.352294921875,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-050.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 182.58883666992188,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": true,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-051.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 182.83116149902345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-052.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 183.06666564941407,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-053.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 183.3034210205078,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-054.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 183.54129028320313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\intro-055.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 183.77890014648438,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-000.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Preparation",
+            "feedback": "",
+            "combatUs": 0,
+            "realtime": 183.8622283935547,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-001.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Preparation",
+            "feedback": "",
+            "combatUs": 116360,
+            "realtime": 183.96414184570313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-002.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Preparation",
+            "feedback": "",
+            "combatUs": 218154,
+            "realtime": 184.0659942626953,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-003.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.1696014404297,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.181675910949707,
+                "y": -0.6200000047683716,
+                "z": -0.004959011450409889
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-004.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.271728515625,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -4.603236675262451,
+                "y": -0.6200000047683716,
+                "z": -0.04694250971078873
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-005.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.3747100830078,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -3.659928560256958,
+                "y": -0.6200000047683716,
+                "z": -0.11540841311216355
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-006.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.47647094726563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -2.7166061401367189,
+                "y": -0.6200000047683716,
+                "z": -0.18387536704540254
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-007.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.58047485351563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -1.777633786201477,
+                "y": -0.6200000047683716,
+                "z": -0.25202658772468569
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-008.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.6836700439453,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -0.8102433681488037,
+                "y": -0.6200000047683716,
+                "z": -0.3222403824329376
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-009.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.78712463378907,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.1380949467420578,
+                "y": -0.6200000047683716,
+                "z": -0.3910714089870453
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-010.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Approach",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.88954162597657,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.8193596005439758,
+                "y": -0.6200000047683716,
+                "z": -0.44051802158355715
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-011.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 184.99180603027345,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-012.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 185.09542846679688,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-013.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 185.19766235351563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-014.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 286783,
+            "realtime": 185.2999267578125,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-015.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 303605,
+            "realtime": 185.4020233154297,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-016.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 405437,
+            "realtime": 185.50563049316407,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-017.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "",
+            "combatUs": 509165,
+            "realtime": 185.60740661621095,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-contact.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 185.7575225830078,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-000.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 185.80230712890626,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-001.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 185.93899536132813,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-002.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 186.07489013671876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-003.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 186.21070861816407,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-004.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 561059,
+            "realtime": 186.34902954101563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-005.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 577705,
+            "realtime": 186.4864044189453,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-006.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:1",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 715152,
+            "realtime": 186.62518310546876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-007.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 770605,
+            "realtime": 186.76132202148438,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-motion-recovery-008.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Attack",
+            "feedback": "УДАР  −20",
+            "combatUs": 770605,
+            "realtime": 186.89645385742188,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": 0.9499999284744263,
+                "y": -0.6200000047683716,
+                "z": -0.44999998807907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\normal-return.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −20",
+            "combatUs": 770605,
+            "realtime": 187.3467254638672,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -0.5261800289154053,
+                "y": -0.6200000047683716,
+                "z": -0.34285789728164675
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-reaction-cursor.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "УДАР  −20",
+            "combatUs": 1337224,
+            "realtime": 189.58023071289063,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\dodge-backstep.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Dodge",
+            "feedback": "УКЛОНЕНИЕ",
+            "combatUs": 1737221,
+            "realtime": 190.75376892089845,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\dodge-result.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:2",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Dodge",
+            "feedback": "УКЛОНЕНИЕ",
+            "combatUs": 1737221,
+            "realtime": 191.08656311035157,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\block-contact.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3520470,
+            "realtime": 195.45704650878907,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\block-result.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.28932189941407,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-000.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.33470153808595,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-001.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.48748779296876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-002.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.64154052734376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-003.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.79388427734376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-004.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3587138,
+            "realtime": 196.94595336914063,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-005.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3687026,
+            "realtime": 197.10032653808595,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-006.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Guard",
+            "feedback": "БЛОК",
+            "combatUs": 3841252,
+            "realtime": 197.25408935546876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-007.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "БЛОК",
+            "combatUs": 3995474,
+            "realtime": 197.4072723388672,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-hit-motion-008.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "БЛОК",
+            "combatUs": 4148164,
+            "realtime": 197.55958557128907,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 100,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\enemy-body-contact.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:3",
+            "committedTarget": "E2",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 4200476,
+            "realtime": 197.71047973632813,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 92,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\stable-idle-after-dodge-block.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E1",
+            "selectedTarget": "E1",
+            "hunterPose": "Idle",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 202.73374938964845,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-000.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 202.79486083984376,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-001.png",
+            "phase": "Suspended",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 202.91519165039063,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-002.png",
+            "phase": "Suspended",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 203.03390502929688,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-003.png",
+            "phase": "Suspended",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 203.1527099609375,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-004.png",
+            "phase": "Suspended",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 203.2711944580078,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-005.png",
+            "phase": "Suspended",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6317187,
+            "realtime": 203.39004516601563,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-006.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6367170,
+            "realtime": 203.5088653564453,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-007.png",
+            "phase": "PlayerCommand",
+            "actionId": "",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "HeavyPreparation",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6486089,
+            "realtime": 203.62953186035157,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-008.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 203.74867248535157,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -5.208407878875732,
+                "y": -0.6200000047683716,
+                "z": 0.0051682558842003349
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-009.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 203.86741638183595,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -4.385192394256592,
+                "y": -0.6200000047683716,
+                "z": 0.10746126621961594
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-010.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 203.9859619140625,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -2.9017298221588136,
+                "y": -0.6200000047683716,
+                "z": 0.29179686307907107
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-011.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.1051025390625,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": -1.4083847999572755,
+                "y": -0.6200000047683716,
+                "z": 0.47736042737960818
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-012.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.2241973876953,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 0.0899929627776146,
+                "y": -0.6200000047683716,
+                "z": 0.6635493636131287
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-013.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.3433380126953,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 1.5866864919662476,
+                "y": -0.6200000047683716,
+                "z": 0.8495290279388428
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-014.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Approach",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.46212768554688,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 2.874617338180542,
+                "y": -0.6200000047683716,
+                "z": 1.0095677375793458
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-015.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.58111572265626,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-016.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.70033264160157,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-017.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.8194122314453,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-018.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 204.93817138671876,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-019.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 205.05740356445313,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-020.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6590744,
+            "realtime": 205.17787170410157,
+            "corpseElapsed": -1.0,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-021.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6624425,
+            "realtime": 205.2970428466797,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-022.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6743423,
+            "realtime": 205.416259765625,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-023.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E2",
+            "hunterPose": "Heavy",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 6862859,
+            "realtime": 205.53564453125,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 60,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-contact.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 205.6864471435547,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-000.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 205.73085021972657,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-001.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 205.86708068847657,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-002.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 206.00279235839845,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-003.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 206.13819885253907,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-004.png",
+            "phase": "Suspended",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6915365,
+            "realtime": 206.27622985839845,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-005.png",
+            "phase": "PlayerExecution",
+            "actionId": "contract_subway_001:1:1:4",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 6932033,
+            "realtime": 206.41314697265626,
+            "corpseElapsed": 0.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-006.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 206.54953002929688,
+            "corpseElapsed": 0.12346959114074707,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-007.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 206.6877899169922,
+            "corpseElapsed": 0.25921979546546938,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-008.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 206.82347106933595,
+            "corpseElapsed": 0.3975186049938202,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-motion-recovery-009.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Heavy",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 206.95912170410157,
+            "corpseElapsed": 0.5334103107452393,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 3.200000286102295,
+                "y": -0.6200000047683716,
+                "z": 1.0499999523162842
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-return.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "ReturnHome",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 207.39349365234376,
+            "corpseElapsed": 0.8685990571975708,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": 1.188454031944275,
+                "y": -0.6200000047683716,
+                "z": 0.8000445365905762
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-fallen.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Idle",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 208.12757873535157,
+            "corpseElapsed": 1.5517942905426026,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-hold.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Idle",
+            "feedback": "УДАР  −68",
+            "combatUs": 7035592,
+            "realtime": 208.57803344726563,
+            "corpseElapsed": 1.9516774415969849,
+            "presentationHeld": true,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\corpse-dissolve.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E2",
+            "selectedTarget": "E3",
+            "hunterPose": "Idle",
+            "feedback": "УДАР  −68",
+            "combatUs": 7502285,
+            "realtime": 209.58644104003907,
+            "corpseElapsed": 2.9015471935272219,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 84,
+            "targetHp": 0,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        },
+        {
+            "image": "C:\\Users\\tim\\AppData\\Local\\Temp\\rokas-polish-ii-combat-visuals\\heavy-final-orientation.png",
+            "phase": "EnemyExecution",
+            "actionId": "contract_subway_001:1:1:5",
+            "committedTarget": "E1",
+            "selectedTarget": "E3",
+            "hunterPose": "Idle",
+            "feedback": "ПОПАДАНИЕ  −8 HP",
+            "combatUs": 8218985,
+            "realtime": 211.05015563964845,
+            "corpseElapsed": -1.0,
+            "presentationHeld": false,
+            "portalActive": false,
+            "hunterHp": 76,
+            "targetHp": 40,
+            "hunterPosition": {
+                "x": -5.25,
+                "y": -0.6200000047683716,
+                "z": 0.0
+            },
+            "hunterModelScale": {
+                "x": 3.6006689071655275,
+                "y": 3.6006689071655275,
+                "z": 3.6006689071655275
+            },
+            "hunterWorldScale": {
+                "x": 3.6006691455841066,
+                "y": 3.6006689071655275,
+                "z": 3.6006691455841066
+            }
+        }
+    ]
+}

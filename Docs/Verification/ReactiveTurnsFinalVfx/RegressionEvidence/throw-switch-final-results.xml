@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20,8258952">
+  <test-suite type="TestSuite" id="1287" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.825895" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1281" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.818419" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="43160" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1282" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.817225" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1283" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="227" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.816198" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1098" name="ReactiveActionPreviewPlayModeTests" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.810508" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1102" name="SwitchingAndCancelPreserveAuthorityAndRestoreCamera" fullname="Rokas.Tests.ReactiveActionPreviewPlayModeTests.SwitchingAndCancelPreserveAuthorityAndRestoreCamera" methodname="SwitchingAndCancelPreserveAuthorityAndRestoreCamera" classname="Rokas.Tests.ReactiveActionPreviewPlayModeTests" runstate="Runnable" seed="1605436811" result="Passed" start-time="2026-10-03 10:38:37Z" end-time="2026-10-03 10:38:58Z" duration="20.801143" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+Saving results to: D:\Rokas\reactiveturns-b2-staging\final-vfx-unity\throw-switch-final-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -97,8 +97,15 @@ namespace Rokas.Tests
             Assert.That(combat.ActiveEnemyIds, Is.EqualTo(new[] { "E1", "E2", "E3" }));
             Assert.That(boot.View.SelectedReactiveTargetId, Is.EqualTo("E2"));
             yield return WaitForCombat(boot);
+            long previewRevision = combat.Revision;
             Press("ReactiveBasic");
+            Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
+            Assert.That(combat.Revision, Is.EqualTo(previewRevision));
+            Press("ReactiveBasic");
+            float confirmDeadline = Time.realtimeSinceStartup + 3f;
+            while (combat.Phase != ReactivePhase.PlayerExecution && Time.realtimeSinceStartup < confirmDeadline) yield return null;
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
+            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize, Is.EqualTo(4.6f).Within(.001f));
             boot.SelectReactiveTarget("E3");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),
                 "The committed target remains frozen during the action.");

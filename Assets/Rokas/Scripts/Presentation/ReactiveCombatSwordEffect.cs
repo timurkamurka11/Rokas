@@ -18,6 +18,8 @@ namespace Rokas.Presentation
         private readonly Material trailMaterial;
         private readonly Material chargeMaterial;
         private readonly LineRenderer charge;
+        private readonly ReactiveCombatEmberLayer lightVapor;
+        private readonly ReactiveCombatEmberLayer heavyVapor;
         private readonly Vector3[] bases = new Vector3[Samples];
         private readonly Vector3[] tips = new Vector3[Samples];
         private readonly float[] ages = new float[Samples];
@@ -93,6 +95,10 @@ namespace Rokas.Presentation
             charge.shadowCastingMode = ShadowCastingMode.Off;
             charge.receiveShadows = false;
             charge.enabled = false;
+            lightVapor = new ReactiveCombatEmberLayer(root.transform.parent, root.layer, "NormalMist");
+            // Held preparation needs continuous wisps. The one-shot HeavyBurst
+            // belongs to the actual contact, where its smoke can grow and retire.
+            heavyVapor = new ReactiveCombatEmberLayer(root.transform.parent, root.layer, "NormalMist");
             MeasureBlade();
         }
 
@@ -144,6 +150,14 @@ namespace Rokas.Presentation
                 if (count == 0 || (tips[0] - tip).sqrMagnitude > .00002f) AddSample(start, tip);
             }
             wasActive = swingActive;
+            Vector3 bladeCenter = blade == null ? Vector3.zero : Vector3.Lerp(blade.position, BladeTip, .55f);
+            Vector3 bladeDirection = blade == null ? Vector3.right : BladeTip - blade.position;
+            float bladeAngle = Mathf.Atan2(bladeDirection.y, bladeDirection.x) * Mathf.Rad2Deg;
+            lightVapor.Follow(bladeCenter + Vector3.back * .07f, new Vector2(.9f, .45f),
+                new Color(.52f, .86f, 1f, 1f), swingActive && !heavy ? .45f : 0f, bladeAngle);
+            heavyVapor.Follow(bladeCenter + Vector3.back * .09f, new Vector2(1.35f, .8f),
+                new Color(.65f, .49f, 1f, 1f), heavy && (swingActive || charge01 > .001f) ? .38f : 0f, bladeAngle);
+            lightVapor.Tick(step); heavyVapor.Tick(step);
             for (int i = 0; i < Samples; i++)
             {
                 int source = Mathf.Min(i, Mathf.Max(0, count - 1));
@@ -191,6 +205,7 @@ namespace Rokas.Presentation
             ReactiveCombatAshDissolve.DestroyOwned(mesh);
             ReactiveCombatAshDissolve.DestroyOwned(trailMaterial);
             ReactiveCombatAshDissolve.DestroyOwned(chargeMaterial);
+            lightVapor.Dispose(); heavyVapor.Dispose();
         }
     }
 }

@@ -1,0 +1,68 @@
+[
+  {
+    "node": 10,
+    "key": "exposed.position",
+    "value": [
+      250,
+      0,
+      125
+    ]
+  },
+  {
+    "node": 10,
+    "key": "exposed.yaw",
+    "value": [
+      90
+    ]
+  },
+  {
+    "node": 10,
+    "key": "exposed.pitch",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 10,
+    "key": "use_back_plate",
+    "value": false
+  },
+  {
+    "node": 16,
+    "key": "first_frame",
+    "value": [
+      60
+    ]
+  },
+  {
+    "node": 16,
+    "key": "stride_frames",
+    "value": [
+      1
+    ]
+  },
+  {
+    "node": 16,
+    "key": "sizes.flipbook_col_row",
+    "value": [
+      8,
+      8
+    ]
+  },
+  {
+    "node": 16,
+    "key": "sizes.sprite_size",
+    "value": [
+      128,
+      128
+    ]
+  },
+  {
+    "node": 16,
+    "key": "sizes.flipbook_size",
+    "value": [
+      1024,
+      1024
+    ]
+  }
+]

@@ -4,6 +4,7 @@ import re
 
 _MESSAGES_PREFIX = ('Assets', 'Rokas', 'Resources', 'Messages')
 _VN_EDITOR_UI_PREFIX = ('Assets', 'Rokas', 'Scripts', 'Editor', 'VnUiWorkshop', 'RuntimeUi')
+_EMBER_FLIPBOOK_PREFIX = ('Assets', 'Rokas', 'Resources', 'Combat', 'ReactiveTurns', 'Vfx', 'EmberGen')
 
 
 def _contains_path_prefix(path, prefix):
@@ -39,6 +40,23 @@ def validate_png_asset(path, width, height, color_type, meta_text):
     """Return validation errors for one already-signature-checked PNG."""
     path = Path(path)
     errors = []
+
+    if _contains_path_prefix(path, _EMBER_FLIPBOOK_PREFIX):
+        # A 64-frame realtime effect is not an HD background. Validate its actual
+        # atlas/import contract rather than enlarging it to satisfy the wrong class.
+        if width != height or width not in (1024, 2048):
+            errors.append('EmberGen flipbook must be a 1024/2048 square 8x8 atlas: ' + path.name)
+        if color_type != 6:
+            errors.append('EmberGen flipbook must carry real RGBA: ' + path.name)
+        if meta_text is None:
+            errors.append('EmberGen flipbook missing meta: ' + path.name)
+            return errors
+        required = {'textureType': 0, 'enableMipMap': 0, 'alphaUsage': 1,
+                    'alphaIsTransparency': 0, 'filterMode': 1, 'wrapU': 1, 'wrapV': 1}
+        for field, value in required.items():
+            if _meta_int(meta_text, field) != value:
+                errors.append('EmberGen flipbook importer invalid ' + field + ': ' + path.name)
+        return errors
 
     if _contains_path_prefix(path, _MESSAGES_PREFIX):
         if meta_text is None:

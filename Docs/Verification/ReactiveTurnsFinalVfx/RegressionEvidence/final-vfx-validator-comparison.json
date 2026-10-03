@@ -1,0 +1,37 @@
+{
+  "baseline_head": "0eecaaf7ab62afbf5c949430f08cd1b175c9edc4",
+  "baseline_method": "Read-only recovery reconstruction: HEAD tracked inventory/text plus preexisting ignored HubDialogue user assets; the same final validator rules are applied to baseline and final inventories. New EmberGen allowance is restricted to current Combat native exports.",
+  "preexisting_ignored_assets": [
+    {
+      "path": "Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity",
+      "sha256": "8384ee44422f13d5645cfc6009de69299c5fa7e123299167fa811c5703da3636",
+      "mtime_utc": "2026-09-29T14:39:08.785821+00:00"
+    },
+    {
+      "path": "Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity.meta",
+      "sha256": "b6e22d2db09af2db58219ed5d5ca87e325cff2353f8c32e8b64cc7b67deb6a11",
+      "mtime_utc": "2026-09-29T12:45:25.417008+00:00"
+    },
+    {
+      "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json",
+      "sha256": "33167b1d03d1aca0b1f5410c3519ee8a5afbcac8aac20d8b358ae036bdf63585",
+      "mtime_utc": "2026-10-03T10:26:39.449763+00:00"
+    },
+    {
+      "path": "Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json.meta",
+      "sha256": "47d2e2f73ee8f5fde9b48d840cd601ff2bae0ab35d7136b80049e9e451583a7d",
+      "mtime_utc": "2026-10-03T10:26:39.450305+00:00"
+    }
+  ],
+  "baseline_exit": 1,
+  "final_exit": 1,
+  "baseline_findings": 132,
+  "final_findings": 136,
+  "added": [
+    "FAIL: Background below HD: DaggerReference.png",
+    "FAIL: Background below HD: DaggerVideoRef.png",
+    "FAIL: Background below HD: SwordReference.png",
+    "FAIL: Background below HD: SwordVideoRef.png"
+  ],
+  "removed": []
+}

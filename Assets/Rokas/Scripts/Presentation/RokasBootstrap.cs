@@ -405,10 +405,52 @@ namespace Rokas.Presentation
                 Screen.fullScreenMode = Session.State.settings.fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
         }
 
+        private bool reactiveActionSelected;
+        private bool reactiveConfirmPending;
+        private CommandKind reactiveSelectedKind;
+        private string reactiveSelectedSkill;
+        public string ReactiveSelectedAction => !reactiveActionSelected ? null :
+            reactiveSelectedKind == CommandKind.Basic ? "normal" : reactiveSelectedSkill;
+
+        public void ClickReactiveAction(CommandKind kind, string skillId)
+        {
+            bool offensive = kind == CommandKind.Basic || kind == CommandKind.Skill && (skillId == "heavy" || skillId == "throw_blade");
+            if (!offensive) { SubmitReactiveCommand(kind, skillId); return; }
+            if (!CanUseReactiveCombat() || ReactivePresentationHeld || reactiveConfirmPending ||
+                !View.ReactivePresentationReady || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            if (reactiveActionSelected && reactiveSelectedKind == kind && reactiveSelectedSkill == skillId)
+            {
+                reactiveConfirmPending = View.ConfirmHunterPreview();
+                View.RefreshReactiveCombat();
+                return;
+            }
+            if (!View.SelectHunterPreview(kind == CommandKind.Basic ? "normal" : skillId)) return;
+            reactiveActionSelected = true;
+            reactiveSelectedKind = kind;
+            reactiveSelectedSkill = skillId;
+            View.RefreshReactiveCombat();
+        }
+
+        public bool CancelReactivePreview()
+        {
+            if (!reactiveActionSelected) return false;
+            reactiveActionSelected = reactiveConfirmPending = false;
+            reactiveSelectedSkill = null;
+            View.CancelHunterPreview();
+            View.RefreshReactiveCombat();
+            return true;
+        }
+
         public void SubmitReactiveCommand(CommandKind kind, string skillId)
         {
             if (!CanUseReactiveCombat() || ReactivePresentationHeld ||
                 !View.ReactivePresentationReady || Session.ReactiveCombat.Phase != ReactivePhase.PlayerCommand) return;
+            if (skillId == ReactiveEightEnemyDefinitions.ThrowId && !View.ReactiveThrowReady)
+            {
+                CancelReactivePreview();
+                View.Toast("Анимация броска недоступна.");
+                return;
+            }
             ReactiveCombatSession combat = Session.ReactiveCombat;
             string[] targets = new string[0];
             if (kind == CommandKind.Basic || kind == CommandKind.Skill && skillId != "sweep")
@@ -423,17 +465,25 @@ namespace Rokas.Presentation
             }
             var intent = new CommandIntent(Guid.NewGuid().ToString("N"), Session.ReactiveCombat.Revision,
                 kind, skillId, targets);
+            bool stagedAttack = kind == CommandKind.Basic || kind == CommandKind.Skill &&
+                (skillId == "seal_strike" || skillId == "sweep" || skillId == "heavy" || skillId == "throw_blade");
+            if (reactiveActionSelected && !stagedAttack) View.CancelHunterMotion();
             CommandResult result = Session.ReactiveCombat.SubmitCommand(intent);
+            reactiveActionSelected = reactiveConfirmPending = false;
+            reactiveSelectedSkill = null;
             if (!result.Accepted)
+            {
+                View.CancelHunterPreview();
                 View.Toast(result.Reason == "InsufficientAp" ? "Недостаточно AP." : "Сейчас действие недоступно.");
+            }
             else if (reactiveClock != null && !reactiveClock.IsPaused &&
-                (kind == CommandKind.Basic || kind == CommandKind.Skill &&
-                    (skillId == "seal_strike" || skillId == "sweep" || skillId == "heavy")))
+                stagedAttack)
             {
                 string approachTarget = targets.Length > 0 ? targets[0] : combat.SelectedTargetId;
                 if (string.IsNullOrEmpty(approachTarget) && combat.ActiveEnemyIds.Count > 0)
                     approachTarget = combat.ActiveEnemyIds[0];
-                if (View.StartHunterApproach(approachTarget, skillId == "heavy"))
+                if (skillId == "throw_blade" ? View.StartHunterThrow(approachTarget) :
+                    View.StartHunterApproach(approachTarget, skillId == "heavy"))
                 {
                     // Core accepts the command now. Its authored 0.2 s contact begins when
                     // the visual approach reaches the target, without changing combat rules.
@@ -503,6 +553,12 @@ namespace Rokas.Presentation
 
         private void ClearReactiveBinding()
         {
+            if (reactiveActionSelected)
+            {
+                reactiveActionSelected = reactiveConfirmPending = false;
+                reactiveSelectedSkill = null;
+                View?.CancelHunterMotion();
+            }
             reactiveInput?.SetContext(false);
             reactiveBoundCombat = null;
             reactiveClock = null;
@@ -518,6 +574,7 @@ namespace Rokas.Presentation
 
         private void PauseReactiveCombat(string reason)
         {
+            CancelReactivePreview();
             if (reactiveClock == null || reactiveBoundCombat == null) return;
             long now = reactiveInput.DeviceNowUs;
             if (!reactiveClock.IsPaused) reactiveClock.Pause(now);
@@ -697,6 +754,23 @@ namespace Rokas.Presentation
             }
             lastReactiveDeviceUs = now;
 
+            if (reactiveConfirmPending && View.ReactivePreviewConfirmed)
+            {
+                // Confirm only after the frame-gap gate and any pause/resume lifecycle.
+                // Core must observe this clock time before SubmitCommand records its start.
+                long alignedCombatUs = reactiveClock.CombatTimeAt(now);
+                PresentReactiveStep(combat.Advance(alignedCombatUs, alignedCombatUs - 40000), combat, now);
+                if (!ReactivePresentationHeld && !reactiveClock.IsPaused &&
+                    combat.Phase == ReactivePhase.PlayerCommand)
+                    SubmitReactiveCommand(reactiveSelectedKind, reactiveSelectedSkill);
+                if (reactiveApproachHold)
+                {
+                    reactiveInput.SetContext(false);
+                    View.RefreshReactiveCombat();
+                    return;
+                }
+            }
+
             bool defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
             bool offenseContext = combat.CurrentPlayerSkillId == "heavy";
             bool reactiveInputContext = defenseContext || offenseContext ||
@@ -757,7 +831,8 @@ namespace Rokas.Presentation
         {
             if (Session == null || View == null) return;
             float dt = Mathf.Min(Time.unscaledDeltaTime, .1f);
-            if (focused && Input.GetKeyDown(KeyCode.Escape)) View.Escape();
+            if (focused && Input.GetKeyDown(KeyCode.Escape) && !CancelReactivePreview()) View.Escape();
+            if (focused && Input.GetMouseButtonDown(1) && reactiveActionSelected) CancelReactivePreview();
             if (Session.CombatMode == CombatMode.ReactiveTurns && Session.State.phase == RunPhase.Combat)
                 TickReactiveCombat();
             else

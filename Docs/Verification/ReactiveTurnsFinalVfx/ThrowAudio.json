@@ -1,0 +1,18 @@
+[
+  {
+    "file": "Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Audio\\FinalVfx\\ThrowRelease.wav",
+    "sha256": "3960feef76811ef4afe8f870153dd2f60cde0ebace58df62030785f404e7e65a",
+    "seconds": 0.28,
+    "sampleRate": 22050,
+    "channels": 2,
+    "peak": 0.29847023858310995
+  },
+  {
+    "file": "Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Audio\\FinalVfx\\ThrowContact.wav",
+    "sha256": "f64a709979ccfc5c6db30b2b9cc62f0b3cd8199b377887f70fcd8d229d95f9e5",
+    "seconds": 0.22,
+    "sampleRate": 22050,
+    "channels": 2,
+    "peak": 0.44156800187407874
+  }
+]

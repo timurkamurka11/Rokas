@@ -30,6 +30,7 @@ namespace Rokas.Core.Tests
                 ReactiveTurnsFoundationTests.RunAll();
                 ReactiveTurnsDefenseAndOffenseTests.RunAll();
                 ReactiveTurnsWavesTests.RunAll();
+                ReactiveTurnsThrowTests.RunAll();
                 ReactiveTurnsSaveTests.RunAll();
                 Console.WriteLine("PASS: all Rokas.Core behavior tests");
                 return 0;

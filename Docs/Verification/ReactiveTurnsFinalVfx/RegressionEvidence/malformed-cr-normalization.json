@@ -1,0 +1,222 @@
+[
+  {
+    "path": "Assets/Rokas/Scripts/Core/LiveMessengerService.cs",
+    "canonical_content_sha256": "f9ab30dd5477dc6b3401eb567b94fd3c1b0e038b0080cb2e8d02d3ef45a0ee57",
+    "removed_carriage_returns": 902
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Core/MessageService.cs",
+    "canonical_content_sha256": "dbd29954162d054cd08e0746166cdb4196a6178ac79dba8a6d2b0156487e6127",
+    "removed_carriage_returns": 911
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayCustomGlowAuthoring.cs",
+    "canonical_content_sha256": "7cff92a684021acef5057c7af0d2fff65f7a0f495e09dffada85fef6231afe0a",
+    "removed_carriage_returns": 386
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayWorkshopBuilder.cs",
+    "canonical_content_sha256": "1222e05adbd7ba2cadfeb336c0bb3dfef3898d164b9779207a2746832da756d4",
+    "removed_carriage_returns": 349
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayWorkshopLayoutIO.cs",
+    "canonical_content_sha256": "3c80e6f5fdd93a6d24b770a8994128a6c641b15ebc965e137f9bc1aed004a73c",
+    "removed_carriage_returns": 430
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/RokasVnRuntimeIntroExporter.cs",
+    "canonical_content_sha256": "acb2ddd4f1e59d2512e235b465c4689174c5c56eabdb3e9ff2c572575286ce18",
+    "removed_carriage_returns": 952
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.RuntimeUi.cs",
+    "canonical_content_sha256": "93d5d1c47ff67494681da57ad47cdee67284b61d122957432012fab0e4986c92",
+    "removed_carriage_returns": 227
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.SceneComposerUiFeedback.cs",
+    "canonical_content_sha256": "2d53ddc3ed273d308721d9e5384c4ef044dd1d17abd4c3a5ab8287d29e7c1b40",
+    "removed_carriage_returns": 101
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.cs",
+    "canonical_content_sha256": "53a70fcbde02df3e62afa4a6e5c26396937b8557040839cd8ebd2112dfdc892f",
+    "removed_carriage_returns": 753
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopVn10Resolver.cs",
+    "canonical_content_sha256": "db33cd4d16f89744502a2373409921269516628c9cb1afad9f974196698d5458",
+    "removed_carriage_returns": 744
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs",
+    "canonical_content_sha256": "04cda1390ba287703a7b9c50a1be16720f6697c9782f591902340fb8e9bd52d7",
+    "removed_carriage_returns": 2472
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAssets.cs",
+    "canonical_content_sha256": "3d99a0defdcc05c4da2ca9e7644c5517e50fa0e992c6f64badf78ccb07989e1e",
+    "removed_carriage_returns": 186
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAudioLayers.cs",
+    "canonical_content_sha256": "e544436c4a03da8073e2a0773a6ba46ff12480ba5eea4a1aa5b6d9b6238d4123",
+    "removed_carriage_returns": 373
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs",
+    "canonical_content_sha256": "7a66df9a0c01ae8b2a17e7aebc448270ebbb791e7eb57d17e82f74e50ab06e9c",
+    "removed_carriage_returns": 984
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs",
+    "canonical_content_sha256": "c6ed1213171e1a5c11c1dedbf69bbc7513e7ea06c32c22615736c3d5b12e8bbb",
+    "removed_carriage_returns": 909
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerDecorations.cs",
+    "canonical_content_sha256": "6cbcd97c502a04a4a8f78628cb99f676d253f8f486433a77918d711254c00704",
+    "removed_carriage_returns": 227
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerEffects.cs",
+    "canonical_content_sha256": "012da3535756e1b7f7fdf53a54dc208729282fc82d66714243a0bd5ad09d0605",
+    "removed_carriage_returns": 107
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerMusic.cs",
+    "canonical_content_sha256": "ee5606571811648d582953ad7354f0954a626ce70ea00e8010f485290f496648",
+    "removed_carriage_returns": 178
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerPresentation.cs",
+    "canonical_content_sha256": "597654587ab152ecde74bbd89102e4a62479751188fef569309887a7246cf25e",
+    "removed_carriage_returns": 473
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerTextElements.cs",
+    "canonical_content_sha256": "35128e7f6a6f01e6013bacb5eb05aec547c3ae7539fb80d6ee56d6f22b680bf4",
+    "removed_carriage_returns": 1288
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.cs",
+    "canonical_content_sha256": "4e6dbbb42cc6916a43776d2c39fa7e3550a34cb57cd2bb0d7c4b4b7fda289b1e",
+    "removed_carriage_returns": 562
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindowVn10MotionLab.cs",
+    "canonical_content_sha256": "e29bdff753124880e407aa77eedabb915bab87ea3488743e22f42e3c3b416153",
+    "removed_carriage_returns": 571
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerAudioAudition.cs",
+    "canonical_content_sha256": "b69442039f7c351675a569967dc4b07b398a8b130a98d655fc237b2dd42a52f6",
+    "removed_carriage_returns": 51
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerComposition.cs",
+    "canonical_content_sha256": "1ca01f20dee4fa919dd7ed68a74dd55046f82cf517fba2e1caeae19137e840a7",
+    "removed_carriage_returns": 538
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerPlaybackController.cs",
+    "canonical_content_sha256": "e1bd902ed3d705c9d2fbd468425fe4158c9f4dae9a15d83233c09d191b021909",
+    "removed_carriage_returns": 1824
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTextFontResolver.cs",
+    "canonical_content_sha256": "b2ce11a390dfc1905b6341074ed9cfcec579e8ac09c96f7d2d5bba78eb433cb9",
+    "removed_carriage_returns": 424
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTransitionSampler.cs",
+    "canonical_content_sha256": "57fb0545edd7ef33d49800179a31f481ce269e0850fc063dfa296492da52ddad",
+    "removed_carriage_returns": 619
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTypes.cs",
+    "canonical_content_sha256": "706a102608fd21d715abb244bdb59e822af74d180348b647675934623f44fbaa",
+    "removed_carriage_returns": 506
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnWorkshopPreviewSampleStore.cs",
+    "canonical_content_sha256": "6cb7e14c44b1a8b036d775b93de67d8ee1e3bacaf73058365b3c8a630843b96e",
+    "removed_carriage_returns": 32
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/CombatHud.cs",
+    "canonical_content_sha256": "da2a8a15f98c126f893927c15fe55f0b8438fd143fb1cc33eacf9ce22df25fd3",
+    "removed_carriage_returns": 121
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/ContractPanels.cs",
+    "canonical_content_sha256": "48a84469f1f90f8f0d9ce9dcc588dcd8875e845b190dbdfc83322585f979a7b5",
+    "removed_carriage_returns": 99
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/HomeView.cs",
+    "canonical_content_sha256": "08e7e8952709638cdffd5a488d6ad07f994041517d1eee01990bfe2bb291af08",
+    "removed_carriage_returns": 597
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/HubDialogueConfig.cs",
+    "canonical_content_sha256": "022ef440c46e7b615e6f185f9e6fc1873ae1c2f912a8a3f24cba824fab65955d",
+    "removed_carriage_returns": 584
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs",
+    "canonical_content_sha256": "0b30ebd2d9d5be67a23cd40650eea4283b25596e7b95b6103b6083f53e208b77",
+    "removed_carriage_returns": 457
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs",
+    "canonical_content_sha256": "230b3f018f2d3ca5326edea25a7870dd317c20ee2b5c44b419953bbb8c3b5586",
+    "removed_carriage_returns": 928
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/LaptopNewsRuntime.cs",
+    "canonical_content_sha256": "66b438a4c2e5bbfb44832ab5be24f1fc7e17a238be722314c72ad2dfa4e45f17",
+    "removed_carriage_returns": 524
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/LaptopView.cs",
+    "canonical_content_sha256": "ad6a3803399851158923032e2e26ad6ef2987dd08814a296b7e276380f564656",
+    "removed_carriage_returns": 401
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/MainMenuView.cs",
+    "canonical_content_sha256": "c5b891e752581fe539d4332688b6b23b5b3770758ad62df6727330862f03c772",
+    "removed_carriage_returns": 378
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/MessagesNotificationView.cs",
+    "canonical_content_sha256": "cf5fc4656c2ce7a5e452be6ff50d557b75a684755526f8ec9cb158a24203a004",
+    "removed_carriage_returns": 143
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/RokasDialogueTypewriter.cs",
+    "canonical_content_sha256": "6f6c35570ec546a418a990f75a8a8f956edc6a59e275994fbd8bcaf5f261b5c4",
+    "removed_carriage_returns": 107
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/RokasVnIntroRuntimeProofRunner.cs",
+    "canonical_content_sha256": "65abcb0ee392de4d6d05aadf39bc792eeff5352ffd50ef78784ea605d1e5a1a0",
+    "removed_carriage_returns": 589
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/RokasVnRuntimePlayer.cs",
+    "canonical_content_sha256": "587b9e473a6bb160898994fc464ee9ce2dbb869828577f4c98b32750b03d7cbc",
+    "removed_carriage_returns": 2495
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/SettingsPanel.cs",
+    "canonical_content_sha256": "d40f68df8b73dd2f3431441761cdd7f348e536a8070a33dfda23c3ed0e2fe67f",
+    "removed_carriage_returns": 52
+  },
+  {
+    "path": "Assets/Rokas/Scripts/Presentation/VnIntroView.cs",
+    "canonical_content_sha256": "ec1950b3eb10a8aba7d2855554f6cb50baf762fe043806fe95c0af851c423523",
+    "removed_carriage_returns": 514
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/BlockBurst/app-log.sanitized.log",
+    "original_sha256": "3192ac0d6afc02101a26256f52853a341398985ec52644e1c6a5be80b310ac77",
+    "formatted_sha256": "835b994dc2103c8fd6ba1ce7f372b1cf53ed831021177fe255e0435d6b8a83f6",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/ClawImpact/app-log.sanitized.log",
+    "original_sha256": "f0a0131908a6b3ca6f2b6cc85f2e6f12d9cf37f5b6cc943464a41f6a55ac4c54",
+    "formatted_sha256": "8d289f7f5ecd07150a742786bdd4f5883abe552b9c9bd7d3a9b4ae0c84dec285",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/HeavyBurst/app-log.sanitized.log",
+    "original_sha256": "e53326342549ef5a4795bbf9665fad83c3e52b2c3d88afeef100bc049a5bf995",
+    "formatted_sha256": "9cda109e4f4458368acbd7e59f000b287264bc2eefd95f056a8f541fc9d60d52",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/NormalMist/app-log.sanitized.log",
+    "original_sha256": "6114af84fbfae3da12fd8e21cacca05ba421126e109f58780dd640aca4895180",
+    "formatted_sha256": "84295c434138dbb2fb92acd67793c13b2326ca3cc89e2176104d0c20871e2120",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/PortalVapor/app-log.sanitized.log",
+    "original_sha256": "766c236d0aa817c4bbd5284d73a0e657df6441dc4e79063c7820d3a935a6695e",
+    "formatted_sha256": "45a351d819bf9a8ba7f35193971943a8da875311caf5f667b67e7fd608a306b3",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/ThrowEnergy/app-log.sanitized.log",
+    "original_sha256": "6ed4c1d3539b720c689a2050c17fa4d5ecc62d18533f40d184aab586c1dcb2b0",
+    "formatted_sha256": "c485b5b35fe2152e78d7ba71ab0bce55f3b0c58b47b56c56b3e3dcd2ba79032c",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/EmberGen/evidence/ThrowImpact/app-log.sanitized.log",
+    "original_sha256": "979f94cb754d1b287c377214e33371080b7564a6bcd61edd54b05fdab82c1426",
+    "formatted_sha256": "16089451de7d7a9946bc63ae33155390c33e6dbf977f28befeed0a99c2d5e43a",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  },
+  {
+    "path": "Docs/Verification/ReactiveTurnsFinalVfx/RegressionEvidence/all-editmode-938-of-943.xml",
+    "original_sha256": "9e823a543f6a2a9f042f0cdab4bd6ec6ea84fa38872131fd8a402149151d0c72",
+    "formatted_sha256": "66c63e6cc72b1d04cd256ca6d0408af89bf8d3b144b9ccbcf464744b0256ac85",
+    "change": "line endings and trailing horizontal whitespace only; XML result/test attributes and failure messages unchanged"
+  }
+]

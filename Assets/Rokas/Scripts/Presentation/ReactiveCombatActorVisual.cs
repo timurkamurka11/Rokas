@@ -11,6 +11,7 @@ namespace Rokas.Presentation
         private Transform modelRoot;
         private Animation animationPlayer;
         private Transform[] poseTransforms;
+        private Transform torsoBone;
         private Vector3[] blendPositions;
         private Quaternion[] blendRotations;
         private Vector3[] blendScales;
@@ -18,6 +19,28 @@ namespace Rokas.Presentation
         private ReactiveCombatWeaponAttachment weaponAttachment;
         private ReactiveCombatTwoHandGrip twoHandGrip;
         private GameObject grippedWeapon;
+        private GameObject heldDagger;
+        private Transform swordHomeParent;
+        private Transform swordStow;
+        private bool throwReleased;
+        public Transform HeldDagger => heldDagger == null ? null : heldDagger.transform;
+        public GameObject ThrowingDaggerPrefab => clips.throwingDaggerPrefab;
+        public float ThrowReleaseSeconds => clips.throwReleaseSeconds;
+        public float ThrowContactSeconds => clips.throwContactSeconds;
+        public bool ThrowReady => clips != null && animationPlayer != null && heldDagger != null &&
+            swordStow != null && clips.throwPreparation != null && clips.throwAttack != null &&
+            clips.throwingDaggerPrefab != null && clips.throwPreparation.legacy && clips.throwAttack.legacy &&
+            HasRegisteredClip("ThrowPreparation", clips.throwPreparation) &&
+            HasRegisteredClip("Throw", clips.throwAttack);
+
+        private bool HasRegisteredClip(string alias, AnimationClip source)
+        {
+            // Legacy Animation.AddClip creates a named runtime copy, so comparing
+            // its object identity with the serialized source would reject valid assets.
+            AnimationClip registered = animationPlayer.GetClip(alias);
+            return registered != null && registered.legacy &&
+                Mathf.Abs(registered.length - source.length) < .001f;
+        }
         private readonly Transform[] gripFingers = new Transform[4];
         private readonly Quaternion[] sampledFingerRotations = new Quaternion[4];
         private bool gripApplied;
@@ -49,6 +72,7 @@ namespace Rokas.Presentation
         private Vector2 anchoredXZ;
 
         public Transform ModelRoot => modelRoot;
+        public Vector3 TorsoPoint => torsoBone == null ? BodyBounds.center : torsoBone.position;
         public bool IsDead => dead;
         public bool IsFacingRight => facingRight;
         public float HitStopRemaining => hitStopRemaining;
@@ -169,6 +193,14 @@ namespace Rokas.Presentation
             animationPlayer.playAutomatically = false;
             animationPlayer.enabled = false;
             poseTransforms = model.GetComponentsInChildren<Transform>(true);
+            // Importers may preserve or remove the namespace separator. Cache
+            // the actual anatomical anchor, independently of animated skin bounds.
+            foreach (string suffix in new[] { "Spine2", "Spine1", "Spine" })
+            {
+                foreach (Transform bone in poseTransforms)
+                    if (bone.name.EndsWith(suffix, StringComparison.Ordinal)) { torsoBone = bone; break; }
+                if (torsoBone != null) break;
+            }
             blendPositions = new Vector3[poseTransforms.Length];
             blendRotations = new Quaternion[poseTransforms.Length];
             blendScales = new Vector3[poseTransforms.Length];
@@ -177,6 +209,8 @@ namespace Rokas.Presentation
             AddClip(clips.heavy, "Heavy", WrapMode.Once);
             AddClip(clips.preparation, "Preparation", WrapMode.ClampForever);
             AddClip(clips.heavyPreparation, "HeavyPreparation", WrapMode.ClampForever);
+            AddClip(clips.throwPreparation, "ThrowPreparation", WrapMode.ClampForever);
+            AddClip(clips.throwAttack, "Throw", WrapMode.Once);
             AddClip(clips.enterBattle, "EnterBattle", WrapMode.Once);
             AddClip(clips.entranceWalk, "EntranceWalk", WrapMode.Loop);
             AddClip(clips.guard, "Guard", WrapMode.ClampForever);
@@ -196,6 +230,21 @@ namespace Rokas.Presentation
                 weaponAttachment = gameObject.AddComponent<ReactiveCombatWeaponAttachment>();
                 weaponAttachment.Configure(modelRoot, clips);
                 grippedWeapon = weaponAttachment.CurrentWeapon;
+                swordHomeParent = grippedWeapon.transform.parent;
+                swordStow = new GameObject("SwordStow").transform;
+                swordStow.SetParent(modelRoot.Find("mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2"), false);
+                // Keep the long blade below the Throw hand and behind the torso.
+                swordStow.localPosition = new Vector3(.06f, -.08f, -.14f);
+                swordStow.localRotation = Quaternion.identity;
+                if (clips.throwingDaggerPrefab != null)
+                {
+                    heldDagger = Instantiate(clips.throwingDaggerPrefab, weaponAttachment.Socket.parent, false);
+                    heldDagger.name = "KeikoHeldThrowingDagger";
+                    heldDagger.transform.localPosition = clips.daggerSocketPosition;
+                    heldDagger.transform.localRotation = Quaternion.Euler(clips.daggerSocketEuler);
+                    foreach (Transform child in heldDagger.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = gameObject.layer;
+                    heldDagger.SetActive(false);
+                }
                 twoHandGrip = new ReactiveCombatTwoHandGrip(modelRoot,
                     weaponAttachment.CurrentWeapon == null ? null : weaponAttachment.CurrentWeapon.transform);
                 foreach (Transform bone in weaponAttachment.Socket.parent.GetComponentsInChildren<Transform>(true))
@@ -285,6 +334,23 @@ namespace Rokas.Presentation
             // Hold its final ready pose if that transition waits on another beat.
             poseSecondsLeft = 0f;
             proceduralSecondsLeft = 0f;
+        }
+        public void PlayThrowPreparation()
+        {
+            if (dead || animationPlayer.GetClip("ThrowPreparation") == null) return;
+            throwReleased = false;
+            BeginPose("ThrowPreparation", 1f);
+            poseSecondsLeft = proceduralSecondsLeft = 0f;
+        }
+        public void PlayThrow()
+        {
+            throwReleased = false;
+            PlayOneShot("Throw", 1.15f, 0f);
+        }
+        public void ReleaseThrowWeapon()
+        {
+            throwReleased = true;
+            heldDagger?.SetActive(false);
         }
         public void PlayEnterBattle(float duration = 0f) =>
             PlayOneShot("EnterBattle", 1.2f, 0f, "Idle", duration > 0f ? duration : EnterBattleDuration);
@@ -655,7 +721,20 @@ namespace Rokas.Presentation
             // Attack/preparation/entrance FBX takes already contain both hands
             // and the closed index fingers. Keep extra finger curl for legacy
             // movement only; the support palm correction also covers blends.
-            twoHandGrip?.Apply();
+            bool throwing = activeAlias == "ThrowPreparation" || activeAlias == "Throw";
+            Transform weapon = grippedWeapon.transform;
+            if (throwing) swordStow.rotation = Quaternion.LookRotation(
+                (Vector3.down - transform.right * .4f).normalized, Vector3.forward);
+            Transform desiredParent = throwing ? swordStow : swordHomeParent;
+            if (weapon.parent != desiredParent)
+            {
+                weapon.SetParent(desiredParent, false);
+                weapon.localPosition = Vector3.zero;
+                weapon.localRotation = Quaternion.identity;
+                weapon.localScale = Vector3.one;
+            }
+            heldDagger?.SetActive(throwing && !throwReleased);
+            if (!throwing) twoHandGrip?.Apply();
             if (activeAlias != "Walk") return;
             for (int i = 0; i < gripFingers.Length; i++)
                 if (gripFingers[i] != null) sampledFingerRotations[i] = gripFingers[i].localRotation;

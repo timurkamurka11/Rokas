@@ -1,0 +1,92 @@
+[
+  {
+    "node": 12,
+    "key": "exposed.position",
+    "value": [
+      0,
+      0,
+      85
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.yaw",
+    "value": [
+      0
+    ]
+  },
+  {
+    "node": 12,
+    "key": "exposed.pitch",
+    "value": [
+      -90
+    ]
+  },
+  {
+    "node": 12,
+    "key": "use_back_plate",
+    "value": false
+  },
+  {
+    "node": 13,
+    "key": "first_frame",
+    "value": [
+      8
+    ]
+  },
+  {
+    "node": 13,
+    "key": "stride_frames",
+    "value": [
+      4
+    ]
+  },
+  {
+    "node": 13,
+    "key": "sizes.flipbook_col_row",
+    "value": [
+      8,
+      8
+    ]
+  },
+  {
+    "node": 13,
+    "key": "sizes.sprite_size",
+    "value": [
+      128,
+      128
+    ]
+  },
+  {
+    "node": 13,
+    "key": "sizes.flipbook_size",
+    "value": [
+      1024,
+      1024
+    ]
+  },
+  {
+    "node": 4,
+    "key": "master_smoke_dissipation",
+    "value": [
+      95
+    ]
+  },
+  {
+    "node": 4,
+    "key": "adv_parameters.smoke_dissipation_rate",
+    "value": [
+      90.25
+    ]
+  },
+  {
+    "node": 8,
+    "key": "color_single_smoke",
+    "value": [
+      0.12,
+      0.24,
+      0.5,
+      1
+    ]
+  }
+]
