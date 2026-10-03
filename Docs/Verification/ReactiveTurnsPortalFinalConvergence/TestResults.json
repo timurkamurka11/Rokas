@@ -1,0 +1,42 @@
+{
+  "focused": {
+    "path": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\unity\\convergence-soft-final-20261003-213134-results.xml",
+    "sha256": "937ce1d196adda752825c020afd7484b64836b6d9a2ed4ae8cc1846f5d4bc882",
+    "result": "Passed",
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "duration": 28.6308154,
+    "failures": [],
+    "longRun": []
+  },
+  "relevantCombat": {
+    "path": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\unity\\regression-20261003-213331-results.xml",
+    "sha256": "c88cffa4ca7fe3bfcd02b53398cd2b746fd30c6d2147dde23cb00f70dcf22505",
+    "result": "Passed",
+    "total": 80,
+    "passed": 80,
+    "failed": 0,
+    "skipped": 0,
+    "duration": 1022.714754,
+    "failures": [],
+    "longRun": [
+      {
+        "test": "Rokas.Tests.ReactivePolishIILiveLongRunPlayModeTests.FiveNormalFiveHeavyThenTenAlternatingLiveCommandsCompleteWithDefenseAndExactReturns",
+        "result": "Passed",
+        "duration": "355.825236"
+      }
+    ]
+  },
+  "visual": {
+    "capture": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft",
+    "motionFile": "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Docs\\Verification\\ReactiveTurnsPortalFinalConvergence\\Visual\\ROKAS-portal-full-motion.mp4",
+    "runtime": {
+      "portals": 3,
+      "maximumParticles": 69,
+      "maximumMaterials": 20
+    }
+  },
+  "review": "Focused independent read-only code review: no actionable defects; runtime visual comparison still not pixel-identical to reference."
+}

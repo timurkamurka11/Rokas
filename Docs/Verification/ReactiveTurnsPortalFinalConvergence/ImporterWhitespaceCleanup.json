@@ -1,0 +1,229 @@
+{
+  "files": [
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Enter battle corrected.fbx.meta",
+      "before_sha256": "07327dfb484ee8b41822b842c7e81b991a6b87f410c5e3a22de402ae389354ad",
+      "after_sha256": "fcd0255f70487ccb4e8560a186e7a0cf81d184995b99e1ecd86597576e05ab02",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Enter battle settle.fbx.meta",
+      "before_sha256": "6d973e44da0f7b6e7e7a366191107732dd6091f407ef1b09e017b82b29d1f9c9",
+      "after_sha256": "b8e3c4fa358c2657b548bb6c5a3c281742a2e2c812b8b4d77e1a62c3f7b9cb01",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Enter the batle.fbx.meta",
+      "before_sha256": "785a0bd80b0d40f757af3d34f796f6c805f14ff0c77083ad24d3df72d2cab027",
+      "after_sha256": "c37f72ece845aa7c2572080cbce808f35baf7695361d4ff31f1110b7b6102fee",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack corrected.fbx.meta",
+      "before_sha256": "d0e1ca8b50dcc26ff65f22e93e7e2303bee37db59582d705f0b0be90188b752f",
+      "after_sha256": "efa39075fdf9af29e0d353eb5ccfb060f5bf6640b2b38cda8febd3d4e824bf21",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Hard jump attack.fbx.meta",
+      "before_sha256": "b19a4efe84f5e280dc7cde0b046d4995d991567bba4bed6984da23ee02dfb92b",
+      "after_sha256": "d27a496f9d4bdf8e47a9da0e91a9dd180926bc90d266f978e560dd8fdad9bcf0",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Heavy preparation.fbx.meta",
+      "before_sha256": "4a45e11878d3814d48d17748f08e0112dc7c18ac34da0654e4830292cb461e59",
+      "after_sha256": "d78050f16c724fb748655773e8816b92cb1b53561e678f6459b842e0c2b5fb26",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Normal attack corrected.fbx.meta",
+      "before_sha256": "9b607e89b900712fb94bb70bdc8af810f634ec1e568ee2e0208f269b53b2db78",
+      "after_sha256": "1b7f29400b5986614605a82470191eeebeea2ee6704072ed4d2cb855af580aa0",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Normal attack.fbx.meta",
+      "before_sha256": "5e068fca60a6218d22f61378f7ef187b6b46f83a030e0cbe4ef894be7f0cb4b9",
+      "after_sha256": "8b602bfb887724481be2b45aead1ce0dd2781b247ffe3ca43d7520d51d511631",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Normal preparation.fbx.meta",
+      "before_sha256": "f1195368d10bbdf20e7fa49451ead6790e104518ec35ea075362a32a1ef6fbfa",
+      "after_sha256": "eae12abb58b99259a26b95c8a13ff2ff81fba1dd4b15de879704e35e98c21aea",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Throw attack corrected.fbx.meta",
+      "before_sha256": "a40cfa7ff3ff0351e07771e1e14908f3e05ec73ef8a73d28e691548b87ff7951",
+      "after_sha256": "ed65c58c921e6f5caae750956c51a0b5e7486ef8ef1fbb5134dd63203a773441",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Throw preparation.fbx.meta",
+      "before_sha256": "20c1e73ac19791d683edf45116de76d83bd4992807e8fc6e456f9553ff6a5d8a",
+      "after_sha256": "f45b3d94d320d4e2ac9c1b30659c849f00cecf21c1f9c37dc6e4b709b24f8d27",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Two handed approach.fbx.meta",
+      "before_sha256": "e073ea03603318fe6432e4355a8fe385af2dafbc28facb4e26a0d0fd502f1973",
+      "after_sha256": "d576a6899f6dc9688425c3c623f5374c3b13a8b37617f0420b1eba6fddfd3e25",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Two handed battle idle.fbx.meta",
+      "before_sha256": "21390838b012f0bfcd6ab7320e38086996115a6f2cd76f24fdadcdb448ef90c8",
+      "after_sha256": "8365f2e5c4dde1f0c1624e173aced96f1ad31f7b3885443e62046c462d683fdb",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Two handed dodge backstep.fbx.meta",
+      "before_sha256": "84da798c6a6e358ca835721f2afd662bc35e169e541291411c3322918612104e",
+      "after_sha256": "293056c085a46dda599806b69841dfa5f46bebf313fd10f1b5239e8739b2de31",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Two handed return.fbx.meta",
+      "before_sha256": "91832fbd4098fae08b533e000a2b97d1333d655c8d54aae3af12a8c6724ca2d4",
+      "after_sha256": "21922f85c5d9f6cc2414982f36fd424c3a199b5d57a74cacebaa155bea0a2a32",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Keiko/Two handed sword block.fbx.meta",
+      "before_sha256": "d8fafdeb8fb8c575de1e9a75adf6263a2fbf9e220c60a3858aeb589d8d9e5a70",
+      "after_sha256": "88fe9a39d7924b7548beece7a9da38ddc318a14545984a5a4cd9c54bfbc89649",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Weapons/KeikoSword/metal+sword+3d+model.fbx.meta",
+      "before_sha256": "76198989ee279e8e4ef7a13b77a1dbdd9fb93a19dd8d67ee874e742a3cf56086",
+      "after_sha256": "79aa799d50c1baa43ea20d5b21dea0313afe4c1e36d528e5b8eabd50803c0ece",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Weapons/KeikoThrowingDagger/KeikoThrowingDagger.fbx.meta",
+      "before_sha256": "d7ea40011277d64f32e8ec5ccf44ea4e7449afba060307c1a1b99138f136c636",
+      "after_sha256": "acef687e13ebfd4f1add11d343f6db0a0883410ffd159dbf2f9e982566aef8f8",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Yokai/Claw attack corrected.fbx.meta",
+      "before_sha256": "2a712b9b9bb154c763d7b328fdccbf51dd5cff008e6882bad09776e9f2d7aa87",
+      "after_sha256": "35eec5ca3104be94f1f3db76137fdeae032d39fbbbe737694604a51b47ec12aa",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Yokai/Claw heavy corrected.fbx.meta",
+      "before_sha256": "1941e2614e302b39318ddb5d5ae9f59c6fa62540bd31bd1f07f07275712a1123",
+      "after_sha256": "4a14c0686f0356b1eeec0f582d1d5b83665d099d671f2b90976f38a263370b80",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Art/CombatActors/Yokai/Claw locomotion corrected.fbx.meta",
+      "before_sha256": "52c218a37ce7b0e67fa06ee5a9d04bd4034ab3c74f5d0ad47d47f1f238b7bb5d",
+      "after_sha256": "e7d55b2042d294b67be1fc11f4cc508fe4c1e3f39ebfa65e7bf9330d5d1c412b",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/BlockBurst.png.meta",
+      "before_sha256": "71e5bc213d69baa1b4d2d1841be4636a34e9589d81f87d288dfcb6fcee778cc9",
+      "after_sha256": "210b8bf3a14b4c45c546416fce551ca3c3144ded92ec318d4312e5181bb0646f",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ClawImpact.png.meta",
+      "before_sha256": "e63a9a29d4044ecec47e3ba418611af5a447b94b193065c2e5e139ba8542a1dd",
+      "after_sha256": "e451e2fa1e42f86abe334337b16ad6574160fe30a8b380f7c22db579735ee213",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/HeavyBurst.png.meta",
+      "before_sha256": "1c210dd7129c9d82303db864cc74cc8417ce53f2ead1f2f977dad4fff9b938d8",
+      "after_sha256": "87be88b38d2d787fa941da8f5ab89ae6d5997eec90a07cabe56283faa461e5b4",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/NormalMist.png.meta",
+      "before_sha256": "a0e9fff8be1d35d009043092ddd881fcd83475caa0a9296b92edff90fe19b151",
+      "after_sha256": "1daa1415a2d38749c118b86a222f8f3c5974a952e531af3fed7250857e054aeb",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/PortalVapor.png.meta",
+      "before_sha256": "b87e7aeb2587b9619cf38ff4984e461dd1d411d3acf5021bb605f70bc98af023",
+      "after_sha256": "da2e412fd96dada297d0f168624beace5995dff8f6075fc107007fff468db99a",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_Collapse.png.meta",
+      "before_sha256": "73411c5ffa42efd6f9945cb6ab77d3c763231b5c51aa80b3df6458b21646bcc0",
+      "after_sha256": "11efc464d5567f2d71a2a13af58858de3eafd07acfc305548343a8692549fe13",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_EdgeSmoke.png.meta",
+      "before_sha256": "0dbdc12d1bf428d7ad8b291eaca8647fff54f55c68eb8081c85ba0aa57f3ae4f",
+      "after_sha256": "b0878990224292fca5da650dd7b3618998c23377297bfa3372abeeecbe334d64",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_InnerVapor.png.meta",
+      "before_sha256": "1c9532b536899818adcc8c017f0ca974024e1be1030c019f11f7d937984820e2",
+      "after_sha256": "5573f0076a5f05245217733a0e0eda4d12795ae9d39c4db6f1c01939012d86b4",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/Portal_Wisps.png.meta",
+      "before_sha256": "077e14eeac6b007cd7d80951838a8e6ca98d883b3505b7282585d0a4ed591093",
+      "after_sha256": "7d77d489abb00efdb36b365e7159241ddbabe349ef88dcc366819d342b33741d",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ThrowEnergy.png.meta",
+      "before_sha256": "99f362c6e730539f096f3099a62b51df0b24f28f71a8823aeb1170c2eda198d6",
+      "after_sha256": "83957a5ad72fd27963b42ae9d81821b396e4c35851b4002af4a2e74a855b6a7a",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    },
+    {
+      "path": "Assets/Rokas/Resources/Combat/ReactiveTurns/Vfx/EmberGen/ThrowImpact.png.meta",
+      "before_sha256": "d381dce8c651025643affec430730dfda4e8348579b008484f25b7a922696feb",
+      "after_sha256": "43f1025878f8dcca27ad5a8fe8ddd075f68ee20ffe928ecceb7c1176f3baf7f1",
+      "semanticChange": false,
+      "normalizedEqualsInitialHead": true
+    }
+  ],
+  "protectedUserFilesUntouched": true
+}

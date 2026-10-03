@@ -1,0 +1,73 @@
+[
+  {
+    "argv": [
+      "git",
+      "status",
+      "--short"
+    ],
+    "exit": 0,
+    "stdout": "M  Assets/Rokas/Resources/Combat/ReactiveCombatPortalLightning.shader\nM  Assets/Rokas/Resources/Combat/ReactiveCombatPortalRibbon.shader\nM  Assets/Rokas/Resources/Combat/ReactiveCombatPortalVolume.shader\n M Assets/Rokas/Scripts/Core/LiveMessengerService.cs\n M Assets/Rokas/Scripts/Core/MessageService.cs\n M Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayCustomGlowAuthoring.cs\n M Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayWorkshopBuilder.cs\n M Assets/Rokas/Scripts/Editor/HomeOverlayWorkshop/MainRoomOverlayWorkshopLayoutIO.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/RokasVnRuntimeIntroExporter.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.RuntimeUi.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.SceneComposerUiFeedback.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopPreviewRenderer.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopVn10Resolver.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposer.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAssets.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAudioLayers.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerAuthoring.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerCharacterStaging.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerDecorations.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerEffects.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerMusic.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerPresentation.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.SceneComposerTextElements.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindow.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnPresentationWorkshopWindowVn10MotionLab.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerAudioAudition.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerComposition.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerPlaybackController.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTextFontResolver.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTransitionSampler.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnSceneComposerTypes.cs\n M Assets/Rokas/Scripts/Editor/VnUiWorkshop/VnWorkshopPreviewSampleStore.cs\n M Assets/Rokas/Scripts/Presentation/CombatHud.cs\n M Assets/Rokas/Scripts/Presentation/ContractPanels.cs\n M Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs\n M Assets/Rokas/Scripts/Presentation/HomeView.cs\n M Assets/Rokas/Scripts/Presentation/HubDialogueConfig.cs\n M Assets/Rokas/Scripts/Presentation/LaptopFoodView.cs\n M Assets/Rokas/Scripts/Presentation/LaptopMessagesView.cs\n M Assets/Rokas/Scripts/Presentation/LaptopNewsRuntime.cs\n M Assets/Rokas/Scripts/Presentation/LaptopView.cs\n M Assets/Rokas/Scripts/Presentation/MainMenuView.cs\n M Assets/Rokas/Scripts/Presentation/MessagesNotificationView.cs\nM  Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs\n M Assets/Rokas/Scripts/Presentation/RokasDialogueTypewriter.cs\n M Assets/Rokas/Scripts/Presentation/RokasView.cs\n M Assets/Rokas/Scripts/Presentation/RokasVnIntroRuntimeProofRunner.cs\n M Assets/Rokas/Scripts/Presentation/RokasVnRuntimePlayer.cs\n M Assets/Rokas/Scripts/Presentation/SettingsPanel.cs\n M Assets/Rokas/Scripts/Presentation/VnIntroView.cs\n?? Assets/Rokas/Art/UI/Workbench.meta\n?? Assets/Rokas/Resources/UI.meta\n?? Assets/Rokas/Resources/UI/\n?? Assets/Rokas/Scripts/Presentation/WorkbenchRedesignUi.cs\n?? Assets/Rokas/Scripts/Presentation/WorkbenchRedesignUi.cs.meta\n?? Assets/_Recovery.meta\n?? TL.log\n?? TestLog-EditMode.log\n?? TestLog-HomeAtmo.log\n?? TestLog-HomeScan.log\n?? TestResults-HomeScan.xml\n?? apply_3d_video_ui.py\n?? apply_fixes.py\n?? apply_fixes_3d.py\n?? apply_fixes_hollow.py\n?? apply_flash_transition.py\n?? check_hash.py\n?? check_img.py\n?? fix_close.py\n?? fix_compiler_error.py\n?? fix_laptop_mojibake.py\n?? fix_uvRect.py\n?? full_write_hollow.py\n?? write_full_ui.py\n?? write_full_ui_crossfade.py\n?? write_workbench.py\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--stat"
+    ],
+    "exit": 0,
+    "stdout": " Assets/Rokas/Scripts/Core/LiveMessengerService.cs  |   2 +-\n Assets/Rokas/Scripts/Core/MessageService.cs        |   2 +-\n .../MainRoomOverlayCustomGlowAuthoring.cs          |   2 +-\n .../MainRoomOverlayWorkshopBuilder.cs              |   2 +-\n .../MainRoomOverlayWorkshopLayoutIO.cs             |   2 +-\n .../VnUiWorkshop/RokasVnRuntimeIntroExporter.cs    |   2 +-\n ...resentationWorkshopPreviewRenderer.RuntimeUi.cs |   2 +-\n ...kshopPreviewRenderer.SceneComposerUiFeedback.cs |   2 +-\n .../VnPresentationWorkshopPreviewRenderer.cs       |   2 +-\n .../VnPresentationWorkshopVn10Resolver.cs          |   2 +-\n .../VnPresentationWorkshopWindow.SceneComposer.cs  |   2 +-\n ...esentationWorkshopWindow.SceneComposerAssets.cs |   2 +-\n ...ationWorkshopWindow.SceneComposerAudioLayers.cs |   2 +-\n ...ntationWorkshopWindow.SceneComposerAuthoring.cs |   2 +-\n ...WorkshopWindow.SceneComposerCharacterStaging.cs |   2 +-\n ...ationWorkshopWindow.SceneComposerDecorations.cs |   2 +-\n ...sentationWorkshopWindow.SceneComposerEffects.cs |   2 +-\n ...resentationWorkshopWindow.SceneComposerMusic.cs |   2 +-\n ...tionWorkshopWindow.SceneComposerPresentation.cs |   2 +-\n ...tionWorkshopWindow.SceneComposerTextElements.cs |   2 +-\n .../VnUiWorkshop/VnPresentationWorkshopWindow.cs   |   2 +-\n .../VnPresentationWorkshopWindowVn10MotionLab.cs   |   2 +-\n .../VnUiWorkshop/VnSceneComposerAudioAudition.cs   |   2 +-\n .../VnUiWorkshop/VnSceneComposerComposition.cs     |   2 +-\n .../VnSceneComposerPlaybackController.cs           |   2 +-\n .../VnSceneComposerTextFontResolver.cs             |   2 +-\n .../VnSceneComposerTransitionSampler.cs            |   2 +-\n .../Editor/VnUiWorkshop/VnSceneComposerTypes.cs    |   2 +-\n .../VnUiWorkshop/VnWorkshopPreviewSampleStore.cs   |   2 +-\n Assets/Rokas/Scripts/Presentation/CombatHud.cs     |   2 +-\n .../Rokas/Scripts/Presentation/ContractPanels.cs   |   2 +-\n .../Scripts/Presentation/HomeFinishedUiRuntime.cs  | 374 ++++++++++++++++++---\n Assets/Rokas/Scripts/Presentation/HomeView.cs      |   4 +-\n .../Scripts/Presentation/HubDialogueConfig.cs      |   2 +-\n .../Rokas/Scripts/Presentation/LaptopFoodView.cs   |   2 +-\n .../Scripts/Presentation/LaptopMessagesView.cs     |   2 +-\n .../Scripts/Presentation/LaptopNewsRuntime.cs      |   2 +-\n Assets/Rokas/Scripts/Presentation/LaptopView.cs    |   2 +-\n Assets/Rokas/Scripts/Presentation/MainMenuView.cs  |   2 +-\n .../Presentation/MessagesNotificationView.cs       |   2 +-\n .../Presentation/RokasDialogueTypewriter.cs        |   2 +-\n Assets/Rokas/Scripts/Presentation/RokasView.cs     |   7 +\n .../Presentation/RokasVnIntroRuntimeProofRunner.cs |   2 +-\n .../Scripts/Presentation/RokasVnRuntimePlayer.cs   |   2 +-\n Assets/Rokas/Scripts/Presentation/SettingsPanel.cs |   2 +-\n Assets/Rokas/Scripts/Presentation/VnIntroView.cs   |   2 +-\n 46 files changed, 383 insertions(+), 88 deletions(-)\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--cached",
+      "--stat"
+    ],
+    "exit": 0,
+    "stdout": " .../Combat/ReactiveCombatPortalLightning.shader    |  13 +-\n .../Combat/ReactiveCombatPortalRibbon.shader       |  20 +--\n .../Combat/ReactiveCombatPortalVolume.shader       |  55 +++++++--\n .../Presentation/ReactiveCombatPortalEffect.cs     | 137 ++++++++++++++++-----\n 4 files changed, 171 insertions(+), 54 deletions(-)\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "exit": 0,
+    "stdout": "4bba762727fdc6a56f2152c9c5c21e70350a4cf2\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "rev-parse",
+      "HEAD^{tree}"
+    ],
+    "exit": 0,
+    "stdout": "5e22a50675dd11509c5c4e4061499481310941eb\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "branch",
+      "--show-current"
+    ],
+    "exit": 0,
+    "stdout": "r11-finished-ui\n",
+    "stderr": ""
+  }
+]

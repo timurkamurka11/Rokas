@@ -1,0 +1,66 @@
+{
+  "source": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft",
+  "phases": [
+    {
+      "phase": "ribbons",
+      "referenceFrame": 36,
+      "target": 0.7,
+      "actual": 0.6714432835578918,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0052.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\1-ribbons.jpg"
+    },
+    {
+      "phase": "formation",
+      "referenceFrame": 53,
+      "target": 1.4,
+      "actual": 1.4026504755020142,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0058.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\2-formation.jpg"
+    },
+    {
+      "phase": "open",
+      "referenceFrame": 70,
+      "target": 2.1,
+      "actual": 2.1464595794677734,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0064.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\3-open.jpg"
+    },
+    {
+      "phase": "reveal",
+      "referenceFrame": 86,
+      "target": 2.766667,
+      "actual": 2.772890329360962,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0069.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\4-reveal.jpg"
+    },
+    {
+      "phase": "half-emergence",
+      "referenceFrame": 120,
+      "target": 4.2,
+      "actual": 4.233754634857178,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0081.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\5-half-emergence.jpg"
+    },
+    {
+      "phase": "exit",
+      "referenceFrame": 136,
+      "target": 4.866667,
+      "actual": 4.820032596588135,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0086.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\6-exit.jpg"
+    },
+    {
+      "phase": "collapse",
+      "referenceFrame": 151,
+      "target": 5.466667,
+      "actual": 5.515275955200195,
+      "runtimeFrame": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\frame-0092.png",
+      "comparison": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\review\\7-collapse.jpg"
+    }
+  ],
+  "stats": {
+    "portals": 3,
+    "maximumParticles": 69,
+    "maximumMaterials": 20
+  }
+}

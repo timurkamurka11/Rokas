@@ -1,0 +1,47 @@
+{
+  "method": "Illustrative interior luminance only: manually marked aperture region, excluding rim and external smoke. Not a visual-quality similarity score. Different capture phase error is recorded in Comparison.json.",
+  "rows": [
+    {
+      "label": "reference",
+      "center": [
+        447,
+        226
+      ],
+      "radii": [
+        92,
+        102
+      ],
+      "medianInteriorLuma": 46.29,
+      "meanInteriorLuma": 56.38,
+      "fractionAbove70": 0.2401
+    },
+    {
+      "label": "before",
+      "center": [
+        1080,
+        228
+      ],
+      "radii": [
+        90,
+        103
+      ],
+      "medianInteriorLuma": 5.86,
+      "meanInteriorLuma": 10.87,
+      "fractionAbove70": 0.0012
+    },
+    {
+      "label": "after",
+      "center": [
+        1080,
+        228
+      ],
+      "radii": [
+        90,
+        103
+      ],
+      "medianInteriorLuma": 25.16,
+      "meanInteriorLuma": 42.62,
+      "fractionAbove70": 0.179
+    }
+  ]
+}

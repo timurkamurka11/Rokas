@@ -1,0 +1,174 @@
+{
+  "baseline": "4bba762",
+  "source_sha256": {
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs": "d81f6e18a8838e828b8ad225088c36bc796aeefda3d422f7e6d61a6120d79301",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalRibbon.shader": "9f04487a711a673e17e107206cd8feb4ad52d182f65b5e68123e95b7f0c8ebe3",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalLightning.shader": "bc82c9451fee5dd9d376596dc48f7d4c5cb30620cab59a6997000a9ab34ec438",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalVolume.shader": "2e581615da051eb6e3a1835d62a00b85fb37e1c928098df385b07d580bc1a863"
+  },
+  "baseline_counts": {
+    "ribbons": 7,
+    "steps_per_ribbon": 48,
+    "vertices_per_ribbon": 96,
+    "triangles_per_ribbon": 94,
+    "ribbon_vertices_total": 672,
+    "ribbon_triangles_total": 658,
+    "effect_owned_meshes_excluding_ember": 9,
+    "effect_owned_materials_excluding_ember": 12,
+    "ember_owned_meshes": 4,
+    "ember_owned_materials": 4,
+    "total_owned_meshes_including_ember": 13,
+    "total_owned_materials_including_ember": 16,
+    "mesh_renderers_excluding_ember": 10,
+    "ember_mesh_renderers": 4,
+    "line_renderers": 24,
+    "line_control_points": 816,
+    "particle_system_renderers": 1,
+    "max_spark_particles": 96,
+    "all_renderer_components_including_ember": 39,
+    "owned_mesh_vertices_excluding_renderer_reuse": 696,
+    "owned_mesh_triangles_excluding_renderer_reuse": 670,
+    "mesh_vertices_if_all_mesh_renderers_draw": 700,
+    "mesh_triangles_if_all_mesh_renderers_draw": 672,
+    "lights": 1,
+    "notes": "Counts derive from source construction; renderer count is not a measured draw-call count. LineRenderer generated native geometry and particle billboards are excluded from explicit mesh vertex/triangle totals."
+  },
+  "current_counts": {
+    "ribbons": 11,
+    "steps_per_ribbon": 64,
+    "vertices_per_ribbon": 128,
+    "triangles_per_ribbon": 126,
+    "ribbon_vertices_total": 1408,
+    "ribbon_triangles_total": 1386,
+    "effect_owned_meshes_excluding_ember": 13,
+    "effect_owned_materials_excluding_ember": 16,
+    "ember_owned_meshes": 4,
+    "ember_owned_materials": 4,
+    "total_owned_meshes_including_ember": 17,
+    "total_owned_materials_including_ember": 20,
+    "mesh_renderers_excluding_ember": 14,
+    "ember_mesh_renderers": 4,
+    "line_renderers": 24,
+    "line_control_points": 816,
+    "particle_system_renderers": 1,
+    "max_spark_particles": 96,
+    "all_renderer_components_including_ember": 43,
+    "owned_mesh_vertices_excluding_renderer_reuse": 1432,
+    "owned_mesh_triangles_excluding_renderer_reuse": 1398,
+    "mesh_vertices_if_all_mesh_renderers_draw": 1436,
+    "mesh_triangles_if_all_mesh_renderers_draw": 1400,
+    "lights": 1,
+    "notes": "Counts derive from source construction; renderer count is not a measured draw-call count. LineRenderer generated native geometry and particle billboards are excluded from explicit mesh vertex/triangle totals."
+  },
+  "portal_atlases": [
+    {
+      "name": "Portal_Wisps",
+      "path": "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Vfx\\EmberGen\\Portal_Wisps.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipmaps_enabled": 0,
+      "standalone_texture_format_enum": 25,
+      "standalone_override": 1,
+      "format": "BC7 (Standalone enum 25)",
+      "bc7_no_mip_payload_bytes": 1048576,
+      "png_disk_bytes": 315662,
+      "is_readable": 0,
+      "png_identical_to_4bba762": true,
+      "meta_equal_to_4bba762_ignoring_line_endings_and_trailing_whitespace": true
+    },
+    {
+      "name": "Portal_InnerVapor",
+      "path": "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Vfx\\EmberGen\\Portal_InnerVapor.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipmaps_enabled": 0,
+      "standalone_texture_format_enum": 25,
+      "standalone_override": 1,
+      "format": "BC7 (Standalone enum 25)",
+      "bc7_no_mip_payload_bytes": 1048576,
+      "png_disk_bytes": 351486,
+      "is_readable": 0,
+      "png_identical_to_4bba762": true,
+      "meta_equal_to_4bba762_ignoring_line_endings_and_trailing_whitespace": true
+    },
+    {
+      "name": "Portal_EdgeSmoke",
+      "path": "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Vfx\\EmberGen\\Portal_EdgeSmoke.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipmaps_enabled": 0,
+      "standalone_texture_format_enum": 25,
+      "standalone_override": 1,
+      "format": "BC7 (Standalone enum 25)",
+      "bc7_no_mip_payload_bytes": 1048576,
+      "png_disk_bytes": 488558,
+      "is_readable": 0,
+      "png_identical_to_4bba762": true,
+      "meta_equal_to_4bba762_ignoring_line_endings_and_trailing_whitespace": true
+    },
+    {
+      "name": "Portal_Collapse",
+      "path": "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY\\Assets\\Rokas\\Resources\\Combat\\ReactiveTurns\\Vfx\\EmberGen\\Portal_Collapse.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "mipmaps_enabled": 0,
+      "standalone_texture_format_enum": 25,
+      "standalone_override": 1,
+      "format": "BC7 (Standalone enum 25)",
+      "bc7_no_mip_payload_bytes": 1048576,
+      "png_disk_bytes": 532211,
+      "is_readable": 0,
+      "png_identical_to_4bba762": true,
+      "meta_equal_to_4bba762_ignoring_line_endings_and_trailing_whitespace": true
+    }
+  ],
+  "total_bc7_no_mip_payload_bytes": 4194304,
+  "texture_memory_limit": "Calculated BC7 texture payload from actual PNG dimensions and imported Standalone format; excludes driver alignment, metadata and shared arena background. Textures are shared Resources assets, not copied for each material/portal.",
+  "capture_manifest": {
+    "path": "D:\\Rokas\\reactiveturns-b2-staging\\portal-final-convergence\\runtime\\final-soft\\manifest.json",
+    "frames": 207,
+    "observed_portals": [
+      {
+        "portal_id": -15272,
+        "captured_frames": 49,
+        "portal_elapsed_min": 0.0333343967795372,
+        "portal_elapsed_max": 5.987972736358643,
+        "opening_min": 0.0,
+        "opening_max": 1.0,
+        "max_masked_actors": 1
+      },
+      {
+        "portal_id": -14278,
+        "captured_frames": 51,
+        "portal_elapsed_min": 0.06661100685596466,
+        "portal_elapsed_max": 6.046506404876709,
+        "opening_min": 0.0,
+        "opening_max": 1.0,
+        "max_masked_actors": 1
+      },
+      {
+        "portal_id": -13284,
+        "captured_frames": 51,
+        "portal_elapsed_min": 0.06653660535812378,
+        "portal_elapsed_max": 6.10408353805542,
+        "opening_min": 0.0,
+        "opening_max": 1.0,
+        "max_masked_actors": 1
+      }
+    ],
+    "max_masked_actors": 1,
+    "limitation": "Sampled capture wall-clock interval is not FPS or GPU timing; manifest does not enumerate renderers/materials or simultaneous active portal roots."
+  },
+  "managed_allocation_observation": "No new array/list/Gradient/AnimationCurve/Material/MaterialPropertyBlock allocations are present in Tick/UpdateAppearance/EmitMote. Arrays and matrices are constructed once; Color/Vector value creation and EmitParams are structs. Mesh.vertices setter copies existing buffers to native, and RecalculateBounds/SetPositions incur CPU/native work. This is source inspection, not a measured GC.Alloc profiler result.",
+  "shader_cost_observation": "Volume layers increase 2 to 3 and evaluate four discharge sectors per layer. Static shader work and mesh uploads rise; no FPS/GPU-profiler PASS is claimed.",
+  "final_soft_color_review": "Final CPU/volume shader sector pulse coefficients match, including sector0 phase offset .14 and widened .28/.40/.46/.50/.60/.69 windows. Updated alpha/width factors remain finite and nonnegative; no new ownership or mask changes. Actual softness/visibility is a visual capture gate, not proved by this source review.",
+  "cleanup_observation": "Dispose immediately hides root, disposes four Ember carriers, destroys both common meshes/five common materials, and loops all 11 ribbon meshes/materials. Shared texture assets are intentionally not destroyed."
+}

@@ -1,0 +1,25 @@
+{
+  "initialHead": "4bba762727fdc6a56f2152c9c5c21e70350a4cf2",
+  "branch": "r11-finished-ui",
+  "renderSources": {
+    "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs": "d81f6e18a8838e828b8ad225088c36bc796aeefda3d422f7e6d61a6120d79301",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalRibbon.shader": "9f04487a711a673e17e107206cd8feb4ad52d182f65b5e68123e95b7f0c8ebe3",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalLightning.shader": "bc82c9451fee5dd9d376596dc48f7d4c5cb30620cab59a6997000a9ab34ec438",
+    "Assets/Rokas/Resources/Combat/ReactiveCombatPortalVolume.shader": "2e581615da051eb6e3a1835d62a00b85fb37e1c928098df385b07d580bc1a863"
+  },
+  "protectedUserFiles": 84,
+  "lockedFiles": 571,
+  "unchangedContracts": {
+    "AngularBoundary": "a9aeece5b2c2f73f1573e57de1ef8711a163ffa4923a6eee0fb1c9e6e2e796f2",
+    "SetProgress": "2d8bba03b3ef0f3dc0666b5c068e091f066a01ef53b7ed33a12c9e0fc6c82765",
+    "Tick": "cecef86d70edb90437f56dfd313d2d90374c1efe9b5362db8f747699917d3087"
+  },
+  "unchangedTiming": [
+    "seed/ribbons ~0.70",
+    "open2.10",
+    "reveal2.766667",
+    "exit4.866667",
+    "collapse5.266667-5.866667",
+    "residual gone6.066667"
+  ]
+}

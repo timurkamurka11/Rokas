@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="14" result="Passed" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:32:11Z" duration="28,6308154">
+  <test-suite type="TestSuite" id="1290" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="229" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:32:11Z" duration="28.630815" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1284" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="229" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:32:11Z" duration="28.622956" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="42652" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1285" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="229" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:32:11Z" duration="28.621325" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1286" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="229" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:32:11Z" duration="28.618298" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1109" name="ReactiveCinematicFxPlayModeTests" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:31:45Z" duration="2.581262" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1116" name="ArenaRetainsCorpsePositionThroughAshThenCleansTheActor" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.ArenaRetainsCorpsePositionThroughAshThenCleansTheActor" methodname="ArenaRetainsCorpsePositionThroughAshThenCleansTheActor" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="606173769" result="Passed" start-time="2026-10-03 18:31:42Z" end-time="2026-10-03 18:31:44Z" duration="1.888449" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1111" name="AshActuallyClipsTheRenderedActorAsProgressAdvances" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshActuallyClipsTheRenderedActorAsProgressAdvances" methodname="AshActuallyClipsTheRenderedActorAsProgressAdvances" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="1177681596" result="Passed" start-time="2026-10-03 18:31:44Z" end-time="2026-10-03 18:31:44Z" duration="0.082067" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1115" name="AshClonesMaterialsPreservesSurfaceAndRestoresOwnedSlots" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.AshClonesMaterialsPreservesSurfaceAndRestoresOwnedSlots" methodname="AshClonesMaterialsPreservesSurfaceAndRestoresOwnedSlots" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="727460863" result="Passed" start-time="2026-10-03 18:31:44Z" end-time="2026-10-03 18:31:44Z" duration="0.197980" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1110" name="PortalActuallyRendersVisibleCoverageIntoTransparentActorTexture" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalActuallyRendersVisibleCoverageIntoTransparentActorTexture" methodname="PortalActuallyRendersVisibleCoverageIntoTransparentActorTexture" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="541689679" result="Passed" start-time="2026-10-03 18:31:44Z" end-time="2026-10-03 18:31:44Z" duration="0.099132" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1114" name="PortalOnlyAdvancesWhenItsPresentationClockTicks" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.PortalOnlyAdvancesWhenItsPresentationClockTicks" methodname="PortalOnlyAdvancesWhenItsPresentationClockTicks" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="1847435157" result="Passed" start-time="2026-10-03 18:31:44Z" end-time="2026-10-03 18:31:44Z" duration="0.156426" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1113" name="ProductionDefeatWithoutActionSettledReturnsAttackerWhileHunterIsDead" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionDefeatWithoutActionSettledReturnsAttackerWhileHunterIsDead" methodname="ProductionDefeatWithoutActionSettledReturnsAttackerWhileHunterIsDead" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="1891214199" result="Passed" start-time="2026-10-03 18:31:44Z" end-time="2026-10-03 18:31:45Z" duration="0.083412" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1112" name="ProductionVictoryWithoutActionSettledStillReturnsHunterAndSettles" fullname="Rokas.Tests.ReactiveCinematicFxPlayModeTests.ProductionVictoryWithoutActionSettledStillReturnsHunterAndSettles" methodname="ProductionVictoryWithoutActionSettledStillReturnsHunterAndSettles" classname="Rokas.Tests.ReactiveCinematicFxPlayModeTests" runstate="Runnable" seed="447675434" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.063369" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1148" name="ReactivePolishIIFxPlayModeTests" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.348271" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1153" name="ActualSkinnedBodyAppearsInsideApertureBeforeCrossingAndRestoresAfterExit" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests.ActualSkinnedBodyAppearsInsideApertureBeforeCrossingAndRestoresAfterExit" methodname="ActualSkinnedBodyAppearsInsideApertureBeforeCrossingAndRestoresAfterExit" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" seed="1191237174" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.046559" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1150" name="BladeRibbonEmitsOnlyDuringSwingAndStopsAfterBladeStops" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests.BladeRibbonEmitsOnlyDuringSwingAndStopsAfterBladeStops" methodname="BladeRibbonEmitsOnlyDuringSwingAndStopsAfterBladeStops" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" seed="303277736" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.105049" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1151" name="DodgeProducesFootDustWithoutBodyContactAndParticlesPause" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests.DodgeProducesFootDustWithoutBodyContactAndParticlesPause" methodname="DodgeProducesFootDustWithoutBodyContactAndParticlesPause" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" seed="1439726809" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.103734" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1152" name="LayeredPortalAnimatesActualPixelsAndLeavesCarrierCornersClear" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests.LayeredPortalAnimatesActualPixelsAndLeavesCarrierCornersClear" methodname="LayeredPortalAnimatesActualPixelsAndLeavesCarrierCornersClear" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" seed="1814209643" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.065648" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1149" name="PortalEmergenceUsesOwnedLitMaterialsAndRestoresThem" fullname="Rokas.Tests.ReactivePolishIIFxPlayModeTests.PortalEmergenceUsesOwnedLitMaterialsAndRestoresThem" methodname="PortalEmergenceUsesOwnedLitMaterialsAndRestoresThem" classname="Rokas.Tests.ReactivePolishIIFxPlayModeTests" runstate="Runnable" seed="1051700376" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.022935" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1163" name="ReactivePortalReferencePlayModeTests" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:32:11Z" duration="25.674880" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1164" name="PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests.PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" methodname="PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" seed="1442233968" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:31:45Z" duration="0.009288" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1165" name="ThreeLiveSequentialPortalsAreCapturedWithoutRootJitterOrLeftoverEffects" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests.ThreeLiveSequentialPortalsAreCapturedWithoutRootJitterOrLeftoverEffects" methodname="ThreeLiveSequentialPortalsAreCapturedWithoutRootJitterOrLeftoverEffects" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" seed="1648280707" result="Passed" start-time="2026-10-03 18:31:45Z" end-time="2026-10-03 18:32:11Z" duration="25.662828" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+PORTAL_CAPTURE_DIRECTORY=D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-183146
+Saving results to: D:\Rokas\reactiveturns-b2-staging\portal-reference-match\unity\convergence-soft-final-20261003-213134-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
