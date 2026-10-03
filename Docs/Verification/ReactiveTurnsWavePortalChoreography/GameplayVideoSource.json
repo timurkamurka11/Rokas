@@ -1,0 +1,6 @@
+{
+  "path": "D:\\Advanced SystemCare\\bandicam 2026-10-03 22-10-52-740.mp4",
+  "bytes": 51988316,
+  "sha256": "9e39cf103d6bd41d2698fa3ba7758e85f31de429efa0749f0ad2c8e12c3e13fb",
+  "metadata": "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'D:\\Advanced SystemCare\\bandicam 2026-10-03 22-10-52-740.mp4':\n  Metadata:\n    major_brand     : isom\n    minor_version   : 512\n    compatible_brands: mp41\n    creation_time   : 2026-10-03T19:10:52.000000Z\n    encoder         : Bandicam 8.3.1.2537 / GDI(Enhanced 1)\n    encoder-eng     : Bandicam 8.3.1.2537 / GDI(Enhanced 1)\n  Duration: 00:01:12.17, start: 0.000000, bitrate: 5763 kb/s\n  Stream #0:0[0x1](eng): Video: h264 (Constrained Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1872x1056, 5558 kb/s, 29.90 fps, 30 tbr, 30k tbn (default)\n      Metadata:\n        creation_time   : 2026-10-03T19:10:52.000000Z\n        handler_name    : VideoHandler\n        vendor_id       : [0][0][0][0]\n  Stream #0:1[0x2](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 196 kb/s (default)\n      Metadata:\n        creation_time   : 2026-10-03T19:10:52.000000Z\n        handler_name    : SoundHandler\n        vendor_id       : [0][0][0][0]\nAt least one output file must be specified\n"
+}

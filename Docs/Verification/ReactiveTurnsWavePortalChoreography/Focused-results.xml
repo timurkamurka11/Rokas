@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Passed" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:57Z" duration="31,6718939">
+  <test-suite type="TestSuite" id="1307" name="ROKAS" fullname="ROKAS" runstate="Runnable" testcasecount="244" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:57Z" duration="31.671894" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1301" name="Rokas.PlayModeTests.dll" fullname="D:/Rokas/Rokas-FULL-R11-FINISHED-UI COPY/Library/ScriptAssemblies/Rokas.PlayModeTests.dll" runstate="Runnable" testcasecount="244" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:57Z" duration="31.663353" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="35124" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1302" name="Rokas" fullname="Rokas" runstate="Runnable" testcasecount="244" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:57Z" duration="31.659690" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1303" name="Tests" fullname="Rokas.Tests" runstate="Runnable" testcasecount="244" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:57Z" duration="31.657994" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1163" name="ReactivePortalReferencePlayModeTests" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:46Z" duration="21.363111" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1165" name="OneLiveWavePortalCapturesThreeSequentialEntriesWithoutRootJitterOrLeftoverEffects" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests.OneLiveWavePortalCapturesThreeSequentialEntriesWithoutRootJitterOrLeftoverEffects" methodname="OneLiveWavePortalCapturesThreeSequentialEntriesWithoutRootJitterOrLeftoverEffects" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" seed="77219039" result="Passed" start-time="2026-10-03 21:19:25Z" end-time="2026-10-03 21:19:46Z" duration="21.298349" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+[ROKAS HOME] FINAL DIRECT UI READY: outlines=3 connectors=0 icons=6
+PORTAL_CAPTURE_DIRECTORY=D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928
+]]></output>
+            </test-case>
+            <test-case id="1164" name="PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" fullname="Rokas.Tests.ReactivePortalReferencePlayModeTests.PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" methodname="PortalUsesFourNativeAtlasesAndDestroysEveryOwnedMeshAndMaterial" classname="Rokas.Tests.ReactivePortalReferencePlayModeTests" runstate="Runnable" seed="927170458" result="Passed" start-time="2026-10-03 21:19:46Z" end-time="2026-10-03 21:19:46Z" duration="0.054357" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1166" name="ReactivePortalStartupEvidencePlayModeTests" fullname="Rokas.Tests.ReactivePortalStartupEvidencePlayModeTests" classname="Rokas.Tests.ReactivePortalStartupEvidencePlayModeTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-03 21:19:46Z" end-time="2026-10-03 21:19:46Z" duration="0.178214" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1167" name="StartupComponentAblationCapturesActualParticleContribution" fullname="Rokas.Tests.ReactivePortalStartupEvidencePlayModeTests.StartupComponentAblationCapturesActualParticleContribution" methodname="StartupComponentAblationCapturesActualParticleContribution" classname="Rokas.Tests.ReactivePortalStartupEvidencePlayModeTests" runstate="Runnable" seed="1325561637" result="Passed" start-time="2026-10-03 21:19:46Z" end-time="2026-10-03 21:19:46Z" duration="0.162934" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[STARTUP_ABLATION=D:/Rokas/reactiveturns-b2-staging/wave-portal-choreography/startup-ablation/20261003-211946
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1197" name="ReactiveWavePortalPlayModeTests" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-10-03 21:19:46Z" end-time="2026-10-03 21:19:57Z" duration="10.102350" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1207" name="DestroyingEnteringActorDoesNotDereferenceStaleQueueOrBlockRemainingActors" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.DestroyingEnteringActorDoesNotDereferenceStaleQueueOrBlockRemainingActors" methodname="DestroyingEnteringActorDoesNotDereferenceStaleQueueOrBlockRemainingActors" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="1031463074" result="Passed" start-time="2026-10-03 21:19:46Z" end-time="2026-10-03 21:19:47Z" duration="0.646986" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1208" name="DestroyingQueuedActorClearsItsPendingMotionAndDoesNotHangAtWaveEnd" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.DestroyingQueuedActorClearsItsPendingMotionAndDoesNotHangAtWaveEnd" methodname="DestroyingQueuedActorClearsItsPendingMotionAndDoesNotHangAtWaveEnd" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="760298192" result="Passed" start-time="2026-10-03 21:19:47Z" end-time="2026-10-03 21:19:48Z" duration="0.632406" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1206" name="DisablingEnteringActorDoesNotReactivateItOrLeaveIntroBlocked" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.DisablingEnteringActorDoesNotReactivateItOrLeaveIntroBlocked" methodname="DisablingEnteringActorDoesNotReactivateItOrLeaveIntroBlocked" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="2015312863" result="Passed" start-time="2026-10-03 21:19:48Z" end-time="2026-10-03 21:19:48Z" duration="0.628094" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1211" name="DisposingDuringEntryDestroysPortalAndEmergenceResourcesTogether" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.DisposingDuringEntryDestroysPortalAndEmergenceResourcesTogether" methodname="DisposingDuringEntryDestroysPortalAndEmergenceResourcesTogether" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="1806543534" result="Passed" start-time="2026-10-03 21:19:48Z" end-time="2026-10-03 21:19:49Z" duration="0.367089" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1202" name="EightEnemyWaveKeepsOnePortalAndClearsEveryFinalBodySlot" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.EightEnemyWaveKeepsOnePortalAndClearsEveryFinalBodySlot" methodname="EightEnemyWaveKeepsOnePortalAndClearsEveryFinalBodySlot" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="606400776" result="Passed" start-time="2026-10-03 21:19:49Z" end-time="2026-10-03 21:19:50Z" duration="1.666752" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1201" name="FiveEnemyFormationDoesNotLeaveRightmostActorsBehindThePortalMask" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.FiveEnemyFormationDoesNotLeaveRightmostActorsBehindThePortalMask" methodname="FiveEnemyFormationDoesNotLeaveRightmostActorsBehindThePortalMask" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="387608849" result="Passed" start-time="2026-10-03 21:19:50Z" end-time="2026-10-03 21:19:51Z" duration="1.061928" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1203" name="NextWaveCreatesOneNewPortalWithoutReusingItsPredecessorsClockOrMask" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.NextWaveCreatesOneNewPortalWithoutReusingItsPredecessorsClockOrMask" methodname="NextWaveCreatesOneNewPortalWithoutReusingItsPredecessorsClockOrMask" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="129652101" result="Passed" start-time="2026-10-03 21:19:51Z" end-time="2026-10-03 21:19:53Z" duration="1.210290" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1198" name="OneEnemyDoesNotBecomeReadyBeforeTheSharedPortalCloses" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.OneEnemyDoesNotBecomeReadyBeforeTheSharedPortalCloses" methodname="OneEnemyDoesNotBecomeReadyBeforeTheSharedPortalCloses" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="356937315" result="Passed" start-time="2026-10-03 21:19:53Z" end-time="2026-10-03 21:19:53Z" duration="0.430011" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1210" name="PortalSeedCannotEmitTheEarlyWhiteMoteCloudButOpenPortalStillEmits" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.PortalSeedCannotEmitTheEarlyWhiteMoteCloudButOpenPortalStillEmits" methodname="PortalSeedCannotEmitTheEarlyWhiteMoteCloudButOpenPortalStillEmits" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="937776588" result="Passed" start-time="2026-10-03 21:19:53Z" end-time="2026-10-03 21:19:53Z" duration="0.118909" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1209" name="RefreshAfterDestroyedEnteringActorQueuesItsReplacementWithoutStaleMotionOrMask" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.RefreshAfterDestroyedEnteringActorQueuesItsReplacementWithoutStaleMotionOrMask" methodname="RefreshAfterDestroyedEnteringActorQueuesItsReplacementWithoutStaleMotionOrMask" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="301653531" result="Passed" start-time="2026-10-03 21:19:53Z" end-time="2026-10-03 21:19:54Z" duration="0.773171" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1205" name="RemovingEnteringEnemyRestoresMaskAndLetsRemainingQueueFinish" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.RemovingEnteringEnemyRestoresMaskAndLetsRemainingQueueFinish" methodname="RemovingEnteringEnemyRestoresMaskAndLetsRemainingQueueFinish" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="1624977372" result="Passed" start-time="2026-10-03 21:19:54Z" end-time="2026-10-03 21:19:55Z" duration="0.646117" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1204" name="RemovingQueuedEnemyCannotReopenPortalOrResurrectThatEnemy" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.RemovingQueuedEnemyCannotReopenPortalOrResurrectThatEnemy" methodname="RemovingQueuedEnemyCannotReopenPortalOrResurrectThatEnemy" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="11272228" result="Passed" start-time="2026-10-03 21:19:55Z" end-time="2026-10-03 21:19:55Z" duration="0.615209" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1200" name="ThreeEnemiesCrossOnePortalSequentiallyAndRestoreTheirSlots" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.ThreeEnemiesCrossOnePortalSequentiallyAndRestoreTheirSlots" methodname="ThreeEnemiesCrossOnePortalSequentiallyAndRestoreTheirSlots" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="1435797533" result="Passed" start-time="2026-10-03 21:19:55Z" end-time="2026-10-03 21:19:56Z" duration="0.718087" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1199" name="TwoEnemiesUseOneContinuousPortalClock" fullname="Rokas.Tests.ReactiveWavePortalPlayModeTests.TwoEnemiesUseOneContinuousPortalClock" methodname="TwoEnemiesUseOneContinuousPortalClock" classname="Rokas.Tests.ReactiveWavePortalPlayModeTests" runstate="Runnable" seed="901239301" result="Passed" start-time="2026-10-03 21:19:56Z" end-time="2026-10-03 21:19:57Z" duration="0.569162" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: D:\Rokas\reactiveturns-b2-staging\portal-reference-match\unity\wave-focused-20261004-001906-results.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

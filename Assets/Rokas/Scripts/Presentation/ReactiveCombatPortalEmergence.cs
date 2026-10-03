@@ -19,7 +19,33 @@ namespace Rokas.Presentation
         private readonly List<Binding> bindings = new List<Binding>();
         private bool begun;
         private bool disposed;
+        private float silhouette;
         public bool Begun => begun;
+        public float RootPlaneDistance => actor == null || portal == null ? float.NegativeInfinity :
+            Vector3.Dot(actor.transform.position - portal.FloorPosition, portal.PlaneNormal);
+        public bool ClearedPortal
+        {
+            get
+            {
+                if (!begun || disposed || actor == null) return false;
+                Vector3 normal = portal.PlaneNormal;
+                Vector3 absolute = new Vector3(Mathf.Abs(normal.x), Mathf.Abs(normal.y), Mathf.Abs(normal.z));
+                foreach (Binding binding in bindings)
+                {
+                    if (binding.Renderer == null) continue;
+                    Bounds bounds = binding.Renderer.bounds;
+                    if (Vector3.Dot(bounds.center - portal.ApertureCenter, normal) -
+                        Vector3.Dot(bounds.extents, absolute) <= .03f) return false;
+                }
+                return RootPlaneDistance > .03f;
+            }
+        }
+
+        public void SetSilhouette(float value)
+        {
+            silhouette = Mathf.Clamp01(value);
+            Tick();
+        }
 
         public ReactiveCombatPortalEmergence(ReactiveCombatActorVisual actor, ReactiveCombatPortalEffect portal)
         {
@@ -74,6 +100,8 @@ namespace Rokas.Presentation
             material.SetVector("_PortalRadius", new Vector4(Mathf.Max(.001f, radius.x),
                 Mathf.Max(.001f, radius.y), portal.MaskDepth, 0f));
             material.SetFloat("_PortalPhase", portal.PresentationElapsed);
+            material.SetFloat("_PortalSilhouette", silhouette);
+            material.SetFloat("_PortalCrossing", portal.CrossingStrength);
         }
 
         public void Dispose()

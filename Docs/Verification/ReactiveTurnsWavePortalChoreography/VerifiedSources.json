@@ -1,0 +1,50 @@
+{
+  "Assets/Rokas/Scripts/Presentation/ReactiveCombatArena.cs": {
+    "sha256": "aeae0d754966abf35f25eeaadcf718fe2f402bc458e4d050a5a4b39a2be8121d",
+    "normalizedTextSha256": "70c49508ade1d4e61d2916bf2394748e07ffcee304654538dae9903c82fb3954"
+  },
+  "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEffect.cs": {
+    "sha256": "5b9b8dfee1dda86fb22227b55efcc07dadf14307712674b2fe5803caa7e2e8da",
+    "normalizedTextSha256": "2cda35562c049084e73b94520719c40a0e89f2bba9ed2e137749eb564844b4fa"
+  },
+  "Assets/Rokas/Scripts/Presentation/ReactiveCombatPortalEmergence.cs": {
+    "sha256": "6af6240c5a14f21049d03fe608385a32ae65087a5ce29f76986aad25a012d616",
+    "normalizedTextSha256": "205f47b804e39dc1c51e11b4ac1840f418c52cfb98bf4c49244a9a38f3ce958b"
+  },
+  "Assets/Rokas/Resources/Combat/ReactiveCombatPortalVolume.shader": {
+    "sha256": "c0f7008e5d8fd3edbf01d111b39c49f945401268a406cb2c3f4bd58d8c37da92",
+    "normalizedTextSha256": "0b9aeab63e209ccf1ca543f14ebfbfdd9c1f5e67603b6b33bf86c6748419d183"
+  },
+  "Assets/Rokas/Resources/Combat/ReactiveCombatPortalDistortion.shader": {
+    "sha256": "57f1e86fbc09daa61aa548431aa2d80f363b4c5ebd812356d8e5a4a110343fc7",
+    "normalizedTextSha256": "98426a2b741d4f8991936e058471dd835373c04aed18d0b55617429749d0fb84"
+  },
+  "Assets/Rokas/Resources/Combat/ReactiveCombatPortalFloor.shader": {
+    "sha256": "7f6be609a2a9928f365a5778e452b104b72ff4df28e8b50a800bd16237356be4",
+    "normalizedTextSha256": "b8031b155794ac6512f9ad8131374563a6324665be8e02222a05c2418d35fa78"
+  },
+  "Assets/Rokas/Resources/Combat/ReactiveCombatPortalEmergence.shader": {
+    "sha256": "b13a078e2c11accf5036918342480b1289aaeb8990f067231c84991f4b0a7c1c",
+    "normalizedTextSha256": "0d765d4a3c9f0bb4be94411f499c74461bbda296d66d14b494d392132d038f55"
+  },
+  "Assets/Rokas/Tests/PlayMode/ReactivePortalReferencePlayModeTests.cs": {
+    "sha256": "4568807626e50b78c61e787e42fe3f97692d8a6ef7ececb82270473741675ed4",
+    "normalizedTextSha256": "10ee1b673c4df98d15076f02d65d64dfa0e16c747ce9652ba1e02c20b7578a20"
+  },
+  "Assets/Rokas/Tests/PlayMode/ReactiveWavePortalPlayModeTests.cs": {
+    "sha256": "b65a31d351fb67feba8e2bf4a7321b1853ff904aee0deda93774e9f468a853c9",
+    "normalizedTextSha256": "deae4f4487effc6d0c4130271903892db50c44f93512c8cfb8a2cae017d56218"
+  },
+  "Assets/Rokas/Tests/PlayMode/ReactiveWavePortalPlayModeTests.cs.meta": {
+    "sha256": "242178ad3b741e7bc038ba1eb19a2381b19cbc8f2a13eb614a0e87e51753044d",
+    "normalizedTextSha256": "c6de5f146ae686cc587465699642255fc7d4d62099673e3f4b2ff211d801a413"
+  },
+  "Assets/Rokas/Tests/PlayMode/ReactivePortalStartupEvidencePlayModeTests.cs": {
+    "sha256": "35a48911723e0541ac002173bd9e0d9ded63ee5e4a52197c2a8b3f837b36419d",
+    "normalizedTextSha256": "73c248f5c80489639ff0f8605a880063d54913d3827905cf6a2c1e18947fd6ac"
+  },
+  "Assets/Rokas/Tests/PlayMode/ReactivePortalStartupEvidencePlayModeTests.cs.meta": {
+    "sha256": "7b0694af3a88219cf8a6e4755c40669feac2350563f878fd9b72a8b1c957a080",
+    "normalizedTextSha256": "08732e8baf5770d9e2723acb223550e9f03516900fb2bba00ea6a0ce533b4ef3"
+  }
+}

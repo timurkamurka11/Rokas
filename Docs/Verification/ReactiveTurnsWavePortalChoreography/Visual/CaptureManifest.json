@@ -1,0 +1,286 @@
+{
+  "sourceManifest": "D:\\Rokas\\reactiveturns-b2-staging\\portal-reference-match\\runtime\\20261003-211928\\manifest.json",
+  "video": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\WavePortalThreeYokai.mp4",
+  "phases": [
+    {
+      "label": "01 Pre-open dark",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\01_Pre-open_dark.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0044.png",
+        "renderPhase": "Inactive",
+        "portalPhase": "Inactive",
+        "realtime": 5.251950263977051,
+        "portalElapsed": 0.0,
+        "opening": 0.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": 0,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 0,
+        "actorsCrossed": 0,
+        "actorsSettled": 0,
+        "crossingCount": 0
+      }
+    },
+    {
+      "label": "02 First cracks",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\02_First_cracks.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0046.png",
+        "renderPhase": "Forming",
+        "portalPhase": "Forming",
+        "realtime": 5.527043342590332,
+        "portalElapsed": 0.2211911827325821,
+        "opening": 0.04500000178813934,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 0,
+        "actorsCrossed": 0,
+        "actorsSettled": 0,
+        "crossingCount": 0
+      }
+    },
+    {
+      "label": "03 Mid formation",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\03_Mid_formation.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0053.png",
+        "renderPhase": "Forming",
+        "portalPhase": "Forming",
+        "realtime": 6.421652793884277,
+        "portalElapsed": 1.0981448888778687,
+        "opening": 0.04500000178813934,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 0,
+        "actorsCrossed": 0,
+        "actorsSettled": 0,
+        "crossingCount": 0
+      }
+    },
+    {
+      "label": "04 Open aperture",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\04_Open_aperture.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0063.png",
+        "renderPhase": "Open",
+        "portalPhase": "Forming",
+        "realtime": 7.672964096069336,
+        "portalElapsed": 2.3542275428771973,
+        "opening": 1.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 0,
+        "actorsCrossed": 0,
+        "actorsSettled": 0,
+        "crossingCount": 0
+      }
+    },
+    {
+      "label": "05 Yokai 1 crossing",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\05_Yokai_1_crossing.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0071.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "EmittingEnemies",
+        "realtime": 8.874067306518555,
+        "portalElapsed": 3.4156675338745117,
+        "opening": 1.0,
+        "crossingPulse": 0.9789430499076843,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9088,
+        "actorsEntered": 1,
+        "actorsCrossed": 1,
+        "actorsSettled": 0,
+        "crossingCount": 1
+      }
+    },
+    {
+      "label": "06 Idle after 1",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\06_Idle_after_1.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0086.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "Open",
+        "realtime": 10.671374320983887,
+        "portalElapsed": 5.216904163360596,
+        "opening": 1.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.8063449263572693,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9386,
+        "actorsEntered": 2,
+        "actorsCrossed": 1,
+        "actorsSettled": 1,
+        "crossingCount": 1
+      }
+    },
+    {
+      "label": "07 Yokai 2 silhouette",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\07_Yokai_2_silhouette.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0085.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "Open",
+        "realtime": 10.54921817779541,
+        "portalElapsed": 5.0938191413879395,
+        "opening": 1.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.8829311728477478,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9386,
+        "actorsEntered": 2,
+        "actorsCrossed": 1,
+        "actorsSettled": 1,
+        "crossingCount": 1
+      }
+    },
+    {
+      "label": "08 Yokai 2 crossing",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\08_Yokai_2_crossing.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0094.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "EmittingEnemies",
+        "realtime": 11.68013858795166,
+        "portalElapsed": 6.2238450050354,
+        "opening": 1.0,
+        "crossingPulse": 0.4255463778972626,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9386,
+        "actorsEntered": 2,
+        "actorsCrossed": 2,
+        "actorsSettled": 1,
+        "crossingCount": 2
+      }
+    },
+    {
+      "label": "09 Idle before last",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\09_Idle_before_last.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0106.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "Open",
+        "realtime": 13.232146263122559,
+        "portalElapsed": 7.771392345428467,
+        "opening": 1.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.8829448819160461,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9684,
+        "actorsEntered": 3,
+        "actorsCrossed": 2,
+        "actorsSettled": 2,
+        "crossingCount": 2
+      }
+    },
+    {
+      "label": "10 Last crossing",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\10_Last_crossing.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0114.png",
+        "renderPhase": "Emergence",
+        "portalPhase": "EmittingEnemies",
+        "realtime": 14.293986320495605,
+        "portalElapsed": 8.802597999572754,
+        "opening": 1.0,
+        "crossingPulse": 0.8127799034118652,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 1,
+        "maskedActorId": -9684,
+        "actorsEntered": 3,
+        "actorsCrossed": 3,
+        "actorsSettled": 2,
+        "crossingCount": 3
+      }
+    },
+    {
+      "label": "11 Residual",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\11_Residual.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0128.png",
+        "renderPhase": "Open",
+        "portalPhase": "Residual",
+        "realtime": 16.121444702148438,
+        "portalElapsed": 10.6612548828125,
+        "opening": 1.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 3,
+        "actorsCrossed": 3,
+        "actorsSettled": 3,
+        "crossingCount": 3
+      }
+    },
+    {
+      "label": "12 Inward collapse",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\12_Inward_collapse.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0132.png",
+        "renderPhase": "Collapsing",
+        "portalPhase": "Collapsing",
+        "realtime": 16.63143539428711,
+        "portalElapsed": 11.173392295837402,
+        "opening": 0.28676074743270874,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": -10520,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 3,
+        "actorsCrossed": 3,
+        "actorsSettled": 3,
+        "crossingCount": 3
+      }
+    },
+    {
+      "label": "13 Portal gone",
+      "path": "D:\\Rokas\\reactiveturns-b2-staging\\wave-portal-choreography\\final-visual\\13_Portal_gone.png",
+      "source": {
+        "image": "D:/Rokas/reactiveturns-b2-staging/portal-reference-match/runtime/20261003-211928\\frame-0146.png",
+        "renderPhase": "Closed",
+        "portalPhase": "Closed",
+        "realtime": 18.32610321044922,
+        "portalElapsed": 0.0,
+        "opening": 0.0,
+        "crossingPulse": 0.0,
+        "silhouette": 0.0,
+        "portalId": 0,
+        "maskedActors": 0,
+        "maskedActorId": 0,
+        "actorsEntered": 3,
+        "actorsCrossed": 3,
+        "actorsSettled": 3,
+        "crossingCount": 3
+      }
+    }
+  ],
+  "runtime": {
+    "portals": 1,
+    "actorsEntered": 3,
+    "actorsCrossed": 3,
+    "maximumParticles": 73,
+    "maximumMaterials": 20
+  }
+}

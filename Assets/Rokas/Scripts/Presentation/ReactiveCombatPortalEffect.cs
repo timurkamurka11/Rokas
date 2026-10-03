@@ -36,11 +36,18 @@ namespace Rokas.Presentation
         private int emitted;
         private int lineSerial;
         private bool closing, disposed;
+        private float crossingElapsed = 1f;
+        private Vector2 crossingPoint;
+        private const float CrossingSeconds = .22f;
         public Transform Transform => root == null ? null : root.transform;
         public float Visibility => visibility;
         public bool IsClosed => visibility <= .001f;
         public float PresentationElapsed => elapsed;
         public int ParticleCount => sparks == null ? 0 : sparks.particleCount;
+        public float CrossingStrength => !closing && crossingElapsed < CrossingSeconds ?
+            Mathf.Sin(Mathf.PI * crossingElapsed / CrossingSeconds) : 0f;
+        public float MoteEmissionStrength => closing ? Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.24f, .55f, visibility)) :
+            Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.55f, .78f, visibility));
         public Vector3 FloorPosition => root.transform.position - Vector3.up * CenterHeight;
         public Vector3 ApertureCenter => root.transform.position;
         public Vector3 PlaneNormal => -root.transform.forward;
@@ -137,39 +144,69 @@ namespace Rokas.Presentation
         public void Tick(float deltaTime)
         {
             if (disposed || deltaTime <= 0) return;
-            float step=Mathf.Max(0,deltaTime); elapsed+=step; if (closing) closeElapsed+=step;
+            float step=Mathf.Max(0,deltaTime); elapsed+=step; crossingElapsed+=step; if (closing) closeElapsed+=step;
             wisps.Tick(step*1.3f); innerVapor.Tick(step*.48f); edgeSmoke.Tick(step*.92f); collapse.Tick(step*.74f);
             UpdateAppearance();
-            if (visibility > .02f)
+            float emission = MoteEmissionStrength;
+            if (emission > .001f)
             {
-                emissionElapsed+=step; int count=Mathf.Min(8,Mathf.FloorToInt(emissionElapsed/.009f)); emissionElapsed%=.009f;
+                emissionElapsed+=step*emission; int count=Mathf.Min(8,Mathf.FloorToInt(emissionElapsed/.009f)); emissionElapsed%=.009f;
                 for (int i=0;i<count;i++) EmitMote();
             }
+            else emissionElapsed=0;
             sparks.Simulate(step,false,false,false); sparks.Pause(false);
+        }
+        public void ReactToCrossing(Vector3 worldContact)
+        {
+            if (disposed || closing || visibility < .99f) return;
+            Vector3 local = root.transform.InverseTransformPoint(worldContact);
+            Vector2 radius = ApertureRadii;
+            crossingPoint = new Vector2(Mathf.Clamp(local.x / radius.x, -.9f, .9f),
+                Mathf.Clamp(local.y / radius.y, -.9f, .9f));
+            crossingElapsed = 0f;
+            // Reuse the one bounded particle system. Each crossing is a local displacement,
+            // not another portal formation or another effect instance.
+            for (int i=0;i<6;i++)
+            {
+                float a=i*2.399963f;
+                sparks.Emit(new ParticleSystem.EmitParams { position=new Vector3(local.x,local.y,-.2f),
+                    velocity=new Vector3(Mathf.Cos(a),Mathf.Sin(a),-.15f)*.65f,
+                    startLifetime=.22f+i*.025f,startSize=.035f,
+                    startColor=i%2==0?new Color(.55f,.16f,.85f,.6f):new Color(.10f,.48f,.65f,.6f)},1);
+            }
         }
         private void UpdateAppearance()
         {
             float opening=closing ? 1f : Mathf.SmoothStep(0,1,Mathf.InverseLerp(.53f,.78f,visibility));
             float presence=visibility>.001f ? 1f : 0f;
             float ghost=closing ? .24f*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.50f,.80f,closeElapsed))) : 0;
+            float contact=CrossingStrength;
+            Vector4 contactField=new Vector4(crossingPoint.x,crossingPoint.y,contact,.45f);
+            depthMaterial.SetVector("_PortalContact",contactField);
+            depthMaterial.SetFloat("_Closing",closing?Mathf.Clamp01(closeElapsed/.6f):0);
+            distortionMaterial.SetVector("_PortalContact",contactField);
+            floorMaterial.SetFloat("_Crossing",contact);
             depthMaterial.SetFloat("_Phase",elapsed); depthMaterial.SetFloat("_Opening",coreScale);
             depthMaterial.SetFloat("_Opacity",presence); depthMaterial.SetFloat("_Seed",1-opening);
             distortionMaterial.SetFloat("_Phase",elapsed); distortionMaterial.SetFloat("_Opening",coreScale);
             distortionMaterial.SetFloat("_Opacity",presence*(closing?visibility:1));
             distortionMaterial.SetFloat("_Seed",1-opening);
             floorMaterial.SetFloat("_Phase",elapsed); floorMaterial.SetFloat("_Opening",Mathf.Max(visibility,ghost));
-            floorMaterial.SetFloat("_Opacity",Mathf.Max(presence*(closing?visibility:Mathf.Clamp01(visibility*10)),ghost));
+            floorMaterial.SetFloat("_Opacity",Mathf.Max(presence*(closing?visibility:Mathf.Lerp(.12f,1,opening)),ghost));
             energyMaterial.SetFloat("_Opacity", Mathf.Max(opening*presence,ghost));
             energyMaterial.SetFloat("_Phase",elapsed);
-            particleMaterial.SetFloat("_Opacity",Mathf.Max(presence,ghost));
-            light.intensity=Mathf.Max(presence*opening*.68f*(.88f+.12f*Mathf.Sin(elapsed*8)),ghost*.3f);
+            particleMaterial.SetFloat("_Opacity",Mathf.Max(MoteEmissionStrength,ghost));
+            light.intensity=Mathf.Max(presence*opening*.68f*(.88f+.12f*Mathf.Sin(elapsed*8))+contact*.28f,ghost*.3f);
+            light.transform.localPosition=Vector3.Lerp(new Vector3(0,-.5f,-1.2f),
+                new Vector3(crossingPoint.x*3.15f,crossingPoint.y*3.35f,-1.2f),contact*.6f);
             float boundaryScale=coreScale;
             for (int s=0;s<Segments;s++)
             {
                 float a=s*Mathf.PI*2/Segments; float b=AngularBoundary(a,elapsed);
+                float contactArc=ContactArc(a)*contact;
                 float fracture=.012f*Mathf.Sin(a*43+Mathf.Floor(elapsed*9)*1.7f)
                     +.009f*Mathf.Sin(a*71-Mathf.Floor(elapsed*13)*.81f);
-                rim[s]=new Vector3(Mathf.Cos(a)*3.15f*(b+fracture)*boundaryScale,Mathf.Sin(a)*3.35f*(b+fracture)*boundaryScale,-.08f);
+                rim[s]=new Vector3(Mathf.Cos(a)*3.15f*(b+fracture+.035f*contactArc)*boundaryScale,Mathf.Sin(a)*3.35f*(b+fracture+.035f*contactArc)*boundaryScale,-.08f);
             }
             rimCore.SetPositions(rim); rimHalo.SetPositions(rim);
             for(int s=0;s<Segments;s++)
@@ -182,10 +219,32 @@ namespace Rokas.Presentation
             rimCore.enabled=rimHalo.enabled=opening*presence>.001f;
             for(int f=0;f<forks.Length;f++)
             {
+                if (!closing && visibility < .17f)
+                {
+                    // Dim, uneven cracks precede the accepted ribbon formation. Reuse the
+                    // existing lines; emitting dense sprites at the tiny aperture made the white flower.
+                    for(int s=0;s<10;s++)
+                    {
+                        float t=s/9f;
+                        forkPoints[s]=new Vector3((f-1)*(.12f+.19f*t)+.035f*Mathf.Sin(t*17+f),
+                            -2.05f+t*(.28f+f*.14f),-.16f);
+                    }
+                    forks[f].SetPositions(forkPoints);
+                    forks[f].enabled=f<3&&visibility>.008f;
+                    forks[f].widthMultiplier=.022f;
+                    forks[f].startColor=new Color(.21f,.05f,.30f,visibility*2);
+                    forks[f].endColor=new Color(.05f,.18f,.23f,0);
+                    continue;
+                }
                 int parent=f<4 ? f : (f-4)%4;
                 float pulse=DischargePulse(parent,elapsed);
                 float clock=Mathf.Floor(elapsed*(8.5f+parent*.7f))/(8.5f+parent*.7f);
                 float anchor=DischargeAngles[parent]+.14f*Mathf.Sin(clock*.71f+parent*2.7f);
+                if(parent<2&&contact>.001f)
+                {
+                    anchor=Mathf.LerpAngle(anchor*Mathf.Rad2Deg,Mathf.Atan2(crossingPoint.y,crossingPoint.x)*Mathf.Rad2Deg+(parent==0?-18:18),contact)*Mathf.Deg2Rad;
+                    pulse=Mathf.Max(pulse,contact*.9f);
+                }
                 for(int s=0;s<10;s++)
                 {
                     float t=s/9f;
@@ -278,7 +337,7 @@ namespace Rokas.Presentation
                 ribbonMeshes[r].vertices=ribbonVertices; ribbonMeshes[r].RecalculateBounds();
                 ribbonMaterials[r].SetFloat("_Phase",elapsed);
                 float roleCoverage=role==0 ? 1 : role==1 ? .72f : .45f;
-                ribbonMaterials[r].SetFloat("_Opacity",presence*fan*Mathf.Lerp(.95f,.32f,fold)*roleCoverage*(closing?visibility:1));
+                ribbonMaterials[r].SetFloat("_Opacity",presence*fan*Mathf.Lerp(.95f,.32f,fold)*roleCoverage*(closing?visibility:1)*(1+.45f*contact*ContactArc(baseAngle)));
             }
             float size=Mathf.Max(.15f,coreScale);
             wisps.FollowLocal(new Vector3(-2.65f*size,.4f*size,-.19f),new Vector2(3.8f,6.5f)*size,
@@ -286,9 +345,14 @@ namespace Rokas.Presentation
             innerVapor.FollowLocal(new Vector3(0,0,-.035f),new Vector2(4.8f,5.8f)*size,
                 new Color(.40f,.60f,.90f,1),presence*opening*.18f*(closing?visibility:1),-elapsed*2.8f);
             edgeSmoke.FollowLocal(new Vector3(2.5f*size,.3f*size,-.17f),new Vector2(4.4f,7.5f)*size,
-                new Color(1.05f,.65f,1.4f,1),presence*opening*.68f*(closing?visibility:1),elapsed*4.1f);
+                new Color(1.05f,.65f,1.4f,1),presence*opening*.68f*(closing?visibility:1)*(1+contact*.12f),elapsed*4.1f);
             collapse.FollowLocal(new Vector3(0,0,-.21f),new Vector2(5.5f,6.4f)*Mathf.Max(.25f,coreScale),
                 new Color(.80f,.52f,1,1),closing?Mathf.Max(visibility*.65f,ghost):0,-elapsed*11);
+        }
+        private float ContactArc(float angle)
+        {
+            float difference=Mathf.DeltaAngle(angle*Mathf.Rad2Deg,Mathf.Atan2(crossingPoint.y,crossingPoint.x)*Mathf.Rad2Deg)*Mathf.Deg2Rad;
+            return Mathf.Exp(-difference*difference/.22f);
         }
         private static float DischargePulse(int sector,float clock)
         {
@@ -306,7 +370,7 @@ namespace Rokas.Presentation
             if(emitted%3==0)p*=.25f+.57f*Mathf.Abs(Mathf.Sin(angle*3));
             Vector3 v=closing ? -p*1.1f : new Vector3(-Mathf.Sin(angle)*.25f,.12f+Mathf.Cos(angle)*.28f,-.05f);
             sparks.Emit(new ParticleSystem.EmitParams { position=p,velocity=v,startLifetime=.35f+.4f*Mathf.Abs(Mathf.Sin(angle)),
-                startSize=.045f+.055f*Mathf.Abs(Mathf.Cos(angle)),startColor=emitted%3==0?new Color(1.6f,1.3f,.8f,.95f):new Color(1.3f,1.2f,1.6f,.9f)},1);
+                startSize=.035f+.035f*Mathf.Abs(Mathf.Cos(angle)),startColor=emitted%3==0?new Color(.35f,.58f,.72f,.75f):new Color(.72f,.27f,.87f,.75f)},1);
         }
         private static Material MakeMaterial(string path,string name)
         {

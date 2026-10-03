@@ -1,0 +1,4 @@
+ParticleCount=67
+Shader=Rokas/ReactiveCombat/QuietFx
+Progress=0,4216867
+Clock=1,166666

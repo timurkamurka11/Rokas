@@ -6,6 +6,8 @@ Shader "Rokas/ReactiveCombat/PortalVolume"
         _Phase("Paused presentation clock",Float)=0
         _Opening("Aperture size",Float)=1
         _Seed("Kernel phase",Float)=0
+        _PortalContact("Local crossing response",Vector)=(0,0,0,.45)
+        _Closing("Inward collapse",Float)=0
     }
     SubShader
     {
@@ -21,6 +23,8 @@ Shader "Rokas/ReactiveCombat/PortalVolume"
             #include "UnityCG.cginc"
             #include "ReactiveCombatPortalBoundary.cginc"
             float _Opacity,_Phase,_Opening,_Seed;
+            float4 _PortalContact;
+            float _Closing;
             struct v2f { float4 pos:SV_POSITION;float2 uv:TEXCOORD0;float3 view:TEXCOORD1; };
             v2f vert(appdata_base v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);o.uv=v.texcoord;o.view=ObjSpaceViewDir(v.vertex);return o;}
             float sectorPulse(float sector)
@@ -35,6 +39,8 @@ Shader "Rokas/ReactiveCombat/PortalVolume"
                 float2 p=((i.uv*2-1)*1.25-float2(0,-.612*_Seed))/max(.001,_Opening);
                 float r=length(p),a=atan2(p.y,p.x),boundary=portalAngularBoundary(a,_Phase);
                 float mask=1-smoothstep(boundary-.025,boundary+.015,r);clip(mask*_Opacity-.001);
+                float2 contactDelta=p-_PortalContact.xy;
+                float contact=exp(-dot(contactDelta,contactDelta)/max(.025,_PortalContact.w*_PortalContact.w))*saturate(_PortalContact.z);
                 // Three view-dependent slices have different centers, radial speeds and scale.
                 // Their attachment sectors share the outer discharge rhythm, not a uniform spiral.
                 float3 energy=0;
@@ -43,11 +49,15 @@ Shader "Rokas/ReactiveCombat/PortalVolume"
                 {
                     float2 drift=float2(sin(_Phase*.47+layer*2.3),cos(_Phase*.39-layer))*float2(.055,.075);
                     float2 q=p-drift+parallax*(.14-layer*.065);
+                    // The passing body briefly draws nearby energy into its crossing point.
+                    // Collapse keeps the running clock and tightens the existing field inward.
+                    q+=contactDelta*contact*.10+q*saturate(_Closing)*(.12+layer*.035);
                     float radius=length(q),angle=atan2(q.y,q.x);
                     float speed=.10+layer*.145;
                     float noise=portalFbm(q*(1.1+layer*.72)+float2(_Phase*.09,-_Phase*.075)+layer*7.8);
                     float twist=angle+pow(radius,.62)*(1.50+layer*.31)-_Phase*speed
-                        +sin(angle*3+radius*5-_Phase*.41)*.32+(noise-.5)*1.25;
+                        +sin(angle*3+radius*5-_Phase*.41)*.32+(noise-.5)*1.25
+                        -(1-saturate(_Opening))*saturate(_Closing)*(1.4+layer*.3);
                     float field=sin(twist*(3+layer*2)+noise*(3.5+layer))
                         +sin(twist*2-radius*8+layer)*.32;
                     float ridge=saturate(1-abs(field));
@@ -69,7 +79,8 @@ Shader "Rokas/ReactiveCombat/PortalVolume"
                     energy+=float3(.055,.036,.09)*noise*depth*(layer==0?1:.28);
                 }
                 float rim=exp(-abs(r-boundary)*48)*(1-_Seed*.8);
-                float3 color=float3(.004,.002,.009)+energy*1.65;
+                float3 color=float3(.004,.002,.009)+energy*1.65*(1+contact*.14);
+                color+=float3(.20,.13,.32)*contact*(.15+min(1,length(energy))*.35);
                 color*=smoothstep(.10,.34,r);
                 color+=float3(.65,.49,1)*rim*.8;
                 color*=lerp(1,.32,smoothstep(.05,.34,r)*_Seed);

@@ -17,6 +17,8 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
         _PortalRight ("Plane Right", Vector) = (1,0,0,0)
         _PortalRadius ("Radius and Depth", Vector) = (.9,1.9,.65,0)
         _PortalPhase ("Presentation Phase", Float) = 0
+        _PortalSilhouette ("Queued actor depth hint", Range(0,1)) = 0
+        _PortalCrossing ("Crossing plane response", Range(0,1)) = 0
     }
     SubShader
     {
@@ -35,7 +37,7 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
         fixed4 _Color, _EmissionColor;
         float _Glossiness, _GlossMapScale, _Metallic, _BumpScale;
         float4 _PortalCenter, _PortalNormal, _PortalRight, _PortalRadius;
-        float _PortalPhase;
+        float _PortalPhase, _PortalSilhouette, _PortalCrossing;
         struct Input { float2 uv_MainTex; float2 uv_BumpMap; float3 worldPos; };
         void surf(Input IN, inout SurfaceOutputStandard o)
         {
@@ -52,7 +54,9 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
             }
             fixed4 albedo=tex2D(_MainTex,IN.uv_MainTex)*_Color;
             float behind=saturate(-depth/_PortalRadius.z);
-            o.Albedo=albedo.rgb*lerp(1,.38,behind);
+            // This is the same masked actor, muted only in the back volume while queued.
+            float silhouette=saturate(_PortalSilhouette)*smoothstep(0,.12,-depth);
+            o.Albedo=albedo.rgb*lerp(1,.38,behind)*lerp(1,.18,silhouette);
             #if defined(_METALLICGLOSSMAP)
                 fixed4 metal=tex2D(_MetallicGlossMap,IN.uv_MainTex);
                 o.Metallic=metal.r;
@@ -70,7 +74,9 @@ Shader "Rokas/ReactiveCombat/PortalEmergence"
             #if defined(_EMISSION)
                 o.Emission=tex2D(_EmissionMap,IN.uv_MainTex).rgb*_EmissionColor.rgb;
             #endif
+            o.Emission*=lerp(1,.08,silhouette);
             o.Emission+=float3(.06,.03,.11)*(1-smoothstep(0,.09,abs(depth)));
+            o.Emission+=float3(.07,.10,.18)*saturate(_PortalCrossing)*(1-smoothstep(0,.12,abs(depth)));
             o.Alpha=albedo.a;
         }
         ENDCG

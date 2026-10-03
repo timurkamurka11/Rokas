@@ -73,11 +73,25 @@ namespace Rokas.Presentation
         private string heavyEnemyActionId;
         private float settleRemaining;
         private bool cinematicEnabled;
-        private enum IntroPhase { None, HunterWalk, HunterStance, HunterSettle, PortalOpen, EnemyWalk, PortalResidual, PortalClose }
+        private enum IntroPhase { None, HunterWalk, HunterStance, HunterSettle, PortalOpen, EnemyWait, EnemyWalk, PortalResidual, PortalClose }
+        public enum WavePortalPhase { Inactive, Forming, Open, EmittingEnemies, Residual, Collapsing, Closed }
         private IntroPhase introPhase;
         private float introElapsed;
         private readonly Queue<string> entranceQueue = new Queue<string>();
         private string enteringEnemy;
+        private bool enteringCrossed;
+        private int waveEntered;
+        private float enemyInterval;
+        public int PortalFormationCount { get; private set; }
+        public int PortalOpenCount { get; private set; }
+        public int PortalCloseCount { get; private set; }
+        public int PortalCrossingCount { get; private set; }
+        public WavePortalPhase PortalPhase => introPhase == IntroPhase.PortalOpen ? WavePortalPhase.Forming :
+            introPhase == IntroPhase.EnemyWait ? WavePortalPhase.Open :
+            introPhase == IntroPhase.EnemyWalk ? WavePortalPhase.EmittingEnemies :
+            introPhase == IntroPhase.PortalResidual ? WavePortalPhase.Residual :
+            introPhase == IntroPhase.PortalClose ? WavePortalPhase.Collapsing :
+            PortalFormationCount > 0 && introPhase == IntroPhase.None ? WavePortalPhase.Closed : WavePortalPhase.Inactive;
         private ReactiveCombatPortalEffect portal;
         private ReactiveCombatPortalEmergence emergence;
         private ReactiveCombatSwordEffect swordEffect;
@@ -95,7 +109,7 @@ namespace Rokas.Presentation
         // reveal 2.7667, exit 4.8667, contraction 5.2667, core gone 5.8667.
         private const float PortalOpeningSeconds = 2.766667f;
         private const float EnemyEntranceSeconds = 2.1f;
-        private const float PortalResidualSeconds = .4f;
+        private const float PortalResidualSeconds = .55f;
         private const float PortalClosingSeconds = .6f;
         private const float PortalGhostSeconds = .2f;
         private const float SelectionFrameReturnSeconds = .26f;
@@ -318,42 +332,52 @@ namespace Rokas.Presentation
             {
                 if (!hunter.IdleSettled || introElapsed < .16f) return;
                 HunterEntryComplete = true;
-                OpenNextPortal();
+                BeginWavePortal();
             }
             else if (introPhase == IntroPhase.PortalOpen)
             {
                 portal.SetProgress(Mathf.Clamp01(introElapsed / PortalOpeningSeconds));
                 portal.Tick(step);
                 if (introElapsed < PortalOpeningSeconds) return;
-                ActorMotion motion = enemyMotions[enteringEnemy];
-                entranceStart = portal.FloorPosition - portal.PlaneNormal * .9f;
-                motion.Actor.transform.position = entranceStart;
-                entranceStart = motion.Actor.transform.localPosition;
-                emergence = new ReactiveCombatPortalEmergence(motion.Actor, portal);
-                emergence.Begin();
-                motion.Actor.gameObject.SetActive(true);
-                motion.Actor.PlayApproach(EnemyEntranceSeconds);
-                introPhase = IntroPhase.EnemyWalk;
-                introElapsed = 0f;
+                PortalOpenCount++;
+                if (PrepareNextYokai(false)) StartPreparedYokai();
+                else BeginPortalResidual();
+            }
+            else if (introPhase == IntroPhase.EnemyWait)
+            {
+                portal.Tick(step);
+                if (!TryGetEntering(out ActorMotion motion)) { CompleteYokai(false); return; }
+                emergence.SetSilhouette(Mathf.Lerp(1f, .72f, Mathf.Clamp01(introElapsed / enemyInterval)));
+                emergence.Tick();
+                if (introElapsed >= enemyInterval) StartPreparedYokai();
             }
             else if (introPhase == IntroPhase.EnemyWalk)
             {
                 portal.Tick(step);
-                emergence?.Tick();
-                ActorMotion motion = enemyMotions[enteringEnemy];
+                if (!TryGetEntering(out ActorMotion motion)) { CompleteYokai(false); return; }
                 MoveEntrance(motion.Actor, entranceStart, motion.Home, introElapsed, EnemyEntranceSeconds, step);
+                emergence.Tick();
+                if (!enteringCrossed && emergence.RootPlaneDistance >= 0f)
+                {
+                    enteringCrossed = true;
+                    PortalCrossingCount++;
+                    portal.ReactToCrossing(motion.Actor.TorsoPoint);
+                }
                 if (introElapsed < EnemyEntranceSeconds) return;
+                // The shared plane is behind every final slot, including its animated body bounds.
+                if (!emergence.ClearedPortal) return;
                 motion.Actor.transform.localPosition = motion.Home;
-                emergence.Dispose(); emergence = null;
-                motion.Phase = MotionPhase.None;
-                motion.Actor.PlayIdle();
-                introPhase = IntroPhase.PortalResidual;
-                introElapsed = 0f;
+                CompleteYokai(true);
             }
             else if (introPhase == IntroPhase.PortalResidual)
             {
                 portal.Tick(step);
+                if (entranceQueue.Count > 0 && PrepareNextYokai(true))
+                {
+                    introPhase = IntroPhase.EnemyWait; introElapsed = 0; return;
+                }
                 if (introElapsed < PortalResidualSeconds) return;
+                PortalCloseCount++;
                 introPhase = IntroPhase.PortalClose;
                 introElapsed = 0f;
             }
@@ -361,9 +385,12 @@ namespace Rokas.Presentation
             {
                 portal.SetProgress(1f - Mathf.Clamp01(introElapsed / PortalClosingSeconds));
                 portal.Tick(step);
-                if (introElapsed < PortalClosingSeconds + PortalGhostSeconds || !enemyMotions[enteringEnemy].Actor.IdleSettled) return;
+                if (introElapsed < PortalClosingSeconds + PortalGhostSeconds) return;
                 portal.Dispose(); portal = null;
-                OpenNextPortal();
+                introPhase = IntroPhase.None;
+                enteringEnemy = null;
+                settleRemaining = .16f;
+                if (entranceQueue.Count > 0) BeginWavePortal();
             }
         }
 
@@ -376,8 +403,18 @@ namespace Rokas.Presentation
             actor.SetLocomotionSpeed(step > 0f ? Vector3.Distance(prior, actor.transform.localPosition) / step : 0f);
         }
 
-        private void OpenNextPortal()
+        private bool QueuedActorExists(string id)
         {
+            if (id == null || !enemyMotions.TryGetValue(id, out ActorMotion motion)) return false;
+            if (motion.Actor != null && !motion.Actor.IsDead && !corpses.ContainsKey(id)) return true;
+            // A destroyed queued body must release its entrance gate as well as its queue item.
+            if (motion.Phase == MotionPhase.Entrance) motion.Phase = MotionPhase.None;
+            return false;
+        }
+
+        private void BeginWavePortal()
+        {
+            while (entranceQueue.Count > 0 && !QueuedActorExists(entranceQueue.Peek())) entranceQueue.Dequeue();
             if (entranceQueue.Count == 0)
             {
                 introPhase = IntroPhase.None;
@@ -385,15 +422,86 @@ namespace Rokas.Presentation
                 settleRemaining = .16f;
                 return;
             }
-            enteringEnemy = entranceQueue.Dequeue();
-            Vector3 origin = enemyMotions[enteringEnemy].Home + new Vector3(1.5f, 0f, .9f);
-            // The larger aperture stays inside the normal combat composition.
-            // Extra depth keeps the final slot in front of the clipping plane,
-            // including the rightmost actor whose portal is framed farther left.
+            Vector3 origin = enemyMotions[entranceQueue.Peek()].Home;
+            foreach (string id in entranceQueue)
+            {
+                if (!QueuedActorExists(id)) continue;
+                Vector3 home = enemyMotions[id].Home;
+                origin.x = Mathf.Max(origin.x, home.x);
+                origin.y = Mathf.Min(origin.y, home.y);
+                origin.z = Mathf.Max(origin.z, home.z);
+            }
+            // One fixed aperture belongs to the whole queue. Keep all final body
+            // volumes in front of its plane so removing each mask cannot reveal a clipped limb.
+            origin.x += 1.5f;
             origin.x = Mathf.Min(origin.x, 6.15f);
+            origin.z += 2.5f;
+            Vector3 normal = Quaternion.Euler(0, 15, 0) * Vector3.back;
+            foreach (string id in entranceQueue)
+            {
+                if (!QueuedActorExists(id)) continue;
+                float clearance = Vector3.Dot(enemyMotions[id].Home - origin, normal);
+                if (clearance < 2.5f) origin.z += (2.5f - clearance) / -normal.z;
+            }
             portal = new ReactiveCombatPortalEffect(world.transform, origin, ActorLayer);
+            PortalFormationCount++;
+            waveEntered = 0;
             introPhase = IntroPhase.PortalOpen;
             introElapsed = 0f;
+        }
+
+        private bool PrepareNextYokai(bool silhouette)
+        {
+            while (entranceQueue.Count > 0)
+            {
+                string id = entranceQueue.Dequeue();
+                if (!QueuedActorExists(id)) continue;
+                enteringEnemy = id; enteringCrossed = false;
+                ActorMotion motion = enemyMotions[id];
+                motion.Phase = MotionPhase.Entrance;
+                motion.Actor.transform.position = portal.FloorPosition - portal.PlaneNormal * .9f;
+                entranceStart = motion.Actor.transform.localPosition;
+                emergence = new ReactiveCombatPortalEmergence(motion.Actor, portal);
+                emergence.Begin(); emergence.SetSilhouette(silhouette ? 1f : 0f);
+                motion.Actor.gameObject.SetActive(true);
+                enemyInterval = waveEntered % 3 == 1 ? .45f : waveEntered % 3 == 2 ? .65f : .50f;
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryGetEntering(out ActorMotion motion)
+        {
+            motion = null;
+            return enteringEnemy != null && enemyMotions.TryGetValue(enteringEnemy, out motion) &&
+                motion.Actor != null && !motion.Actor.IsDead && motion.Actor.gameObject.activeInHierarchy;
+        }
+
+        private void StartPreparedYokai()
+        {
+            if (!TryGetEntering(out ActorMotion motion)) { CompleteYokai(false); return; }
+            emergence.SetSilhouette(0);
+            motion.Actor.PlayApproach(EnemyEntranceSeconds);
+            introPhase = IntroPhase.EnemyWalk; introElapsed = 0;
+        }
+
+        private void CompleteYokai(bool arrived)
+        {
+            emergence?.Dispose(); emergence = null;
+            if (enteringEnemy != null && enemyMotions.TryGetValue(enteringEnemy, out ActorMotion motion))
+            {
+                motion.Phase = MotionPhase.None;
+                if (motion.Actor != null && !motion.Actor.IsDead) motion.Actor.PlayIdle();
+            }
+            if (arrived) waveEntered++;
+            enteringEnemy = null;
+            if (PrepareNextYokai(true)) { introPhase = IntroPhase.EnemyWait; introElapsed = 0; }
+            else BeginPortalResidual();
+        }
+
+        private void BeginPortalResidual()
+        {
+            introPhase = IntroPhase.PortalResidual; introElapsed = 0;
         }
 
         public void SetEnemies(IReadOnlyList<string> activeIds, string actingId)
@@ -438,8 +546,9 @@ namespace Rokas.Presentation
             Layout(activeIds, waveEnemyIds != null && waveEnemyIds.Count > 0 ? waveEnemyIds : activeIds);
             if (cinematicEnabled && entranceQueue.Count > 0)
             {
-                foreach (string pending in entranceQueue) enemyMotions[pending].Phase = MotionPhase.Entrance;
-                if (introPhase == IntroPhase.None) OpenNextPortal();
+                foreach (string pending in entranceQueue)
+                    if (enemyMotions.TryGetValue(pending, out ActorMotion pendingMotion)) pendingMotion.Phase = MotionPhase.Entrance;
+                if (introPhase == IntroPhase.None) BeginWavePortal();
             }
             if (hunterMotion.Phase == MotionPhase.Approach && hunterMotionTargetId != null &&
                 !active.Contains(hunterMotionTargetId)) CancelHunterMotion();
@@ -495,6 +604,7 @@ namespace Rokas.Presentation
                     enemyMotions.Add(id, motion);
                 }
                 motion.Home = slot;
+                motion.Actor = actor;
                 // Refresh runs every frame. Keep the attacker's world position while it moves
                 // or strikes; only the durable slot is updated from the wave layout.
                 if (motion.Phase == MotionPhase.None) actor.transform.localPosition = slot;
@@ -900,6 +1010,9 @@ namespace Rokas.Presentation
                 CancelHunterMotion();
             ActorMotion motion;
             if (enemyMotions.TryGetValue(id, out motion)) motion.Phase = MotionPhase.None;
+            // Death cleanup must capture the actor's durable materials, never the
+            // temporary emergence clones which the cancelled entry is about to destroy.
+            if (enteringEnemy == id) { emergence?.Dispose(); emergence = null; }
             actor.PlayDeath(DeathFallDuration);
             corpses[id] = new CorpseState { Actor = actor, Origin = actor.transform.localPosition,
                 Ash = new ReactiveCombatAshDissolve(actor) };
@@ -1224,6 +1337,8 @@ namespace Rokas.Presentation
             throwEffect?.Dispose(); throwEffect = null;
             foreach (var corpse in corpses.Values) corpse.Ash?.Dispose();
             entranceQueue.Clear();
+            introPhase = IntroPhase.None;
+            enteringEnemy = null;
             if (world != null) UnityEngine.Object.Destroy(world);
             if (texture != null)
             {
