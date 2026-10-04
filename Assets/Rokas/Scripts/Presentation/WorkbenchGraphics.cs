@@ -303,6 +303,13 @@ namespace Rokas.Presentation
         private bool hovered;
         private bool pressed;
         private float visual;
+        private float restGlowAlpha;
+
+        public float RestGlowAlpha
+        {
+            get => restGlowAlpha;
+            set => restGlowAlpha = Mathf.Clamp01(value);
+        }
 
         public void Initialize(Button button, WorkbenchPanelGraphic face, Outline glow)
         {
@@ -337,7 +344,7 @@ namespace Rokas.Presentation
             if (glow)
             {
                 Color c = glow.effectColor;
-                c.a = enabled ? Mathf.Lerp(.02f, .38f, lift) : 0f;
+                c.a = enabled ? Mathf.Max(restGlowAlpha, Mathf.Lerp(.02f, .38f, lift)) : 0f;
                 glow.effectColor = c;
             }
         }
