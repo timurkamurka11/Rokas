@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Rokas.Presentation
@@ -22,8 +23,10 @@ namespace Rokas.Presentation
     {
         [SerializeField] private Color fillColor = new Color(.025f, .07f, .11f, .94f);
         [SerializeField] private Color borderColor = new Color(.28f, .72f, .93f, .92f);
+        [SerializeField] private Color innerBorderColor = new Color(.18f, .48f, .65f, .34f);
         [SerializeField] private float cornerCut = 14f;
         [SerializeField] private float borderWidth = 2f;
+        [SerializeField] private float innerInset = 5f;
 
         public Color FillColor
         {
@@ -35,6 +38,12 @@ namespace Rokas.Presentation
         {
             get => borderColor;
             set { borderColor = value; SetVerticesDirty(); }
+        }
+
+        public Color InnerBorderColor
+        {
+            get => innerBorderColor;
+            set { innerBorderColor = value; SetVerticesDirty(); }
         }
 
         public float CornerCut
@@ -84,9 +93,40 @@ namespace Rokas.Presentation
                     mesh.AddTriangle(center, center + i + 1, center + ((i + 1) % points.Length) + 1);
             }
 
-            if (borderWidth <= 0 || borderColor.a <= 0) return;
-            for (int i = 0; i < points.Length; i++)
-                AddLine(mesh, points[i], points[(i + 1) % points.Length], borderWidth, borderColor);
+            if (borderWidth > 0 && borderColor.a > 0)
+            {
+                for (int i = 0; i < points.Length; i++)
+                    AddLine(mesh, points[i], points[(i + 1) % points.Length], borderWidth, borderColor);
+            }
+
+            if (innerBorderColor.a > 0 && rect.width > innerInset * 2f && rect.height > innerInset * 2f)
+            {
+                Rect inner = new Rect(rect.xMin + innerInset, rect.yMin + innerInset,
+                    rect.width - innerInset * 2f, rect.height - innerInset * 2f);
+                float innerCut = Mathf.Max(2f, cut - innerInset * .55f);
+                Vector2[] innerPoints =
+                {
+                    new Vector2(inner.xMin + innerCut, inner.yMax),
+                    new Vector2(inner.xMax - innerCut, inner.yMax),
+                    new Vector2(inner.xMax, inner.yMax - innerCut),
+                    new Vector2(inner.xMax, inner.yMin + innerCut),
+                    new Vector2(inner.xMax - innerCut, inner.yMin),
+                    new Vector2(inner.xMin + innerCut, inner.yMin),
+                    new Vector2(inner.xMin, inner.yMin + innerCut),
+                    new Vector2(inner.xMin, inner.yMax - innerCut)
+                };
+                for (int i = 0; i < innerPoints.Length; i++)
+                    AddLine(mesh, innerPoints[i], innerPoints[(i + 1) % innerPoints.Length], 1f, innerBorderColor);
+            }
+
+            Color accent = new Color(borderColor.r, borderColor.g, borderColor.b,
+                Mathf.Min(1f, borderColor.a * 1.15f));
+            float accentLength = Mathf.Min(44f, rect.width * .16f);
+            AddLine(mesh, new Vector2(rect.xMin + cut + 5f, rect.yMax - 1f),
+                new Vector2(rect.xMin + cut + 5f + accentLength, rect.yMax - 1f), 2.2f, accent);
+            AddLine(mesh, new Vector2(rect.xMax - cut - 5f - accentLength, rect.yMin + 1f),
+                new Vector2(rect.xMax - cut - 5f, rect.yMin + 1f), 1.8f,
+                new Color(accent.r, accent.g, accent.b, accent.a * .7f));
         }
 
         private static void AddLine(VertexHelper mesh, Vector2 a, Vector2 b, float width, Color color)
@@ -108,6 +148,12 @@ namespace Rokas.Presentation
     public sealed class WorkbenchHudGraphic : MaskableGraphic
     {
         [SerializeField] private float rotationSpeed = 4.5f;
+
+        public float RotationSpeed
+        {
+            get => rotationSpeed;
+            set => rotationSpeed = value;
+        }
 
         protected override void Awake()
         {
@@ -135,6 +181,8 @@ namespace Rokas.Presentation
             AddArc(mesh, center, radius * .82f, 150, 262, 2.2f, strong, 30);
             AddArc(mesh, center, radius * .64f, 34, 205, 1.5f, soft, 34);
             AddArc(mesh, center, radius * .46f, 222, 346, 1.8f, soft, 24);
+            AddArc(mesh, center, radius * .92f, 278, 342, 1.1f,
+                new Color(color.r, color.g, color.b, color.a * .28f), 18);
             AddCircle(mesh, center, radius * .30f, 1.2f, new Color(color.r, color.g, color.b, color.a * .24f), 44);
             AddLine(mesh, center + Vector2.left * radius * .92f, center + Vector2.right * radius * .92f, 1f, soft);
             AddLine(mesh, center + Vector2.down * radius * .92f, center + Vector2.up * radius * .92f, 1f, soft);
@@ -182,6 +230,116 @@ namespace Rokas.Presentation
             mesh.AddVert(b - normal, color, Vector2.zero);
             mesh.AddTriangle(first, first + 1, first + 2);
             mesh.AddTriangle(first + 2, first + 1, first + 3);
+        }
+    }
+
+    [AddComponentMenu("ROKAS/UI/Workbench Arrow")]
+    [RequireComponent(typeof(CanvasRenderer))]
+    public sealed class WorkbenchArrowGraphic : MaskableGraphic
+    {
+        [SerializeField] private int direction = 1;
+
+        public int Direction
+        {
+            get => direction;
+            set
+            {
+                direction = value < 0 ? -1 : 1;
+                SetVerticesDirty();
+            }
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            raycastTarget = false;
+        }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            Rect rect = GetPixelAdjustedRect();
+            if (rect.width <= 0 || rect.height <= 0) return;
+            float sign = direction < 0 ? -1f : 1f;
+            Vector2 center = rect.center;
+            float h = rect.height * .24f;
+            float w = rect.width * .20f;
+            Color bright = color;
+            Color soft = new Color(color.r, color.g, color.b, color.a * .38f);
+            Vector2 tip = center + new Vector2(sign * w, 0);
+            Vector2 top = center + new Vector2(-sign * w * .65f, h);
+            Vector2 bottom = center + new Vector2(-sign * w * .65f, -h);
+            AddLine(mesh, top, tip, 3.4f, bright);
+            AddLine(mesh, tip, bottom, 3.4f, bright);
+            AddLine(mesh, top + new Vector2(-sign * 8f, 0), tip + new Vector2(-sign * 8f, 0), 1.1f, soft);
+            AddLine(mesh, tip + new Vector2(-sign * 8f, 0), bottom + new Vector2(-sign * 8f, 0), 1.1f, soft);
+            AddLine(mesh, center + new Vector2(-sign * 16f, -h * .62f),
+                center + new Vector2(-sign * 16f, h * .62f), 1f, soft);
+        }
+
+        private static void AddLine(VertexHelper mesh, Vector2 a, Vector2 b, float width, Color color)
+        {
+            Vector2 direction = (b - a).normalized;
+            Vector2 normal = new Vector2(-direction.y, direction.x) * (width * .5f);
+            int first = mesh.currentVertCount;
+            mesh.AddVert(a + normal, color, Vector2.zero);
+            mesh.AddVert(a - normal, color, Vector2.zero);
+            mesh.AddVert(b + normal, color, Vector2.zero);
+            mesh.AddVert(b - normal, color, Vector2.zero);
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first + 2, first + 1, first + 3);
+        }
+    }
+
+    public sealed class WorkbenchTechButtonFeedback : MonoBehaviour,
+        IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler,
+        ISelectHandler, IDeselectHandler
+    {
+        private Button button;
+        private RectTransform rect;
+        private WorkbenchPanelGraphic face;
+        private Outline glow;
+        private Vector3 baseScale;
+        private bool hovered;
+        private bool pressed;
+        private float visual;
+
+        public void Initialize(Button button, WorkbenchPanelGraphic face, Outline glow)
+        {
+            this.button = button;
+            this.face = face;
+            this.glow = glow;
+            rect = button ? button.transform as RectTransform : null;
+            baseScale = rect ? rect.localScale : Vector3.one;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData) { hovered = true; }
+        public void OnPointerExit(PointerEventData eventData) { hovered = false; pressed = false; }
+        public void OnPointerDown(PointerEventData eventData) { if (button && button.IsInteractable()) pressed = true; }
+        public void OnPointerUp(PointerEventData eventData) { pressed = false; }
+        public void OnSelect(BaseEventData eventData) { hovered = true; }
+        public void OnDeselect(BaseEventData eventData) { hovered = false; pressed = false; }
+
+        private void Update()
+        {
+            if (!button || !rect || !face) return;
+            bool enabled = button.IsInteractable();
+            float target = enabled ? (pressed ? .55f : hovered ? 1f : 0f) : -.5f;
+            visual = Mathf.Lerp(visual, target, Time.unscaledDeltaTime * 16f);
+            float lift = Mathf.Max(0, visual);
+            float scale = pressed ? .975f : 1f + lift * .018f;
+            rect.localScale = Vector3.Lerp(rect.localScale, baseScale * scale, Time.unscaledDeltaTime * 18f);
+
+            Color border = face.BorderColor;
+            float baseAlpha = enabled ? .62f : .22f;
+            border.a = Mathf.Clamp01(baseAlpha + lift * .34f);
+            face.BorderColor = border;
+            if (glow)
+            {
+                Color c = glow.effectColor;
+                c.a = enabled ? Mathf.Lerp(.02f, .38f, lift) : 0f;
+                glow.effectColor = c;
+            }
         }
     }
 
