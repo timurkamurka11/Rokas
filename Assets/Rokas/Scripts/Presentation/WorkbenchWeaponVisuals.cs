@@ -289,8 +289,8 @@ namespace Rokas.Presentation
         public int RenderTextureHeight => renderTexture ? renderTexture.height : 0;
         public bool RenderedWithPremiumSurfaceMaps { get; private set; }
         public string CurrentSource => Kind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / FBX-derived premium card render"
-            : "ROKAS premium authored ritual dagger / card render";
+            ? "WorkbenchPremiumSwordMesh.cs / model-derived card render"
+            : "WorkbenchPremiumDaggerMesh.cs / model-derived card render";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind kind)
         {
