@@ -180,7 +180,9 @@ namespace Rokas.Presentation
             CanvasGroup openGroup = root.gameObject.AddComponent<CanvasGroup>();
             root.gameObject.AddComponent<WorkbenchOpenMotion>().Initialize(root, openGroup);
 
-            AddPanel(root, "WorkbenchMainFrame", 0, 0, 1600, 740, 22, Navy, CyanSoft, 2.4f);
+            var mainFrame = AddPanel(root, "WorkbenchMainFrame", 0, 0, 1600, 740, 22, Navy,
+                new Color(Cyan.r, Cyan.g, Cyan.b, .74f), 3.0f);
+            mainFrame.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .22f);
             BuildGrid(root, 1600, 740);
             ui.Box(root, "WorkbenchTopScanLine", 408, 24, 850, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .17f));
             ui.Box(root, "WorkbenchBottomScanLine", 408, 715, 850, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .10f));
@@ -210,10 +212,15 @@ namespace Rokas.Presentation
                 out WorkbenchWeaponIcon3D daggerIcon);
 
             var viewer = AddPanel(root, "WorkbenchViewer", 220, 108, 610, 570, 20,
-                new Color(.014f, .046f, .075f, .97f), CyanSoft, 2.2f);
+                new Color(.012f, .038f, .064f, .98f), new Color(Cyan.r, Cyan.g, Cyan.b, .74f), 2.8f);
+            viewer.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .22f);
             var viewerInner = AddPanel(viewer.transform, "WorkbenchViewerInner", 16, 16, 578, 538, 15,
-                new Color(.010f, .031f, .052f, .82f), new Color(Cyan.r, Cyan.g, Cyan.b, .22f), 1.2f);
-            viewerInner.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .12f);
+                new Color(.007f, .024f, .041f, .90f), new Color(Cyan.r, Cyan.g, Cyan.b, .30f), 1.4f);
+            viewerInner.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .15f);
+            ui.Box(viewer.transform, "ViewerCornerTLH", 28, 30, 92, 3, new Color(Cyan.r, Cyan.g, Cyan.b, .72f));
+            ui.Box(viewer.transform, "ViewerCornerTLV", 28, 30, 3, 58, new Color(Cyan.r, Cyan.g, Cyan.b, .52f));
+            ui.Box(viewer.transform, "ViewerCornerBRH", 490, 537, 92, 3, new Color(Cyan.r, Cyan.g, Cyan.b, .58f));
+            ui.Box(viewer.transform, "ViewerCornerBRV", 579, 482, 3, 58, new Color(Cyan.r, Cyan.g, Cyan.b, .38f));
             ui.Box(viewer.transform, "ViewerHorizon", 76, 284, 458, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .08f));
             ui.Box(viewer.transform, "ViewerTopTick", 270, 19, 70, 2, CyanSoft);
             ui.Box(viewer.transform, "ViewerBottomTick", 270, 548, 70, 2, CyanSoft);
@@ -239,27 +246,29 @@ namespace Rokas.Presentation
             var preview = previewRect.gameObject.AddComponent<WorkbenchWeaponPreview3D>();
             preview.Initialize(previewImage, selectedKind);
 
-            Button previous = DecoratedButton(viewer.transform, "WorkbenchPreviousWeapon", string.Empty, 18, 244, 62, 84,
+            Button previous = DecoratedButton(viewer.transform, "WorkbenchPreviousWeapon", string.Empty, 12, 238, 72, 96,
                 () => controller?.Cycle(-1), out WorkbenchPanelGraphic previousFace, out _);
             previousFace.FillColor = new Color(.015f, .065f, .105f, .82f);
             previousFace.BorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .72f);
             previousFace.CornerCut = 13f;
-            var previousArrow = ui.Rect(previous.transform, "ArrowGlyph", 5, 9, 52, 66).gameObject.AddComponent<WorkbenchArrowGraphic>();
+            var previousArrow = ui.Rect(previous.transform, "ArrowGlyph", 6, 9, 60, 78).gameObject.AddComponent<WorkbenchArrowGraphic>();
             previousArrow.Direction = -1;
             previousArrow.color = White;
 
-            Button next = DecoratedButton(viewer.transform, "WorkbenchNextWeapon", string.Empty, 530, 244, 62, 84,
+            Button next = DecoratedButton(viewer.transform, "WorkbenchNextWeapon", string.Empty, 526, 238, 72, 96,
                 () => controller?.Cycle(1), out WorkbenchPanelGraphic nextFace, out _);
             nextFace.FillColor = new Color(.015f, .065f, .105f, .82f);
             nextFace.BorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .72f);
             nextFace.CornerCut = 13f;
-            var nextArrow = ui.Rect(next.transform, "ArrowGlyph", 5, 9, 52, 66).gameObject.AddComponent<WorkbenchArrowGraphic>();
+            var nextArrow = ui.Rect(next.transform, "ArrowGlyph", 6, 9, 60, 78).gameObject.AddComponent<WorkbenchArrowGraphic>();
             nextArrow.Direction = 1;
             nextArrow.color = White;
 
             var right = ui.Rect(root, "WorkbenchData", 855, 104, 515, 574);
             CanvasGroup rightGroup = right.gameObject.AddComponent<CanvasGroup>();
-            var info = AddPanel(right, "WorkbenchInfoPanel", 0, 0, 515, 205, 16, NavyLight, CyanSoft, 1.8f);
+            var info = AddPanel(right, "WorkbenchInfoPanel", 0, 0, 515, 205, 16, NavyLight,
+                new Color(Cyan.r, Cyan.g, Cyan.b, .62f), 2.1f);
+            info.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .16f);
             Text category = ui.Label(info.transform, "WorkbenchInfoCategory", string.Empty, 24, 15, 220, 24, 13, Muted);
             Text title = ui.Label(info.transform, "WorkbenchInfoTitle", string.Empty, 24, 38, 465, 45, 28, White);
             Text level = ui.Label(info.transform, "WorkbenchInfoLevel", string.Empty, 24, 82, 465, 26, 14, Cyan);
@@ -279,6 +288,9 @@ namespace Rokas.Presentation
                 () => controller?.Upgrade(), out WorkbenchPanelGraphic upgradeFace, out _);
             upgradeFace.FillColor = new Color(.025f, .34f, .34f, .96f);
             upgradeFace.BorderColor = new Color(.22f, .95f, .88f, .95f);
+            upgradeFace.InnerBorderColor = new Color(.36f, 1f, .94f, .26f);
+            ui.Box(upgrade.transform, "UpgradeGlowLineTop", 20, 8, 210, 2, new Color(.36f, 1f, .94f, .62f));
+            ui.Box(upgrade.transform, "UpgradeGlowLineBottom", 285, 53, 210, 2, new Color(.36f, 1f, .94f, .30f));
             Text upgradeText = upgrade.transform.Find("Title").GetComponent<Text>();
             upgradeText.fontSize = 22;
             upgradeText.color = White;
@@ -317,10 +329,10 @@ namespace Rokas.Presentation
         {
             Button button = DecoratedButton(parent, name, string.Empty, x, y, 168, 214,
                 () => target?.Select(kind), out face, out glow);
-            var iconBack = AddPanel(button.transform, "WeaponCardIconWell", 18, 16, 132, 136, 16,
-                new Color(.006f, .024f, .040f, .58f), new Color(Cyan.r, Cyan.g, Cyan.b, .18f), 1f);
-            iconBack.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .07f);
-            var iconRect = ui.Rect(button.transform, "WeaponCardPreview", 25, 23, 118, 118);
+            var iconBack = AddPanel(button.transform, "WeaponCardIconWell", 14, 14, 140, 140, 16,
+                new Color(.004f, .019f, .033f, .72f), new Color(Cyan.r, Cyan.g, Cyan.b, .25f), 1.2f);
+            iconBack.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .10f);
+            var iconRect = ui.Rect(button.transform, "WeaponCardPreview", 19, 19, 130, 130);
             CenterPivot(iconRect);
             var rawIcon = iconRect.gameObject.AddComponent<RawImage>();
             rawIcon.color = Color.white;
