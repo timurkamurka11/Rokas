@@ -249,49 +249,13 @@ namespace Rokas.Presentation
             previewCamera.allowHDR = false;
             previewCamera.targetTexture = renderTexture;
 
-            metalMaterial = CreateStandardMaterial("Workbench Preview Metal",
-                new Color(.22f, .25f, .29f), .78f, .58f);
-            gripMaterial = CreateStandardMaterial("Workbench Preview Grip",
-                new Color(.055f, .038f, .030f), .12f, .28f);
-
-            CreateLight("WorkbenchKey", new Color(.76f, .86f, .94f), .96f, new Vector3(30f, -34f, 0f));
-            CreateLight("WorkbenchFill", new Color(.50f, .61f, .68f), .32f, new Vector3(-16f, 38f, 0f));
-            CreateLight("WorkbenchRim", new Color(.12f, .58f, .90f), .68f, new Vector3(18f, 145f, 0f));
-        }
-
-        private Material CreateStandardMaterial(string materialName, Color color, float metallic, float smoothness)
-        {
-            Shader shader = Shader.Find("Standard");
-            if (!shader) shader = Shader.Find("Legacy Shaders/Diffuse");
-            var material = new Material(shader)
-            {
-                name = materialName,
-                hideFlags = HideFlags.HideAndDontSave,
-                color = color
-            };
-            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
-            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", smoothness);
-            if (material.HasProperty("_EmissionColor"))
-            {
-                material.EnableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", new Color(.008f, .025f, .035f));
-            }
-            return material;
-        }
-
-        private void CreateLight(string lightName, Color color, float intensity, Vector3 euler)
-        {
-            var lightObject = new GameObject(lightName);
-            lightObject.hideFlags = HideFlags.HideAndDontSave;
-            lightObject.layer = PreviewLayer;
-            lightObject.transform.SetParent(rig.transform, false);
-            lightObject.transform.localRotation = Quaternion.Euler(euler);
-            Light light = lightObject.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.color = color;
-            light.intensity = intensity;
-            light.cullingMask = 1 << PreviewLayer;
-            light.shadows = LightShadows.None;
+            materials = WorkbenchWeaponVisualFactory.CreateMaterials();
+            WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchKey",
+                new Color(.82f, .88f, .94f), 1.08f, new Vector3(24f, -31f, 0f));
+            WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchFill",
+                new Color(.42f, .54f, .64f), .26f, new Vector3(-20f, 42f, 0f));
+            WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchRim",
+                new Color(.08f, .58f, .96f), .82f, new Vector3(12f, 148f, 0f));
         }
 
         private void OnDestroy()
