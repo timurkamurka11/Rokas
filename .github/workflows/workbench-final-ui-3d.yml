@@ -153,7 +153,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing -workbenchCaptureDir=/github/workspace/verification/workbench-captures
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Final Home Route
       - name: Upload evidence
@@ -161,7 +161,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: workbench-final-home-route
-          path: ${{ steps.tests.outputs.artifactsPath }}
+          path: |
+            ${{ steps.tests.outputs.artifactsPath }}
+            verification/workbench-captures
           if-no-files-found: warn
 
   laptop-regression:
