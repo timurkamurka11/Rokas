@@ -101,7 +101,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests -workbenchCaptureDir=/github/workspace/verification/workbench-captures
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation -workbenchCaptureDir=/github/workspace/verification/workbench-captures
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Final 3D PlayMode
       - name: Record exact checkpoint
@@ -127,7 +127,7 @@ jobs:
 
 
   home-route:
-    name: Home has no Workbench hotspot
+    name: Home legacy Workbench route is disabled
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -140,7 +140,7 @@ jobs:
             WorkbenchFinal3D-${{ runner.os }}-
             WorkbenchV2-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
-      - name: Run Home route regression
+      - name: Run laptop-only legacy route regression
         id: tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -153,7 +153,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.HomeScanUiPlayModeTests
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Final Home Route
       - name: Upload evidence
