@@ -5,10 +5,17 @@ on:
   push:
     branches:
       - codex/workbench-final-ui-3d-polish
+      - codex/workbench-laptop-only-premium-final
       - r11-finished-ui
     paths:
       - .github/workflows/workbench-final-ui-3d.yml
       - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs
+      - Assets/Rokas/Scripts/Presentation/HomeView.cs
+      - Assets/Rokas/Scripts/Presentation/RokasView.cs
+      - Assets/Rokas/Scripts/Presentation/ContractPanels.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchPremiumDaggerMesh.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchPremiumDaggerMesh.cs.meta
+      - Assets/Rokas/Tests/PlayMode/HomeScanUiPlayModeTests.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs.meta
