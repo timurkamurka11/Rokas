@@ -51,11 +51,11 @@ namespace Rokas.Presentation
             {
                 name = "Workbench Premium Dark Steel",
                 hideFlags = HideFlags.HideAndDontSave,
-                color = new Color(.235f, .255f, .285f, 1f)
+                color = new Color(.18f, .195f, .22f, 1f)
             };
             if (set.Metal.HasProperty("_Metallic")) set.Metal.SetFloat("_Metallic", .86f);
-            if (set.Metal.HasProperty("_Glossiness")) set.Metal.SetFloat("_Glossiness", .60f);
-            if (set.Metal.HasProperty("_GlossMapScale")) set.Metal.SetFloat("_GlossMapScale", .78f);
+            if (set.Metal.HasProperty("_Glossiness")) set.Metal.SetFloat("_Glossiness", .54f);
+            if (set.Metal.HasProperty("_GlossMapScale")) set.Metal.SetFloat("_GlossMapScale", .68f);
             if (set.Metal.HasProperty("_MetallicGlossMap"))
             {
                 set.Metal.SetTexture("_MetallicGlossMap", set.MetallicGloss);
@@ -64,7 +64,7 @@ namespace Rokas.Presentation
             if (set.Metal.HasProperty("_BumpMap"))
             {
                 set.Metal.SetTexture("_BumpMap", set.NormalDetail);
-                set.Metal.SetFloat("_BumpScale", .08f);
+                set.Metal.SetFloat("_BumpScale", .055f);
                 set.Metal.EnableKeyword("_NORMALMAP");
             }
             if (set.Metal.HasProperty("_EmissionColor"))
@@ -88,10 +88,10 @@ namespace Rokas.Presentation
             {
                 name = "Workbench Polished Accent Steel",
                 hideFlags = HideFlags.HideAndDontSave,
-                color = new Color(.34f, .38f, .43f, 1f)
+                color = new Color(.30f, .335f, .38f, 1f)
             };
             if (set.Accent.HasProperty("_Metallic")) set.Accent.SetFloat("_Metallic", .92f);
-            if (set.Accent.HasProperty("_Glossiness")) set.Accent.SetFloat("_Glossiness", .72f);
+            if (set.Accent.HasProperty("_Glossiness")) set.Accent.SetFloat("_Glossiness", .66f);
             if (set.Accent.HasProperty("_MetallicGlossMap"))
             {
                 set.Accent.SetTexture("_MetallicGlossMap", set.MetallicGloss);
@@ -114,9 +114,7 @@ namespace Rokas.Presentation
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
             renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            renderer.sharedMaterials = kind == WorkbenchWeaponKind.Dagger
-                ? new[] { materials.Metal, materials.Grip }
-                : new[] { materials.Metal, materials.Accent, materials.Grip };
+            renderer.sharedMaterials = new[] { materials.Metal, materials.Accent, materials.Grip };
         }
 
         public static void ApplyPose(Transform weapon, Mesh mesh, WorkbenchWeaponKind kind, bool icon)
@@ -124,8 +122,8 @@ namespace Rokas.Presentation
             Bounds bounds = mesh.bounds;
             float planarSpan = Mathf.Max(bounds.size.x, bounds.size.y);
             float targetSpan = icon
-                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.62f : 1.48f)
-                : (kind == WorkbenchWeaponKind.TwoHanded ? 1.90f : 1.82f);
+                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.56f : 1.54f)
+                : (kind == WorkbenchWeaponKind.TwoHanded ? 1.82f : 1.86f);
 
             float scale = targetSpan / Mathf.Max(planarSpan, .0001f);
             weapon.localScale = Vector3.one * scale;
@@ -136,8 +134,8 @@ namespace Rokas.Presentation
         public static Quaternion PresentationRotation(WorkbenchWeaponKind kind, bool icon)
         {
             if (kind == WorkbenchWeaponKind.TwoHanded)
-                return Quaternion.Euler(icon ? 6f : 5f, icon ? -12f : -15f, icon ? -37f : -35f);
-            return Quaternion.Euler(icon ? 9f : 7f, icon ? -22f : -20f, icon ? -31f : -34f);
+                return Quaternion.Euler(icon ? 5f : 4f, icon ? -13f : -16f, icon ? -34f : -31f);
+            return Quaternion.Euler(icon ? 7f : 6f, icon ? -18f : -20f, icon ? -32f : -33f);
         }
 
         public static void AddDirectionalLight(Transform root, string name, Color color, float intensity, Vector3 euler)
@@ -182,7 +180,7 @@ namespace Rokas.Presentation
 
         private static Texture2D CreateMetallicGlossTexture()
         {
-            const int size = 64;
+            const int size = 128;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false, true)
             {
                 name = "WorkbenchBrushedMetallicGloss",
@@ -198,7 +196,7 @@ namespace Rokas.Presentation
                 {
                     float streak = .5f + .5f * Mathf.Sin(y * .92f + Mathf.Sin(x * .31f) * 1.7f);
                     float grain = .5f + .5f * Mathf.Sin(x * 2.13f + y * .17f);
-                    float smoothness = Mathf.Clamp01(.57f + streak * .08f + grain * .018f);
+                    float smoothness = Mathf.Clamp01(.50f + streak * .09f + grain * .015f);
                     pixels[y * size + x] = new Color(.86f, .04f, .02f, smoothness);
                 }
             }
@@ -224,7 +222,7 @@ namespace Rokas.Presentation
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float wave = Mathf.Sin(y * 1.31f + Mathf.Sin(x * .19f) * 2.2f) * .026f;
+                    float wave = Mathf.Sin(y * .83f + Mathf.Sin(x * .13f) * 1.4f) * .018f;
                     Vector3 normal = new Vector3(wave, 0f, 1f).normalized;
                     pixels[y * size + x] = new Color(
                         normal.x * .5f + .5f,
@@ -256,15 +254,15 @@ namespace Rokas.Presentation
         public int RenderTextureHeight => renderTexture ? renderTexture.height : 0;
         public bool RenderedWithPremiumSurfaceMaps { get; private set; }
         public string CurrentSource => Kind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium authored card render"
-            : "ROKAS authored ritual dagger mesh / card render";
+            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium heavy greatsword card render"
+            : "ROKAS premium authored matching dagger / card render";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind kind)
         {
             target = image ?? throw new ArgumentNullException(nameof(image));
             Kind = kind;
 
-            renderTexture = new RenderTexture(384, 384, 24, RenderTextureFormat.ARGB32)
+            renderTexture = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32)
             {
                 name = "WorkbenchWeaponIconRT_" + kind,
                 antiAliasing = 4,
