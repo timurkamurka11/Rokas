@@ -187,6 +187,8 @@ namespace Rokas.Presentation
         public float UserYaw => userYaw;
         public float UserPitch => userPitch;
         public bool IsUserDragging => userDragging;
+        public float CurrentIdleYawAmplitude => CurrentKind == WorkbenchWeaponKind.Dagger ? 8.8f : 6.8f;
+        public float CurrentIdleYawSpeed => CurrentKind == WorkbenchWeaponKind.Dagger ? .36f : .27f;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
             ? "WorkbenchPremiumSwordMesh.cs / local premium authored heavy greatsword"
             : "WorkbenchPremiumDaggerMesh.cs / local premium authored ritual dagger";
@@ -256,11 +258,13 @@ namespace Rokas.Presentation
                 userPitch = Mathf.Lerp(userPitch, 0f, Time.unscaledDeltaTime * 1.35f);
             }
 
-            float yaw = Mathf.Sin(idleTime * .30f) * 7.5f + userYaw;
-            float pitch = Mathf.Cos(idleTime * .39f) * 1.25f + userPitch;
-            float roll = Mathf.Sin(idleTime * .25f) * .65f;
+            bool dagger = CurrentKind == WorkbenchWeaponKind.Dagger;
+            float yaw = Mathf.Sin(idleTime * CurrentIdleYawSpeed) * CurrentIdleYawAmplitude + userYaw;
+            float pitch = Mathf.Cos(idleTime * (dagger ? .44f : .35f)) * (dagger ? 1.55f : 1.10f) + userPitch;
+            float roll = Mathf.Sin(idleTime * (dagger ? .30f : .22f)) * (dagger ? .92f : .52f);
             pivot.localRotation = baseRotation * Quaternion.Euler(pitch, yaw, roll);
-            pivot.localPosition = new Vector3(0, Mathf.Sin(idleTime * .58f) * .015f, 0);
+            pivot.localPosition = new Vector3(0,
+                Mathf.Sin(idleTime * (dagger ? .68f : .52f)) * (dagger ? .018f : .013f), 0);
             RenderNow();
         }
 
