@@ -188,8 +188,8 @@ namespace Rokas.Presentation
         public float UserPitch => userPitch;
         public bool IsUserDragging => userDragging;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium authored heavy greatsword presentation mesh"
-            : "ROKAS premium authored ritual dagger mesh";
+            ? "WorkbenchPremiumSwordMesh.cs / local premium authored heavy greatsword"
+            : "WorkbenchPremiumDaggerMesh.cs / local premium authored ritual dagger";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind initial)
         {
