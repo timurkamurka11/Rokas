@@ -21,6 +21,8 @@ namespace Rokas.Tests
         {
             int baselinePreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
                 .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+            int baselineIconTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name.StartsWith("WorkbenchWeaponIconRT_", StringComparison.Ordinal));
 
             root = new GameObject("WorkbenchUiFixture");
             Canvas canvas = root.AddComponent<Canvas>();
@@ -53,6 +55,8 @@ namespace Rokas.Tests
             Button next = FindButton("WorkbenchNextWeapon");
             Button upgrade = FindButton("UpgradeWeapon");
             WorkbenchWeaponPreview3D preview = Find("WorkbenchWeaponPreview").GetComponent<WorkbenchWeaponPreview3D>();
+            WorkbenchWeaponIcon3D swordIcon = twoHanded.GetComponentInChildren<WorkbenchWeaponIcon3D>(true);
+            WorkbenchWeaponIcon3D daggerIcon = dagger.GetComponentInChildren<WorkbenchWeaponIcon3D>(true);
 
             Assert.That(twoHanded, Is.Not.Null);
             Assert.That(dagger, Is.Not.Null);
@@ -70,8 +74,27 @@ namespace Rokas.Tests
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
             Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
             Assert.That(preview.HasCreatedRenderTexture, Is.True);
-            Assert.That(preview.RenderTextureWidth, Is.EqualTo(640));
-            Assert.That(preview.RenderTextureHeight, Is.EqualTo(640));
+            Assert.That(preview.RenderTextureWidth, Is.EqualTo(768));
+            Assert.That(preview.RenderTextureHeight, Is.EqualTo(768));
+            Assert.That(preview.HasPremiumSurfaceMaps, Is.True);
+            Assert.That(preview.ActiveLightCount, Is.EqualTo(3));
+            Assert.That(swordIcon, Is.Not.Null);
+            Assert.That(daggerIcon, Is.Not.Null);
+            Assert.That(swordIcon.Kind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
+            Assert.That(daggerIcon.Kind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
+            Assert.That(swordIcon.SourceVertexCount, Is.EqualTo(preview.CurrentVertexCount),
+                "Sword card must be rendered from the same final mesh used by the central viewer.");
+            Assert.That(swordIcon.SourceTriangleCount, Is.EqualTo(preview.CurrentTriangleCount));
+            Assert.That(swordIcon.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
+            Assert.That(swordIcon.HasCreatedRenderTexture, Is.True);
+            Assert.That(daggerIcon.HasCreatedRenderTexture, Is.True);
+            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(384));
+            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(384));
+            Assert.That(swordIcon.RenderedWithPremiumSurfaceMaps, Is.True);
+            Assert.That(daggerIcon.RenderedWithPremiumSurfaceMaps, Is.True);
+            Assert.That(twoHanded.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null,
+                "Final weapon cards must not fall back to the old procedural placeholder silhouette.");
+            Assert.That(dagger.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null);
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
             Assert.That(upgrade.IsInteractable(), Is.True);
             Assert.That(Find("WorkbenchHud").GetComponent<RectTransform>().pivot, Is.EqualTo(new Vector2(.5f, .5f)));
@@ -167,8 +190,12 @@ namespace Rokas.Tests
             yield return null;
             int remainingPreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
                 .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+            int remainingIconTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name.StartsWith("WorkbenchWeaponIconRT_", StringComparison.Ordinal));
             Assert.That(remainingPreviewTextures, Is.EqualTo(baselinePreviewTextures),
                 "Destroying the Workbench must release its private RenderTexture and preview rig.");
+            Assert.That(remainingIconTextures, Is.EqualTo(baselineIconTextures),
+                "Destroying the Workbench must release both model-derived card icon RenderTextures.");
             LogAssert.NoUnexpectedReceived();
         }
 
