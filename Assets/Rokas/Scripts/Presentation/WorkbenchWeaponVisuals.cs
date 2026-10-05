@@ -51,11 +51,11 @@ namespace Rokas.Presentation
             {
                 name = "Workbench Premium Dark Steel",
                 hideFlags = HideFlags.HideAndDontSave,
-                color = new Color(.18f, .195f, .22f, 1f)
+                color = new Color(.275f, .295f, .325f, 1f)
             };
             if (set.Metal.HasProperty("_Metallic")) set.Metal.SetFloat("_Metallic", .86f);
-            if (set.Metal.HasProperty("_Glossiness")) set.Metal.SetFloat("_Glossiness", .54f);
-            if (set.Metal.HasProperty("_GlossMapScale")) set.Metal.SetFloat("_GlossMapScale", .68f);
+            if (set.Metal.HasProperty("_Glossiness")) set.Metal.SetFloat("_Glossiness", .50f);
+            if (set.Metal.HasProperty("_GlossMapScale")) set.Metal.SetFloat("_GlossMapScale", .58f);
             if (set.Metal.HasProperty("_MetallicGlossMap"))
             {
                 set.Metal.SetTexture("_MetallicGlossMap", set.MetallicGloss);
@@ -64,7 +64,7 @@ namespace Rokas.Presentation
             if (set.Metal.HasProperty("_BumpMap"))
             {
                 set.Metal.SetTexture("_BumpMap", set.NormalDetail);
-                set.Metal.SetFloat("_BumpScale", .055f);
+                set.Metal.SetFloat("_BumpScale", .018f);
                 set.Metal.EnableKeyword("_NORMALMAP");
             }
             if (set.Metal.HasProperty("_EmissionColor"))
@@ -88,10 +88,10 @@ namespace Rokas.Presentation
             {
                 name = "Workbench Polished Accent Steel",
                 hideFlags = HideFlags.HideAndDontSave,
-                color = new Color(.30f, .335f, .38f, 1f)
+                color = new Color(.41f, .445f, .49f, 1f)
             };
             if (set.Accent.HasProperty("_Metallic")) set.Accent.SetFloat("_Metallic", .92f);
-            if (set.Accent.HasProperty("_Glossiness")) set.Accent.SetFloat("_Glossiness", .66f);
+            if (set.Accent.HasProperty("_Glossiness")) set.Accent.SetFloat("_Glossiness", .62f);
             if (set.Accent.HasProperty("_MetallicGlossMap"))
             {
                 set.Accent.SetTexture("_MetallicGlossMap", set.MetallicGloss);
@@ -100,7 +100,7 @@ namespace Rokas.Presentation
             if (set.Accent.HasProperty("_BumpMap"))
             {
                 set.Accent.SetTexture("_BumpMap", set.NormalDetail);
-                set.Accent.SetFloat("_BumpScale", .045f);
+                set.Accent.SetFloat("_BumpScale", .012f);
                 set.Accent.EnableKeyword("_NORMALMAP");
             }
             return set;
@@ -122,7 +122,7 @@ namespace Rokas.Presentation
             Bounds bounds = mesh.bounds;
             float planarSpan = Mathf.Max(bounds.size.x, bounds.size.y);
             float targetSpan = icon
-                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.56f : 1.54f)
+                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.76f : 1.66f)
                 : (kind == WorkbenchWeaponKind.TwoHanded ? 1.82f : 1.86f);
 
             float scale = targetSpan / Mathf.Max(planarSpan, .0001f);
@@ -196,7 +196,7 @@ namespace Rokas.Presentation
                 {
                     float streak = .5f + .5f * Mathf.Sin(y * .92f + Mathf.Sin(x * .31f) * 1.7f);
                     float grain = .5f + .5f * Mathf.Sin(x * 2.13f + y * .17f);
-                    float smoothness = Mathf.Clamp01(.50f + streak * .09f + grain * .015f);
+                    float smoothness = Mathf.Clamp01(.48f + streak * .055f + grain * .010f);
                     pixels[y * size + x] = new Color(.86f, .04f, .02f, smoothness);
                 }
             }
@@ -222,7 +222,7 @@ namespace Rokas.Presentation
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float wave = Mathf.Sin(y * .83f + Mathf.Sin(x * .13f) * 1.4f) * .018f;
+                    float wave = (Mathf.Sin(y * 4.7f) * .006f) + (Mathf.Sin(y * 11.3f + x * .35f) * .003f);
                     Vector3 normal = new Vector3(wave, 0f, 1f).normalized;
                     pixels[y * size + x] = new Color(
                         normal.x * .5f + .5f,
@@ -324,7 +324,7 @@ namespace Rokas.Presentation
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.enabled = false;
             camera.orthographic = true;
-            camera.orthographicSize = Kind == WorkbenchWeaponKind.TwoHanded ? 1.10f : 1.04f;
+            camera.orthographicSize = Kind == WorkbenchWeaponKind.TwoHanded ? 1.01f : .98f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0, 0, 0, 0);
             camera.cullingMask = 1 << WorkbenchWeaponVisualFactory.PreviewLayer;
@@ -334,11 +334,11 @@ namespace Rokas.Presentation
             camera.targetTexture = renderTexture;
 
             WorkbenchWeaponVisualFactory.AddPointLight(rig.transform, "IconKey",
-                new Color(.84f, .90f, .96f), 3.8f, new Vector3(-1.7f, 1.3f, -2.1f));
+                new Color(.88f, .93f, .98f), 4.6f, new Vector3(-1.7f, 1.3f, -2.1f));
             WorkbenchWeaponVisualFactory.AddPointLight(rig.transform, "IconFill",
-                new Color(.35f, .47f, .58f), 1.2f, new Vector3(1.4f, -1.4f, -1.7f));
+                new Color(.39f, .50f, .61f), 1.55f, new Vector3(1.4f, -1.4f, -1.7f));
             WorkbenchWeaponVisualFactory.AddPointLight(rig.transform, "IconRim",
-                new Color(.08f, .58f, 1f), 2.9f, new Vector3(1.8f, 1.6f, .4f));
+                new Color(.08f, .58f, 1f), 3.2f, new Vector3(1.8f, 1.6f, .4f));
 
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null) camera.Render();
 
