@@ -76,16 +76,16 @@ namespace Rokas.Tests
             {
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalVertexCount, Is.EqualTo(48858));
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalPolygonCount, Is.EqualTo(97712));
-                Assert.That(sword.name, Does.Contain("FbxDerived_Premium"));
-                Assert.That(sword.vertexCount, Is.GreaterThan(250),
-                    "The final Workbench sword must use the retained FBX-derived presentation mesh rather than a card placeholder.");
-                Assert.That(sword.triangles.Length / 3, Is.GreaterThan(350));
+                Assert.That(sword.name, Does.Contain("PremiumGreatsword"));
+                Assert.That(sword.vertexCount, Is.GreaterThan(1700),
+                    "The final two-hander must retain enough geometry for bevels, guard, wraps and pommel detail.");
+                Assert.That(sword.triangles.Length / 3, Is.GreaterThan(700));
                 Assert.That(sword.subMeshCount, Is.EqualTo(3),
-                    "The FBX-derived sword is partitioned into blade, accent/collar and grip material regions.");
-                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * .8f),
-                    "The hero sword must remain a long weapon after FBX-derived preprocessing.");
-                Assert.That(sword.bounds.size.x, Is.GreaterThan(sword.bounds.size.y * .45f),
-                    "The final silhouette must keep the supplied heavy broad-blade character.");
+                    "Blade, accent steel and grip must retain separate material regions.");
+                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 2.2f),
+                    "The heavy greatsword must read as a long two-handed weapon.");
+                Assert.That(sword.bounds.size.x, Is.GreaterThan(1.0f),
+                    "The final silhouette must remain visibly broad/heavy.");
                 Assert.That(sword.bounds.size.z, Is.LessThan(.22f));
                 Assert.That(sword.uv, Has.Length.EqualTo(sword.vertexCount),
                     "Premium material detail requires stable planar UVs on the runtime sword mesh.");
