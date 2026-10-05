@@ -66,6 +66,8 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
+            float swordIdleYawAmplitude = preview.CurrentIdleYawAmplitude;
+            float swordIdleYawSpeed = preview.CurrentIdleYawSpeed;
             Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1700));
             Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(700));
             Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.2f));
@@ -147,6 +149,10 @@ namespace Rokas.Tests
 
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("КИНЖАЛ"));
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
+            Assert.That(preview.CurrentIdleYawAmplitude, Is.GreaterThan(swordIdleYawAmplitude),
+                "Dagger presentation should feel lighter through a slightly wider restrained idle arc.");
+            Assert.That(preview.CurrentIdleYawSpeed, Is.GreaterThan(swordIdleYawSpeed),
+                "Dagger presentation should move slightly faster than the heavy two-handed sword.");
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1100));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
