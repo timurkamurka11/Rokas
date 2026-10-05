@@ -203,9 +203,11 @@ namespace Rokas.Presentation
             controller = root.gameObject.AddComponent<WorkbenchController>();
 
             BuildWeaponCard(root, "WorkbenchWeaponTwoHanded", WorkbenchWeaponKind.TwoHanded,
-                "ДВУРУЧНИК", 28, 112, controller, out WorkbenchPanelGraphic twoFace, out Outline twoGlow);
+                "ДВУРУЧНИК", 28, 112, controller, out WorkbenchPanelGraphic twoFace, out Outline twoGlow,
+                out WorkbenchWeaponIcon3D twoIcon);
             BuildWeaponCard(root, "WorkbenchWeaponDagger", WorkbenchWeaponKind.Dagger,
-                "КИНЖАЛ", 28, 358, controller, out WorkbenchPanelGraphic daggerFace, out Outline daggerGlow);
+                "КИНЖАЛ", 28, 358, controller, out WorkbenchPanelGraphic daggerFace, out Outline daggerGlow,
+                out WorkbenchWeaponIcon3D daggerIcon);
 
             var viewer = AddPanel(root, "WorkbenchViewer", 220, 108, 610, 570, 20,
                 new Color(.014f, .046f, .075f, .97f), CyanSoft, 2.2f);
@@ -292,6 +294,7 @@ namespace Rokas.Presentation
                 value => selectedKind = value,
                 new[] { twoFace, daggerFace },
                 new[] { twoGlow, daggerGlow },
+                new[] { twoIcon, daggerIcon },
                 preview,
                 previewRect,
                 previewGroup,
@@ -309,16 +312,21 @@ namespace Rokas.Presentation
         }
 
         private void BuildWeaponCard(Transform parent, string name, WorkbenchWeaponKind kind, string label,
-            float x, float y, WorkbenchController target, out WorkbenchPanelGraphic face, out Outline glow)
+            float x, float y, WorkbenchController target, out WorkbenchPanelGraphic face, out Outline glow,
+            out WorkbenchWeaponIcon3D icon)
         {
             Button button = DecoratedButton(parent, name, string.Empty, x, y, 168, 214,
                 () => target?.Select(kind), out face, out glow);
-            var iconRect = ui.Rect(button.transform, "WeaponCardPreview", 34, 17, 100, 137);
+            var iconBack = AddPanel(button.transform, "WeaponCardIconWell", 18, 16, 132, 136, 16,
+                new Color(.006f, .024f, .040f, .58f), new Color(Cyan.r, Cyan.g, Cyan.b, .18f), 1f);
+            iconBack.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .07f);
+            var iconRect = ui.Rect(button.transform, "WeaponCardPreview", 25, 23, 118, 118);
             CenterPivot(iconRect);
-            iconRect.localEulerAngles = new Vector3(0, 0, kind == WorkbenchWeaponKind.TwoHanded ? -35f : -28f);
-            var icon = iconRect.gameObject.AddComponent<WorkbenchWeaponGraphic>();
-            icon.Kind = kind;
-            icon.color = Color.white;
+            var rawIcon = iconRect.gameObject.AddComponent<RawImage>();
+            rawIcon.color = Color.white;
+            rawIcon.raycastTarget = false;
+            icon = iconRect.gameObject.AddComponent<WorkbenchWeaponIcon3D>();
+            icon.Initialize(rawIcon, kind);
             ui.Label(button.transform, "WeaponCardLabel", label, 10, 160, 148, 33, 17, White, false, TextAnchor.MiddleCenter);
             ui.Label(button.transform, "WeaponCardIndex", kind == WorkbenchWeaponKind.TwoHanded ? "01" : "02",
                 15, 8, 28, 20, 10, CyanSoft);
@@ -443,6 +451,7 @@ namespace Rokas.Presentation
         private WorkbenchWeaponKind selected;
         private WorkbenchPanelGraphic[] selectorFaces;
         private Outline[] selectorGlows;
+        private WorkbenchWeaponIcon3D[] selectorIcons;
         private WorkbenchWeaponPreview3D preview;
         private RectTransform previewRect;
         private CanvasGroup previewGroup;
@@ -461,7 +470,8 @@ namespace Rokas.Presentation
 
         public void Initialize(GameSession session, Action<Func<bool>, string> act, WorkbenchWeaponKind initial,
             Action<WorkbenchWeaponKind> selectedChanged, WorkbenchPanelGraphic[] selectorFaces, Outline[] selectorGlows,
-            WorkbenchWeaponPreview3D preview, RectTransform previewRect, CanvasGroup previewGroup, CanvasGroup rightGroup,
+            WorkbenchWeaponIcon3D[] selectorIcons, WorkbenchWeaponPreview3D preview,
+            RectTransform previewRect, CanvasGroup previewGroup, CanvasGroup rightGroup,
             Text category, Text title, Text level, Text description, Text stat, WorkbenchTierWidgets[] tiers,
             Button upgrade, WorkbenchPanelGraphic upgradeFace, Text upgradeText, Text lockReason)
         {
@@ -470,6 +480,7 @@ namespace Rokas.Presentation
             this.selectedChanged = selectedChanged;
             this.selectorFaces = selectorFaces;
             this.selectorGlows = selectorGlows;
+            this.selectorIcons = selectorIcons;
             this.preview = preview;
             this.previewRect = previewRect;
             this.previewGroup = previewGroup;
@@ -621,6 +632,8 @@ namespace Rokas.Presentation
                 WorkbenchTechButtonFeedback feedback =
                     selectorFaces[i].transform.parent.GetComponent<WorkbenchTechButtonFeedback>();
                 if (feedback) feedback.RestGlowAlpha = active ? .42f : .02f;
+                if (selectorIcons != null && i < selectorIcons.Length && selectorIcons[i])
+                    selectorIcons[i].SetSelected(active);
             }
         }
 

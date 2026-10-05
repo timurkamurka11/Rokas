@@ -75,19 +75,26 @@ namespace Rokas.Tests
             {
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalVertexCount, Is.EqualTo(48858));
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalPolygonCount, Is.EqualTo(97712));
-                Assert.That(sword.name, Does.Contain("FbxDerived"));
-                Assert.That(sword.vertexCount, Is.EqualTo(2871),
-                    "The final Workbench viewer must use the prepared optimized FBX-derived payload.");
-                Assert.That(sword.triangles.Length / 3, Is.EqualTo(5766));
-                Assert.That(sword.bounds.size.x, Is.EqualTo(.86446667f).Within(.002f));
-                Assert.That(sword.bounds.size.y, Is.EqualTo(.9915f).Within(.002f));
-                Assert.That(sword.bounds.size.z, Is.LessThan(.08f),
-                    "The supplied sword preview must preserve the thin FBX silhouette.");
+                Assert.That(sword.name, Does.Contain("PremiumAuthored"));
+                Assert.That(sword.vertexCount, Is.EqualTo(1270),
+                    "The final Workbench sword must use the authored hero presentation mesh.");
+                Assert.That(sword.triangles.Length / 3, Is.EqualTo(524));
+                Assert.That(sword.subMeshCount, Is.EqualTo(3),
+                    "Blade, accent steel and grip must retain separate material regions.");
+                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 2.5f),
+                    "Premium two-handed silhouette must stay long and confidently narrow.");
+                Assert.That(sword.bounds.size.z, Is.LessThan(.20f));
+                Assert.That(sword.uv, Has.Length.EqualTo(sword.vertexCount),
+                    "Premium material detail requires stable planar UVs on the runtime sword mesh.");
+                Assert.That(sword.tangents, Has.Length.EqualTo(sword.vertexCount),
+                    "Runtime sword tangents must be rebuilt for the brushed normal detail.");
                 Assert.That(dagger.name, Does.Contain("RitualDagger"));
                 Assert.That(dagger.vertexCount, Is.GreaterThan(150));
                 Assert.That(dagger.subMeshCount, Is.EqualTo(2),
                     "The authored dagger keeps separate metal and grip material regions.");
                 Assert.That(dagger.bounds.size.y, Is.GreaterThan(dagger.bounds.size.x));
+                Assert.That(dagger.uv, Has.Length.EqualTo(dagger.vertexCount));
+                Assert.That(dagger.tangents, Has.Length.EqualTo(dagger.vertexCount));
             }
             finally
             {

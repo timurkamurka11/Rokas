@@ -5,12 +5,17 @@ on:
   push:
     branches:
       - codex/workbench-final-ui-3d-polish
+      - r11-finished-ui
     paths:
       - .github/workflows/workbench-final-ui-3d.yml
       - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs
       - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs.meta
+      - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponVisuals.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponVisuals.cs.meta
+      - Assets/Rokas/Scripts/Presentation/WorkbenchPremiumSwordMesh.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchPremiumSwordMesh.cs.meta
       - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs
       - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
 
@@ -89,7 +94,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation -workbenchCaptureDir=/github/workspace/verification/workbench-captures
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests -workbenchCaptureDir=/github/workspace/verification/workbench-captures
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Final 3D PlayMode
       - name: Record exact checkpoint
@@ -110,6 +115,8 @@ jobs:
             ${{ steps.tests.outputs.artifactsPath }}
             verification
           if-no-files-found: warn
+
+
 
   laptop-regression:
     name: Existing laptop lifecycle regression

@@ -21,6 +21,8 @@ namespace Rokas.Tests
         {
             int baselinePreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
                 .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+            int baselineIconTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name.StartsWith("WorkbenchWeaponIconRT_", StringComparison.Ordinal));
 
             root = new GameObject("WorkbenchUiFixture");
             Canvas canvas = root.AddComponent<Canvas>();
@@ -53,6 +55,8 @@ namespace Rokas.Tests
             Button next = FindButton("WorkbenchNextWeapon");
             Button upgrade = FindButton("UpgradeWeapon");
             WorkbenchWeaponPreview3D preview = Find("WorkbenchWeaponPreview").GetComponent<WorkbenchWeaponPreview3D>();
+            WorkbenchWeaponIcon3D swordIcon = twoHanded.GetComponentInChildren<WorkbenchWeaponIcon3D>(true);
+            WorkbenchWeaponIcon3D daggerIcon = dagger.GetComponentInChildren<WorkbenchWeaponIcon3D>(true);
 
             Assert.That(twoHanded, Is.Not.Null);
             Assert.That(dagger, Is.Not.Null);
@@ -62,16 +66,36 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.EqualTo(2871));
-            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(5766));
-            Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.08f));
+            Assert.That(preview.CurrentVertexCount, Is.EqualTo(1270));
+            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(524));
+            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.5f));
+            Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.20f));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The sword mesh must be centered on the presentation pivot before idle rotation.");
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
             Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
             Assert.That(preview.HasCreatedRenderTexture, Is.True);
-            Assert.That(preview.RenderTextureWidth, Is.EqualTo(640));
-            Assert.That(preview.RenderTextureHeight, Is.EqualTo(640));
+            Assert.That(preview.RenderTextureWidth, Is.EqualTo(768));
+            Assert.That(preview.RenderTextureHeight, Is.EqualTo(768));
+            Assert.That(preview.HasPremiumSurfaceMaps, Is.True);
+            Assert.That(preview.ActiveLightCount, Is.EqualTo(3));
+            Assert.That(swordIcon, Is.Not.Null);
+            Assert.That(daggerIcon, Is.Not.Null);
+            Assert.That(swordIcon.Kind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
+            Assert.That(daggerIcon.Kind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
+            Assert.That(swordIcon.SourceVertexCount, Is.EqualTo(preview.CurrentVertexCount),
+                "Sword card must be rendered from the same final mesh used by the central viewer.");
+            Assert.That(swordIcon.SourceTriangleCount, Is.EqualTo(preview.CurrentTriangleCount));
+            Assert.That(swordIcon.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
+            Assert.That(swordIcon.HasCreatedRenderTexture, Is.True);
+            Assert.That(daggerIcon.HasCreatedRenderTexture, Is.True);
+            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(384));
+            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(384));
+            Assert.That(swordIcon.RenderedWithPremiumSurfaceMaps, Is.True);
+            Assert.That(daggerIcon.RenderedWithPremiumSurfaceMaps, Is.True);
+            Assert.That(twoHanded.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null,
+                "Final weapon cards must not fall back to the old procedural placeholder silhouette.");
+            Assert.That(dagger.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null);
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
             Assert.That(upgrade.IsInteractable(), Is.True);
             Assert.That(Find("WorkbenchHud").GetComponent<RectTransform>().pivot, Is.EqualTo(new Vector2(.5f, .5f)));
@@ -167,9 +191,74 @@ namespace Rokas.Tests
             yield return null;
             int remainingPreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
                 .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+            int remainingIconTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name.StartsWith("WorkbenchWeaponIconRT_", StringComparison.Ordinal));
             Assert.That(remainingPreviewTextures, Is.EqualTo(baselinePreviewTextures),
                 "Destroying the Workbench must release its private RenderTexture and preview rig.");
+            Assert.That(remainingIconTextures, Is.EqualTo(baselineIconTextures),
+                "Destroying the Workbench must release both model-derived card icon RenderTextures.");
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator WorkbenchRoomAndLaptopRoutesBuildSamePremiumView()
+        {
+            root = new GameObject("WorkbenchRouteFixture");
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            root.AddComponent<CanvasScaler>();
+            root.AddComponent<GraphicRaycaster>();
+            if (!EventSystem.current) root.AddComponent<EventSystem>();
+
+            var stageObject = new GameObject("RouteStage", typeof(RectTransform));
+            var stage = (RectTransform)stageObject.transform;
+            stage.SetParent(root.transform, false);
+            stage.anchorMin = stage.anchorMax = new Vector2(0, 1);
+            stage.pivot = new Vector2(0, 1);
+            stage.sizeDelta = new Vector2(1920, 1080);
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            var ui = new UiKit(assets, null);
+            var state = new SaveData { phase = RunPhase.Home, yen = 2000, weaponLevel = 1 };
+            var session = new GameSession(state, new ContractDefinition());
+            bool closed = false;
+            var panels = new ContractPanels(
+                ui,
+                session,
+                (action, _) => action(),
+                () => { },
+                (action, _) => action(),
+                () => closed = true);
+
+            panels.Build(stage, "workbench");
+            yield return new WaitForSecondsRealtime(.08f);
+            Assert.That(Find("WorkbenchModal"), Is.Not.Null);
+            AssertPremiumWorkbenchRoute("Room -> Swords");
+
+            UnityEngine.Object.Destroy(Find("WorkbenchModal"));
+            yield return null;
+
+            RectTransform laptopPage = ui.Rect(stage, "LaptopWorkbenchRoutePage", 0, 0, 1744, 812);
+            panels.BuildLaptopWorkbenchPage(laptopPage, () => closed = true);
+            yield return new WaitForSecondsRealtime(.08f);
+            AssertPremiumWorkbenchRoute("Laptop -> Workbench");
+
+            Assert.That(closed, Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private void AssertPremiumWorkbenchRoute(string route)
+        {
+            GameObject workbench = Find("WorkbenchRoot");
+            Assert.That(workbench, Is.Not.Null, route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponIcon3D>(true), Has.Length.EqualTo(2), route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponPreview3D>(true), Has.Length.EqualTo(1), route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponGraphic>(true), Is.Empty,
+                route + " must use model-derived weapon cards rather than procedural placeholders.");
+            Assert.That(Find("UpgradeWeapon"), Is.Not.Null, route);
+            Assert.That(Find("WorkbenchPreviousWeapon"), Is.Not.Null, route);
+            Assert.That(Find("WorkbenchNextWeapon"), Is.Not.Null, route);
         }
 
         private void Capture(string name)
