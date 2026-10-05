@@ -41,7 +41,7 @@ namespace Rokas.Tests
 
             foreach (string hotspot in new[]
             {
-                "LampHotspot", "WindowHotspot", "DeskLampHotspot", "WorkbenchHotspot",
+                "LampHotspot", "WindowHotspot", "DeskLampHotspot",
                 "DoorHotspot", "LaptopHotspot", "TeaHotspot", "MameHotspot"
             })
             {
@@ -50,6 +50,9 @@ namespace Rokas.Tests
                 Assert.That(button.IsInteractable(), Is.True, hotspot);
                 Assert.That(button.transform.Find("ScanBadge"), Is.Null, hotspot);
             }
+
+            Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
+                "Workbench must no longer expose a direct Hub/room hotspot.");
 
             foreach (string legacyChrome in new[]
             {
@@ -74,10 +77,12 @@ namespace Rokas.Tests
             Assert.That(FindRect("HomeCustomGlowRuntime"), Is.Not.Null);
             foreach (string hotspot in new[]
             {
-                "LampHotspot", "WindowHotspot", "DeskLampHotspot", "WorkbenchHotspot",
+                "LampHotspot", "WindowHotspot", "DeskLampHotspot",
                 "DoorHotspot", "LaptopHotspot", "TeaHotspot", "MameHotspot"
             })
                 Assert.That(Find<Button>(hotspot), Is.Not.Null, hotspot);
+            Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
+                "The swords area may remain decorative, but it must not be an interactive Workbench entry.");
             LogAssert.NoUnexpectedReceived();
         }
 
