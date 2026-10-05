@@ -169,7 +169,7 @@ namespace Rokas.Tests
 
         private void Capture(string name)
         {
-            string output = Environment.GetEnvironmentVariable("ROKAS_WORKBENCH_CAPTURE_DIR");
+            string output = ResolveCaptureDirectory();
             if (string.IsNullOrEmpty(output) ||
                 SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
 
@@ -219,6 +219,25 @@ namespace Rokas.Tests
                 UnityEngine.Object.Destroy(cameraObject);
                 Canvas.ForceUpdateCanvases();
             }
+        }
+
+        private static string ResolveCaptureDirectory()
+        {
+            string output = Environment.GetEnvironmentVariable("ROKAS_WORKBENCH_CAPTURE_DIR");
+            if (!string.IsNullOrEmpty(output)) return output;
+
+            string[] args = Environment.GetCommandLineArgs();
+            for (int index = 0; index < args.Length; index++)
+            {
+                if (args[index] == "-workbenchCaptureDir" && index + 1 < args.Length)
+                    return args[index + 1];
+
+                const string prefix = "-workbenchCaptureDir=";
+                if (args[index].StartsWith(prefix, StringComparison.Ordinal))
+                    return args[index].Substring(prefix.Length);
+            }
+
+            return string.Empty;
         }
 
         private Button FindButton(string name)

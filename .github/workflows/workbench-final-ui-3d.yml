@@ -89,7 +89,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: PlayMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation -workbenchCaptureDir=/github/workspace/verification/workbench-captures
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Final 3D PlayMode
       - name: Record exact checkpoint
@@ -99,7 +99,7 @@ jobs:
           mkdir -p verification
           git rev-parse HEAD > verification/head.txt
           git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=all > verification/git-status.txt
+          git status --short --untracked-files=no > verification/git-status.txt
           git diff --check > verification/git-diff-check.txt || true
       - name: Upload playmode and visual evidence
         if: always()
