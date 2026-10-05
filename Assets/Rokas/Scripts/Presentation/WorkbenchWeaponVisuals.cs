@@ -10,6 +10,7 @@ namespace Rokas.Presentation
         public Material Metal;
         public Material Grip;
         public Material Accent;
+        public Texture2D SteelAlbedo;
         public Texture2D MetallicGloss;
         public Texture2D NormalDetail;
 
@@ -22,11 +23,13 @@ namespace Rokas.Presentation
             WorkbenchWeaponVisualFactory.DestroyObject(Metal);
             WorkbenchWeaponVisualFactory.DestroyObject(Grip);
             WorkbenchWeaponVisualFactory.DestroyObject(Accent);
+            WorkbenchWeaponVisualFactory.DestroyObject(SteelAlbedo);
             WorkbenchWeaponVisualFactory.DestroyObject(MetallicGloss);
             WorkbenchWeaponVisualFactory.DestroyObject(NormalDetail);
             Metal = null;
             Grip = null;
             Accent = null;
+            SteelAlbedo = null;
             MetallicGloss = null;
             NormalDetail = null;
         }
@@ -40,6 +43,7 @@ namespace Rokas.Presentation
         {
             var set = new WorkbenchWeaponMaterialSet
             {
+                SteelAlbedo = CreateSteelAlbedoTexture(),
                 MetallicGloss = CreateMetallicGlossTexture(),
                 NormalDetail = CreateBrushedNormalTexture()
             };
@@ -53,6 +57,7 @@ namespace Rokas.Presentation
                 hideFlags = HideFlags.HideAndDontSave,
                 color = new Color(.275f, .295f, .325f, 1f)
             };
+            if (set.Metal.HasProperty("_MainTex")) set.Metal.SetTexture("_MainTex", set.SteelAlbedo);
             if (set.Metal.HasProperty("_Metallic")) set.Metal.SetFloat("_Metallic", .86f);
             if (set.Metal.HasProperty("_Glossiness")) set.Metal.SetFloat("_Glossiness", .50f);
             if (set.Metal.HasProperty("_GlossMapScale")) set.Metal.SetFloat("_GlossMapScale", .58f);
@@ -64,7 +69,7 @@ namespace Rokas.Presentation
             if (set.Metal.HasProperty("_BumpMap"))
             {
                 set.Metal.SetTexture("_BumpMap", set.NormalDetail);
-                set.Metal.SetFloat("_BumpScale", .018f);
+                set.Metal.SetFloat("_BumpScale", .006f);
                 set.Metal.EnableKeyword("_NORMALMAP");
             }
             if (set.Metal.HasProperty("_EmissionColor"))
@@ -100,7 +105,7 @@ namespace Rokas.Presentation
             if (set.Accent.HasProperty("_BumpMap"))
             {
                 set.Accent.SetTexture("_BumpMap", set.NormalDetail);
-                set.Accent.SetFloat("_BumpScale", .012f);
+                set.Accent.SetFloat("_BumpScale", .004f);
                 set.Accent.EnableKeyword("_NORMALMAP");
             }
             return set;
@@ -178,6 +183,36 @@ namespace Rokas.Presentation
             else UnityEngine.Object.DestroyImmediate(value);
         }
 
+        private static Texture2D CreateSteelAlbedoTexture()
+        {
+            const int size = 128;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false, false)
+            {
+                name = "WorkbenchDirectionalSteelTone",
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                float longitudinal = .5f + .5f * Mathf.Sin(y * .31f);
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (x + .5f) / size;
+                    float edgeDarken = Mathf.Abs(u - .5f) * .075f;
+                    float micro = Mathf.Sin(y * 1.73f + x * .11f) * .010f;
+                    float tone = Mathf.Clamp01(.88f + longitudinal * .025f + micro - edgeDarken);
+                    pixels[y * size + x] = new Color(tone * .97f, tone * .99f, tone, 1f);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
         private static Texture2D CreateMetallicGlossTexture()
         {
             const int size = 128;
@@ -222,7 +257,7 @@ namespace Rokas.Presentation
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float wave = (Mathf.Sin(y * 4.7f) * .006f) + (Mathf.Sin(y * 11.3f + x * .35f) * .003f);
+                    float wave = (Mathf.Sin(y * 7.1f) * .0018f) + (Mathf.Sin(y * 17.7f + x * .21f) * .0009f);
                     Vector3 normal = new Vector3(wave, 0f, 1f).normalized;
                     pixels[y * size + x] = new Color(
                         normal.x * .5f + .5f,
