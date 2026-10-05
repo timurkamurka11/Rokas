@@ -18,7 +18,9 @@ namespace Rokas.Presentation
 
         public static Mesh Create(WorkbenchWeaponKind kind)
         {
-            return kind == WorkbenchWeaponKind.Dagger ? DecodeDagger() : WorkbenchPremiumSwordMesh.Create();
+            return kind == WorkbenchWeaponKind.Dagger
+                ? WorkbenchPremiumDaggerMesh.Create()
+                : WorkbenchPremiumSwordMesh.Create();
         }
 
         private static Mesh DecodeTwoHanded()
@@ -149,8 +151,8 @@ namespace Rokas.Presentation
         public int ActiveLightCount => rig ? rig.GetComponentsInChildren<Light>(true).Length : 0;
         public string CurrentMeshName => currentMesh ? currentMesh.name : string.Empty;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium authored presentation mesh"
-            : "ROKAS authored ritual dagger mesh";
+            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium heavy greatsword presentation mesh"
+            : "ROKAS premium authored matching dagger mesh";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind initial)
         {
@@ -208,10 +210,11 @@ namespace Rokas.Presentation
         {
             if (!pivot || !weaponObject) return;
             idleTime += Time.unscaledDeltaTime;
-            float yaw = Mathf.Sin(idleTime * .62f) * 3.4f;
-            float pitch = Mathf.Cos(idleTime * .47f) * 1.1f;
-            pivot.localRotation = baseRotation * Quaternion.Euler(pitch, yaw, 0);
-            pivot.localPosition = new Vector3(0, Mathf.Sin(idleTime * .78f) * .022f, 0);
+            float yaw = Mathf.Sin(idleTime * .36f) * 10.5f;
+            float pitch = Mathf.Cos(idleTime * .43f) * 1.5f;
+            float roll = Mathf.Sin(idleTime * .29f) * .8f;
+            pivot.localRotation = baseRotation * Quaternion.Euler(pitch, yaw, roll);
+            pivot.localPosition = new Vector3(0, Mathf.Sin(idleTime * .62f) * .018f, 0);
             RenderNow();
         }
 
@@ -219,7 +222,7 @@ namespace Rokas.Presentation
         {
             if (rig) return;
 
-            renderTexture = new RenderTexture(768, 768, 24, RenderTextureFormat.ARGB32)
+            renderTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32)
             {
                 name = "WorkbenchWeaponPreviewRT",
                 antiAliasing = 4,
@@ -253,7 +256,7 @@ namespace Rokas.Presentation
             previewCamera.clearFlags = CameraClearFlags.SolidColor;
             previewCamera.backgroundColor = new Color(0, 0, 0, 0);
             previewCamera.cullingMask = 1 << PreviewLayer;
-            previewCamera.fieldOfView = 24f;
+            previewCamera.fieldOfView = 23f;
             previewCamera.nearClipPlane = .1f;
             previewCamera.farClipPlane = 20f;
             previewCamera.allowHDR = false;
