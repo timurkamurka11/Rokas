@@ -340,6 +340,8 @@ namespace Rokas.Presentation
 
         private void OpenPanel(string value)
         {
+            // Workbench is laptop-only. Reject the legacy in-room route before any modal state is created.
+            if (string.Equals(value, "workbench", StringComparison.OrdinalIgnoreCase)) return;
             if (transition || storageBlocked ||
                 (hubDialogue != null && hubDialogue.IsOpen))
                 return;

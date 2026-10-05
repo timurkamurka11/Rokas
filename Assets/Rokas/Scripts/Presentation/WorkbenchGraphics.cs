@@ -127,6 +127,21 @@ namespace Rokas.Presentation
             AddLine(mesh, new Vector2(rect.xMax - cut - 5f - accentLength, rect.yMin + 1f),
                 new Vector2(rect.xMax - cut - 5f, rect.yMin + 1f), 1.8f,
                 new Color(accent.r, accent.g, accent.b, accent.a * .7f));
+
+            if (rect.width >= 120f && rect.height >= 60f)
+            {
+                Color corner = new Color(accent.r, accent.g, accent.b, accent.a * .55f);
+                float arm = Mathf.Min(26f, Mathf.Min(rect.width, rect.height) * .16f);
+                float inset = 9f;
+                AddLine(mesh, new Vector2(rect.xMin + inset, rect.yMax - cut - 2f),
+                    new Vector2(rect.xMin + inset, rect.yMax - cut - arm), 1.4f, corner);
+                AddLine(mesh, new Vector2(rect.xMin + cut + 2f, rect.yMax - inset),
+                    new Vector2(rect.xMin + cut + arm, rect.yMax - inset), 1.4f, corner);
+                AddLine(mesh, new Vector2(rect.xMax - inset, rect.yMin + cut + 2f),
+                    new Vector2(rect.xMax - inset, rect.yMin + cut + arm), 1.2f, corner);
+                AddLine(mesh, new Vector2(rect.xMax - cut - 2f, rect.yMin + inset),
+                    new Vector2(rect.xMax - cut - arm, rect.yMin + inset), 1.2f, corner);
+            }
         }
 
         private static void AddLine(VertexHelper mesh, Vector2 a, Vector2 b, float width, Color color)
@@ -183,16 +198,29 @@ namespace Rokas.Presentation
             AddArc(mesh, center, radius * .46f, 222, 346, 1.8f, soft, 24);
             AddArc(mesh, center, radius * .92f, 278, 342, 1.1f,
                 new Color(color.r, color.g, color.b, color.a * .28f), 18);
+            AddArc(mesh, center, radius * .91f, 14, 66, 3.0f,
+                new Color(color.r, color.g, color.b, color.a * .55f), 14);
+            AddArc(mesh, center, radius * .74f, 268, 330, 2.4f,
+                new Color(color.r, color.g, color.b, color.a * .58f), 14);
             AddCircle(mesh, center, radius * .30f, 1.2f, new Color(color.r, color.g, color.b, color.a * .24f), 44);
+            AddCircle(mesh, center, radius * .56f, .9f, new Color(color.r, color.g, color.b, color.a * .16f), 52);
             AddLine(mesh, center + Vector2.left * radius * .92f, center + Vector2.right * radius * .92f, 1f, soft);
             AddLine(mesh, center + Vector2.down * radius * .92f, center + Vector2.up * radius * .92f, 1f, soft);
 
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < 24; i++)
             {
-                float angle = i * 30f * Mathf.Deg2Rad;
+                float angle = i * 15f * Mathf.Deg2Rad;
                 Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                AddLine(mesh, center + direction * radius * .70f, center + direction * radius * .79f, 1.5f, strong);
+                bool major = i % 2 == 0;
+                AddLine(mesh,
+                    center + direction * radius * (major ? .69f : .73f),
+                    center + direction * radius * .80f,
+                    major ? 1.55f : .85f,
+                    major ? strong : soft);
             }
+
+            AddLine(mesh, center + new Vector2(-radius * .09f, 0), center + new Vector2(radius * .09f, 0), 1.4f, strong);
+            AddLine(mesh, center + new Vector2(0, -radius * .09f), center + new Vector2(0, radius * .09f), 1.4f, strong);
         }
 
         private static void AddCircle(VertexHelper mesh, Vector2 center, float radius, float width, Color color, int segments)
@@ -262,19 +290,19 @@ namespace Rokas.Presentation
             if (rect.width <= 0 || rect.height <= 0) return;
             float sign = direction < 0 ? -1f : 1f;
             Vector2 center = rect.center;
-            float h = rect.height * .24f;
-            float w = rect.width * .20f;
+            float h = rect.height * .31f;
+            float w = rect.width * .27f;
             Color bright = color;
             Color soft = new Color(color.r, color.g, color.b, color.a * .38f);
             Vector2 tip = center + new Vector2(sign * w, 0);
             Vector2 top = center + new Vector2(-sign * w * .65f, h);
             Vector2 bottom = center + new Vector2(-sign * w * .65f, -h);
-            AddLine(mesh, top, tip, 3.4f, bright);
-            AddLine(mesh, tip, bottom, 3.4f, bright);
-            AddLine(mesh, top + new Vector2(-sign * 8f, 0), tip + new Vector2(-sign * 8f, 0), 1.1f, soft);
-            AddLine(mesh, tip + new Vector2(-sign * 8f, 0), bottom + new Vector2(-sign * 8f, 0), 1.1f, soft);
-            AddLine(mesh, center + new Vector2(-sign * 16f, -h * .62f),
-                center + new Vector2(-sign * 16f, h * .62f), 1f, soft);
+            AddLine(mesh, top, tip, 4.2f, bright);
+            AddLine(mesh, tip, bottom, 4.2f, bright);
+            AddLine(mesh, top + new Vector2(-sign * 10f, 0), tip + new Vector2(-sign * 10f, 0), 1.6f, soft);
+            AddLine(mesh, tip + new Vector2(-sign * 10f, 0), bottom + new Vector2(-sign * 10f, 0), 1.6f, soft);
+            AddLine(mesh, center + new Vector2(-sign * 19f, -h * .66f),
+                center + new Vector2(-sign * 19f, h * .66f), 1.2f, soft);
         }
 
         private static void AddLine(VertexHelper mesh, Vector2 a, Vector2 b, float width, Color color)

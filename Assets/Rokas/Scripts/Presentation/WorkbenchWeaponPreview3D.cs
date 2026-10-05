@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
 
@@ -18,7 +20,9 @@ namespace Rokas.Presentation
 
         public static Mesh Create(WorkbenchWeaponKind kind)
         {
-            return kind == WorkbenchWeaponKind.Dagger ? DecodeDagger() : WorkbenchPremiumSwordMesh.Create();
+            return kind == WorkbenchWeaponKind.Dagger
+                ? WorkbenchPremiumDaggerMesh.Create()
+                : WorkbenchPremiumSwordMesh.Create();
         }
 
         private static Mesh DecodeTwoHanded()
@@ -29,10 +33,39 @@ namespace Rokas.Presentation
             int faceCount = reader.ReadInt32();
             Vector3[] vertices = ReadVertices(reader, vertexCount);
             int[] triangles = ReadTriangles(reader, faceCount);
-            var mesh = new Mesh { name = "WorkbenchTwoHanded_FbxDerived" };
+
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+            for (int index = 0; index < vertices.Length; index++)
+            {
+                minY = Mathf.Min(minY, vertices[index].y);
+                maxY = Mathf.Max(maxY, vertices[index].y);
+            }
+            float height = Mathf.Max(.0001f, maxY - minY);
+            var blade = new List<int>(triangles.Length);
+            var accent = new List<int>(triangles.Length / 5);
+            var grip = new List<int>(triangles.Length / 5);
+            for (int index = 0; index < triangles.Length; index += 3)
+            {
+                float centroidY =
+                    (vertices[triangles[index]].y +
+                     vertices[triangles[index + 1]].y +
+                     vertices[triangles[index + 2]].y) / 3f;
+                float normalizedY = (centroidY - minY) / height;
+                List<int> target = normalizedY < .72f ? blade :
+                    normalizedY < .83f ? accent : grip;
+                target.Add(triangles[index]);
+                target.Add(triangles[index + 1]);
+                target.Add(triangles[index + 2]);
+            }
+
+            var mesh = new Mesh { name = "WorkbenchTwoHanded_FbxDerived_Premium" };
             mesh.indexFormat = vertexCount > ushort.MaxValue ? IndexFormat.UInt32 : IndexFormat.UInt16;
             mesh.vertices = vertices;
-            mesh.triangles = triangles;
+            mesh.subMeshCount = 3;
+            mesh.SetTriangles(blade, 0, true);
+            mesh.SetTriangles(accent, 1, true);
+            mesh.SetTriangles(grip, 2, true);
             FinalizePresentationMesh(mesh, vertices);
             return mesh;
         }
@@ -110,7 +143,7 @@ namespace Rokas.Presentation
     }
 
     [AddComponentMenu("ROKAS/UI/Workbench Weapon Preview 3D")]
-    public sealed class WorkbenchWeaponPreview3D : MonoBehaviour
+    public sealed class WorkbenchWeaponPreview3D : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         private const int PreviewLayer = 31;
         private static readonly Vector3 PreviewOrigin = new Vector3(9100f, 9100f, 9100f);
@@ -125,6 +158,9 @@ namespace Rokas.Presentation
         private WorkbenchWeaponMaterialSet materials;
         private Quaternion baseRotation;
         private float idleTime;
+        private float userYaw;
+        private float userPitch;
+        private bool userDragging;
 
         public WorkbenchWeaponKind CurrentKind { get; private set; }
         public bool HasModel => currentMesh != null && weaponObject;
@@ -148,9 +184,14 @@ namespace Rokas.Presentation
         public bool HasPremiumSurfaceMaps => materials != null && materials.HasSurfaceMaps;
         public int ActiveLightCount => rig ? rig.GetComponentsInChildren<Light>(true).Length : 0;
         public string CurrentMeshName => currentMesh ? currentMesh.name : string.Empty;
+        public float UserYaw => userYaw;
+        public float UserPitch => userPitch;
+        public bool IsUserDragging => userDragging;
+        public float CurrentIdleYawAmplitude => CurrentKind == WorkbenchWeaponKind.Dagger ? 8.8f : 6.8f;
+        public float CurrentIdleYawSpeed => CurrentKind == WorkbenchWeaponKind.Dagger ? .36f : .27f;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium authored presentation mesh"
-            : "ROKAS authored ritual dagger mesh";
+            ? "WorkbenchPremiumSwordMesh.cs / local premium authored heavy greatsword"
+            : "WorkbenchPremiumDaggerMesh.cs / local premium authored ritual dagger";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind initial)
         {
@@ -195,6 +236,9 @@ namespace Rokas.Presentation
             pivot.localRotation = baseRotation;
             pivot.localPosition = Vector3.zero;
             idleTime = 0f;
+            userYaw = 0f;
+            userPitch = 0f;
+            userDragging = false;
             RenderNow();
         }
 
@@ -208,18 +252,45 @@ namespace Rokas.Presentation
         {
             if (!pivot || !weaponObject) return;
             idleTime += Time.unscaledDeltaTime;
-            float yaw = Mathf.Sin(idleTime * .62f) * 3.4f;
-            float pitch = Mathf.Cos(idleTime * .47f) * 1.1f;
-            pivot.localRotation = baseRotation * Quaternion.Euler(pitch, yaw, 0);
-            pivot.localPosition = new Vector3(0, Mathf.Sin(idleTime * .78f) * .022f, 0);
+            if (!userDragging)
+            {
+                userYaw = Mathf.Lerp(userYaw, 0f, Time.unscaledDeltaTime * 1.35f);
+                userPitch = Mathf.Lerp(userPitch, 0f, Time.unscaledDeltaTime * 1.35f);
+            }
+
+            bool dagger = CurrentKind == WorkbenchWeaponKind.Dagger;
+            float yaw = Mathf.Sin(idleTime * CurrentIdleYawSpeed) * CurrentIdleYawAmplitude + userYaw;
+            float pitch = Mathf.Cos(idleTime * (dagger ? .44f : .35f)) * (dagger ? 1.55f : 1.10f) + userPitch;
+            float roll = Mathf.Sin(idleTime * (dagger ? .30f : .22f)) * (dagger ? .92f : .52f);
+            pivot.localRotation = baseRotation * Quaternion.Euler(pitch, yaw, roll);
+            pivot.localPosition = new Vector3(0,
+                Mathf.Sin(idleTime * (dagger ? .68f : .52f)) * (dagger ? .018f : .013f), 0);
             RenderNow();
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (!weaponObject) return;
+            userDragging = true;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!userDragging || eventData == null) return;
+            userYaw = Mathf.Clamp(userYaw - eventData.delta.x * .10f, -24f, 24f);
+            userPitch = Mathf.Clamp(userPitch + eventData.delta.y * .065f, -8f, 8f);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            userDragging = false;
         }
 
         private void EnsureRig()
         {
             if (rig) return;
 
-            renderTexture = new RenderTexture(768, 768, 24, RenderTextureFormat.ARGB32)
+            renderTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32)
             {
                 name = "WorkbenchWeaponPreviewRT",
                 antiAliasing = 4,
@@ -230,7 +301,7 @@ namespace Rokas.Presentation
             renderTexture.Create();
             target.texture = renderTexture;
             target.color = Color.white;
-            target.raycastTarget = false;
+            target.raycastTarget = true;
 
             rig = new GameObject("WorkbenchWeaponPreviewRig");
             rig.hideFlags = HideFlags.HideAndDontSave;
@@ -253,7 +324,7 @@ namespace Rokas.Presentation
             previewCamera.clearFlags = CameraClearFlags.SolidColor;
             previewCamera.backgroundColor = new Color(0, 0, 0, 0);
             previewCamera.cullingMask = 1 << PreviewLayer;
-            previewCamera.fieldOfView = 24f;
+            previewCamera.fieldOfView = 23f;
             previewCamera.nearClipPlane = .1f;
             previewCamera.farClipPlane = 20f;
             previewCamera.allowHDR = false;
@@ -261,11 +332,11 @@ namespace Rokas.Presentation
 
             materials = WorkbenchWeaponVisualFactory.CreateMaterials();
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchKey",
-                new Color(.82f, .88f, .94f), 1.08f, new Vector3(24f, -31f, 0f));
+                new Color(.86f, .91f, .96f), 1.22f, new Vector3(22f, -28f, 0f));
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchFill",
-                new Color(.42f, .54f, .64f), .26f, new Vector3(-20f, 42f, 0f));
+                new Color(.46f, .57f, .68f), .34f, new Vector3(-18f, 40f, 0f));
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchRim",
-                new Color(.08f, .58f, .96f), .82f, new Vector3(12f, 148f, 0f));
+                new Color(.08f, .55f, .94f), .72f, new Vector3(14f, 150f, 0f));
         }
 
         private void OnDestroy()

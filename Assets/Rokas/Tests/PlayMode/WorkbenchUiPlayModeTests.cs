@@ -66,17 +66,20 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.EqualTo(1270));
-            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(524));
-            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.5f));
+            float swordIdleYawAmplitude = preview.CurrentIdleYawAmplitude;
+            float swordIdleYawSpeed = preview.CurrentIdleYawSpeed;
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1700));
+            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(700));
+            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.2f));
+            Assert.That(preview.CurrentMeshBoundsSize.x, Is.GreaterThan(1.0f));
             Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.20f));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The sword mesh must be centered on the presentation pivot before idle rotation.");
-            Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
+            Assert.That(preview.CurrentSource, Does.Contain("WorkbenchPremiumSwordMesh"));
             Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
             Assert.That(preview.HasCreatedRenderTexture, Is.True);
-            Assert.That(preview.RenderTextureWidth, Is.EqualTo(768));
-            Assert.That(preview.RenderTextureHeight, Is.EqualTo(768));
+            Assert.That(preview.RenderTextureWidth, Is.EqualTo(1024));
+            Assert.That(preview.RenderTextureHeight, Is.EqualTo(1024));
             Assert.That(preview.HasPremiumSurfaceMaps, Is.True);
             Assert.That(preview.ActiveLightCount, Is.EqualTo(3));
             Assert.That(swordIcon, Is.Not.Null);
@@ -86,11 +89,11 @@ namespace Rokas.Tests
             Assert.That(swordIcon.SourceVertexCount, Is.EqualTo(preview.CurrentVertexCount),
                 "Sword card must be rendered from the same final mesh used by the central viewer.");
             Assert.That(swordIcon.SourceTriangleCount, Is.EqualTo(preview.CurrentTriangleCount));
-            Assert.That(swordIcon.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
+            Assert.That(swordIcon.CurrentSource, Does.Contain("WorkbenchPremiumSwordMesh"));
             Assert.That(swordIcon.HasCreatedRenderTexture, Is.True);
             Assert.That(daggerIcon.HasCreatedRenderTexture, Is.True);
-            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(384));
-            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(384));
+            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(512));
+            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(512));
             Assert.That(swordIcon.RenderedWithPremiumSurfaceMaps, Is.True);
             Assert.That(daggerIcon.RenderedWithPremiumSurfaceMaps, Is.True);
             Assert.That(twoHanded.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null,
@@ -106,7 +109,26 @@ namespace Rokas.Tests
             Assert.That(next.GetComponentInChildren<WorkbenchArrowGraphic>(), Is.Not.Null);
 
             preview.RenderNow();
-            Capture("01-twohanded");
+            Capture("01_full_sword");
+
+            RawImage previewImage = preview.GetComponent<RawImage>();
+            Assert.That(previewImage.raycastTarget, Is.True,
+                "The hero RenderTexture must receive restrained drag input.");
+            var dragData = new PointerEventData(EventSystem.current)
+            {
+                button = PointerEventData.InputButton.Left,
+                delta = new Vector2(-90f, 24f)
+            };
+            preview.OnBeginDrag(dragData);
+            Assert.That(preview.IsUserDragging, Is.True);
+            preview.OnDrag(dragData);
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.GreaterThan(2f));
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.LessThanOrEqualTo(24f));
+            Assert.That(Mathf.Abs(preview.UserPitch), Is.LessThanOrEqualTo(8f));
+            yield return new WaitForSecondsRealtime(.05f);
+            Capture("04_sword_rotation");
+            preview.OnEndDrag(dragData);
+            Assert.That(preview.IsUserDragging, Is.False);
 
             WorkbenchTechButtonFeedback leftFeedback = previous.GetComponent<WorkbenchTechButtonFeedback>();
             leftFeedback.OnPointerEnter(new PointerEventData(EventSystem.current));
@@ -117,7 +139,7 @@ namespace Rokas.Tests
             WorkbenchTechButtonFeedback rightFeedback = next.GetComponent<WorkbenchTechButtonFeedback>();
             rightFeedback.OnPointerEnter(new PointerEventData(EventSystem.current));
             yield return new WaitForSecondsRealtime(.08f);
-            Capture("03-right-arrow-hover");
+            Capture("09_arrow_hover");
 
             next.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.06f);
@@ -127,14 +149,33 @@ namespace Rokas.Tests
 
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("КИНЖАЛ"));
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
+            Assert.That(preview.CurrentIdleYawAmplitude, Is.GreaterThan(swordIdleYawAmplitude),
+                "Dagger presentation should feel lighter through a slightly wider restrained idle arc.");
+            Assert.That(preview.CurrentIdleYawSpeed, Is.GreaterThan(swordIdleYawSpeed),
+                "Dagger presentation should move slightly faster than the heavy two-handed sword.");
             Assert.That(preview.HasModel, Is.True);
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(150));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1100));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The dagger must use the same bounds-centered 3D presentation path.");
             Assert.That(preview.ActiveRendererCount, Is.EqualTo(1), "A completed switch must keep exactly one 3D weapon renderer.");
             Assert.That(upgrade.IsInteractable(), Is.False,
                 "Dagger must not fabricate an upgrade path that the domain model does not own.");
-            Capture("05-dagger");
+            Capture("05_full_dagger");
+
+            var daggerDrag = new PointerEventData(EventSystem.current)
+            {
+                button = PointerEventData.InputButton.Left,
+                delta = new Vector2(64f, -18f)
+            };
+            preview.OnBeginDrag(daggerDrag);
+            preview.OnDrag(daggerDrag);
+            Assert.That(preview.IsUserDragging, Is.True);
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.GreaterThan(2f));
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.LessThanOrEqualTo(24f));
+            yield return new WaitForSecondsRealtime(.05f);
+            Capture("08_dagger_rotation");
+            preview.OnEndDrag(daggerDrag);
+            Assert.That(preview.IsUserDragging, Is.False);
 
             previous.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.32f);
@@ -180,7 +221,7 @@ namespace Rokas.Tests
                 "Open Workbench must refresh its visible level immediately after a successful upgrade.");
             Assert.That(FindButton("UpgradeWeapon").GetComponentInChildren<Text>().text, Does.Contain("600"),
                 "The next authoritative upgrade cost must refresh without closing the screen.");
-            Capture("06-upgraded-info-tiers-cta");
+            Capture("10_upgrade");
 
             Assert.That(root.GetComponentsInChildren<Canvas>(true), Has.Length.EqualTo(1));
             FindButton("WorkbenchClose").onClick.Invoke();
@@ -201,7 +242,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator WorkbenchRoomAndLaptopRoutesBuildSamePremiumView()
+        public IEnumerator WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing()
         {
             root = new GameObject("WorkbenchRouteFixture");
             Canvas canvas = root.AddComponent<Canvas>();
@@ -210,7 +251,7 @@ namespace Rokas.Tests
             root.AddComponent<GraphicRaycaster>();
             if (!EventSystem.current) root.AddComponent<EventSystem>();
 
-            var stageObject = new GameObject("RouteStage", typeof(RectTransform));
+            var stageObject = new GameObject("Stage", typeof(RectTransform));
             var stage = (RectTransform)stageObject.transform;
             stage.SetParent(root.transform, false);
             stage.anchorMin = stage.anchorMax = new Vector2(0, 1);
@@ -232,17 +273,16 @@ namespace Rokas.Tests
                 () => closed = true);
 
             panels.Build(stage, "workbench");
-            yield return new WaitForSecondsRealtime(.08f);
-            Assert.That(Find("WorkbenchModal"), Is.Not.Null);
-            AssertPremiumWorkbenchRoute("Room -> Swords");
-
-            UnityEngine.Object.Destroy(Find("WorkbenchModal"));
             yield return null;
+            Assert.That(Find("WorkbenchModal"), Is.Null);
+            Assert.That(Find("WorkbenchRoot"), Is.Null,
+                "Legacy room/in-world route must not construct a Workbench.");
 
             RectTransform laptopPage = ui.Rect(stage, "LaptopWorkbenchRoutePage", 0, 0, 1744, 812);
             panels.BuildLaptopWorkbenchPage(laptopPage, () => closed = true);
             yield return new WaitForSecondsRealtime(.08f);
             AssertPremiumWorkbenchRoute("Laptop -> Workbench");
+            Capture("11_laptop_workbench_entry");
 
             Assert.That(closed, Is.False);
             LogAssert.NoUnexpectedReceived();
