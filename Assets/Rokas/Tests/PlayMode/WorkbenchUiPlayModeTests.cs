@@ -66,17 +66,17 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.EqualTo(1270));
-            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(524));
-            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.5f));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1700));
+            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(700));
+            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 3.4f));
             Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.20f));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The sword mesh must be centered on the presentation pivot before idle rotation.");
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
             Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
             Assert.That(preview.HasCreatedRenderTexture, Is.True);
-            Assert.That(preview.RenderTextureWidth, Is.EqualTo(768));
-            Assert.That(preview.RenderTextureHeight, Is.EqualTo(768));
+            Assert.That(preview.RenderTextureWidth, Is.EqualTo(1024));
+            Assert.That(preview.RenderTextureHeight, Is.EqualTo(1024));
             Assert.That(preview.HasPremiumSurfaceMaps, Is.True);
             Assert.That(preview.ActiveLightCount, Is.EqualTo(3));
             Assert.That(swordIcon, Is.Not.Null);
@@ -89,8 +89,8 @@ namespace Rokas.Tests
             Assert.That(swordIcon.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
             Assert.That(swordIcon.HasCreatedRenderTexture, Is.True);
             Assert.That(daggerIcon.HasCreatedRenderTexture, Is.True);
-            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(384));
-            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(384));
+            Assert.That(swordIcon.RenderTextureWidth, Is.EqualTo(512));
+            Assert.That(daggerIcon.RenderTextureHeight, Is.EqualTo(512));
             Assert.That(swordIcon.RenderedWithPremiumSurfaceMaps, Is.True);
             Assert.That(daggerIcon.RenderedWithPremiumSurfaceMaps, Is.True);
             Assert.That(twoHanded.GetComponentInChildren<WorkbenchWeaponGraphic>(true), Is.Null,
@@ -128,7 +128,7 @@ namespace Rokas.Tests
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("КИНЖАЛ"));
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
             Assert.That(preview.HasModel, Is.True);
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(150));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1200));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The dagger must use the same bounds-centered 3D presentation path.");
             Assert.That(preview.ActiveRendererCount, Is.EqualTo(1), "A completed switch must keep exactly one 3D weapon renderer.");
@@ -201,7 +201,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator WorkbenchRoomAndLaptopRoutesBuildSamePremiumView()
+        public IEnumerator WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing()
         {
             root = new GameObject("WorkbenchRouteFixture");
             Canvas canvas = root.AddComponent<Canvas>();
@@ -232,12 +232,10 @@ namespace Rokas.Tests
                 () => closed = true);
 
             panels.Build(stage, "workbench");
-            yield return new WaitForSecondsRealtime(.08f);
-            Assert.That(Find("WorkbenchModal"), Is.Not.Null);
-            AssertPremiumWorkbenchRoute("Room -> Swords");
-
-            UnityEngine.Object.Destroy(Find("WorkbenchModal"));
             yield return null;
+            Assert.That(Find("WorkbenchModal"), Is.Null);
+            Assert.That(Find("WorkbenchRoot"), Is.Null,
+                "Legacy room/in-world route must not construct a Workbench.");
 
             RectTransform laptopPage = ui.Rect(stage, "LaptopWorkbenchRoutePage", 0, 0, 1744, 812);
             panels.BuildLaptopWorkbenchPage(laptopPage, () => closed = true);
