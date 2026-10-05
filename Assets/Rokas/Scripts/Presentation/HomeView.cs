@@ -76,9 +76,6 @@ namespace Rokas.Presentation
                 false);
             ScanActionMarker(parent, "DeskLampHotspot", HomeScanGlyph.DeskLamp,
                 1151.3f, 194.9f, 52f, toggleFloorLamp, false);
-            ScanActionMarker(parent, "WorkbenchHotspot", HomeScanGlyph.Swords,
-                1403.5f, 296.8f, 46f, () => open("workbench"));
-
             Button laptopButton = ScanActionMarker(parent, "LaptopHotspot", HomeScanGlyph.Laptop,
                 1093.4f, 489.6f, 50f, () => open("laptop"));
             laptopMarkerFeedback = laptopButton.GetComponent<HomeScanMarkerFeedback>();
