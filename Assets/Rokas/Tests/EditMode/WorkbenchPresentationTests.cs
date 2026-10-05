@@ -82,10 +82,10 @@ namespace Rokas.Tests
                 Assert.That(sword.triangles.Length / 3, Is.GreaterThan(700));
                 Assert.That(sword.subMeshCount, Is.EqualTo(3),
                     "Blade, accent steel and grip must retain separate material regions.");
-                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 3.4f),
+                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 2.2f),
                     "The broad greatsword must still read as a long two-handed weapon rather than a slab.");
-                Assert.That(sword.bounds.size.x, Is.GreaterThan(.50f),
-                    "The final silhouette must be visibly broader/heavier than the previous generic longsword.");
+                Assert.That(sword.bounds.size.x, Is.GreaterThan(1.0f),
+                    "The final silhouette must remain visibly broad/heavy rather than collapsing back to a generic longsword.");
                 Assert.That(sword.bounds.size.z, Is.LessThan(.22f));
                 Assert.That(sword.uv, Has.Length.EqualTo(sword.vertexCount),
                     "Premium material detail requires stable planar UVs on the runtime sword mesh.");
