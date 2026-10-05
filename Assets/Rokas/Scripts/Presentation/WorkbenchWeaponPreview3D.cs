@@ -264,11 +264,11 @@ namespace Rokas.Presentation
 
             materials = WorkbenchWeaponVisualFactory.CreateMaterials();
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchKey",
-                new Color(.82f, .88f, .94f), 1.08f, new Vector3(24f, -31f, 0f));
+                new Color(.86f, .91f, .96f), 1.22f, new Vector3(22f, -28f, 0f));
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchFill",
-                new Color(.42f, .54f, .64f), .26f, new Vector3(-20f, 42f, 0f));
+                new Color(.46f, .57f, .68f), .34f, new Vector3(-18f, 40f, 0f));
             WorkbenchWeaponVisualFactory.AddDirectionalLight(rig.transform, "WorkbenchRim",
-                new Color(.08f, .58f, .96f), .82f, new Vector3(12f, 148f, 0f));
+                new Color(.08f, .55f, .94f), .72f, new Vector3(14f, 150f, 0f));
         }
 
         private void OnDestroy()
