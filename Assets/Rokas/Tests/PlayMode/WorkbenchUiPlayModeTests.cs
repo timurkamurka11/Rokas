@@ -199,6 +199,67 @@ namespace Rokas.Tests
             LogAssert.NoUnexpectedReceived();
         }
 
+        [UnityTest]
+        public IEnumerator WorkbenchRoomAndLaptopRoutesBuildSamePremiumView()
+        {
+            root = new GameObject("WorkbenchRouteFixture");
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            root.AddComponent<CanvasScaler>();
+            root.AddComponent<GraphicRaycaster>();
+            if (!EventSystem.current) root.AddComponent<EventSystem>();
+
+            var stageObject = new GameObject("RouteStage", typeof(RectTransform));
+            var stage = (RectTransform)stageObject.transform;
+            stage.SetParent(root.transform, false);
+            stage.anchorMin = stage.anchorMax = new Vector2(0, 1);
+            stage.pivot = new Vector2(0, 1);
+            stage.sizeDelta = new Vector2(1920, 1080);
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            Assert.That(assets, Is.Not.Null);
+            var ui = new UiKit(assets, null);
+            var state = new SaveData { phase = RunPhase.Home, yen = 2000, weaponLevel = 1 };
+            var session = new GameSession(state, new ContractDefinition());
+            bool closed = false;
+            var panels = new ContractPanels(
+                ui,
+                session,
+                (action, _) => action(),
+                () => { },
+                (action, _) => action(),
+                () => closed = true);
+
+            panels.Build(stage, "workbench");
+            yield return new WaitForSecondsRealtime(.08f);
+            Assert.That(Find("WorkbenchModal"), Is.Not.Null);
+            AssertPremiumWorkbenchRoute("Room -> Swords");
+
+            UnityEngine.Object.Destroy(Find("WorkbenchModal"));
+            yield return null;
+
+            RectTransform laptopPage = ui.Rect(stage, "LaptopWorkbenchRoutePage", 0, 0, 1744, 812);
+            panels.BuildLaptopWorkbenchPage(laptopPage, () => closed = true);
+            yield return new WaitForSecondsRealtime(.08f);
+            AssertPremiumWorkbenchRoute("Laptop -> Workbench");
+
+            Assert.That(closed, Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        private void AssertPremiumWorkbenchRoute(string route)
+        {
+            GameObject workbench = Find("WorkbenchRoot");
+            Assert.That(workbench, Is.Not.Null, route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponIcon3D>(true), Has.Length.EqualTo(2), route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponPreview3D>(true), Has.Length.EqualTo(1), route);
+            Assert.That(workbench.GetComponentsInChildren<WorkbenchWeaponGraphic>(true), Is.Empty,
+                route + " must use model-derived weapon cards rather than procedural placeholders.");
+            Assert.That(Find("UpgradeWeapon"), Is.Not.Null, route);
+            Assert.That(Find("WorkbenchPreviousWeapon"), Is.Not.Null, route);
+            Assert.That(Find("WorkbenchNextWeapon"), Is.Not.Null, route);
+        }
+
         private void Capture(string name)
         {
             string output = ResolveCaptureDirectory();
