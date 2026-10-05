@@ -18,43 +18,47 @@ namespace Rokas.Presentation
 
             Vector2[] bladeOutline =
             {
-                new Vector2(0f, -.84f),
-                new Vector2(-.105f, -.66f),
-                new Vector2(-.165f, -.38f),
-                new Vector2(-.172f, .30f),
-                new Vector2(-.135f, .43f),
-                new Vector2(-.078f, .50f),
-                new Vector2(.078f, .50f),
-                new Vector2(.135f, .43f),
-                new Vector2(.172f, .30f),
-                new Vector2(.165f, -.38f),
-                new Vector2(.105f, -.66f)
+                new Vector2(0f, -.62f),
+                new Vector2(-.11f, -.50f),
+                new Vector2(-.18f, -.25f),
+                new Vector2(-.20f, .02f),
+                new Vector2(-.17f, .22f),
+                new Vector2(-.11f, .34f),
+                new Vector2(-.06f, .39f),
+                new Vector2(.06f, .39f),
+                new Vector2(.11f, .34f),
+                new Vector2(.17f, .22f),
+                new Vector2(.20f, .02f),
+                new Vector2(.18f, -.25f),
+                new Vector2(.11f, -.50f)
             };
-            AddBeveledPrism(vertices, blade, bladeOutline, .115f, .79f);
-            AddRaisedDiamond(vertices, accent, -.66f, .40f, .028f, -.063f);
-            AddRaisedDiamond(vertices, accent, -.66f, .40f, .028f, .063f);
+            AddBeveledPrism(vertices, blade, bladeOutline, .13f, .76f);
+            AddRaisedDiamond(vertices, accent, -.49f, .30f, .036f, -.070f);
+            AddRaisedDiamond(vertices, accent, -.49f, .30f, .036f, .070f);
 
-            AddBox(vertices, accent, new Vector3(0f, .535f, 0f),
-                new Vector3(.17f, .105f, .145f), Quaternion.identity);
-            AddBox(vertices, accent, new Vector3(-.165f, .55f, 0f),
-                new Vector3(.33f, .068f, .135f), Quaternion.Euler(0f, 0f, -12f));
-            AddBox(vertices, accent, new Vector3(.165f, .55f, 0f),
-                new Vector3(.33f, .068f, .135f), Quaternion.Euler(0f, 0f, 12f));
+            // Compact down-swept quillons distinguish the dagger from the greatsword
+            // while keeping the same angular ritual-metal language.
+            AddBox(vertices, accent, new Vector3(0f, .425f, 0f),
+                new Vector3(.16f, .105f, .15f), Quaternion.identity);
+            AddBox(vertices, accent, new Vector3(-.17f, .455f, 0f),
+                new Vector3(.35f, .060f, .135f), Quaternion.Euler(0f, 0f, -18f));
+            AddBox(vertices, accent, new Vector3(.17f, .455f, 0f),
+                new Vector3(.35f, .060f, .135f), Quaternion.Euler(0f, 0f, 18f));
 
-            AddCylinderY(vertices, grip, new Vector3(0f, .765f, 0f), .058f, .39f, 12, 0f);
-            for (int i = 0; i < 6; i++)
+            AddCylinderY(vertices, grip, new Vector3(0f, .635f, 0f), .058f, .30f, 12, 0f);
+            for (int i = 0; i < 5; i++)
             {
-                float y = .605f + i * .060f;
-                AddCylinderY(vertices, accent, new Vector3(0f, y, 0f), .063f, .015f, 12,
+                float y = .515f + i * .052f;
+                AddCylinderY(vertices, accent, new Vector3(0f, y, 0f), .063f, .014f, 12,
                     i % 2 == 0 ? 7f : -7f);
             }
 
-            AddCylinderY(vertices, accent, new Vector3(0f, .575f, 0f), .072f, .040f, 12, 0f);
-            AddCylinderY(vertices, accent, new Vector3(0f, .965f, 0f), .070f, .050f, 12, 0f);
-            AddBox(vertices, accent, new Vector3(0f, 1.025f, 0f),
-                new Vector3(.135f, .12f, .13f), Quaternion.Euler(0f, 0f, 45f));
+            AddCylinderY(vertices, accent, new Vector3(0f, .485f, 0f), .072f, .040f, 12, 0f);
+            AddCylinderY(vertices, accent, new Vector3(0f, .790f, 0f), .070f, .045f, 12, 0f);
+            AddBox(vertices, accent, new Vector3(0f, .850f, 0f),
+                new Vector3(.135f, .115f, .13f), Quaternion.Euler(0f, 0f, 45f));
 
-            var mesh = new Mesh { name = "WorkbenchDagger_PremiumGreatswordSet" };
+            var mesh = new Mesh { name = "WorkbenchDagger_PremiumRitualSet" };
             mesh.SetVertices(vertices);
             mesh.subMeshCount = 3;
             mesh.SetTriangles(blade, BladeMaterial, true);
