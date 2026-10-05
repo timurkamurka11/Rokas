@@ -1,0 +1,150 @@
+name: ROKAS Workbench Final UI 3D
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/workbench-final-ui-3d-polish
+    paths:
+      - .github/workflows/workbench-final-ui-3d.yml
+      - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchWeaponPreview3D.cs.meta
+      - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs
+      - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: workbench-final-ui-3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editmode:
+    name: Workbench 3D presentation EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchFinal3D-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchFinal3D-${{ runner.os }}-
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Workbench presentation tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchPresentationTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Final 3D EditMode
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-final-3d-editmode
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  playmode:
+    name: Workbench 3D interaction PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchFinal3D-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchFinal3D-${{ runner.os }}-
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Workbench 3D interaction test and capture
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          ROKAS_WORKBENCH_CAPTURE_DIR: /github/workspace/verification/workbench-captures
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation -workbenchCaptureDir=/github/workspace/verification/workbench-captures
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Final 3D PlayMode
+      - name: Record exact checkpoint
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p runner-verification
+          git rev-parse HEAD > runner-verification/head.txt
+          git rev-parse HEAD^{tree} > runner-verification/tree.txt
+          git status --short --untracked-files=no > runner-verification/git-status.txt
+          git diff --check > runner-verification/git-diff-check.txt || true
+      - name: Upload playmode and visual evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-final-3d-playmode
+          path: |
+            ${{ steps.tests.outputs.artifactsPath }}
+            verification
+          if-no-files-found: warn
+
+  laptop-regression:
+    name: Existing laptop lifecycle regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchFinal3D-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchFinal3D-${{ runner.os }}-
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run retained laptop lifecycle
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Final Laptop Regression
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-final-laptop-regression
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn

@@ -1,0 +1,139 @@
+name: ROKAS Workbench UI V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/workbench-ui-v2
+    paths:
+      - .github/workflows/workbench-ui-v2.yml
+      - Assets/Rokas/Scripts/Presentation/ContractPanels.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopView.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs
+      - Assets/Rokas/Scripts/Presentation/LaptopWorkbenchView.cs.meta
+      - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs
+      - Assets/Rokas/Scripts/Presentation/WorkbenchGraphics.cs.meta
+      - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs
+      - Assets/Rokas/Tests/EditMode/WorkbenchPresentationTests.cs.meta
+      - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs.meta
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: workbench-ui-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editmode:
+    name: Workbench presentation EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchV2-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Workbench presentation tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchPresentationTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench V2 EditMode
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-v2-editmode
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  playmode:
+    name: Workbench interaction PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchV2-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Workbench interaction test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchSwitchesWeaponPresentationAndKeepsUpgradeAuthoritative
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench V2 PlayMode
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-v2-playmode
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  laptop-regression:
+    name: Existing laptop lifecycle regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchV2-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run retained laptop lifecycle
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopFullContractLifecyclePlayModeTests.FullContractLifecycleConsumesReturnVisitBootOnlyOnceThroughPayment
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench V2 Laptop Regression
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-v2-laptop-regression
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn

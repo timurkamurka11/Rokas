@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Rokas.Core;
 using Rokas.Presentation;
+using UnityEngine;
 
 namespace Rokas.Tests
 {
@@ -63,6 +64,36 @@ namespace Rokas.Tests
             Assert.That(data.Tiers[0].State, Is.EqualTo(WorkbenchTierState.Locked));
             Assert.That(data.Tiers[1].State, Is.EqualTo(WorkbenchTierState.Locked));
             Assert.That(data.Tiers[2].State, Is.EqualTo(WorkbenchTierState.Locked));
+        }
+
+        [Test]
+        public void ThreeDimensionalWeaponMeshesDecodeWithExpectedSourceShape()
+        {
+            Mesh sword = WorkbenchWeaponMeshLibrary.Create(WorkbenchWeaponKind.TwoHanded);
+            Mesh dagger = WorkbenchWeaponMeshLibrary.Create(WorkbenchWeaponKind.Dagger);
+            try
+            {
+                Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalVertexCount, Is.EqualTo(48858));
+                Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalPolygonCount, Is.EqualTo(97712));
+                Assert.That(sword.name, Does.Contain("FbxDerived"));
+                Assert.That(sword.vertexCount, Is.EqualTo(2871),
+                    "The final Workbench viewer must use the prepared optimized FBX-derived payload.");
+                Assert.That(sword.triangles.Length / 3, Is.EqualTo(5766));
+                Assert.That(sword.bounds.size.x, Is.EqualTo(.86446667f).Within(.002f));
+                Assert.That(sword.bounds.size.y, Is.EqualTo(.9915f).Within(.002f));
+                Assert.That(sword.bounds.size.z, Is.LessThan(.08f),
+                    "The supplied sword preview must preserve the thin FBX silhouette.");
+                Assert.That(dagger.name, Does.Contain("RitualDagger"));
+                Assert.That(dagger.vertexCount, Is.GreaterThan(150));
+                Assert.That(dagger.subMeshCount, Is.EqualTo(2),
+                    "The authored dagger keeps separate metal and grip material regions.");
+                Assert.That(dagger.bounds.size.y, Is.GreaterThan(dagger.bounds.size.x));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sword);
+                Object.DestroyImmediate(dagger);
+            }
         }
 
         [Test]

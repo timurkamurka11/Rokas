@@ -180,18 +180,20 @@ namespace Rokas.Presentation
             CanvasGroup openGroup = root.gameObject.AddComponent<CanvasGroup>();
             root.gameObject.AddComponent<WorkbenchOpenMotion>().Initialize(root, openGroup);
 
-            AddPanel(root, "WorkbenchMainFrame", 0, 0, 1402, 740, 22, Navy, CyanSoft, 2.2f);
-            BuildGrid(root, 1402, 740);
+            AddPanel(root, "WorkbenchMainFrame", 0, 0, 1600, 740, 22, Navy, CyanSoft, 2.4f);
+            BuildGrid(root, 1600, 740);
+            ui.Box(root, "WorkbenchTopScanLine", 408, 24, 850, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .17f));
+            ui.Box(root, "WorkbenchBottomScanLine", 408, 715, 850, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .10f));
 
-            var header = AddPanel(root, "WorkbenchHeader", 28, 18, 356, 66, 14,
-                new Color(.024f, .08f, .125f, .98f), Cyan, 2.5f);
-            ui.Label(header.transform, "WorkbenchHeaderTitle", "ВЕРСТАК", 28, 7, 270, 31, 25, White);
-            ui.Label(header.transform, "WorkbenchHeaderSubtitle", "РИТУАЛЬНОЕ СНАРЯЖЕНИЕ", 28, 35, 290, 20, 12, Muted);
-            ui.Box(header.transform, "HeaderAccentA", 305, 19, 8, 25, Cyan);
-            ui.Box(header.transform, "HeaderAccentB", 318, 19, 8, 25, Cyan * new Color(1, 1, 1, .75f));
-            ui.Box(header.transform, "HeaderAccentC", 331, 19, 8, 25, Cyan * new Color(1, 1, 1, .45f));
+            var header = AddPanel(root, "WorkbenchHeader", 28, 18, 392, 66, 14,
+                new Color(.024f, .08f, .125f, .98f), Cyan, 2.7f);
+            ui.Label(header.transform, "WorkbenchHeaderTitle", "ВЕРСТАК", 28, 7, 282, 31, 26, White);
+            ui.Label(header.transform, "WorkbenchHeaderSubtitle", "РИТУАЛЬНОЕ СНАРЯЖЕНИЕ", 28, 35, 302, 20, 12, Muted);
+            ui.Box(header.transform, "HeaderAccentA", 337, 18, 9, 28, Cyan);
+            ui.Box(header.transform, "HeaderAccentB", 351, 18, 9, 28, Cyan * new Color(1, 1, 1, .74f));
+            ui.Box(header.transform, "HeaderAccentC", 365, 18, 9, 28, Cyan * new Color(1, 1, 1, .42f));
 
-            Button closeButton = DecoratedButton(root, "WorkbenchClose", string.Empty, 1335, 19, 47, 47,
+            Button closeButton = DecoratedButton(root, "WorkbenchClose", string.Empty, 1525, 19, 48, 48,
                 back, out WorkbenchPanelGraphic closeFace, out _);
             closeFace.CornerCut = 11;
             var closeIcon = ui.Rect(closeButton.transform, "CloseGlyph", 8, 8, 31, 31).gameObject.AddComponent<LaptopIcon>();
@@ -206,30 +208,52 @@ namespace Rokas.Presentation
                 "КИНЖАЛ", 28, 358, controller, out WorkbenchPanelGraphic daggerFace, out Outline daggerGlow);
 
             var viewer = AddPanel(root, "WorkbenchViewer", 220, 108, 610, 570, 20,
-                new Color(.018f, .052f, .082f, .94f), CyanSoft, 2f);
-            AddPanel(viewer.transform, "WorkbenchViewerInner", 16, 16, 578, 538, 15,
-                new Color(.015f, .043f, .071f, .62f), new Color(Cyan.r, Cyan.g, Cyan.b, .18f), 1f);
-            var hudRect = ui.Rect(viewer.transform, "WorkbenchHud", 97, 93, 416, 416);
+                new Color(.014f, .046f, .075f, .97f), CyanSoft, 2.2f);
+            var viewerInner = AddPanel(viewer.transform, "WorkbenchViewerInner", 16, 16, 578, 538, 15,
+                new Color(.010f, .031f, .052f, .82f), new Color(Cyan.r, Cyan.g, Cyan.b, .22f), 1.2f);
+            viewerInner.InnerBorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .12f);
+            ui.Box(viewer.transform, "ViewerHorizon", 76, 284, 458, 1, new Color(Cyan.r, Cyan.g, Cyan.b, .08f));
+            ui.Box(viewer.transform, "ViewerTopTick", 270, 19, 70, 2, CyanSoft);
+            ui.Box(viewer.transform, "ViewerBottomTick", 270, 548, 70, 2, CyanSoft);
+
+            var hudBackRect = ui.Rect(viewer.transform, "WorkbenchHudBack", 75, 70, 460, 460);
+            CenterPivot(hudBackRect);
+            var hudBack = hudBackRect.gameObject.AddComponent<WorkbenchHudGraphic>();
+            hudBack.color = new Color(Cyan.r, Cyan.g, Cyan.b, .17f);
+            hudBack.RotationSpeed = -2.15f;
+
+            var hudRect = ui.Rect(viewer.transform, "WorkbenchHud", 101, 96, 408, 408);
             CenterPivot(hudRect);
             var hud = hudRect.gameObject.AddComponent<WorkbenchHudGraphic>();
-            hud.color = new Color(Cyan.r, Cyan.g, Cyan.b, .42f);
-            ui.Box(viewer.transform, "ViewerTopTick", 278, 19, 54, 2, CyanSoft);
-            ui.Box(viewer.transform, "ViewerBottomTick", 278, 548, 54, 2, CyanSoft);
+            hud.color = new Color(Cyan.r, Cyan.g, Cyan.b, .46f);
+            hud.RotationSpeed = 3.5f;
 
-            var previewRect = ui.Rect(viewer.transform, "WorkbenchWeaponPreview", 170, 58, 270, 455);
+            var previewRect = ui.Rect(viewer.transform, "WorkbenchWeaponPreview", 86, 42, 438, 486);
             CenterPivot(previewRect);
-            previewRect.localEulerAngles = new Vector3(0, 0, -34f);
-            var preview = previewRect.gameObject.AddComponent<WorkbenchWeaponGraphic>();
-            preview.color = Color.white;
+            var previewImage = previewRect.gameObject.AddComponent<RawImage>();
+            previewImage.color = Color.white;
+            previewImage.raycastTarget = false;
+            CanvasGroup previewGroup = previewRect.gameObject.AddComponent<CanvasGroup>();
+            var preview = previewRect.gameObject.AddComponent<WorkbenchWeaponPreview3D>();
+            preview.Initialize(previewImage, selectedKind);
 
-            Button previous = DecoratedButton(viewer.transform, "WorkbenchPreviousWeapon", "‹", 17, 252, 42, 64,
+            Button previous = DecoratedButton(viewer.transform, "WorkbenchPreviousWeapon", string.Empty, 18, 244, 62, 84,
                 () => controller?.Cycle(-1), out WorkbenchPanelGraphic previousFace, out _);
-            previousFace.FillColor = new Color(.02f, .08f, .12f, .5f);
-            previous.transform.Find("Title").GetComponent<Text>().fontSize = 34;
-            Button next = DecoratedButton(viewer.transform, "WorkbenchNextWeapon", "›", 551, 252, 42, 64,
+            previousFace.FillColor = new Color(.015f, .065f, .105f, .82f);
+            previousFace.BorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .72f);
+            previousFace.CornerCut = 13f;
+            var previousArrow = ui.Rect(previous.transform, "ArrowGlyph", 5, 9, 52, 66).gameObject.AddComponent<WorkbenchArrowGraphic>();
+            previousArrow.Direction = -1;
+            previousArrow.color = White;
+
+            Button next = DecoratedButton(viewer.transform, "WorkbenchNextWeapon", string.Empty, 530, 244, 62, 84,
                 () => controller?.Cycle(1), out WorkbenchPanelGraphic nextFace, out _);
-            nextFace.FillColor = new Color(.02f, .08f, .12f, .5f);
-            next.transform.Find("Title").GetComponent<Text>().fontSize = 34;
+            nextFace.FillColor = new Color(.015f, .065f, .105f, .82f);
+            nextFace.BorderColor = new Color(Cyan.r, Cyan.g, Cyan.b, .72f);
+            nextFace.CornerCut = 13f;
+            var nextArrow = ui.Rect(next.transform, "ArrowGlyph", 5, 9, 52, 66).gameObject.AddComponent<WorkbenchArrowGraphic>();
+            nextArrow.Direction = 1;
+            nextArrow.color = White;
 
             var right = ui.Rect(root, "WorkbenchData", 855, 104, 515, 574);
             CanvasGroup rightGroup = right.gameObject.AddComponent<CanvasGroup>();
@@ -270,6 +294,7 @@ namespace Rokas.Presentation
                 new[] { twoGlow, daggerGlow },
                 preview,
                 previewRect,
+                previewGroup,
                 rightGroup,
                 category,
                 title,
@@ -295,7 +320,9 @@ namespace Rokas.Presentation
             icon.Kind = kind;
             icon.color = Color.white;
             ui.Label(button.transform, "WeaponCardLabel", label, 10, 160, 148, 33, 17, White, false, TextAnchor.MiddleCenter);
-            ui.Box(button.transform, "WeaponCardAccent", 12, 199, 144, 2, new Color(Cyan.r, Cyan.g, Cyan.b, .32f));
+            ui.Label(button.transform, "WeaponCardIndex", kind == WorkbenchWeaponKind.TwoHanded ? "01" : "02",
+                15, 8, 28, 20, 10, CyanSoft);
+            ui.Box(button.transform, "WeaponCardAccent", 12, 199, 144, 2, new Color(Cyan.r, Cyan.g, Cyan.b, .40f));
         }
 
         private WorkbenchTierWidgets BuildTier(Transform parent, int index, float y)
@@ -376,6 +403,7 @@ namespace Rokas.Presentation
             glow = face.gameObject.AddComponent<Outline>();
             glow.effectDistance = new Vector2(2, -2);
             glow.effectColor = new Color(Cyan.r, Cyan.g, Cyan.b, 0);
+            button.gameObject.AddComponent<WorkbenchTechButtonFeedback>().Initialize(button, face, glow);
             return button;
         }
     }
@@ -415,8 +443,9 @@ namespace Rokas.Presentation
         private WorkbenchWeaponKind selected;
         private WorkbenchPanelGraphic[] selectorFaces;
         private Outline[] selectorGlows;
-        private WorkbenchWeaponGraphic preview;
+        private WorkbenchWeaponPreview3D preview;
         private RectTransform previewRect;
+        private CanvasGroup previewGroup;
         private CanvasGroup rightGroup;
         private Text category;
         private Text title;
@@ -432,7 +461,7 @@ namespace Rokas.Presentation
 
         public void Initialize(GameSession session, Action<Func<bool>, string> act, WorkbenchWeaponKind initial,
             Action<WorkbenchWeaponKind> selectedChanged, WorkbenchPanelGraphic[] selectorFaces, Outline[] selectorGlows,
-            WorkbenchWeaponGraphic preview, RectTransform previewRect, CanvasGroup rightGroup,
+            WorkbenchWeaponPreview3D preview, RectTransform previewRect, CanvasGroup previewGroup, CanvasGroup rightGroup,
             Text category, Text title, Text level, Text description, Text stat, WorkbenchTierWidgets[] tiers,
             Button upgrade, WorkbenchPanelGraphic upgradeFace, Text upgradeText, Text lockReason)
         {
@@ -443,6 +472,7 @@ namespace Rokas.Presentation
             this.selectorGlows = selectorGlows;
             this.preview = preview;
             this.previewRect = previewRect;
+            this.previewGroup = previewGroup;
             this.rightGroup = rightGroup;
             this.category = category;
             this.title = title;
@@ -483,38 +513,42 @@ namespace Rokas.Presentation
 
         private IEnumerator SwitchRoutine(WorkbenchWeaponKind kind)
         {
-            preview.canvasRenderer.SetAlpha(1);
+            previewGroup.alpha = 1f;
             previewRect.localScale = Vector3.one;
-            rightGroup.alpha = 1;
-            float baseAngle = BaseAngle(preview.Kind);
-            const float outDuration = .10f;
+            previewRect.anchoredPosition = new Vector2(305f, -285f);
+            rightGroup.alpha = 1f;
+
+            const float outDuration = .11f;
             for (float t = 0; t < outDuration; t += Time.unscaledDeltaTime)
             {
-                float p = Mathf.Clamp01(t / outDuration);
-                preview.canvasRenderer.SetAlpha(1 - p);
-                previewRect.localScale = Vector3.one * Mathf.Lerp(1f, .88f, p);
-                previewRect.localEulerAngles = new Vector3(0, 0, baseAngle + 10f * p);
-                rightGroup.alpha = 1 - p;
+                float p = Mathf.SmoothStep(0, 1, Mathf.Clamp01(t / outDuration));
+                previewGroup.alpha = 1f - p;
+                previewRect.localScale = Vector3.one * Mathf.Lerp(1f, .87f, p);
+                previewRect.anchoredPosition = new Vector2(Mathf.Lerp(305f, 326f, p), -285f);
+                rightGroup.alpha = 1f - p;
                 yield return null;
             }
 
             ApplyModel(kind, true);
-            preview.canvasRenderer.SetAlpha(0);
-            rightGroup.alpha = 0;
-            const float inDuration = .17f;
+            previewGroup.alpha = 0f;
+            rightGroup.alpha = 0f;
+            previewRect.anchoredPosition = new Vector2(283f, -285f);
+
+            const float inDuration = .18f;
             for (float t = 0; t < inDuration; t += Time.unscaledDeltaTime)
             {
-                float p = Mathf.Clamp01(t / inDuration);
-                preview.canvasRenderer.SetAlpha(p);
-                previewRect.localScale = Vector3.one * Mathf.Lerp(.90f, 1f, p);
-                previewRect.localEulerAngles = new Vector3(0, 0, BaseAngle(kind) + Mathf.Lerp(-8f, 0, p));
+                float p = Mathf.SmoothStep(0, 1, Mathf.Clamp01(t / inDuration));
+                previewGroup.alpha = p;
+                previewRect.localScale = Vector3.one * Mathf.Lerp(.88f, 1f, p);
+                previewRect.anchoredPosition = new Vector2(Mathf.Lerp(283f, 305f, p), -285f);
                 rightGroup.alpha = p;
                 yield return null;
             }
-            preview.canvasRenderer.SetAlpha(1);
+
+            previewGroup.alpha = 1f;
             previewRect.localScale = Vector3.one;
-            previewRect.localEulerAngles = new Vector3(0, 0, BaseAngle(kind));
-            rightGroup.alpha = 1;
+            previewRect.anchoredPosition = new Vector2(305f, -285f);
+            rightGroup.alpha = 1f;
             switchRoutine = null;
         }
 
@@ -524,8 +558,8 @@ namespace Rokas.Presentation
             selected = kind;
             if (updatePreview)
             {
-                preview.Kind = kind;
-                previewRect.localEulerAngles = new Vector3(0, 0, BaseAngle(kind));
+                preview.SetWeapon(kind);
+                preview.RenderNow();
             }
             category.text = data.Category;
             title.text = data.Title;
@@ -584,13 +618,12 @@ namespace Rokas.Presentation
                 selectorFaces[i].BorderColor = active ? Cyan : CyanDim;
                 selectorGlows[i].effectColor = active ? new Color(Cyan.r, Cyan.g, Cyan.b, .48f) :
                     new Color(Cyan.r, Cyan.g, Cyan.b, 0);
+                WorkbenchTechButtonFeedback feedback =
+                    selectorFaces[i].transform.parent.GetComponent<WorkbenchTechButtonFeedback>();
+                if (feedback) feedback.RestGlowAlpha = active ? .42f : .02f;
             }
         }
 
-        private static float BaseAngle(WorkbenchWeaponKind kind)
-        {
-            return kind == WorkbenchWeaponKind.TwoHanded ? -34f : -27f;
-        }
     }
 
     internal sealed class WorkbenchOpenMotion : MonoBehaviour
