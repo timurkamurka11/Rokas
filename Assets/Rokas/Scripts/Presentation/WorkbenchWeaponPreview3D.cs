@@ -163,8 +163,18 @@ namespace Rokas.Presentation
         public void SetWeapon(WorkbenchWeaponKind kind)
         {
             EnsureRig();
-            if (weaponObject) WorkbenchWeaponVisualFactory.DestroyObject(weaponObject);
-            if (currentMesh) WorkbenchWeaponVisualFactory.DestroyObject(currentMesh);
+            if (weaponObject)
+            {
+                weaponObject.transform.SetParent(null, false);
+                weaponObject.SetActive(false);
+                WorkbenchWeaponVisualFactory.DestroyObject(weaponObject);
+                weaponObject = null;
+            }
+            if (currentMesh)
+            {
+                WorkbenchWeaponVisualFactory.DestroyObject(currentMesh);
+                currentMesh = null;
+            }
 
             currentMesh = WorkbenchWeaponMeshLibrary.Create(kind);
             currentMesh.hideFlags = HideFlags.HideAndDontSave;
