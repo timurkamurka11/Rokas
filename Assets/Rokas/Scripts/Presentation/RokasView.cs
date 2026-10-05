@@ -111,12 +111,12 @@ namespace Rokas.Presentation
             ui.Box(globalChrome, "HeaderRule", 56, 99, 1808, 1, new Color(.5f, .6f, .55f, .3f));
             ui.Label(globalChrome, "Logo", "R O K A S", 58, 15, 305, 66, 36, UiKit.Paper, true);
             ui.Label(globalChrome, "BrandTag", "YOKAI CONTRACT HUNTER", 370, 23, 320, 25, 14, UiKit.Muted);
-            status = ui.Label(globalChrome, "LocationStatus", "ТВОЙ ДОМ", 370, 47, 520, 26, 17, UiKit.Gold);
+            status = ui.Label(globalChrome, "LocationStatus", "РўР’РћР™ Р”РћРњ", 370, 47, 520, 26, 17, UiKit.Gold);
             wallet = ui.Label(globalChrome, "Wallet", "", 1155, 18, 475, 58, 22, UiKit.Paper, false, TextAnchor.MiddleRight);
-            settingsButton = ui.Button(globalChrome, "Settings", "Настройки", 1675, 23, 185, 52, () => OpenPanel("settings"));
+            settingsButton = ui.Button(globalChrome, "Settings", "РќР°СЃС‚СЂРѕР№РєРё", 1675, 23, 185, 52, () => OpenPanel("settings"));
             ui.Box(globalChrome, "FooterShade", 0, 1006, 1920, 74, new Color(.025f, .045f, .05f, .88f));
-            ui.Label(globalChrome, "Controls", "TAB  выбрать предмет    ENTER  взаимодействовать    ESC  пауза / назад", 58, 1018, 1220, 37, 17, UiKit.Muted);
-            saved = ui.Label(globalChrome, "SaveStatus", "ПРОФИЛЬ СОХРАНЁН", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
+            ui.Label(globalChrome, "Controls", "TAB  РІС‹Р±СЂР°С‚СЊ РїСЂРµРґРјРµС‚    ENTER  РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ    ESC  РїР°СѓР·Р° / РЅР°Р·Р°Рґ", 58, 1018, 1220, 37, 17, UiKit.Muted);
+            saved = ui.Label(globalChrome, "SaveStatus", "РџР РћР¤РР›Р¬ РЎРћРҐР РђРќРЃРќ", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
             panels = ui.Rect(stage, "Panels", 0, 0, 1920, 1080);
             toast = ui.Label(stage, "Toast", "", 310, 925, 1300, 60, 23, UiKit.Paper, false, TextAnchor.MiddleCenter);
             var toastOutline = toast.gameObject.AddComponent<Outline>();
@@ -235,7 +235,7 @@ namespace Rokas.Presentation
                 save();
                 if (!string.IsNullOrEmpty(message)) Toast(message);
             }
-            else Toast("Сейчас это действие недоступно.");
+            else Toast("РЎРµР№С‡Р°СЃ СЌС‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµРґРѕСЃС‚СѓРїРЅРѕ.");
         }
 
         private void Travel(Func<bool> action, string caption)
@@ -292,7 +292,7 @@ namespace Rokas.Presentation
                     RebuildScene();
                 }
             }
-            wallet.text = "¥ " + session.State.yen.ToString("N0") + "     /     РЕП " + session.State.reputation + "     /     ПЕПЕЛ " + session.State.spiritAsh;
+            wallet.text = "ВҐ " + session.State.yen.ToString("N0") + "     /     Р Р•Рџ " + session.State.reputation + "     /     РџР•РџР•Р› " + session.State.spiritAsh;
             home.Refresh();
             mission.Refresh();
         }
@@ -331,9 +331,9 @@ namespace Rokas.Presentation
             effects.SetLocation(!otherSide && phase != RunPhase.Portal, phase == RunPhase.Portal);
             if (otherSide || phase == RunPhase.Portal) mission.Build(scene);
             else home.Build(scene);
-            status.text = reactiveBackground != null ? "ПРОПАСТЬ  /  ИСКАЖЁННЫЙ КОНТРАКТ" :
-                otherSide ? "КИСАРАГИ  /  ЗАКРЫТАЯ ПЛАТФОРМА" :
-                phase == RunPhase.Portal ? "ГОРОД  /  ЗАБЫТОЕ СВЯТИЛИЩЕ" : "ТВОЙ ДОМ  /  НОЧЬ, ДОЖДЬ";
+            status.text = reactiveBackground != null ? "РџР РћРџРђРЎРўР¬  /  РРЎРљРђР–РЃРќРќР«Р™ РљРћРќРўР РђРљРў" :
+                otherSide ? "РљРРЎРђР РђР“Р  /  Р—РђРљР Р«РўРђРЇ РџР›РђРўР¤РћР РњРђ" :
+                phase == RunPhase.Portal ? "Р“РћР РћР”  /  Р—РђР‘Р«РўРћР• РЎР’РЇРўРР›РР©Р•" : "РўР’РћР™ Р”РћРњ  /  РќРћР§Р¬, Р”РћР–Р”Р¬";
         }
 
         private void OnHit(CombatHit hit) { mission.OnHit(hit); }
@@ -526,16 +526,16 @@ namespace Rokas.Presentation
 
         private void ToastShort(string value) { Toast(value); }
         public void Toast(string value, float seconds = 4) { toast.text = value; toastTime = seconds; }
-        public void SetSaveStatus(bool success) { saved.text = success ? "ПРОФИЛЬ СОХРАНЁН" : "ПРОФИЛЬ НЕ ЗАПИСАН"; saved.color = success ? UiKit.Muted : UiKit.Gold; }
+        public void SetSaveStatus(bool success) { saved.text = success ? "РџР РћР¤РР›Р¬ РЎРћРҐР РђРќРЃРќ" : "РџР РћР¤РР›Р¬ РќР• Р—РђРџРРЎРђРќ"; saved.color = success ? UiKit.Muted : UiKit.Gold; }
 
         public void ShowStorageBlock(string message)
         {
             storageBlocked = true;
             ui.Clear(transitions);
             ui.Box(transitions, "StorageBlock", 0, 0, 1920, 1080, UiKit.Ink, true);
-            ui.Label(transitions, "StorageTitle", "Профиль защищён", 360, 310, 1200, 110, 48, UiKit.Paper, true);
+            ui.Label(transitions, "StorageTitle", "РџСЂРѕС„РёР»СЊ Р·Р°С‰РёС‰С‘РЅ", 360, 310, 1200, 110, 48, UiKit.Paper, true);
             ui.Label(transitions, "StorageMessage", message, 360, 440, 1200, 210, 27);
-            ui.Button(transitions, "ExitProtectedProfile", "Закрыть игру", 360, 690, 360, 64, Application.Quit);
+            ui.Button(transitions, "ExitProtectedProfile", "Р—Р°РєСЂС‹С‚СЊ РёРіСЂСѓ", 360, 690, 360, 64, Application.Quit);
         }
 
         public void Dispose()

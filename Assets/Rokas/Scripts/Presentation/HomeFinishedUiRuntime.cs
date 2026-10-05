@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -132,48 +132,6 @@ namespace Rokas.Presentation
 
         private static readonly HomeFinalConnector[] Connectors =
         {
-            new HomeFinalConnector
-            {
-                id = "Connector_Window",
-                rect = new HomeFinalRect
-                {
-                    anchoredPosition = new Vector2(697.0f, -196.0f),
-                    sizeDelta = new Vector2(22.0f, 70.0f),
-                    anchorMin = new Vector2(0.0f, 1.0f),
-                    anchorMax = new Vector2(0.0f, 1.0f),
-                    pivot = new Vector2(0.5f, 0.0f),
-                    localScale = new Vector3(1.0f, 1.0f, 1.0f),
-                    rotationZ = 0.0f,
-                    active = true
-                },
-                dotSize = 7.0f,
-                spacing = 14.0f,
-                circleSegments = 12,
-                coreColor = new Color(1.0f, 0.75999999f, 0.349999994f, 0.980000019f),
-                glowColor = new Color(1.0f, 0.620000005f, 0.180000007f, 0.219999999f),
-                glowExtra = 5.0f
-            },
-            new HomeFinalConnector
-            {
-                id = "Connector_Cat",
-                rect = new HomeFinalRect
-                {
-                    anchoredPosition = new Vector2(297.0f, -845.0f),
-                    sizeDelta = new Vector2(22.0f, 70.0f),
-                    anchorMin = new Vector2(0.0f, 1.0f),
-                    anchorMax = new Vector2(0.0f, 1.0f),
-                    pivot = new Vector2(0.5f, 0.0f),
-                    localScale = new Vector3(1.0f, 1.0f, 1.0f),
-                    rotationZ = 0.0f,
-                    active = true
-                },
-                dotSize = 7.0f,
-                spacing = 14.0f,
-                circleSegments = 12,
-                coreColor = new Color(1.0f, 0.75999999f, 0.349999994f, 0.980000019f),
-                glowColor = new Color(1.0f, 0.620000005f, 0.180000007f, 0.219999999f),
-                glowExtra = 5.0f
-            }
         };
 
         private static readonly HomeFinalIcon[] Icons =
@@ -439,7 +397,39 @@ namespace Rokas.Presentation
                 image.color = data.color;
                 image.preserveAspect = data.preserveAspect;
                 image.raycastTarget = false;
+
+                // Attach subtle synchronized micro-animation to all main interaction icons.
+                if (data.id == "Hotspot_Window" ||
+                    data.id == "Hotspot_Swords" ||
+                    data.id == "Hotspot_Door" ||
+                    data.id == "Hotspot_Laptop" ||
+                    data.id == "Hotspot_FloorLamp" ||
+                    data.id == "Hotspot_Cat")
+                {
+                    var iconFx = go.AddComponent<HomeInteractionIconFx>();
+
+                    // Bind to the underlying scene hotspot so we can react to its hover events
+                    string targetName = data.id.Replace("Hotspot_", "");
+                    if (targetName == "Swords") targetName = "Workbench";
+                    if (targetName == "Cat") targetName = "Mame";
+                    if (targetName == "FloorLamp") targetName = "Lamp";
+                    targetName += "Hotspot";
+
+                    GameObject bgHitTarget = null;
+                    Transform hitTrans = parent.Find(targetName);
+                    if (hitTrans != null) bgHitTarget = hitTrans.gameObject;
+
+                    if (bgHitTarget != null)
+                    {
+                        var reporter = bgHitTarget.AddComponent<HoverReporter>();
+                        reporter.iconFx = iconFx;
+                    }
+                }
             }
+
+            // --- Window atmospheric FX layer ---
+            // Placed above outlines/connectors/icons; below gameplay hit targets.
+            BuildWindowAtmosphere(root);
 
             // Keep the authored visuals above the room background,
             // while the existing transparent gameplay hit targets still work.
@@ -493,6 +483,56 @@ namespace Rokas.Presentation
 
             rect.gameObject.SetActive(
                 data.active);
+        }
+
+        private static void BuildWindowAtmosphere(
+            RectTransform parent)
+        {
+            // Sparse wet-glass rain streaks catching city light
+            GameObject streaksGo =
+                new GameObject(
+                    "WindowRainStreaks",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(HomeWindowRainStreaksGraphic));
+
+            RectTransform streaksRect =
+                streaksGo.GetComponent<RectTransform>();
+
+            streaksRect.SetParent(parent, false);
+            streaksRect.anchorMin = Vector2.zero;
+            streaksRect.anchorMax = Vector2.one;
+            streaksRect.pivot = new Vector2(.5f, .5f);
+            streaksRect.offsetMin = Vector2.zero;
+            streaksRect.offsetMax = Vector2.zero;
+
+            HomeWindowRainStreaksGraphic streaks =
+                streaksGo.GetComponent<HomeWindowRainStreaksGraphic>();
+
+            streaks.raycastTarget = false;
+
+            // Occasional tasteful specular glints on the glass panes
+            GameObject glintsGo =
+                new GameObject(
+                    "WindowSpecularGlints",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(HomeWindowSpecularGlintsGraphic));
+
+            RectTransform glintsRect =
+                glintsGo.GetComponent<RectTransform>();
+
+            glintsRect.SetParent(parent, false);
+            glintsRect.anchorMin = Vector2.zero;
+            glintsRect.anchorMax = Vector2.one;
+            glintsRect.pivot = new Vector2(.5f, .5f);
+            glintsRect.offsetMin = Vector2.zero;
+            glintsRect.offsetMax = Vector2.zero;
+
+            HomeWindowSpecularGlintsGraphic glints =
+                glintsGo.GetComponent<HomeWindowSpecularGlintsGraphic>();
+
+            glints.raycastTarget = false;
         }
     }
 
@@ -979,6 +1019,254 @@ namespace Rokas.Presentation
                      segments) +
                     1);
             }
+        }
+    }
+
+    /// <summary>
+    /// Subtle, pane-localized wet-glass rain streaks.
+    /// Draws thin, slightly slanted, elongated soft reflections inside the glass panes.
+    /// </summary>
+    [RequireComponent(typeof(CanvasRenderer))]
+    internal sealed class HomeWindowRainStreaksGraphic : MaskableGraphic
+    {
+        // Actual glass panes, avoiding black structural mullions and curtains.
+        private static readonly Rect Pane1 = new Rect(402f, 38f, 210f, 510f);
+        private static readonly Rect Pane2 = new Rect(628f, 38f, 216f, 510f);
+        private static readonly Rect Pane3 = new Rect(860f, 38f, 140f, 510f);
+
+        private float phase;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            phase = Mathf.Repeat(Mathf.Abs(GetInstanceID()) * .000317f, 1f);
+        }
+
+        private void Update() { SetVerticesDirty(); }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            Rect rect = GetPixelAdjustedRect();
+            float time = Time.unscaledTime;
+
+            // Draw a few very thin, elongated rain streaks inside the panes.
+            DrawRainStreak(mesh, rect, Pane1, time, phase + 0.15f, new Color(.75f, .90f, 1f));
+            DrawRainStreak(mesh, rect, Pane2, time, phase + 0.55f, new Color(.80f, .95f, 1f));
+            DrawRainStreak(mesh, rect, Pane3, time, phase + 0.85f, new Color(.70f, .88f, 1f));
+        }
+
+        private void DrawRainStreak(VertexHelper mesh, Rect baseRect, Rect pane, float time, float offset, Color color)
+        {
+            // Streaks fade in and out, and drift slowly downwards
+            float cycle = Mathf.Repeat(time * 0.15f + offset, 1f);
+            float alpha = Mathf.Sin(cycle * Mathf.PI) * .08f; // Very soft, max 8% alpha
+
+            if (alpha < 0.001f) return;
+
+            float nx = Mathf.PerlinNoise(offset * 10f, 0f);
+            float cx = Mathf.Lerp(pane.xMin + 20f, pane.xMax - 20f, nx);
+
+            // Downward drift
+            float cy = Mathf.Lerp(pane.yMax - 50f, pane.yMin + 50f, cycle);
+
+            Color cPeak = new Color(color.r, color.g, color.b, alpha);
+            Color cFade = new Color(color.r, color.g, color.b, 0f);
+
+            // Thin, elongated diamond (streak)
+            float width = 3f;
+            float height = 120f;
+            float slant = 10f; // Slight slant to match rain/perspective
+
+            int first = mesh.currentVertCount;
+            mesh.AddVert(new Vector3(baseRect.xMin + cx, baseRect.yMax - cy), cPeak, Vector2.zero); // Center
+            mesh.AddVert(new Vector3(baseRect.xMin + cx + slant, baseRect.yMax - (cy - height)), cFade, Vector2.zero); // Top
+            mesh.AddVert(new Vector3(baseRect.xMin + cx + width, baseRect.yMax - cy), cFade, Vector2.zero); // Right
+            mesh.AddVert(new Vector3(baseRect.xMin + cx - slant, baseRect.yMax - (cy + height)), cFade, Vector2.zero); // Bottom
+            mesh.AddVert(new Vector3(baseRect.xMin + cx - width, baseRect.yMax - cy), cFade, Vector2.zero); // Left
+
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first, first + 2, first + 3);
+            mesh.AddTriangle(first, first + 3, first + 4);
+            mesh.AddTriangle(first, first + 4, first + 1);
+        }
+    }
+
+    /// <summary>
+    /// Occasional specular glints catching city lights on the wet glass.
+    /// </summary>
+    [RequireComponent(typeof(CanvasRenderer))]
+    internal sealed class HomeWindowSpecularGlintsGraphic : MaskableGraphic
+    {
+        private static readonly Rect Pane1 = new Rect(402f, 38f, 210f, 510f);
+        private static readonly Rect Pane2 = new Rect(628f, 38f, 216f, 510f);
+        private static readonly Rect Pane3 = new Rect(860f, 38f, 140f, 510f);
+
+        private float phase;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            phase = Mathf.Repeat(Mathf.Abs(GetInstanceID()) * .000211f, 1f);
+        }
+
+        private void Update() { SetVerticesDirty(); }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            Rect rect = GetPixelAdjustedRect();
+            float time = Time.unscaledTime;
+
+            // Occasional glint in Pane 1 (every ~7s)
+            DrawGlintEvent(mesh, rect, Pane1, time, 0.14f, phase + 0.1f, new Color(.7f, .95f, 1f));
+
+            // Occasional glint in Pane 2 (every ~9s)
+            DrawGlintEvent(mesh, rect, Pane2, time, 0.11f, phase + 0.4f, new Color(.85f, .98f, 1f));
+
+            // Occasional glint in Pane 3 (every ~11s)
+            DrawGlintEvent(mesh, rect, Pane3, time, 0.09f, phase + 0.7f, new Color(.8f, .95f, 1f));
+        }
+
+        private void DrawGlintEvent(VertexHelper mesh, Rect baseRect, Rect pane, float time, float frequency, float offset, Color color)
+        {
+            float cycle = Mathf.Repeat(time * frequency + offset, 1f);
+
+            // Glint only visible during the middle 20% of its cycle
+            if (cycle > 0.4f && cycle < 0.6f)
+            {
+                float localTime = (cycle - 0.4f) * 5f; // 0 to 1
+                float alpha = Mathf.Sin(localTime * Mathf.PI) * .15f; // Max 15% opacity
+
+                if (alpha < 0.001f) return;
+
+                // Position is pseudo-randomized based on the offset
+                float nx = Mathf.PerlinNoise(offset * 13f, 0f);
+                float ny = Mathf.PerlinNoise(0f, offset * 13f);
+
+                float cx = Mathf.Lerp(pane.xMin + 30f, pane.xMax - 30f, nx);
+                float cy = Mathf.Lerp(pane.yMin + 100f, pane.yMax - 100f, ny);
+
+                // Subtle drift
+                cx += (localTime - 0.5f) * 15f;
+                cy += (localTime - 0.5f) * 10f;
+
+                Color cPeak = new Color(color.r, color.g, color.b, alpha);
+                Color cFade = new Color(color.r, color.g, color.b, 0f);
+
+                float size = 40f;
+
+                int first = mesh.currentVertCount;
+                mesh.AddVert(new Vector3(baseRect.xMin + cx, baseRect.yMax - cy), cPeak, Vector2.zero); // Center
+                mesh.AddVert(new Vector3(baseRect.xMin + cx, baseRect.yMax - (cy - size)), cFade, Vector2.zero); // Top
+                mesh.AddVert(new Vector3(baseRect.xMin + cx + size, baseRect.yMax - cy), cFade, Vector2.zero); // Right
+                mesh.AddVert(new Vector3(baseRect.xMin + cx, baseRect.yMax - (cy + size)), cFade, Vector2.zero); // Bottom
+                mesh.AddVert(new Vector3(baseRect.xMin + cx - size, baseRect.yMax - cy), cFade, Vector2.zero); // Left
+
+                mesh.AddTriangle(first, first + 1, first + 2);
+                mesh.AddTriangle(first, first + 2, first + 3);
+                mesh.AddTriangle(first, first + 3, first + 4);
+                mesh.AddTriangle(first, first + 4, first + 1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Micro-animation for all Hub interaction icons.
+    /// Synchronized 2.5px float and alpha breathing.
+    /// Supports laptop-style hover emphasis.
+    /// </summary>
+    internal sealed class HomeInteractionIconFx : MonoBehaviour
+    {
+        private RectTransform rect;
+        private Image image;
+        private Vector2 origin;
+        private bool initialized;
+
+        public bool Hovered;
+        private float hoverState; // 0 to 1 smooth transition
+
+        private void Start()
+        {
+            rect = transform as RectTransform;
+            image = GetComponent<Image>();
+            if (rect != null)
+                origin = rect.anchoredPosition;
+            initialized = rect != null;
+        }
+
+        private void Update()
+        {
+            if (!initialized) return;
+            float time = Time.unscaledTime;
+
+            // Smoothly blend into hover state
+            float dt = Time.unscaledDeltaTime;
+            float speed = 1f - Mathf.Exp(-14f * dt);
+            hoverState = Mathf.Lerp(hoverState, Hovered ? 1f : 0f, speed);
+
+            // Vertical float: Idle sine wave overrides to a static lift on hover
+            float idleFloat = Mathf.Sin(time * 1.8f) * 2.5f;
+            float hoverLift = 6f; // Lift amount
+            float finalY = Mathf.Lerp(idleFloat, hoverLift, hoverState);
+
+            rect.anchoredPosition = origin + new Vector2(0f, finalY);
+
+            // Scale emphasis like laptop
+            float scale = Mathf.Lerp(1f, 1.055f, hoverState);
+            rect.localScale = new Vector3(scale, scale, 1f);
+
+            // Alpha and color breathing:
+            // Idle breathes ±15%. Hover pulses rapidly like laptop attention glow.
+            if (image != null)
+            {
+                float idleBreath = 0.85f + Mathf.Sin(time * 2.2f + .5f) * .15f;
+                float activePulse = 0.90f + Mathf.Sin(time * 4.4f) * 0.10f;
+
+                float finalAlpha = Mathf.Lerp(idleBreath, activePulse, hoverState);
+
+                // Color emphasis: slightly brighter/golden on hover
+                Color idleColor = Color.white;
+                Color hoverColor = new Color(1f, 0.95f, 0.8f);
+                Color finalColor = Color.Lerp(idleColor, hoverColor, hoverState);
+
+                finalColor.a = Mathf.Clamp01(finalAlpha);
+                image.color = finalColor;
+            }
+        }
+
+        private void OnDisable()
+        {
+            Hovered = false;
+            hoverState = 0f;
+            if (initialized && rect != null)
+            {
+                rect.anchoredPosition = origin;
+                rect.localScale = Vector3.one;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Attaches to background gameplay hit targets to relay hover state to the UI icon.
+    /// </summary>
+    internal sealed class HoverReporter : MonoBehaviour, UnityEngine.EventSystems.IPointerEnterHandler, UnityEngine.EventSystems.IPointerExitHandler
+    {
+        public HomeInteractionIconFx iconFx;
+
+        public void OnPointerEnter(UnityEngine.EventSystems.PointerEventData e)
+        {
+            if (iconFx) iconFx.Hovered = true;
+        }
+
+        public void OnPointerExit(UnityEngine.EventSystems.PointerEventData e)
+        {
+            if (iconFx) iconFx.Hovered = false;
+        }
+
+        private void OnDisable()
+        {
+            if (iconFx) iconFx.Hovered = false;
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Rokas.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -47,7 +47,6 @@ namespace Rokas.Presentation
 
             // Runtime Home uses the exact authored PNG hotspot artwork plus CustomGlow.
             // The old procedural scan visuals are intentionally not instantiated.
-            HomeFinalUiPresenter.Build(parent);
 
             Action toggleFloorLamp = () =>
             {
@@ -120,6 +119,7 @@ namespace Rokas.Presentation
                     }
                 });
 
+            HomeFinalUiPresenter.Build(parent);
             Refresh();
         }
 
