@@ -112,7 +112,12 @@ namespace Rokas.Presentation
         public WorkbenchWeaponKind CurrentKind { get; private set; }
         public bool HasModel => currentMesh != null && weaponObject;
         public int CurrentVertexCount => currentMesh ? currentMesh.vertexCount : 0;
+        public int CurrentTriangleCount => currentMesh ? currentMesh.triangles.Length / 3 : 0;
         public int ActiveRendererCount => rig ? rig.GetComponentsInChildren<MeshRenderer>(true).Length : 0;
+        public int ActivePreviewCameraCount => rig ? rig.GetComponentsInChildren<Camera>(true).Length : 0;
+        public bool HasCreatedRenderTexture => renderTexture && renderTexture.IsCreated();
+        public int RenderTextureWidth => renderTexture ? renderTexture.width : 0;
+        public int RenderTextureHeight => renderTexture ? renderTexture.height : 0;
         public string CurrentMeshName => currentMesh ? currentMesh.name : string.Empty;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
             ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / geometry-derived preview"

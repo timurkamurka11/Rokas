@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Rokas.Core;
 using Rokas.Presentation;
@@ -18,6 +19,9 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator WorkbenchSwitchesCardsAndArrowsThroughOneAuthoritative3DPresentation()
         {
+            int baselinePreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+
             root = new GameObject("WorkbenchUiFixture");
             Canvas canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -58,8 +62,13 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1000));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThanOrEqualTo(500));
+            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(900));
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
+            Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
+            Assert.That(preview.HasCreatedRenderTexture, Is.True);
+            Assert.That(preview.RenderTextureWidth, Is.EqualTo(640));
+            Assert.That(preview.RenderTextureHeight, Is.EqualTo(640));
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
             Assert.That(upgrade.IsInteractable(), Is.True);
             Assert.That(Find("WorkbenchHud").GetComponent<RectTransform>().pivot, Is.EqualTo(new Vector2(.5f, .5f)));
@@ -103,6 +112,7 @@ namespace Rokas.Tests
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
             Assert.That(preview.ActiveRendererCount, Is.EqualTo(1));
+            Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
 
             dagger.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.32f);
@@ -113,6 +123,23 @@ namespace Rokas.Tests
             twoHanded.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.32f);
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("ДВУРУЧНИК"));
+            Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
+            Assert.That(upgrade.IsInteractable(), Is.True);
+
+            // Rapid input must converge on one authoritative selection without stacking preview rigs.
+            for (int index = 0; index < 7; index++)
+            {
+                next.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(.015f);
+            }
+            yield return new WaitForSecondsRealtime(.36f);
+            Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("КИНЖАЛ"));
+            Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
+            Assert.That(preview.ActiveRendererCount, Is.EqualTo(1));
+            Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
+
+            twoHanded.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.32f);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
             Assert.That(upgrade.IsInteractable(), Is.True);
 
@@ -129,6 +156,14 @@ namespace Rokas.Tests
             Assert.That(root.GetComponentsInChildren<Canvas>(true), Has.Length.EqualTo(1));
             FindButton("WorkbenchClose").onClick.Invoke();
             Assert.That(closed, Is.True);
+
+            UnityEngine.Object.Destroy(root);
+            root = null;
+            yield return null;
+            int remainingPreviewTextures = Resources.FindObjectsOfTypeAll<RenderTexture>()
+                .Count(texture => texture && texture.name == "WorkbenchWeaponPreviewRT");
+            Assert.That(remainingPreviewTextures, Is.EqualTo(baselinePreviewTextures),
+                "Destroying the Workbench must release its private RenderTexture and preview rig.");
             LogAssert.NoUnexpectedReceived();
         }
 

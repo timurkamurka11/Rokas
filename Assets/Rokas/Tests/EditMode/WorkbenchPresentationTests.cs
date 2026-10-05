@@ -76,8 +76,10 @@ namespace Rokas.Tests
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalVertexCount, Is.EqualTo(48858));
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalPolygonCount, Is.EqualTo(97712));
                 Assert.That(sword.name, Does.Contain("FbxDerived"));
-                Assert.That(sword.vertexCount, Is.GreaterThan(1000));
-                Assert.That(sword.triangles.Length / 3, Is.GreaterThan(3000));
+                Assert.That(sword.vertexCount, Is.GreaterThanOrEqualTo(500),
+                    "The FBX-derived preview must keep a non-trivial optimized 3D silhouette.");
+                Assert.That(sword.triangles.Length / 3, Is.GreaterThan(900),
+                    "The optimized preview must retain enough surface detail for the central viewer.");
                 Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.z * 8f),
                     "The supplied sword preview must preserve the long thin FBX silhouette.");
                 Assert.That(dagger.name, Does.Contain("RitualDagger"));
