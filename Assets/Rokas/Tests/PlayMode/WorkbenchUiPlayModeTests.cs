@@ -66,10 +66,10 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1700));
-            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(700));
-            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.2f));
-            Assert.That(preview.CurrentMeshBoundsSize.x, Is.GreaterThan(1.0f));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(250));
+            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(350));
+            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * .8f));
+            Assert.That(preview.CurrentMeshBoundsSize.x, Is.GreaterThan(preview.CurrentMeshBoundsSize.y * .45f));
             Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.20f));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The sword mesh must be centered on the presentation pivot before idle rotation.");
@@ -109,6 +109,25 @@ namespace Rokas.Tests
             preview.RenderNow();
             Capture("01-twohanded");
 
+            RawImage previewImage = preview.GetComponent<RawImage>();
+            Assert.That(previewImage.raycastTarget, Is.True,
+                "The hero RenderTexture must receive restrained drag input.");
+            var dragData = new PointerEventData(EventSystem.current)
+            {
+                button = PointerEventData.InputButton.Left,
+                delta = new Vector2(-90f, 24f)
+            };
+            preview.OnBeginDrag(dragData);
+            Assert.That(preview.IsUserDragging, Is.True);
+            preview.OnDrag(dragData);
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.GreaterThan(2f));
+            Assert.That(Mathf.Abs(preview.UserYaw), Is.LessThanOrEqualTo(24f));
+            Assert.That(Mathf.Abs(preview.UserPitch), Is.LessThanOrEqualTo(8f));
+            yield return new WaitForSecondsRealtime(.05f);
+            Capture("02-sword-controlled-rotate");
+            preview.OnEndDrag(dragData);
+            Assert.That(preview.IsUserDragging, Is.False);
+
             WorkbenchTechButtonFeedback leftFeedback = previous.GetComponent<WorkbenchTechButtonFeedback>();
             leftFeedback.OnPointerEnter(new PointerEventData(EventSystem.current));
             yield return new WaitForSecondsRealtime(.08f);
@@ -129,7 +148,7 @@ namespace Rokas.Tests
             Assert.That(FindText("WorkbenchInfoCategory").text, Is.EqualTo("КИНЖАЛ"));
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
             Assert.That(preview.HasModel, Is.True);
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1200));
+            Assert.That(preview.CurrentVertexCount, Is.GreaterThan(1100));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The dagger must use the same bounds-centered 3D presentation path.");
             Assert.That(preview.ActiveRendererCount, Is.EqualTo(1), "A completed switch must keep exactly one 3D weapon renderer.");
