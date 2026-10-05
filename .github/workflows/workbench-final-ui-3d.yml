@@ -121,9 +121,48 @@ jobs:
           path: |
             ${{ steps.tests.outputs.artifactsPath }}
             verification
+            runner-verification
           if-no-files-found: warn
 
 
+
+  home-route:
+    name: Home has no Workbench hotspot
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: WorkbenchFinal3D-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            WorkbenchFinal3D-${{ runner.os }}-
+            WorkbenchV2-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Home route regression
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeScanUiPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Final Home Route
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: workbench-final-home-route
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
 
   laptop-regression:
     name: Existing laptop lifecycle regression
