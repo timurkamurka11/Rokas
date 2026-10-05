@@ -62,8 +62,11 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.GreaterThanOrEqualTo(500));
-            Assert.That(preview.CurrentTriangleCount, Is.GreaterThan(900));
+            Assert.That(preview.CurrentVertexCount, Is.EqualTo(2871));
+            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(5766));
+            Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.08f));
+            Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
+                "The sword mesh must be centered on the presentation pivot before idle rotation.");
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
             Assert.That(preview.ActivePreviewCameraCount, Is.EqualTo(1));
             Assert.That(preview.HasCreatedRenderTexture, Is.True);
@@ -102,6 +105,8 @@ namespace Rokas.Tests
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.Dagger));
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentVertexCount, Is.GreaterThan(150));
+            Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
+                "The dagger must use the same bounds-centered 3D presentation path.");
             Assert.That(preview.ActiveRendererCount, Is.EqualTo(1), "A completed switch must keep exactly one 3D weapon renderer.");
             Assert.That(upgrade.IsInteractable(), Is.False,
                 "Dagger must not fabricate an upgrade path that the domain model does not own.");
