@@ -1,3 +1,4 @@
+using System.IO;
 using NUnit.Framework;
 using Rokas.Core;
 using Rokas.Presentation;
@@ -75,23 +76,26 @@ namespace Rokas.Tests
             {
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalVertexCount, Is.EqualTo(48858));
                 Assert.That(WorkbenchWeaponMeshLibrary.SuppliedFbxOriginalPolygonCount, Is.EqualTo(97712));
-                Assert.That(sword.name, Does.Contain("PremiumAuthored"));
-                Assert.That(sword.vertexCount, Is.EqualTo(1270),
-                    "The final Workbench sword must use the authored hero presentation mesh.");
-                Assert.That(sword.triangles.Length / 3, Is.EqualTo(524));
+                Assert.That(sword.name, Does.Contain("PremiumGreatsword"));
+                Assert.That(sword.vertexCount, Is.GreaterThan(1700),
+                    "The final two-hander must retain enough geometry for bevels, guard, wraps and pommel detail.");
+                Assert.That(sword.triangles.Length / 3, Is.GreaterThan(700));
                 Assert.That(sword.subMeshCount, Is.EqualTo(3),
                     "Blade, accent steel and grip must retain separate material regions.");
-                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 2.5f),
-                    "Premium two-handed silhouette must stay long and confidently narrow.");
-                Assert.That(sword.bounds.size.z, Is.LessThan(.20f));
+                Assert.That(sword.bounds.size.y, Is.GreaterThan(sword.bounds.size.x * 3.4f),
+                    "The broad greatsword must still read as a long two-handed weapon rather than a slab.");
+                Assert.That(sword.bounds.size.x, Is.GreaterThan(.50f),
+                    "The final silhouette must be visibly broader/heavier than the previous generic longsword.");
+                Assert.That(sword.bounds.size.z, Is.LessThan(.22f));
                 Assert.That(sword.uv, Has.Length.EqualTo(sword.vertexCount),
                     "Premium material detail requires stable planar UVs on the runtime sword mesh.");
                 Assert.That(sword.tangents, Has.Length.EqualTo(sword.vertexCount),
                     "Runtime sword tangents must be rebuilt for the brushed normal detail.");
-                Assert.That(dagger.name, Does.Contain("RitualDagger"));
-                Assert.That(dagger.vertexCount, Is.GreaterThan(150));
-                Assert.That(dagger.subMeshCount, Is.EqualTo(2),
-                    "The authored dagger keeps separate metal and grip material regions.");
+                Assert.That(dagger.name, Does.Contain("PremiumGreatswordSet"));
+                Assert.That(dagger.vertexCount, Is.GreaterThan(1200));
+                Assert.That(dagger.triangles.Length / 3, Is.GreaterThan(500));
+                Assert.That(dagger.subMeshCount, Is.EqualTo(3),
+                    "The matching dagger keeps blade, accent steel and grip material regions.");
                 Assert.That(dagger.bounds.size.y, Is.GreaterThan(dagger.bounds.size.x));
                 Assert.That(dagger.uv, Has.Length.EqualTo(dagger.vertexCount));
                 Assert.That(dagger.tangents, Has.Length.EqualTo(dagger.vertexCount));
@@ -101,6 +105,20 @@ namespace Rokas.Tests
                 Object.DestroyImmediate(sword);
                 Object.DestroyImmediate(dagger);
             }
+        }
+
+        [Test]
+        public void LaptopOnlyWorkbenchRouteRemovesLegacyHubEntry()
+        {
+            string home = File.ReadAllText("Assets/Rokas/Scripts/Presentation/HomeView.cs");
+            string view = File.ReadAllText("Assets/Rokas/Scripts/Presentation/RokasView.cs");
+            string panels = File.ReadAllText("Assets/Rokas/Scripts/Presentation/ContractPanels.cs");
+
+            Assert.That(home, Does.Not.Contain("WorkbenchHotspot"));
+            Assert.That(home, Does.Not.Contain("open(\"workbench\")"));
+            Assert.That(view, Does.Contain("Workbench is laptop-only"));
+            Assert.That(panels, Does.Not.Contain("WorkbenchModal"));
+            Assert.That(panels, Does.Contain("BuildLaptopWorkbenchPage"));
         }
 
         [Test]
