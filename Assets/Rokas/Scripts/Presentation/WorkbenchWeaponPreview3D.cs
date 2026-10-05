@@ -22,7 +22,7 @@ namespace Rokas.Presentation
         {
             return kind == WorkbenchWeaponKind.Dagger
                 ? WorkbenchPremiumDaggerMesh.Create()
-                : DecodeTwoHanded();
+                : WorkbenchPremiumSwordMesh.Create();
         }
 
         private static Mesh DecodeTwoHanded()
@@ -188,8 +188,8 @@ namespace Rokas.Presentation
         public float UserPitch => userPitch;
         public bool IsUserDragging => userDragging;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / embedded FBX-derived premium presentation mesh"
-            : "ROKAS premium authored matching dagger mesh";
+            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium authored heavy greatsword presentation mesh"
+            : "ROKAS premium authored ritual dagger mesh";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind initial)
         {
