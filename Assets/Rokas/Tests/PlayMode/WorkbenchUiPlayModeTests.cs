@@ -245,7 +245,7 @@ namespace Rokas.Tests
             root.AddComponent<GraphicRaycaster>();
             if (!EventSystem.current) root.AddComponent<EventSystem>();
 
-            var stageObject = new GameObject("RouteStage", typeof(RectTransform));
+            var stageObject = new GameObject("Stage", typeof(RectTransform));
             var stage = (RectTransform)stageObject.transform;
             stage.SetParent(root.transform, false);
             stage.anchorMin = stage.anchorMax = new Vector2(0, 1);
