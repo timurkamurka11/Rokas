@@ -33,8 +33,7 @@ namespace Rokas.Presentation
             mesh.indexFormat = vertexCount > ushort.MaxValue ? IndexFormat.UInt32 : IndexFormat.UInt16;
             mesh.vertices = vertices;
             mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
+            FinalizePresentationMesh(mesh, vertices);
             return mesh;
         }
 
@@ -53,8 +52,7 @@ namespace Rokas.Presentation
             mesh.subMeshCount = 2;
             mesh.SetTriangles(metalTriangles, 0);
             mesh.SetTriangles(gripTriangles, 1);
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
+            FinalizePresentationMesh(mesh, vertices);
             return mesh;
         }
 
@@ -89,6 +87,26 @@ namespace Rokas.Presentation
                 triangles[index] = reader.ReadUInt16();
             return triangles;
         }
+
+        private static void FinalizePresentationMesh(Mesh mesh, Vector3[] vertices)
+        {
+            if (!mesh || vertices == null || vertices.Length == 0) return;
+            mesh.RecalculateBounds();
+            Bounds bounds = mesh.bounds;
+            float width = Mathf.Max(bounds.size.x, .0001f);
+            float height = Mathf.Max(bounds.size.y, .0001f);
+            var uv = new Vector2[vertices.Length];
+            for (int index = 0; index < vertices.Length; index++)
+            {
+                uv[index] = new Vector2(
+                    (vertices[index].x - bounds.min.x) / width,
+                    (vertices[index].y - bounds.min.y) / height);
+            }
+            mesh.uv = uv;
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+        }
     }
 
     [AddComponentMenu("ROKAS/UI/Workbench Weapon Preview 3D")]
@@ -104,8 +122,7 @@ namespace Rokas.Presentation
         private Camera previewCamera;
         private GameObject weaponObject;
         private Mesh currentMesh;
-        private Material metalMaterial;
-        private Material gripMaterial;
+        private WorkbenchWeaponMaterialSet materials;
         private Quaternion baseRotation;
         private float idleTime;
 
@@ -128,6 +145,8 @@ namespace Rokas.Presentation
         public bool HasCreatedRenderTexture => renderTexture && renderTexture.IsCreated();
         public int RenderTextureWidth => renderTexture ? renderTexture.width : 0;
         public int RenderTextureHeight => renderTexture ? renderTexture.height : 0;
+        public bool HasPremiumSurfaceMaps => materials != null && materials.HasSurfaceMaps;
+        public int ActiveLightCount => rig ? rig.GetComponentsInChildren<Light>(true).Length : 0;
         public string CurrentMeshName => currentMesh ? currentMesh.name : string.Empty;
         public string CurrentSource => CurrentKind == WorkbenchWeaponKind.TwoHanded
             ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / geometry-derived preview"
@@ -144,8 +163,8 @@ namespace Rokas.Presentation
         public void SetWeapon(WorkbenchWeaponKind kind)
         {
             EnsureRig();
-            if (weaponObject) DestroyObject(weaponObject);
-            if (currentMesh) DestroyObject(currentMesh);
+            if (weaponObject) WorkbenchWeaponVisualFactory.DestroyObject(weaponObject);
+            if (currentMesh) WorkbenchWeaponVisualFactory.DestroyObject(currentMesh);
 
             currentMesh = WorkbenchWeaponMeshLibrary.Create(kind);
             currentMesh.hideFlags = HideFlags.HideAndDontSave;
@@ -158,26 +177,11 @@ namespace Rokas.Presentation
             var filter = weaponObject.AddComponent<MeshFilter>();
             filter.sharedMesh = currentMesh;
             var renderer = weaponObject.AddComponent<MeshRenderer>();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.lightProbeUsage = LightProbeUsage.Off;
-            renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-            renderer.sharedMaterials = kind == WorkbenchWeaponKind.Dagger
-                ? new[] { metalMaterial, gripMaterial }
-                : new[] { metalMaterial };
+            WorkbenchWeaponVisualFactory.ConfigureRenderer(renderer, kind, materials);
 
             CurrentKind = kind;
-            Bounds bounds = currentMesh.bounds;
-            float planarSpan = Mathf.Max(bounds.size.x, bounds.size.y);
-            float targetSpan = kind == WorkbenchWeaponKind.TwoHanded ? 1.98f : 1.72f;
-            float scale = targetSpan / Mathf.Max(planarSpan, .0001f);
-            weaponObject.transform.localScale = Vector3.one * scale;
-            weaponObject.transform.localPosition = -bounds.center * scale;
-            weaponObject.transform.localRotation = Quaternion.identity;
-            baseRotation = Quaternion.Euler(
-                kind == WorkbenchWeaponKind.TwoHanded ? 4f : 7f,
-                kind == WorkbenchWeaponKind.TwoHanded ? -18f : -20f,
-                kind == WorkbenchWeaponKind.TwoHanded ? 0f : -34f);
+            WorkbenchWeaponVisualFactory.ApplyPose(weaponObject.transform, currentMesh, kind, false);
+            baseRotation = WorkbenchWeaponVisualFactory.PresentationRotation(kind, false);
             pivot.localRotation = baseRotation;
             pivot.localPosition = Vector3.zero;
             idleTime = 0f;
@@ -205,10 +209,10 @@ namespace Rokas.Presentation
         {
             if (rig) return;
 
-            renderTexture = new RenderTexture(640, 640, 24, RenderTextureFormat.ARGB32)
+            renderTexture = new RenderTexture(768, 768, 24, RenderTextureFormat.ARGB32)
             {
                 name = "WorkbenchWeaponPreviewRT",
-                antiAliasing = 2,
+                antiAliasing = 4,
                 filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Clamp,
                 hideFlags = HideFlags.HideAndDontSave
@@ -239,7 +243,7 @@ namespace Rokas.Presentation
             previewCamera.clearFlags = CameraClearFlags.SolidColor;
             previewCamera.backgroundColor = new Color(0, 0, 0, 0);
             previewCamera.cullingMask = 1 << PreviewLayer;
-            previewCamera.fieldOfView = 26f;
+            previewCamera.fieldOfView = 24f;
             previewCamera.nearClipPlane = .1f;
             previewCamera.farClipPlane = 20f;
             previewCamera.allowHDR = false;
@@ -293,23 +297,16 @@ namespace Rokas.Presentation
         private void OnDestroy()
         {
             if (target) target.texture = null;
-            if (weaponObject) DestroyObject(weaponObject);
-            if (currentMesh) DestroyObject(currentMesh);
-            if (rig) DestroyObject(rig);
-            if (metalMaterial) DestroyObject(metalMaterial);
-            if (gripMaterial) DestroyObject(gripMaterial);
+            if (weaponObject) WorkbenchWeaponVisualFactory.DestroyObject(weaponObject);
+            if (currentMesh) WorkbenchWeaponVisualFactory.DestroyObject(currentMesh);
+            if (rig) WorkbenchWeaponVisualFactory.DestroyObject(rig);
+            materials?.Dispose();
+            materials = null;
             if (renderTexture)
             {
                 renderTexture.Release();
-                DestroyObject(renderTexture);
+                WorkbenchWeaponVisualFactory.DestroyObject(renderTexture);
             }
-        }
-
-        private static void DestroyObject(UnityEngine.Object value)
-        {
-            if (!value) return;
-            if (Application.isPlaying) UnityEngine.Object.Destroy(value);
-            else UnityEngine.Object.DestroyImmediate(value);
         }
     }
 }
