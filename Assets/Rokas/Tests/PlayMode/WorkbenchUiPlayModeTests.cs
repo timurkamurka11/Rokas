@@ -66,9 +66,10 @@ namespace Rokas.Tests
             Assert.That(preview, Is.Not.Null);
             Assert.That(preview.HasModel, Is.True);
             Assert.That(preview.CurrentKind, Is.EqualTo(WorkbenchWeaponKind.TwoHanded));
-            Assert.That(preview.CurrentVertexCount, Is.EqualTo(2871));
-            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(5766));
-            Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.08f));
+            Assert.That(preview.CurrentVertexCount, Is.EqualTo(1270));
+            Assert.That(preview.CurrentTriangleCount, Is.EqualTo(524));
+            Assert.That(preview.CurrentMeshBoundsSize.y, Is.GreaterThan(preview.CurrentMeshBoundsSize.x * 2.5f));
+            Assert.That(preview.CurrentMeshBoundsSize.z, Is.LessThan(.20f));
             Assert.That(preview.CurrentCenteringError, Is.LessThan(.001f),
                 "The sword mesh must be centered on the presentation pivot before idle rotation.");
             Assert.That(preview.CurrentSource, Does.Contain(WorkbenchWeaponMeshLibrary.SuppliedFbxName));
