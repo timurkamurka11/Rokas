@@ -38,8 +38,9 @@ namespace Rokas.Presentation
                 return;
             }
 
-            var workbenchRoot = ui.Rect(root, "WorkbenchModal", 300, 155, 1320, 770);
-            workbench.Build(workbenchRoot, close);
+            // Workbench intentionally has no generic/in-world panel route.
+            // The dedicated laptop page below is the only supported entry point.
+            return;
         }
 
         public void BuildLaptopPage(RectTransform panel, string kind)
