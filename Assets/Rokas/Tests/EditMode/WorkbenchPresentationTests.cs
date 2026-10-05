@@ -83,11 +83,17 @@ namespace Rokas.Tests
                 Assert.That(sword.bounds.size.y, Is.EqualTo(.9915f).Within(.002f));
                 Assert.That(sword.bounds.size.z, Is.LessThan(.08f),
                     "The supplied sword preview must preserve the thin FBX silhouette.");
+                Assert.That(sword.uv, Has.Length.EqualTo(sword.vertexCount),
+                    "Premium material detail requires stable planar UVs on the runtime sword mesh.");
+                Assert.That(sword.tangents, Has.Length.EqualTo(sword.vertexCount),
+                    "Runtime sword tangents must be rebuilt for the brushed normal detail.");
                 Assert.That(dagger.name, Does.Contain("RitualDagger"));
                 Assert.That(dagger.vertexCount, Is.GreaterThan(150));
                 Assert.That(dagger.subMeshCount, Is.EqualTo(2),
                     "The authored dagger keeps separate metal and grip material regions.");
                 Assert.That(dagger.bounds.size.y, Is.GreaterThan(dagger.bounds.size.x));
+                Assert.That(dagger.uv, Has.Length.EqualTo(dagger.vertexCount));
+                Assert.That(dagger.tangents, Has.Length.EqualTo(dagger.vertexCount));
             }
             finally
             {
