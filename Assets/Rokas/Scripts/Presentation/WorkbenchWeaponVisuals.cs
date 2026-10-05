@@ -127,8 +127,8 @@ namespace Rokas.Presentation
             Bounds bounds = mesh.bounds;
             float planarSpan = Mathf.Max(bounds.size.x, bounds.size.y);
             float targetSpan = icon
-                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.76f : 1.66f)
-                : (kind == WorkbenchWeaponKind.TwoHanded ? 1.82f : 1.86f);
+                ? (kind == WorkbenchWeaponKind.TwoHanded ? 1.72f : 1.52f)
+                : (kind == WorkbenchWeaponKind.TwoHanded ? 1.72f : 1.34f);
 
             float scale = targetSpan / Mathf.Max(planarSpan, .0001f);
             weapon.localScale = Vector3.one * scale;
@@ -139,8 +139,8 @@ namespace Rokas.Presentation
         public static Quaternion PresentationRotation(WorkbenchWeaponKind kind, bool icon)
         {
             if (kind == WorkbenchWeaponKind.TwoHanded)
-                return Quaternion.Euler(icon ? 5f : 4f, icon ? -13f : -16f, icon ? -34f : -31f);
-            return Quaternion.Euler(icon ? 7f : 6f, icon ? -18f : -20f, icon ? -32f : -33f);
+                return Quaternion.Euler(icon ? 4f : 3f, icon ? -11f : -14f, icon ? -32f : -29f);
+            return Quaternion.Euler(icon ? 8f : 7f, icon ? -20f : -22f, icon ? -39f : -37f);
         }
 
         public static void AddDirectionalLight(Transform root, string name, Color color, float intensity, Vector3 euler)
@@ -289,8 +289,8 @@ namespace Rokas.Presentation
         public int RenderTextureHeight => renderTexture ? renderTexture.height : 0;
         public bool RenderedWithPremiumSurfaceMaps { get; private set; }
         public string CurrentSource => Kind == WorkbenchWeaponKind.TwoHanded
-            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / premium heavy greatsword card render"
-            : "ROKAS premium authored matching dagger / card render";
+            ? WorkbenchWeaponMeshLibrary.SuppliedFbxName + " / FBX-derived premium card render"
+            : "ROKAS premium authored ritual dagger / card render";
 
         public void Initialize(RawImage image, WorkbenchWeaponKind kind)
         {
