@@ -96,11 +96,11 @@ jobs:
         if: always()
         shell: bash
         run: |
-          mkdir -p verification
-          git rev-parse HEAD > verification/head.txt
-          git rev-parse HEAD^{tree} > verification/tree.txt
-          git status --short --untracked-files=no > verification/git-status.txt
-          git diff --check > verification/git-diff-check.txt || true
+          mkdir -p runner-verification
+          git rev-parse HEAD > runner-verification/head.txt
+          git rev-parse HEAD^{tree} > runner-verification/tree.txt
+          git status --short --untracked-files=no > runner-verification/git-status.txt
+          git diff --check > runner-verification/git-diff-check.txt || true
       - name: Upload playmode and visual evidence
         if: always()
         uses: actions/upload-artifact@v7

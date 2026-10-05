@@ -157,14 +157,14 @@ namespace Rokas.Presentation
                 : new[] { metalMaterial };
 
             CurrentKind = kind;
-            float scale = kind == WorkbenchWeaponKind.TwoHanded ? 2.18f : 2.35f;
+            float scale = kind == WorkbenchWeaponKind.TwoHanded ? 1.92f : 1.86f;
             weaponObject.transform.localScale = Vector3.one * scale;
             weaponObject.transform.localPosition = Vector3.zero;
             weaponObject.transform.localRotation = Quaternion.identity;
             baseRotation = Quaternion.Euler(
-                kind == WorkbenchWeaponKind.TwoHanded ? 4f : 7f,
-                kind == WorkbenchWeaponKind.TwoHanded ? -14f : -18f,
-                kind == WorkbenchWeaponKind.TwoHanded ? -39f : -31f);
+                kind == WorkbenchWeaponKind.TwoHanded ? 2f : 5f,
+                kind == WorkbenchWeaponKind.TwoHanded ? -22f : -24f,
+                kind == WorkbenchWeaponKind.TwoHanded ? -38f : -34f);
             pivot.localRotation = baseRotation;
             pivot.localPosition = Vector3.zero;
             idleTime = 0f;
@@ -229,17 +229,17 @@ namespace Rokas.Presentation
             previewCamera.fieldOfView = 27f;
             previewCamera.nearClipPlane = .1f;
             previewCamera.farClipPlane = 20f;
-            previewCamera.allowHDR = true;
+            previewCamera.allowHDR = false;
             previewCamera.targetTexture = renderTexture;
 
             metalMaterial = CreateStandardMaterial("Workbench Preview Metal",
-                new Color(.29f, .33f, .36f), .84f, .58f);
+                new Color(.16f, .19f, .22f), .76f, .48f);
             gripMaterial = CreateStandardMaterial("Workbench Preview Grip",
-                new Color(.075f, .055f, .045f), .18f, .34f);
+                new Color(.055f, .038f, .030f), .12f, .28f);
 
-            CreateLight("WorkbenchKey", new Color(.76f, .90f, 1f), 1.55f, new Vector3(32f, -28f, 0f));
-            CreateLight("WorkbenchFill", new Color(.84f, .88f, .90f), .72f, new Vector3(-18f, 34f, 0f));
-            CreateLight("WorkbenchRim", new Color(.18f, .72f, 1f), 1.05f, new Vector3(18f, 145f, 0f));
+            CreateLight("WorkbenchKey", new Color(.74f, .84f, .92f), .78f, new Vector3(30f, -34f, 0f));
+            CreateLight("WorkbenchFill", new Color(.48f, .58f, .64f), .24f, new Vector3(-16f, 38f, 0f));
+            CreateLight("WorkbenchRim", new Color(.12f, .56f, .86f), .56f, new Vector3(18f, 145f, 0f));
         }
 
         private Material CreateStandardMaterial(string materialName, Color color, float metallic, float smoothness)
