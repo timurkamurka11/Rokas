@@ -273,6 +273,71 @@ namespace Rokas.Tests
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
+
+        // Native outgoing override switches ActiveVirtualCamera to fallback; only its correction is weighted by 1-shotWeight.
+        [Test]
+        public void NativeOutgoingCameraRoutingBlendsShakeWithFallbackCameraWeight()
+        {
+            var root = new GameObject("NativeShakeRoutingFixture");
+            var camera = root.AddComponent<Camera>();
+            camera.orthographic = false;
+            camera.fieldOfView = 38f;
+            root.transform.position = new Vector3(0f, .74f, -8.3f);
+            var data = SourceBasicDamage();
+            data.routeShakeToTimelineActiveCamera = true;
+            data.shakes = new[]
+            {
+                new LicensedCameraShakeSegment { duration = 1.3f, priority = 10, x = AnimationCurve.Constant(0f, 1.3f, 4f) }
+            };
+            try
+            {
+                var player = new LicensedCombatCameraPlayer(camera);
+                player.Begin(data, Vector3.zero, 1f, Quaternion.identity);
+                Assert.That(camera.transform.position.x, Is.EqualTo(4f));
+                float outStart = data.shotDuration - data.blendOut;
+                player.Tick(outStart);
+                Assert.That(camera.transform.position.x, Is.EqualTo(4f), "Mixer keeps the shot active while input weight is exactly one");
+                player.Tick(.0001f);
+                // u=.0001/(11/30); active fallback correction factor=1-(1-u)^2.
+                Assert.That((double)camera.transform.position.x, Is.EqualTo(.0021815206611570248).Within(.000001),
+                    "Strict weight<1 outgoing branch routes to fallback; this is not an arbitrary fade curve");
+                player.Tick(1.2f - player.Clock);
+                Assert.That(camera.transform.position.x, Is.EqualTo(3f).Within(.000003),
+                    "At shotWeight .25, fallback receives .75 of the raw shake, not full amplitude or shotWeight amplitude");
+                player.Tick(.1f);
+                Assert.That(camera.transform.position.x, Is.EqualTo(0f), "Expired track contributes no correction while shot blend continues");
+                player.Cancel();
+                Assert.That(player.IsHome, Is.True);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+
+        [Test]
+        public void AuthoredCameraDeadlineRestoresHomeOnEightyThirdSixtyHertzTick()
+        {
+            var root = new GameObject("CameraDeadlineFixture");
+            var camera = root.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 2.857919256f;
+            camera.fieldOfView = 38f;
+            root.transform.position = new Vector3(0f, .74f, -8.3f);
+            try
+            {
+                var player = new LicensedCombatCameraPlayer(camera);
+                player.Begin(SourceBasicDamage(), Vector3.zero, 1f, Quaternion.identity);
+                for (int i = 0; i < 82; i++) player.Tick(1f / 60f);
+                Assert.That(player.Active, Is.True, "Shot deadline is 83/60; it must still own the camera after tick82");
+                player.Tick(1f / 60f);
+                Assert.That(player.Active, Is.False, "Float accumulation must not extend the source shot by a whole frame");
+                Assert.That(player.IsHome, Is.True);
+                Assert.That(camera.orthographic, Is.True);
+                Assert.That(camera.orthographicSize, Is.EqualTo(2.857919256f));
+                Assert.That(camera.fieldOfView, Is.EqualTo(38f));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         static LicensedCameraData SourceBasicDamage() => new LicensedCameraData
         {
             parentPosition = new Vector3(0f, 0f, -6.4f),

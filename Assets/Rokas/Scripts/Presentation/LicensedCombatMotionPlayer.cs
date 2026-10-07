@@ -15,6 +15,7 @@ namespace Rokas.Presentation
         private readonly Queue<string> contactHistory = new Queue<string>();
         private float[] blendIn, blendOut;
         private string actionId, anticipationAlias;
+        private double clockSeconds;
         private float clock;
         private bool contacted;
 
@@ -85,6 +86,7 @@ namespace Rokas.Presentation
             contactHistory.Enqueue(id);
             while (contactHistory.Count > ContactHistoryLimit) consumedContacts.Remove(contactHistory.Dequeue());
             contacted = true;
+            clockSeconds = 0;
             clock = 0;
             Sample();
             return true;
@@ -93,7 +95,8 @@ namespace Rokas.Presentation
         public void Tick(float delta)
         {
             if (!Active) return;
-            clock += Mathf.Max(0, delta);
+            if (delta > 0f && !float.IsNaN(delta) && !float.IsInfinity(delta)) clockSeconds += delta;
+            clock = (float)clockSeconds;
             if (contacted && clock >= Profile.Duration) { Cancel(); return; }
             Sample();
         }
@@ -148,6 +151,7 @@ namespace Rokas.Presentation
             aliases.Clear();
             Profile = null;
             actionId = null;
+            clockSeconds = 0;
             clock = 0;
             contacted = false;
         }

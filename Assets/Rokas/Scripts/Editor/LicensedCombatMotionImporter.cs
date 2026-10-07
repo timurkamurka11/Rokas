@@ -91,6 +91,7 @@ namespace Rokas.Editor
                         parentPosition = data.parentPosition, parentEuler = data.parentEuler, rootPosition = data.rootPosition,
                         performerFramingSize = (LicensedCameraFramingSize)data.performerFramingSize,
                         framingOffsets = data.framingOffsets, sourceBinding = data.sourceBinding,
+                        routeShakeToTimelineActiveCamera = true,
                         calibration = data.calibration, shakes = data.shakes.Select(shake => new LicensedCameraShakeSegment {
                             start = shake.start, duration = shake.duration, clipIn = shake.clipIn, speed = shake.speed,
                             priority = shake.priority, muted = shake.muted,

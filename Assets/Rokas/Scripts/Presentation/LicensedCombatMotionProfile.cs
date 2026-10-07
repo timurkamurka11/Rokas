@@ -89,6 +89,7 @@ namespace Rokas.Presentation
         public AnimationCurve shakeY = new AnimationCurve();
         public AnimationCurve shakeZ = new AnimationCurve();
         public float shakeDuration = .6f;
+        public bool routeShakeToTimelineActiveCamera;
         public LicensedCameraShakeSegment[] shakes = Array.Empty<LicensedCameraShakeSegment>();
         public string sourceBinding, calibration;
 

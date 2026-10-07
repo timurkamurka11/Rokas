@@ -37,6 +37,7 @@ namespace Rokas.Presentation
         Vector3 cancelPosition;
         Quaternion cancelRotation;
         float cancelFov, cancelElapsed, cancelDuration;
+        double elapsedClock;
 
         public LicensedCombatCameraPlayer(Camera camera)
         {
@@ -46,7 +47,7 @@ namespace Rokas.Presentation
 
         public bool Active => source != null;
         public bool IsCancelling => cancelDuration > 0f;
-        public float Clock { get; private set; }
+        public float Clock => (float)elapsedClock;
         public bool IsHome => !Active && camera != null &&
             camera.orthographic == homeOrthographic &&
             camera.orthographicSize == homeSize &&
@@ -76,7 +77,7 @@ namespace Rokas.Presentation
             scale = worldUnitsPerSourceUnit;
             cameraParentPosition = resolvedParentPosition ?? data.parentPosition;
             cameraParentRotation = Quaternion.Euler(resolvedParentEuler ?? data.parentEuler);
-            Clock = 0f;
+            elapsedClock = 0;
             perspectiveHomeFov = homeOrthographic ? Mathf.Clamp(data.baseFov, 1f, 179f) : homeFov;
             perspectiveHome = homePosition;
             if (homeOrthographic)
@@ -104,8 +105,8 @@ namespace Rokas.Presentation
                     Quaternion.Slerp(cancelRotation, homeRotation, alpha));
                 return;
             }
-            if (deltaTime > 0f && !float.IsNaN(deltaTime) && !float.IsInfinity(deltaTime)) Clock += deltaTime;
-            if (Clock >= source.shotDuration) { Cancel(); return; }
+            if (deltaTime > 0f && !float.IsNaN(deltaTime) && !float.IsInfinity(deltaTime)) elapsedClock += deltaTime;
+            if (elapsedClock >= source.shotDuration) { Cancel(); return; }
             Sample();
         }
 
@@ -125,7 +126,7 @@ namespace Rokas.Presentation
         {
             cancelDuration = cancelElapsed = 0f;
             source = null;
-            Clock = 0f;
+            elapsedClock = 0;
             if (camera == null) return;
             camera.orthographic = homeOrthographic;
             camera.orthographicSize = homeSize;
@@ -157,6 +158,11 @@ namespace Rokas.Presentation
             Quaternion shotRotation = basis * cameraParentRotation * Quaternion.Euler(
                 Evaluate(source.pitch, Clock), Evaluate(source.yaw, Clock), Evaluate(source.roll, Clock));
             Vector3 shake = SampleShake();
+            if (source.routeShakeToTimelineActiveCamera && weight < 1f)
+            {
+                // Native outgoing one-shot override routes shakers to fallback CamB; CameraState blends its correction by 1-weight.
+                shake *= 1f - weight;
+            }
             camera.orthographic = false;
             camera.fieldOfView = Mathf.Lerp(perspectiveHomeFov, source.shotFov, weight);
             camera.transform.SetPositionAndRotation(

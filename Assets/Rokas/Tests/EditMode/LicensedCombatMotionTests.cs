@@ -19,6 +19,12 @@ namespace Rokas.Tests {
    try{Set(p,"anticipation",antic);var segments=Array.CreateInstance(st,2);var a=Activator.CreateInstance(st);var b=Activator.CreateInstance(st);Set(a,"clip",action);Set(a,"duration",1.05f);Set(b,"clip",recover);Set(b,"start",1f);Set(b,"duration",1f);segments.SetValue(a,0);segments.SetValue(b,1);Set(p,"segments",segments);var player=Activator.CreateInstance(mt,new object[]{animation,null});Call(player,"Begin",p,"overlap-action","Attack");Call(player,"ConfirmContact","overlap-action");Call(player,"Tick",1.0125f);Assert.That(child.transform.localPosition.x,Is.EqualTo(12.5f).Within(.005f),"Quarter way through a 50ms overlap must use outgoing75%/incoming25%");}
    finally{UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(p);foreach(var c in new[]{antic,action,recover})UnityEngine.Object.DestroyImmediate(c);}
   }
+  [Test] public void SixtyHertzPlaybackEndsAtTheAuthoredFrameWithoutAnAdditionalTick(){
+   var root=new GameObject("SourceClockFixture");var child=new GameObject("Animated");child.transform.SetParent(root.transform,false);var animation=root.AddComponent<Animation>();var profile=ScriptableObject.CreateInstance<LicensedCombatMotionProfile>();var clip=Clip(0,1);
+   try{profile.anticipation=clip;profile.segments=new[]{new LicensedMotionSegment{clip=clip,start=0,duration=83f/60f}};var player=new LicensedCombatMotionPlayer(animation,null);
+    for(int cycle=0;cycle<20;cycle++){string id="frame-clock-"+cycle;player.Begin(profile,id,"FrameAntic");Assert.That(player.ConfirmContact(id),Is.True);for(int frame=1;frame<=82;frame++)player.Tick(1f/60f);Assert.That(player.Active,Is.True,"Source phase must remain active through frame82");player.Tick(1f/60f);Assert.That(player.Active,Is.False,"Source phase ends on authored frame83, not84 from accumulated float rounding");}
+   }finally{UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(profile);UnityEngine.Object.DestroyImmediate(clip);}
+  }
   static void Set(object o,string key,object v)=>o.GetType().GetField(key).SetValue(o,v);
   static object Call(object o,string key,params object[] values)=>o.GetType().GetMethod(key).Invoke(o,values);
   static AnimationClip Clip(float a,float b){var c=new AnimationClip{legacy=true};c.SetCurve("Animated",typeof(Transform),"localPosition.x",AnimationCurve.Linear(0,a,1,b));return c;}
