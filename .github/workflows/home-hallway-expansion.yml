@@ -201,6 +201,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: codex/home-hallway-expansion
       - uses: actions/cache@v6
         with:
           path: Library
@@ -231,6 +233,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: codex/home-hallway-expansion
       - uses: actions/cache@v6
         with:
           path: Library
@@ -261,6 +265,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: codex/home-hallway-expansion
       - uses: actions/cache@v6
         with:
           path: Library
@@ -306,6 +312,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: codex/home-hallway-expansion
       - uses: actions/cache@v6
         with:
           path: Library
