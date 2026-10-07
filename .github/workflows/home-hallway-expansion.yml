@@ -29,8 +29,8 @@ concurrency:
 
 env:
   UNITY_VERSION: 6000.3.19f1
-  HALLWAY_ASSET_URL: https://firestorage.ai/en/f/dsXiyAdWmLBH/hallway1024_q72.jpg
-  HALLWAY_ASSET_SHA256: bb291922b9f605f0a48ab88ff07a282fad0db428a24b0a7094ac669417d57a6e
+  HALLWAY_SHARE_URL: https://firestorage.ai/en/f/JoTJeZvzhbvc
+  HALLWAY_ASSET_SHA256: 34618076026b5f44676d05d471219cd38f77472cd1f88c822197e47736752fab
 
 jobs:
   asset-bootstrap:
@@ -57,7 +57,36 @@ jobs:
           fi
 
           mkdir -p "$(dirname "$target")"
-          curl --fail --location --retry 3 --retry-delay 2 "$HALLWAY_ASSET_URL" --output "$target"
+          # The Firestorage share is a Next.js download page, not a direct JPEG endpoint.
+          # Browser download is necessary; its bytes must match our prepared full-resolution source.
+          mkdir -p /tmp/rokas-hallway-browser
+          npm --prefix /tmp/rokas-hallway-browser install --no-save --silent playwright@1.56.1
+          /tmp/rokas-hallway-browser/node_modules/.bin/playwright install chromium
+          ASSET_TARGET="$target" node <<'JS'
+          const { chromium } = require('/tmp/rokas-hallway-browser/node_modules/playwright');
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            try {
+              const context = await browser.newContext({acceptDownloads:true});
+              const page = await context.newPage();
+              await page.goto(process.env.HALLWAY_SHARE_URL, {waitUntil:'domcontentloaded',timeout:90000});
+              const button = page.getByTestId('download-button').or(
+                page.getByRole('button', {name:/^download$/i})
+              ).or(page.getByRole('link', {name:/^download$/i})).first();
+              await button.waitFor({state:'visible',timeout:45000});
+              const [download] = await Promise.all([
+                page.waitForEvent('download', {timeout:90000}),
+                button.click({timeout:45000})
+              ]);
+              const failure = await download.failure();
+              if (failure) throw new Error('Download failed: '+failure);
+              await download.saveAs(process.env.ASSET_TARGET);
+            } finally {
+              await browser.close();
+            }
+          })().catch(e => { console.error(e); process.exit(1); });
+          JS
+          file "$target"
           echo "$HALLWAY_ASSET_SHA256  $target" | sha256sum --check -
 
           cat > "$meta" <<'META'
@@ -142,7 +171,7 @@ jobs:
               nameFileIdTable: {}
             mipmapLimitGroupName:
             pSDRemoveMatte: 0
-            userData: ROKAS Hallway reference sha256=bb291922b9f605f0a48ab88ff07a282fad0db428a24b0a7094ac669417d57a6e
+            userData: ROKAS Hallway reference sha256=34618076026b5f44676d05d471219cd38f77472cd1f88c822197e47736752fab
             assetBundleName:
             assetBundleVariant:
           META
