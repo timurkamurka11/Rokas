@@ -24,7 +24,7 @@ on:
       - Assets/Rokas/Tests/Serialization/UnitySaveTests.cs
 
 permissions:
-  contents: write
+  contents: read
   checks: write
 
 concurrency:
@@ -34,7 +34,6 @@ concurrency:
 env:
   UNITY_VERSION: 6000.3.19f1
   HALLWAY_ASSET_SHA256: 34618076026b5f44676d05d471219cd38f77472cd1f88c822197e47736752fab
-  HALLWAY_OFF_SHARE: https://firestorage.ai/en/f/IE9uWs1ixi8a
   HALLWAY_OFF_SHA256: 8b13acb735089ce5c8a5607b97c0cdc86d666f3b17f6a7555142525b74ecd691
 
 jobs:
@@ -46,60 +45,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: codex/hallway-crossroom-light-fidelity
-      - name: Restore approved OFF image once and verify both photos
+      - name: Verify both committed photographic light states
         shell: bash
         run: |
           set -euo pipefail
-          image="Assets/Rokas/Resources/Home/HallwayReference.jpg"
-          target="Assets/Rokas/Resources/Home/HallwayLightsOff.jpg"
-          test -f "$image" && test -f "${image}.meta"
-          echo "$HALLWAY_ASSET_SHA256  $image" | sha256sum --check -
-          test -f "${target}.meta"
-
-          if [[ ! -f "$target" ]]; then
-            mkdir -p /tmp/rokas-light-download
-            npm --prefix /tmp/rokas-light-download install --no-save --silent playwright@1.56.1
-            /tmp/rokas-light-download/node_modules/.bin/playwright install chromium
-            ASSET_TARGET="$target" node <<'JS'
-          const {chromium} = require('/tmp/rokas-light-download/node_modules/playwright');
-          (async () => {
-            const browser = await chromium.launch({headless:true});
-            try {
-              const context = await browser.newContext({acceptDownloads:true});
-              const page = await context.newPage();
-              await page.goto(process.env.HALLWAY_OFF_SHARE,{waitUntil:'domcontentloaded',timeout:90000});
-              const button = page.getByTestId('download-button').or(
-                page.getByRole('button',{name:/^download$/i})
-              ).or(page.getByRole('link',{name:/^download$/i})).first();
-              await button.waitFor({state:'visible',timeout:45000});
-              const [download] = await Promise.all([
-                page.waitForEvent('download',{timeout:90000}),
-                button.click({timeout:45000})
-              ]);
-              const failure=await download.failure();
-              if(failure) throw Error(failure);
-              await download.saveAs(process.env.ASSET_TARGET);
-            } finally { await browser.close(); }
-          })().catch(e => {console.error(e);process.exit(1)});
-          JS
-            echo "$HALLWAY_OFF_SHA256  $target" | sha256sum --check -
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "$target"
-            git commit -m "asset: commit original approved Hallway OFF photograph"
-            for attempt in 1 2 3 4 5; do
-              git fetch origin codex/hallway-crossroom-light-fidelity
-              git rebase origin/codex/hallway-crossroom-light-fidelity
-              if git push origin HEAD:codex/hallway-crossroom-light-fidelity; then
-                exit 0
-              fi
-              sleep 2
-            done
-            exit 1
-          fi
-
-          echo "$HALLWAY_OFF_SHA256  $target" | sha256sum --check -
-          file "$image" "$target"
+          on="Assets/Rokas/Resources/Home/HallwayReference.jpg"
+          off="Assets/Rokas/Resources/Home/HallwayLightsOff.jpg"
+          test -f "$on" && test -f "${on}.meta"
+          test -f "$off" && test -f "${off}.meta"
+          echo "$HALLWAY_ASSET_SHA256  $on" | sha256sum --check -
+          echo "$HALLWAY_OFF_SHA256  $off" | sha256sum --check -
+          file "$on" "$off"
 
   hallway:
     needs: asset-integrity
