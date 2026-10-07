@@ -130,6 +130,42 @@ namespace Rokas.Tests
             Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
         }
 
+        [UnityTest]
+        public IEnumerator HallwaySwitchIsIndependentAndSurvivesHomeRoundTrip()
+        {
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.True,
+                "Fresh and legacy saves should start with the hallway illuminated.");
+            bool originalMainRoomLight = bootstrap.Session.State.lampOn;
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+
+            Button hallwaySwitch = Find<Button>("HallwayLightHotspot");
+            Assert.That(hallwaySwitch, Is.Not.Null);
+            hallwaySwitch.onClick.Invoke();
+            yield return null;
+
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
+            Assert.That(bootstrap.Session.State.lampOn, Is.EqualTo(originalMainRoomLight),
+                "Hallway switch must not affect the Main Room light.");
+
+            Find<Button>("HallwayReturnHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.MainRoom);
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
+            Assert.That(Find<CanvasGroup>("MainRoomHallwayOffMask").alpha, Is.GreaterThan(.70f));
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
+            Assert.That(Find<CanvasGroup>("HallwayOwnLightOffMask").alpha, Is.GreaterThan(.70f),
+                "Hallway OFF must already be visible on the first frame after a completed fade.");
+
+            Find<Button>("HallwayLightHotspot").onClick.Invoke();
+            yield return null;
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.True);
+            Assert.That(bootstrap.Session.State.lampOn, Is.EqualTo(originalMainRoomLight));
+        }
+
         private void SetLights(bool mainOn, bool hallwayOn)
         {
             bootstrap.Session.SetLamp(mainOn);
