@@ -290,7 +290,7 @@ namespace Rokas.Presentation
         {
             if (session.State.phase == RunPhase.Accepted)
             {
-                Travel(session.LeaveHome, "Дождь. Последний переход.\\nСвятилище между домами.");
+                Travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
             }
             else if (session.State.phase == RunPhase.Payment)
             {
