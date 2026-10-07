@@ -8,8 +8,8 @@ namespace Rokas.Presentation
     // so no hard rectangle is introduced.
     public sealed class VideoCornerArtifactMask : MonoBehaviour
     {
-        public static readonly Vector2 NormalizedAnchor = new Vector2(.895f, .20f);
-        public static readonly Vector2 ReferenceSize = new Vector2(190f, 190f);
+        public static readonly Vector2 NormalizedAnchor = new Vector2(.911f, .155f);
+        public static readonly Vector2 ReferenceSize = new Vector2(220f, 220f);
         public static readonly Vector4 SourceRect = new Vector4(.7675f, .1120f, .0990f, .1760f);
 
         private Material ownedMaterial;
@@ -63,7 +63,7 @@ namespace Rokas.Presentation
                 hideFlags = HideFlags.HideAndDontSave
             };
             ownedMaterial.SetVector("_SourceRect", SourceRect);
-            ownedMaterial.SetFloat("_InnerRadius", .39f);
+            ownedMaterial.SetFloat("_InnerRadius", .58f);
             ownedMaterial.SetFloat("_OuterRadius", .96f);
             image.material = ownedMaterial;
         }
