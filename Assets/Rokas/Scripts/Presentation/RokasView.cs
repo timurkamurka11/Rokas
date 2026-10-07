@@ -318,7 +318,13 @@ namespace Rokas.Presentation
             bool otherSide = phase == RunPhase.Combat || phase == RunPhase.Sealed || phase == RunPhase.Failed;
             bool homeLocation = !otherSide && phase != RunPhase.Portal;
             bool reactiveBattle = phase == RunPhase.Combat && session.CombatMode == CombatMode.ReactiveTurns;
-            globalChrome.gameObject.SetActive(!homeLocation && !reactiveBattle);
+            bool preBattlePortal = phase == RunPhase.Portal;
+            globalChrome.gameObject.SetActive(!homeLocation && !reactiveBattle && !preBattlePortal);
+            if (preBattlePortal)
+            {
+                toast.text = string.Empty;
+                toastTime = 0f;
+            }
             toast.rectTransform.anchoredPosition = reactiveBattle ? new Vector2(410f, -1013f) : new Vector2(310f, -925f);
             toast.rectTransform.sizeDelta = reactiveBattle ? new Vector2(1100f, 33f) : new Vector2(1300f, 60f);
             toast.fontSize = reactiveBattle ? 17 : 23;
@@ -480,8 +486,9 @@ namespace Rokas.Presentation
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
             }
-            messageNotifications.SetSuppressed(session.CombatMode == CombatMode.ReactiveTurns &&
-                (phase == RunPhase.Combat || reactiveResultPending));
+            messageNotifications.SetSuppressed(phase == RunPhase.Portal ||
+                (session.CombatMode == CombatMode.ReactiveTurns &&
+                (phase == RunPhase.Combat || reactiveResultPending)));
             messageNotifications.Tick(dt);
             if (toastTime > 0)
             {
