@@ -22,6 +22,8 @@ namespace Rokas.Presentation
         private readonly Action<Func<bool>, string> travel;
         private readonly Action<string> toast;
         private readonly Func<HubDialogueDefinition, bool> openHubDialogue;
+        private readonly Action enterHallway;
+        private HomeLightStateOverlay neighborLight;
         private RawImage mame;
         private Image weaponWard;
         private Text objective;
@@ -34,16 +36,17 @@ namespace Rokas.Presentation
 
         public HomeView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio, Action<string> open,
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast,
-            Func<HubDialogueDefinition, bool> openHubDialogue)
+            Func<HubDialogueDefinition, bool> openHubDialogue, Action enterHallway)
         {
             this.ui = ui; this.assets = assets; this.session = session; this.audio = audio;
             this.open = open; this.act = act; this.travel = travel; this.toast = toast;
-            this.openHubDialogue = openHubDialogue;
+            this.openHubDialogue = openHubDialogue; this.enterHallway = enterHallway;
         }
 
         public void Build(RectTransform parent)
         {
             mame = ui.Art(parent, "Mame", assets.familiar, 150, 772, 218, 218);
+            neighborLight = HomeLightStateOverlay.CreateForMainRoom(ui, parent);
 
             // Runtime Home uses the exact authored PNG hotspot artwork plus CustomGlow.
             // The old procedural scan visuals are intentionally not instantiated.
@@ -102,19 +105,7 @@ namespace Rokas.Presentation
                 false);
 
             ScanActionMarker(parent, "DoorHotspot", HomeScanGlyph.Exit,
-                1748f, 132.9f, 58f,
-                () =>
-                {
-                    if (session.State.phase == RunPhase.Accepted)
-                        travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
-                    else if (session.State.phase == RunPhase.Payment)
-                        toast("На ноутбук пришло подтверждение оплаты.");
-                    else
-                    {
-                        open("laptop");
-                        toast("Сначала выберите контракт в YOMI.");
-                    }
-                });
+                1748f, 132.9f, 58f, () => enterHallway?.Invoke());
 
             HomeFinalUiPresenter.Build(parent);
             Refresh();
@@ -308,6 +299,7 @@ namespace Rokas.Presentation
             if (weaponWard)
                 weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);
             UpdateLaptopUnreadIndicator();
+            neighborLight?.SetMainRoomNeighbor(session.HallwayLightOn);
         }
 
         private void UpdateLaptopUnreadIndicator()
@@ -324,6 +316,7 @@ namespace Rokas.Presentation
         public void Tick(float dt)
         {
             time += dt;
+            neighborLight?.Tick(dt);
             mameReaction = Mathf.Max(0, mameReaction - dt);
             UpdateLaptopUnreadIndicator();
             if (mame)
@@ -335,6 +328,7 @@ namespace Rokas.Presentation
 
         public void ClearReferences()
         {
+            neighborLight = null;
             mame = null; weaponWard = null; objective = null; prepared = null; laptopUnreadIndicator = null; laptopUnreadGlow = null; laptopMarkerFeedback = null;
         }
     }
