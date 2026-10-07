@@ -40,11 +40,43 @@ namespace Rokas.Presentation
         public float time, duration;
     }
 
+    public enum LicensedCameraFramingSize { Medium, Short, Large }
+
+    [Serializable]
+    public sealed class LicensedCameraFramingOffset
+    {
+        public Vector3 medium, largeTarget, largePerformer, shortTarget, shortTargetEuler;
+    }
+
     [Serializable]
     public sealed class LicensedCameraData
     {
         public float baseFov = 38, shotFov = 18, shotDuration = 1.3833333f, blendOut = .3666667f;
         public Vector3 parentPosition = new Vector3(0, 0, -6.4f);
+        public Vector3 parentEuler;
+        public Vector3 rootPosition = new Vector3(0, 0, -6f);
+        public LicensedCameraFramingSize performerFramingSize;
+        public LicensedCameraFramingOffset[] framingOffsets = Array.Empty<LicensedCameraFramingOffset>();
+
+        public void ResolveParentPose(int externalTargets, LicensedCameraFramingSize targetSize,
+            out Vector3 position, out Vector3 euler)
+        {
+            position = parentPosition;
+            euler = parentEuler;
+            if (framingOffsets == null || framingOffsets.Length == 0) return;
+            LicensedCameraFramingOffset offset = framingOffsets[Mathf.Clamp(externalTargets, 0, framingOffsets.Length - 1)];
+            Vector3 translation;
+            if (performerFramingSize == LicensedCameraFramingSize.Large) translation = offset.largePerformer;
+            else if (targetSize == LicensedCameraFramingSize.Short)
+            {
+                translation = offset.shortTarget;
+                euler += offset.shortTargetEuler;
+            }
+            else if (targetSize == LicensedCameraFramingSize.Large) translation = offset.largeTarget;
+            else translation = offset.medium;
+            position = rootPosition + translation;
+        }
+
         public Vector3 basePosition = new Vector3(0, .74f, -8.3f);
         public AnimationCurve x = AnimationCurve.Constant(0, 2, 0);
         public AnimationCurve y = AnimationCurve.Constant(0, 2, .6f);

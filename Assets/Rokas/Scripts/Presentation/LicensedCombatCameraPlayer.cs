@@ -22,13 +22,21 @@ namespace Rokas.Presentation
         Vector3 origin;
         Quaternion basis;
         float scale;
+        Vector3 cameraParentPosition;
+        Quaternion cameraParentRotation;
         Vector3 homePosition;
         Quaternion homeRotation;
+        Transform homeParent;
+        Vector3 homeLocalPosition;
+        Quaternion homeLocalRotation;
         bool homeOrthographic;
         float homeSize;
         float homeFov;
         Vector3 perspectiveHome;
         float perspectiveHomeFov;
+        Vector3 cancelPosition;
+        Quaternion cancelRotation;
+        float cancelFov, cancelElapsed, cancelDuration;
 
         public LicensedCombatCameraPlayer(Camera camera)
         {
@@ -37,17 +45,25 @@ namespace Rokas.Presentation
         }
 
         public bool Active => source != null;
+        public bool IsCancelling => cancelDuration > 0f;
         public float Clock { get; private set; }
         public bool IsHome => !Active && camera != null &&
             camera.orthographic == homeOrthographic &&
-            Mathf.Abs(camera.orthographicSize - homeSize) < .001f &&
-            Mathf.Abs(camera.fieldOfView - homeFov) < .001f &&
-            (camera.transform.position - homePosition).sqrMagnitude < .000001f &&
-            Quaternion.Angle(camera.transform.rotation, homeRotation) < .001f;
+            camera.orthographicSize == homeSize &&
+            camera.fieldOfView == homeFov &&
+            HomePoseMatches();
 
         /// <param name="stageOrigin">World-space floor origin of the source composition, not a second torso offset.</param>
         /// <param name="worldUnitsPerSourceUnit">Measured target/source actor-height ratio.</param>
         public void Begin(LicensedCameraData data, Vector3 stageOrigin, float worldUnitsPerSourceUnit, Quaternion stageBasis)
+        {
+            Begin(data, stageOrigin, worldUnitsPerSourceUnit, stageBasis, null, null);
+        }
+
+        /// <param name="resolvedParentPosition">Complete camera-root plus selected Offset translation; replaces the profile parent.</param>
+        /// <param name="resolvedParentEuler">Selected Offset parent rotation, before the recorded camera child rotation.</param>
+        public void Begin(LicensedCameraData data, Vector3 stageOrigin, float worldUnitsPerSourceUnit, Quaternion stageBasis,
+            Vector3? resolvedParentPosition, Vector3? resolvedParentEuler = null)
         {
             if (Active) Cancel();
             CaptureTacticalState();
@@ -58,6 +74,8 @@ namespace Rokas.Presentation
             origin = stageOrigin;
             basis = stageBasis;
             scale = worldUnitsPerSourceUnit;
+            cameraParentPosition = resolvedParentPosition ?? data.parentPosition;
+            cameraParentRotation = Quaternion.Euler(resolvedParentEuler ?? data.parentEuler);
             Clock = 0f;
             perspectiveHomeFov = homeOrthographic ? Mathf.Clamp(data.baseFov, 1f, 179f) : homeFov;
             perspectiveHome = homePosition;
@@ -75,26 +93,56 @@ namespace Rokas.Presentation
         public void Tick(float deltaTime)
         {
             if (!Active || camera == null) return;
+            if (IsCancelling)
+            {
+                if (deltaTime > 0f && !float.IsNaN(deltaTime) && !float.IsInfinity(deltaTime)) cancelElapsed += deltaTime;
+                if (cancelElapsed >= cancelDuration) { Cancel(); return; }
+                float alpha = Mathf.Clamp01(cancelElapsed / cancelDuration);
+                camera.orthographic = false;
+                camera.fieldOfView = Mathf.Lerp(cancelFov, perspectiveHomeFov, alpha);
+                camera.transform.SetPositionAndRotation(Vector3.Lerp(cancelPosition, perspectiveHome, alpha),
+                    Quaternion.Slerp(cancelRotation, homeRotation, alpha));
+                return;
+            }
             if (deltaTime > 0f && !float.IsNaN(deltaTime) && !float.IsInfinity(deltaTime)) Clock += deltaTime;
             if (Clock >= source.shotDuration) { Cancel(); return; }
             Sample();
         }
 
+        /// <summary>Own interruption adaptation: frozen displayed camera exits with the body's linear handoff.</summary>
+        public void BeginCancel(float seconds)
+        {
+            if (!Active || IsCancelling || camera == null) return;
+            if (seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds)) { Cancel(); return; }
+            cancelPosition = camera.transform.position;
+            cancelRotation = camera.transform.rotation;
+            cancelFov = camera.fieldOfView;
+            cancelElapsed = 0f;
+            cancelDuration = seconds;
+        }
+
         public void Cancel()
         {
+            cancelDuration = cancelElapsed = 0f;
             source = null;
             Clock = 0f;
             if (camera == null) return;
             camera.orthographic = homeOrthographic;
             camera.orthographicSize = homeSize;
             camera.fieldOfView = homeFov;
-            camera.transform.SetPositionAndRotation(homePosition, homeRotation);
+            if (camera.transform.parent == homeParent)
+                camera.transform.SetLocalPositionAndRotation(homeLocalPosition, homeLocalRotation);
+            else
+                camera.transform.SetPositionAndRotation(homePosition, homeRotation);
         }
 
         void CaptureTacticalState()
         {
             homePosition = camera.transform.position;
             homeRotation = camera.transform.rotation;
+            homeParent = camera.transform.parent;
+            homeLocalPosition = camera.transform.localPosition;
+            homeLocalRotation = camera.transform.localRotation;
             homeOrthographic = camera.orthographic;
             homeSize = camera.orthographicSize;
             homeFov = camera.fieldOfView;
@@ -103,10 +151,10 @@ namespace Rokas.Presentation
         void Sample()
         {
             float weight = source.Weight(Clock);
-            Vector3 local = source.parentPosition + new Vector3(
+            Vector3 local = cameraParentPosition + cameraParentRotation * new Vector3(
                 Evaluate(source.x, Clock), Evaluate(source.y, Clock), Evaluate(source.z, Clock));
             Vector3 shotPosition = origin + basis * (local * scale);
-            Quaternion shotRotation = basis * Quaternion.Euler(
+            Quaternion shotRotation = basis * cameraParentRotation * Quaternion.Euler(
                 Evaluate(source.pitch, Clock), Evaluate(source.yaw, Clock), Evaluate(source.roll, Clock));
             Vector3 shake = SampleShake();
             camera.orthographic = false;
@@ -138,6 +186,26 @@ namespace Rokas.Presentation
             }
             // For equal priorities retain serialized order; source registration order is an explicit authoring limitation.
             return selected;
+        }
+
+        bool HomePoseMatches()
+        {
+            bool sameParent = camera.transform.parent == homeParent;
+            Vector3 position = sameParent ? camera.transform.localPosition : camera.transform.position;
+            Quaternion rotation = sameParent ? camera.transform.localRotation : camera.transform.rotation;
+            return (position - (sameParent ? homeLocalPosition : homePosition)).sqrMagnitude <= 1e-12f &&
+                RotationMatches(rotation, sameParent ? homeLocalRotation : homeRotation);
+        }
+
+        static bool RotationMatches(Quaternion actual, Quaternion expected)
+        {
+            // q and -q represent one orientation. Avoid float dot/acos rounding small real drift to zero.
+            double dx = (double)actual.x - expected.x, dy = (double)actual.y - expected.y;
+            double dz = (double)actual.z - expected.z, dw = (double)actual.w - expected.w;
+            double sx = (double)actual.x + expected.x, sy = (double)actual.y + expected.y;
+            double sz = (double)actual.z + expected.z, sw = (double)actual.w + expected.w;
+            return Math.Min(dx * dx + dy * dy + dz * dz + dw * dw,
+                sx * sx + sy * sy + sz * sz + sw * sw) <= 2.5e-13;
         }
 
         static float Evaluate(AnimationCurve curve, float time) => curve != null && curve.length > 0 ? curve.Evaluate(time) : 0f;

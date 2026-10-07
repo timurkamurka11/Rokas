@@ -43,7 +43,9 @@ namespace Rokas.Editor
             public SegmentData[] segments;
             public CurveData[] cameraCurves;
             public ShakeData[] shakes;
-            public Vector3 parentPosition;
+            public Vector3 parentPosition, parentEuler, rootPosition;
+            public int performerFramingSize;
+            public LicensedCameraFramingOffset[] framingOffsets;
         }
 
         public static void ImportFromManifest()
@@ -86,7 +88,9 @@ namespace Rokas.Editor
                         mixIn = Curve(segment.mixIn), mixOut = Curve(segment.mixOut)
                     }).ToArray();
                     profile.camera = new LicensedCameraData {
-                        parentPosition = data.parentPosition, sourceBinding = data.sourceBinding,
+                        parentPosition = data.parentPosition, parentEuler = data.parentEuler, rootPosition = data.rootPosition,
+                        performerFramingSize = (LicensedCameraFramingSize)data.performerFramingSize,
+                        framingOffsets = data.framingOffsets, sourceBinding = data.sourceBinding,
                         calibration = data.calibration, shakes = data.shakes.Select(shake => new LicensedCameraShakeSegment {
                             start = shake.start, duration = shake.duration, clipIn = shake.clipIn, speed = shake.speed,
                             priority = shake.priority, muted = shake.muted,
