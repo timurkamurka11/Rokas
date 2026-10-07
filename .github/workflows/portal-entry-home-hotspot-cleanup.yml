@@ -10,7 +10,8 @@ on:
       - Assets/Rokas/Scripts/Presentation/ReactiveMissionView.cs
       - Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs
       - Assets/Rokas/Tests/PlayMode/ReactiveCinematicHudPlayModeTests.cs
-      - Assets/Rokas/Tests/PlayMode/HomeScanUiPlayModeTests.cs
+      - Assets/Rokas/Tests/EditMode/HomeFinishedUiCleanupTests.cs
+      - Assets/Rokas/Tests/EditMode/HomeFinishedUiCleanupTests.cs.meta
       - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
 
 permissions:
@@ -75,7 +76,7 @@ jobs:
           restore-keys: |
             PortalEntryCleanup-${{ runner.os }}-
             Unity-Library-${{ runner.os }}-
-      - name: Run Home scan focused tests
+      - name: Run focused Home icon registration test
         id: tests
         uses: game-ci/unity-test-runner@v4
         env:
@@ -86,9 +87,9 @@ jobs:
         with:
           projectPath: .
           unityVersion: ${{ env.UNITY_VERSION }}
-          testMode: PlayMode
+          testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.HomeScanUiPlayModeTests
+          customParameters: -testFilter Rokas.Tests.HomeFinishedUiCleanupTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Home No Swords Workbench Icon
       - name: Upload evidence
