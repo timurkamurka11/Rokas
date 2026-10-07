@@ -10,6 +10,16 @@ namespace Rokas.Presentation
         private ReactiveCombatActorClips clips;
         private Transform modelRoot;
         private Animation animationPlayer;
+        private LicensedCombatMotionPlayer licensedMotion;
+        private LicensedCombatMotionProfile licensedStance;
+        private bool bossPresentation;
+        private string licensedContactKey;
+        private Transform licensedWeaponSocket;
+        private Transform daggerHomeParent;
+        public LicensedCombatMotionProfile ActiveLicensedProfile => licensedMotion?.Profile;
+        public float LicensedMotionClock => licensedMotion == null ? 0f : licensedMotion.Clock;
+        public bool LicensedContactConfirmed => licensedMotion != null && licensedMotion.Contacted;
+        public void SetBossPresentation(bool enabled) => bossPresentation = enabled;
         private Transform[] poseTransforms;
         private Transform torsoBone;
         private Vector3[] blendPositions;
@@ -49,6 +59,14 @@ namespace Rokas.Presentation
         private float activeSpeed = 1f;
         private float previousSpeed = 1f;
         private float blendElapsed;
+        private bool sampledLicensedPose;
+        private bool frozenPreviousPose;
+        private bool frozenWeaponValid;
+        private Vector3 frozenWeaponPosition;
+        private Quaternion frozenWeaponRotation;
+        private Vector3 frozenWeaponScale;
+        public enum SwordTransformAuthority { DefaultSocket, NativeMotion, ExitBlend }
+        public SwordTransformAuthority SwordTransformOwner { get; private set; }
         private const float BlendDuration = .08f;
         private float hitStopRemaining;
         private float recoilRemaining;
@@ -78,17 +96,17 @@ namespace Rokas.Presentation
         public float HitStopRemaining => hitStopRemaining;
         public string CurrentPose => activeAlias;
         public bool ActionRecoveryComplete => poseSecondsLeft <= 0f && hitStopRemaining <= 0f &&
-            !AwaitingAttackContact && !defenseActive;
+            !AwaitingAttackContact && !defenseActive && (licensedMotion == null || !licensedMotion.Active);
         public bool IdleSettled => activeAlias == "Idle" &&
-            (previousAlias == null || blendElapsed >= BlendDuration) && hitStopRemaining <= 0f;
+            (previousAlias == null || blendElapsed >= BlendDuration) && !frozenPreviousPose && hitStopRemaining <= 0f;
         public ReactiveCombatWeaponAttachment WeaponAttachment => weaponAttachment;
         public float WeaponGripCurlDegrees { get; set; } = 28f;
         public float EnterBattleDuration => clips.enterBattle == null ? 1.2f : clips.enterBattle.length;
         public bool DefenseRecoveryComplete => !defenseActive && ActionRecoveryComplete;
         public bool DefenseActive => defenseActive;
         public float CurrentPoseSeconds => animationPlayer == null || activeAlias == null
-            ? 0f : animationPlayer[activeAlias].time;
-        public bool AwaitingAttackContact => pendingAttackContactAlias != null &&
+            ? 0f : licensedMotion != null && licensedMotion.Active ? licensedMotion.Clock : animationPlayer[activeAlias].time;
+        public bool AwaitingAttackContact => licensedMotion != null && licensedMotion.Active && !licensedMotion.Contacted || pendingAttackContactAlias != null &&
             pendingAttackContactAlias == activeAlias;
         public float DodgeDisplacement => defenseActive && defenseDodge
             ? DodgeOffset(CurrentPoseSeconds) : 0f;
@@ -192,6 +210,9 @@ namespace Rokas.Presentation
             animationPlayer.Stop();
             animationPlayer.playAutomatically = false;
             animationPlayer.enabled = false;
+            licensedWeaponSocket = new GameObject("LicensedWeaponSocket").transform;
+            licensedWeaponSocket.SetParent(modelRoot, false);
+            licensedMotion = new LicensedCombatMotionPlayer(animationPlayer, clips.idle);
             poseTransforms = model.GetComponentsInChildren<Transform>(true);
             // Importers may preserve or remove the namespace separator. Cache
             // the actual anatomical anchor, independently of animated skin bounds.
@@ -240,6 +261,7 @@ namespace Rokas.Presentation
                 {
                     heldDagger = Instantiate(clips.throwingDaggerPrefab, weaponAttachment.Socket.parent, false);
                     heldDagger.name = "KeikoHeldThrowingDagger";
+                    daggerHomeParent = heldDagger.transform.parent;
                     heldDagger.transform.localPosition = clips.daggerSocketPosition;
                     heldDagger.transform.localRotation = Quaternion.Euler(clips.daggerSocketEuler);
                     foreach (Transform child in heldDagger.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = gameObject.layer;
@@ -252,6 +274,9 @@ namespace Rokas.Presentation
                         if (bone.name.EndsWith("RightHandIndex" + (i + 1), StringComparison.Ordinal))
                             gripFingers[i] = bone;
             }
+            licensedStance = clips.licensedNormal;
+            if (licensedStance != null && licensedStance.baseIdle != null)
+                AddClip(licensedStance.baseIdle, "Idle", WrapMode.Loop);
             PlayIdle();
         }
 
@@ -265,6 +290,110 @@ namespace Rokas.Presentation
             }
             animationPlayer.AddClip(clip, alias);
             animationPlayer[alias].wrapMode = wrapMode;
+        }
+
+        private LicensedCombatMotionProfile GetLicensedProfile(bool heavy)
+        {
+            if (bossPresentation)
+            {
+                LicensedCombatMotionProfile boss = heavy ? clips.licensedBossHeavy : clips.licensedBoss;
+                if (boss != null) return boss;
+            }
+            return heavy ? clips.licensedHeavy : clips.licensedNormal;
+        }
+
+        private bool BeginLicensed(LicensedCombatMotionProfile profile, string alias)
+        {
+            if (dead || profile == null || licensedMotion == null) return false;
+            twoHandGrip?.RestoreSample();
+            gripApplied = false;
+            defenseActive = false;
+            locomotionStrideDistance = 0f;
+            activeAlias = alias;
+            previousAlias = null;
+            pendingAttackContactAlias = null;
+            poseSecondsLeft = proceduralSecondsLeft = 0f;
+            licensedStance = profile;
+            if (profile.baseIdle != null) AddClip(profile.baseIdle, "Idle", WrapMode.Loop);
+            licensedContactKey = null;
+            frozenPreviousPose = false;
+            licensedMotion.Begin(profile, null, "Licensed_Anticipation");
+            sampledLicensedPose = true;
+            ApplyLicensedEquipment();
+            return true;
+        }
+
+        public void BindLicensedContact(string actionId, string hitId = null)
+        {
+            licensedContactKey = string.IsNullOrEmpty(actionId) ? null : actionId + ":" + (hitId ?? "");
+            licensedMotion?.BindContact(licensedContactKey);
+        }
+
+        public bool ConfirmLicensedContact(string actionId, string hitId = null)
+        {
+            string key = string.IsNullOrEmpty(actionId) ? null : actionId + ":" + (hitId ?? "");
+            bool accepted = licensedMotion != null && licensedMotion.ConfirmContact(key);
+            if (accepted) { sampledLicensedPose = true; pendingAttackContactAlias = null; ApplyLicensedEquipment(); }
+            return accepted;
+        }
+
+        private void ApplyLicensedEquipment() => UpdateEquipmentPose(true);
+
+        // This is the only runtime writer of the equipped sword transform.
+        // Clips animate the helper socket, never the weapon prefab itself.
+        private void UpdateEquipmentPose(bool nativeSample, float weight = 1f)
+        {
+            if (weaponAttachment == null || weaponAttachment.CurrentWeapon == null) return;
+            if (grippedWeapon != weaponAttachment.CurrentWeapon)
+            {
+                grippedWeapon = weaponAttachment.CurrentWeapon;
+                twoHandGrip = new ReactiveCombatTwoHandGrip(modelRoot, grippedWeapon.transform);
+            }
+            bool throwing = activeAlias == "ThrowPreparation" || activeAlias == "Throw";
+            bool sourceIdle = licensedStance != null && activeAlias == "Idle";
+            bool authoredSocket = licensedStance != null && licensedStance.authoredWeaponSocket;
+            bool sourceSword = authoredSocket && (nativeSample || sourceIdle) &&
+                licensedStance.weapon != LicensedWeaponKind.Dagger;
+            if (throwing) swordStow.rotation = Quaternion.LookRotation(
+                (Vector3.down - transform.right * .4f).normalized, Vector3.forward);
+            Transform desired = throwing ? swordStow : sourceSword ? licensedWeaponSocket : swordHomeParent;
+            Transform weapon = grippedWeapon.transform;
+            bool exit = frozenPreviousPose && frozenWeaponValid && weight < 1f;
+            SwordTransformOwner = exit ? SwordTransformAuthority.ExitBlend : nativeSample
+                ? SwordTransformAuthority.NativeMotion : SwordTransformAuthority.DefaultSocket;
+            if (exit)
+            {
+                // Preserve world pose on parent handoff. Snapshot coordinates are
+                // relative to the model so arena translation does not lag the blade.
+                if (weapon.parent != modelRoot) weapon.SetParent(modelRoot, true);
+                weapon.localPosition = Vector3.Lerp(frozenWeaponPosition,
+                    modelRoot.InverseTransformPoint(desired.position), weight);
+                weapon.localRotation = Quaternion.Slerp(frozenWeaponRotation,
+                    Quaternion.Inverse(modelRoot.rotation) * desired.rotation, weight);
+                weapon.localScale = Vector3.Lerp(frozenWeaponScale, Vector3.one, weight);
+            }
+            else
+            {
+                if (weapon.parent != desired) weapon.SetParent(desired, false);
+                weapon.localPosition = Vector3.zero;
+                weapon.localRotation = Quaternion.identity;
+                weapon.localScale = Vector3.one;
+            }
+            if (heldDagger != null)
+            {
+                Transform desiredDagger = throwing && authoredSocket && nativeSample
+                    ? licensedWeaponSocket : daggerHomeParent;
+                if (heldDagger.transform.parent != desiredDagger)
+                    heldDagger.transform.SetParent(desiredDagger, false);
+                heldDagger.transform.localPosition = desiredDagger == licensedWeaponSocket
+                    ? Vector3.zero : clips.daggerSocketPosition;
+                heldDagger.transform.localRotation = desiredDagger == licensedWeaponSocket
+                    ? Quaternion.identity : Quaternion.Euler(clips.daggerSocketEuler);
+                heldDagger.SetActive(throwing && !throwReleased);
+            }
+            // The support hand never owns the weapon. Native arms already contain
+            // the source grip; legacy correction resumes after the handoff completes.
+            if (!nativeSample && !sourceIdle && !throwing && !exit) twoHandGrip?.Apply();
         }
 
         public void SetStandingHeight(float height)
@@ -315,17 +444,24 @@ namespace Rokas.Presentation
             fallbackDeathAngle = 0f;
             if (animationPlayer != null && animationPlayer.GetClip("Idle") != null)
             {
-                BeginPose("Idle", 1f);
+                BeginPose("Idle", licensedStance == null ? 1f : licensedStance.idleSpeed);
             }
         }
 
-        public void PlayAttack(float playbackSeconds = 0f) =>
-            PlayOneShot("Attack", .55f, -7f, null, playbackSeconds);
-        public void PlayHeavy(float playbackSeconds = 0f) =>
-            PlayOneShot("Heavy", .8f, -12f, "Attack", playbackSeconds);
+        public void PlayAttack(float playbackSeconds = 0f)
+        {
+            if (!BeginLicensed(GetLicensedProfile(false), "Attack"))
+                PlayOneShot("Attack", .55f, -7f, null, playbackSeconds);
+        }
+        public void PlayHeavy(float playbackSeconds = 0f)
+        {
+            if (!BeginLicensed(GetLicensedProfile(true), "Heavy"))
+                PlayOneShot("Heavy", .8f, -12f, "Attack", playbackSeconds);
+        }
         public void PlayPreparation(bool heavy)
         {
             if (dead) return;
+            if (BeginLicensed(GetLicensedProfile(heavy), heavy ? "HeavyPreparation" : "Preparation")) return;
             string alias = heavy ? "HeavyPreparation" : "Preparation";
             AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
             if (clip == null) { PlayIdle(); return; }
@@ -339,13 +475,14 @@ namespace Rokas.Presentation
         {
             if (dead || animationPlayer.GetClip("ThrowPreparation") == null) return;
             throwReleased = false;
+            if (BeginLicensed(clips.licensedThrow, "ThrowPreparation")) return;
             BeginPose("ThrowPreparation", 1f);
             poseSecondsLeft = proceduralSecondsLeft = 0f;
         }
         public void PlayThrow()
         {
             throwReleased = false;
-            PlayOneShot("Throw", 1.15f, 0f);
+            if (!BeginLicensed(clips.licensedThrow, "Throw")) PlayOneShot("Throw", 1.15f, 0f);
         }
         public void ReleaseThrowWeapon()
         {
@@ -435,6 +572,12 @@ namespace Rokas.Presentation
 
         public void HoldAttackAtContact(bool heavy, float seconds)
         {
+            if (licensedMotion != null && licensedMotion.Active)
+            {
+                pendingAttackContactAlias = null;
+                HoldPresentation(seconds);
+                return;
+            }
             string alias = heavy ? "Heavy" : "Attack";
             AnimationClip clip = animationPlayer == null ? null : animationPlayer.GetClip(alias);
             if (clip != null && activeAlias == alias)
@@ -465,6 +608,11 @@ namespace Rokas.Presentation
         public void CancelPendingAttackContact()
         {
             bool wasAwaiting = AwaitingAttackContact;
+            if (licensedMotion != null && licensedMotion.Active && !licensedMotion.Contacted)
+            {
+                PlayIdle();
+                return;
+            }
             pendingAttackContactAlias = null;
             if (!wasAwaiting || animationPlayer == null || activeAlias == null) return;
             AnimationClip clip = animationPlayer.GetClip(activeAlias);
@@ -531,6 +679,7 @@ namespace Rokas.Presentation
         public void PlayDeath(float seconds = 1.35f)
         {
             if (dead) return;
+            licensedMotion?.Cancel();
             defenseActive = false;
             pendingAttackContactAlias = null;
             dead = true;
@@ -552,6 +701,15 @@ namespace Rokas.Presentation
 
         public void ResetForPool()
         {
+            licensedMotion?.ResetForPool();
+            licensedContactKey = null;
+            bossPresentation = false;
+            sampledLicensedPose = frozenPreviousPose = frozenWeaponValid = false;
+            SwordTransformOwner = SwordTransformAuthority.DefaultSocket;
+            previousAlias = activeAlias = null;
+            licensedStance = clips.licensedNormal;
+            if (licensedStance != null && licensedStance.baseIdle != null)
+                AddClip(licensedStance.baseIdle, "Idle", WrapMode.Loop);
             dead = false;
             fallbackDeathAngle = 0f;
             fallbackDeathElapsed = 0f;
@@ -596,7 +754,30 @@ namespace Rokas.Presentation
         private void BeginPose(string alias, float speed)
         {
             if (animationPlayer == null || animationPlayer.GetClip(alias) == null) return;
-            previousAlias = activeAlias == alias ? null : activeAlias;
+            // A native Timeline blend has no single legacy alias to resample.
+            // Preserve its actual last rig sample when moving back to owned movement/idle.
+            bool preserveNativeSample = sampledLicensedPose || frozenPreviousPose;
+            if (preserveNativeSample)
+                for (int i = 0; i < poseTransforms.Length; i++)
+                {
+                    blendPositions[i] = poseTransforms[i].localPosition;
+                    blendRotations[i] = poseTransforms[i].localRotation;
+                    blendScales[i] = poseTransforms[i].localScale;
+                }
+            frozenWeaponValid = preserveNativeSample && grippedWeapon != null;
+            if (frozenWeaponValid)
+            {
+                Transform weapon = grippedWeapon.transform;
+                frozenWeaponPosition = modelRoot.InverseTransformPoint(weapon.position);
+                frozenWeaponRotation = Quaternion.Inverse(modelRoot.rotation) * weapon.rotation;
+                Vector3 worldScale = weapon.lossyScale, modelScale = modelRoot.lossyScale;
+                frozenWeaponScale = new Vector3(worldScale.x / modelScale.x,
+                    worldScale.y / modelScale.y, worldScale.z / modelScale.z);
+            }
+            licensedMotion?.Cancel();
+            sampledLicensedPose = false;
+            frozenPreviousPose = preserveNativeSample;
+            previousAlias = preserveNativeSample || activeAlias == alias ? null : activeAlias;
             pendingAttackContactAlias = null;
             previousSpeed = activeSpeed;
             float previousTime = previousAlias == null ? 0f : animationPlayer[previousAlias].time;
@@ -608,7 +789,7 @@ namespace Rokas.Presentation
             current.time = 0f;
             current.speed = 0f;
             current.enabled = true;
-            current.weight = previousAlias == null ? 1f : 0f;
+            current.weight = previousAlias == null && !frozenPreviousPose ? 1f : 0f;
             if (previousAlias != null)
             {
                 AnimationState previous = animationPlayer[previousAlias];
@@ -632,6 +813,15 @@ namespace Rokas.Presentation
                 step -= held;
             }
             if (step <= 0f) return;
+            if (licensedMotion != null && licensedMotion.Active)
+            {
+                licensedMotion.Tick(step);
+                sampledLicensedPose = true;
+                if (!licensedMotion.Active) PlayIdle();
+                else ApplyLicensedEquipment();
+                recoilRemaining = Mathf.Max(0f, recoilRemaining - step);
+                return;
+            }
             if (dead) fallbackDeathElapsed += step;
             blendElapsed += step;
             if (animationPlayer != null && activeAlias != null)
@@ -646,7 +836,7 @@ namespace Rokas.Presentation
                 }
                 if (defenseActive && !defenseContactResolved)
                     current.time = Mathf.Min(current.time, defenseContactTime);
-                current.weight = previousAlias == null ? 1f : Mathf.Clamp01(blendElapsed / BlendDuration);
+                current.weight = previousAlias == null && !frozenPreviousPose ? 1f : Mathf.Clamp01(blendElapsed / BlendDuration);
                 if (previousAlias != null)
                 {
                     AnimationState previous = animationPlayer[previousAlias];
@@ -679,6 +869,13 @@ namespace Rokas.Presentation
 
         private void SamplePose()
         {
+            if (licensedMotion != null && licensedMotion.Active)
+            {
+                licensedMotion.Sample();
+                sampledLicensedPose = true;
+                ApplyLicensedEquipment();
+                return;
+            }
             twoHandGrip?.RestoreSample();
             // Restore the last authored sample before a fresh one so a missing finger
             // curve or a repeated paused render can never accumulate the grip offset.
@@ -704,7 +901,7 @@ namespace Rokas.Presentation
             }
             AnimationState current = animationPlayer[activeAlias];
             animationPlayer.GetClip(activeAlias).SampleAnimation(modelRoot.gameObject, current.time);
-            if (previousAlias != null)
+            if (previousAlias != null || frozenPreviousPose)
                 for (int i = 0; i < poseTransforms.Length; i++)
                 {
                     Transform bone = poseTransforms[i];
@@ -712,29 +909,9 @@ namespace Rokas.Presentation
                     bone.localRotation = Quaternion.Slerp(blendRotations[i], bone.localRotation, current.weight);
                     bone.localScale = Vector3.Lerp(blendScales[i], bone.localScale, current.weight);
                 }
-            if (weaponAttachment == null || weaponAttachment.CurrentWeapon == null) return;
-            if (grippedWeapon != weaponAttachment.CurrentWeapon)
-            {
-                grippedWeapon = weaponAttachment.CurrentWeapon;
-                twoHandGrip = new ReactiveCombatTwoHandGrip(modelRoot, grippedWeapon.transform);
-            }
-            // Attack/preparation/entrance FBX takes already contain both hands
-            // and the closed index fingers. Keep extra finger curl for legacy
-            // movement only; the support palm correction also covers blends.
-            bool throwing = activeAlias == "ThrowPreparation" || activeAlias == "Throw";
-            Transform weapon = grippedWeapon.transform;
-            if (throwing) swordStow.rotation = Quaternion.LookRotation(
-                (Vector3.down - transform.right * .4f).normalized, Vector3.forward);
-            Transform desiredParent = throwing ? swordStow : swordHomeParent;
-            if (weapon.parent != desiredParent)
-            {
-                weapon.SetParent(desiredParent, false);
-                weapon.localPosition = Vector3.zero;
-                weapon.localRotation = Quaternion.identity;
-                weapon.localScale = Vector3.one;
-            }
-            heldDagger?.SetActive(throwing && !throwReleased);
-            if (!throwing) twoHandGrip?.Apply();
+            UpdateEquipmentPose(false, current.weight);
+            if (frozenPreviousPose && current.weight >= 1f)
+                frozenPreviousPose = frozenWeaponValid = false;
             if (activeAlias != "Walk") return;
             for (int i = 0; i < gripFingers.Length; i++)
                 if (gripFingers[i] != null) sampledFingerRotations[i] = gripFingers[i].localRotation;
