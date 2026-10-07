@@ -415,7 +415,11 @@ namespace Rokas.Presentation
             audio.SetLocation(otherSide || phase == RunPhase.Portal, phase == RunPhase.Combat, reactiveBattle);
             effects.SetLocation(homeScene && !hallwayHome, phase == RunPhase.Portal);
             if (otherSide || phase == RunPhase.Portal) mission.Build(scene);
-            else if (hallwayHome) hallway.Build(scene);
+            else if (hallwayHome)
+            {
+                hallway.ConfigureBackground(background);
+                hallway.Build(scene);
+            }
             else home.Build(scene);
             status.text = reactiveBackground != null ? "РџР РћРџРђРЎРўР¬  /  РРЎРљРђР–РЃРќРќР«Р™ РљРћРќРўР РђРљРў" :
                 otherSide ? "РљРРЎРђР РђР“Р  /  Р—РђРљР Р«РўРђРЇ РџР›РђРўР¤РћР РњРђ" :

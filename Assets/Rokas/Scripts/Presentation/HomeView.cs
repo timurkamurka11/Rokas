@@ -23,7 +23,7 @@ namespace Rokas.Presentation
         private readonly Action<string> toast;
         private readonly Func<HubDialogueDefinition, bool> openHubDialogue;
         private readonly Action enterHallway;
-        private HomeLightStateOverlay neighborLight;
+        private HomeHallwayDoorwayPresentation neighborLight;
         private RawImage mame;
         private Image weaponWard;
         private Text objective;
@@ -46,7 +46,7 @@ namespace Rokas.Presentation
         public void Build(RectTransform parent)
         {
             mame = ui.Art(parent, "Mame", assets.familiar, 150, 772, 218, 218);
-            neighborLight = HomeLightStateOverlay.CreateForMainRoom(ui, parent);
+            neighborLight = HomeHallwayDoorwayPresentation.Create(ui, parent, assets.home);
 
             // Runtime Home uses the exact authored PNG hotspot artwork plus CustomGlow.
             // The old procedural scan visuals are intentionally not instantiated.
@@ -299,7 +299,7 @@ namespace Rokas.Presentation
             if (weaponWard)
                 weaponWard.gameObject.SetActive(session.State.weaponLevel >= 2);
             UpdateLaptopUnreadIndicator();
-            neighborLight?.SetMainRoomNeighbor(session.HallwayLightOn);
+            neighborLight?.SetHallwayState(session.HallwayLightOn);
         }
 
         private void UpdateLaptopUnreadIndicator()
@@ -316,7 +316,6 @@ namespace Rokas.Presentation
         public void Tick(float dt)
         {
             time += dt;
-            neighborLight?.Tick(dt);
             mameReaction = Mathf.Max(0, mameReaction - dt);
             UpdateLaptopUnreadIndicator();
             if (mame)

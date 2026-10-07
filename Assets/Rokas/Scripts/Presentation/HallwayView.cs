@@ -23,7 +23,7 @@ namespace Rokas.Presentation
         private readonly Action<Func<bool>, string> act;
         private readonly Action returnToMainRoom;
         private readonly Action exitApartment;
-        private HomeLightStateOverlay lighting;
+        private readonly HallwayLightPresentation lighting = new HallwayLightPresentation();
 
         public HallwayView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio,
             Action<Func<bool>, string> act, Action returnToMainRoom, Action exitApartment)
@@ -64,9 +64,13 @@ namespace Rokas.Presentation
             return new Rect(0f, 0f, 1f, 1f);
         }
 
+        public void ConfigureBackground(RawImage background)
+        {
+            lighting.Bind(background,session.State.lampOn,session.HallwayLightOn);
+        }
+
         public void Build(RectTransform parent)
         {
-            lighting = HomeLightStateOverlay.CreateForHallway(ui, parent);
 
             // Natural left opening: the polygon follows the architectural doorway instead of
             // placing a visible rectangular button over the scene.
@@ -109,17 +113,17 @@ namespace Rokas.Presentation
 
         public void Refresh()
         {
-            lighting?.SetHallwayStates(session.State.lampOn, session.HallwayLightOn);
+            lighting.SetStates(session.State.lampOn, session.HallwayLightOn);
         }
 
         public void Tick(float dt)
         {
-            lighting?.Tick(dt);
+            lighting.Tick(dt);
         }
 
         public void ClearReferences()
         {
-            lighting = null;
+            lighting.Unbind();
         }
 
         private void CreatePolygonHotspot(RectTransform parent, string name, HomeScanGlyph glyph,
