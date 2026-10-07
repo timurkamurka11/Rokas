@@ -44,8 +44,11 @@ namespace Rokas.Tests
             RawImage world = Find<RawImage>("WorldIllustration");
             Assert.That(world, Is.Not.Null);
             Assert.That(world.texture, Is.SameAs(HallwayView.LoadBackground()));
-            Assert.That(world.uvRect.height, Is.LessThan(1f),
-                "The 3:2 reference must be center-cropped to Home's 16:9 stage, never stretched.");
+            Assert.That(HallwayView.LoadBackground().width, Is.EqualTo(1920),
+                "The full-resolution hallway reference must be used, not a downscaled 1024px placeholder.");
+            Assert.That(HallwayView.LoadBackground().height, Is.EqualTo(1080));
+            Assert.That(world.uvRect, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)),
+                "The approved 16:9 asset must fill the stage without stretching or further cropping.");
 
             Assert.That(Find<Button>("HallwayReturnHotspot"), Is.Not.Null);
             Assert.That(Find<Button>("HallwayFrontDoorHotspot"), Is.Not.Null);
