@@ -79,6 +79,7 @@ namespace Rokas.Presentation
         private readonly Action<string> chooseTarget;
         private readonly List<string> activeIds = new List<string>(4);
         private readonly List<GameObject> hunterStatusElements = new List<GameObject>();
+        private readonly List<GameObject> entryHudElements = new List<GameObject>(48);
         private readonly string[] targetIds = new string[4];
         private readonly Button[] targetButtons = new Button[4];
         private readonly Text[] targetTexts = new Text[4];
@@ -188,7 +189,7 @@ namespace Rokas.Presentation
 
         public void ShowAnnouncement(string message)
         {
-            if (announcement == null || string.IsNullOrEmpty(message)) return;
+            if (announcement == null || string.IsNullOrEmpty(message) || EntryPresentationActive) return;
             announcement.text = message;
             announcementRemaining = AnnouncementDuration;
             announcement.color = new Color(UiKit.Paper.r, UiKit.Paper.g, UiKit.Paper.b, 0f);
@@ -529,12 +530,61 @@ namespace Rokas.Presentation
             commandPanel.transform.Find("CommandTitle").gameObject.SetActive(false);
             commandPreview.gameObject.SetActive(false);
             hunterStatusElements.Clear();
+            entryHudElements.Clear();
             foreach (string statusName in new[] { "ReactiveHunterPanel", "ReactiveHunterRule", "ReactiveHunterBottomRule",
                 "ReactiveHunterPortraitFrame", "ReactiveHunterKeiko", "ReactiveHunterName", "ReactiveHunterHp",
                 "ReactiveHunterHpTrack", "ReactiveHunterHpFill", "ReactiveAp" })
                 hunterStatusElements.Add(root.Find(statusName).gameObject);
             for (int i = 0; i < hunterApPips.Length; i++) hunterStatusElements.Add(hunterApPips[i].gameObject);
             SetHunterStatusVisible(false);
+            CacheEntryHudElements();
+            HideEntryHud();
+        }
+
+        private bool EntryPresentationActive => arena != null && !arena.IntroComplete;
+
+        private void CacheEntryHudElements()
+        {
+            entryHudElements.Clear();
+            foreach (string objectName in new[]
+            {
+                "ReactiveTopShade", "ReactiveLowerShade", "ReactiveEnemyGround",
+                "ReactiveForecastPanel", "ReactiveForecastRule", "ReactiveForecastTitle", "ReactiveForecast",
+                "ReactiveWavePanel", "ReactiveWaveRule", "ReactiveWave", "ReactiveEnemyFacelessCommuter",
+                "ReactiveTargetName", "ReactiveTargetHp", "ReactiveTargetSeal",
+                "ReactiveHunterPanel", "ReactiveHunterRule", "ReactiveHunterBottomRule",
+                "ReactiveHunterPortraitFrame", "ReactiveHunterKeiko", "ReactiveHunterName",
+                "ReactiveHunterHp", "ReactiveHunterHpTrack", "ReactiveHunterHpFill", "ReactiveAp",
+                "ReactiveSelectionHint", "ReactiveTelegraph", "ReactiveDetail",
+                "ReactiveAttackWarningArt", "ReactiveTimingPromptArt", "ReactiveContactTrack",
+                "ReactiveContactFill", "ReactiveDodgeWindow", "ReactiveBlockWindow", "ReactivePerfectZone",
+                "ReactivePerfectWindow", "ReactiveNearBars", "ReactiveTimingBeacon", "ReactiveDefenseHint",
+                "ReactiveOffenseTiming", "ReactiveHitFeedback", "ReactiveSelectedAction",
+                "ReactiveWaveBanner", "ReactiveAnnouncement"
+            })
+            {
+                Transform found = root.Find(objectName);
+                if (found != null) entryHudElements.Add(found.gameObject);
+            }
+
+            for (int i = 0; i < hunterApPips.Length; i++)
+                if (hunterApPips[i] != null) entryHudElements.Add(hunterApPips[i].gameObject);
+            for (int i = 0; i < targetButtons.Length; i++)
+                if (targetButtons[i] != null) entryHudElements.Add(targetButtons[i].gameObject);
+
+            if (commandPanel != null) entryHudElements.Add(commandPanel);
+            if (defensePanel != null) entryHudElements.Add(defensePanel);
+            if (counterPanel != null) entryHudElements.Add(counterPanel);
+            if (saveBlockedPanel != null) entryHudElements.Add(saveBlockedPanel);
+        }
+
+        private void HideEntryHud()
+        {
+            for (int i = 0; i < entryHudElements.Count; i++)
+            {
+                GameObject element = entryHudElements[i];
+                if (element != null && element.activeSelf) element.SetActive(false);
+            }
         }
 
         private void SetHunterStatusVisible(bool visible)
@@ -832,10 +882,18 @@ namespace Rokas.Presentation
             throwButton.gameObject.SetActive(display.CanPreviewThrow && ThrowReady);
             throwButton.interactable = display.CanPreviewThrow;
             anchorButton.interactable = display.CanAnchor;
+
+            if (!entranceComplete) HideEntryHud();
         }
 
         private void RefreshTiming()
         {
+            if (EntryPresentationActive)
+            {
+                HideEntryHud();
+                return;
+            }
+
             bool reacting = latestDisplay.Phase == ReactiveDisplayPhase.Reacting && latestDisplay.IncomingHit;
             bool resolved = latestDisplay.ActionId == resolvedActionId && latestDisplay.HitId == resolvedHitId;
             bool visible = reacting && !presentationLocked && !AnnouncementActive && !resolved && resolutionHold <= 0f;
