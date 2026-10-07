@@ -33,7 +33,7 @@ namespace Rokas.Tests
             GameObject startupSurface = Find("StartupVideoSurface");
             VideoCornerArtifactMask startupMask = FindMask();
             GameObject hint = Find("StartupSkipHintOverlay");
-            AssertMask(startupSurface, startupMask);
+            AssertMask(startupSurface, startupMask, VideoCornerArtifactMask.Profile.Startup);
             Assert.That(hint, Is.Not.Null);
             Assert.That(startupSurface.transform.GetSiblingIndex(), Is.LessThan(startupMask.transform.GetSiblingIndex()));
             Assert.That(startupMask.transform.GetSiblingIndex(), Is.LessThan(hint.transform.GetSiblingIndex()),
@@ -44,7 +44,11 @@ namespace Rokas.Tests
             presenter.PlayStoryIntro("__missing_mask_story__.mp4", 0f, () => { });
             GameObject storySurface = Find("StoryIntroVideoSurface");
             VideoCornerArtifactMask storyMask = FindMask();
-            AssertMask(storySurface, storyMask);
+            AssertMask(storySurface, storyMask, VideoCornerArtifactMask.Profile.Story);
+            Assert.That(storyMask.SampleRect.y + storyMask.SampleRect.w, Is.LessThan(.17f),
+                "Story clone source must stay below the moving silhouette band that caused duplicated legs/VFX.");
+            Assert.That(storyMask.SampleRect.x + storyMask.SampleRect.z, Is.LessThan(.84f),
+                "Story clone source must remain left of the artifact and away from the right-side character band.");
             Assert.That(Find("StartupSkipHintOverlay"), Is.Null,
                 "Story intro keeps its existing no-hint behavior while still masking the baked star.");
             presenter.Cancel();
@@ -69,7 +73,7 @@ namespace Rokas.Tests
                 menu = MainMenuView.Create(root.transform, assets, 0f, null, () => { });
                 GameObject surface = Find("MainMenuVideoSurface");
                 VideoCornerArtifactMask mask = FindMask();
-                AssertMask(surface, mask);
+                AssertMask(surface, mask, VideoCornerArtifactMask.Profile.MainMenu);
                 GameObject enter = Find("EnterWorldButton");
                 Assert.That(enter, Is.Not.Null);
                 Assert.That(surface.transform.GetSiblingIndex(), Is.LessThan(mask.transform.GetSiblingIndex()));
@@ -222,7 +226,8 @@ namespace Rokas.Tests
             return string.Empty;
         }
 
-        private void AssertMask(GameObject surface, VideoCornerArtifactMask mask)
+        private void AssertMask(GameObject surface, VideoCornerArtifactMask mask,
+            VideoCornerArtifactMask.Profile expectedProfile)
         {
             Assert.That(surface, Is.Not.Null);
             Assert.That(mask, Is.Not.Null);
@@ -233,11 +238,20 @@ namespace Rokas.Tests
             Assert.That(raw.material, Is.Not.Null);
             Assert.That(raw.material.shader.name, Is.EqualTo("ROKAS/UI/VideoCornerCloneMask"));
 
+            Assert.That(mask.MaskProfile, Is.EqualTo(expectedProfile));
+            Vector2 expectedSize = expectedProfile == VideoCornerArtifactMask.Profile.Story
+                ? VideoCornerArtifactMask.StoryReferenceSize
+                : VideoCornerArtifactMask.ReferenceSize;
+            Vector4 expectedSource = expectedProfile == VideoCornerArtifactMask.Profile.Story
+                ? VideoCornerArtifactMask.StorySourceRect
+                : VideoCornerArtifactMask.SourceRect;
+
             RectTransform rect = (RectTransform)mask.transform;
             Assert.That(rect.anchorMin.x, Is.EqualTo(VideoCornerArtifactMask.NormalizedAnchor.x).Within(.0001f));
             Assert.That(rect.anchorMin.y, Is.EqualTo(VideoCornerArtifactMask.NormalizedAnchor.y).Within(.0001f));
             Assert.That(rect.anchorMax, Is.EqualTo(rect.anchorMin));
-            Assert.That(rect.sizeDelta, Is.EqualTo(VideoCornerArtifactMask.ReferenceSize));
+            Assert.That(rect.sizeDelta, Is.EqualTo(expectedSize));
+            Assert.That(mask.SampleRect, Is.EqualTo(expectedSource));
             Assert.That(mask.SampleRect.x + mask.SampleRect.z, Is.LessThan(.88f),
                 "Clone source must sample left of the baked star rather than copying the star back onto itself.");
         }
