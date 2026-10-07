@@ -290,7 +290,7 @@ namespace Rokas.Presentation
         {
             if (session.State.phase == RunPhase.Accepted)
             {
-                Travel(session.LeaveHome, string.Empty);
+                Travel(session.LeaveHome, "Дождь. Последний переход.\\nСвятилище между домами.");
             }
             else if (session.State.phase == RunPhase.Payment)
             {
@@ -315,18 +315,16 @@ namespace Rokas.Presentation
             ui.Clear(transitions);
             var shade = ui.Box(transitions, "TravelCurtain", 0, 0, 1920, 1080, Color.black, true);
             var group = shade.gameObject.AddComponent<CanvasGroup>();
-            if (!string.IsNullOrWhiteSpace(caption))
-                ui.Label(shade.transform, "JourneyCaption", caption,
-                    280, 410, 1360, 170, 38, UiKit.Paper, true, TextAnchor.MiddleCenter);
-            for (float t = 0; t < .40f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
-            { group.alpha = t / .40f; yield return null; }
+            ui.Label(shade.transform, "JourneyCaption", caption, 280, 410, 1360, 170, 38, UiKit.Paper, true, TextAnchor.MiddleCenter);
+            for (float t = 0; t < .3f; t += Time.unscaledDeltaTime)
+            { group.alpha = t / .3f; yield return null; }
             group.alpha = 1;
             ClosePanel();
             audio.Play(assets.portalSound);
             if (action()) save();
-            yield return new WaitForSecondsRealtime(.12f);
-            for (float t = 0; t < .55f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
-            { group.alpha = 1 - t / .55f; yield return null; }
+            yield return new WaitForSecondsRealtime(.3f);
+            for (float t = 0; t < .45f; t += Time.unscaledDeltaTime)
+            { group.alpha = 1 - t / .45f; yield return null; }
             ui.Clear(transitions);
             transition = false;
         }

@@ -42,8 +42,8 @@ namespace Rokas.Presentation
             return Resources.Load<Texture2D>(BackgroundResourcePath);
         }
 
-        // The supplied reference is 3:2 while Home is authored at 16:9.
-        // Preserve its proportions and center-crop vertically instead of stretching it.
+        // The approved runtime reference is 1920x1080. Preserve a 16:9 image as-is,
+        // and support alternate source ratios without stretching when editing assets.
         public static Rect GetBackgroundUvRect(Texture texture)
         {
             if (!texture || texture.width <= 0 || texture.height <= 0)

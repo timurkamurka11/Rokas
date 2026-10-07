@@ -20,7 +20,7 @@ on:
       - Assets/Rokas/Tests/Serialization/UnitySaveTests.cs
 
 permissions:
-  contents: write
+  contents: read
   checks: write
 
 concurrency:
@@ -29,173 +29,29 @@ concurrency:
 
 env:
   UNITY_VERSION: 6000.3.19f1
-  HALLWAY_SHARE_URL: https://firestorage.ai/en/f/JoTJeZvzhbvc
   HALLWAY_ASSET_SHA256: 34618076026b5f44676d05d471219cd38f77472cd1f88c822197e47736752fab
 
 jobs:
-  asset-bootstrap:
-    name: Land prepared Hallway reference
+  asset-integrity:
+    name: Verify committed Hallway reference
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      changed: ${{ steps.asset.outputs.changed }}
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
           ref: codex/home-hallway-expansion
-          fetch-depth: 0
-      - id: asset
-        name: Restore prepared runtime image if missing
+      - name: Verify runtime JPEG
         shell: bash
         run: |
           set -euo pipefail
-          target="Assets/Rokas/Resources/Home/HallwayReference.jpg"
-          meta="${target}.meta"
-          if [[ -f "$target" ]]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          mkdir -p "$(dirname "$target")"
-          # The Firestorage share is a Next.js download page, not a direct JPEG endpoint.
-          # Browser download is necessary; its bytes must match our prepared full-resolution source.
-          mkdir -p /tmp/rokas-hallway-browser
-          npm --prefix /tmp/rokas-hallway-browser install --no-save --silent playwright@1.56.1
-          /tmp/rokas-hallway-browser/node_modules/.bin/playwright install chromium
-          ASSET_TARGET="$target" node <<'JS'
-          const { chromium } = require('/tmp/rokas-hallway-browser/node_modules/playwright');
-          (async () => {
-            const browser = await chromium.launch({headless:true});
-            try {
-              const context = await browser.newContext({acceptDownloads:true});
-              const page = await context.newPage();
-              await page.goto(process.env.HALLWAY_SHARE_URL, {waitUntil:'domcontentloaded',timeout:90000});
-              const button = page.getByTestId('download-button').or(
-                page.getByRole('button', {name:/^download$/i})
-              ).or(page.getByRole('link', {name:/^download$/i})).first();
-              await button.waitFor({state:'visible',timeout:45000});
-              const [download] = await Promise.all([
-                page.waitForEvent('download', {timeout:90000}),
-                button.click({timeout:45000})
-              ]);
-              const failure = await download.failure();
-              if (failure) throw new Error('Download failed: '+failure);
-              await download.saveAs(process.env.ASSET_TARGET);
-            } finally {
-              await browser.close();
-            }
-          })().catch(e => { console.error(e); process.exit(1); });
-          JS
-          file "$target"
-          echo "$HALLWAY_ASSET_SHA256  $target" | sha256sum --check -
-
-          cat > "$meta" <<'META'
-          fileFormatVersion: 2
-          guid: a1f3c02d7e4b4cb5a8d0ce44e3ef6d31
-          TextureImporter:
-            internalIDToNameTable: []
-            externalObjects: {}
-            serializedVersion: 13
-            mipmaps:
-              mipMapMode: 0
-              enableMipMap: 0
-              sRGBTexture: 1
-              linearTexture: 0
-              fadeOut: 0
-              borderMipMap: 0
-              mipMapsPreserveCoverage: 0
-              alphaTestReferenceValue: 0.5
-              mipMapFadeDistanceStart: 1
-              mipMapFadeDistanceEnd: 3
-            isReadable: 0
-            streamingMipmaps: 0
-            grayScaleToAlpha: 0
-            generateCubemap: 6
-            cubemapConvolution: 0
-            seamlessCubemap: 0
-            textureFormat: 1
-            maxTextureSize: 2048
-            textureSettings:
-              serializedVersion: 2
-              filterMode: 1
-              aniso: 1
-              mipBias: 0
-              wrapU: 1
-              wrapV: 1
-              wrapW: 1
-            nPOTScale: 0
-            lightmap: 0
-            compressionQuality: 80
-            spriteMode: 0
-            spriteExtrude: 1
-            spriteMeshType: 1
-            alignment: 0
-            spritePivot: {x: 0.5, y: 0.5}
-            spritePixelsToUnits: 100
-            spriteBorder: {x: 0, y: 0, z: 0, w: 0}
-            alphaUsage: 1
-            alphaIsTransparency: 0
-            spriteTessellationDetail: -1
-            textureType: 0
-            textureShape: 1
-            singleChannelComponent: 0
-            flipbookRows: 1
-            flipbookColumns: 1
-            platformSettings:
-            - serializedVersion: 3
-              buildTarget: DefaultTexturePlatform
-              maxTextureSize: 2048
-              resizeAlgorithm: 0
-              textureFormat: -1
-              textureCompression: 0
-              compressionQuality: 80
-              crunchedCompression: 0
-              allowsAlphaSplitting: 0
-              overridden: 0
-              ignorePlatformSupport: 0
-              androidETC2FallbackOverride: 0
-              forceMaximumCompressionQuality_BC6H_BC7: 0
-            spriteSheet:
-              serializedVersion: 2
-              sprites: []
-              outline: []
-              physicsShape: []
-              bones: []
-              spriteID:
-              internalID: 0
-              vertices: []
-              indices:
-              edges: []
-              weights: []
-              secondaryTextures: []
-              nameFileIdTable: {}
-            mipmapLimitGroupName:
-            pSDRemoveMatte: 0
-            userData: ROKAS Hallway reference sha256=34618076026b5f44676d05d471219cd38f77472cd1f88c822197e47736752fab
-            assetBundleName:
-            assetBundleVariant:
-          META
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$target" "$meta"
-          git commit -m "chore: land hallway runtime reference asset"
-          # Concurrent safe text commits may land while Chromium downloads the image.
-          # Replay this single asset commit on the moving task branch before pushing.
-          for attempt in 1 2 3 4 5 6 7 8; do
-            git fetch origin codex/home-hallway-expansion
-            git rebase origin/codex/home-hallway-expansion
-            if git push origin HEAD:codex/home-hallway-expansion; then
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "::error::Could not advance task ref without overwriting concurrent changes"
-          exit 1
+          image="Assets/Rokas/Resources/Home/HallwayReference.jpg"
+          test -f "$image"
+          test -f "${image}.meta"
+          echo "$HALLWAY_ASSET_SHA256  $image" | sha256sum --check -
+          file "$image"
 
   hallway:
-    needs: asset-bootstrap
+    needs: asset-integrity
     name: Hallway routing + light matrix
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -227,7 +83,7 @@ jobs:
           checkName: Hallway Home Expansion
 
   save:
-    needs: asset-bootstrap
+    needs: asset-integrity
     name: Hallway light persistence
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -259,7 +115,7 @@ jobs:
           checkName: Hallway Save Compatibility
 
   hub-regression:
-    needs: asset-bootstrap
+    needs: asset-integrity
     name: Existing Home + Workbench routes
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -306,7 +162,7 @@ jobs:
           checkName: Workbench Remains Laptop Only
 
   swords-regression:
-    needs: asset-bootstrap
+    needs: asset-integrity
     name: Removed swords hotspot stays removed
     runs-on: ubuntu-latest
     timeout-minutes: 30

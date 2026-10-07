@@ -74,7 +74,11 @@ namespace Rokas.Tests
             yield return null;
             Press("LaptopHotspot");
             boot.View.Escape();
-            yield return new WaitForSecondsRealtime(.3f);
+            float closeDeadline = Time.realtimeSinceStartup + 2.5f;
+            while (boot.View.LaptopOpen && Time.realtimeSinceStartup < closeDeadline)
+                yield return null;
+            Assert.That(boot.View.LaptopOpen, Is.False,
+                "The internal Home interaction should be tested after the existing laptop close animation completes.");
 
             Press("TeaHotspot");
             Assert.That(boot.View.LaptopOpen, Is.False);

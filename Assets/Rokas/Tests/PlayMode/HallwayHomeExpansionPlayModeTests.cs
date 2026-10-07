@@ -75,6 +75,7 @@ namespace Rokas.Tests
 
             Find<Button>("HallwayFrontDoorHotspot").onClick.Invoke();
             yield return WaitForPhase(RunPhase.Portal);
+            yield return null; // Unity destroys the previous frame's UI at end of frame.
 
             Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Portal),
                 "Hallway front door must call the existing LeaveHome route.");
