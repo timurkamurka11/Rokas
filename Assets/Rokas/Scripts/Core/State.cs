@@ -64,6 +64,9 @@ namespace Rokas.Core
         public float combatTime;
         public bool weakPointClaimed;
         public bool lampOn = true;
+        // 0 = legacy/missing field (treated as ON), 1 = ON, 2 = OFF.
+        // Using a tri-state integer keeps v1/v2 saves backward compatible without changing their required JSON shape.
+        public int hallwayLightState = 1;
         public int mameInteractions;
         public bool hubGuildIntroSeen;
         public MessageSaveData messages = new MessageSaveData();

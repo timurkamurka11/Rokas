@@ -19,6 +19,7 @@ namespace Rokas.Core
         public CombatService Combat { get; private set; }
         public ReactiveCombatSession ReactiveCombat { get; private set; }
         public CombatMode CombatMode { get { return State.combatMode; } }
+        public bool HallwayLightOn { get { return State.hallwayLightState != 2; } }
         public bool SaveBlocked { get; private set; }
         public string SaveError { get; private set; }
         public MessageService Messages { get; private set; }
@@ -327,6 +328,15 @@ namespace Rokas.Core
             NotifyChanged();
         }
 
+        public void SetHallwayLight(bool on)
+        {
+            if (SaveBlocked) return;
+            int value = on ? 1 : 2;
+            if (State.hallwayLightState == value) return;
+            State.hallwayLightState = value;
+            NotifyChanged();
+        }
+
         public void PetMame()
         {
             if (SaveBlocked) return;
@@ -587,6 +597,8 @@ namespace Rokas.Core
             }
             if (State.claimedEconomicRunIds == null) State.claimedEconomicRunIds = new System.Collections.Generic.List<string>();
             if (State.firstClearRewardIds == null) State.firstClearRewardIds = new System.Collections.Generic.List<string>();
+            // Old saves do not contain hallwayLightState. Zero is therefore the safe migration sentinel: ON.
+            if (State.hallwayLightState != 2) State.hallwayLightState = 1;
             State.storedFoodId = State.storedFoodId ?? string.Empty;
             if (State.storedFoodCount <= 0 || State.storedFoodId.Length == 0)
             {
