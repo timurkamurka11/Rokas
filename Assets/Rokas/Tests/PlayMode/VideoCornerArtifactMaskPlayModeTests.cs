@@ -49,8 +49,12 @@ namespace Rokas.Tests
                 "Story clone source must stay below the moving silhouette band that caused duplicated legs/VFX.");
             Assert.That(storyMask.SampleRect.x + storyMask.SampleRect.z, Is.LessThan(.84f),
                 "Story clone source must remain left of the artifact and away from the right-side character band.");
-            Assert.That(Find("StartupSkipHintOverlay"), Is.Null,
-                "Story intro keeps its existing no-hint behavior while still masking the baked star.");
+            GameObject storyHint = Find("StartupSkipHintOverlay");
+            Assert.That(storyHint, Is.Not.Null,
+                "Story intro reuses the approved startup skip hint to cover the residual corner artifact.");
+            Assert.That(storySurface.transform.GetSiblingIndex(), Is.LessThan(storyMask.transform.GetSiblingIndex()));
+            Assert.That(storyMask.transform.GetSiblingIndex(), Is.LessThan(storyHint.transform.GetSiblingIndex()),
+                "Story skip hint must render above the video artifact mask.");
             presenter.Cancel();
             yield return null;
         }
@@ -79,6 +83,8 @@ namespace Rokas.Tests
                 Assert.That(surface.transform.GetSiblingIndex(), Is.LessThan(mask.transform.GetSiblingIndex()));
                 Assert.That(mask.transform.GetSiblingIndex(), Is.LessThan(enter.transform.GetSiblingIndex()),
                     "Menu controls must always render above the shared video artifact patch.");
+                Assert.That(Find("StartupSkipHintOverlay"), Is.Null,
+                    "Main menu must not receive the startup/story skip hint.");
             }
             finally
             {
@@ -100,6 +106,8 @@ namespace Rokas.Tests
             Assert.That(Find("HostedVideoSurface"), Is.Not.Null);
             Assert.That(FindMask(), Is.Null,
                 "Only StartupPreview/StoryIntro/MainMenuLoop should receive the fixed-position baked-artifact patch.");
+            Assert.That(Find("StartupSkipHintOverlay"), Is.Null,
+                "Generic/Laptop hosted video must not receive the startup/story skip hint.");
             presenter.Cancel();
             yield return null;
         }
