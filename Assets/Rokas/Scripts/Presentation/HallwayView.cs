@@ -293,6 +293,9 @@ namespace Rokas.Presentation
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HallwaySoftRectGraphic : MaskableGraphic
     {
+        // Elliptical, smoothly feathered illumination treatment. A former four-by-four
+        // rectangular plateau made conspicuous dark squares on the lanterns.
+        private const int MeshSegments = 20;
         [Range(.05f, .45f)] public float edge = .18f;
 
         protected override void Awake()
@@ -305,33 +308,37 @@ namespace Rokas.Presentation
         {
             mesh.Clear();
             Rect rect = GetPixelAdjustedRect();
-            float e = Mathf.Clamp(edge, .05f, .45f);
-            float[] xs = { 0f, e, 1f - e, 1f };
-            float[] ys = { 0f, e, 1f - e, 1f };
-            int[,] index = new int[4, 4];
+            int[,] indices = new int[MeshSegments + 1, MeshSegments + 1];
 
-            for (int y = 0; y < 4; y++)
+            for (int y = 0; y <= MeshSegments; y++)
             {
-                for (int x = 0; x < 4; x++)
+                float v = y / (float)MeshSegments;
+                for (int x = 0; x <= MeshSegments; x++)
                 {
-                    float weight = (x == 0 || x == 3 || y == 0 || y == 3) ? 0f : 1f;
+                    float u = x / (float)MeshSegments;
+                    float dx = 2f * (u - .5f);
+                    float dy = 2f * (v - .5f);
+                    float radiusSquared = dx * dx + dy * dy;
+                    // Continuous falloff reaches zero at the ellipse's edge.
+                    // No opaque inner box, hard edge, or one-frame overlay seam.
+                    float falloff = Mathf.Pow(Mathf.Clamp01(1f - radiusSquared), 1.75f);
                     Color vertex = color;
-                    vertex.a *= weight;
-                    index[x, y] = mesh.currentVertCount;
+                    vertex.a *= falloff;
+                    indices[x, y] = mesh.currentVertCount;
                     mesh.AddVert(new Vector3(
-                        Mathf.Lerp(rect.xMin, rect.xMax, xs[x]),
-                        Mathf.Lerp(rect.yMin, rect.yMax, ys[y])), vertex, Vector2.zero);
+                        Mathf.Lerp(rect.xMin, rect.xMax, u),
+                        Mathf.Lerp(rect.yMin, rect.yMax, v)), vertex, Vector2.zero);
                 }
             }
 
-            for (int y = 0; y < 3; y++)
+            for (int y = 0; y < MeshSegments; y++)
             {
-                for (int x = 0; x < 3; x++)
+                for (int x = 0; x < MeshSegments; x++)
                 {
-                    int a = index[x, y];
-                    int b = index[x, y + 1];
-                    int c = index[x + 1, y + 1];
-                    int d = index[x + 1, y];
+                    int a = indices[x, y];
+                    int b = indices[x, y + 1];
+                    int c = indices[x + 1, y + 1];
+                    int d = indices[x + 1, y];
                     mesh.AddTriangle(a, b, c);
                     mesh.AddTriangle(a, c, d);
                 }
