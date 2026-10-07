@@ -153,11 +153,13 @@ namespace Rokas.Tests
 
         private IEnumerator WaitForLocation(HomeLocation location)
         {
-            float deadline = Time.realtimeSinceStartup + 2.5f;
-            while (bootstrap.View.CurrentHomeLocation != location &&
+            float deadline = Time.realtimeSinceStartup + 3.5f;
+            while ((bootstrap.View.CurrentHomeLocation != location ||
+                    Find<CanvasGroup>("HomeRoomCurtain") != null) &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(bootstrap.View.CurrentHomeLocation, Is.EqualTo(location));
+            Assert.That(Find<CanvasGroup>("HomeRoomCurtain"), Is.Null);
         }
 
         private IEnumerator WaitForPhase(RunPhase expected)
