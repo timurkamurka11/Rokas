@@ -1028,6 +1028,7 @@ namespace Rokas.Presentation
             defenseAttemptAccepted = hunterHpInitialized = false;
             activeIds.Clear();
             hunterStatusElements.Clear();
+            entryHudElements.Clear();
             for (int i = 0; i < targetIds.Length; i++)
             {
                 targetIds[i] = null;
