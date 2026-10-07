@@ -53,9 +53,27 @@ namespace Rokas.Tests
             Assert.That(Find("ReactiveHeavy").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveHunterHp").activeInHierarchy, Is.False);
             Assert.That(Find("ReactiveTarget1").activeInHierarchy, Is.False);
-            foreach (string hidden in new[] { "ReactiveForecastPanel", "ReactiveForecast", "ReactiveWave",
-                "ReactiveWavePanel", "ReactiveSelectionHint", "ReactiveCommandPreview" })
-                Assert.That(Find(hidden).activeInHierarchy, Is.False, hidden);
+            foreach (string hidden in new[]
+            {
+                "ReactiveTopShade", "ReactiveLowerShade", "ReactiveEnemyGround",
+                "ReactiveForecastPanel", "ReactiveForecastRule", "ReactiveForecastTitle", "ReactiveForecast",
+                "ReactiveWavePanel", "ReactiveWaveRule", "ReactiveWave", "ReactiveEnemyFacelessCommuter",
+                "ReactiveTargetName", "ReactiveTargetHp", "ReactiveTargetSeal",
+                "ReactiveHunterPanel", "ReactiveHunterRule", "ReactiveHunterBottomRule",
+                "ReactiveHunterPortraitFrame", "ReactiveHunterKeiko", "ReactiveHunterName",
+                "ReactiveHunterHp", "ReactiveHunterHpTrack", "ReactiveHunterHpFill", "ReactiveAp",
+                "ReactiveSelectionHint", "ReactiveTelegraph", "ReactiveDetail",
+                "ReactiveAttackWarningArt", "ReactiveTimingPromptArt", "ReactiveContactTrack",
+                "ReactiveContactFill", "ReactiveDodgeWindow", "ReactiveBlockWindow", "ReactivePerfectZone",
+                "ReactivePerfectWindow", "ReactiveNearBars", "ReactiveTimingBeacon", "ReactiveDefenseHint",
+                "ReactiveOffenseTiming", "ReactiveHitFeedback", "ReactiveSelectedAction",
+                "ReactiveWaveBanner", "ReactiveAnnouncement",
+                "ReactiveCommands", "ReactiveDefense", "ReactiveCounter", "ReactiveSaveBlocked"
+            })
+                Assert.That(Find(hidden).activeInHierarchy, Is.False,
+                    hidden + " must stay hidden during the portal/encounter entrance.");
+            for (int index = 1; index <= 6; index++)
+                Assert.That(Find("ReactiveApPip" + index).activeInHierarchy, Is.False);
 
             FinishEntrance(display);
             Assert.That(Find("ReactiveBasic").activeInHierarchy, Is.True);
