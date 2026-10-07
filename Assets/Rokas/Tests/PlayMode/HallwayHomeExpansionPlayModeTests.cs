@@ -1,0 +1,208 @@
+using System;
+using System.Collections;
+using System.IO;
+using NUnit.Framework;
+using Rokas.Core;
+using Rokas.Presentation;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+
+namespace Rokas.Tests
+{
+    public sealed class HallwayHomeExpansionPlayModeTests
+    {
+        private GameObject root;
+        private string directory;
+        private RokasBootstrap bootstrap;
+
+        [UnitySetUp]
+        public IEnumerator SetUp()
+        {
+            directory = Path.Combine(Path.GetTempPath(),
+                "rokas-hallway-home-" + Guid.NewGuid().ToString("N"));
+            root = new GameObject("HallwayHomeExpansionFixture");
+            bootstrap = root.AddComponent<RokasBootstrap>();
+            bootstrap.Initialize(directory);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator MainDoorOpensHallwayAndLeftOpeningReturnsHome()
+        {
+            Assert.That(bootstrap.View.CurrentHomeLocation, Is.EqualTo(HomeLocation.MainRoom));
+            Assert.That(Find<Button>("DoorHotspot"), Is.Not.Null);
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Home),
+                "Walking into the hallway must not start the external route.");
+            Assert.That(HallwayView.LoadBackground(), Is.Not.Null,
+                "The supplied hallway reference must be committed as a runtime Resource.");
+
+            RawImage world = Find<RawImage>("WorldIllustration");
+            Assert.That(world, Is.Not.Null);
+            Assert.That(world.texture, Is.SameAs(HallwayView.LoadBackground()));
+            Assert.That(world.uvRect.height, Is.LessThan(1f),
+                "The 3:2 reference must be center-cropped to Home's 16:9 stage, never stretched.");
+
+            Assert.That(Find<Button>("HallwayReturnHotspot"), Is.Not.Null);
+            Assert.That(Find<Button>("HallwayFrontDoorHotspot"), Is.Not.Null);
+            Assert.That(Find<Button>("HallwayLightHotspot"), Is.Not.Null);
+            Assert.That(Find<Button>("LaptopHotspot"), Is.Null,
+                "Hallway currently exposes exactly its three intended interactions.");
+            Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
+                "Workbench must remain Laptop-only.");
+
+            Find<Button>("HallwayReturnHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.MainRoom);
+            Assert.That(Find<Button>("DoorHotspot"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator FrontDoorReusesExistingAcceptedContractPortalRoute()
+        {
+            Assert.That(bootstrap.Session.AcceptContract(), Is.True);
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Accepted));
+
+            Find<Button>("HallwayFrontDoorHotspot").onClick.Invoke();
+            yield return WaitForPhase(RunPhase.Portal);
+
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Portal),
+                "Hallway front door must call the existing LeaveHome route.");
+            Assert.That(Find<Button>("HallwayFrontDoorHotspot"), Is.Null,
+                "Hallway UI must be gone once the canonical Portal state owns the screen.");
+        }
+
+        [UnityTest]
+        public IEnumerator RoomTransitionUsesOneShortCurtainWithoutJourneyCaption()
+        {
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return null;
+
+            Assert.That(Find<CanvasGroup>("HomeRoomCurtain"), Is.Not.Null);
+            Assert.That(Count<CanvasGroup>("HomeRoomCurtain"), Is.EqualTo(1),
+                "Room movement must use one fade curtain.");
+            Assert.That(Find<Text>("JourneyCaption"), Is.Null,
+                "Apartment room movement must not show external-travel text.");
+
+            yield return WaitForLocation(HomeLocation.Hallway);
+            yield return WaitForMissing<CanvasGroup>("HomeRoomCurtain");
+            Assert.That(Find<CanvasGroup>("HomeRoomCurtain"), Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator FourIndependentLightStatesAreCrossVisible()
+        {
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+
+            SetLights(true, true);
+            AssertLightGroups(ownOff: false, mainOff: false);
+
+            SetLights(false, true);
+            AssertLightGroups(ownOff: false, mainOff: true);
+
+            SetLights(true, false);
+            AssertLightGroups(ownOff: true, mainOff: false);
+
+            SetLights(false, false);
+            AssertLightGroups(ownOff: true, mainOff: true);
+
+            Find<Button>("HallwayReturnHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.MainRoom);
+            bootstrap.View.Tick(.5f);
+
+            CanvasGroup neighbor = Find<CanvasGroup>("MainRoomHallwayOffMask");
+            Assert.That(neighbor, Is.Not.Null);
+            Assert.That(neighbor.alpha, Is.GreaterThan(.70f),
+                "Main Hub must visually retain Hallway OFF through its right-side doorway region.");
+
+            Assert.That(bootstrap.Session.State.lampOn, Is.False);
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
+        }
+
+        private void SetLights(bool mainOn, bool hallwayOn)
+        {
+            bootstrap.Session.SetLamp(mainOn);
+            bootstrap.Session.SetHallwayLight(hallwayOn);
+            bootstrap.View.Refresh();
+            for (int i = 0; i < 4; i++) bootstrap.View.Tick(.25f);
+        }
+
+        private void AssertLightGroups(bool ownOff, bool mainOff)
+        {
+            CanvasGroup own = Find<CanvasGroup>("HallwayOwnLightOffMask");
+            CanvasGroup main = Find<CanvasGroup>("HallwayMainRoomOffMask");
+            Assert.That(own, Is.Not.Null);
+            Assert.That(main, Is.Not.Null);
+            Assert.That(own.alpha, ownOff ? Is.GreaterThan(.70f) : Is.LessThan(.15f));
+            Assert.That(main.alpha, mainOff ? Is.GreaterThan(.70f) : Is.LessThan(.15f));
+
+            Assert.That(Find<Graphic>("CeilingPracticalDim"), Is.Not.Null);
+            Assert.That(Find<Graphic>("CabinetPracticalDim"), Is.Not.Null);
+            Assert.That(Find<Graphic>("EntryWarmDim"), Is.Not.Null);
+            Assert.That(Find<Graphic>("VisibleMainRoomDim"), Is.Not.Null);
+            Assert.That(Find<Graphic>("HallwayGlobalBlackOverlay"), Is.Null,
+                "Hallway OFF must use localized light treatment, not a global black rectangle.");
+        }
+
+        private IEnumerator WaitForLocation(HomeLocation location)
+        {
+            float deadline = Time.realtimeSinceStartup + 2.5f;
+            while (bootstrap.View.CurrentHomeLocation != location &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(bootstrap.View.CurrentHomeLocation, Is.EqualTo(location));
+        }
+
+        private IEnumerator WaitForPhase(RunPhase expected)
+        {
+            float deadline = Time.realtimeSinceStartup + 2.5f;
+            while (bootstrap.Session.State.phase != expected &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(expected));
+        }
+
+        private IEnumerator WaitForMissing<T>(string name) where T : Component
+        {
+            float deadline = Time.realtimeSinceStartup + 2.5f;
+            while (Find<T>(name) != null && Time.realtimeSinceStartup < deadline)
+                yield return null;
+        }
+
+        private T Find<T>(string name) where T : Component
+        {
+            if (!root) return null;
+            foreach (T item in root.GetComponentsInChildren<T>(true))
+                if (item.name == name) return item;
+            return null;
+        }
+
+        private int Count<T>(string name) where T : Component
+        {
+            int count = 0;
+            if (!root) return count;
+            foreach (T item in root.GetComponentsInChildren<T>(true))
+                if (item.name == name) count++;
+            return count;
+        }
+
+        [UnityTearDown]
+        public IEnumerator Cleanup()
+        {
+            if (root) UnityEngine.Object.Destroy(root);
+            root = null;
+            bootstrap = null;
+            yield return null;
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                Directory.Delete(directory, true);
+        }
+    }
+}
