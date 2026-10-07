@@ -156,24 +156,6 @@ namespace Rokas.Presentation
             },
             new HomeFinalIcon
             {
-                id = "Hotspot_Swords",
-                resourceName = "Swords",
-                rect = new HomeFinalRect
-                {
-                    anchoredPosition = new Vector2(1404.0f, -297.0f),
-                    sizeDelta = new Vector2(96.0f, 96.0f),
-                    anchorMin = new Vector2(0.0f, 1.0f),
-                    anchorMax = new Vector2(0.0f, 1.0f),
-                    pivot = new Vector2(0.5f, 0.5f),
-                    localScale = new Vector3(1.0f, 1.0f, 1.0f),
-                    rotationZ = 0.0f,
-                    active = true
-                },
-                color = new Color(1.0f, 1.0f, 1.0f, 1.0f),
-                preserveAspect = true
-            },
-            new HomeFinalIcon
-            {
                 id = "Hotspot_Door",
                 resourceName = "Exit",
                 rect = new HomeFinalRect
@@ -400,7 +382,6 @@ namespace Rokas.Presentation
 
                 // Attach subtle synchronized micro-animation to all main interaction icons.
                 if (data.id == "Hotspot_Window" ||
-                    data.id == "Hotspot_Swords" ||
                     data.id == "Hotspot_Door" ||
                     data.id == "Hotspot_Laptop" ||
                     data.id == "Hotspot_FloorLamp" ||
@@ -410,7 +391,6 @@ namespace Rokas.Presentation
 
                     // Bind to the underlying scene hotspot so we can react to its hover events
                     string targetName = data.id.Replace("Hotspot_", "");
-                    if (targetName == "Swords") targetName = "Workbench";
                     if (targetName == "Cat") targetName = "Mame";
                     if (targetName == "FloorLamp") targetName = "Lamp";
                     targetName += "Hotspot";
