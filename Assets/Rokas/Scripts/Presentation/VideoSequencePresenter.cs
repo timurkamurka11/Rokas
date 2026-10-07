@@ -73,14 +73,14 @@ namespace Rokas.Presentation
         {
             Cancel();
             RectTransform host = CreateStartupHost();
-            Begin(host, fileName, "StartupVideoSurface", 1280, 720, requestedVolume, true, true, onComplete);
+            Begin(host, fileName, "StartupVideoSurface", 1280, 720, requestedVolume, true, true, true, onComplete);
         }
 
         public void PlayStoryIntro(string fileName, float requestedVolume, Action onComplete)
         {
             Cancel();
             RectTransform host = CreateStartupHost();
-            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, true, false, onComplete,
+            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, true, false, true, onComplete,
                 StoryPlaybackTimeoutSeconds);
         }
 
@@ -89,7 +89,7 @@ namespace Rokas.Presentation
         {
             if (!host) throw new ArgumentNullException("host");
             Cancel();
-            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, false, false, onComplete);
+            Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, false, false, false, onComplete);
         }
 
         public void Skip()
@@ -110,15 +110,15 @@ namespace Rokas.Presentation
 
         private void Begin(RectTransform host, string fileName, string surfaceName,
             int targetWidth, int targetHeight, float requestedVolume, bool canSkip, bool showStartupHint,
-            Action onComplete)
+            bool applyArtifactMask, Action onComplete)
         {
             Begin(host, fileName, surfaceName, targetWidth, targetHeight, requestedVolume, canSkip, showStartupHint,
-                onComplete, PlaybackTimeoutSeconds);
+                applyArtifactMask, onComplete, PlaybackTimeoutSeconds);
         }
 
         private void Begin(RectTransform host, string fileName, string surfaceName,
             int targetWidth, int targetHeight, float requestedVolume, bool canSkip, bool showStartupHint,
-            Action onComplete, float requestedPlaybackTimeoutSeconds)
+            bool applyArtifactMask, Action onComplete, float requestedPlaybackTimeoutSeconds)
         {
             EnsureComponents();
             active = true;
@@ -155,6 +155,7 @@ namespace Rokas.Presentation
             image.texture = target;
             image.color = Color.black;
             image.raycastTarget = false;
+            if (applyArtifactMask) VideoCornerArtifactMask.Create(host, target);
             if (showStartupHint) CreateStartupHint(host);
 
             player.Stop();
