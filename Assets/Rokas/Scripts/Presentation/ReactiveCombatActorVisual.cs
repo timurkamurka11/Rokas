@@ -16,6 +16,7 @@ namespace Rokas.Presentation
         private string licensedContactKey;
         private Transform licensedWeaponSocket;
         private Transform daggerHomeParent;
+        public LicensedCombatMotionProfile DefaultLicensedProfile => clips?.licensedNormal;
         public LicensedCombatMotionProfile ActiveLicensedProfile => licensedMotion?.Profile;
         public float LicensedMotionClock => licensedMotion == null ? 0f : licensedMotion.Clock;
         public bool LicensedContactConfirmed => licensedMotion != null && licensedMotion.Contacted;
@@ -756,7 +757,8 @@ namespace Rokas.Presentation
             if (animationPlayer == null || animationPlayer.GetClip(alias) == null) return;
             // A native Timeline blend has no single legacy alias to resample.
             // Preserve its actual last rig sample when moving back to owned movement/idle.
-            bool preserveNativeSample = sampledLicensedPose || frozenPreviousPose;
+            bool sourceIdleTransition = licensedStance != null && (activeAlias == "Idle" || alias == "Idle");
+            bool preserveNativeSample = sampledLicensedPose || frozenPreviousPose || sourceIdleTransition;
             if (preserveNativeSample)
                 for (int i = 0; i < poseTransforms.Length; i++)
                 {

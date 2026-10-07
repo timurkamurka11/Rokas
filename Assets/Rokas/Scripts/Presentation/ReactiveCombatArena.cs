@@ -63,6 +63,14 @@ namespace Rokas.Presentation
         private float hitStopRemaining;
         private GameObject world;
         private Camera camera;
+        private LicensedCombatCameraPlayer licensedCamera;
+        private ReactiveCombatActorVisual licensedCameraPerformer;
+        private float tacticalCameraSize = 4.6f;
+        private float tacticalCameraFov = 60f;
+        private Vector3 tacticalCameraPosition = new Vector3(0f, 2.25f, -20f);
+        private Quaternion tacticalCameraRotation = Quaternion.identity;
+        private readonly HashSet<string> presentedContacts = new HashSet<string>(StringComparer.Ordinal);
+        private readonly Queue<string> contactHistory = new Queue<string>();
         private RenderTexture texture;
         private RawImage image;
         private Material actorComposite;
@@ -129,8 +137,11 @@ namespace Rokas.Presentation
         public float HeavyContactResolutionDelay { get; set; } = .09f;
         public event Action<string, string, bool> AttackPresentationStarted;
         public event Action<string, string, bool, string> SwingStarted;
-        public bool CameraAtHome => camera != null && Mathf.Abs(camera.orthographicSize - 4.6f) < .001f &&
-            (camera.transform.localPosition - new Vector3(0f, 2.25f, -20f)).sqrMagnitude < .0001f;
+        public bool CameraAtHome => camera != null && camera.orthographic &&
+            (licensedCamera == null || licensedCamera.IsHome) &&
+            camera.orthographicSize == tacticalCameraSize && camera.fieldOfView == tacticalCameraFov &&
+            camera.transform.localPosition.Equals(tacticalCameraPosition) &&
+            camera.transform.localRotation.Equals(tacticalCameraRotation);
         public bool IntroComplete => introPhase == IntroPhase.None && entranceQueue.Count == 0;
         public bool PresentationReady
         {
@@ -253,6 +264,7 @@ namespace Rokas.Presentation
             camera.allowMSAA = true;
             camera.targetTexture = texture;
 
+
             var keyObject = new GameObject("ReactiveActorKey", typeof(Light));
             keyObject.transform.SetParent(world.transform, false);
             keyObject.transform.localRotation = Quaternion.Euler(32f, -36f, 0f);
@@ -286,6 +298,8 @@ namespace Rokas.Presentation
                 hunter.PlayIdle();
                 swordEffect = new ReactiveCombatSwordEffect(hunter);
             }
+            ConfigureTacticalCamera();
+            licensedCamera = new LicensedCombatCameraPlayer(camera);
             impactEffect = new ReactiveCombatImpactEffect(world.transform, ActorLayer);
         }
 
@@ -728,7 +742,7 @@ namespace Rokas.Presentation
             hunterPosePreplayed = false;
             hunterAnticipationRemaining = 0f;
             hunterMotion.Throw = hunterMotion.Released = false;
-            ResetCamera();
+            ResetCamera(true);
             if ((hunter.transform.localPosition - hunterMotion.Home).sqrMagnitude < .0001f)
             {
                 hunter.transform.localPosition = hunterMotion.Home;
@@ -741,8 +755,9 @@ namespace Rokas.Presentation
             hunter.PlayReturnHome(hunterMotion.Duration);
         }
 
-        public void CancelHunterMotion()
+        public void CancelHunterMotion(bool returnToHome = true)
         {
+            bool nativeExit = hunter != null && hunter.ActiveLicensedProfile != null && hunter.LicensedContactConfirmed;
             throwEffect?.Cancel();
             hunterMotion.Throw = hunterMotion.Released = false;
             throwHunterActionId = null;
@@ -755,8 +770,20 @@ namespace Rokas.Presentation
             hunterPosePreplayed = false;
             hunterAnticipationRemaining = 0f;
             HunterPresentationActionId = null;
-            ResetCamera();
+            ResetCamera(true);
             if (hunter == null) return;
+            if (nativeExit)
+            {
+                // Preserve the displayed root along with the sampled bones/weapon.
+                // Travel back through the existing return motion; defeat stays at its current floor position.
+                if (returnToHome && (hunter.transform.localPosition - hunterMotion.Home).sqrMagnitude > .0001f)
+                {
+                    BeginMotion(hunterMotion, MotionPhase.Return, hunterMotion.Home, HunterReturnDuration);
+                    hunter.PlayReturnHome(hunterMotion.Duration);
+                }
+                else hunter.PlayIdle();
+                return;
+            }
             hunter.transform.localPosition = hunterMotion.Home;
             hunter.PlayIdle();
         }
@@ -777,6 +804,7 @@ namespace Rokas.Presentation
             ActorMotion motion;
             if (id == null || !enemyMotions.TryGetValue(id, out motion) ||
                 motion.Actor == null || motion.Actor.IsDead || corpses.ContainsKey(id)) return;
+            motion.Actor.SetBossPresentation(sequence != null && sequence.Id == "final_triple");
             motion.Heavy = heavy;
             motion.ActionId = null;
             motion.AttackSequence = sequence;
@@ -819,11 +847,50 @@ namespace Rokas.Presentation
             if (dodge && hunter != null) impactEffect.DodgeDust(hunter.transform.position);
         }
 
-        private void ResetCamera()
+        private void ConfigureTacticalCamera()
+        {
+            LicensedCombatMotionProfile profile = hunter?.DefaultLicensedProfile;
+            if (profile != null && profile.camera != null)
+            {
+                // The source wide camera is independent of BasicDamage's -6 root.
+                // Fix its actor-plane projection once, using a measured standing rig scale.
+                float scale = hunter.ModelRoot.lossyScale.y * profile.sourceToTargetScale;
+                tacticalCameraPosition = new Vector3(0f, hunterMotion.Home.y, 0f) +
+                    profile.camera.basePosition * scale;
+                tacticalCameraFov = profile.camera.baseFov;
+                float depth = -profile.camera.basePosition.z * scale;
+                tacticalCameraSize = depth * Mathf.Tan(tacticalCameraFov * Mathf.Deg2Rad * .5f);
+            }
+            ApplyTacticalCamera();
+        }
+
+        private void ApplyTacticalCamera()
+        {
+            camera.orthographic = true;
+            camera.orthographicSize = tacticalCameraSize;
+            camera.fieldOfView = tacticalCameraFov;
+            camera.transform.localRotation = tacticalCameraRotation;
+            camera.transform.localPosition = tacticalCameraPosition;
+        }
+
+        private void ResetCamera(bool blendNativeExit = false)
         {
             if (camera == null) return;
-            camera.orthographicSize = 4.6f;
-            camera.transform.localPosition = new Vector3(0f, 2.25f, -20f);
+            if (blendNativeExit && licensedCamera != null && licensedCamera.Active)
+            {
+                licensedCamera.BeginCancel(.08f);
+                return;
+            }
+            licensedCamera?.Cancel();
+            licensedCameraPerformer = null;
+            ApplyTacticalCamera();
+        }
+
+        private void CancelInterruptedLicensedCamera()
+        {
+            if (licensedCamera != null && licensedCamera.Active && licensedCameraPerformer != null &&
+                (licensedCameraPerformer.IsDead || licensedCameraPerformer.ActiveLicensedProfile == null))
+                licensedCamera.BeginCancel(.08f);
         }
 
         public void Present(CombatEvent combatEvent, AttackSequenceDefinition attackSequence = null)
@@ -842,6 +909,7 @@ namespace Rokas.Presentation
                         combatEvent.Detail == "Retreat" ? HunterCommandPose.None : HunterCommandPose.Attack;
                     if (hunterMotion.Phase != MotionPhase.Approach && !hunterPosePreplayed)
                         PlayHunterCommandPose(.2f);
+                    hunter.BindLicensedContact(combatEvent.ActionId);
                     break;
                 case CombatEventKind.AttackStarted:
                     heavyEnemyActionId = combatEvent.Detail == "heavy" ? combatEvent.ActionId : null;
@@ -850,10 +918,21 @@ namespace Rokas.Presentation
                         started.ActionId = combatEvent.ActionId;
                     break;
                 case CombatEventKind.HitResolved:
+                    if (!AcceptPresentationContact(combatEvent)) break;
                     bool heavyContact = IsHeavyContact(combatEvent);
+                    bool hunterContact = combatEvent.ActorId == ReactiveDuelDefinitions.HunterId;
+                    ReactiveCombatActorVisual performer = hunterContact ? hunter :
+                        combatEvent.ActorId != null && enemies.TryGetValue(combatEvent.ActorId, out ReactiveCombatActorVisual sourceActor) ? sourceActor : null;
+                    if (performer != null && performer.ConfirmLicensedContact(combatEvent.ActionId, hunterContact ? null : combatEvent.HitId))
+                        BeginLicensedCamera(performer, hunterContact ? ActorForTarget(combatEvent.TargetId) : hunter);
                     bool dodge = combatEvent.Detail == "Dodge";
                     bool guard = combatEvent.Detail == "Parry" || combatEvent.Detail == "Perfect";
-                    float contactStop = dodge ? 0f : guard ? .055f :
+                    // Native action/shot timelines already contain their source pose holds.
+                    // Extra R11 hit stop would stretch the recorded camera/body clocks.
+                    bool nativeContact = performer != null && performer.ActiveLicensedProfile != null &&
+                        performer.LicensedContactConfirmed;
+                    bool sourceClockActive = nativeContact || licensedCamera != null && licensedCamera.Active;
+                    float contactStop = sourceClockActive || dodge ? 0f : guard ? .055f :
                         heavyContact ? HeavyHitStopDuration : HitStopDuration;
                     if (combatEvent.TargetId == ReactiveDuelDefinitions.HunterId)
                     {
@@ -920,15 +999,16 @@ namespace Rokas.Presentation
                             }
                         }
                     }
+                    CancelInterruptedLicensedCamera();
                     hitStopRemaining = Mathf.Max(hitStopRemaining, contactStop);
-                    if (!dodge)
+                    if (!dodge && !sourceClockActive)
                     {
                         cameraImpulseRemaining = .13f;
                         cameraImpulseStrength = guard ? .025f : heavyContact ? .065f : .035f;
                     }
                     break;
                 case CombatEventKind.Defeat:
-                    CancelHunterMotion();
+                    CancelHunterMotion(false);
                     if (hunter != null) hunter.PlayDeath(DeathFallDuration);
                     foreach (var pair in enemyMotions)
                         if (pair.Value.Phase != MotionPhase.None) StartEnemyReturn(pair.Key);
@@ -950,6 +1030,53 @@ namespace Rokas.Presentation
                     StartHunterReturn();
                     break;
             }
+        }
+
+        private ReactiveCombatActorVisual ActorForTarget(string id)
+        {
+            return id != null && enemies.TryGetValue(id, out ReactiveCombatActorVisual target) ? target : null;
+        }
+
+        private bool AcceptPresentationContact(CombatEvent evt)
+        {
+            if (string.IsNullOrEmpty(evt.ActionId)) return true;
+            string hit = evt.ActorId == ReactiveDuelDefinitions.HunterId ? "" : evt.HitId ?? "";
+            string key = evt.ActorId + ":" + evt.TargetId + ":" + evt.ActionId + ":" + hit;
+            if (!presentedContacts.Add(key)) return false;
+            contactHistory.Enqueue(key);
+            while (contactHistory.Count > 32) presentedContacts.Remove(contactHistory.Dequeue());
+            return true;
+        }
+
+        private void BeginLicensedCamera(ReactiveCombatActorVisual performer, ReactiveCombatActorVisual target)
+        {
+            LicensedCombatMotionProfile profile = performer.ActiveLicensedProfile;
+            if (profile == null || profile.camera == null || licensedCamera == null) return;
+            ResetCamera();
+            int externalTargets = 1;
+            Vector3 targetFloor = target == null ? performer.transform.position : target.transform.position;
+            if (performer == hunter && hunterMotion.Heavy)
+            {
+                externalTargets = 0;
+                targetFloor = Vector3.zero;
+                foreach (ReactiveCombatActorVisual candidate in enemies.Values)
+                {
+                    if (candidate == null || candidate.IsDead || !candidate.gameObject.activeSelf) continue;
+                    externalTargets++;
+                    targetFloor += candidate.transform.position;
+                }
+                if (externalTargets > 0) targetFloor /= externalTargets;
+                else targetFloor = performer.transform.position;
+            }
+            Vector3 origin = (performer.transform.position + targetFloor) * .5f;
+            // ROKAS targets occupy one logical slot and use Medium framing.
+            // The source performer's classification and target-count offsets remain authored.
+            profile.camera.ResolveParentPose(externalTargets, LicensedCameraFramingSize.Medium,
+                out Vector3 parentPosition, out Vector3 parentEuler);
+            float scale = performer.ModelRoot.lossyScale.y * profile.sourceToTargetScale;
+            licensedCamera.Begin(profile.camera, origin, Mathf.Max(.001f, scale), world.transform.rotation,
+                parentPosition, parentEuler);
+            licensedCameraPerformer = performer;
         }
 
         private bool IsHeavyContact(CombatEvent evt)
@@ -1014,6 +1141,7 @@ namespace Rokas.Presentation
             // temporary emergence clones which the cancelled entry is about to destroy.
             if (enteringEnemy == id) { emergence?.Dispose(); emergence = null; }
             actor.PlayDeath(DeathFallDuration);
+            CancelInterruptedLicensedCamera();
             corpses[id] = new CorpseState { Actor = actor, Origin = actor.transform.localPosition,
                 Ash = new ReactiveCombatAshDissolve(actor) };
         }
@@ -1021,6 +1149,7 @@ namespace Rokas.Presentation
         public void Tick(float deltaTime)
         {
             if (world == null) return;
+            CancelInterruptedLicensedCamera();
             float step = Mathf.Max(0f, deltaTime);
             float motionStep = step;
             if (hitStopRemaining > 0f)
@@ -1034,28 +1163,36 @@ namespace Rokas.Presentation
             if (hunterMotion.Phase == MotionPhase.Preview)
             {
                 hunterMotion.Elapsed += motionStep;
-                float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
-                camera.orthographicSize = Mathf.Lerp(selectionFrameSize, 4.6f * (1f - cameraEmphasis), push);
-                camera.transform.localPosition = Vector3.Lerp(selectionFramePosition,
-                    new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
+                if (hunter.ActiveLicensedProfile == null)
+                {
+                    float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
+                    camera.orthographicSize = Mathf.Lerp(selectionFrameSize, 4.6f * (1f - cameraEmphasis), push);
+                    camera.transform.localPosition = Vector3.Lerp(selectionFramePosition,
+                        new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
+                }
+                else ResetCamera();
             }
             else if (hunterMotion.Phase == MotionPhase.Prepare)
             {
-                float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
-                camera.orthographicSize = Mathf.Lerp(4.6f, 4.6f * (1f - cameraEmphasis), push);
-                camera.transform.localPosition = Vector3.Lerp(new Vector3(0f, 2.25f, -20f),
-                    new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
+                if (hunter.ActiveLicensedProfile == null)
+                {
+                    float push = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(hunterMotion.Elapsed / .3f));
+                    camera.orthographicSize = Mathf.Lerp(4.6f, 4.6f * (1f - cameraEmphasis), push);
+                    camera.transform.localPosition = Vector3.Lerp(new Vector3(0f, 2.25f, -20f),
+                        new Vector3(cameraFocus.x * .22f, 2.25f, -20f), push);
+                }
+                else ResetCamera();
             }
             else if (hunterMotion.Phase == MotionPhase.FrameRestore || hunterMotion.Phase == MotionPhase.PreviewRestore ||
                 hunterMotion.Phase == MotionPhase.CancelRestore)
             {
                 float restore = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((hunterMotion.Elapsed + motionStep) / SelectionFrameReturnSeconds));
-                camera.orthographicSize = Mathf.Lerp(selectionFrameSize, 4.6f, restore);
-                camera.transform.localPosition = Vector3.Lerp(selectionFramePosition, new Vector3(0f, 2.25f, -20f), restore);
+                camera.orthographicSize = Mathf.Lerp(selectionFrameSize, tacticalCameraSize, restore);
+                camera.transform.localPosition = Vector3.Lerp(selectionFramePosition, tacticalCameraPosition, restore);
             }
-            else ResetCamera();
+            else if (licensedCamera == null || !licensedCamera.Active) ResetCamera();
             cameraImpulseRemaining = Mathf.Max(0f, cameraImpulseRemaining - step);
-            if (cameraImpulseRemaining > 0f)
+            if (cameraImpulseRemaining > 0f && (licensedCamera == null || !licensedCamera.Active))
                 camera.transform.localPosition += Vector3.right *
                     (Mathf.Sin((.13f - cameraImpulseRemaining) * 72f) * cameraImpulseStrength * cameraImpulseRemaining / .13f);
             if (hunter != null)
@@ -1220,6 +1357,7 @@ namespace Rokas.Presentation
                 }
             }
             // Travel computes this frame's actual distance before locomotion is sampled.
+            licensedCamera?.Tick(motionStep);
             hunter?.TickPresentation(step);
             foreach (var pair in enemies) pair.Value?.TickPresentation(step);
             float beforeContact = hunterMotion.StrikeContact - hunterMotion.StrikeElapsed;
@@ -1296,6 +1434,7 @@ namespace Rokas.Presentation
             if (heavy) motion.Actor.PlayHeavyToContact(Mathf.Max(.08f, until));
             else motion.Actor.PlayAttackToContact(Mathf.Max(.08f, until));
             motion.Actor.AwaitAttackContact(heavy);
+            motion.Actor.BindLicensedContact(motion.ActionId, motion.StrikeHitId);
         }
 
         private static bool TickMotion(ActorMotion motion, float step)
@@ -1326,6 +1465,10 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            licensedCamera?.Cancel();
+            licensedCamera = null;
+            presentedContacts.Clear();
+            contactHistory.Clear();
             if (camera != null) camera.targetTexture = null;
             if (image != null) { image.texture = null; image.material = null; }
             ReactiveCombatAshDissolve.DestroyOwned(actorComposite);
