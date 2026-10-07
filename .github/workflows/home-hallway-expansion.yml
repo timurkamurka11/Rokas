@@ -161,6 +161,46 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Workbench Remains Laptop Only
 
+  visual-capture:
+    name: Actual Hallway Unity screenshots
+    needs: asset-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/home-hallway-expansion
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: HallwayHome-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Capture Unity Hallway frames
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HallwayVisualCapturePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hallway Live Visual Captures
+          artifactsPath: artifacts
+      - name: Upload actual Unity screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-hallway-visual-captures
+          path: artifacts/hallway-visual/*.png
+          if-no-files-found: warn
+
   swords-regression:
     needs: asset-integrity
     name: Removed swords hotspot stays removed
