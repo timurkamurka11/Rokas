@@ -8,17 +8,37 @@ namespace Rokas.Presentation
     // so no hard rectangle is introduced.
     public sealed class VideoCornerArtifactMask : MonoBehaviour
     {
+        public enum Profile
+        {
+            Startup,
+            Story,
+            MainMenu
+        }
+
         public static readonly Vector2 NormalizedAnchor = new Vector2(.911f, .155f);
         public static readonly Vector2 ReferenceSize = new Vector2(220f, 220f);
         public static readonly Vector4 SourceRect = new Vector4(.7675f, .1120f, .0990f, .1760f);
 
+        // StoryIntro changes composition aggressively. The generic source band crosses moving silhouettes/VFX,
+        // so use a smaller patch and a clean lower-left source region that stays on scenery/ground in the clip.
+        public static readonly Vector2 StoryReferenceSize = new Vector2(170f, 170f);
+        public static readonly Vector4 StorySourceRect = new Vector4(.7535f, .0352f, .0729f, .1296f);
+
         private Material ownedMaterial;
         private RawImage image;
+        private Vector4 sampleRect;
+        private Profile profile;
 
         public RawImage Image => image;
-        public Vector4 SampleRect => SourceRect;
+        public Vector4 SampleRect => sampleRect;
+        public Profile MaskProfile => profile;
 
         public static VideoCornerArtifactMask Create(RectTransform parent, Texture source)
+        {
+            return Create(parent, source, Profile.Startup);
+        }
+
+        public static VideoCornerArtifactMask Create(RectTransform parent, Texture source, Profile requestedProfile)
         {
             if (!parent || !source) return null;
 
@@ -32,18 +52,21 @@ namespace Rokas.Presentation
             rect.SetParent(parent, false);
             rect.anchorMin = rect.anchorMax = NormalizedAnchor;
             rect.pivot = new Vector2(.5f, .5f);
-            rect.sizeDelta = ReferenceSize;
+            rect.sizeDelta = requestedProfile == Profile.Story ? StoryReferenceSize : ReferenceSize;
             rect.anchoredPosition = Vector2.zero;
             rect.localScale = Vector3.one;
 
             var component = go.GetComponent<VideoCornerArtifactMask>();
-            component.Configure(source);
+            component.Configure(source, requestedProfile);
             rect.SetAsLastSibling();
             return component;
         }
 
-        private void Configure(Texture source)
+        private void Configure(Texture source, Profile requestedProfile)
         {
+            profile = requestedProfile;
+            sampleRect = requestedProfile == Profile.Story ? StorySourceRect : SourceRect;
+
             image = GetComponent<RawImage>();
             image.texture = source;
             image.color = Color.white;
@@ -62,8 +85,8 @@ namespace Rokas.Presentation
                 name = "ROKAS Video Corner Artifact Mask",
                 hideFlags = HideFlags.HideAndDontSave
             };
-            ownedMaterial.SetVector("_SourceRect", SourceRect);
-            ownedMaterial.SetFloat("_InnerRadius", .58f);
+            ownedMaterial.SetVector("_SourceRect", sampleRect);
+            ownedMaterial.SetFloat("_InnerRadius", requestedProfile == Profile.Story ? .60f : .58f);
             ownedMaterial.SetFloat("_OuterRadius", .96f);
             image.material = ownedMaterial;
         }

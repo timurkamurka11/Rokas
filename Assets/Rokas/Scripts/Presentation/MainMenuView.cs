@@ -102,7 +102,7 @@ namespace Rokas.Presentation
             target.Create();
             ClearToBlack(target);
             videoImage.texture = target;
-            VideoCornerArtifactMask.Create(root, target);
+            VideoCornerArtifactMask.Create(root, target, VideoCornerArtifactMask.Profile.MainMenu);
 
             player = gameObject.AddComponent<VideoPlayer>();
             player.playOnAwake = false;
