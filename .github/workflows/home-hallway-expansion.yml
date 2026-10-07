@@ -1,0 +1,163 @@
+name: ROKAS Home Hallway Expansion
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/home-hallway-expansion
+    paths:
+      - .github/workflows/home-hallway-expansion.yml
+      - Assets/Rokas/Scripts/Core/State.cs
+      - Assets/Rokas/Scripts/Core/GameSession.cs
+      - Assets/Rokas/Scripts/Presentation/HomeView.cs
+      - Assets/Rokas/Scripts/Presentation/HallwayView.cs
+      - Assets/Rokas/Scripts/Presentation/HallwayView.cs.meta
+      - Assets/Rokas/Scripts/Presentation/RokasView.cs
+      - Assets/Rokas/Resources/Home/HallwayReference.jpg
+      - Assets/Rokas/Resources/Home/HallwayReference.jpg.meta
+      - Assets/Rokas/Tests/PlayMode/HallwayHomeExpansionPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/HallwayHomeExpansionPlayModeTests.cs.meta
+      - Assets/Rokas/Tests/Serialization/UnitySaveTests.cs
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: home-hallway-expansion-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  hallway:
+    name: Hallway routing + light matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: HallwayHome-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Hallway Home PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HallwayHomeExpansionPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hallway Home Expansion
+
+  save:
+    name: Hallway light persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: HallwayHome-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run save compatibility tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.UnitySaveTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hallway Save Compatibility
+
+  hub-regression:
+    name: Existing Home + Workbench routes
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: HallwayHome-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run existing Home scan regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeScanUiPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Existing Home Scan Regression
+      - name: Run Laptop-only Workbench regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Remains Laptop Only
+
+  swords-regression:
+    name: Removed swords hotspot stays removed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: HallwayHome-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run finished Home overlay regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeFinishedUiCleanupTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Swords Hotspot Remains Removed
