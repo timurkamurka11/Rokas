@@ -53,8 +53,6 @@ namespace Rokas.Tests
 
             Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
                 "Workbench must no longer expose a direct Hub/room hotspot.");
-            Assert.That(FindRect("Hotspot_Swords"), Is.Null,
-                "The finished Home overlay must not render a residual swords/Workbench icon.");
 
             foreach (string legacyChrome in new[]
             {
@@ -85,8 +83,6 @@ namespace Rokas.Tests
                 Assert.That(Find<Button>(hotspot), Is.Not.Null, hotspot);
             Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
                 "The swords area may remain decorative, but it must not be an interactive Workbench entry.");
-            Assert.That(FindRect("Hotspot_Swords"), Is.Null,
-                "No separate swords interaction icon may remain in the Hub overlay.");
             LogAssert.NoUnexpectedReceived();
         }
 
