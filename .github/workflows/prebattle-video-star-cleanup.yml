@@ -1,0 +1,172 @@
+name: ROKAS Prebattle + Video Star Cleanup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/prebattle-video-star-cleanup
+    paths:
+      - .github/workflows/prebattle-video-star-cleanup.yml
+      - Assets/Rokas/Scripts/Presentation/MissionView.cs
+      - Assets/Rokas/Scripts/Presentation/RokasView.cs
+      - Assets/Rokas/Scripts/Presentation/VideoSequencePresenter.cs
+      - Assets/Rokas/Scripts/Presentation/MainMenuView.cs
+      - Assets/Rokas/Scripts/Presentation/VideoCornerArtifactMask.cs
+      - Assets/Rokas/Scripts/Presentation/VideoCornerArtifactMask.cs.meta
+      - Assets/Rokas/Resources/Shaders.meta
+      - Assets/Rokas/Resources/Shaders/VideoCornerCloneMask.shader
+      - Assets/Rokas/Resources/Shaders/VideoCornerCloneMask.shader.meta
+      - Assets/Rokas/Tests/PlayMode/PreBattlePortalCleanupPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/PreBattlePortalCleanupPlayModeTests.cs.meta
+      - Assets/Rokas/Tests/PlayMode/VideoCornerArtifactMaskPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/VideoCornerArtifactMaskPlayModeTests.cs.meta
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: prebattle-video-star-cleanup-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  prebattle:
+    name: Ultra-minimal pre-battle Portal
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PrebattleVideoStar-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PrebattleVideoStar-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run pre-battle Portal cleanup tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          ROKAS_PREBATTLE_CAPTURE_DIR: /github/workspace/verification/prebattle
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.PreBattlePortalCleanupPlayModeTests -prebattleCaptureDir=/github/workspace/verification/prebattle
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Prebattle Portal Cleanup
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: prebattle-portal-cleanup
+          path: |
+            ${{ steps.tests.outputs.artifactsPath }}
+            verification/prebattle
+          if-no-files-found: warn
+
+  video-mask:
+    name: Shared startup/story/menu star mask
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PrebattleVideoStar-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PrebattleVideoStar-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run shared video artifact-mask tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          ROKAS_VIDEO_MASK_CAPTURE_DIR: /github/workspace/verification/video-mask
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.VideoCornerArtifactMaskPlayModeTests -videoMaskCaptureDir=/github/workspace/verification/video-mask
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Shared Video Artifact Mask
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: video-star-mask
+          path: |
+            ${{ steps.tests.outputs.artifactsPath }}
+            verification/video-mask
+          if-no-files-found: warn
+
+  hub-route:
+    name: Hub swords icon remains removed
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PrebattleVideoStar-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PrebattleVideoStar-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Home finished-overlay regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeFinishedUiCleanupTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Hub Swords Icon Removed
+
+  workbench-route:
+    name: Workbench remains Laptop-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PrebattleVideoStar-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PrebattleVideoStar-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Laptop-only Workbench regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Workbench Laptop Only
