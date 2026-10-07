@@ -97,10 +97,7 @@ namespace Rokas.Presentation
             age = hitTime = enemyAttackTime = 0;
             if (session.State.phase == RunPhase.Portal)
             {
-                ui.Label(parent, "PortalEyebrow", "МЕСТО, КОТОРОГО НЕТ НА КАРТЕ", 66, 148, 1120, 42, 20, UiKit.Gold);
-                ui.Label(parent, "PortalTitle", "Другая сторона.", 63, 207, 1030, 102, 62, UiKit.Paper, true);
-                ui.Label(parent, "PortalNote", "Город стихает. За воротами слышен поезд.", 67, 321, 1050, 70, 27);
-                ui.Button(parent, "EnterReactivePortal", "Войти в искажение", 1240, 866, 600, 76,
+                ui.Button(parent, "EnterReactivePortal", "Войти в бой", 1240, 866, 600, 76,
                     () => travel(session.EnterReactiveTestEncounter, "ПЛАТФОРМА КИСАРАГИ\nСледующая остановка не объявлена."), true);
                 ui.Button(parent, "ReturnFromPortal", "Вернуться домой", 67, 881, 450, 60,
                     () => travel(session.ReturnHome, "Вы возвращаетесь по мокрым улицам."));
