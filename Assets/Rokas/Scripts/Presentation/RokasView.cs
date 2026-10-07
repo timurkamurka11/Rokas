@@ -31,7 +31,9 @@ namespace Rokas.Presentation
         private readonly RawImage background;
         private readonly WorldEffects effects;
         private readonly HomeView home;
+        private readonly HallwayView hallway;
         private readonly MissionView mission;
+        private HomeLocation homeSubLocation = HomeLocation.MainRoom;
         private readonly ContractPanels contracts;
         private readonly LaptopView laptop;
         private readonly MessagesNotificationView messageNotifications;
@@ -84,6 +86,7 @@ namespace Rokas.Presentation
         public void CancelCombatInput() { mission.CancelInput(); }
         public void HandleCombatInput(bool dodge, bool deflect, bool resonance) { mission.HandleInput(dodge, deflect, resonance); }
         public bool LaptopOpen { get { return panel == "laptop"; } }
+        public HomeLocation CurrentHomeLocation { get { return homeSubLocation; } }
 
         public RokasView(RokasBootstrap owner, RokasAssets assets, GameSession session, RokasAudio audio, Action save)
         {
@@ -132,7 +135,12 @@ namespace Rokas.Presentation
                 OpenHubMenu);
             home = new HomeView(
                 ui, assets, session, audio,
-                OpenPanel, Act, Travel, ToastShort, OpenHubDialogue);
+                OpenPanel, Act, Travel, ToastShort, OpenHubDialogue,
+                () => MoveHomeLocation(HomeLocation.Hallway));
+            hallway = new HallwayView(
+                ui, assets, session, audio, Act,
+                () => MoveHomeLocation(HomeLocation.MainRoom),
+                ExitHallway);
             mission = new MissionView(ui, assets, session, audio, Act, Travel, ToastShort, effects, () => Paused,
                 owner.ClickReactiveAction, owner.SubmitReactiveDefense, owner.ConfirmReactiveCounter,
                 owner.RetryReactiveSave, owner.SelectReactiveTarget);
@@ -238,6 +246,63 @@ namespace Rokas.Presentation
             else Toast("РЎРµР№С‡Р°СЃ СЌС‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµРґРѕСЃС‚СѓРїРЅРѕ.");
         }
 
+        private void MoveHomeLocation(HomeLocation target)
+        {
+            if (storageBlocked || transition || !IsHomeLocation(phase) || homeSubLocation == target) return;
+            owner.StartCoroutine(HomeLocationRoutine(target));
+        }
+
+        private IEnumerator HomeLocationRoutine(HomeLocation target)
+        {
+            transition = true;
+            SetSceneInteractionsEnabled(false);
+            ui.Clear(transitions);
+
+            Image shade = ui.Box(transitions, "HomeRoomCurtain",
+                0, 0, 1920, 1080, Color.black, true);
+            CanvasGroup group = shade.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+
+            for (float t = 0f; t < .40f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
+            {
+                group.alpha = Mathf.Clamp01(t / .40f);
+                yield return null;
+            }
+            group.alpha = 1f;
+
+            homeSubLocation = target;
+            RebuildScene();
+            Refresh();
+            yield return null;
+
+            for (float t = 0f; t < .55f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
+            {
+                group.alpha = 1f - Mathf.Clamp01(t / .55f);
+                yield return null;
+            }
+
+            ui.Clear(transitions);
+            transition = false;
+            SetSceneInteractionsEnabled(true);
+        }
+
+        private void ExitHallway()
+        {
+            if (session.State.phase == RunPhase.Accepted)
+            {
+                Travel(session.LeaveHome, string.Empty);
+            }
+            else if (session.State.phase == RunPhase.Payment)
+            {
+                Toast("На ноутбук пришло подтверждение оплаты.");
+            }
+            else
+            {
+                OpenPanel("laptop");
+                Toast("Сначала выберите контракт в YOMI.");
+            }
+        }
+
         private void Travel(Func<bool> action, string caption)
         {
             if (storageBlocked || transition) return;
@@ -250,16 +315,18 @@ namespace Rokas.Presentation
             ui.Clear(transitions);
             var shade = ui.Box(transitions, "TravelCurtain", 0, 0, 1920, 1080, Color.black, true);
             var group = shade.gameObject.AddComponent<CanvasGroup>();
-            ui.Label(shade.transform, "JourneyCaption", caption, 280, 410, 1360, 170, 38, UiKit.Paper, true, TextAnchor.MiddleCenter);
-            for (float t = 0; t < .3f; t += Time.unscaledDeltaTime)
-            { group.alpha = t / .3f; yield return null; }
+            if (!string.IsNullOrWhiteSpace(caption))
+                ui.Label(shade.transform, "JourneyCaption", caption,
+                    280, 410, 1360, 170, 38, UiKit.Paper, true, TextAnchor.MiddleCenter);
+            for (float t = 0; t < .40f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
+            { group.alpha = t / .40f; yield return null; }
             group.alpha = 1;
             ClosePanel();
             audio.Play(assets.portalSound);
             if (action()) save();
-            yield return new WaitForSecondsRealtime(.3f);
-            for (float t = 0; t < .45f; t += Time.unscaledDeltaTime)
-            { group.alpha = 1 - t / .45f; yield return null; }
+            yield return new WaitForSecondsRealtime(.12f);
+            for (float t = 0; t < .55f; t += Mathf.Min(Time.unscaledDeltaTime, .05f))
+            { group.alpha = 1 - t / .55f; yield return null; }
             ui.Clear(transitions);
             transition = false;
         }
@@ -288,12 +355,17 @@ namespace Rokas.Presentation
                     bool wasHomeLocation = IsHomeLocation(phase);
                     bool isHomeLocation = IsHomeLocation(nextPhase);
                     phase = nextPhase;
-                    if (!wasHomeLocation && isHomeLocation) laptop.BeginHomeVisit();
+                    if (!wasHomeLocation && isHomeLocation)
+                    {
+                        homeSubLocation = HomeLocation.MainRoom;
+                        laptop.BeginHomeVisit();
+                    }
                     RebuildScene();
                 }
             }
             wallet.text = "ВҐ " + session.State.yen.ToString("N0") + "     /     Р Р•Рџ " + session.State.reputation + "     /     РџР•РџР•Р› " + session.State.spiritAsh;
             home.Refresh();
+            hallway.Refresh();
             mission.Refresh();
         }
 
@@ -314,6 +386,7 @@ namespace Rokas.Presentation
                 hubDialogue.Close();
             ui.Clear(scene);
             home.ClearReferences();
+            hallway.ClearReferences();
             mission.ClearReferences();
             bool otherSide = phase == RunPhase.Combat || phase == RunPhase.Sealed || phase == RunPhase.Failed;
             bool homeLocation = !otherSide && phase != RunPhase.Portal;
@@ -331,11 +404,20 @@ namespace Rokas.Presentation
             Texture2D reactiveBackground = phase == RunPhase.Combat &&
                 session.CombatMode == CombatMode.ReactiveTurns
                 ? Resources.Load<Texture2D>("CombatB/AbyssArenaBackground") : null;
+            bool homeScene = !otherSide && phase != RunPhase.Portal;
+            bool hallwayHome = homeScene && homeSubLocation == HomeLocation.Hallway;
+            Texture2D hallwayBackground = hallwayHome ? HallwayView.LoadBackground() : null;
             background.texture = reactiveBackground != null ? reactiveBackground :
-                otherSide ? assets.subway : phase == RunPhase.Portal ? assets.portal : assets.home;
+                otherSide ? assets.subway :
+                phase == RunPhase.Portal ? assets.portal :
+                hallwayBackground != null ? hallwayBackground : assets.home;
+            background.uvRect = hallwayHome && hallwayBackground != null
+                ? HallwayView.GetBackgroundUvRect(hallwayBackground)
+                : new Rect(0f, 0f, 1f, 1f);
             audio.SetLocation(otherSide || phase == RunPhase.Portal, phase == RunPhase.Combat, reactiveBattle);
-            effects.SetLocation(!otherSide && phase != RunPhase.Portal, phase == RunPhase.Portal);
+            effects.SetLocation(homeScene && !hallwayHome, phase == RunPhase.Portal);
             if (otherSide || phase == RunPhase.Portal) mission.Build(scene);
+            else if (hallwayHome) hallway.Build(scene);
             else home.Build(scene);
             status.text = reactiveBackground != null ? "РџР РћРџРђРЎРўР¬  /  РРЎРљРђР–РЃРќРќР«Р™ РљРћРќРўР РђРљРў" :
                 otherSide ? "РљРРЎРђР РђР“Р  /  Р—РђРљР Р«РўРђРЇ РџР›РђРўР¤РћР РњРђ" :
@@ -468,6 +550,7 @@ namespace Rokas.Presentation
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
             home.Tick(dt);
+            hallway.Tick(dt);
             mission.Tick(dt, Paused || !focused);
             if (reactiveResultPending && focused && !Paused && !session.SaveBlocked)
             {
