@@ -193,7 +193,14 @@ namespace Rokas.Presentation
             glyphGraphic.Glyph = glyph;
             glyphGraphic.color = new Color(.98f, .80f, .43f, 1f);
             glyphGraphic.raycastTarget = false;
-            if (flipGlyph) glyphRect.localEulerAngles = new Vector3(0f, 0f, 180f);
+            if (flipGlyph)
+            {
+                // UiKit.Rect uses a top-left pivot. Center it before rotating so the
+                // left-return glyph stays inside its circular badge.
+                glyphRect.pivot = new Vector2(.5f, .5f);
+                glyphRect.anchoredPosition = new Vector2(36f, -36f);
+                glyphRect.localEulerAngles = new Vector3(0f, 0f, 180f);
+            }
 
             RectTransform connector = ui.Rect(marker, "ScanConnector", 33f, 75f, 6f, connectorLength);
             CanvasGroup connectorGroup = connector.gameObject.AddComponent<CanvasGroup>();
@@ -350,13 +357,21 @@ namespace Rokas.Presentation
             RectTransform own = ui.Rect(root, "HallwayOwnLightOffMask", 0f, 0f, 1920f, 1080f);
             overlay.ownHallwayOff = own.gameObject.AddComponent<CanvasGroup>();
             Soft(ui, own, "CeilingPracticalDim",
-                1030f, 0f, 730f, 520f, new Color(.035f, .075f, .12f, .54f));
+                1030f, 0f, 730f, 520f, new Color(.035f, .075f, .12f, .66f));
             Soft(ui, own, "CabinetPracticalDim",
-                650f, 300f, 620f, 690f, new Color(.035f, .065f, .10f, .43f));
+                650f, 300f, 620f, 690f, new Color(.035f, .065f, .10f, .48f));
             Soft(ui, own, "EntryWarmDim",
-                1160f, 280f, 720f, 680f, new Color(.025f, .055f, .095f, .39f));
+                1160f, 280f, 720f, 680f, new Color(.025f, .055f, .095f, .49f));
             Soft(ui, own, "FloorWarmDim",
-                520f, 720f, 1320f, 350f, new Color(.04f, .075f, .11f, .22f));
+                520f, 720f, 1320f, 350f, new Color(.04f, .075f, .11f, .28f));
+            // Baked practical cores need their own feathered dimming. A broad
+            // room mask alone leaves obviously glowing lanterns when the switch is OFF.
+            Soft(ui, own, "CabinetLanternCoreOff",
+                665f, 330f, 195f, 225f, new Color(.012f, .042f, .075f, .89f));
+            Soft(ui, own, "EntryLanternCoreOff",
+                1025f, 290f, 180f, 240f, new Color(.018f, .048f, .085f, .90f));
+            Soft(ui, own, "CeilingWarmBounceOff",
+                1050f, 0f, 820f, 255f, new Color(.028f, .057f, .087f, .56f));
 
             RectTransform main = ui.Rect(root, "HallwayMainRoomOffMask", 0f, 0f, 1920f, 1080f);
             overlay.mainRoomOff = main.gameObject.AddComponent<CanvasGroup>();
@@ -364,6 +379,10 @@ namespace Rokas.Presentation
                 210f, 0f, 590f, 970f, new Color(.025f, .07f, .12f, .60f));
             Soft(ui, main, "VisibleMainRoomFloorDim",
                 250f, 610f, 600f, 390f, new Color(.03f, .075f, .12f, .32f));
+            Soft(ui, main, "MainRoomDeskPracticalOff",
+                385f, 288f, 158f, 220f, new Color(.03f, .075f, .13f, .76f));
+            Soft(ui, main, "MainRoomWindowLanternOff",
+                302f, 387f, 145f, 178f, new Color(.03f, .07f, .12f, .72f));
 
             overlay.ownHallwayOff.alpha = 0f;
             overlay.mainRoomOff.alpha = 0f;

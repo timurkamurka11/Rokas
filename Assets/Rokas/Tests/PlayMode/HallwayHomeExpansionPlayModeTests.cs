@@ -53,6 +53,12 @@ namespace Rokas.Tests
             Assert.That(Find<Button>("HallwayReturnHotspot"), Is.Not.Null);
             Assert.That(Find<Button>("HallwayFrontDoorHotspot"), Is.Not.Null);
             Assert.That(Find<Button>("HallwayLightHotspot"), Is.Not.Null);
+            RectTransform returnMarker = Find<RectTransform>("HallwayReturnHotspotMarker");
+            Assert.That(returnMarker, Is.Not.Null);
+            RectTransform returnGlyph = returnMarker.Find("ScanGlyph") as RectTransform;
+            Assert.That(returnGlyph, Is.Not.Null);
+            Assert.That(returnGlyph.pivot, Is.EqualTo(new Vector2(.5f, .5f)),
+                "Rotating around the original top-left pivot displaced the exit icon outside its badge.");
             Assert.That(Find<Button>("LaptopHotspot"), Is.Null,
                 "Hallway currently exposes exactly its three intended interactions.");
             Assert.That(Find<Button>("WorkbenchHotspot"), Is.Null,
@@ -186,6 +192,9 @@ namespace Rokas.Tests
             Assert.That(Find<Graphic>("CeilingPracticalDim"), Is.Not.Null);
             Assert.That(Find<Graphic>("CabinetPracticalDim"), Is.Not.Null);
             Assert.That(Find<Graphic>("EntryWarmDim"), Is.Not.Null);
+            Assert.That(Find<Graphic>("CabinetLanternCoreOff"), Is.Not.Null);
+            Assert.That(Find<Graphic>("EntryLanternCoreOff"), Is.Not.Null);
+            Assert.That(Find<Graphic>("MainRoomDeskPracticalOff"), Is.Not.Null);
             Assert.That(Find<Graphic>("VisibleMainRoomDim"), Is.Not.Null);
             Assert.That(Find<Graphic>("HallwayGlobalBlackOverlay"), Is.Null,
                 "Hallway OFF must use localized light treatment, not a global black rectangle.");

@@ -80,10 +80,13 @@ namespace Rokas.Tests
             Assert.That(boot.View.LaptopOpen, Is.False,
                 "The internal Home interaction should be tested after the existing laptop close animation completes.");
 
-            Press("TeaHotspot");
-            Assert.That(boot.View.LaptopOpen, Is.False);
+            // Finished Home UI intentionally keeps TeaHotspot dormant; use an active
+            // internal Home interaction instead of restoring a removed hotspot.
+            Press("WindowHotspot");
+            Assert.That(boot.View.HubDialogueOpen, Is.True);
             boot.View.Escape();
             yield return null;
+            Assert.That(boot.View.HubDialogueOpen, Is.False);
 
             Press("LaptopHotspot");
             Assert.That(Find("LaptopBootSurface"), Is.Null,
