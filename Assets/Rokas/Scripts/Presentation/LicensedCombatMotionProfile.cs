@@ -19,6 +19,7 @@ namespace Rokas.Presentation {
   public AnimationCurve mixOut=new AnimationCurve(new Keyframe(0,1,-2,-2),new Keyframe(1,0,0,0));
   public AnimationCurve shakeX=new AnimationCurve(),shakeY=new AnimationCurve(),shakeZ=new AnimationCurve();
   public float shakeDuration=.6f;
+  public LicensedCameraShakeSegment[] shakes=Array.Empty<LicensedCameraShakeSegment>();
   public string sourceBinding,calibration;
   public float Weight(float time){if(time<0||time>=shotDuration)return 0;if(blendOut<=0||time<shotDuration-blendOut)return 1;return Mathf.Clamp01(mixOut.Evaluate((time-shotDuration+blendOut)/blendOut));}
  }
@@ -29,6 +30,8 @@ namespace Rokas.Presentation {
   public float idleSpeed=1,anticipationSpeed=1;
   public LicensedMotionSegment[] segments=Array.Empty<LicensedMotionSegment>();
   public LicensedWeaponKind weapon;
+  public bool authoredWeaponSocket;
+  public float sourceToTargetScale=1f;
   public LicensedMotionCue[] cues=Array.Empty<LicensedMotionCue>();
   public LicensedCameraData camera;
   public float Duration {get{float end=0;foreach(var s in segments)if(s!=null)end=Mathf.Max(end,s.start+s.duration);return end;}}
