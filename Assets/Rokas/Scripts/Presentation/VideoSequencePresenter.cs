@@ -81,7 +81,7 @@ namespace Rokas.Presentation
         {
             Cancel();
             RectTransform host = CreateStartupHost();
-            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, true, false,
+            Begin(host, fileName, "StoryIntroVideoSurface", 1920, 1080, requestedVolume, true, true,
                 VideoCornerArtifactMask.Profile.Story, onComplete, StoryPlaybackTimeoutSeconds);
         }
 
