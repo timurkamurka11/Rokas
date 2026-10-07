@@ -56,19 +56,31 @@ namespace Rokas.Tests
         {
             RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
             Assert.That(assets, Is.Not.Null);
-            MainMenuView menu = MainMenuView.Create(root.transform, assets, 0f, null, () => { });
-            yield return null;
 
-            GameObject surface = Find("MainMenuVideoSurface");
-            VideoCornerArtifactMask mask = FindMask();
-            AssertMask(surface, mask);
-            GameObject enter = Find("EnterWorldButton");
-            Assert.That(enter, Is.Not.Null);
-            Assert.That(surface.transform.GetSiblingIndex(), Is.LessThan(mask.transform.GetSiblingIndex()));
-            Assert.That(mask.transform.GetSiblingIndex(), Is.LessThan(enter.transform.GetSiblingIndex()),
-                "Menu controls must always render above the shared video artifact patch.");
+            string media = Path.Combine(Application.streamingAssetsPath, "RokasVideo", "MainMenuLoop.mp4");
+            string hidden = media + ".artifact-mask-test-hidden";
+            Assert.That(File.Exists(media), Is.True);
+            Assert.That(File.Exists(hidden), Is.False);
 
-            menu.Dispose();
+            MainMenuView menu = null;
+            File.Move(media, hidden);
+            try
+            {
+                menu = MainMenuView.Create(root.transform, assets, 0f, null, () => { });
+                GameObject surface = Find("MainMenuVideoSurface");
+                VideoCornerArtifactMask mask = FindMask();
+                AssertMask(surface, mask);
+                GameObject enter = Find("EnterWorldButton");
+                Assert.That(enter, Is.Not.Null);
+                Assert.That(surface.transform.GetSiblingIndex(), Is.LessThan(mask.transform.GetSiblingIndex()));
+                Assert.That(mask.transform.GetSiblingIndex(), Is.LessThan(enter.transform.GetSiblingIndex()),
+                    "Menu controls must always render above the shared video artifact patch.");
+            }
+            finally
+            {
+                menu?.Dispose();
+                if (File.Exists(hidden) && !File.Exists(media)) File.Move(hidden, media);
+            }
             yield return null;
         }
 
@@ -91,6 +103,9 @@ namespace Rokas.Tests
         [UnityTest]
         public IEnumerator RealMediaEvidenceCapturesWhenDecoderAvailable()
         {
+            if (Application.isBatchMode || Application.platform == RuntimePlatform.LinuxEditor)
+                Assert.Ignore("Headless Linux Unity runner does not decode the committed H.264 launch videos.");
+
             string output = ResolveCaptureDirectory();
             if (string.IsNullOrEmpty(output)) Assert.Ignore("Video capture output was not requested.");
 
