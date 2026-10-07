@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
+using System.IO;
 using NUnit.Framework;
 using Rokas.Presentation;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 namespace Rokas.Tests
 {
@@ -83,6 +86,125 @@ namespace Rokas.Tests
                 "Only StartupPreview/StoryIntro/MainMenuLoop should receive the fixed-position baked-artifact patch.");
             presenter.Cancel();
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator RealMediaEvidenceCapturesWhenDecoderAvailable()
+        {
+            string output = ResolveCaptureDirectory();
+            if (string.IsNullOrEmpty(output)) Assert.Ignore("Video capture output was not requested.");
+
+            var presenter = root.AddComponent<VideoSequencePresenter>();
+            presenter.PlayStartup("StartupPreview.mp4", 0f, () => { });
+            yield return WaitForFirstFrame(presenter, 8f);
+            if (!presenter.FirstFramePresented)
+            {
+                presenter.Cancel();
+                Assert.Ignore("Headless runner cannot decode StartupPreview.mp4.");
+            }
+            CaptureCanvas(Find("StartupVideoCanvas"), output, "02_intro_video_star_fixed");
+            presenter.Cancel();
+            yield return null;
+
+            presenter.PlayStoryIntro("StoryIntro.mp4", 0f, () => { });
+            yield return WaitForFirstFrame(presenter, 8f);
+            if (!presenter.FirstFramePresented)
+            {
+                presenter.Cancel();
+                Assert.Ignore("Headless runner cannot decode StoryIntro.mp4.");
+            }
+            CaptureCanvas(Find("StartupVideoCanvas"), output, "03_start_video_star_fixed");
+            presenter.Cancel();
+            yield return null;
+
+            RokasAssets assets = Resources.Load<RokasAssets>("RokasAssets");
+            MainMenuView menu = MainMenuView.Create(root.transform, assets, 0f, null, () => { });
+            GameObject menuRoot = Find("RokasMainMenu");
+            VideoPlayer menuPlayer = menuRoot == null ? null : menuRoot.GetComponent<VideoPlayer>();
+            float deadline = Time.realtimeSinceStartup + 8f;
+            while (menuPlayer != null && !menuPlayer.isPlaying && Time.realtimeSinceStartup < deadline)
+                yield return null;
+            if (menuPlayer == null || !menuPlayer.isPlaying)
+            {
+                menu.Dispose();
+                Assert.Ignore("Headless runner cannot decode MainMenuLoop.mp4.");
+            }
+            CaptureCanvas(menuRoot, output, "04_menu_video_star_fixed");
+            menu.Dispose();
+            yield return null;
+        }
+
+        private static IEnumerator WaitForFirstFrame(VideoSequencePresenter presenter, float seconds)
+        {
+            float deadline = Time.realtimeSinceStartup + seconds;
+            while (presenter.IsPlaying && !presenter.FirstFramePresented && Time.realtimeSinceStartup < deadline)
+                yield return null;
+        }
+
+        private static void CaptureCanvas(GameObject canvasObject, string output, string name)
+        {
+            if (canvasObject == null ||
+                SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
+
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            RectTransform stage = canvasObject.GetComponent<RectTransform>();
+            if (canvas == null || stage == null) return;
+
+            RenderMode oldMode = canvas.renderMode;
+            Camera oldCamera = canvas.worldCamera;
+            Vector3 oldScale = stage.localScale;
+            var cameraObject = new GameObject("VideoEvidenceCaptureCamera");
+            Camera camera = cameraObject.AddComponent<Camera>();
+            var target = new RenderTexture(1920, 1080, 24);
+            var pixels = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                camera.enabled = false;
+                camera.orthographic = true;
+                camera.orthographicSize = 540f;
+                camera.nearClipPlane = .01f;
+                camera.farClipPlane = 100f;
+                camera.targetTexture = target;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1f;
+                stage.localScale = Vector3.one;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                RenderTexture.active = target;
+                pixels.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
+                pixels.Apply();
+                Directory.CreateDirectory(output);
+                File.WriteAllBytes(Path.Combine(output, name + ".png"), pixels.EncodeToPNG());
+            }
+            finally
+            {
+                canvas.renderMode = oldMode;
+                canvas.worldCamera = oldCamera;
+                stage.localScale = oldScale;
+                RenderTexture.active = previous;
+                camera.targetTexture = null;
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+                UnityEngine.Object.Destroy(pixels);
+                UnityEngine.Object.Destroy(cameraObject);
+                Canvas.ForceUpdateCanvases();
+            }
+        }
+
+        private static string ResolveCaptureDirectory()
+        {
+            string output = Environment.GetEnvironmentVariable("ROKAS_VIDEO_MASK_CAPTURE_DIR");
+            if (!string.IsNullOrEmpty(output)) return output;
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "-videoMaskCaptureDir" && i + 1 < args.Length) return args[i + 1];
+                const string prefix = "-videoMaskCaptureDir=";
+                if (args[i].StartsWith(prefix, StringComparison.Ordinal)) return args[i].Substring(prefix.Length);
+            }
+            return string.Empty;
         }
 
         private void AssertMask(GameObject surface, VideoCornerArtifactMask mask)
