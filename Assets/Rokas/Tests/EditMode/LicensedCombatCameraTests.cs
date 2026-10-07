@@ -338,6 +338,57 @@ namespace Rokas.Tests
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
+        [Test]
+        public void PerspectiveWideKeepsSourceDepthThroughOutgoingMixAndCancellation()
+        {
+            var root = new GameObject("PerspectiveWideFixture");
+            var camera = root.AddComponent<Camera>();
+            camera.orthographic = false;
+            camera.orthographicSize = 123f; // A dormant orthographic size must not move a perspective home.
+            camera.fieldOfView = 38f;
+            camera.transform.position = new Vector3(0f, .74f, -8.3f);
+            Matrix4x4 projection = camera.projectionMatrix;
+            try
+            {
+                var player = new LicensedCombatCameraPlayer(camera);
+                var source = SourceBasicDamage();
+                for (int cycle = 0; cycle < 12; cycle++)
+                {
+                    player.Begin(source, Vector3.zero, 1f, Quaternion.identity);
+                    player.Tick(72f / 60f);
+                    // t=72/60 is halfway through the source 22-frame outgoing mix: weight .25.
+                    Vector3 expected = new Vector3(0f, .7175f, -9.617525f);
+                    Assert.That(Vector3.Distance(camera.transform.position, expected), Is.LessThan(.000003f));
+                    Assert.That(camera.fieldOfView, Is.EqualTo(33f).Within(.00001f));
+                    Assert.That(camera.orthographic, Is.False);
+                    Vector3 displayed = camera.transform.position;
+                    float displayedFov = camera.fieldOfView;
+                    player.BeginCancel(.08f);
+                    Assert.That(camera.transform.position, Is.EqualTo(displayed));
+                    Assert.That(camera.fieldOfView, Is.EqualTo(displayedFov));
+                    player.Tick(.04f);
+                    Assert.That(player.IsHome, Is.False);
+                    Assert.That(Vector3.Distance(camera.transform.position,
+                        (displayed + new Vector3(0f, .74f, -8.3f)) * .5f), Is.LessThan(.000002f));
+                    Assert.That(camera.fieldOfView, Is.EqualTo((displayedFov + 38f) * .5f).Within(.00001f));
+                    player.Tick(.04f);
+                    Assert.That(player.IsHome, Is.True);
+                    Assert.That(camera.orthographic, Is.False);
+                    Assert.That(camera.fieldOfView, Is.EqualTo(38f));
+                    Assert.That(camera.orthographicSize, Is.EqualTo(123f));
+                    Assert.That(camera.transform.position, Is.EqualTo(new Vector3(0f, .74f, -8.3f)));
+                    for (int i = 0; i < 16; i++)
+                        Assert.That(camera.projectionMatrix[i], Is.EqualTo(projection[i]));
+                    player.Begin(source, Vector3.zero, 1f, Quaternion.identity);
+                    for (int i = 0; i < 83; i++) player.Tick(1f / 60f);
+                    Assert.That(player.Active, Is.False);
+                    Assert.That(player.IsHome, Is.True);
+                    Assert.That(camera.orthographic, Is.False, "Normal source exit cannot change projection mode.");
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         static LicensedCameraData SourceBasicDamage() => new LicensedCameraData
         {
             parentPosition = new Vector3(0f, 0f, -6.4f),

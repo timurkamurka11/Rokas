@@ -88,7 +88,8 @@ namespace Rokas.Tests
                 Assert.That(PreciseAngle(sample.Key.localRotation, sampledRotations[sample.Key]), Is.LessThan(.01f),
                     "Cancellation snapped the sampled bone rotation: " + sample.Key.name);
             }
-            Assert.That(ActorCamera().orthographic, Is.True, "Unconfirmed preview cannot activate the source contact shot.");
+            Assert.That(arena.CameraAtHome, Is.True, "Unconfirmed preview cannot activate the source contact shot.");
+            Assert.That(ActorCamera().fieldOfView, Is.EqualTo(hunter.DefaultLicensedProfile.camera.baseFov));
             Assert.That(arena.ThrowReleaseCount, Is.Zero);
             Assert.That(arena.ThrowContactCount, Is.Zero);
             Assert.That(GameObject.Find("KeikoThrownDagger"), Is.Null);
@@ -420,7 +421,7 @@ namespace Rokas.Tests
                         if (frame < contactFrame)
                         {
                             Assert.That(ContactConfirmed(sourceActor), Is.False);
-                            Assert.That(camera.orthographic, Is.True, "Camera push cannot precede authoritative contact.");
+                            tactical.AssertRestored(camera); // A source shot cannot precede authoritative contact.
                         }
                         // Let the production LateUpdate and skin renderer finish this manual sample.
                         // These components do not advance the standalone arena clock.
@@ -530,7 +531,7 @@ namespace Rokas.Tests
             Assert.That(camera.orthographic, Is.False, "The source action frame must start at contact, not a later tick.");
             Assert.That(camera.fieldOfView, Is.EqualTo(profile.camera.shotFov).Within(.0001f));
             arena.Tick(82f / 60f);
-            Assert.That(camera.orthographic, Is.False, "The final source blend sample still belongs to this shot.");
+            Assert.That(arena.CameraAtHome, Is.False, "The final source blend sample still belongs to this shot.");
             Assert.That(ActiveProfile(hunter), Is.SameAs(profile));
             arena.Tick(1f / 60f);
             Assert.That(arena.CameraAtHome, Is.True, "The shot must end at 1.3833333 seconds without an extra hit-stop delay.");
@@ -692,7 +693,7 @@ namespace Rokas.Tests
 
         private static void AssertTacticalWide(Camera camera, Vector3 position, float halfHeight)
         {
-            Assert.That(camera.orthographic, Is.True);
+            Assert.That(camera.orthographic, Is.False, "Native wide must retain the source perspective projection.");
             Assert.That(camera.fieldOfView, Is.EqualTo(38f));
             Assert.That(camera.orthographicSize, Is.EqualTo(halfHeight).Within(.000001f));
             Assert.That(Vector3.Distance(camera.transform.localPosition, position), Is.LessThan(.000001f));

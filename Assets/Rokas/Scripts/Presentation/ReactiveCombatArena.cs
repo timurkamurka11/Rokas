@@ -65,6 +65,7 @@ namespace Rokas.Presentation
         private Camera camera;
         private LicensedCombatCameraPlayer licensedCamera;
         private ReactiveCombatActorVisual licensedCameraPerformer;
+        private bool tacticalCameraOrthographic = true;
         private float tacticalCameraSize = 4.6f;
         private float tacticalCameraFov = 60f;
         private Vector3 tacticalCameraPosition = new Vector3(0f, 2.25f, -20f);
@@ -137,7 +138,7 @@ namespace Rokas.Presentation
         public float HeavyContactResolutionDelay { get; set; } = .09f;
         public event Action<string, string, bool> AttackPresentationStarted;
         public event Action<string, string, bool, string> SwingStarted;
-        public bool CameraAtHome => camera != null && camera.orthographic &&
+        public bool CameraAtHome => camera != null && camera.orthographic == tacticalCameraOrthographic &&
             (licensedCamera == null || licensedCamera.IsHome) &&
             camera.orthographicSize == tacticalCameraSize && camera.fieldOfView == tacticalCameraFov &&
             camera.transform.localPosition.Equals(tacticalCameraPosition) &&
@@ -853,7 +854,8 @@ namespace Rokas.Presentation
             if (profile != null && profile.camera != null)
             {
                 // The source wide camera is independent of BasicDamage's -6 root.
-                // Fix its actor-plane projection once, using a measured standing rig scale.
+                // Preserve the source perspective lens with a measured standing rig scale.
+                tacticalCameraOrthographic = false;
                 float scale = hunter.ModelRoot.lossyScale.y * profile.sourceToTargetScale;
                 tacticalCameraPosition = new Vector3(0f, hunterMotion.Home.y, 0f) +
                     profile.camera.basePosition * scale;
@@ -866,7 +868,7 @@ namespace Rokas.Presentation
 
         private void ApplyTacticalCamera()
         {
-            camera.orthographic = true;
+            camera.orthographic = tacticalCameraOrthographic;
             camera.orthographicSize = tacticalCameraSize;
             camera.fieldOfView = tacticalCameraFov;
             camera.transform.localRotation = tacticalCameraRotation;

@@ -1,6 +1,6 @@
 # Licensed DD2 combat/camera continuation — 7 October 2026
 
-Current sampler result: **12/12 PASS** (9 camera + 3 motion), `D:/DD2-Research/AnimationStudy/source_clock_deadline_green.xml`. Final saved-asset and runtime/frame acceptance remains in progress. Intermediate bakes and historical results below are not final native PASS.
+Current sampler result: **13/13 PASS** (10 camera + 3 motion), `D:/DD2-Research/AnimationStudy/source_perspective_wide_green.xml`. The earlier 12 deadline/curve/offset checks remain green. Final saved-asset and runtime/frame acceptance remains in progress. Intermediate bakes and historical results below are not final native PASS.
 
 Authoritative ancestor: `cc241c4a70590d0f6b2527d1e51f674effcd50d1`; branch `codex/dd2-licensed-motion`; worktree `C:/Users/tim/.codex/worktrees/dd2-licensed-motion/Rokas`. The user's newer canonical UI tree is read-only and is not incorporated.
 
@@ -9,7 +9,7 @@ The project owner's stated Red Hook license authorizes the motion/configuration 
 ## Current source behavior and integration
 
 - Recorded BasicDamage curves, ZXY rotation, FOV 18, wide FOV 38, actor-size/target-count Offset selection, quadratic outgoing mix and native shake priority/timing.
-- Source wide position `(0,.74,-8.3)` is scaled once from the normal hero rig. Orthographic actor-plane half-height is `8.3 * tan(19 degrees) * S`. BasicDamage's `z=-6` root is excluded from wide.
+- Source wide position `(0,.74,-8.3)` is scaled once from the normal hero rig with the source perspective FOV 38. Actor-plane half-height metadata is `8.3 * tan(19 degrees) * S` for entrance bounds. BasicDamage's `z=-6` root is excluded from wide. Native outgoing blend and interruption keep perspective throughout; the legacy camera remains orthographic.
 - The arena keeps one camera. Exact local home/lens/projection is captured. Own interruption freezes displayed body/sword/camera and uses the existing linear 0.08-second handoff; cleanup is immediate.
 - One equipment transform writer owns NativeMotion/ExitBlend/DefaultSocket transitions. Clips animate a helper; the support hand moves arms only. Parent changes preserve world pose. Return movement to source idle has a dedicated continuity fixture.
 - Double accumulation makes both samplers end the authored 83/60 phase on frame 83. The prior float implementation needed frame 84. Source durations and curves were preserved.
