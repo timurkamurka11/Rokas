@@ -118,10 +118,13 @@ namespace Rokas.Editor
                     ReactiveCombatActorClips definition = data.actor == "keiko" ? library.keiko : library.yokai;
                     typeof(ReactiveCombatActorClips).GetField(data.field).SetValue(definition, profile);
                     EditorUtility.SetDirty(profile);
+                    AssetDatabase.SaveAssetIfDirty(profile);
                     Debug.Log("LICENSED_PROFILE_IMPORTED " + data.name + " duration=" + profile.Duration + " source=" + data.sourceTimeline);
                 }
                 EditorUtility.SetDirty(library);
-                AssetDatabase.SaveAssets();
+                // Saving all assets would rewrite read-only binary motion clips
+                // under ForceText. Persist only this importer's generated settings.
+                AssetDatabase.SaveAssetIfDirty(library);
                 AssetDatabase.Refresh();
                 EditorApplication.Exit(0);
             }
