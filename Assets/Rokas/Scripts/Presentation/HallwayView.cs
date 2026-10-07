@@ -340,6 +340,7 @@ namespace Rokas.Presentation
         private float ownTarget;
         private float mainTarget;
         private float neighborTarget;
+        private bool stateInitialized;
 
         public static HomeLightStateOverlay CreateForHallway(UiKit ui, RectTransform parent)
         {
@@ -389,11 +390,22 @@ namespace Rokas.Presentation
         {
             ownTarget = hallwayOn ? 0f : 1f;
             mainTarget = mainRoomOn ? 0f : 1f;
+            if (!stateInitialized)
+            {
+                if (ownHallwayOff) ownHallwayOff.alpha = ownTarget;
+                if (mainRoomOff) mainRoomOff.alpha = mainTarget;
+                stateInitialized = true;
+            }
         }
 
         public void SetMainRoomNeighbor(bool hallwayOn)
         {
             neighborTarget = hallwayOn ? 0f : 1f;
+            if (!stateInitialized)
+            {
+                if (hallwayNeighborOff) hallwayNeighborOff.alpha = neighborTarget;
+                stateInitialized = true;
+            }
         }
 
         public void Tick(float dt)
