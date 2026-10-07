@@ -1,0 +1,137 @@
+name: ROKAS Portal Entry + Home Hotspot Cleanup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/portal-entry-home-hotspot-cleanup
+    paths:
+      - .github/workflows/portal-entry-home-hotspot-cleanup.yml
+      - Assets/Rokas/Scripts/Presentation/ReactiveMissionView.cs
+      - Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs
+      - Assets/Rokas/Tests/PlayMode/ReactiveCinematicHudPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/HomeScanUiPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/WorkbenchUiPlayModeTests.cs
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: portal-entry-home-hotspot-cleanup-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  portal-entry:
+    name: Clean portal / battle entry HUD
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PortalEntryCleanup-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PortalEntryCleanup-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run portal entry focused test
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.ReactiveCinematicHudPlayModeTests.RealEntranceAndFadingTurnAnnouncementGatePlayerControls
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Clean Portal Entry HUD
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-entry-cleanup
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  home-hotspot:
+    name: Home has no swords Workbench icon
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PortalEntryCleanup-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PortalEntryCleanup-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run Home scan focused tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeScanUiPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Home No Swords Workbench Icon
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: home-hotspot-cleanup
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  laptop-route:
+    name: Laptop remains the only Workbench route
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: PortalEntryCleanup-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            PortalEntryCleanup-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run laptop-only route regression
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.WorkbenchUiPlayModeTests.WorkbenchIsLaptopOnlyAndLegacyRoomRouteBuildsNothing
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Only Workbench Route
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: laptop-only-workbench-route
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
