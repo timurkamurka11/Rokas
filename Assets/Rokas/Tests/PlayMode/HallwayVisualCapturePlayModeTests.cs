@@ -61,6 +61,15 @@ namespace Rokas.Tests
             yield return WaitForLocation(HomeLocation.MainRoom);
             boot.View.Tick(.5f);
             Capture("mainroom_hallway_off");
+
+            boot.Session.SetLamp(false);
+            boot.Session.SetHallwayLight(true);
+            boot.View.Tick(.5f);
+            Capture("mainroom_off_hallway_on");
+
+            boot.Session.SetHallwayLight(false);
+            boot.View.Tick(.5f);
+            Capture("mainroom_both_off");
         }
 
         private IEnumerator WaitForLocation(HomeLocation expected)

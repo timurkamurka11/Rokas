@@ -128,10 +128,12 @@ namespace Rokas.Tests
             yield return WaitForLocation(HomeLocation.MainRoom);
             bootstrap.View.Tick(.5f);
 
-            CanvasGroup neighbor = Find<CanvasGroup>("MainRoomHallwayOffMask");
-            Assert.That(neighbor, Is.Not.Null);
-            Assert.That(neighbor.alpha, Is.GreaterThan(.70f),
-                "Main Hub must visually retain Hallway OFF through its right-side doorway region.");
+            HomeDoorwayPhotoGraphic doorway = Find<HomeDoorwayPhotoGraphic>("MainRoomHallwayPhotographicPortal");
+            Assert.That(doorway, Is.Not.Null,
+                "Main Room must display the real Hallway light state inside the right doorway.");
+            Assert.That(doorway.mainTexture, Is.SameAs(
+                Resources.Load<Texture2D>("Home/ApartmentNightLightOff")),
+                "Hallway OFF must select the authored unlit doorway photo.");
 
             Assert.That(bootstrap.Session.State.lampOn, Is.False);
             Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
@@ -159,13 +161,15 @@ namespace Rokas.Tests
             Find<Button>("HallwayReturnHotspot").onClick.Invoke();
             yield return WaitForLocation(HomeLocation.MainRoom);
             Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
-            Assert.That(Find<CanvasGroup>("MainRoomHallwayOffMask").alpha, Is.GreaterThan(.70f));
+            Assert.That(Find<HomeDoorwayPhotoGraphic>("MainRoomHallwayPhotographicPortal").mainTexture,
+                Is.SameAs(Resources.Load<Texture2D>("Home/ApartmentNightLightOff")));
 
             Find<Button>("DoorHotspot").onClick.Invoke();
             yield return WaitForLocation(HomeLocation.Hallway);
             Assert.That(bootstrap.Session.HallwayLightOn, Is.False);
-            Assert.That(Find<CanvasGroup>("HallwayOwnLightOffMask").alpha, Is.GreaterThan(.70f),
-                "Hallway OFF must already be visible on the first frame after a completed fade.");
+            RawImage hallwayImage = Find<RawImage>("WorldIllustration");
+            Assert.That(hallwayImage.material.GetFloat("_HallwayOn"), Is.LessThan(.01f),
+                "Hallway OFF must already render its unlit photo after the room fade.");
 
             Find<Button>("HallwayLightHotspot").onClick.Invoke();
             yield return null;
@@ -182,22 +186,55 @@ namespace Rokas.Tests
 
         private void AssertLightGroups(bool ownOff, bool mainOff)
         {
-            CanvasGroup own = Find<CanvasGroup>("HallwayOwnLightOffMask");
-            CanvasGroup main = Find<CanvasGroup>("HallwayMainRoomOffMask");
-            Assert.That(own, Is.Not.Null);
-            Assert.That(main, Is.Not.Null);
-            Assert.That(own.alpha, ownOff ? Is.GreaterThan(.70f) : Is.LessThan(.15f));
-            Assert.That(main.alpha, mainOff ? Is.GreaterThan(.70f) : Is.LessThan(.15f));
+            RawImage image = Find<RawImage>("WorldIllustration");
+            Assert.That(image, Is.Not.Null);
+            Assert.That(image.material, Is.Not.Null);
+            Assert.That(image.material.shader.name, Is.EqualTo("ROKAS/UI/HallwayLightStates"));
+            Assert.That(HallwayLightPresentation.OffPhoto, Is.Not.Null,
+                "Unlit user-approved photograph is required for the two-state composite.");
+            Assert.That(HallwayLightPresentation.OffPhoto.width, Is.EqualTo(1920));
+            Assert.That(HallwayLightPresentation.OffPhoto.height, Is.EqualTo(1080));
+            Assert.That(image.material.GetTexture("_OffTex"), Is.SameAs(HallwayLightPresentation.OffPhoto));
+            Assert.That(image.material.GetFloat("_HallwayOn"),
+                ownOff ? Is.LessThan(.05f) : Is.GreaterThan(.95f));
+            Assert.That(image.material.GetFloat("_MainRoomOn"),
+                mainOff ? Is.LessThan(.05f) : Is.GreaterThan(.95f));
 
-            Assert.That(Find<Graphic>("CeilingPracticalDim"), Is.Not.Null);
-            Assert.That(Find<Graphic>("CabinetPracticalDim"), Is.Not.Null);
-            Assert.That(Find<Graphic>("EntryWarmDim"), Is.Not.Null);
-            Assert.That(Find<Graphic>("CabinetLanternCoreOff"), Is.Not.Null);
-            Assert.That(Find<Graphic>("EntryLanternCoreOff"), Is.Not.Null);
-            Assert.That(Find<Graphic>("MainRoomDeskPracticalOff"), Is.Not.Null);
-            Assert.That(Find<Graphic>("VisibleMainRoomDim"), Is.Not.Null);
-            Assert.That(Find<Graphic>("HallwayGlobalBlackOverlay"), Is.Null,
-                "Hallway OFF must use localized light treatment, not a global black rectangle.");
+            Assert.That(Find<CanvasGroup>("HallwayOwnLightOffMask"), Is.Null,
+                "The old circular/rectangular patches must not be instantiated.");
+            Assert.That(Find<CanvasGroup>("HallwayMainRoomOffMask"), Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator MainRoomDoorwayUsesHallwayPhotographIndependently()
+        {
+            RawImage world = Find<RawImage>("WorldIllustration");
+            Texture mainOn = world.texture;
+            Texture mainOff = Resources.Load<Texture2D>("Home/ApartmentNightLightOff");
+            Assert.That(mainOn, Is.Not.Null);
+            Assert.That(mainOff, Is.Not.Null);
+
+            bootstrap.Session.SetLamp(false);
+            bootstrap.Session.SetHallwayLight(true);
+            bootstrap.View.Tick(.25f);
+
+            var doorway = Find<HomeDoorwayPhotoGraphic>("MainRoomHallwayPhotographicPortal");
+            Assert.That(doorway, Is.Not.Null);
+            Assert.That(world.texture, Is.SameAs(mainOff));
+            Assert.That(doorway.mainTexture, Is.SameAs(mainOn),
+                "Hallway ON must remain lit inside the MainRoom doorway, even when MainRoom is OFF.");
+
+            bootstrap.Session.SetHallwayLight(false);
+            bootstrap.View.Tick(.25f);
+            Assert.That(world.texture, Is.SameAs(mainOff));
+            Assert.That(doorway.mainTexture, Is.SameAs(mainOff));
+
+            bootstrap.Session.SetLamp(true);
+            bootstrap.View.Tick(.25f);
+            Assert.That(world.texture, Is.SameAs(mainOn));
+            Assert.That(doorway.mainTexture, Is.SameAs(mainOff),
+                "MainRoom ON must not turn on the Hallway doorway.");
+            yield return null;
         }
 
         private IEnumerator WaitForLocation(HomeLocation location)
