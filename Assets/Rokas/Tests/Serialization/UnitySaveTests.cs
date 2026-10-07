@@ -45,5 +45,50 @@ namespace Rokas.Tests
             Assert.That(recovered.Status, Is.EqualTo(SaveLoadStatus.RecoveredBackup));
             Assert.That(recovered.Data.yen, Is.EqualTo(1900));
         }
+
+        [Test]
+        public void HallwayLightPersistsIndependentlyFromMainRoomLight()
+        {
+            var store = new SaveStore(directory, new UnitySaveCodec());
+            var state = new SaveData
+            {
+                lampOn = true,
+                hallwayLightState = 2,
+                yen = 1200
+            };
+
+            Assert.That(store.Save(state).Succeeded, Is.True);
+            SaveLoadResult loaded = store.Load();
+            Assert.That(loaded.Succeeded, Is.True);
+
+            var session = new GameSession(loaded.Data, new ContractDefinition());
+            Assert.That(session.State.lampOn, Is.True);
+            Assert.That(session.HallwayLightOn, Is.False);
+
+            session.SetLamp(false);
+            session.SetHallwayLight(true);
+            Assert.That(store.Save(session.State).Succeeded, Is.True);
+
+            var reopened = new GameSession(store.Load().Data, new ContractDefinition());
+            Assert.That(reopened.State.lampOn, Is.False);
+            Assert.That(reopened.HallwayLightOn, Is.True);
+        }
+
+        [Test]
+        public void LegacySaveWithoutHallwayLightDefaultsToOn()
+        {
+            var legacy = new SaveData
+            {
+                lampOn = false,
+                hallwayLightState = 0
+            };
+
+            var session = new GameSession(legacy, new ContractDefinition());
+            Assert.That(session.State.lampOn, Is.False,
+                "MainRoomLight migration must not alter the existing room state.");
+            Assert.That(session.HallwayLightOn, Is.True);
+            Assert.That(session.State.hallwayLightState, Is.EqualTo(1),
+                "Missing/zero Hallway state must normalize to the safe ON default.");
+        }
     }
 }
