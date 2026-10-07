@@ -131,7 +131,6 @@ namespace Rokas.Tests
         {
             bootstrap.Session.SetLamp(mainOn);
             bootstrap.Session.SetHallwayLight(hallwayOn);
-            bootstrap.View.Refresh();
             for (int i = 0; i < 4; i++) bootstrap.View.Tick(.25f);
         }
 
