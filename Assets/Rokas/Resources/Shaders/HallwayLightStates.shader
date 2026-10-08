@@ -52,12 +52,18 @@ Shader "ROKAS/UI/HallwayLightStates"
                 // Select the MainRoom image INSIDE the physical doorway only, not with a
                 // circular/radial artificial spotlight. Coordinates are top-left authored.
                 float2 p = float2(i.uv.x * 1920.0, (1.0-i.uv.y)*1080.0);
-                float left = lerp(292.0,303.0,saturate((p.y-810.0)/145.0));
-                float right = lerp(722.0,730.0,saturate((p.y-810.0)/145.0));
-                float entry = smoothstep(left-3.0,left+3.0,p.x);
-                float exit = 1.0-smoothstep(right-3.0,right+3.0,p.x);
-                float bottom = 1.0-smoothstep(940.0,958.0,p.y);
-                float mainRoomOpening = saturate(entry*exit*bottom);
+                // Pixel-aligned inner jambs of the photographed LEFT doorway.
+                // The visible wood threshold slopes from (320,985) to (692,915).
+                // Previous horizontal y=940..958 cutoff stranded a warm strip in
+                // the MainRoom floor. Follow the threshold, not a viewport rectangle.
+                float low = saturate((p.y-600.0)/385.0);
+                float left = lerp(290.0,320.0,low);
+                float right = lerp(695.0,692.0,low);
+                float threshold = lerp(985.0,915.0,saturate((p.x-320.0)/372.0));
+                float innerJamb = smoothstep(left-2.0,left+2.0,p.x) *
+                                  (1.0-smoothstep(right-2.0,right+2.0,p.x));
+                float sill = 1.0-smoothstep(threshold-2.0,threshold+2.0,p.y);
+                float mainRoomOpening = saturate(innerJamb*sill);
                 float illumination = lerp(saturate(_HallwayOn),saturate(_MainRoomOn),mainRoomOpening);
                 fixed4 onPhoto = tex2D(_MainTex,i.uv);
                 fixed4 offPhoto = tex2D(_OffTex,i.uv);
