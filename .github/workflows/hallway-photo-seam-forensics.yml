@@ -1,101 +1,74 @@
-name: ROKAS Hallway Photo Seam Forensics
+name: ROKAS Hallway Photograph Pixel Regression
+
 on:
   push:
     branches:
       - codex/hallway-doorway-visual-artifact-repair
     paths:
       - .github/workflows/hallway-photo-seam-forensics.yml
+      - Assets/Rokas/Scripts/Presentation/HallwayLightPresentation.cs
+      - Assets/Rokas/Art/Home/ApartmentNight.png
+      - Assets/Rokas/Resources/Home/ApartmentNightLightOff.png
+
 permissions:
   contents: read
+
 jobs:
-  photo-analysis:
+  photographic-pixel-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect source ON OFF image alignment and doorway ROI
+      - name: Check actual ON/OFF pixels, lamp niche and TV boundary
         shell: bash
         run: |
           python3 -m pip -q install Pillow
           python3 - <<'PY'
-          import base64, io
-          from PIL import Image, ImageChops, ImageStat
-          files = {
-             'ON': 'Assets/Rokas/Art/Home/ApartmentNight.png',
-             'OFF': 'Assets/Rokas/Resources/Home/ApartmentNightLightOff.png',
-          }
-          images = {}
-          for name, path in files.items():
-              image = Image.open(path).convert('RGB')
-              images[name] = image
-              print(f'PHOTO_DIM_{name}={image.size}', flush=True)
-              roi = image.crop((1330,0,1672,620))
-              buff = io.BytesIO()
-              roi.save(buff,format='JPEG',quality=78,optimize=True)
-              print('PHOTO_ROI_'+name+'='+base64.b64encode(buff.getvalue()).decode('ascii'),flush=True)
-              for y in (45,80,180,275,385,415):
-                  segments=[]
-                  for x0,x1 in ((1620,1700),(1700,1768),(1768,1835),(1835,1870)):
-                      sx=image.width/1920.0; sy=image.height/1080.0
-                      patch=image.crop((round(x0*sx),round(y*sy),round(x1*sx),round((y+10)*sy)))
-                      means=ImageStat.Stat(patch).mean
-                      segments.append(f'{x0}-{x1}:'+','.join(f'{v:.1f}' for v in means))
-                  print(f'PHOTO_BAND_{name}_{y}='+' '.join(segments),flush=True)
-          if images['ON'].size == images['OFF'].size:
-              delta=ImageChops.difference(images['ON'],images['OFF'])
-              for box in ((1620,80,1870,380),(1620,380,1870,470),(1618,470,1760,640)):
-                  means=ImageStat.Stat(delta.crop(tuple(round(v*(images['ON'].width/1920.0 if k%2==0 else images['ON'].height/1080.0)) for k,v in enumerate(box)))).mean
-                  print('PHOTO_DIFFERENCE_'+str(box)+'='+','.join(f'{v:.1f}' for v in means),flush=True)
-          from PIL import ImageDraw, ImageFilter
-          # Reconstruct the currently committed photographic doorway polygon
-          # in native 1672x941 texture coordinates, including its 4 px feather.
-          doorway = [(1622,72),(1712,58),(1872,30),(1873,390),
-             (1850,394),(1800,398),(1768,403),(1760,453),(1751,466),
-             (1751,645),(1700,636),(1660,629),(1618,621)]
-          sx=images['ON'].width/1920;sy=images['ON'].height/1080
-          polygon=[(round(x*sx),round(y*sy)) for x,y in doorway]
-          mask=Image.new('L', images['ON'].size, 0)
-          ImageDraw.Draw(mask).polygon(polygon, fill=255)
-          mask=mask.filter(ImageFilter.GaussianBlur(radius=3.5))
-          cases={'MAIN_ON_HALL_OFF':Image.composite(images['OFF'],images['ON'],mask),
-                 'MAIN_OFF_HALL_ON':Image.composite(images['ON'],images['OFF'],mask)}
-          for name, photo in cases.items():
-              out=io.BytesIO()
-              photo.crop((1330,0,1672,620)).save(out,format='JPEG',quality=78,optimize=True)
-              print('PHOTO_HYBRID_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
-          # Overlay true authored-stage grid and polygon edge over the comparison.
-          # Make the lower-right problem area obvious without guessing from a
-          # heavily resized end-user screenshot.
-          for name, photo in cases.items():
-              pic=photo.copy()
-              draw=ImageDraw.Draw(pic)
-              for stage_x in (1700,1730,1750,1770,1790,1810,1830,1850,1870):
-                  tx=round(stage_x*sx)
-                  draw.line([(tx,round(330*sy)),(tx,round(620*sy))],fill=(240,75,60),width=1)
-                  draw.text((tx+2,round(330*sy)),str(stage_x),fill=(255,255,150))
-              for stage_y in (380,400,420,440,460,480,500,520,540,570,600):
-                  ty=round(stage_y*sy)
-                  draw.line([(round(1680*sx),ty),(round(1875*sx),ty)],fill=(60,220,110),width=1)
-                  draw.text((round(1680*sx),ty+1),str(stage_y),fill=(240,255,180))
-              draw.line(polygon+[polygon[0]],fill=(255,250,20),width=2)
-              out=io.BytesIO()
-              pic.crop((round(1590*sx),round(315*sy),round(1895*sx),round(635*sy))).resize((610,640)).save(out,format='JPEG',quality=84)
-              print('PHOTO_GRID_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
-          # Lower-right corridor/light spill candidate: follow the INNER
-          # silhouette around the potted lamp, stop short of the TV glass.
-          trial = [(1622,72),(1712,58),(1872,30),(1873,390),
-                   (1850,394),(1800,398),(1796,404),
-                   (1795,433),(1795,454),(1794,466),
-                   (1789,477),(1764,484),(1751,484),
-                   (1751,645),(1700,636),(1660,629),(1618,621)]
-          tpoly=[(round(x*sx),round(y*sy)) for x,y in trial]
-          trialmask=Image.new('L',images['ON'].size,0)
-          ImageDraw.Draw(trialmask).polygon(tpoly,fill=255)
-          trialmask=trialmask.filter(ImageFilter.GaussianBlur(radius=3.5))
-          for name, composite in {
-              'MAIN_ON_HALL_OFF':Image.composite(images['OFF'],images['ON'],trialmask),
-              'MAIN_OFF_HALL_ON':Image.composite(images['ON'],images['OFF'],trialmask)}.items():
-              out=io.BytesIO()
-              composite.crop((round(1600*sx),round(325*sy),round(1900*sx),round(610*sy))).resize((660,627)).save(out,format='JPEG',quality=80)
-              print('PHOTO_TRIAL_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
+          import math, pathlib, re
+          from PIL import Image
+          on=Image.open('Assets/Rokas/Art/Home/ApartmentNight.png').convert('RGB')
+          off=Image.open('Assets/Rokas/Resources/Home/ApartmentNightLightOff.png').convert('RGB')
+          assert on.size == off.size, 'Source photographs must have aligned dimensions'
+          script=pathlib.Path('Assets/Rokas/Scripts/Presentation/HallwayLightPresentation.cs').read_text(encoding='utf-8-sig')
+          polygon=script.split('private static readonly Vector2[] Doorway = {',1)[1].split('};',1)[0]
+          vertices=[tuple(map(float, v)) for v in re.findall(r'new Vector2\(([0-9.]+)f,([0-9.]+)f\)',polygon)]
+          assert len(vertices)>=13, 'Photographic doorway contour not found'
+          def coverage(x,y):
+              inside=False
+              closest=1e20
+              for j in range(len(vertices)):
+                  ax,ay=vertices[j-1]; bx,by=vertices[j]
+                  dx=bx-ax;dy=by-ay; denom=dx*dx+dy*dy
+                  if ((ay>y)!=(by>y)) and x<(bx-ax)*(y-ay)/(by-ay)+ax:
+                      inside=not inside
+                  u=max(0,min(1,((x-ax)*dx+(y-ay)*dy)/denom))
+                  distance=math.hypot(x-ax-u*dx,y-ay-u*dy)
+                  closest=min(closest,distance)
+              t=max(0,min(1,closest/4))
+              return t*t*(3-2*t) if inside else 0
+          def sample(im,x,y):
+              u=max(0,min(im.width-1,round(x*im.width/1920)))
+              v=max(0,min(im.height-1,round(y*im.height/1080)))
+              return im.getpixel((u,v))
+          def composite(x,y,main_on,hall_on):
+              alpha=coverage(x,y)
+              main=on if main_on else off
+              hall=on if hall_on else off
+              a,b=sample(main,x,y),sample(hall,x,y)
+              return tuple(round(a[i]*(1-alpha)+b[i]*alpha) for i in range(3))
+          # User-reported orange rectangle and plant/light niche under curtain.
+          for x,y in [(1780,440),(1782,461),(1770,480)]:
+              assert coverage(x,y)>.95,(x,y,coverage(x,y))
+              assert composite(x,y,True,False)==sample(off,x,y),(x,y,'HALL_OFF_LEAK')
+              assert composite(x,y,False,True)==sample(on,x,y),(x,y,'HALL_ON_LEAK')
+              print('NICHE_SWITCH_OK',x,y,sample(on,x,y),sample(off,x,y))
+          # TV image and foreground cabinet never switch with the hallway.
+          for x,y in [(1805,440),(1810,465),(1785,500),(1830,421)]:
+              assert coverage(x,y)==0,(x,y,coverage(x,y))
+              assert composite(x,y,True,False)==sample(on,x,y)
+              assert composite(x,y,False,True)==sample(off,x,y)
+              print('TV_FOREGROUND_UNTOUCHED',x,y)
+          for x,y in [(1879,230),(1904,230),(1660,640)]:
+              assert coverage(x,y)==0,(x,y,coverage(x,y))
+          print('PHOTO_SEAM_PIXEL_REGRESSION_PASS source=',on.size,'vertices=',len(vertices))
           PY
