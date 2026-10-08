@@ -126,7 +126,11 @@ namespace Rokas.Presentation
             new Vector2(1740f,393f), new Vector2(1754f,393f),
             new Vector2(1768f,397f),
             new Vector2(1760f,453f), new Vector2(1740f,466f),
-            new Vector2(1740f,618f), new Vector2(1628f,614f)
+            // Bottom visible Hallway follows the photographed wooden sill,
+            // from the left inner jamb (~1618,623) to the right (~1740,645).
+            // The previous flat 614-618 cutoff left a 10-25px lit floor strip.
+            new Vector2(1740f,643f), new Vector2(1700f,636f),
+            new Vector2(1660f,629f), new Vector2(1618f,621f)
         };
         public static float CoverageAt(float x,float y)
         {
@@ -146,7 +150,9 @@ namespace Rokas.Presentation
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            const float x0=1620f,y0=58f,x1=1776f,y1=630f;
+            // Include the full sloping sill. y1=630 previously clipped the
+            // mesh even if the polygon was extended below it.
+            const float x0=1608f,y0=58f,x1=1776f,y1=652f;
             const int step=3;
             int nx=Mathf.CeilToInt((x1-x0)/step);
             int ny=Mathf.CeilToInt((y1-y0)/step);
