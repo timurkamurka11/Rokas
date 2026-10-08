@@ -1,0 +1,55 @@
+using System;using System.Reflection;using NUnit.Framework;using Rokas.Presentation;using UnityEngine;
+namespace Rokas.Tests {
+ public sealed class LicensedCombatMotionTests {
+  // Catches contact fired by clip duration, wrong action IDs, or duplicate domain events.
+  [Test] public void ContactWaitsForMatchingCoreActionAndCannotRestartRecovery(){
+   var asm=typeof(ReactiveCombatActorVisual).Assembly;var pt=asm.GetType("Rokas.Presentation.LicensedCombatMotionProfile");var mt=asm.GetType("Rokas.Presentation.LicensedCombatMotionPlayer");
+   Assert.That(pt,Is.Not.Null,"Licensed motion profile is missing");Assert.That(mt,Is.Not.Null,"Licensed presentation player is missing");
+   var root=new GameObject("MotionFixture");var child=new GameObject("Animated");child.transform.SetParent(root.transform,false);var anim=root.AddComponent<Animation>();var profile=ScriptableObject.CreateInstance(pt);var anticipation=Clip(0,1);var action=Clip(10,10);var recovery=Clip(20,22);object player=null;
+   try {Set(profile,"anticipation",anticipation);var st=asm.GetType("Rokas.Presentation.LicensedMotionSegment");var segments=Array.CreateInstance(st,2);object a=Activator.CreateInstance(st),b=Activator.CreateInstance(st);Set(a,"clip",action);Set(a,"start",0f);Set(a,"duration",1f);Set(b,"clip",recovery);Set(b,"start",1f);Set(b,"duration",1f);segments.SetValue(a,0);segments.SetValue(b,1);Set(profile,"segments",segments);
+    player=Activator.CreateInstance(mt,new object[]{anim,null});Call(player,"Begin",profile,"action-1","Attack");Call(player,"Tick",.4f);Assert.That(child.transform.localPosition.x,Is.EqualTo(.4f).Within(.002f));
+    Assert.That(Call(player,"ConfirmContact","other-action"),Is.False);Call(player,"Tick",.8f);Assert.That(child.transform.localPosition.x,Is.EqualTo(1f).Within(.002f),"Anticipation must wait at its end for Core, never auto-contact");
+    Assert.That(Call(player,"ConfirmContact","action-1"),Is.True);Assert.That(child.transform.localPosition.x,Is.EqualTo(10f).Within(.002f));Call(player,"Tick",1.5f);Assert.That(child.transform.localPosition.x,Is.EqualTo(21f).Within(.002f));
+    Assert.That(Call(player,"ConfirmContact","action-1"),Is.False);Call(player,"Tick",.1f);Assert.That(child.transform.localPosition.x,Is.EqualTo(21.2f).Within(.002f),"Duplicate contact must not rewind recovery");
+   } finally {UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(profile);foreach(var c in new[]{anticipation,action,recovery})UnityEngine.Object.DestroyImmediate(c);}
+  }
+  // Catches the equal-weight plateau when a source Timeline overlaps its two phases.
+  [Test] public void OverlapUsesAuthoredMixCurvesInsteadOfEqualWeightPlateau(){
+   var asm=typeof(ReactiveCombatActorVisual).Assembly;var pt=asm.GetType("Rokas.Presentation.LicensedCombatMotionProfile");var mt=asm.GetType("Rokas.Presentation.LicensedCombatMotionPlayer");var st=asm.GetType("Rokas.Presentation.LicensedMotionSegment");var root=new GameObject("OverlapFixture");var child=new GameObject("Animated");child.transform.SetParent(root.transform,false);var animation=root.AddComponent<Animation>();var p=ScriptableObject.CreateInstance(pt);var antic=Clip(0,0);var action=Clip(10,10);var recover=Clip(20,20);
+   try{Set(p,"anticipation",antic);var segments=Array.CreateInstance(st,2);var a=Activator.CreateInstance(st);var b=Activator.CreateInstance(st);Set(a,"clip",action);Set(a,"duration",1.05f);Set(b,"clip",recover);Set(b,"start",1f);Set(b,"duration",1f);segments.SetValue(a,0);segments.SetValue(b,1);Set(p,"segments",segments);var player=Activator.CreateInstance(mt,new object[]{animation,null});Call(player,"Begin",p,"overlap-action","Attack");Call(player,"ConfirmContact","overlap-action");Call(player,"Tick",1.0125f);Assert.That(child.transform.localPosition.x,Is.EqualTo(12.5f).Within(.005f),"Quarter way through a 50ms overlap must use outgoing75%/incoming25%");}
+   finally{UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(p);foreach(var c in new[]{antic,action,recover})UnityEngine.Object.DestroyImmediate(c);}
+  }
+  [Test] public void SixtyHertzPlaybackEndsAtTheAuthoredFrameWithoutAnAdditionalTick(){
+   var root=new GameObject("SourceClockFixture");var child=new GameObject("Animated");child.transform.SetParent(root.transform,false);var animation=root.AddComponent<Animation>();var profile=ScriptableObject.CreateInstance<LicensedCombatMotionProfile>();var clip=Clip(0,1);
+   try{profile.anticipation=clip;profile.segments=new[]{new LicensedMotionSegment{clip=clip,start=0,duration=83f/60f}};var player=new LicensedCombatMotionPlayer(animation,null);
+    for(int cycle=0;cycle<20;cycle++){string id="frame-clock-"+cycle;player.Begin(profile,id,"FrameAntic");Assert.That(player.ConfirmContact(id),Is.True);for(int frame=1;frame<=82;frame++)player.Tick(1f/60f);Assert.That(player.Active,Is.True,"Source phase must remain active through frame82");player.Tick(1f/60f);Assert.That(player.Active,Is.False,"Source phase ends on authored frame83, not84 from accumulated float rounding");}
+   }finally{UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(profile);UnityEngine.Object.DestroyImmediate(clip);}
+  }
+
+  // The source stage cue releases layout/camera ownership before the performer finishes its recovery.
+  [Test] public void StageRecoveryCueLeavesTheFullPerformerSequenceRunning(){
+   var root=new GameObject("StageRecoveryLifetimeFixture");var child=new GameObject("Animated");child.transform.SetParent(root.transform,false);var animation=root.AddComponent<Animation>();var profile=ScriptableObject.CreateInstance<LicensedCombatMotionProfile>();var anticipation=Clip(0,1);var recovery=new AnimationClip{legacy=true};recovery.SetCurve("Animated",typeof(Transform),"localPosition.x",AnimationCurve.Linear(0,10,3.5f,13.5f));
+   try{profile.anticipation=anticipation;profile.stageRecoveryTime=83f/60f;profile.segments=new[]{new LicensedMotionSegment{clip=recovery,start=0,duration=3.5f}};var player=new LicensedCombatMotionPlayer(animation,null);player.Begin(profile,"stage-recovery","Anticipation");player.Tick(.9f);
+    Assert.That(player.ReachesStageRecovery(10f,out _),Is.False,"Anticipation time cannot trigger a contact-origin stage cue");Assert.That(player.ConfirmContact("stage-recovery"),Is.True);Assert.That(player.Clock,Is.Zero,"Only matching contact resets the source action clock");
+    for(int frame=0;frame<82;frame++)player.Tick(1f/60f);Assert.That(player.StageRecoveryReached,Is.False);player.Tick(1f/60f);
+    Assert.That(player.StageRecoveryReached,Is.True);Assert.That(player.Active,Is.True,"Stage recovery must not truncate the later performer FK recovery");Assert.That(player.Profile,Is.SameAs(profile));float poseAtCue=child.transform.localPosition.x;float clockAtCue=player.Clock;
+    Assert.That(player.ConfirmContact("stage-recovery"),Is.False);Assert.That(player.Clock,Is.EqualTo(clockAtCue),"Repeated contact cannot restart recovery at the layout cue");player.Tick(.5f);Assert.That(child.transform.localPosition.x-poseAtCue,Is.EqualTo(.5f).Within(.002f),"The body must keep sampling source recovery after stage release");
+    player.Tick(profile.Duration-player.Clock);Assert.That(player.Active,Is.False,"Only the full authored performer deadline releases native body ownership");
+   }finally{UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(profile);UnityEngine.Object.DestroyImmediate(anticipation);UnityEngine.Object.DestroyImmediate(recovery);}
+  }
+  // A frame straddling the cue may spend only its remainder on root return; source prediction is read-only.
+  [Test] public void StageCuePredictionPreservesContactClockAndReturnsOnlyTheCrossingRemainder(){
+   var firstRoot=new GameObject("WholeStepCueFixture");var secondRoot=new GameObject("PartitionedCueFixture");var firstChild=new GameObject("Animated");firstChild.transform.SetParent(firstRoot.transform,false);var secondChild=new GameObject("Animated");secondChild.transform.SetParent(secondRoot.transform,false);var profile=ScriptableObject.CreateInstance<LicensedCombatMotionProfile>();var clip=Clip(10,12);
+   try{profile.anticipation=clip;profile.stageRecoveryTime=.5f;profile.segments=new[]{new LicensedMotionSegment{clip=clip,start=0,duration=2f}};var whole=new LicensedCombatMotionPlayer(firstRoot.AddComponent<Animation>(),null);var partitioned=new LicensedCombatMotionPlayer(secondRoot.AddComponent<Animation>(),null);whole.Begin(profile,"whole-cue","Anticipation");partitioned.Begin(profile,"partitioned-cue","Anticipation");whole.Tick(1f);
+    Assert.That(whole.ReachesStageRecovery(1f,out float precontactRemainder),Is.False);Assert.That(precontactRemainder,Is.Zero);Assert.That(whole.ConfirmContact("other-cue"),Is.False);Assert.That(whole.Clock,Is.EqualTo(1f));Assert.That(whole.ConfirmContact("whole-cue"),Is.True);Assert.That(whole.Clock,Is.Zero);Assert.That(partitioned.ConfirmContact("partitioned-cue"),Is.True);
+    whole.Tick(.375f);partitioned.Tick(.125f);partitioned.Tick(.25f);Assert.That(whole.ReachesStageRecovery(.0625f,out float beforeCue),Is.False);Assert.That(beforeCue,Is.Zero);
+    Assert.That(whole.ReachesStageRecovery(.25f,out float wholeRemainder),Is.True);Assert.That(partitioned.ReachesStageRecovery(.25f,out float partitionedRemainder),Is.True);Assert.That(wholeRemainder,Is.EqualTo(.125f));Assert.That(partitionedRemainder,Is.EqualTo(wholeRemainder),"Splitting earlier source ticks must not change the root return remainder");Assert.That(whole.Clock,Is.EqualTo(.375f),"Looking ahead must not advance or reset the source clock");Assert.That(partitioned.Clock,Is.EqualTo(whole.Clock));
+    whole.Tick(.25f);partitioned.Tick(.125f);partitioned.Tick(.125f);Assert.That(whole.StageRecoveryReached,Is.True);Assert.That(partitioned.Clock,Is.EqualTo(whole.Clock));Assert.That(secondChild.transform.localPosition.x,Is.EqualTo(firstChild.transform.localPosition.x).Within(.0001f));Assert.That(whole.Active,Is.True);
+    Assert.That(whole.ReachesStageRecovery(.0625f,out float afterCue),Is.True);Assert.That(afterCue,Is.EqualTo(.0625f),"After the cue, the entire new frame is available to root return");float clockAfterCue=whole.Clock;Assert.That(whole.ConfirmContact("whole-cue"),Is.False);Assert.That(whole.Clock,Is.EqualTo(clockAfterCue));
+   }finally{UnityEngine.Object.DestroyImmediate(firstRoot);UnityEngine.Object.DestroyImmediate(secondRoot);UnityEngine.Object.DestroyImmediate(profile);UnityEngine.Object.DestroyImmediate(clip);}
+  }
+  static void Set(object o,string key,object v)=>o.GetType().GetField(key).SetValue(o,v);
+  static object Call(object o,string key,params object[] values)=>o.GetType().GetMethod(key).Invoke(o,values);
+  static AnimationClip Clip(float a,float b){var c=new AnimationClip{legacy=true};c.SetCurve("Animated",typeof(Transform),"localPosition.x",AnimationCurve.Linear(0,a,1,b));return c;}
+ }
+}

@@ -8,6 +8,11 @@ namespace Rokas.Presentation
     [Serializable]
     public sealed class ReactiveCombatActorClips
     {
+        public LicensedCombatMotionProfile licensedNormal;
+        public LicensedCombatMotionProfile licensedHeavy;
+        public LicensedCombatMotionProfile licensedThrow;
+        public LicensedCombatMotionProfile licensedBoss;
+        public LicensedCombatMotionProfile licensedBossHeavy;
         public GameObject model;
         public Material material;
         public AnimationClip idle;

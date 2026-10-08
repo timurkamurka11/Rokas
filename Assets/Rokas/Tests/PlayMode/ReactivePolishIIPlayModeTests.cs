@@ -119,7 +119,8 @@ namespace Rokas.Tests
                 for (int i = 0; i < 12; i++) arena.Tick(.025f);
                 Assert.That(arena.SelectionVisible, Is.True);
                 Assert.That(arena.HunterPosition, Is.EqualTo(arena.HunterHome));
-                Assert.That(arena.CameraAtHome, Is.False);
+                Assert.That(arena.CameraAtHome, Hunter().DefaultLicensedProfile == null ? Is.False : Is.True,
+                    "Native selection keeps source tactical framing; Legacy selection owns its preview zoom.");
                 string prepare = Hunter().CurrentPose;
                 Assert.That(prepare, Is.EqualTo(heavy ? "HeavyPreparation" : "Preparation"));
                 int ticks = 0;
@@ -169,6 +170,31 @@ namespace Rokas.Tests
             hunter.PlayAttack(); hunter.AwaitAttackContact(false);
             hunter.TickPresentation(2f);
             Assert.That(hunter.CurrentPose, Is.EqualTo("Attack"));
+            if (hunter.ActiveLicensedProfile != null)
+            {
+                LicensedCombatMotionProfile source = hunter.ActiveLicensedProfile;
+                Assert.That(hunter.AwaitingAttackContact, Is.True);
+                Assert.That(hunter.LicensedContactConfirmed, Is.False, "Time alone never authorizes source contact.");
+                Assert.That(hunter.LicensedMotionClock, Is.EqualTo(2f).Within(.001f));
+                var anticipation = hunter.ModelRoot.GetComponent<Animation>()["Licensed_Anticipation"];
+                Assert.That(anticipation.time, Is.EqualTo(Mathf.Min(2f * source.anticipationSpeed,
+                    source.anticipation.length)).Within(.001f));
+                Assert.That(hunter.ActionRecoveryComplete, Is.False);
+                hunter.BindLicensedContact("pending-contact-source");
+                Assert.That(hunter.ConfirmLicensedContact("pending-contact-source"), Is.True);
+                Assert.That(hunter.ConfirmLicensedContact("pending-contact-source"), Is.False);
+                Assert.That(hunter.LicensedMotionClock, Is.Zero);
+                Assert.That(hunter.HitStopRemaining, Is.Zero, "Source playback adds no Legacy hit-stop.");
+                hunter.TickPresentation(.04f);
+                Assert.That(hunter.LicensedMotionClock, Is.EqualTo(.04f).Within(.0001f));
+                hunter.TickPresentation(source.Duration - .05f);
+                Assert.That(hunter.ActionRecoveryComplete, Is.False, "Keep the complete source recovery tail.");
+                hunter.TickPresentation(.02f);
+                hunter.TickPresentation(.09f);
+                Assert.That(hunter.ActionRecoveryComplete && hunter.IdleSettled, Is.True);
+                yield return null;
+                yield break;
+            }
             Assert.That(hunter.CurrentPoseSeconds, Is.EqualTo(hunter.AttackContactSeconds(false)).Within(.001f));
             Assert.That(hunter.ActionRecoveryComplete, Is.False);
             hunter.HoldAttackAtContact(false, .08f);
