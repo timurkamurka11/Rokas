@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - codex/hallway-threshold-crossroom-yomi-flow
+      - codex/hallway-door-sill-microfix
+      - r11-finished-ui
     paths:
       - .github/workflows/home-hallway-expansion.yml
       - Assets/Rokas/Scripts/Core/State.cs
@@ -44,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - name: Verify both committed photographic light states
         shell: bash
         run: |
@@ -65,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - uses: actions/cache@v6
         with:
           path: Library
@@ -97,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - uses: actions/cache@v6
         with:
           path: Library
@@ -129,7 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - uses: actions/cache@v6
         with:
           path: Library
@@ -176,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - uses: actions/cache@v6
         with:
           path: Library
@@ -216,7 +217,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-threshold-crossroom-yomi-flow
+          ref: ${{ github.sha }}
       - uses: actions/cache@v6
         with:
           path: Library
