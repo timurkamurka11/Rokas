@@ -46,4 +46,21 @@ jobs:
               for box in ((1620,80,1870,380),(1620,380,1870,470),(1618,470,1760,640)):
                   means=ImageStat.Stat(delta.crop(tuple(round(v*(images['ON'].width/1920.0 if k%2==0 else images['ON'].height/1080.0)) for k,v in enumerate(box)))).mean
                   print('PHOTO_DIFFERENCE_'+str(box)+'='+','.join(f'{v:.1f}' for v in means),flush=True)
+          from PIL import ImageDraw, ImageFilter
+          # Reconstruct the currently committed photographic doorway polygon
+          # in native 1672x941 texture coordinates, including its 4 px feather.
+          doorway = [(1622,72),(1712,58),(1872,30),(1873,390),
+             (1850,394),(1800,398),(1768,403),(1760,453),(1751,466),
+             (1751,645),(1700,636),(1660,629),(1618,621)]
+          sx=images['ON'].width/1920;sy=images['ON'].height/1080
+          polygon=[(round(x*sx),round(y*sy)) for x,y in doorway]
+          mask=Image.new('L', images['ON'].size, 0)
+          ImageDraw.Draw(mask).polygon(polygon, fill=255)
+          mask=mask.filter(ImageFilter.GaussianBlur(radius=3.5))
+          cases={'MAIN_ON_HALL_OFF':Image.composite(images['OFF'],images['ON'],mask),
+                 'MAIN_OFF_HALL_ON':Image.composite(images['ON'],images['OFF'],mask)}
+          for name, photo in cases.items():
+              out=io.BytesIO()
+              photo.crop((1330,0,1672,620)).save(out,format='JPEG',quality=78,optimize=True)
+              print('PHOTO_HYBRID_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
           PY
