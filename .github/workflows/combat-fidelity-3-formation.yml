@@ -1,0 +1,94 @@
+name: ROKAS Combat Fidelity 3 — Formation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/rokas-combat-cinematic-fidelity-3
+    paths:
+      - Assets/Rokas/Scripts/Presentation/ReactiveCombatArena.cs
+      - Assets/Rokas/Tests/PlayMode/ReactiveCombatFormationFidelityPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/ReactiveCombatPolishCapturePlayModeTests.cs
+      - .github/workflows/combat-fidelity-3-formation.yml
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: combat-fidelity-3-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  formation:
+    name: Compact Keiko / 3 Yokai — actual Unity
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: CombatFidelity3-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            CombatFidelity3-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Test real formation and contact slots
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.ReactiveCombatFormationFidelityPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Keiko / Yokai Compact Formation
+          artifactsPath: artifacts
+      - name: Upload actual Unity formation camera
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-combat3-formation-capture
+          path: artifacts/combat-formation/*.png
+          if-no-files-found: warn
+
+  camera-regression:
+    name: Existing camera and recovery sequence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: CombatFidelity3-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            CombatFidelity3-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run existing Polish II camera and recovery tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.ReactivePolishIIPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Existing Cinematic Camera Regression
