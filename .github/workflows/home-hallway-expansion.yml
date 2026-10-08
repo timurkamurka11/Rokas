@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - codex/hallway-crossroom-light-fidelity
+      - codex/hallway-threshold-crossroom-yomi-flow
     paths:
       - .github/workflows/home-hallway-expansion.yml
       - Assets/Rokas/Scripts/Core/State.cs
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - name: Verify both committed photographic light states
         shell: bash
         run: |
@@ -65,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - uses: actions/cache@v6
         with:
           path: Library
@@ -97,7 +97,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - uses: actions/cache@v6
         with:
           path: Library
@@ -129,7 +129,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - uses: actions/cache@v6
         with:
           path: Library
@@ -176,7 +176,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - uses: actions/cache@v6
         with:
           path: Library
@@ -216,7 +216,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: codex/hallway-crossroom-light-fidelity
+          ref: codex/hallway-threshold-crossroom-yomi-flow
       - uses: actions/cache@v6
         with:
           path: Library
