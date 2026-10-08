@@ -23,6 +23,63 @@ namespace Rokas.Tests
         private string profileDirectory;
 
         [UnityTest]
+        public IEnumerator ConfiguredResourcesUseAllSevenExactNativeMappingsAndOnly27DerivativeClips()
+        {
+            var library = Resources.Load<ReactiveCombatActorLibrary>("Combat/ReactiveCombatActorLibrary");
+            Assert.That(library, Is.Not.Null);
+            var unique = new HashSet<AnimationClip>();
+            AssertConfiguredMapping(library.keiko.licensedNormal, "Keiko", "dul_touche_p1", "dul_sword_attack_1", LicensedWeaponKind.Sword, unique,
+                "duelist_attack_lowslash_antic", "duelist_idleA", "duelist_attack_lowslash_action", "duelist_attack_sword_lead_backhand__NEWSPINAROUND_recover");
+            AssertConfiguredMapping(library.keiko.licensedHeavy, "Keiko", "hel_bleed_out", "hel_bleed_out", LicensedWeaponKind.TwoHandedSword, unique,
+                "hellion_attack5_downswing_antic", "hellion_idleB", "hellion_attack5_downswing_action", "hellion_attack5_downswing_recoverD");
+            AssertConfiguredMapping(library.keiko.licensedThrow, "Keiko", "gr_thrown_dagger", "Grave_robber_dagger_throw", LicensedWeaponKind.Dagger, unique,
+                "graverobber_attack_dagger_thrown_antic_anm", "idle_upright_v2", "graverobber_attack_dagger_thrown_action", "graverobber_attack_dagger_thrown_recover");
+            AssertConfiguredMapping(library.yokai.licensedNormal, "Yokai", "foot_soldier_atrophic_cut", "lost_battalion_foot_soldier_test_sword", LicensedWeaponKind.None, unique,
+                "footsoldier_attack_sword_antic_anm", "footsoldier_idle_anm", "footsoldier_attack_sword_action_anm", "footsoldier_attack_sword_recover_anm");
+            AssertConfiguredMapping(library.yokai.licensedHeavy, "Yokai", "foot_soldier_thrust", "lost_battalion_foot_soldier_test_thrust", LicensedWeaponKind.None, unique,
+                "footsoldier_attack_thrust_antic_anm", "footsoldier_idle_anm", "footsoldier_attack_thrust_action_anm", "footsoldier_attack_thrust_recoverv2_anm");
+            AssertConfiguredMapping(library.yokai.licensedBoss, "Yokai", "librarian_backdraft", "librarian_backdraft", LicensedWeaponKind.None, unique,
+                "fanatic_librarian_attack3_antic", "fanatic_librarian_idleB", "fanatic_librarian_attack3_action", "fanatic_librarian_attack3_recover");
+            AssertConfiguredMapping(library.yokai.licensedBossHeavy, "Yokai", "huntsman_axe_slash", "huntsman_axe_slash", LicensedWeaponKind.None, unique,
+                "beastmen_huntsman_axe_chop_anticV2", "beastmen_huntsman_idle_B", "beastmen_huntsman_action_chop_v2", "beastmen_huntsman_action_chop_v2_recover");
+            Assert.That(unique.Count, Is.EqualTo(27), "Accept the saved runtime subset, including the one shared enemy idle.");
+            Assert.That(library.yokai.licensedBoss.camera.performerFramingSize, Is.EqualTo(LicensedCameraFramingSize.Large),
+                "Backdraft uses original large Librarian, not the ignited medium wrapper.");
+            yield return null;
+        }
+
+        private static void AssertConfiguredMapping(LicensedCombatMotionProfile profile, string actor,
+            string skill, string timeline, LicensedWeaponKind weapon, HashSet<AnimationClip> unique,
+            string anticipation, string idle, string action, string recovery)
+        {
+            AssertSource(profile);
+            Assert.That(profile.sourceSkill, Is.EqualTo(skill));
+            Assert.That(profile.sourceTimeline, Is.EqualTo(timeline));
+            Assert.That(profile.weapon, Is.EqualTo(weapon));
+            Assert.That(profile.sourceToTargetScale, Is.GreaterThan(0f));
+            Assert.That(float.IsInfinity(profile.sourceToTargetScale) || float.IsNaN(profile.sourceToTargetScale), Is.False);
+            Assert.That(profile.authoredWeaponSocket, Is.EqualTo(actor == "Keiko"));
+            Assert.That(profile.segments.Length, Is.EqualTo(2));
+            AnimationClip[] actual = { profile.anticipation, profile.baseIdle, profile.segments[0].clip, profile.segments[1].clip };
+            string[] expected = { anticipation, idle, action, recovery };
+            for (int index = 0; index < actual.Length; index++)
+            {
+                Assert.That(actual[index], Is.Not.Null);
+                Assert.That(actual[index].name, Is.EqualTo(actor + "_DD2_" + expected[index]),
+                    "A loader must select the exact source subclip, not the first animation in the FBX.");
+                Assert.That(actual[index].legacy, Is.True);
+                Assert.That(actual[index].events.Length, Is.Zero, "No source audio/events are imported with body curves.");
+                unique.Add(actual[index]);
+            }
+            Assert.That(profile.camera, Is.Not.Null);
+            Assert.That(profile.camera.baseFov, Is.EqualTo(38f));
+            Assert.That(profile.camera.shotFov, Is.EqualTo(18f));
+            Assert.That(profile.camera.shotDuration, Is.EqualTo(83f / 60f).Within(.000001f));
+            Assert.That(profile.camera.framingOffsets.Length, Is.EqualTo(5));
+            Assert.That(profile.camera.routeShakeToTimelineActiveCamera, Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator PoolResetCancelsSourceMotionAndRetiresItsSampleWeights()
         {
             root = new GameObject("LicensedPoolResetFixture");
@@ -150,6 +207,7 @@ namespace Rokas.Tests
                 actor.BindLicensedContact("owned-sword-" + cycle);
                 Assert.That(actor.ConfirmLicensedContact("owned-sword-" + cycle), Is.True);
                 actor.TickPresentation(.6f);
+                AssertOwnedPalmContact(actor, true, "Native Heavy before exit");
                 Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.NativeMotion));
                 Assert.That(sword.parent.name, Is.EqualTo("LicensedWeaponSocket"));
                 Vector3 position = sword.position, scale = sword.lossyScale;
@@ -159,9 +217,14 @@ namespace Rokas.Tests
                 Assert.That(Vector3.Distance(sword.position, position), Is.LessThan(.00001f), "Handoff frame translated the blade.");
                 Assert.That(PreciseAngle(sword.rotation, rotation), Is.LessThan(.001f), "Handoff frame rotated the blade.");
                 Assert.That(Vector3.Distance(sword.lossyScale, scale), Is.LessThan(.00001f));
-                actor.TickPresentation(.04f);
-                Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.ExitBlend));
-                actor.TickPresentation(.05f);
+                AssertOwnedPalmContact(actor, true, "Native Heavy instant exit");
+                for (int step = 1; step <= 5; step++)
+                {
+                    actor.TickPresentation(1f / 60f);
+                    AssertOwnedPalmContact(actor, true, "Heavy exit cycle " + cycle + " step " + step);
+                    if (step < 5)
+                        Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.ExitBlend));
+                }
                 Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.DefaultSocket));
                 Assert.That(sword.parent, Is.SameAs(actor.WeaponAttachment.Socket));
                 Assert.That(sword.localPosition, Is.EqualTo(Vector3.zero));
@@ -175,6 +238,133 @@ namespace Rokas.Tests
             }
             yield return null;
         }
+        [UnityTest]
+        public IEnumerator NormalExitRetainsPrimaryPalmThroughLeftToRightRoleTransfer()
+        {
+            root = new GameObject("LicensedNormalExitFixture", typeof(RectTransform));
+            arena = new ReactiveCombatArena(new UiKit(null, null), root.GetComponent<RectTransform>());
+            arena.BeginEncounterIntro(); arena.SetEnemies(new[] { "E1" }, null);
+            StepUntil(() => arena.PresentationReady, 20f, "Normal exit fixture entrance");
+            var actor = Hunter();
+            Transform sword = actor.WeaponAttachment.CurrentWeapon.transform;
+            Camera camera = ActorCamera();
+            string folder = Path.Combine(CaptureRoot, "NormalExit"); Directory.CreateDirectory(folder);
+            for (int cycle = 0; cycle < 3; cycle++)
+                foreach (float sourceTime in new[] { .6f, 2.8f, 3.3f })
+                    foreach (bool returnHome in new[] { true, false })
+                    {
+                        actor.ResetForPool(); actor.PlayAttack();
+                        string key = "normal-role-" + cycle + "-" + sourceTime + "-" + returnHome;
+                        actor.BindLicensedContact(key);
+                        Assert.That(actor.ConfirmLicensedContact(key), Is.True);
+                        actor.TickPresentation(sourceTime); yield return null;
+                        float nativeGap = NearestPrimaryPalmGap(actor);
+                        // At 2.8 the native hand transfer is intentionally between palm
+                        // centers. Preserve that source baseline; the stable held roles
+                        // retain the strict 1mm marker gate. Mesh contact is checked separately.
+                        bool nativeTransfer = Mathf.Abs(sourceTime - 2.8f) < .0001f;
+                        if (!nativeTransfer) Assert.That(nativeGap, Is.LessThan(.001f));
+                        bool capture = cycle == 0 && sourceTime < 1f;
+                        string name = returnHome ? "left-to-return" : "left-to-idle";
+                        if (capture) SaveExitEvidence(camera, actor, folder, name + "-before");
+                        BonePose[] bones = CaptureBones(actor);
+                        Vector3 position = sword.position; Quaternion rotation = sword.rotation;
+                        if (returnHome) actor.PlayReturnHome(.5f); else actor.PlayIdle();
+                        Assert.That(Vector3.Distance(sword.position, position), Is.LessThan(.00001f));
+                        Assert.That(PreciseAngle(sword.rotation, rotation), Is.LessThan(.001f));
+                        AssertBoneSnapshotsEqual(bones, CaptureBones(actor), "Normal exit instant " + key);
+                        Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.ExitBlend));
+                        Assert.That(sword.parent, Is.SameAs(actor.ModelRoot), "The actor owns the frozen exit in model coordinates.");
+                        if (capture) SaveExitEvidence(camera, actor, folder, name + "-E0");
+                        for (int step = 1; step <= 5; step++)
+                        {
+                            actor.TickPresentation(1f / 60f); yield return null;
+                            float gap = NearestPrimaryPalmGap(actor);
+                            Assert.That(gap, Is.LessThan(nativeTransfer ? nativeGap + .001f : .001f),
+                                "Normal " + sourceTime + " exit " + returnHome + " step " + step + " lost both palms; native gap " + nativeGap);
+                            if (capture) SaveExitEvidence(camera, actor, folder, name + "-E" + step);
+                        }
+                        AssertOwnedPalmContact(actor, returnHome, "Normal destination grip");
+                        Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.DefaultSocket));
+                        Assert.That(sword.parent, Is.Not.SameAs(actor.ModelRoot), "The completed exit restores an authored socket.");
+                        Assert.That(sword.IsChildOf(actor.ModelRoot), Is.True);
+                        if (returnHome) Assert.That(sword.parent, Is.SameAs(actor.WeaponAttachment.Socket));
+                    }
+        }
+
+        private static float NearestPrimaryPalmGap(ReactiveCombatActorVisual actor)
+        {
+            Vector3 primary = actor.ModelRoot.InverseTransformPoint(actor.WeaponAttachment.CurrentWeapon.transform.position);
+            float gap = float.PositiveInfinity;
+            foreach (Transform bone in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
+            {
+                float offset = bone.name.EndsWith("RightHand", StringComparison.Ordinal) ? .0324945897f
+                    : bone.name.EndsWith("LeftHand", StringComparison.Ordinal) ? .0329871997f : 0f;
+                if (offset > 0f) gap = Mathf.Min(gap, Vector3.Distance(primary,
+                    actor.ModelRoot.InverseTransformPoint(bone.TransformPoint(Vector3.up * offset))));
+            }
+            return gap;
+        }
+
+        private static void SaveExitEvidence(Camera sourceCamera, ReactiveCombatActorVisual actor, string folder, string name)
+        {
+            Directory.CreateDirectory(folder);
+            SaveActorImage(sourceCamera, Path.Combine(folder, name + "-pose.png"));
+            Camera photo = UnityEngine.Object.Instantiate(sourceCamera); photo.enabled = false;
+            var render = new RenderTexture(1024, 768, 24); render.Create(); photo.targetTexture = render;
+            photo.orthographic = true; photo.orthographicSize = .055f * Mathf.Abs(actor.ModelRoot.lossyScale.y);
+            try
+            {
+                Transform sword = actor.WeaponAttachment.CurrentWeapon.transform;
+                foreach (Transform bone in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
+                {
+                    bool right = bone.name.EndsWith("RightHand", StringComparison.Ordinal);
+                    bool left = bone.name.EndsWith("LeftHand", StringComparison.Ordinal);
+                    if (!right && !left) continue;
+                    Vector3 target = bone.TransformPoint(Vector3.up * (right ? .0324945897f : .0329871997f));
+                    Transform chest = null;
+                    foreach (Transform candidate in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
+                        if (candidate.name.EndsWith("Spine2", StringComparison.Ordinal)) chest = candidate;
+                    Vector3 away = chest == null ? actor.ModelRoot.forward : (target - chest.position).normalized;
+                    if (away.sqrMagnitude < .5f) away = actor.ModelRoot.forward;
+                    photo.transform.position = target + away * 3f; photo.transform.LookAt(target, Vector3.up);
+                    SaveActorImage(photo, Path.Combine(folder, name + (right ? "-right-hand.png" : "-left-hand.png")));
+                    photo.transform.position = target + Quaternion.AngleAxis(80f, Vector3.up) * away * 3f;
+                    photo.transform.LookAt(target, Vector3.up);
+                    SaveActorImage(photo, Path.Combine(folder, name + (right ? "-right-hand-side.png" : "-left-hand-side.png")));
+                }
+            }
+            finally
+            {
+                photo.targetTexture = null; render.Release();
+                UnityEngine.Object.DestroyImmediate(render); UnityEngine.Object.DestroyImmediate(photo.gameObject);
+            }
+        }
+
+        private static void AssertOwnedPalmContact(ReactiveCombatActorVisual actor, bool twoHands, string context)
+        {
+            Transform right = null, left = null;
+            foreach (Transform bone in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (bone.name.EndsWith("RightHand", StringComparison.Ordinal)) right = bone;
+                if (bone.name.EndsWith("LeftHand", StringComparison.Ordinal)) left = bone;
+            }
+            Assert.That(right, Is.Not.Null); Assert.That(left, Is.Not.Null);
+            Transform sword = actor.WeaponAttachment.CurrentWeapon.transform;
+            Transform support = sword.Find("LeftHandGrip");
+            Assert.That(support, Is.Not.Null);
+            Vector3 rightPalm = actor.ModelRoot.InverseTransformPoint(right.TransformPoint(Vector3.up * .0324945897f));
+            Vector3 leftPalm = actor.ModelRoot.InverseTransformPoint(left.TransformPoint(Vector3.up * .0329871997f));
+            Vector3 primary = actor.ModelRoot.InverseTransformPoint(sword.position);
+            Vector3 secondary = actor.ModelRoot.InverseTransformPoint(support.position);
+            // Surface contact uses a separate 1mm own-model grip tolerance. The
+            // pre-existing default right socket differs from the measured palm by
+            // .0005054; saved source-motion fidelity remains .0001/.15 degrees.
+            Assert.That(Vector3.Distance(rightPalm, primary), Is.LessThan(.001f), context + " primary palm detached");
+            if (twoHands)
+                Assert.That(Vector3.Distance(leftPalm, secondary), Is.LessThan(.001f), context + " support palm detached");
+        }
+
         private static float PreciseAngle(Quaternion a, Quaternion b)
         {
             Quaternion delta = b.normalized * Quaternion.Inverse(a.normalized);
@@ -299,8 +489,12 @@ namespace Rokas.Tests
         {
             // These render the production arena/rig at deterministic presentation
             // steps. They are not a recording of live Core/gameplay wall time.
-            foreach (string scenario in new[] { "normal", "heavy", "throw", "block", "dodge", "enemy", "final_elite_E8" })
+            string requested = Environment.GetEnvironmentVariable("ROKAS_LICENSED_CAPTURE_SCENARIOS");
+            var allScenarios = new[] { "normal", "heavy", "throw", "block", "dodge", "enemy", "final_elite_E8" };
+            string[] scenarios = string.IsNullOrEmpty(requested) ? allScenarios : requested.Split(',');
+            foreach (string scenario in scenarios)
             {
+                Assert.That(Array.IndexOf(allScenarios, scenario), Is.GreaterThanOrEqualTo(0), "Explicit existing capture scenario");
                 root = new GameObject("LicensedCapture_" + scenario, typeof(RectTransform));
                 arena = new ReactiveCombatArena(new UiKit(null, null), root.GetComponent<RectTransform>());
                 Camera camera = ActorCamera();
@@ -453,9 +647,15 @@ namespace Rokas.Tests
                             attackerViewport = camera.WorldToViewportPoint(sourceActor.TorsoPoint),
                             defenderViewport = camera.WorldToViewportPoint((hunterAction ? enemy : hunter).TorsoPoint),
                             sword = CaptureSword(hunter),
-                            sourceBones = boundary != null || MotionClock(sourceActor) >= sourceProfile.Duration - 2f / 60f
+                            sourceBones = boundary != null || (exitFrame >= 0 && frame <= exitFrame + 7) ||
+                                MotionClock(sourceActor) >= sourceProfile.Duration - 2f / 60f
                                 ? CaptureBones(sourceActor) : null
                         });
+                        if (hunterAction && scenario != "throw" && exitFrame >= 0 && frame <= exitFrame + 5)
+                            AssertOwnedPalmContact(hunter, scenario == "heavy", scenario + " full-recovery exit E+" + (frame - exitFrame));
+                        if (scenario == "heavy" && (frame == 0 || frame == contactFrame || frame == contactFrame + 16 ||
+                            frame == exitFrame || frame == exitFrame + 1 || frame == socketRestoredFrame))
+                            SaveExitEvidence(camera, hunter, Path.Combine(CaptureRoot, "HeavyGrip"), "heavy-frame-" + frame.ToString("D4"));
                         previousNative = native;
                         SaveActorImage(camera, Path.Combine(folder, "frame-" + frame.ToString("D4") + ".png"), readback);
                         arena.Tick(1f / 60f);
@@ -564,6 +764,9 @@ namespace Rokas.Tests
                 actionId: "native-mid-contact-cancel", amount: 40));
             arena.Tick(.6f);
             yield return null; // Include the displayed production LateUpdate pose.
+            string interruptFolder = Path.Combine(CaptureRoot, "Interruption");
+            Directory.CreateDirectory(interruptFolder);
+            SaveActorImage(camera, Path.Combine(interruptFolder, "heavy-before-cancel.png"));
             Assert.That(ContactConfirmed(hunter), Is.True);
             Assert.That(hunter.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.NativeMotion));
             Assert.That(camera.orthographic, Is.False);
@@ -580,6 +783,7 @@ namespace Rokas.Tests
             float cameraFov = camera.fieldOfView, cameraSize = camera.orthographicSize;
             Matrix4x4 cameraProjection = camera.projectionMatrix;
             arena.CancelHunterMotion();
+            SaveActorImage(camera, Path.Combine(interruptFolder, "heavy-cancel-instant.png"));
             Assert.That(hunter.transform.localPosition, Is.EqualTo(actorPosition), "Cancel cannot teleport the actor root.");
             Assert.That(PreciseAngle(hunter.transform.localRotation, actorRotation), Is.LessThan(.001f));
             Assert.That(hunter.ModelRoot.localPosition, Is.EqualTo(modelPosition));
@@ -602,12 +806,16 @@ namespace Rokas.Tests
             Assert.That(hunter.AwaitingAttackContact, Is.False);
             Assert.That(arena.HitStopRemaining, Is.Zero);
             arena.Tick(.04f);
+            yield return null;
+            SaveActorImage(camera, Path.Combine(interruptFolder, "heavy-native-exit-half.png"));
             Assert.That(arena.CameraAtHome, Is.False);
             Assert.That(hunter.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.ExitBlend));
             Assert.That(hunter.CurrentPose, Is.EqualTo("ReturnHome"));
             Assert.That(hunter.ActionRecoveryComplete, Is.False);
             Assert.That(arena.HunterAtHome, Is.False);
             arena.Tick(.05f);
+            yield return null;
+            SaveActorImage(camera, Path.Combine(interruptFolder, "heavy-native-exit-complete.png"));
             Assert.That(arena.CameraAtHome, Is.True, "The camera's 0.08s interruption blend must finish independently of travel.");
             tactical.AssertRestored(camera);
             Assert.That(hunter.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.DefaultSocket));
@@ -615,6 +823,8 @@ namespace Rokas.Tests
             Assert.That(originalSword.transform.parent, Is.SameAs(hunter.WeaponAttachment.Socket));
             Assert.That(arena.HunterAtHome, Is.False, "The 0.72s return must continue after camera/weapon handoff.");
             StepUntil(() => arena.PresentationReady && arena.CameraAtHome, 3f, "interrupted actor return and settle");
+            yield return null;
+            SaveActorImage(camera, Path.Combine(interruptFolder, "heavy-interrupted-tactical-return.png"));
             Assert.That(hunter.transform.localPosition, Is.EqualTo(arena.HunterHome));
             Assert.That(hunter.IdleSettled, Is.True);
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.SameAs(originalSword));
@@ -800,9 +1010,20 @@ namespace Rokas.Tests
         }
         private ReactiveCombatArena FindLiveArena()
         {
-            foreach (FieldInfo field in boot.View.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic))
-                if (field.FieldType == typeof(ReactiveCombatArena)) return (ReactiveCombatArena)field.GetValue(boot.View);
-            Assert.Fail("The live view must own its arena."); return null;
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            FieldInfo missionField = typeof(RokasView).GetField("mission", flags);
+            Assert.That(missionField, Is.Not.Null, "The live view owns its mission presenter.");
+            object mission = missionField.GetValue(boot.View);
+            Assert.That(mission, Is.Not.Null);
+            FieldInfo reactiveField = mission.GetType().GetField("reactiveView", flags);
+            Assert.That(reactiveField, Is.Not.Null);
+            object reactive = reactiveField.GetValue(mission);
+            Assert.That(reactive, Is.Not.Null);
+            FieldInfo arenaField = reactive.GetType().GetField("arena", flags);
+            Assert.That(arenaField, Is.Not.Null, "The reactive mission presenter owns the live arena.");
+            var liveArena = (ReactiveCombatArena)arenaField.GetValue(reactive);
+            Assert.That(liveArena, Is.Not.Null);
+            return liveArena;
         }
         private bool Ready(string name)
         {
