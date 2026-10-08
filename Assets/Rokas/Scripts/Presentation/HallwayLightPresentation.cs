@@ -133,9 +133,16 @@ namespace Rokas.Presentation
             // curtain. The right edge stops just inside the vertical frame.
             new Vector2(1622f,72f), new Vector2(1712f,58f),
             new Vector2(1872f,30f), new Vector2(1873f,390f),
+            // Continue the Hallway light cutout around the photographed
+            // plant/lantern niche immediately left of the television.  The
+            // prior contour stepped to x=1751 by y=466, exposing the warm
+            // MainRoom photograph inside a Hallway-OFF niche (and vice versa).
+            // Stop before the TV glass and the foreground cabinet face.
             new Vector2(1850f,394f), new Vector2(1800f,398f),
-            new Vector2(1768f,403f),
-            new Vector2(1760f,453f), new Vector2(1751f,466f),
+            new Vector2(1796f,404f), new Vector2(1795f,433f),
+            new Vector2(1795f,454f), new Vector2(1794f,466f),
+            new Vector2(1789f,477f), new Vector2(1764f,484f),
+            new Vector2(1751f,484f),
             // Bottom visible Hallway follows the photographed wooden sill,
             // from the left inner jamb (~1618,623) to the right (~1740,645).
             // The previous flat 614-618 cutoff left a 10-25px lit floor strip.
