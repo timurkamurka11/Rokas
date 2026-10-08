@@ -231,6 +231,10 @@ namespace Rokas.Tests
                 Is.EqualTo(0f), "Adjacent wall must never get the Hallway photo.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1750f,180f),
                 Is.EqualTo(0f), "Hanging curtain must stay opaque.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,385f),
+                Is.EqualTo(0f), "Photo must not tint the photographed curtain hem.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,425f),
+                Is.GreaterThan(.95f), "Exposed Hallway below the curtain must remain visible.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1690f,680f),
                 Is.EqualTo(0f), "MainRoom floor outside the opening must not change.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1580f,450f),
