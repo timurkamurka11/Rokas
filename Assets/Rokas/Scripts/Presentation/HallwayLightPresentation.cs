@@ -125,11 +125,13 @@ namespace Rokas.Presentation
             new Vector2(1714f,387f), new Vector2(1722f,391f),
             new Vector2(1740f,393f), new Vector2(1754f,393f),
             new Vector2(1768f,397f),
-            new Vector2(1760f,453f), new Vector2(1740f,466f),
+            new Vector2(1760f,453f), new Vector2(1751f,466f),
             // Bottom visible Hallway follows the photographed wooden sill,
             // from the left inner jamb (~1618,623) to the right (~1740,645).
             // The previous flat 614-618 cutoff left a 10-25px lit floor strip.
-            new Vector2(1740f,643f), new Vector2(1700f,636f),
+            // Fill the final lower-right 11px of the visible Hallway without
+            // extending the image into the curtain, doorframe or cabinet.
+            new Vector2(1751f,645f), new Vector2(1700f,636f),
             new Vector2(1660f,629f), new Vector2(1618f,621f)
         };
         public static float CoverageAt(float x,float y)

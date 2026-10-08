@@ -90,6 +90,12 @@ namespace Rokas.Tests
             boot.Session.SetHallwayLight(true);
             boot.View.Tick(.3f);
             Capture("04_mainroom_hallway_on_view");
+            Capture("14_window_rain_on", new RectInt(310,85,680,470));
+            boot.Session.SetLamp(false);
+            boot.View.Tick(.5f);
+            Capture("15_window_rain_off", new RectInt(310,85,680,470));
+            boot.Session.SetLamp(true);
+            boot.View.Tick(.5f);
             Press("DoorHotspot");
             yield return WaitForLocation(HomeLocation.Hallway);
             Capture("01_hallway_threshold_main_on");

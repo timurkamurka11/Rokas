@@ -247,6 +247,12 @@ namespace Rokas.Tests
                 Is.GreaterThan(.95f), "The center floor should not retain the old warm strip.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,631f),
                 Is.GreaterThan(.95f), "The lower right door floor must not stop at y=618.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1746f,535f),
+                Is.GreaterThan(.95f), "OFF state must cover the last visible strip on the right.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1750f,635f),
+                Is.GreaterThan(.50f), "Lower-right photo must reach the sloped sill.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1765f,545f),
+                Is.EqualTo(0f), "The widened photo must not cover the outside doorframe.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1660f,640f),
                 Is.EqualTo(0f), "Do not repaint the Main Room floor outside the sill.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,660f),
@@ -255,6 +261,47 @@ namespace Rokas.Tests
                 Is.EqualTo(0f), "MainRoom floor outside the opening must not change.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1580f,450f),
                 Is.EqualTo(0f), "Door jamb must not be overwritten.");
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator HomeRainAndOutsidePhotoCoverGlazingAtBothLightStates()
+        {
+            RawImage world = Find<RawImage>("WorldIllustration");
+            RawImage outside = Find<RawImage>("HomeOutsideParallax");
+            RawImage composite = Find<RawImage>("HomeWeatherComposite");
+            RawImage glazing = Find<RawImage>("HomeGlazingMask");
+            RawImage droplets = Find<RawImage>("HomeWetGlassDroplets");
+            RawImage frameBottom = Find<RawImage>("FrameBottom");
+            RectTransform outsideClip = Find<RectTransform>("HomeOutsideDepthMask");
+            RectTransform rainClip = Find<RectTransform>("WindowRain");
+            Assert.That(world, Is.Not.Null);
+            Assert.That(outside, Is.Not.Null);
+            Assert.That(composite, Is.Not.Null);
+            Assert.That(glazing, Is.Not.Null);
+            Assert.That(droplets, Is.Not.Null);
+            Assert.That(frameBottom, Is.Not.Null);
+            Assert.That(outsideClip, Is.Not.Null);
+            Assert.That(rainClip, Is.Not.Null);
+
+            Assert.That(outsideClip.sizeDelta.y, Is.EqualTo(428f).Within(.01f));
+            Assert.That(rainClip.sizeDelta.y, Is.EqualTo(428f).Within(.01f));
+            Assert.That(glazing.rectTransform.sizeDelta.y, Is.EqualTo(428f).Within(.01f));
+            Assert.That(composite.rectTransform.sizeDelta.y, Is.EqualTo(428f).Within(.01f));
+            Assert.That(droplets.rectTransform.sizeDelta.y, Is.EqualTo(428f).Within(.01f));
+            Assert.That(outsideClip.anchoredPosition.y, Is.EqualTo(-107f).Within(.01f));
+            Assert.That(frameBottom.rectTransform.anchoredPosition.y, Is.EqualTo(-503f).Within(.01f));
+
+            for (int k = 0; k < 2; k++)
+            {
+                bool lampOn = k == 0;
+                bootstrap.Session.SetLamp(lampOn);
+                bootstrap.View.Tick(.25f);
+                Assert.That(outside.texture, Is.SameAs(world.texture),
+                    "Parallax and main art must use the same ON/OFF photograph.");
+                Assert.That(frameBottom.texture, Is.SameAs(world.texture));
+                Assert.That(composite.gameObject.activeInHierarchy, Is.True);
+            }
             yield return null;
         }
 

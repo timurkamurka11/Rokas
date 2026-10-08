@@ -7,6 +7,11 @@ namespace Rokas.Presentation
     public sealed class WorldEffects
     {
         private const int WeatherLayer = 30;
+        // The visible glazing reaches the bottom photo-frame (y=535), not the
+        // old y=503 hard-cutoff. The opaque foreground frame hides weather
+        // underneath; the extra 32px prevents a horizontal rain/parallax seam.
+        private const float HomeWindowWidth = 605f;
+        private const float HomeWindowHeight = 428f;
         private readonly RectTransform background;
         private readonly RawImage roomIllustration;
         private readonly Texture homeLightOn;
@@ -87,10 +92,12 @@ namespace Rokas.Presentation
             if (!homeLightOff)
                 throw new System.InvalidOperationException("Missing required Home light-off artwork: Home/ApartmentNightLightOff");
 
-            outsideDepthMask = ui.Rect(parent, "HomeOutsideDepthMask", 350, 107, 605, 396);
+            outsideDepthMask = ui.Rect(parent, "HomeOutsideDepthMask", 350, 107,
+                HomeWindowWidth, HomeWindowHeight);
             outsideDepthMask.gameObject.AddComponent<RectMask2D>();
-            outsideParallax = ui.Art(outsideDepthMask, "HomeOutsideParallax", homeSource, -8, -8, 621, 412);
-            outsideParallax.uvRect = SourceUv(342f, 99f, 621f, 412f);
+            outsideParallax = ui.Art(outsideDepthMask, "HomeOutsideParallax", homeSource,
+                -8, -8, 621, 444);
+            outsideParallax.uvRect = SourceUv(342f, 99f, 621f, 444f);
             outsideParallax.color = new Color(.96f, .985f, 1f, 1f);
             outsideBasePosition = outsideParallax.rectTransform.anchoredPosition;
 
@@ -109,9 +116,11 @@ namespace Rokas.Presentation
             wetGlassDropletsTexture.wrapMode = TextureWrapMode.Repeat;
             wetGlassStreaksTexture.wrapMode = TextureWrapMode.Repeat;
 
-            weatherCanvasRoot = ui.Rect(parent, "WindowRain", 350, 107, 605, 396);
+            weatherCanvasRoot = ui.Rect(parent, "WindowRain", 350, 107,
+                HomeWindowWidth, HomeWindowHeight);
             weatherCanvasRoot.gameObject.AddComponent<RectMask2D>();
-            glazingMaskGraphic = ui.Art(weatherCanvasRoot, "HomeGlazingMask", glazingTexture, 0, 0, 605, 396);
+            glazingMaskGraphic = ui.Art(weatherCanvasRoot, "HomeGlazingMask", glazingTexture,
+                0, 0, HomeWindowWidth, HomeWindowHeight);
             glazingMaskGraphic.color = Color.white;
             glazingMask = glazingMaskGraphic.gameObject.AddComponent<Mask>();
             glazingMask.showMaskGraphic = false;
@@ -131,18 +140,22 @@ namespace Rokas.Presentation
                 autoGenerateMips = false
             };
             weatherTexture.Create();
-            weatherComposite = ui.Art(glazingRoot, "HomeWeatherComposite", weatherTexture, 0, 0, 605, 396);
+            weatherComposite = ui.Art(glazingRoot, "HomeWeatherComposite", weatherTexture,
+                0, 0, HomeWindowWidth, HomeWindowHeight);
             weatherComposite.color = new Color(.86f, .95f, 1f, .84f);
 
-            wetGlassDroplets = ui.Art(glazingRoot, "HomeWetGlassDroplets", wetGlassDropletsTexture, 0, 0, 605, 396);
+            wetGlassDroplets = ui.Art(glazingRoot, "HomeWetGlassDroplets",
+                wetGlassDropletsTexture, 0, 0, HomeWindowWidth, HomeWindowHeight);
             wetGlassDroplets.color = Color.clear;
-            wetGlassStreaks = ui.Art(glazingRoot, "HomeWetGlassStreaks", wetGlassStreaksTexture, -5, -4, 615, 404);
+            wetGlassStreaks = ui.Art(glazingRoot, "HomeWetGlassStreaks",
+                wetGlassStreaksTexture, -5, -4, 615, 436);
             wetGlassStreaks.uvRect = new Rect(.17f, .31f, 1.28f, 1.28f);
             wetGlassStreaks.color = Color.clear;
 
             // Compatibility anchor retained for the established Home 2.5D regression contract.
             // It is transparent; the visible droplet treatment is HomeWetGlassDroplets above.
-            wetGlass = ui.Art(glazingRoot, "HomeWetGlass", wetGlassDropletsTexture, 0, 0, 605, 396);
+            wetGlass = ui.Art(glazingRoot, "HomeWetGlass", wetGlassDropletsTexture,
+                0, 0, HomeWindowWidth, HomeWindowHeight);
             wetGlass.color = Color.clear;
 
             stormFlash = ui.Art(glazingRoot, "HomeStormFlash", stormCloudTexture, -78, -62, 760, 520);
@@ -218,7 +231,8 @@ namespace Rokas.Presentation
             weatherCanvasRoot.gameObject.SetActive(weatherVisible);
             weatherRuntime.SetActive(weatherVisible);
             weatherCanvasRoot.anchoredPosition = home ? new Vector2(350, -107) : new Vector2(0, -100);
-            weatherCanvasRoot.sizeDelta = home ? new Vector2(605, 396) : new Vector2(1920, 906);
+            weatherCanvasRoot.sizeDelta = home ?
+                new Vector2(HomeWindowWidth, HomeWindowHeight) : new Vector2(1920, 906);
             glazingMaskGraphic.rectTransform.sizeDelta = weatherCanvasRoot.sizeDelta;
             glazingMaskGraphic.rectTransform.anchoredPosition = Vector2.zero;
             glazingMask.enabled = home;
@@ -227,7 +241,7 @@ namespace Rokas.Presentation
             weatherComposite.rectTransform.anchoredPosition = Vector2.zero;
             stormFlash.rectTransform.sizeDelta = home ? new Vector2(760, 520) : weatherCanvasRoot.sizeDelta;
             stormFlash.rectTransform.anchoredPosition = home ? new Vector2(-78, 62) : Vector2.zero;
-            weatherCamera.aspect = home ? 605f / 396f : 1920f / 906f;
+            weatherCamera.aspect = home ? HomeWindowWidth / HomeWindowHeight : 1920f / 906f;
             ResizeEmitterWidth();
             if (weatherVisible)
             {
@@ -547,6 +561,10 @@ namespace Rokas.Presentation
             // Select its authored state before the independent exterior/weather layers.
             Texture roomSource = lampOn ? homeLightOn : homeLightOff;
             roomIllustration.texture = roomSource;
+            // Parallax used to retain the ON photograph when the room changed
+            // to OFF. Its rectangular edge then showed up as a visible blue band.
+            // Keep the exterior photo synchronized with the main art.
+            outsideParallax.texture = roomSource;
             foregroundDepth.texture = roomSource;
             for (int i = 0; i < windowFrameSlices.Length; i++)
                 windowFrameSlices[i].texture = roomSource;

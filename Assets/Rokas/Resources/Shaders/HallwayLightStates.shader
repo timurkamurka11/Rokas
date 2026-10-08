@@ -53,13 +53,14 @@ Shader "ROKAS/UI/HallwayLightStates"
                 // circular/radial artificial spotlight. Coordinates are top-left authored.
                 float2 p = float2(i.uv.x * 1920.0, (1.0-i.uv.y)*1080.0);
                 // Pixel-aligned inner jambs of the photographed LEFT doorway.
-                // The visible wood threshold slopes from (320,985) to (692,915).
+                // The visible wood threshold slopes across the opening; a small
+                // extra reach below its inner bevel prevents a warm sliver at OFF.
                 // Previous horizontal y=940..958 cutoff stranded a warm strip in
                 // the MainRoom floor. Follow the threshold, not a viewport rectangle.
                 float low = saturate((p.y-600.0)/385.0);
                 float left = lerp(290.0,320.0,low);
                 float right = lerp(695.0,692.0,low);
-                float threshold = lerp(985.0,915.0,saturate((p.x-320.0)/372.0));
+                float threshold = lerp(991.0,922.0,saturate((p.x-320.0)/372.0));
                 float innerJamb = smoothstep(left-2.0,left+2.0,p.x) *
                                   (1.0-smoothstep(right-2.0,right+2.0,p.x));
                 float sill = 1.0-smoothstep(threshold-2.0,threshold+2.0,p.y);
