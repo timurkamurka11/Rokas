@@ -63,7 +63,7 @@ Shader "ROKAS/UI/HallwayLightStates"
                 // MainRoom OFF region, while the lower-right sill stopped early.
                 float left = lerp(284.0,314.0,low);
                 float right = lerp(705.0,706.0,low);
-                float threshold = lerp(997.0,941.0,saturate((p.x-320.0)/372.0));
+                float threshold = lerp(1002.0,947.0,saturate((p.x-320.0)/372.0));
                 float innerJamb = smoothstep(left-2.0,left+2.0,p.x) *
                                   (1.0-smoothstep(right-2.0,right+2.0,p.x));
                 float sill = 1.0-smoothstep(threshold-2.0,threshold+2.0,p.y);
@@ -82,11 +82,15 @@ Shader "ROKAS/UI/HallwayLightStates"
                 float insideHeight = smoothstep(137.0,162.0,p.y) *
                     (1.0-smoothstep(722.0,753.0,p.y));
                 float fringe = leftFringe * insideHeight;
-                float neutralRed = max(offPhoto.g,offPhoto.b)*1.08 + 0.004;
-                offPhoto.r = lerp(offPhoto.r,
-                    min(offPhoto.r,neutralRed),fringe);
-
-                return lerp(offPhoto,onPhoto,illumination)*i.color;
+                // The very outer few pixels may still use Hallway ON art when
+                // the physical door jamb curves. Correct the composited pixel
+                // rather than only the OFF sample, and ONLY when MainRoom is OFF.
+                fixed4 composite = lerp(offPhoto,onPhoto,illumination);
+                float neutralRed = max(composite.g,composite.b)*1.08 + 0.004;
+                float correction = fringe * (1.0-saturate(_MainRoomOn));
+                composite.r = lerp(composite.r,
+                    min(composite.r,neutralRed),correction);
+                return composite*i.color;
             }
             ENDCG
         }
