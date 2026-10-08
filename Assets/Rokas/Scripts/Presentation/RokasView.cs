@@ -249,10 +249,10 @@ namespace Rokas.Presentation
         private void MoveHomeLocation(HomeLocation target)
         {
             if (storageBlocked || transition || !IsHomeLocation(phase) || homeSubLocation == target) return;
-            owner.StartCoroutine(HomeLocationRoutine(target));
+            owner.StartCoroutine(HomeLocationRoutine(target, null));
         }
 
-        private IEnumerator HomeLocationRoutine(HomeLocation target)
+        private IEnumerator HomeLocationRoutine(HomeLocation target, Action afterReturn)
         {
             transition = true;
             SetSceneInteractionsEnabled(false);
@@ -284,10 +284,14 @@ namespace Rokas.Presentation
             ui.Clear(transitions);
             transition = false;
             SetSceneInteractionsEnabled(true);
+            if (afterReturn != null && homeSubLocation == HomeLocation.MainRoom &&
+                IsHomeLocation(phase) && !storageBlocked)
+                afterReturn();
         }
 
         private void ExitHallway()
         {
+            if (storageBlocked || transition || homeSubLocation != HomeLocation.Hallway) return;
             if (session.State.phase == RunPhase.Accepted)
             {
                 Travel(session.LeaveHome, "Дождь. Последний переход.\nСвятилище между домами.");
@@ -298,8 +302,13 @@ namespace Rokas.Presentation
             }
             else
             {
-                OpenPanel("laptop");
-                Toast("Сначала выберите контракт в YOMI.");
+                // No contract: finish the EXISTING room transition before building
+                // the one existing Laptop/YOMI UI. Never place YOMI above Hallway.
+                owner.StartCoroutine(HomeLocationRoutine(HomeLocation.MainRoom, () =>
+                {
+                    OpenPanel("laptop");
+                    Toast("Сначала выберите контракт в YOMI.");
+                }));
             }
         }
 
@@ -438,6 +447,7 @@ namespace Rokas.Presentation
             if (laptop.IsClosing) return;
             if (value == "laptop")
             {
+                if (IsHomeLocation(phase) && homeSubLocation != HomeLocation.MainRoom) return;
                 laptop.Reset();
                 laptopOpenedFrame = Time.frameCount;
             }
