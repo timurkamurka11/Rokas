@@ -16,6 +16,7 @@ namespace Rokas.Presentation
             new Dictionary<string, ReactiveCombatActorVisual>(StringComparer.Ordinal);
         private readonly Dictionary<string, ActorMotion> enemyMotions =
             new Dictionary<string, ActorMotion>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> formationRanks = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, CorpseState> corpses =
             new Dictionary<string, CorpseState>(StringComparer.Ordinal);
         private readonly List<string> retired = new List<string>();
@@ -67,6 +68,8 @@ namespace Rokas.Presentation
         private float hitStopRemaining;
         private GameObject world;
         private Camera camera;
+        private float formationSourceScale = 1f;
+        private static readonly Vector3 SourceZoomFloor = new Vector3(0f, 0f, -7f);
         private LicensedCombatCameraPlayer licensedCamera;
         private ReactiveCombatActorVisual stageOffsetPerformer;
         private ReactiveCombatActorVisual licensedCameraPerformer;
@@ -304,6 +307,10 @@ namespace Rokas.Presentation
                 hunterMotion.Home = hunter.transform.localPosition;
                 hunter.transform.localRotation = Quaternion.identity;
                 hunter.SetStandingHeight(4.0f);
+                if (hunter.DefaultLicensedProfile != null)
+                    formationSourceScale = hunter.ModelRoot.lossyScale.y * hunter.DefaultLicensedProfile.sourceToTargetScale;
+                hunter.transform.localPosition = new Vector3(-.7f * formationSourceScale, -.62f, 0f);
+                hunterMotion.Home = hunter.transform.localPosition;
                 SetLayerRecursive(hunter.gameObject, ActorLayer);
                 hunter.SetFacing(true);
                 hunter.PlayIdle();
@@ -582,6 +589,9 @@ namespace Rokas.Presentation
         private void Layout(IReadOnlyList<string> activeIds, IReadOnlyList<string> waveEnemyIds)
         {
             if (activeIds == null) return;
+            // Source layout packs enabled ranks continuously. Retain occupied corpse slots
+            // through the current shot, then compact the living formation after cleanup.
+            bool compact = corpses.Count == 0 && CanReflowFormation();
             int count = waveEnemyIds == null ? activeIds.Count : waveEnemyIds.Count;
             for (int activeIndex = 0; activeIndex < activeIds.Count; activeIndex++)
             {
@@ -592,6 +602,8 @@ namespace Rokas.Presentation
                 if (waveEnemyIds != null)
                     for (int waveSlot = 0; waveSlot < waveEnemyIds.Count; waveSlot++)
                         if (waveEnemyIds[waveSlot] == id) { i = waveSlot; break; }
+                if (compact || !formationRanks.ContainsKey(id)) formationRanks[id] = compact ? activeIndex : i;
+                int rank = formationRanks[id];
                 float x;
                 float y;
                 float z;
@@ -621,6 +633,9 @@ namespace Rokas.Presentation
                     z = i == 1 || i == 2 ? 1.5f : 0f;
                     scale = .71f;
                 }
+                // Source Front origin .2 plus size-one half-width .5; adjacent centers
+                // advance Width(1) + spacing(-.1). Existing depth/stature adaptation stays.
+                x = (.7f + .9f * rank) * formationSourceScale;
                 Vector3 slot = new Vector3(x, y, z);
                 ActorMotion motion;
                 if (!enemyMotions.TryGetValue(id, out motion))
@@ -639,6 +654,22 @@ namespace Rokas.Presentation
                 }
                 actor.transform.localScale = Vector3.one * scale;
             }
+        }
+
+        private bool CanReflowFormation()
+        {
+            if (LicensedCameraActive || hunterMotion.Phase != MotionPhase.None ||
+                hunterMotion.StageOffsetActive || hunterMotion.ReturnRequested || hunter != null && !hunter.IdleSettled) return false;
+            foreach (ActorMotion motion in enemyMotions.Values)
+                if (motion.Phase != MotionPhase.None || motion.StageOffsetActive || motion.ReturnRequested ||
+                    motion.Actor != null && !motion.Actor.IsDead && !motion.Actor.IdleSettled) return false;
+            return true;
+        }
+
+        private static float ContactDistance(ReactiveCombatActorVisual actor, bool heavy, float fallback)
+        {
+            LicensedCombatMotionProfile source = actor == null ? null : actor.AttackLicensedProfile(heavy);
+            return source == null ? fallback : Mathf.Max(.1f, actor.ModelRoot.lossyScale.y * source.sourceToTargetScale);
         }
 
         // Movement precedes the committed command. Core still owns the impact and damage.
@@ -727,7 +758,7 @@ namespace Rokas.Presentation
             bool prepared = PreviewConfirmed;
             Vector3 targetPosition = enemyMotions.TryGetValue(targetId, out ActorMotion targetMotion)
                 ? targetMotion.Home : target.transform.localPosition;
-            Vector3 attackPoint = new Vector3(targetPosition.x - HunterAttackDistance, hunterMotion.Home.y,
+            Vector3 attackPoint = new Vector3(targetPosition.x - ContactDistance(hunter, heavy, HunterAttackDistance), hunterMotion.Home.y,
                 targetPosition.z - .45f);
             hunterMotionTargetId = targetId;
             hunterApproachComplete = false;
@@ -840,7 +871,7 @@ namespace Rokas.Presentation
             motion.NextHitIndex = 0;
             motion.StrikeLead = Mathf.Max(.1f, (heavy ? 1.45f : 1f) - EnemyApproachDuration);
             // AttackStarted is delivered only after the prior actor has settled at home.
-            Vector3 goal = new Vector3(hunterMotion.Home.x + EnemyAttackDistance,
+            Vector3 goal = new Vector3(hunterMotion.Home.x + ContactDistance(motion.Actor, motion.Heavy, EnemyAttackDistance),
                 motion.Home.y, hunterMotion.Home.z + .1f);
             BeginMotion(motion, MotionPhase.Prepare, goal, .16f);
             motion.Actor.PlayAttackToContact(heavy ? 1.45f : 1f);
@@ -946,6 +977,8 @@ namespace Rokas.Presentation
                     heavyHunterActionId = combatEvent.Detail == "heavy" ? combatEvent.ActionId : null;
                     throwHunterActionId = combatEvent.Detail == "throw_blade" ? combatEvent.ActionId : null;
                     if (hunter == null) break;
+                    if (combatEvent.Detail == "Basic") hunter.CommitCombatStance(CombatIdleStance.Normal);
+                    else if (combatEvent.Detail == "heavy") hunter.CommitCombatStance(CombatIdleStance.Heavy);
                     hunterCommandPose = combatEvent.Detail == "throw_blade" ? HunterCommandPose.Throw :
                         combatEvent.Detail == "heavy" ? HunterCommandPose.Heavy :
                         combatEvent.Detail == "Defend" ? HunterCommandPose.Defend :
@@ -1121,6 +1154,9 @@ namespace Rokas.Presentation
             // Team placement shifts actors in source stage units, not the camera root.
             // Capture composition origin first so common offsets do not cancel themselves.
             ApplyLicensedStageOffsets(profile, performer, target, scale);
+            // Raw camera parent/child positions use the source world frame.
+            // Map its ZoomIn floor Z=-7 onto this composition exactly once.
+            origin -= world.transform.rotation * (SourceZoomFloor * scale);
             licensedCamera.Begin(profile.camera, origin, Mathf.Max(.001f, scale), world.transform.rotation,
                 parentPosition, parentEuler);
             licensedCameraPerformer = performer;
@@ -1153,7 +1189,7 @@ namespace Rokas.Presentation
             ActorMotion motion = MotionForActor(actor);
             if (motion == null || actor.IsDead || sourceOffset == Vector2.zero) return;
             motion.StageBasePosition = actor.transform.localPosition;
-            Vector3 worldOffset = world.transform.rotation * new Vector3(sourceOffset.x, sourceOffset.y, 0f) * scale;
+            Vector3 worldOffset = world.transform.rotation * new Vector3(actor == hunter ? sourceOffset.x : -sourceOffset.x, 0f, sourceOffset.y) * scale;
             motion.StageOffset = world.transform.InverseTransformVector(worldOffset);
             actor.transform.localPosition += motion.StageOffset;
             motion.StageOffsetActive = true;

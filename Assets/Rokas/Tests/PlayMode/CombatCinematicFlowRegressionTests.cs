@@ -38,6 +38,8 @@ namespace Rokas.Tests
         private float previousDistance;
         private Vector3 previousStageScale;
         private Keyboard keyboard;
+        private bool spatialValidation, spatialContactObserved;
+        private Vector3 spatialTargetHome;
         private bool inputConfigured, keyHeld, capture, measuring, completed, observedEnemyNormal, observedEnemyHeavy, observedBlock;
         private bool observedCoreSuffixCancellation, observedNativeHomeRecovery, observedPassiveStageOffset, confirmCounters = true;
         private readonly List<StageOffsetProbe> stageOffsetProbes = new List<StageOffsetProbe>();
@@ -70,6 +72,31 @@ namespace Rokas.Tests
         private float started, nextSequenceTime;
         private int sequenceFrame, plannedCommands, fillerCommands;
         private ProfilerRecorder mainThreadRecorder, gcRecorder;
+
+        [UnityTest, Timeout(180000)]
+        public IEnumerator ActualCoreUiUsesCompactSourceFormationAndRelativeZoomCamera()
+        {
+            capture = false; confirmCounters = true; runLabel = "SourceSpatial";
+            yield return EnterEncounter();
+            float scale = hunter.ModelRoot.lossyScale.y * hunter.DefaultLicensedProfile.sourceToTargetScale;
+            string first = boot.Session.ReactiveCombat.ActiveEnemyIds[0];
+            Assert.That(arena.HunterHome.x / scale, Is.EqualTo(-.7f).Within(.001f), "Size-one source front hero is -.7, rather than the old wide -5.25 anchor.");
+            Assert.That(arena.EnemyHome(first).x / scale, Is.EqualTo(.7f).Within(.001f), "First source enemy slot must use the other compact front anchor.");
+            for (int i = 0; i < boot.Session.ReactiveCombat.ActiveEnemyIds.Count; i++)
+                Assert.That(arena.EnemyHome(boot.Session.ReactiveCombat.ActiveEnemyIds[i]).x / scale,
+                    Is.EqualTo(.7f + .9f * i).Within(.001f), "Active size-one ranks use the source .9 spacing.");
+            spatialValidation = true;
+            spatialTargetHome = arena.EnemyHome(first);
+            yield return VerifyPreviewSwitchAndCancellation();
+            yield return ExecuteCommand("ReactiveBasic", "source-spatial-normal", first);
+            yield return WaitForCommand();
+            Assert.That(spatialContactObserved, Is.True, "Relative shot and mirrored target placement must be seen during the actual Core contact.");
+            Assert.That(observedPassiveStageOffset, Is.True, "Real UI refresh must retain the source target placement until its cue.");
+            tactical.AssertRestored(actorCamera);
+            Assert.That(arena.HunterAtHome && hunter.IdleSettled, Is.True);
+            completed = true;
+            WriteManifest("source-spatial", "Actual Bootstrap/UI/Core route with source size-one front anchors, mirrored team offsets and camera translated from source ZoomIn floor Z=-7. No capture readback.");
+        }
 
         [UnityTest, Timeout(420000)]
         public IEnumerator ActualCoreUiFlowCapturesNativeReturnAndSingleThrowVisualOwnership()
@@ -345,11 +372,14 @@ namespace Rokas.Tests
                 Click(button);
             }
             yield return WaitUntil(() => combat.Phase == ReactivePhase.PlayerExecution, 5f, "real commit");
+            CombatIdleStance expectedStance = button == "ReactiveHeavy" ? CombatIdleStance.Heavy :
+                button == "ReactiveBasic" ? CombatIdleStance.Normal : hunter.ConfirmedCombatStance;
+            Assert.That(hunter.ConfirmedCombatStance, Is.EqualTo(expectedStance), "Actual Core commit must own the saved sword stance.");
             string action = combat.CurrentActionId;
             yield return WaitUntil(() => combat.GetActorState(targetId).Hp < hp, 15f, "real Core hit " + action);
             Assert.That(hunter.ActiveLicensedProfile, Is.Not.Null);
             Assert.That(hunter.LicensedContactConfirmed, Is.True);
-            if (capture && button == "ReactiveBasic")
+            if ((capture || spatialValidation) && button == "ReactiveBasic")
                 yield return VerifyPassiveTargetOffsetAcrossRefresh(targetActor, targetHome);
             if (capture)
                 Capture(button == "ReactiveHeavy" ? "06_keiko_heavy_impact" :
@@ -513,6 +543,23 @@ namespace Rokas.Tests
             if (arena.HunterMotionPhase == "None" && hunter.LicensedContactConfirmed &&
                 hunter.ActiveLicensedProfile != null && hunter.LicensedStageRecovered)
                 observedNativeHomeRecovery = true;
+            if (spatialValidation && hunter.LicensedContactConfirmed && hunter.ActiveLicensedProfile == actorLibrary.keiko.licensedNormal &&
+                arena.LicensedCameraActive && arena.LicensedCameraClock < .4f && targetId != null &&
+                enemies.TryGetValue(targetId, out ReactiveCombatActorVisual spatialTarget) && !spatialTarget.IsDead)
+            {
+                float sourceScale = hunter.ModelRoot.lossyScale.y * hunter.ActiveLicensedProfile.sourceToTargetScale;
+                // ActorSpacingLayout uses local +Z for offset.x: the right team is mirrored.
+                Assert.That((spatialTarget.transform.localPosition.x - spatialTargetHome.x) / sourceScale,
+                    Is.EqualTo(.25f).Within(.002f), "Touche raw target -.25 maps to world +.25 on Team1.");
+                float floorZ = (hunter.transform.localPosition.z + spatialTarget.transform.localPosition.z) * .5f;
+                float relativeDepth = (actorCamera.transform.localPosition.z - floorZ) / sourceScale;
+                Assert.That(relativeDepth, Is.InRange(-8f, -6f), "BasicDamage camera is around -7.1 relative to ZoomIn floor, not raw -14.1 added again.");
+                Vector3 attackerView = actorCamera.WorldToViewportPoint(hunter.TorsoPoint);
+                Vector3 targetView = actorCamera.WorldToViewportPoint(spatialTarget.TorsoPoint);
+                Assert.That(attackerView.x, Is.InRange(0f, 1f));
+                Assert.That(targetView.x, Is.InRange(0f, 1f));
+                spatialContactObserved = true;
+            }
             if (!capture) return;
             var row = new FrameEvidence {
                 index = frames.Count, unityFrame = Time.frameCount, realtime = Time.realtimeSinceStartup - started, frameDelta = Time.unscaledDeltaTime,

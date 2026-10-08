@@ -4,6 +4,7 @@ using UnityEngine;
 namespace Rokas.Presentation
 {
     public enum CombatActorKind { Keiko, Mina, Yokai }
+    public enum CombatIdleStance { Normal, Heavy }
 
     [Serializable]
     public sealed class ReactiveCombatActorClips
@@ -52,6 +53,10 @@ namespace Rokas.Presentation
         public Vector3 weaponSocketPosition;
         public Vector3 weaponSocketEuler;
         public Vector3 weaponSocketScale = Vector3.one;
+        // Own back carry adaptation. Calibrate its rotation from the actual skin bind frame.
+        public string swordStowBonePath = "mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2";
+        public Vector3 swordStowPosition = new Vector3(.06f, -.08f, -.14f);
+        public float swordStowBladeSideSlope = .4f;
     }
 
     // Only referenced model and clip subassets enter the player build.
