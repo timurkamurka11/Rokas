@@ -29,20 +29,21 @@ jobs:
               image = Image.open(path).convert('RGB')
               images[name] = image
               print(f'PHOTO_DIM_{name}={image.size}', flush=True)
-              roi = image.crop((1550,0,1920,690))
+              roi = image.crop((1330,0,1672,620))
               buff = io.BytesIO()
               roi.save(buff,format='JPEG',quality=78,optimize=True)
               print('PHOTO_ROI_'+name+'='+base64.b64encode(buff.getvalue()).decode('ascii'),flush=True)
               for y in (45,80,180,275,385,415):
                   segments=[]
                   for x0,x1 in ((1620,1700),(1700,1768),(1768,1835),(1835,1870)):
-                      patch=image.crop((x0,y,x1,y+10))
+                      sx=image.width/1920.0; sy=image.height/1080.0
+                      patch=image.crop((round(x0*sx),round(y*sy),round(x1*sx),round((y+10)*sy)))
                       means=ImageStat.Stat(patch).mean
                       segments.append(f'{x0}-{x1}:'+','.join(f'{v:.1f}' for v in means))
                   print(f'PHOTO_BAND_{name}_{y}='+' '.join(segments),flush=True)
           if images['ON'].size == images['OFF'].size:
               delta=ImageChops.difference(images['ON'],images['OFF'])
               for box in ((1620,80,1870,380),(1620,380,1870,470),(1618,470,1760,640)):
-                  means=ImageStat.Stat(delta.crop(box)).mean
+                  means=ImageStat.Stat(delta.crop(tuple(round(v*(images['ON'].width/1920.0 if k%2==0 else images['ON'].height/1080.0)) for k,v in enumerate(box)))).mean
                   print('PHOTO_DIFFERENCE_'+str(box)+'='+','.join(f'{v:.1f}' for v in means),flush=True)
           PY
