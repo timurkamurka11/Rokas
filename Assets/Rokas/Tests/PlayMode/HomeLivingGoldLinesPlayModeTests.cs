@@ -1,0 +1,123 @@
+using System;
+using System.Collections;
+using System.Reflection;
+using NUnit.Framework;
+using Rokas.Presentation;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+
+namespace Rokas.Tests
+{
+    public sealed class HomeLivingGoldLinesPlayModeTests
+    {
+        private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        [UnityTest]
+        public IEnumerator OnlyDoorAndLaptopHaveLivingGoldAndHoverDoesNotMoveTheirContours()
+        {
+            var rootObject = new GameObject("HomeGoldLineTest", typeof(RectTransform),
+                typeof(Canvas), typeof(CanvasScaler));
+            var parent = rootObject.GetComponent<RectTransform>();
+            parent.sizeDelta = new Vector2(1920f, 1080f);
+            var eventRoot = new GameObject("HomeGoldLineEventSystem", typeof(EventSystem));
+
+            try
+            {
+                Transform doorHit = MakeHit(parent, "DoorHotspot");
+                Transform laptopHit = MakeHit(parent, "LaptopHotspot");
+                RectTransform home = HomeFinalUiPresenter.Build(parent);
+                Assert.That(home, Is.Not.Null, "The committed HomeFinalIcons must load.");
+
+                Component door = FindOutline(home, "Door");
+                Component laptop = FindOutline(home, "Laptop");
+                Component cat = FindOutline(home, "Cat");
+
+                Assert.That(Living(door), Is.True);
+                Assert.That(Living(laptop), Is.True);
+                Assert.That(Living(cat), Is.False, "Do not alter Cat outline FX.");
+                Assert.That(((Graphic)door).raycastTarget, Is.False);
+                Assert.That(((Graphic)laptop).raycastTarget, Is.False);
+
+                Vector2[] doorPoints = Points(door);
+                Vector2[] laptopPoints = Points(laptop);
+                Assert.That(doorPoints.Length, Is.EqualTo(8));
+                Assert.That(laptopPoints.Length, Is.EqualTo(8));
+
+                var pointer = new PointerEventData(eventRoot.GetComponent<EventSystem>());
+                ExecuteEvents.Execute<IPointerEnterHandler>(doorHit.gameObject, pointer,
+                    ExecuteEvents.pointerEnterHandler);
+                Assert.That(Hovered(door), Is.True);
+                Assert.That(Hovered(laptop), Is.False);
+                yield return null;
+
+                ExecuteEvents.Execute<IPointerExitHandler>(doorHit.gameObject, pointer,
+                    ExecuteEvents.pointerExitHandler);
+                ExecuteEvents.Execute<IPointerEnterHandler>(laptopHit.gameObject, pointer,
+                    ExecuteEvents.pointerEnterHandler);
+                Assert.That(Hovered(door), Is.False);
+                Assert.That(Hovered(laptop), Is.True);
+                yield return null;
+
+                ExecuteEvents.Execute<IPointerExitHandler>(laptopHit.gameObject, pointer,
+                    ExecuteEvents.pointerExitHandler);
+                yield return null;
+                Assert.That(Hovered(laptop), Is.False);
+
+                CollectionAssert.AreEqual(doorPoints, Points(door),
+                    "Living gold must not change any authored Door contour vertex.");
+                CollectionAssert.AreEqual(laptopPoints, Points(laptop),
+                    "Living gold must not change any authored Laptop contour vertex.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(rootObject);
+                UnityEngine.Object.DestroyImmediate(eventRoot);
+            }
+        }
+
+        private static Transform MakeHit(Transform parent, string id)
+        {
+            var go = new GameObject(id, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return go.transform;
+        }
+
+        private static Component FindOutline(RectTransform root, string name)
+        {
+            Transform t = root.Find("Outlines/Outline_" + name);
+            Assert.That(t, Is.Not.Null, "Missing authored " + name + " outline.");
+            Graphic graphic = t.GetComponent<Graphic>();
+            Assert.That(graphic, Is.Not.Null);
+            return graphic;
+        }
+
+        private static bool Living(Component outline)
+        {
+            FieldInfo field = outline.GetType().GetField("livingGold", Private);
+            Assert.That(field, Is.Not.Null);
+            return (bool)field.GetValue(outline);
+        }
+
+        private static bool Hovered(Component outline)
+        {
+            PropertyInfo property = outline.GetType().GetProperty("Hovered",
+                BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(property, Is.Not.Null);
+            return (bool)property.GetValue(outline);
+        }
+
+        private static Vector2[] Points(Component outline)
+        {
+            FieldInfo dataField = outline.GetType().GetField("data", Private);
+            Assert.That(dataField, Is.Not.Null);
+            object source = dataField.GetValue(outline);
+            Assert.That(source, Is.Not.Null);
+            FieldInfo pointsField = source.GetType().GetField("points",
+                BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(pointsField, Is.Not.Null);
+            return (Vector2[])((Vector2[])pointsField.GetValue(source)).Clone();
+        }
+    }
+}
