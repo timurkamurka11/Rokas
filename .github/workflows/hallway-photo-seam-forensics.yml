@@ -71,4 +71,18 @@ jobs:
           for x,y in [(1879,230),(1904,230),(1660,640)]:
               assert coverage(x,y)==0,(x,y,coverage(x,y))
           print('PHOTO_SEAM_PIXEL_REGRESSION_PASS source=',on.size,'vertices=',len(vertices))
+          # Emit two full-resolution-source comparison crops for visual QA.
+          import base64, io
+          from PIL import ImageDraw, ImageFilter
+          native=[(round(x*on.width/1920),round(y*on.height/1080)) for x,y in vertices]
+          mask=Image.new('L',on.size,0)
+          ImageDraw.Draw(mask).polygon(native,fill=255)
+          mask=mask.filter(ImageFilter.GaussianBlur(3.5))
+          for name,hall,main in [('MAIN_ON_HALL_OFF',off,on),('MAIN_OFF_HALL_ON',on,off)]:
+              mixed=Image.composite(hall,main,mask)
+              region=(round(1590*on.width/1920),round(330*on.height/1080),
+                      round(1895*on.width/1920),round(610*on.height/1080))
+              out=io.BytesIO()
+              mixed.crop(region).resize((610,560)).save(out,'JPEG',quality=82,optimize=True)
+              print('PHOTO_FINAL_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
           PY
