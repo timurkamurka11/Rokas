@@ -253,6 +253,23 @@ namespace Rokas.Tests
                 Is.EqualTo(0f), "The right frame and adjacent wall must not be recolored.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1830f,421f),
                 Is.EqualTo(0f), "Below the curtain hem, don't recolor the TV cabinet.");
+            // The actual reported defect is the photographic potted-lantern
+            // niche LEFT of the TV, BELOW the hanging curtain.  The old
+            // right-hand cutout ended at x=1751 around y=466, leaving a warm
+            // rectangle when Hallway was OFF and a dark rectangle when ON.
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1780f,440f),
+                Is.GreaterThan(.95f), "Upper potted lantern must follow HallwayLight.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1782f,461f),
+                Is.GreaterThan(.95f), "Lit plant niche must not leak the opposite light state.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1770f,480f),
+                Is.GreaterThan(.95f), "Bottom plant niche must not retain a square light patch.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1805f,440f),
+                Is.EqualTo(0f), "Television glass and right side must retain Main Room lighting.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1810f,465f),
+                Is.EqualTo(0f), "Do not recolor the television with Hallway photo.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1785f,500f),
+                Is.EqualTo(0f), "Foreground cabinet below plant niche remains Main Room.");
+
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1705f,220f),
                 Is.GreaterThan(.95f), "Hallway strip beside the curtain must not remain warm.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1725f,220f),
