@@ -119,40 +119,54 @@ namespace Rokas.Presentation
             }
         }
 
-        // Tight strip inside the existing Home opening. Outer boundary is alpha zero;
-        // a 5px inner ring prevents a seam on the frame without a circular mask.
-        private static readonly Vector2[] Outer = {
-            new Vector2(1403,42), new Vector2(1620,30),
-            new Vector2(1618,618), new Vector2(1410,625)
-        };
-        private static readonly Vector2[] Inner = {
-            new Vector2(1411,48), new Vector2(1612,39),
-            new Vector2(1610,609), new Vector2(1417,616)
-        };
 
+        private static readonly Vector2[] Doorway = {
+            new Vector2(1628f,72f), new Vector2(1698f,65f),
+            new Vector2(1698f,377f), new Vector2(1768f,383f),
+            new Vector2(1760f,453f), new Vector2(1740f,466f),
+            new Vector2(1740f,618f), new Vector2(1628f,614f)
+        };
+        public static float CoverageAt(float x,float y)
+        {
+            var p=new Vector2(x,y);
+            bool inside=false;
+            float closest=float.MaxValue;
+            for(int i=0,j=Doorway.Length-1;i<Doorway.Length;j=i++)
+            {
+                var a=Doorway[j];var b=Doorway[i];var e=b-a;
+                if((a.y>y)!=(b.y>y) && x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)
+                    inside=!inside;
+                float u=Mathf.Clamp01(Vector2.Dot(p-a,e)/e.sqrMagnitude);
+                closest=Mathf.Min(closest,(p-(a+u*e)).sqrMagnitude);
+            }
+            return inside ? Mathf.SmoothStep(0f,1f,Mathf.Sqrt(closest)/4f):0f;
+        }
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            // Alpha-feathered polygon patch with full-scene UV mapping.
-            for(int i=0;i<4;i++) AddVertex(mesh,Outer[i],0f);
-            for(int i=0;i<4;i++) AddVertex(mesh,Inner[i],1f);
-            for(int i=0;i<4;i++)
+            const float x0=1620f,y0=58f,x1=1776f,y1=630f;
+            const int step=3;
+            int nx=Mathf.CeilToInt((x1-x0)/step);
+            int ny=Mathf.CeilToInt((y1-y0)/step);
+            Rect rect=GetPixelAdjustedRect();
+            for(int y=0;y<=ny;y++)
             {
-                int next=(i+1)%4;
-                mesh.AddTriangle(i,next,4+next);
-                mesh.AddTriangle(i,4+next,4+i);
+                float py=Mathf.Min(y1,y0+y*step);
+                for(int x=0;x<=nx;x++)
+                {
+                    float px=Mathf.Min(x1,x0+x*step);
+                    Color c=color;c.a*=CoverageAt(px,py);
+                    mesh.AddVert(new Vector3(rect.xMin+px,rect.yMax-py),
+                        c,new Vector2(px/1920f,1f-py/1080f));
+                }
             }
-            mesh.AddTriangle(4,5,6);
-            mesh.AddTriangle(4,6,7);
-        }
-
-        private void AddVertex(VertexHelper mesh,Vector2 point,float alpha)
-        {
-            Rect rect = GetPixelAdjustedRect();
-            Color c = color;
-            c.a *= alpha;
-            mesh.AddVert(new Vector3(rect.xMin+point.x,rect.yMax-point.y),
-                c,new Vector2(point.x/1920f,1f-point.y/1080f));
+            for(int y=0;y<ny;y++)
+            for(int x=0;x<nx;x++)
+            {
+                int a=y*(nx+1)+x;int b=a+nx+1;
+                mesh.AddTriangle(a,b,a+1);
+                mesh.AddTriangle(a+1,b,b+1);
+            }
         }
     }
 }
