@@ -218,8 +218,8 @@ namespace Rokas.Tests
             Assert.That(bootstrap.Session.HallwayLightOn, Is.True);
         }
 
-        [Test]
-        public void MainRoomDoorwayRenderedPolygonExcludesWallCurtainAndFloor()
+        [UnityTest]
+        public IEnumerator MainRoomDoorwayRenderedPolygonExcludesWallCurtainAndFloor()
         {
             // Measured authored 1920x1080 pixel bounds. Applies equally at QHD
             // because AuthoredStage scales as a whole rather than changing UVs.
@@ -235,6 +235,7 @@ namespace Rokas.Tests
                 Is.EqualTo(0f), "MainRoom floor outside the opening must not change.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1580f,450f),
                 Is.EqualTo(0f), "Door jamb must not be overwritten.");
+            yield return null;
         }
 
         private void SetLights(bool mainOn, bool hallwayOn)
