@@ -81,4 +81,21 @@ jobs:
               out=io.BytesIO()
               pic.crop((round(1590*sx),round(315*sy),round(1895*sx),round(635*sy))).resize((610,640)).save(out,format='JPEG',quality=84)
               print('PHOTO_GRID_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
+          # Lower-right corridor/light spill candidate: follow the INNER
+          # silhouette around the potted lamp, stop short of the TV glass.
+          trial = [(1622,72),(1712,58),(1872,30),(1873,390),
+                   (1850,394),(1800,398),(1796,404),
+                   (1795,433),(1795,454),(1794,466),
+                   (1789,477),(1764,484),(1751,484),
+                   (1751,645),(1700,636),(1660,629),(1618,621)]
+          tpoly=[(round(x*sx),round(y*sy)) for x,y in trial]
+          trialmask=Image.new('L',images['ON'].size,0)
+          ImageDraw.Draw(trialmask).polygon(tpoly,fill=255)
+          trialmask=trialmask.filter(ImageFilter.GaussianBlur(radius=3.5))
+          for name, composite in {
+              'MAIN_ON_HALL_OFF':Image.composite(images['OFF'],images['ON'],trialmask),
+              'MAIN_OFF_HALL_ON':Image.composite(images['ON'],images['OFF'],trialmask)}.items():
+              out=io.BytesIO()
+              composite.crop((round(1600*sx),round(325*sy),round(1900*sx),round(610*sy))).resize((660,627)).save(out,format='JPEG',quality=80)
+              print('PHOTO_TRIAL_'+name+'='+base64.b64encode(out.getvalue()).decode('ascii'),flush=True)
           PY
