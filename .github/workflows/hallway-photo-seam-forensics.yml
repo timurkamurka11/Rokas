@@ -1,0 +1,48 @@
+name: ROKAS Hallway Photo Seam Forensics
+on:
+  push:
+    branches:
+      - codex/hallway-doorway-visual-artifact-repair
+    paths:
+      - .github/workflows/hallway-photo-seam-forensics.yml
+permissions:
+  contents: read
+jobs:
+  photo-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect source ON OFF image alignment and doorway ROI
+        shell: bash
+        run: |
+          python3 -m pip -q install Pillow
+          python3 - <<'PY'
+          import base64, io
+          from PIL import Image, ImageChops, ImageStat
+          files = {
+             'ON': 'Assets/Rokas/Art/Home/ApartmentNight.png',
+             'OFF': 'Assets/Rokas/Resources/Home/ApartmentNightLightOff.png',
+          }
+          images = {}
+          for name, path in files.items():
+              image = Image.open(path).convert('RGB')
+              images[name] = image
+              print(f'PHOTO_DIM_{name}={image.size}', flush=True)
+              roi = image.crop((1550,0,1920,690))
+              buff = io.BytesIO()
+              roi.save(buff,format='JPEG',quality=78,optimize=True)
+              print('PHOTO_ROI_'+name+'='+base64.b64encode(buff.getvalue()).decode('ascii'),flush=True)
+              for y in (45,80,180,275,385,415):
+                  segments=[]
+                  for x0,x1 in ((1620,1700),(1700,1768),(1768,1835),(1835,1870)):
+                      patch=image.crop((x0,y,x1,y+10))
+                      means=ImageStat.Stat(patch).mean
+                      segments.append(f'{x0}-{x1}:'+','.join(f'{v:.1f}' for v in means))
+                  print(f'PHOTO_BAND_{name}_{y}='+' '.join(segments),flush=True)
+          if images['ON'].size == images['OFF'].size:
+              delta=ImageChops.difference(images['ON'],images['OFF'])
+              for box in ((1620,80,1870,380),(1620,380,1870,470),(1618,470,1760,640)):
+                  means=ImageStat.Stat(delta.crop(box)).mean
+                  print('PHOTO_DIFFERENCE_'+str(box)+'='+','.join(f'{v:.1f}' for v in means),flush=True)
+          PY
