@@ -403,6 +403,15 @@ namespace Rokas.Presentation
                     {
                         var reporter = bgHitTarget.AddComponent<HoverReporter>();
                         reporter.iconFx = iconFx;
+                        // Share the existing gameplay hotspot hover events with
+                        // its matching outline; do not create a second collider.
+                        if (targetName == "DoorHotspot" || targetName == "LaptopHotspot")
+                        {
+                            Transform outline = outlineRoot.Find("Outline_" +
+                                (targetName == "DoorHotspot" ? "Door" : "Laptop"));
+                            if (outline) reporter.outlineFx =
+                                outline.GetComponent<HomeFinalOutlineGraphic>();
+                        }
                     }
                 }
             }
@@ -522,22 +531,38 @@ namespace Rokas.Presentation
     {
         private HomeFinalOutline data;
         private float phase;
+        private bool livingGold;
+        private bool laptopGold;
+        private float hoverStrength;
+        public bool Hovered { get; set; }
 
         public void Configure(HomeFinalOutline source)
         {
             data = source;
-            phase =
-                Mathf.Repeat(
-                    Mathf.Abs(GetInstanceID()) *
-                    .000173f,
-                    1f);
+            livingGold = source.id == "Outline_Door" || source.id == "Outline_Laptop";
+            laptopGold = source.id == "Outline_Laptop";
+            // Identical phase after scene recreation; Cat retains its old style.
+            phase = livingGold ? (laptopGold ? .57f : .13f) :
+                Mathf.Repeat(Mathf.Abs(GetInstanceID()) * .000173f, 1f);
 
             SetVerticesDirty();
         }
 
         private void Update()
         {
+            if (livingGold && Application.isPlaying)
+            {
+                float smoothing = 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime);
+                hoverStrength = Mathf.Lerp(hoverStrength, Hovered ? 1f : 0f, smoothing);
+            }
             SetVerticesDirty();
+        }
+
+        protected override void OnDisable()
+        {
+            Hovered = false;
+            hoverStrength = 0f;
+            base.OnDisable();
         }
 
         protected override void OnPopulateMesh(
@@ -577,6 +602,11 @@ namespace Rokas.Presentation
             Color source,
             float shimmerStrength)
         {
+            if (livingGold)
+            {
+                StrokeLivingGold(mesh, thickness, source, shimmerStrength);
+                return;
+            }
             int segmentCount =
                 data.points.Length - 1 +
                 (data.closed &&
@@ -623,6 +653,85 @@ namespace Rokas.Presentation
                         position,
                         shimmerStrength));
             }
+        }
+
+        // Walk the actual authored polygon perimeter. Short vertex-colored
+        // segments give a continuous glint instead of blinking whole edges.
+        // The original points, pivot, hit targets and light mask never move.
+        private void StrokeLivingGold(VertexHelper mesh, float thickness,
+            Color source, float strength)
+        {
+            int edges = data.points.Length - 1 +
+                (data.closed && data.points.Length > 2 ? 1 : 0);
+            float perimeter = 0f;
+            for (int i = 0; i < edges; i++)
+                perimeter += Vector2.Distance(data.points[i],
+                    data.points[(i + 1) % data.points.Length]);
+            if (perimeter < .001f) return;
+
+            float time = Application.isPlaying ? Time.unscaledTime : 0f;
+            // Breathing is confined to width (max 2.2%); contour coordinates
+            // remain pixel-identical to the current Door and Laptop assets.
+            float breath = 1f + Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
+                phase * Mathf.PI * 2f) * .022f;
+            float width = thickness * breath * (1f + hoverStrength * .025f);
+            float distanceAlong = 0f;
+            for (int i = 0; i < edges; i++)
+            {
+                Vector2 a = Map(data.points[i]);
+                Vector2 b = Map(data.points[(i + 1) % data.points.Length]);
+                float length = Vector2.Distance(a, b);
+                if (length < .001f) continue;
+                int steps = Mathf.Max(1, Mathf.CeilToInt(length / 12f));
+                for (int k = 0; k < steps; k++)
+                {
+                    float begin = (float)k / steps, end = (float)(k + 1) / steps;
+                    Color startColor = LivingColor(source,
+                        (distanceAlong + length * begin) / perimeter, strength, time);
+                    Color endColor = LivingColor(source,
+                        (distanceAlong + length * end) / perimeter, strength, time);
+                    AddGradientSegment(mesh, Vector2.Lerp(a, b, begin),
+                        Vector2.Lerp(a, b, end), width, startColor, endColor);
+                }
+                distanceAlong += length;
+            }
+        }
+
+        private Color LivingColor(Color source, float location, float strength, float time)
+        {
+            float cursor = Mathf.Repeat(time * (laptopGold ? .175f : .115f) + phase, 1f);
+            float delta = Mathf.Abs(Mathf.Repeat(location - cursor + .5f, 1f) - .5f);
+            float band = 1f - Mathf.SmoothStep(0f, laptopGold ? .083f : .115f, delta);
+            float pulse = Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
+                phase * Mathf.PI * 2f) * .075f;
+            // No frame-random flicker. Micro movement is in luminosity only.
+            float micro = Mathf.Sin(time * 3.7f + location * 29f +
+                phase * Mathf.PI * 2f) * .012f;
+            float sweep = band * (laptopGold ? .47f : .38f) * strength;
+            float gain = (1f + pulse + micro + sweep) * (1f + hoverStrength * .14f);
+            Color result = source;
+            result.r = Mathf.Clamp01(source.r * gain);
+            result.g = Mathf.Clamp01(source.g * gain);
+            result.b = Mathf.Clamp01(source.b * gain);
+            result.a = Mathf.Clamp01(source.a *
+                (1f + pulse * .7f + sweep * .8f + hoverStrength * .12f));
+            return result;
+        }
+
+        private static void AddGradientSegment(VertexHelper mesh, Vector2 a, Vector2 b,
+            float thickness, Color start, Color end)
+        {
+            Vector2 delta = b - a;
+            if (delta.sqrMagnitude < .0001f) return;
+            Vector2 normal = new Vector2(-delta.y, delta.x).normalized *
+                thickness * .5f;
+            int first = mesh.currentVertCount;
+            mesh.AddVert(a + normal, start, Vector2.zero);
+            mesh.AddVert(a - normal, start, Vector2.zero);
+            mesh.AddVert(b + normal, end, Vector2.zero);
+            mesh.AddVert(b - normal, end, Vector2.zero);
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first + 2, first + 1, first + 3);
         }
 
         private Color Animate(
@@ -1233,20 +1342,24 @@ namespace Rokas.Presentation
     internal sealed class HoverReporter : MonoBehaviour, UnityEngine.EventSystems.IPointerEnterHandler, UnityEngine.EventSystems.IPointerExitHandler
     {
         public HomeInteractionIconFx iconFx;
+        public HomeFinalOutlineGraphic outlineFx;
 
         public void OnPointerEnter(UnityEngine.EventSystems.PointerEventData e)
         {
             if (iconFx) iconFx.Hovered = true;
+            if (outlineFx) outlineFx.Hovered = true;
         }
 
         public void OnPointerExit(UnityEngine.EventSystems.PointerEventData e)
         {
             if (iconFx) iconFx.Hovered = false;
+            if (outlineFx) outlineFx.Hovered = false;
         }
 
         private void OnDisable()
         {
             if (iconFx) iconFx.Hovered = false;
+            if (outlineFx) outlineFx.Hovered = false;
         }
     }
 }
