@@ -59,7 +59,7 @@ namespace Rokas.Tests
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.Not.Null);
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E1"));
             Vector3 hunterHome = hunter.transform.localPosition;
-            ReactiveCombatActorVisual dyingTarget = FindEnemyAt(new Vector3(4.55f, -.38f, 1.5f));
+            ReactiveCombatActorVisual dyingTarget = FindEnemyAt(ReactiveCombatArena.TacticalEnemySlot(3, 1));
             Assert.That(dyingTarget, Is.Not.Null);
             Vector3 corpseOrigin = dyingTarget.transform.localPosition;
             Vector3 corpseScale = dyingTarget.transform.localScale;
@@ -76,8 +76,8 @@ namespace Rokas.Tests
             yield return new WaitForSecondsRealtime(.2f);
             Assert.That(hunter.CurrentPose, Is.EqualTo("ReturnHome"));
             Assert.That(boot.ReactivePresentationHeld, Is.True);
-            Assert.That((FindEnemyAt(new Vector3(2.3f, -.66f, 0f)).transform.localPosition -
-                new Vector3(2.3f, -.66f, 0f)).sqrMagnitude, Is.LessThan(.0001f),
+            Assert.That((FindEnemyAt(ReactiveCombatArena.TacticalEnemySlot(3, 0)).transform.localPosition -
+                ReactiveCombatArena.TacticalEnemySlot(3, 0)).sqrMagnitude, Is.LessThan(.0001f),
                 "The next enemy must remain at home while Keiko is returning.");
             Capture(boot, "normal-return", "E1");
 

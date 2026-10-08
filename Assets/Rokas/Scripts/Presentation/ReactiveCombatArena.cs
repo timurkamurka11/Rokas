@@ -113,6 +113,32 @@ namespace Rokas.Presentation
         private const float PortalClosingSeconds = .6f;
         private const float PortalGhostSeconds = .2f;
         private const float SelectionFrameReturnSeconds = .26f;
+
+        // Measured ROKAS tactical layout. This is a compact staging pass, not a
+        // claim of pixel-identical DD2 proportions until original footage is measured.
+        // Combat Core, camera ownership, contact distances and target IDs stay unchanged.
+        public const float KeikoTacticalX = -3.8f;
+        public static Vector3 TacticalEnemySlot(int count, int i)
+        {
+            if (count <= 1) return new Vector3(3.15f, -.54f, 0f);
+            if (count == 2)
+                return new Vector3(i == 0 ? 1.9f : 4.55f,
+                    i == 0 ? -.4f : -.64f, i == 0 ? 1f : 0f);
+            if (count == 3)
+                return new Vector3(i == 0 ? 1.55f : i == 1 ? 3.5f : 5.45f,
+                    i == 1 ? -.38f : -.66f, i == 1 ? 1.5f : 0f);
+            return new Vector3(1.35f + 1.65f * i,
+                i == 1 || i == 2 ? -.38f : -.66f,
+                i == 1 || i == 2 ? 1.5f : 0f);
+        }
+
+        public static float TacticalEnemyScale(int count, int i)
+        {
+            if (count <= 1) return 1f;
+            if (count == 2) return i == 0 ? .85f : .93f;
+            if (count == 3) return i == 1 ? .77f : .83f;
+            return .71f;
+        }
         public bool HunterEntryComplete { get; private set; }
         public string HunterPresentationActionId { get; private set; }
         public bool SelectionVisible => hunterMotion.Phase == MotionPhase.Preview || hunterMotion.Phase == MotionPhase.PreviewRestore ||
@@ -276,7 +302,7 @@ namespace Rokas.Presentation
             hunter = ReactiveCombatActorVisual.Spawn(CombatActorKind.Keiko, world.transform);
             if (hunter != null)
             {
-                hunter.transform.localPosition = new Vector3(-5.25f, -.62f, 0f);
+                hunter.transform.localPosition = new Vector3(KeikoTacticalX, -.62f, 0f);
                 hunterMotion.Actor = hunter;
                 hunterMotion.Home = hunter.transform.localPosition;
                 hunter.transform.localRotation = Quaternion.identity;
@@ -567,36 +593,8 @@ namespace Rokas.Presentation
                 if (waveEnemyIds != null)
                     for (int waveSlot = 0; waveSlot < waveEnemyIds.Count; waveSlot++)
                         if (waveEnemyIds[waveSlot] == id) { i = waveSlot; break; }
-                float x;
-                float y;
-                float z;
-                float scale;
-                if (count == 1)
-                {
-                    x = 4.1f; y = -.54f; z = 0f; scale = 1f;
-                }
-                else if (count == 2)
-                {
-                    x = i == 0 ? 2.55f : 5.65f;
-                    y = i == 0 ? -.4f : -.64f;
-                    z = i == 0 ? 1f : 0f;
-                    scale = i == 0 ? .85f : .93f;
-                }
-                else if (count == 3)
-                {
-                    x = i == 0 ? 2.3f : i == 1 ? 4.55f : 6.65f;
-                    y = i == 1 ? -.38f : -.66f;
-                    z = i == 1 ? 1.5f : 0f;
-                    scale = i == 1 ? .77f : .83f;
-                }
-                else
-                {
-                    x = 1.75f + 1.75f * i;
-                    y = i == 1 || i == 2 ? -.38f : -.66f;
-                    z = i == 1 || i == 2 ? 1.5f : 0f;
-                    scale = .71f;
-                }
-                Vector3 slot = new Vector3(x, y, z);
+                Vector3 slot = TacticalEnemySlot(count, i);
+                float scale = TacticalEnemyScale(count, i);
                 ActorMotion motion;
                 if (!enemyMotions.TryGetValue(id, out motion))
                 {
