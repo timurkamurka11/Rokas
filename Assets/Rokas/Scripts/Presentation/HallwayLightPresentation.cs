@@ -122,7 +122,7 @@ namespace Rokas.Presentation
 
         private static readonly Vector2[] Doorway = {
             new Vector2(1628f,72f), new Vector2(1698f,65f),
-            new Vector2(1698f,377f), new Vector2(1768f,383f),
+            new Vector2(1698f,395f), new Vector2(1768f,403f),
             new Vector2(1760f,453f), new Vector2(1740f,466f),
             new Vector2(1740f,618f), new Vector2(1628f,614f)
         };
