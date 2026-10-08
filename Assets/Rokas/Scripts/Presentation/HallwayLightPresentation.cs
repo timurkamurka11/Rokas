@@ -141,8 +141,10 @@ namespace Rokas.Presentation
             new Vector2(1850f,394f), new Vector2(1800f,398f),
             new Vector2(1796f,404f), new Vector2(1795f,433f),
             new Vector2(1795f,454f), new Vector2(1794f,466f),
-            new Vector2(1789f,477f), new Vector2(1764f,484f),
-            new Vector2(1751f,484f),
+            // Keep covering the real lamp base and potted niche until
+            // its bottom shelf, feathering back before the TV/cabinet face.
+            new Vector2(1794f,483f), new Vector2(1784f,492f),
+            new Vector2(1769f,501f), new Vector2(1751f,505f),
             // Bottom visible Hallway follows the photographed wooden sill,
             // from the left inner jamb (~1618,623) to the right (~1740,645).
             // The previous flat 614-618 cutoff left a 10-25px lit floor strip.
