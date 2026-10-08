@@ -1,0 +1,81 @@
+name: ROKAS Living Gold Door and Laptop
+
+on:
+  push:
+    branches:
+      - codex/home-door-laptop-living-gold-lines
+    paths:
+      - .github/workflows/home-living-gold-lines.yml
+      - Assets/Rokas/Scripts/Presentation/HomeFinishedUiRuntime.cs
+      - Assets/Rokas/Tests/PlayMode/HomeLivingGoldLinesPlayModeTests.cs
+      - Assets/Rokas/Tests/PlayMode/HomeLivingGoldLinesPlayModeTests.cs.meta
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: living-gold-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: 6000.3.19f1
+
+jobs:
+  living-gold-playmode:
+    name: Living Door Laptop outlines and hover
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: LivingGold-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run focused living gold PlayMode regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeLivingGoldLinesPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Living Gold Door Laptop
+
+  home-regression:
+    name: Existing Home laptop interaction regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: LivingGold-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            HallwayHome-${{ runner.os }}-
+            Unity-Library-${{ runner.os }}-
+      - name: Run existing home/laptop route PlayMode regression
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: ${{ env.UNITY_VERSION }}
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.StartupSkipHintLaptopHomeVisitPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Existing Home Laptop Route
