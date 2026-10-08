@@ -74,8 +74,9 @@ namespace Rokas.Presentation
     }
 
     // The MainRoom photograph already depicts its hallway through the right doorway.
-    // Composite ONLY that doorway from the existing ON/OFF main-room photographs;
-    // never draw a dark geometric overlay across unrelated parts of the home.
+    // Composite the ENTIRE visible hallway (including its curtain) from the
+    // existing ON/OFF photographs; don't leave half the curtain controlled by
+    // MainRoomLight and the other half controlled by HallwayLight.
     public sealed class HomeHallwayDoorwayPresentation : MonoBehaviour
     {
         private HomeDoorwayPhotoGraphic cutout;
@@ -121,12 +122,19 @@ namespace Rokas.Presentation
 
 
         private static readonly Vector2[] Doorway = {
-            // Upper-left corner follows the INNER wooden jamb. The old
-            // (1628,72) point left a small lit wedge when Hallway was OFF.
-            new Vector2(1622f,66f), new Vector2(1712f,63f),
-            new Vector2(1714f,387f), new Vector2(1722f,391f),
-            new Vector2(1740f,393f), new Vector2(1754f,393f),
-            new Vector2(1768f,397f),
+            // The entire visible Hallway, INCLUDING the hanging curtain,
+            // belongs to HallwayLight. The former right edge (x~1712-1768)
+            // stopped halfway across the curtain. Its exposed ON/OFF photo
+            // formed the rectangular lighting mismatch seen in both states.
+            // These authored 1920x1080 points follow the upper inside frame,
+            // the right inner jamb and the curtain's hanging bottom edge.
+            // The top follows the actual INNER illuminated lintel rather
+            // than leaving a horizontal 12-20px MainRoom-lit strip on the
+            // curtain. The right edge stops just inside the vertical frame.
+            new Vector2(1622f,72f), new Vector2(1712f,58f),
+            new Vector2(1872f,30f), new Vector2(1873f,390f),
+            new Vector2(1850f,394f), new Vector2(1800f,398f),
+            new Vector2(1768f,403f),
             new Vector2(1760f,453f), new Vector2(1751f,466f),
             // Bottom visible Hallway follows the photographed wooden sill,
             // from the left inner jamb (~1618,623) to the right (~1740,645).
@@ -156,7 +164,9 @@ namespace Rokas.Presentation
             mesh.Clear();
             // Include the full sloping sill. y1=630 previously clipped the
             // mesh even if the polygon was extended below it.
-            const float x0=1608f,y0=58f,x1=1776f,y1=652f;
+            // Extend the mesh to the INNER right doorframe. The old x1=1776
+            // clipped any geometry beyond mid-curtain regardless of polygon.
+            const float x0=1608f,y0=24f,x1=1883f,y1=652f;
             const int step=3;
             int nx=Mathf.CeilToInt((x1-x0)/step);
             int ny=Mathf.CeilToInt((y1-y0)/step);
