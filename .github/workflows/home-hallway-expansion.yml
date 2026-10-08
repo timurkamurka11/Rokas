@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - codex/hallway-door-sill-microfix
+      - codex/hallway-doors-window-rain-microfix
       - r11-finished-ui
     paths:
       - .github/workflows/home-hallway-expansion.yml
@@ -18,6 +18,8 @@ on:
       - Assets/Rokas/Resources/Home/HallwayReference.jpg.meta
       - Assets/Rokas/Resources/Home/HallwayLightsOff.jpg
       - Assets/Rokas/Resources/Home/HallwayLightsOff.jpg.meta
+      - Assets/Rokas/Scripts/Presentation/WorldEffects.cs
+      - Assets/Rokas/Tests/PlayMode/HallwayVisualCapturePlayModeTests.cs
       - Assets/Rokas/Resources/Shaders/HallwayLightStates.shader
       - Assets/Rokas/Scripts/Presentation/HallwayLightPresentation.cs
       - Assets/Rokas/Tests/PlayMode/HallwayHomeExpansionPlayModeTests.cs

@@ -249,8 +249,8 @@ namespace Rokas.Tests
                 Is.GreaterThan(.95f), "The lower right door floor must not stop at y=618.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1746f,535f),
                 Is.GreaterThan(.95f), "OFF state must cover the last visible strip on the right.");
-            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1750f,635f),
-                Is.GreaterThan(.50f), "Lower-right photo must reach the sloped sill.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1745f,632f),
+                Is.GreaterThan(.95f), "Lower-right photo must reach the sloped sill.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1765f,545f),
                 Is.EqualTo(0f), "The widened photo must not cover the outside doorframe.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1660f,640f),
