@@ -239,6 +239,18 @@ namespace Rokas.Tests
                 Is.EqualTo(0f), "Photo must not tint the photographed curtain hem.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,425f),
                 Is.GreaterThan(.95f), "Exposed Hallway below the curtain must remain visible.");
+            // The lower opening is not horizontal: it follows the real
+            // photographed wood sill, approximately (1618,623) -> (1740,645).
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1660f,619f),
+                Is.GreaterThan(.95f), "The lower left door floor must reach the sill.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1700f,626f),
+                Is.GreaterThan(.95f), "The center floor should not retain the old warm strip.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,631f),
+                Is.GreaterThan(.95f), "The lower right door floor must not stop at y=618.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1660f,640f),
+                Is.EqualTo(0f), "Do not repaint the Main Room floor outside the sill.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,660f),
+                Is.EqualTo(0f), "Never paint beyond the sloped wood threshold.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1690f,680f),
                 Is.EqualTo(0f), "MainRoom floor outside the opening must not change.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1580f,450f),
