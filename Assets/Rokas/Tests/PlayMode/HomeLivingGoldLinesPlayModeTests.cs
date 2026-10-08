@@ -40,6 +40,11 @@ namespace Rokas.Tests
                 Assert.That(((Graphic)door).raycastTarget, Is.False);
                 Assert.That(((Graphic)laptop).raycastTarget, Is.False);
 
+                // Check the actual motion equation, not merely the flags:
+                // color/alpha must advance smoothly with time on both outlines.
+                AssertLivingColorChanges(door);
+                AssertLivingColorChanges(laptop);
+
                 Vector2[] doorPoints = Points(door);
                 Vector2[] laptopPoints = Points(laptop);
                 Assert.That(doorPoints.Length, Is.EqualTo(8));
@@ -91,6 +96,21 @@ namespace Rokas.Tests
             Graphic graphic = t.GetComponent<Graphic>();
             Assert.That(graphic, Is.Not.Null);
             return graphic;
+        }
+
+        private static void AssertLivingColorChanges(Component outline)
+        {
+            MethodInfo motion = outline.GetType().GetMethod("LivingColor", Private);
+            Assert.That(motion, Is.Not.Null);
+            var tint = new Color(.86f, .67f, .34f, .45f);
+            Color before = (Color)motion.Invoke(outline, new object[]
+                { tint, .31f, 1f, 0f });
+            Color after = (Color)motion.Invoke(outline, new object[]
+                { tint, .31f, 1f, 2f });
+            float change = Mathf.Abs(before.g - after.g) +
+                Mathf.Abs(before.a - after.a);
+            Assert.That(change, Is.GreaterThan(.01f),
+                "Continuous shimmer/pulse must actually change the rendered color.");
         }
 
         private static bool Living(Component outline)
