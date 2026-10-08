@@ -225,6 +225,10 @@ namespace Rokas.Tests
             // because AuthoredStage scales as a whole rather than changing UVs.
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1650f,230f),
                 Is.GreaterThan(.95f), "Lit Hallway must appear INSIDE the upper doorway.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1628f,76f),
+                Is.GreaterThan(.95f), "OFF light must cover the upper-left inner door corner.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1618f,85f),
+                Is.EqualTo(0f), "Do not darken the outer left wooden door frame.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1670f,565f),
                 Is.GreaterThan(.95f), "Lower exposed Hallway must be visible.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1480f,250f),

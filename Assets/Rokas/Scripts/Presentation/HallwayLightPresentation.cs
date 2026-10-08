@@ -121,7 +121,9 @@ namespace Rokas.Presentation
 
 
         private static readonly Vector2[] Doorway = {
-            new Vector2(1628f,72f), new Vector2(1712f,63f),
+            // Upper-left corner follows the INNER wooden jamb. The old
+            // (1628,72) point left a small lit wedge when Hallway was OFF.
+            new Vector2(1622f,66f), new Vector2(1712f,63f),
             new Vector2(1714f,387f), new Vector2(1722f,391f),
             new Vector2(1740f,393f), new Vector2(1754f,393f),
             new Vector2(1768f,397f),

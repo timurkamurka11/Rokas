@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - codex/hallway-doors-window-rain-microfix
+      - codex/hallway-final-upper-left-red-sill
       - r11-finished-ui
     paths:
       - .github/workflows/home-hallway-expansion.yml
