@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.Reflection;
 using NUnit.Framework;
+using Rokas.Core;
 using Rokas.Core.ReactiveTurns;
 using Rokas.Presentation;
 using UnityEngine;
@@ -17,6 +18,12 @@ namespace Rokas.Tests
         private GameObject root;
         private string profile;
         private RokasBootstrap boot;
+        private Vector3 tacticalPosition;
+        private Quaternion tacticalRotation;
+        private bool tacticalOrthographic;
+        private float tacticalSize, tacticalFov;
+        private Matrix4x4 tacticalProjection;
+        private GameObject equippedSword;
 
         [UnityTest]
         public IEnumerator ThreePreviewsThrowFlightContactAndRecoveryAreRenderedWithoutEarlyDamage()
@@ -49,6 +56,11 @@ namespace Rokas.Tests
                 Capture(button + "-preview");
             }
             Assert.That(actor.HeldDagger.gameObject.activeInHierarchy, Is.True);
+            ReactiveCombatArena liveArena = FindLiveArena();
+            int releasesBefore = liveArena.ThrowReleaseCount, contactsBefore = liveArena.ThrowContactCount;
+            bool nativeThrow = actor.ActiveLicensedProfile != null;
+            long acceptedThrowStartUs = -1;
+            float maximumUnconfirmedThrowClock = 0f;
             Click("ReactiveThrow");
             float deadline = Time.realtimeSinceStartup + 8f, nextCapture = 0f;
             int frame = 0;
@@ -56,11 +68,22 @@ namespace Rokas.Tests
             while (combat.GetActorState("E1").Hp == hp && Time.realtimeSinceStartup < deadline)
             {
                 Assert.That(actor.transform.localPosition, Is.EqualTo(home), "Throw has no melee approach.");
+                if (combat.Phase == ReactivePhase.PlayerExecution &&
+                    combat.CurrentPlayerSkillId == ReactiveEightEnemyDefinitions.ThrowId && acceptedThrowStartUs < 0)
+                    acceptedThrowStartUs = combat.CurrentActionStartUs;
+                if (actor.CurrentPose == "Throw" && (!nativeThrow || !actor.LicensedContactConfirmed))
+                    maximumUnconfirmedThrowClock = Mathf.Max(maximumUnconfirmedThrowClock, actor.CurrentPoseSeconds);
+                if (nativeThrow) Assert.That(actor.LicensedContactConfirmed, Is.False,
+                    "An actual flying projectile and unchanged HP precede the authoritative source contact.");
+                Assert.That(liveArena.ThrowContactCount, Is.EqualTo(contactsBefore));
                 GameObject projectile = GameObject.Find("KeikoThrownDagger");
                 if (projectile != null)
                 {
                     sawFlight = true;
                     Assert.That(actor.HeldDagger.gameObject.activeInHierarchy, Is.False, "One weapon leaves the hand.");
+                    Assert.That(liveArena.ThrowReleaseCount, Is.EqualTo(releasesBefore + 1));
+                    Assert.That(actor.CurrentPoseSeconds, Is.GreaterThanOrEqualTo(actor.ThrowReleaseSeconds),
+                        "The observed projectile cannot exist before the actual visual release.");
                 }
                 if (actor.CurrentPose == "Throw" && Time.realtimeSinceStartup >= nextCapture)
                 {
@@ -71,8 +94,19 @@ namespace Rokas.Tests
             }
             Assert.That(sawFlight, Is.True);
             Assert.That(combat.GetActorState("E1").Hp, Is.LessThan(hp));
-            Assert.That(actor.CurrentPoseSeconds, Is.GreaterThanOrEqualTo(actor.ThrowContactSeconds - .04f),
-                "Damage must wait for the physical projectile flight; camera restore cannot age the committed Core action.");
+            Assert.That(acceptedThrowStartUs, Is.GreaterThanOrEqualTo(0), "Observe the actual accepted Core Throw.");
+            // The existing Core hit is at +200000us, delivered through Bootstrap’s 40000us watermark.
+            // +400000us is the action end and is not the physical contact deadline.
+            Assert.That(combat.CurrentCombatUs - acceptedThrowStartUs, Is.GreaterThanOrEqualTo(240000),
+                "Core damage waits for the authored hit plus its delivery watermark.");
+            Assert.That(maximumUnconfirmedThrowClock, Is.GreaterThanOrEqualTo(actor.ThrowContactSeconds - .04f),
+                "Before HP changes, the sampled visual clock must traverse release and physical flight.");
+            Assert.That(liveArena.ThrowReleaseCount, Is.EqualTo(releasesBefore + 1));
+            Assert.That(liveArena.ThrowContactCount, Is.EqualTo(contactsBefore + 1));
+            if (nativeThrow) Assert.That(actor.LicensedContactConfirmed, Is.True,
+                "Confirmed Native action starts its source clock at zero after the one physical contact.");
+            else Assert.That(actor.CurrentPoseSeconds, Is.GreaterThanOrEqualTo(actor.ThrowContactSeconds - .04f),
+                "Legacy Throw retains its continuous visual contact clock.");
             Assert.That(combat.HunterAp, Is.EqualTo(ap - 2));
             Capture("throw-impact");
             // The first contact sample is inside hit-stop. Capture the early burst
@@ -87,7 +121,7 @@ namespace Rokas.Tests
             Assert.That(actor.IdleSettled && boot.View.HunterAtHome, Is.True);
             Assert.That(actor.transform.localPosition, Is.EqualTo(home));
             Assert.That(actor.HeldDagger.gameObject.activeInHierarchy, Is.False);
-            Assert.That(actor.WeaponAttachment.CurrentWeapon.transform.parent, Is.EqualTo(actor.WeaponAttachment.Socket));
+            AssertPersistentSword(actor);
             Capture("throw-recovery");
         }
 
@@ -207,6 +241,7 @@ namespace Rokas.Tests
             while ((boot.Session.ReactiveCombat == null || !Ready("ReactiveBasic")) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(Ready("ReactiveBasic"), Is.True, "Entrance/announcement must finish before selection.");
+            RememberTacticalCamera();
         }
 
         [UnityTest]
@@ -237,11 +272,11 @@ namespace Rokas.Tests
             Assert.That(actor.transform.localPosition, Is.EqualTo(home));
             Assert.That(boot.CancelReactivePreview(), Is.True);
             deadline = Time.realtimeSinceStartup + 1f;
-            while ((!Ready("ReactiveBasic") || Mathf.Abs(camera.orthographicSize - 4.6f) > .001f) &&
+            while ((!Ready("ReactiveBasic") || !CameraIsTacticalHome(camera)) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.ReactiveSelectedAction, Is.Null);
             Assert.That(actor.CurrentPose, Is.EqualTo("Idle"));
-            Assert.That(camera.orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            AssertTacticalCameraHome(camera);
             Assert.That(Ready("ReactiveBasic"), Is.True);
             Assert.That(combat.HunterAp, Is.EqualTo(ap));
             Assert.That(combat.Revision, Is.EqualTo(revision));
@@ -256,7 +291,7 @@ namespace Rokas.Tests
                     Time.realtimeSinceStartup < deadline) yield return null;
                 Assert.That(boot.ReactiveSelectedAction, Is.EqualTo(nextButton == "ReactiveHeavy" ? "heavy" : "normal"));
                 Assert.That(actor.HeldDagger.gameObject.activeInHierarchy, Is.False);
-                Assert.That(actor.WeaponAttachment.CurrentWeapon.transform.parent, Is.EqualTo(actor.WeaponAttachment.Socket));
+                AssertPersistentSword(actor);
                 Assert.That(ThrowFxActive(), Is.False, "Switching away from Throw retires its charge and particles.");
                 Assert.That(GameObject.Find("KeikoThrownDagger"), Is.Null);
                 Assert.That(combat.Revision, Is.EqualTo(revision));
@@ -273,7 +308,7 @@ namespace Rokas.Tests
             while ((!Ready("ReactiveThrow") || ThrowFxActive()) && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(Ready("ReactiveThrow") && !ThrowFxActive(), Is.True);
             Assert.That(actor.CurrentPose, Is.EqualTo("Idle"));
-            Assert.That(camera.orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            AssertTacticalCameraHome(camera);
             Assert.That(combat.HunterAp, Is.EqualTo(ap));
             Assert.That(combat.Revision, Is.EqualTo(revision));
             Click("ReactiveThrow"); Click("ReactiveThrow");
@@ -322,7 +357,7 @@ namespace Rokas.Tests
                 yield return null;
             }
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
-            Assert.That(camera.orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            AssertTacticalCameraHome(camera);
             Assert.That(boot.ReactiveSelectedAction, Is.Null);
             Assert.That(Ready("ReactiveBasic"), Is.False, "Repeated UI clicks cannot dispatch a second attack.");
         }
@@ -343,6 +378,7 @@ namespace Rokas.Tests
             while ((boot.Session.ReactiveCombat == null || !Ready("ReactiveBasic")) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(Ready("ReactiveBasic"), Is.True, "Entrance/announcement must finish before selection.");
+            RememberTacticalCamera();
             ReactiveCombatSession combat = boot.Session.ReactiveCombat;
             int ap = combat.HunterAp;
             int hp = combat.GetActorState("E1").Hp;
@@ -360,8 +396,64 @@ namespace Rokas.Tests
             Assert.That(actor.transform.localPosition, Is.EqualTo(home));
             Assert.That(actor.CurrentPose, Is.EqualTo("Preparation"));
             var camera = GameObject.Find("ReactiveActorCamera").GetComponent<Camera>();
-            Assert.That(camera.orthographicSize, Is.LessThan(4.6f));
+            if (actor.DefaultLicensedProfile == null) Assert.That(camera.orthographicSize, Is.LessThan(4.6f));
+            else AssertTacticalCameraHome(camera);
             Assert.That(Ready("ReactiveBasic"), Is.True, "The selected command must stay available for confirmation.");
+        }
+
+        private void RememberTacticalCamera()
+        {
+            Camera camera = GameObject.Find("ReactiveActorCamera").GetComponent<Camera>();
+            tacticalPosition = camera.transform.localPosition; tacticalRotation = camera.transform.localRotation;
+            tacticalOrthographic = camera.orthographic; tacticalSize = camera.orthographicSize;
+            tacticalFov = camera.fieldOfView; tacticalProjection = camera.projectionMatrix;
+            ReactiveCombatActorVisual hunter = GameObject.Find("CombatActor_Keiko").GetComponent<ReactiveCombatActorVisual>();
+            equippedSword = hunter.WeaponAttachment.CurrentWeapon;
+            if (hunter.DefaultLicensedProfile != null)
+            {
+                Assert.That(camera.orthographic, Is.False);
+                Assert.That(camera.fieldOfView, Is.EqualTo(hunter.DefaultLicensedProfile.camera.baseFov));
+            }
+            else
+            {
+                Assert.That(camera.orthographic, Is.True);
+                Assert.That(camera.orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            }
+        }
+
+        private bool CameraIsTacticalHome(Camera camera)
+        {
+            if (camera.orthographic != tacticalOrthographic ||
+                Vector3.Distance(camera.transform.localPosition, tacticalPosition) > .00001f ||
+                Quaternion.Angle(camera.transform.localRotation, tacticalRotation) > .001f ||
+                Mathf.Abs(camera.orthographicSize - tacticalSize) > .001f ||
+                Mathf.Abs(camera.fieldOfView - tacticalFov) > .0001f) return false;
+            for (int i = 0; i < 16; i++) if (Mathf.Abs(camera.projectionMatrix[i] - tacticalProjection[i]) > .00001f) return false;
+            return true;
+        }
+
+        private void AssertTacticalCameraHome(Camera camera)
+        {
+            Assert.That(CameraIsTacticalHome(camera), Is.True,
+                "Restore the captured tactical position, rotation, projection and FOV exactly.");
+        }
+
+        private void AssertPersistentSword(ReactiveCombatActorVisual actor)
+        {
+            Assert.That(actor.WeaponAttachment.CurrentWeapon, Is.SameAs(equippedSword));
+            Assert.That(equippedSword.transform.IsChildOf(actor.ModelRoot), Is.True);
+            if (actor.DefaultLicensedProfile == null)
+                Assert.That(equippedSword.transform.parent, Is.EqualTo(actor.WeaponAttachment.Socket));
+        }
+
+        private ReactiveCombatArena FindLiveArena()
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            object mission = typeof(RokasView).GetField("mission", flags).GetValue(boot.View);
+            object reactive = mission.GetType().GetField("reactiveView", flags).GetValue(mission);
+            var arena = (ReactiveCombatArena)reactive.GetType().GetField("arena", flags).GetValue(reactive);
+            Assert.That(arena, Is.Not.Null);
+            return arena;
         }
 
         private GameObject Find(string name)

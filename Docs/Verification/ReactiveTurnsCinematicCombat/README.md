@@ -1,24 +1,20 @@
-# Licensed DD2 combat/camera continuation — 7 October 2026
+# Licensed DD2 combat finalization — 8 October 2026
 
-Current sampler result: **13/13 PASS** (10 camera + 3 motion), `D:/DD2-Research/AnimationStudy/source_perspective_wide_green.xml`. The earlier 12 deadline/curve/offset checks remain green. Final saved-asset and runtime/frame acceptance remains in progress. Intermediate bakes and historical results below are not final native PASS.
+**Stage 5/6; final physical grip acceptance is pending.** Recovering from `b6a2f7cf7a7ec73d81e54e34df3f4056b1f16d7f` on `codex/dd2-licensed-motion`, in `C:/Users/tim/.codex/worktrees/dd2-licensed-motion/Rokas`. Approved ancestor remains `cc241c4a70590d0f6b2527d1e51f674effcd50d1`. The canonical UI COPY is protected and no integration is performed in this task.
 
-Authoritative ancestor: `cc241c4a70590d0f6b2527d1e51f674effcd50d1`; branch `codex/dd2-licensed-motion`; worktree `C:/Users/tim/.codex/worktrees/dd2-licensed-motion/Rokas`. The user's newer canonical UI tree is read-only and is not incorporated.
+Verified importer checkpoint b6a2f7c uses scoped settings saves so ForceText does not rewrite the binary own-rig motion clips. Real Unity import loaded all seven profiles; all27 binary file hashes/GUIDs remain exact after native runtime and the first28 combat tests (291,116,848 bytes). Saved source/body fidelity passes27/27 and the existing own authored finger overlay round-trip passes12/12. These numerical results alone do not establish physical finger contact. Raw DD2 assets, decompiled source and license documents remain private in D:/DD2-Research; DD2 audio is excluded. Original DD2 motion is credited to Red Hook Studios.
 
-The project owner's stated Red Hook license authorizes the motion/configuration adaptation. Original Darkest Dungeon II motion remains credited to Red Hook Studios. Raw game assets and decompiled research stay in `D:/DD2-Research`; runtime clips are derivatives for existing ROKAS rigs. DD2 audio is excluded.
+Normal exit: targeted actual Unity PASS,18 transitions/90 fixed steps in the production arena; stable left/right held roles use the existing1mm own-model palm marker gate. The preserved native hand-transfer band compares to its real source baseline, rather than pretending both palm centers should coincide. E0 sword/bones remain frozen, ownership uses the existing.08-second exit and source clips/camera/clocks/Core are unchanged. Normal recovery remains at its validated.0000983 body /.0000985 tip errors. Actual corrected closeups remain pending final photography and grip fit.
 
-## Current source behavior and integration
+Latest full Native acceptance:9/10 PASS; one Normal contact failure was then closed by the targeted test. Earlier Heavy20-cycle source-action exit is green. A new full-recovery E+1 support reach failure justified the exit-only feasible-hilt correction; its final endpoint capture is pending. The existing28 combat regressions pass across25 actual full-run cases plus3 targeted corrections; the20-command/two-encounter live run passed in529.878s and was not repeated. Core unchanged:23 CombatFoundation checks and16 RunAll groups passed. Focused samplers13/13 passed.
 
-- Recorded BasicDamage curves, ZXY rotation, FOV 18, wide FOV 38, actor-size/target-count Offset selection, quadratic outgoing mix and native shake priority/timing.
-- Source wide position `(0,.74,-8.3)` is scaled once from the normal hero rig with the source perspective FOV 38. Actor-plane half-height metadata is `8.3 * tan(19 degrees) * S` for entrance bounds. BasicDamage's `z=-6` root is excluded from wide. Native outgoing blend and interruption keep perspective throughout; the legacy camera remains orthographic.
-- The arena keeps one camera. Exact local home/lens/projection is captured. Own interruption freezes displayed body/sword/camera and uses the existing linear 0.08-second handoff; cleanup is immediate.
-- One equipment transform writer owns NativeMotion/ExitBlend/DefaultSocket transitions. Clips animate a helper; the support hand moves arms only. Parent changes preserve world pose. Return movement to source idle has a dedicated continuity fixture.
-- Double accumulation makes both samplers end the authored 83/60 phase on frame 83. The prior float implementation needed frame 84. Source durations and curves were preserved.
-- Native outgoing shake uses the proved Cinemachine callback forwarding and PositionCorrection blend: fallback routing gives `1-shotWeight`. First boundary-frame listener order remains an offline validation limitation.
-- Core retains Preview → Confirm, Throw, defense, waves, save/payment authority. Additional R11 preview zoom, pulse and native contact hit stop are removed. Arena travel, projectile and reactive model lifecycles remain explicit ROKAS integration adaptations.
+Physical grip is not yet PASS: actual closed own-sword/hand surface probe found up to.01194 model-unit penetration. Hilt-shrinking experiments were rejected and never transferred. The bounded remaining fix uses existing Index1–4 only, with original sword proportions and body/wrist/blade/source timings protected. The own Keiko rig has shared Index1–4 chains and lacks independent thumb/middle/ring/little channels; no independent five-digit motion fidelity is claimed. All27 derivative backups are retained.
 
-Private evidence: `D:/DD2-Research/Reports/CAMERA_PROFILES.{md,json}` and `CAMERA_WEAPON_RECOVERY_2026-10-07.{md,json}`. Final 27 saved-clip hierarchy and refreshed 12-socket acceptance is pending. Current validator comparison: actual cc241 baseline 120 findings, current 120, zero added/removed under the same UTF-8 invocation.
+Camera evidence is preserved: source position/parent/ZXY rotations/offsets, perspective wide38°, shot18°, exact83/60 duration, tactical restoration and.08 interruption; no legacy preview zoom/pulse/contact hit-stop. First outgoing-shake listener order and own arena/projectile/victim lifecycle integration remain explicit adaptations.
 
-The remainder preserves historical R11 evidence for its original tree.
+Asset validator: authoritative baseline120/current120, added0/removed0. Final literal diff check is pending cleanup of Unity whitespace-only meta rewrites. Private evidence: D:/DD2-Research/Reports/CONTINUATION_LIVE_STATE_2026-10-08.json, NATIVE_EXIT_CONTACT_CORRECTION_2026-10-08.json, FEATURE_27_INTEGRITY_BEFORE_GRIP_FIT.json. No final checkpoint/push/manual-QA readiness is claimed.
+
+The remainder preserves historical evidence and is not the current task's manual-QA handoff.
 
 ---
 

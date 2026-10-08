@@ -41,7 +41,9 @@ namespace Rokas.Tests
                 GameObject first = attachment.CurrentWeapon;
                 for (int i = 0; i < 15; i++) attachment.Equip(library.keiko.weaponPrefab);
                 Assert.That(attachment.CurrentWeapon, Is.SameAs(first));
-                Assert.That(attachment.Socket.childCount, Is.EqualTo(1));
+                if (actor.DefaultLicensedProfile == null) Assert.That(attachment.Socket.childCount, Is.EqualTo(1));
+                else Assert.That(first.transform.IsChildOf(actor.ModelRoot), Is.True,
+                    "The same owned sword may be under its authored Native helper.");
                 Assert.That(first.GetComponentsInChildren<SkinnedMeshRenderer>(), Is.Empty,
                     "The weapon prefab must not carry a second Keiko character.");
                 Assert.That(first.GetComponentInChildren<MeshRenderer>().sharedMaterial.mainTexture, Is.Not.Null);
@@ -64,6 +66,9 @@ namespace Rokas.Tests
                 var actor = ReactiveCombatActorVisual.Spawn(CombatActorKind.Keiko, root.transform);
                 actor.enabled = false;
                 actor.ModelRoot.GetComponent<Animation>().enabled = false;
+                // This existing test inspects the retained own Legacy takes directly.
+                // Their weapon reference is the Legacy socket, not a stale source-idle helper.
+                AttachForLegacyTakeInspection(actor);
                 var library = Resources.Load<ReactiveCombatActorLibrary>("Combat/ReactiveCombatActorLibrary");
                 Transform left = null;
                 foreach (Transform bone in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
@@ -105,6 +110,33 @@ namespace Rokas.Tests
             finally { Object.Destroy(root); }
         }
 
+        private static void AttachForLegacyTakeInspection(ReactiveCombatActorVisual actor)
+        {
+            Transform sword = actor.WeaponAttachment.CurrentWeapon.transform;
+            sword.SetParent(actor.WeaponAttachment.Socket, false);
+            sword.localPosition = Vector3.zero; sword.localRotation = Quaternion.identity; sword.localScale = Vector3.one;
+        }
+
+        private static void AssertNativePalmContact(ReactiveCombatActorVisual actor, bool twoHands, string context)
+        {
+            Transform right = null, left = null;
+            foreach (Transform bone in actor.ModelRoot.GetComponentsInChildren<Transform>(true))
+            {
+                if (bone.name == "mixamorig:RightHand") right = bone;
+                if (bone.name == "mixamorig:LeftHand") left = bone;
+            }
+            Assert.That(right, Is.Not.Null); Assert.That(left, Is.Not.Null);
+            Transform sword = actor.WeaponAttachment.CurrentWeapon.transform;
+            Vector3 primary = actor.ModelRoot.InverseTransformPoint(sword.position);
+            Vector3 rightPalm = actor.ModelRoot.InverseTransformPoint(right.TransformPoint(Vector3.up * .0324945897f));
+            Vector3 leftPalm = actor.ModelRoot.InverseTransformPoint(left.TransformPoint(Vector3.up * .0329871997f));
+            Assert.That(Mathf.Min(Vector3.Distance(rightPalm, primary), Vector3.Distance(leftPalm, primary)),
+                Is.LessThan(.001f), context + " primary palm must hold the actual owned hilt");
+            if (twoHands) Assert.That(Vector3.Distance(leftPalm,
+                actor.ModelRoot.InverseTransformPoint(sword.Find("LeftHandGrip").position)),
+                Is.LessThan(.001f), context + " source/Legacy support grip");
+        }
+
         private static Vector3 SwordTip(ReactiveCombatActorVisual actor) =>
             actor.WeaponAttachment.Socket.TransformPoint(new Vector3(0f, 0f, .63f));
 
@@ -126,16 +158,26 @@ namespace Rokas.Tests
                     () => actor.PlayApproach(.8f), () => actor.PlayAttack(),
                     () => actor.PlayPreparation(true), () => actor.PlayHeavy(),
                     () => actor.PlayReturnHome(.8f), () => actor.PlayEnterBattle() };
+                bool native = actor.DefaultLicensedProfile != null;
+                bool sourceSupportHeld = false;
                 foreach (var pose in poses)
                 {
                     pose();
+                    if (actor.ActiveLicensedProfile != null)
+                        sourceSupportHeld = actor.ActiveLicensedProfile.weapon == LicensedWeaponKind.TwoHandedSword;
                     for (int i = 0; i < 16; i++)
                     {
                         // Cover the Legacy crossfade as well as the settled take.
                         actor.TickPresentation(i < 4 ? .02f : .12f);
-                        Assert.That(Vector3.Distance(left.TransformPoint(new Vector3(0f, .033f, 0f)),
+                        if (native)
+                        {
+                            bool twoHands = actor.ActiveLicensedProfile != null ? sourceSupportHeld :
+                                actor.CurrentPose == "Idle" ? sourceSupportHeld : sourceSupportHeld || i >= 3;
+                            AssertNativePalmContact(actor, twoHands, actor.CurrentPose + " tick " + i);
+                        }
+                        else Assert.That(Vector3.Distance(left.TransformPoint(new Vector3(0f, .033f, 0f)),
                             grip.position), Is.LessThan(.025f), actor.CurrentPose + " tick " + i);
-                        if (i >= 4)
+                        if (i >= 4 && (!native || actor.ActiveLicensedProfile == null && actor.CurrentPose != "Idle"))
                             Assert.That(Vector3.Angle(left.forward, grip.forward), Is.LessThan(12f),
                                 "The constraint must retain the authored wrist direction: " + actor.CurrentPose + " tick " + i);
                     }
@@ -156,6 +198,7 @@ namespace Rokas.Tests
                 actor.SetStandingHeight(2f);
                 actor.enabled = false; // Inspect exact authored poses without advancing the visual clock.
                 actor.ModelRoot.GetComponent<Animation>().enabled = false;
+                AttachForLegacyTakeInspection(actor);
                 foreach (var renderer in actor.GetComponentsInChildren<SkinnedMeshRenderer>()) renderer.updateWhenOffscreen = true;
                 var library = Resources.Load<ReactiveCombatActorLibrary>("Combat/ReactiveCombatActorLibrary");
                 var camera = new GameObject("SwordStudyCamera", typeof(Camera)).GetComponent<Camera>();

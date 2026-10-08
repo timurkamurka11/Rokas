@@ -44,6 +44,12 @@ namespace Rokas.Tests
             ReactiveCombatActorVisual hunter = null;
             Vector3 home = default(Vector3);
             Quaternion facing = default(Quaternion);
+            GameObject equippedSword = null;
+            Vector3 tacticalCameraPosition = default(Vector3);
+            Quaternion tacticalCameraRotation = default(Quaternion);
+            bool tacticalOrthographic = true;
+            float tacticalSize = 0f, tacticalFov = 0f;
+            Matrix4x4 tacticalProjection = default(Matrix4x4);
             bool outstanding = false, countsTowardPlan = false, previewChecked = false;
             string pendingActionButton = null;
             bool sawThrowExecution = false;
@@ -81,7 +87,15 @@ namespace Rokas.Tests
                 Assert.That(combat.TerminalResult, Is.Not.EqualTo(CombatOutcome.Defeat));
                 if (hunter == null)
                     foreach (var actor in GameObject.Find("ReactiveCombatWorld").GetComponentsInChildren<ReactiveCombatActorVisual>(true))
-                        if (actor.name == "CombatActor_Keiko") { hunter = actor; break; }
+                        if (actor.name == "CombatActor_Keiko")
+                        {
+                            hunter = actor; equippedSword = hunter.WeaponAttachment.CurrentWeapon;
+                            var tactical = GameObject.Find("ReactiveActorCamera").GetComponent<Camera>();
+                            tacticalCameraPosition = tactical.transform.localPosition; tacticalCameraRotation = tactical.transform.localRotation;
+                            tacticalOrthographic = tactical.orthographic; tacticalSize = tactical.orthographicSize;
+                            tacticalFov = tactical.fieldOfView; tacticalProjection = tactical.projectionMatrix;
+                            break;
+                        }
 
                 bool commandReady = combat.Phase == ReactivePhase.PlayerCommand &&
                     boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld && Ready("ReactiveBasic");
@@ -105,10 +119,30 @@ namespace Rokas.Tests
                     if (!boot.View.HunterAtHome || !hunter.IdleSettled) { yield return null; continue; }
                     Assert.That(hunter.transform.localPosition, Is.EqualTo(home));
                     Assert.That(hunter.ModelRoot.localRotation, Is.EqualTo(facing));
-                    Assert.That(hunter.WeaponAttachment.Socket.childCount, Is.EqualTo(1));
+                    Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.SameAs(equippedSword));
+                    Assert.That(equippedSword.transform.IsChildOf(hunter.ModelRoot), Is.True);
+                    int swordInstances = 0;
+                    foreach (Transform item in hunter.ModelRoot.GetComponentsInChildren<Transform>(true))
+                        if (item.name == equippedSword.name) swordInstances++;
+                    Assert.That(swordInstances, Is.EqualTo(1), "Each completed action retains exactly one owned sword.");
                     var camera = GameObject.Find("ReactiveActorCamera").GetComponent<Camera>();
-                    Assert.That(camera.transform.localPosition, Is.EqualTo(new Vector3(0f, 2.25f, -20f)));
-                    Assert.That(camera.orthographicSize, Is.EqualTo(4.6f));
+                    if (hunter.DefaultLicensedProfile == null)
+                    {
+                        Assert.That(hunter.WeaponAttachment.Socket.childCount, Is.EqualTo(1));
+                        Assert.That(camera.transform.localPosition, Is.EqualTo(new Vector3(0f, 2.25f, -20f)));
+                        Assert.That(camera.orthographicSize, Is.EqualTo(4.6f));
+                    }
+                    else
+                    {
+                        Assert.That(tacticalOrthographic, Is.False);
+                        Assert.That(camera.orthographic, Is.EqualTo(tacticalOrthographic));
+                        Assert.That(camera.transform.localPosition, Is.EqualTo(tacticalCameraPosition));
+                        Assert.That(camera.transform.localRotation, Is.EqualTo(tacticalCameraRotation));
+                        Assert.That(camera.orthographicSize, Is.EqualTo(tacticalSize));
+                        Assert.That(camera.fieldOfView, Is.EqualTo(tacticalFov));
+                        for (int i = 0; i < 16; i++)
+                            Assert.That(camera.projectionMatrix[i], Is.EqualTo(tacticalProjection[i]).Within(.00001f));
+                    }
                     var world = GameObject.Find("ReactiveCombatWorld");
                     int emberCarriers = 0;
                     foreach (var renderer in world.GetComponentsInChildren<MeshRenderer>(true))

@@ -66,6 +66,16 @@ namespace Rokas.Presentation
         private Vector3 frozenWeaponPosition;
         private Quaternion frozenWeaponRotation;
         private Vector3 frozenWeaponScale;
+        private Vector3 frozenWeaponGripPosition;
+        private Quaternion frozenWeaponGripRotation;
+        private Vector3 destinationWeaponGripPosition;
+        private Vector3 destinationWeaponPosition;
+        private Quaternion destinationWeaponRotation;
+        private Quaternion destinationWeaponGripRotation;
+        private Vector3 destinationWeaponScale;
+        private bool frozenPrimaryHeldByLeft;
+        private bool frozenSupportHeld;
+        private bool frozenSwordStowed;
         public enum SwordTransformAuthority { DefaultSocket, NativeMotion, ExitBlend }
         public SwordTransformAuthority SwordTransformOwner { get; private set; }
         private const float BlendDuration = .08f;
@@ -360,6 +370,8 @@ namespace Rokas.Presentation
             Transform desired = throwing ? swordStow : sourceSword ? licensedWeaponSocket : swordHomeParent;
             Transform weapon = grippedWeapon.transform;
             bool exit = frozenPreviousPose && frozenWeaponValid && weight < 1f;
+            bool destinationSupportHeld = !sourceIdle || licensedStance.weapon == LicensedWeaponKind.TwoHandedSword;
+            bool correctExitPrimary = false;
             SwordTransformOwner = exit ? SwordTransformAuthority.ExitBlend : nativeSample
                 ? SwordTransformAuthority.NativeMotion : SwordTransformAuthority.DefaultSocket;
             if (exit)
@@ -367,11 +379,40 @@ namespace Rokas.Presentation
                 // Preserve world pose on parent handoff. Snapshot coordinates are
                 // relative to the model so arena translation does not lag the blade.
                 if (weapon.parent != modelRoot) weapon.SetParent(modelRoot, true);
-                weapon.localPosition = Vector3.Lerp(frozenWeaponPosition,
-                    modelRoot.InverseTransformPoint(desired.position), weight);
-                weapon.localRotation = Quaternion.Slerp(frozenWeaponRotation,
-                    Quaternion.Inverse(modelRoot.rotation) * desired.rotation, weight);
-                weapon.localScale = Vector3.Lerp(frozenWeaponScale, Vector3.one, weight);
+                Transform primaryHand = twoHandGrip?.PrimaryHand;
+                if (weight > 0f && primaryHand != null && !throwing && !frozenSwordStowed)
+                {
+                    // FK has already blended the hand. Blend only its local grip
+                    // adapter here; blending its world position again detached the
+                    // blade from both palms during the first exit frames.
+                    if (frozenPrimaryHeldByLeft)
+                    {
+                        // A left-held blade cannot orbit the other wrist through a
+                        // large grip adapter while that wrist turns into source idle.
+                        // Interpolate once toward the unblended authored destination;
+                        // the palm correction performs the continuous hand transfer.
+                        weapon.localPosition = Vector3.Lerp(frozenWeaponPosition, destinationWeaponPosition, weight);
+                        weapon.localRotation = Quaternion.Slerp(frozenWeaponRotation, destinationWeaponRotation, weight);
+                    }
+                    else
+                    {
+                        weapon.position = primaryHand.TransformPoint(Vector3.Lerp(
+                            frozenWeaponGripPosition, destinationWeaponGripPosition, weight));
+                        weapon.rotation = primaryHand.rotation * Quaternion.Slerp(
+                            frozenWeaponGripRotation, destinationWeaponGripRotation, weight);
+                    }
+                    weapon.localScale = Vector3.Lerp(frozenWeaponScale, destinationWeaponScale, weight);
+                }
+                else
+                {
+                    // Keep the exact frozen frame and the existing stowed Throw
+                    // transfer, where the sword intentionally is not in either hand.
+                    weapon.localPosition = Vector3.Lerp(frozenWeaponPosition,
+                        modelRoot.InverseTransformPoint(desired.position), weight);
+                    weapon.localRotation = Quaternion.Slerp(frozenWeaponRotation,
+                        Quaternion.Inverse(modelRoot.rotation) * desired.rotation, weight);
+                    weapon.localScale = Vector3.Lerp(frozenWeaponScale, Vector3.one, weight);
+                }
             }
             else
             {
@@ -379,6 +420,13 @@ namespace Rokas.Presentation
                 weapon.localPosition = Vector3.zero;
                 weapon.localRotation = Quaternion.identity;
                 weapon.localScale = Vector3.one;
+            }
+            if (exit && weight > 0f && !throwing && !frozenSwordStowed && twoHandGrip != null)
+            {
+                Vector3 feasiblePosition = twoHandGrip.ResolveExitPrimaryPosition(weapon.position, weight,
+                    frozenPrimaryHeldByLeft, frozenSupportHeld, destinationSupportHeld);
+                correctExitPrimary = (feasiblePosition - weapon.position).sqrMagnitude > 1e-12f;
+                weapon.position = feasiblePosition;
             }
             if (heldDagger != null)
             {
@@ -392,9 +440,33 @@ namespace Rokas.Presentation
                     ? Quaternion.identity : Quaternion.Euler(clips.daggerSocketEuler);
                 heldDagger.SetActive(throwing && !throwReleased);
             }
-            // The support hand never owns the weapon. Native arms already contain
-            // the source grip; legacy correction resumes after the handoff completes.
-            if (!nativeSample && !sourceIdle && !throwing && !exit) twoHandGrip?.Apply();
+            // The support hand never owns the weapon. Native samples already own
+            // their grip; only the common exit needs the existing palm correction
+            // while the body crossfades into the destination hand roles.
+            if (exit && !throwing && !frozenSwordStowed)
+                twoHandGrip?.ApplyExit(weight, frozenPrimaryHeldByLeft, frozenSupportHeld,
+                    destinationSupportHeld, correctExitPrimary);
+            else if (!nativeSample && !sourceIdle && !throwing && !exit) twoHandGrip?.Apply();
+        }
+
+        private void CaptureDestinationWeaponGrip()
+        {
+            Transform primaryHand = twoHandGrip?.PrimaryHand;
+            if (!frozenPreviousPose || !frozenWeaponValid || primaryHand == null) return;
+            bool throwing = activeAlias == "ThrowPreparation" || activeAlias == "Throw";
+            bool sourceIdle = licensedStance != null && activeAlias == "Idle";
+            bool sourceSword = sourceIdle && licensedStance.authoredWeaponSocket &&
+                licensedStance.weapon != LicensedWeaponKind.Dagger;
+            Transform desired = throwing ? swordStow : sourceSword ? licensedWeaponSocket : swordHomeParent;
+            // Read the destination from the unblended authored sample. Its helper
+            // and the hand will subsequently be blended together by SamplePose.
+            destinationWeaponPosition = modelRoot.InverseTransformPoint(desired.position);
+            destinationWeaponRotation = Quaternion.Inverse(modelRoot.rotation) * desired.rotation;
+            destinationWeaponGripPosition = primaryHand.InverseTransformPoint(desired.position);
+            destinationWeaponGripRotation = Quaternion.Inverse(primaryHand.rotation) * desired.rotation;
+            Vector3 worldScale = desired.lossyScale, modelScale = modelRoot.lossyScale;
+            destinationWeaponScale = new Vector3(worldScale.x / modelScale.x,
+                worldScale.y / modelScale.y, worldScale.z / modelScale.z);
         }
 
         public void SetStandingHeight(float height)
@@ -775,6 +847,17 @@ namespace Rokas.Presentation
                 Vector3 worldScale = weapon.lossyScale, modelScale = modelRoot.lossyScale;
                 frozenWeaponScale = new Vector3(worldScale.x / modelScale.x,
                     worldScale.y / modelScale.y, worldScale.z / modelScale.z);
+                Transform primaryHand = twoHandGrip?.PrimaryHand;
+                if (primaryHand != null)
+                {
+                    frozenWeaponGripPosition = primaryHand.InverseTransformPoint(weapon.position);
+                    frozenWeaponGripRotation = Quaternion.Inverse(primaryHand.rotation) * weapon.rotation;
+                }
+                frozenPrimaryHeldByLeft = twoHandGrip != null && twoHandGrip.PrimaryHeldByLeft;
+                frozenSupportHeld = twoHandGrip != null && twoHandGrip.SupportHandHolding;
+                frozenSwordStowed = weapon.parent == swordStow ||
+                    activeAlias == "ThrowPreparation" || activeAlias == "Throw" ||
+                    weapon.parent == modelRoot && frozenSwordStowed;
             }
             licensedMotion?.Cancel();
             sampledLicensedPose = false;
@@ -903,6 +986,7 @@ namespace Rokas.Presentation
             }
             AnimationState current = animationPlayer[activeAlias];
             animationPlayer.GetClip(activeAlias).SampleAnimation(modelRoot.gameObject, current.time);
+            CaptureDestinationWeaponGrip();
             if (previousAlias != null || frozenPreviousPose)
                 for (int i = 0; i < poseTransforms.Length; i++)
                 {
