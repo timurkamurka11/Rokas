@@ -233,14 +233,24 @@ namespace Rokas.Tests
                 Is.GreaterThan(.95f), "Lower exposed Hallway must be visible.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1480f,250f),
                 Is.EqualTo(0f), "Adjacent wall must never get the Hallway photo.");
+            // The hanging fabric must change lighting with Hallway, not with
+            // Main Room. Both photographs retain the opaque curtain silhouette.
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1750f,180f),
-                Is.EqualTo(0f), "Hanging curtain must stay opaque.");
+                Is.GreaterThan(.95f), "Upper curtain must follow HallwayLight.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1830f,230f),
+                Is.GreaterThan(.95f), "Right-hand curtain must not retain the MainRoom photo.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1825f,355f),
+                Is.GreaterThan(.95f), "Lower curtain must not contain a square ON/OFF patch.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1904f,230f),
+                Is.EqualTo(0f), "The right frame and adjacent wall must not be recolored.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1830f,421f),
+                Is.EqualTo(0f), "Below the curtain hem, don't recolor the TV cabinet.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1705f,220f),
                 Is.GreaterThan(.95f), "Hallway strip beside the curtain must not remain warm.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1725f,220f),
-                Is.EqualTo(0f), "Upper fabric must never be made transparent.");
+                Is.GreaterThan(.95f), "Curtain lighting must not retain the MainRoom state.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,385f),
-                Is.EqualTo(0f), "Photo must not tint the photographed curtain hem.");
+                Is.GreaterThan(.95f), "Curtain hem must switch with Hallway light.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1730f,425f),
                 Is.GreaterThan(.95f), "Exposed Hallway below the curtain must remain visible.");
             // The lower opening is not horizontal: it follows the real
