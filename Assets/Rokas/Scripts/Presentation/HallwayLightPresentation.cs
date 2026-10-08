@@ -128,8 +128,11 @@ namespace Rokas.Presentation
             // formed the rectangular lighting mismatch seen in both states.
             // These authored 1920x1080 points follow the upper inside frame,
             // the right inner jamb and the curtain's hanging bottom edge.
-            new Vector2(1622f,66f), new Vector2(1712f,63f),
-            new Vector2(1888f,51f), new Vector2(1888f,390f),
+            // The top follows the actual INNER illuminated lintel rather
+            // than leaving a horizontal 12-20px MainRoom-lit strip on the
+            // curtain. The right edge stops just inside the vertical frame.
+            new Vector2(1622f,72f), new Vector2(1712f,58f),
+            new Vector2(1872f,30f), new Vector2(1873f,390f),
             new Vector2(1850f,394f), new Vector2(1800f,398f),
             new Vector2(1768f,403f),
             new Vector2(1760f,453f), new Vector2(1751f,466f),
@@ -163,7 +166,7 @@ namespace Rokas.Presentation
             // mesh even if the polygon was extended below it.
             // Extend the mesh to the INNER right doorframe. The old x1=1776
             // clipped any geometry beyond mid-curtain regardless of polygon.
-            const float x0=1608f,y0=43f,x1=1896f,y1=652f;
+            const float x0=1608f,y0=24f,x1=1883f,y1=652f;
             const int step=3;
             int nx=Mathf.CeilToInt((x1-x0)/step);
             int ny=Mathf.CeilToInt((y1-y0)/step);

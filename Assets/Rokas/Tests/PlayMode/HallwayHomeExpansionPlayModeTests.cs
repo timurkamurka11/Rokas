@@ -241,6 +241,14 @@ namespace Rokas.Tests
                 Is.GreaterThan(.95f), "Right-hand curtain must not retain the MainRoom photo.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1825f,355f),
                 Is.GreaterThan(.95f), "Lower curtain must not contain a square ON/OFF patch.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1800f,50f),
+                Is.GreaterThan(.95f), "Top of curtain must switch below the sloped lintel.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1850f,38f),
+                Is.GreaterThan(.95f), "Upper-right curtain must not retain a dark/warm horizontal strip.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1800f,26f),
+                Is.EqualTo(0f), "The wooden lintel above the doorway must stay untouched.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1879f,230f),
+                Is.EqualTo(0f), "The gold-bordered right wooden frame must remain untouched.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1904f,230f),
                 Is.EqualTo(0f), "The right frame and adjacent wall must not be recolored.");
             Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1830f,421f),
