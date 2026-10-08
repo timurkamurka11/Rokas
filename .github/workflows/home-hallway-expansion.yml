@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - codex/hallway-curtain-square-light-fix
+      - codex/hallway-doorway-visual-artifact-repair
       - r11-finished-ui
     paths:
       - .github/workflows/home-hallway-expansion.yml
