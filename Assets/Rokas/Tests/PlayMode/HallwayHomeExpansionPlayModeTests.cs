@@ -177,6 +177,66 @@ namespace Rokas.Tests
             Assert.That(bootstrap.Session.State.lampOn, Is.EqualTo(originalMainRoomLight));
         }
 
+
+        [UnityTest]
+        public IEnumerator NoContractDoorReturnsHomeBeforeOneLaptopOpens()
+        {
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Home));
+            bootstrap.Session.SetLamp(false);
+            bootstrap.Session.SetHallwayLight(true);
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+
+            Button exit = Find<Button>("HallwayFrontDoorHotspot");
+            Assert.That(exit, Is.Not.Null);
+            exit.onClick.Invoke();
+            // The first click begins the existing room fade, never the Laptop.
+            Assert.That(bootstrap.View.LaptopOpen, Is.False);
+            Assert.That(bootstrap.View.CurrentHomeLocation, Is.EqualTo(HomeLocation.Hallway));
+            Assert.That(Count<CanvasGroup>("HomeRoomCurtain"), Is.EqualTo(1));
+            exit.onClick.Invoke(); // Repeated input must not schedule another return.
+            Assert.That(Count<CanvasGroup>("HomeRoomCurtain"), Is.EqualTo(1));
+            yield return WaitForLocation(HomeLocation.MainRoom);
+            Assert.That(bootstrap.View.LaptopOpen, Is.True);
+            Assert.That(bootstrap.Session.State.phase, Is.EqualTo(RunPhase.Home));
+            Assert.That(Count<RectTransform>("YomiLaptop"), Is.EqualTo(1));
+            Assert.That(Find<Button>("HallwayFrontDoorHotspot"), Is.Null);
+            Assert.That(bootstrap.Session.State.lampOn, Is.False);
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.True);
+
+            bootstrap.View.Escape();
+            float until = Time.realtimeSinceStartup + 3f;
+            while (bootstrap.View.LaptopOpen && Time.realtimeSinceStartup < until)
+                yield return null;
+            Assert.That(bootstrap.View.LaptopOpen, Is.False);
+            Assert.That(bootstrap.View.CurrentHomeLocation, Is.EqualTo(HomeLocation.MainRoom));
+            Assert.That(Find<Button>("DoorHotspot"), Is.Not.Null);
+
+            Find<Button>("DoorHotspot").onClick.Invoke();
+            yield return WaitForLocation(HomeLocation.Hallway);
+            Assert.That(bootstrap.Session.State.lampOn, Is.False);
+            Assert.That(bootstrap.Session.HallwayLightOn, Is.True);
+        }
+
+        [Test]
+        public void MainRoomDoorwayRenderedPolygonExcludesWallCurtainAndFloor()
+        {
+            // Measured authored 1920x1080 pixel bounds. Applies equally at QHD
+            // because AuthoredStage scales as a whole rather than changing UVs.
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1650f,230f),
+                Is.GreaterThan(.95f), "Lit Hallway must appear INSIDE the upper doorway.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1670f,565f),
+                Is.GreaterThan(.95f), "Lower exposed Hallway must be visible.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1480f,250f),
+                Is.EqualTo(0f), "Adjacent wall must never get the Hallway photo.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1750f,180f),
+                Is.EqualTo(0f), "Hanging curtain must stay opaque.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1690f,680f),
+                Is.EqualTo(0f), "MainRoom floor outside the opening must not change.");
+            Assert.That(HomeDoorwayPhotoGraphic.CoverageAt(1580f,450f),
+                Is.EqualTo(0f), "Door jamb must not be overwritten.");
+        }
+
         private void SetLights(bool mainOn, bool hallwayOn)
         {
             bootstrap.Session.SetLamp(mainOn);
