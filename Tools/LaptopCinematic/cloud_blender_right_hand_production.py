@@ -166,13 +166,13 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     reach=smooth(t/1.30)
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
-    tip_x=1415.+(POWER_X-40.-1415.)*reach + 135.*withdraw
+    tip_x=1415.+(POWER_X-80.-1415.)*reach + 135.*withdraw
     tip_y=1080.+(POWER_Y-35.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
-    wrist_x=tip_x+140.
-    wrist_y=tip_y+95.
+    wrist_x=tip_x+100.
+    wrist_y=tip_y+68.
     # Wrist tucking rotates the actual glTF armature and leaves the finger mesh skinned.
     base=rig.pose.bones["hand_r"]
     direction=rig.data.bones["index_03_r"].tail_local-rig.data.bones["hand_r"].head_local
@@ -200,10 +200,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
     # Cloth geometry has real tube cross section, nonuniform diameter and folds.
-    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,.45-wrist.z)))
+    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,1.1-wrist.z)))
     # Narrow rib-knit cuff at hand–sleeve junction, not a flat straight sleeve cap.
     # Make only first two rings from the same tapered profile for smoother join.
-    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.46-wrist.z)), cuff=True)
+    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,1.11-wrist.z)), cuff=True)
     # Mesh.clear_geometry() may drop slots in Blender 4.5; rebind the actual
     # dark sweatshirt and dark ribbed cuff every frame, never grey default.
     sleeve_mesh.materials.clear()
