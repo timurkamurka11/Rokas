@@ -121,7 +121,7 @@ def create_scene(a):
     # Force mildly animated real finger joints, no frame-to-frame morph cards.
     for bone in rig.pose.bones:
         bone.rotation_mode="XYZ"
-    fabric=mat("Graphite_HomeSweatshirt_Cotton",(.062,.071,.080),.86,0,True)
+    fabric=mat("Graphite_HomeSweatshirt_Cotton",(.018,.022,.027),.94,0,True)
     sleeve_mesh=bpy.data.meshes.new("LooseSleeve_Creased_Tube")
     sleeve_obj=bpy.data.objects.new("RIGHT_FreeHomeSleeve",sleeve_mesh)
     bpy.context.collection.objects.link(sleeve_obj)
@@ -129,8 +129,15 @@ def create_scene(a):
     cuff_mesh=bpy.data.meshes.new("RibbedCuff")
     cuff=bpy.data.objects.new("RIGHT_SleeveSoftCuff",cuff_mesh)
     bpy.context.collection.objects.link(cuff)
-    cuff_mat=mat("Cuff_Graphite",(.045,.048,.057),.90,0,True)
+    cuff_mat=mat("Cuff_Graphite",(.013,.016,.020),.95,0,True)
     cuff_mesh.materials.append(cuff_mat)
+    # Local sleeve/cuff meshes are now static geometry following keyed object transforms.
+    # This preserves a genuinely editable .blend instead of only a single-pose snapshot.
+    sleeve_geometry(sleeve_mesh, Vector((0,0,0)))
+    cuff_mesh.clear_geometry()
+    sleeve_geometry(cuff_mesh, Vector((0,0,0)), cuff=True)
+    sleeve_mesh.materials.clear(); sleeve_mesh.materials.append(fabric)
+    cuff_mesh.materials.clear(); cuff_mesh.materials.append(cuff_mat)
     camera_data=bpy.data.cameras.new("POV_1672x941_PixelAligned")
     cam=bpy.data.objects.new("POV_1672x941_PixelAligned",camera_data)
     bpy.context.collection.objects.link(cam)
@@ -152,6 +159,8 @@ def create_scene(a):
     scene.render.image_settings.color_mode="RGBA"
     scene.render.image_settings.color_depth="8"
     scene.view_settings.view_transform="AgX"
+    scene.view_settings.exposure=-1.25
+    scene.render.fps=FPS
     scene.render.filepath=os.path.join(a.output,"HandsRight_0000.png")
     scene.render.image_settings.compression=35
     scene.world=bpy.data.worlds.new("ROKAS_WarmNightEnvironment")
@@ -167,7 +176,9 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
     tip_x=1415.+(POWER_X-80.-1415.)*reach + 135.*withdraw
-    tip_y=1080.+(POWER_Y-35.-1080.)*reach + 175.*withdraw + 3.*press
+    # The glTF index-bone tail differs from the visible skinned fingertip by about +84px vertically.
+    # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
+    tip_y=1080.+(POWER_Y-84.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -199,20 +210,23 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     rig.location.y += wanted.y-tip_now.y
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
-    # Cloth geometry has real tube cross section, nonuniform diameter and folds.
-    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,1.1-wrist.z)))
-    # Narrow rib-knit cuff at hand–sleeve junction, not a flat straight sleeve cap.
-    # Make only first two rings from the same tapered profile for smoother join.
-    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,1.11-wrist.z)), cuff=True)
-    # Mesh.clear_geometry() may drop slots in Blender 4.5; rebind the actual
-    # dark sweatshirt and dark ribbed cuff every frame, never grey default.
-    sleeve_mesh.materials.clear()
-    sleeve_mesh.materials.append(bpy.data.materials["Graphite_HomeSweatshirt_Cotton"])
-    cuff_mesh.materials.clear()
-    cuff_mesh.materials.append(bpy.data.materials["Cuff_Graphite"])
-    cf_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
-    cf_obj.scale=(.98,.98,.98)
-    # Non-cuff sleeve and cuff overlap slightly, which creates a fabric seam.
+    # Locally modeled cloth follows the wrist with real keyframed transforms.
+    sleeve_obj=bpy.data.objects["RIGHT_FreeHomeSleeve"]
+    cuff_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
+    sleeve_obj.location=(wrist.x, wrist.y, 1.10)
+    cuff_obj.location=(wrist.x, wrist.y, 1.11)
+    cuff_obj.scale=(.98,.98,.98)
+    # Keyframe every control: the saved .blend contains 49 editable animation keys,
+    # not merely a snapshot of the final pose.
+    k=index+1
+    rig.keyframe_insert(data_path="location",frame=k)
+    rig.keyframe_insert(data_path="rotation_euler",frame=k)
+    rig.keyframe_insert(data_path="scale",frame=k)
+    for bone in rig.pose.bones:
+        bone.keyframe_insert(data_path="rotation_euler",frame=k)
+    sleeve_obj.keyframe_insert(data_path="location",frame=k)
+    cuff_obj.keyframe_insert(data_path="location",frame=k)
+    # Non-cuff sleeve and cuff overlap slightly, forming the fabric seam.
     def world_pixel(point):
         return [round((point.x/(FRAME_LENGTH*W/H)+.5)*W,2), round((.5-point.y/FRAME_LENGTH)*H,2)]
     after_tip=rig.matrix_world @ rig.pose.bones["index_03_r"].tail
@@ -229,16 +243,19 @@ def main():
     ids=[int(x) for x in a.only.split(",") if x.strip()] if a.only else list(range(a.frames))
     poses=[]
     for idx in ids:
-        record=pose_for_frame(rig,hand,sleeve,cuff,scene,idx,a.frames)
         scene.frame_set(idx+1)
-        if idx==CONTACT_INDEX:
-            bpy.ops.wm.save_as_mainfile(filepath=os.path.join(a.output,"ROKAS_RightHand_Editable.blend"))
+        record=pose_for_frame(rig,hand,sleeve,cuff,scene,idx,a.frames)
         scene.render.filepath=os.path.join(a.output,"HandsRight_%04d.png"%idx)
         bpy.ops.render.render(write_still=True)
         if not os.path.getsize(scene.render.filepath)>250:
             raise RuntimeError("Rendered PNG missing: "+scene.render.filepath)
         poses.append(record)
         print("ROKAS_FRAME_COMPLETE",idx,record,flush=True)
+    scene.frame_start=1
+    scene.frame_end=a.frames
+    scene.frame_set(CONTACT_INDEX+1)
+    assert rig.animation_data and rig.animation_data.action, "Rig animation keyframes not saved"
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(a.output,"ROKAS_RightHand_Editable.blend"))
     report={"renderer":"Blender "+bpy.app.version_string,"mesh_vertices":len(hand.data.vertices),
         "armature_bones":len(rig.pose.bones),"handedness":"right","frames":a.frames,
         "fps":FPS,"pixel_canvas":[W,H],"contact_index":CONTACT_INDEX,
