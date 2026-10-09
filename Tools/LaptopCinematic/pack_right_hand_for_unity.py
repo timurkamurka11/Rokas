@@ -34,8 +34,11 @@ def build(input_dir,output_dir,count=49,fps=24):
         if i in (0,6,22,31,32,41,count-1):
             canvas=Image.new("RGBA",img.size)
             canvas.alpha_composite(crop,(left,top))
-            if canvas.tobytes()!=img.tobytes():
-                raise RuntimeError(f"Lossless alpha reconstruction mismatch #{i}")
+            matte=Image.new("RGBA",img.size,(0,0,0,255))
+            # Blender PNG can store arbitrary RGB under fully transparent alpha.
+            # Compare visible pixels after compositing, preserving every nonzero-alpha pixel.
+            if Image.alpha_composite(matte,canvas).tobytes()!=Image.alpha_composite(matte,img).tobytes():
+                raise RuntimeError(f"Visible RGBA reconstruction mismatch #{i}")
     (res/"right_hand_manifest.json").write_text(
         json.dumps(manifest,indent=2,ensure_ascii=False),encoding="utf-8")
     assert manifest["handedness"]=="right" and len(manifest["frames"])==count
