@@ -12,6 +12,11 @@ namespace Rokas.Presentation
         private Animation animationPlayer;
         private LicensedCombatMotionPlayer licensedMotion;
         private LicensedCombatMotionProfile licensedStance;
+        private CombatIdleStance confirmedCombatStance;
+        private AnimationClip registeredIdle;
+        public CombatIdleStance ConfirmedCombatStance => confirmedCombatStance;
+        public LicensedCombatMotionProfile ConfirmedLicensedProfile => clips == null ? null
+            : GetLicensedProfile(confirmedCombatStance == CombatIdleStance.Heavy);
         private bool bossPresentation;
         private string licensedContactKey;
         private Transform licensedWeaponSocket;
@@ -27,7 +32,20 @@ namespace Rokas.Presentation
             remainingStep = 0f;
             return licensedMotion != null && licensedMotion.ReachesStageRecovery(delta, out remainingStep);
         }
-        public void SetBossPresentation(bool enabled) => bossPresentation = enabled;
+        public void SetBossPresentation(bool enabled)
+        {
+            bossPresentation = enabled;
+            if (activeAlias == "Idle") PlayIdle();
+        }
+
+        // Core CommandCommitted is the only caller that changes the persistent sword stance.
+        // Preview, Throw, defense and hit reactions keep their own temporary poses.
+        public void CommitCombatStance(CombatIdleStance stance)
+        {
+            if (stance != CombatIdleStance.Normal && stance != CombatIdleStance.Heavy)
+                throw new ArgumentOutOfRangeException(nameof(stance));
+            confirmedCombatStance = stance;
+        }
         private Transform[] poseTransforms;
         private Transform torsoBone;
         private Vector3[] blendPositions;
@@ -40,6 +58,11 @@ namespace Rokas.Presentation
         private GameObject heldDagger;
         private Transform swordHomeParent;
         private Transform swordStow;
+        public Transform SwordStowSocket => swordStow;
+        public bool SwordStowCalibrationValid { get; private set; }
+        public Quaternion SwordStowCalibratedLocalRotation { get; private set; }
+        // Existing owned mesh measurement: long blade runs along prefab +Z.
+        public Vector3 SwordStowBladeAxis => Vector3.forward;
         private bool throwReleased;
         public Transform HeldDagger => heldDagger == null ? null : heldDagger.transform;
         public GameObject ThrowingDaggerPrefab => clips.throwingDaggerPrefab;
@@ -272,11 +295,7 @@ namespace Rokas.Presentation
                 weaponAttachment.Configure(modelRoot, clips);
                 grippedWeapon = weaponAttachment.CurrentWeapon;
                 swordHomeParent = grippedWeapon.transform.parent;
-                swordStow = new GameObject("SwordStow").transform;
-                swordStow.SetParent(modelRoot.Find("mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2"), false);
-                // Keep the long blade below the Throw hand and behind the torso.
-                swordStow.localPosition = new Vector3(.06f, -.08f, -.14f);
-                swordStow.localRotation = Quaternion.identity;
+                ConfigureSwordStow();
                 if (clips.throwingDaggerPrefab != null)
                 {
                     heldDagger = Instantiate(clips.throwingDaggerPrefab, weaponAttachment.Socket.parent, false);
@@ -294,10 +313,64 @@ namespace Rokas.Presentation
                         if (bone.name.EndsWith("RightHandIndex" + (i + 1), StringComparison.Ordinal))
                             gripFingers[i] = bone;
             }
-            licensedStance = clips.licensedNormal;
-            if (licensedStance != null && licensedStance.baseIdle != null)
-                AddClip(licensedStance.baseIdle, "Idle", WrapMode.Loop);
+            confirmedCombatStance = CombatIdleStance.Normal;
             PlayIdle();
+        }
+
+        private void ConfigureSwordStow()
+        {
+            Transform spine = modelRoot.Find(clips.swordStowBonePath);
+            Transform left = null, right = null, neck = null;
+            foreach (Transform bone in poseTransforms)
+            {
+                if (bone.name.EndsWith("LeftShoulder", StringComparison.Ordinal)) left = bone;
+                if (bone.name.EndsWith("RightShoulder", StringComparison.Ordinal)) right = bone;
+                if (bone.name.EndsWith("Neck", StringComparison.Ordinal)) neck = bone;
+            }
+            if (spine == null || !TrySkinBindPose(spine, out Matrix4x4 spineBind) ||
+                !TrySkinBindPose(left, out Matrix4x4 leftBind) ||
+                !TrySkinBindPose(right, out Matrix4x4 rightBind) ||
+                !TrySkinBindPose(neck, out Matrix4x4 neckBind))
+                throw new InvalidOperationException("Back sword socket requires its configured spine and actual skin bind geometry.");
+            Vector3 up = (neckBind.MultiplyPoint3x4(Vector3.zero) - spineBind.MultiplyPoint3x4(Vector3.zero)).normalized;
+            Vector3 rightAxis = (rightBind.MultiplyPoint3x4(Vector3.zero) - leftBind.MultiplyPoint3x4(Vector3.zero)).normalized;
+            Vector3 forward = Vector3.Cross(rightAxis, up).normalized;
+            if (up.sqrMagnitude < .9f || forward.sqrMagnitude < .9f)
+                throw new InvalidOperationException("Back sword socket bind frame is degenerate.");
+            // Keep the existing own .4 lateral/down carry ratio, now in the rig's
+            // anatomical frame. Its local quaternion is calibrated once; FK owns
+            // the spine thereafter, including facing changes and paused renders.
+            Vector3 bladeDirection = (-up - rightAxis * clips.swordStowBladeSideSlope).normalized;
+            SwordStowCalibratedLocalRotation = Quaternion.Inverse(spineBind.rotation) *
+                Quaternion.LookRotation(bladeDirection, forward);
+            swordStow = new GameObject("SwordStow").transform;
+            swordStow.SetParent(spine, false);
+            swordStow.localPosition = clips.swordStowPosition;
+            swordStow.localRotation = SwordStowCalibratedLocalRotation;
+            SwordStowCalibrationValid = true;
+        }
+
+        private bool TrySkinBindPose(Transform bone, out Matrix4x4 bindInModel)
+        {
+            bindInModel = Matrix4x4.identity;
+            if (bone == null) return false;
+            foreach (Renderer renderer in actorRenderers)
+            {
+                var skin = renderer as SkinnedMeshRenderer;
+                if (skin == null || skin.sharedMesh == null) continue;
+                Transform[] bones = skin.bones;
+                Matrix4x4[] bindPoses = skin.sharedMesh.bindposes;
+                for (int index = 0; index < bones.Length && index < bindPoses.Length; index++)
+                    if (bones[index] == bone)
+                    {
+                        Matrix4x4 skinToModel = Matrix4x4.identity;
+                        for (Transform node = skin.transform; node != null && node != modelRoot; node = node.parent)
+                            skinToModel = Matrix4x4.TRS(node.localPosition, node.localRotation, node.localScale) * skinToModel;
+                        bindInModel = skinToModel * bindPoses[index].inverse;
+                        return true;
+                    }
+            }
+            return false;
         }
 
         private void AddClip(AnimationClip clip, string alias, WrapMode wrapMode)
@@ -311,6 +384,8 @@ namespace Rokas.Presentation
             animationPlayer.AddClip(clip, alias);
             animationPlayer[alias].wrapMode = wrapMode;
         }
+
+        public LicensedCombatMotionProfile AttackLicensedProfile(bool heavy) => GetLicensedProfile(heavy);
 
         private LicensedCombatMotionProfile GetLicensedProfile(bool heavy)
         {
@@ -339,7 +414,6 @@ namespace Rokas.Presentation
             pendingAttackContactAlias = null;
             poseSecondsLeft = proceduralSecondsLeft = 0f;
             licensedStance = profile;
-            if (profile.baseIdle != null) AddClip(profile.baseIdle, "Idle", WrapMode.Loop);
             licensedContactKey = null;
             licensedMotion.Begin(profile, null, "Licensed_Anticipation");
             sampledLicensedPose = true;
@@ -400,8 +474,6 @@ namespace Rokas.Presentation
             bool authoredSocket = licensedStance != null && licensedStance.authoredWeaponSocket;
             bool sourceSword = authoredSocket && (nativeSample || sourceIdle) &&
                 licensedStance.weapon != LicensedWeaponKind.Dagger;
-            if (throwing) swordStow.rotation = Quaternion.LookRotation(
-                (Vector3.down - transform.right * .4f).normalized, Vector3.forward);
             Transform desired = throwing ? swordStow : sourceSword ? licensedWeaponSocket : swordHomeParent;
             Transform weapon = grippedWeapon.transform;
             bool exit = frozenPreviousPose && frozenWeaponValid && weight < 1f;
@@ -544,6 +616,14 @@ namespace Rokas.Presentation
         public void PlayIdle()
         {
             if (dead) return;
+            licensedStance = ConfirmedLicensedProfile;
+            AnimationClip idle = licensedStance != null && licensedStance.baseIdle != null
+                ? licensedStance.baseIdle : clips.idle;
+            if (idle != registeredIdle)
+            {
+                AddClip(idle, "Idle", WrapMode.Loop);
+                registeredIdle = idle;
+            }
             defenseActive = false;
             defenseContactResolved = false;
             locomotionStrideDistance = 0f;
@@ -817,9 +897,7 @@ namespace Rokas.Presentation
             nativeEntryElapsed = 0f;
             SwordTransformOwner = SwordTransformAuthority.DefaultSocket;
             previousAlias = activeAlias = null;
-            licensedStance = clips.licensedNormal;
-            if (licensedStance != null && licensedStance.baseIdle != null)
-                AddClip(licensedStance.baseIdle, "Idle", WrapMode.Loop);
+            confirmedCombatStance = CombatIdleStance.Normal;
             dead = false;
             fallbackDeathAngle = 0f;
             fallbackDeathElapsed = 0f;
