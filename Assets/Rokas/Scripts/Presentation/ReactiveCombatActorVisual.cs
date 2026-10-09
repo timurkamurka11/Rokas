@@ -400,6 +400,20 @@ namespace Rokas.Presentation
             return heavy ? clips.licensedHeavy : clips.licensedNormal;
         }
 
+#if UNITY_EDITOR
+        // Geometry audit selects the same committed Heavy idle used by production.
+        public void SelectHeavyIdleForGeometryAudit()
+        {
+            if (licensedMotion != null && licensedMotion.Active)
+                throw new InvalidOperationException("Cannot select geometry-audit idle during an active licensed action.");
+            LicensedCombatMotionProfile heavy = GetLicensedProfile(true);
+            if (heavy == null || heavy.baseIdle == null || !heavy.baseIdle.legacy)
+                throw new InvalidOperationException("The licensed Heavy profile needs a Legacy baseIdle for geometry audit.");
+            CommitCombatStance(CombatIdleStance.Heavy);
+            PlayIdle();
+        }
+#endif
+
         private bool BeginLicensed(LicensedCombatMotionProfile profile, string alias)
         {
             if (dead || profile == null || licensedMotion == null) return false;
