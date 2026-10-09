@@ -112,9 +112,9 @@ def create_scene(a):
     pores.inputs["Detail"].default_value=3.
     palette=nodes.new("ShaderNodeValToRGB")
     palette.color_ramp.elements[0].position=.23
-    palette.color_ramp.elements[0].color=(.42,.215,.17,1)
+    palette.color_ramp.elements[0].color=(.29,.15,.12,1)
     palette.color_ramp.elements[1].position=.77
-    palette.color_ramp.elements[1].color=(.71,.45,.37,1)
+    palette.color_ramp.elements[1].color=(.55,.305,.235,1)
     links.new(pores.outputs["Fac"],palette.inputs["Fac"])
     links.new(palette.outputs["Color"],skin_bsdf.inputs["Base Color"])
     hand.data.materials.clear();hand.data.materials.append(skin)
@@ -175,10 +175,11 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     reach=smooth(t/1.30)
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
-    tip_x=1415.+(POWER_X-80.-1415.)*reach + 135.*withdraw
+    # Visible skinned finger apex is ~95px to the right of the index bone reference.
+    tip_x=1415.+(POWER_X-95.-1415.)*reach + 135.*withdraw
     # The glTF index-bone tail differs from the visible skinned fingertip by about +84px vertically.
     # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
-    tip_y=1080.+(POWER_Y-84.-1080.)*reach + 175.*withdraw + 3.*press
+    tip_y=1080.+(POWER_Y-46.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -233,7 +234,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     return {"index":index,"tip_px":[tip_x,tip_y],
             "actual_bone_tip_px":world_pixel(after_tip),
             "actual_bone_wrist_px":world_pixel(wrist),
-            "contact_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
+            "skeleton_reference_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
             "press":round(press,3),
             "wrist_px":[wrist_x,wrist_y]}
 
