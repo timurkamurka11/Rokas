@@ -130,7 +130,7 @@ jobs:
             if [ "$n" -eq 4 ]; then exit 1; fi
             sleep $((n*30))
           done
-      - name: Unity PlayMode: installed art, contact and Game View screenshots
+      - name: 'Unity PlayMode: installed art, contact and Game View screenshots'
         id: game
         uses: game-ci/unity-test-runner@v4
         env:
