@@ -10,6 +10,14 @@ namespace Rokas.Presentation
 {
     public sealed class MissionView
     {
+        private static readonly Unity.Profiling.ProfilerMarker ResearchRefreshMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.Refresh");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchEventMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.EventPresent");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchPoseVfxMarker = new Unity.Profiling.ProfilerMarker("Rokas.Block.PoseVfx");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchAudioMarker = new Unity.Profiling.ProfilerMarker("Rokas.Block.Audio");
+#if UNITY_EDITOR
+        internal static Action<CombatEvent> ResearchContactObserved;
+#endif
+
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly GameSession session;
@@ -31,6 +39,9 @@ namespace Rokas.Presentation
         private readonly Text[] numbers = new Text[12];
         private readonly float[] numberTimes = new float[12];
         private int numberIndex;
+        private long previewAudioSerial;
+        private string previewAudioToken, previewAudioStance, previewAudioExpectedCoreAction;
+        private bool previewAudioAwaitingCommit;
         private float age;
         private float hitTime;
         private float enemyAttackTime;
@@ -45,17 +56,84 @@ namespace Rokas.Presentation
         public bool ReactivePresentationReady => reactiveView.PresentationReady;
         public bool ReactivePreviewConfirmed => reactiveView.PreviewConfirmed;
         public bool ReactiveThrowReady => reactiveView.ThrowReady;
-        public bool SelectHunterPreview(string action) => reactiveView.SelectHunterPreview(action);
-        public bool StartHunterThrow(string target) => reactiveView.StartHunterThrow(target);
-        public bool ConfirmHunterPreview() => reactiveView.ConfirmHunterPreview();
-        public void CancelHunterPreview() { reactiveView.CancelHunterPreview(); }
+        public bool SelectHunterPreview(string action)
+        {
+            if (!reactiveView.SelectHunterPreview(action)) return false;
+            // A stable accepted selection reuses its identity; a real switch gets one
+            // new counter token. No event or token generation belongs in hover/Update.
+            if (previewAudioToken == null || previewAudioAwaitingCommit ||
+                !string.Equals(previewAudioStance, action, StringComparison.OrdinalIgnoreCase))
+            {
+                previewAudioToken = "stance-" + (++previewAudioSerial).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                previewAudioStance = action;
+                previewAudioAwaitingCommit = false;
+                previewAudioExpectedCoreAction = null;
+            }
+            reactiveAudio.PresentPreview(previewAudioToken, action);
+            return true;
+        }
+        public bool StartHunterThrow(string target)
+        {
+            string priorId = reactiveView.HunterPresentationActionId;
+            if (!reactiveView.StartHunterThrow(target)) return false;
+            if (!string.Equals(priorId, reactiveView.HunterPresentationActionId, StringComparison.Ordinal)) TrackAcceptedPreviewAction();
+            // Throw commit is never sword readiness or release/contact audio.
+            return true;
+        }
+        public bool ConfirmHunterPreview()
+        {
+            if (!reactiveView.ConfirmHunterPreview()) return false;
+            // Native confirmation precedes SubmitCommand/AP validation. Keep the
+            // token cancelable until an authoritative Core CommandCommitted arrives.
+            previewAudioAwaitingCommit = previewAudioToken != null;
+            return true;
+        }
+        public void CancelHunterPreview() { reactiveView.CancelHunterPreview(); CancelPreviewAudio(); }
         public void ShowReactiveAnnouncement(string text) { reactiveView.ShowAnnouncement(text); }
         public void ShowReactiveTurnAnnouncement(bool playerTurn) { reactiveView.ShowTurnAnnouncement(playerTurn); }
-        public bool StartHunterApproach(string enemyId, bool heavy = false) { return reactiveView.StartHunterApproach(enemyId, heavy); }
+        public bool StartHunterApproach(string enemyId, bool heavy = false)
+        {
+            string priorId = reactiveView.HunterPresentationActionId;
+            if (!reactiveView.StartHunterApproach(enemyId, heavy)) return false;
+            string id = reactiveView.HunterPresentationActionId;
+            if (!string.IsNullOrEmpty(id) && !string.Equals(priorId, id, StringComparison.Ordinal))
+            {
+                // Arena's same-target retry can return true without creating a new ID.
+                reactiveAudio.PresentReadiness(id, heavy);
+                TrackAcceptedPreviewAction();
+            }
+            return true;
+        }
         public void PresentReactiveDefenseAttempt(DefenseAttempt attempt, long pressUs)
         { reactiveView.PresentDefenseAttempt(attempt, pressUs); }
-        public void CancelHunterMotion() { reactiveView.CancelHunterMotion(); }
+        public void CancelHunterMotion() { reactiveView.CancelHunterMotion(); CancelPreviewAudio(); }
         public void SetReactivePresentationLocked(bool value) { reactiveView.SetPresentationLocked(value); }
+
+        private void TrackAcceptedPreviewAction()
+        {
+            if (previewAudioAwaitingCommit && session.ReactiveCombat != null &&
+                session.ReactiveCombat.Phase == ReactivePhase.PlayerExecution)
+                previewAudioExpectedCoreAction = session.ReactiveCombat.CurrentActionId;
+        }
+        private void CancelPreviewAudio()
+        {
+            if (previewAudioToken != null) reactiveAudio.PresentCancel(previewAudioToken);
+            ClearPreviewAudio();
+        }
+        private void ClearPreviewAudio()
+        {
+            previewAudioToken = previewAudioStance = previewAudioExpectedCoreAction = null;
+            previewAudioAwaitingCommit = false;
+        }
+        private bool MatchesPendingPreviewCommit(CombatEvent evt)
+        {
+            if (!previewAudioAwaitingCommit || previewAudioToken == null || evt.ActorId != "P") return false;
+            if (previewAudioExpectedCoreAction != null)
+                return string.Equals(evt.ActionId, previewAudioExpectedCoreAction, StringComparison.Ordinal);
+            // Accepted Core fallback when a presentation could not create an ID.
+            return string.Equals(previewAudioStance, evt.Detail, StringComparison.OrdinalIgnoreCase) ||
+                previewAudioStance == "normal" && evt.Detail == "Basic";
+        }
 
         public MissionView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio,
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast, WorldEffects world,
@@ -109,6 +187,8 @@ namespace Rokas.Presentation
             {
                 combatHud = null;
                 reactiveAudio.Reset();
+                ClearPreviewAudio();
+                previewAudioSerial = 0;
                 reactiveView.Build(parent);
                 Refresh();
                 return;
@@ -153,6 +233,10 @@ namespace Rokas.Presentation
 
         public void Refresh()
         {
+            using var researchRefresh = ResearchRefreshMarker.Auto();
+#if UNITY_EDITOR
+            RokasView.ResearchRefreshObserved?.Invoke(1);
+#endif
             if (session.CombatMode == CombatMode.ReactiveTurns &&
                 (session.State.phase == RunPhase.Combat || reactiveView.AnimatedActorsReady))
             {
@@ -371,18 +455,34 @@ namespace Rokas.Presentation
 
         public void PresentReactiveCombatEvent(CombatEvent combatEvent, AttackSequenceDefinition sequence = null)
         {
+            using var researchEvent = ResearchEventMarker.Auto();
             if (combatEvent == null || session.CombatMode != CombatMode.ReactiveTurns) return;
-            reactiveView.Present(combatEvent, sequence);
+            using (ResearchPoseVfxMarker.Auto()) reactiveView.Present(combatEvent, sequence);
             if (combatEvent.Kind == CombatEventKind.CommandCommitted &&
                 !string.IsNullOrEmpty(reactiveView.HunterPresentationActionId))
                 reactiveAudio.BindActionId(combatEvent.ActionId, reactiveView.HunterPresentationActionId);
-            bool combatCueHandled = reactiveAudio.Present(combatEvent);
+            bool combatCueHandled;
+            using (ResearchAudioMarker.Auto())
+            {
+                if (combatEvent.Kind == CombatEventKind.CommandCommitted && MatchesPendingPreviewCommit(combatEvent))
+                {
+                    reactiveAudio.PresentConfirm(previewAudioToken);
+                    ClearPreviewAudio();
+                }
+                if (combatEvent.Kind == CombatEventKind.AttackStarted && combatEvent.ActorId != "P" &&
+                    session.ReactiveCombat?.GetActorState(combatEvent.ActorId)?.Alive == true)
+                    reactiveAudio.PresentEnemyWarning(combatEvent.ActionId, combatEvent.ActorId);
+                combatCueHandled = reactiveAudio.Present(combatEvent);
+            }
             if (combatEvent.Kind != CombatEventKind.HitResolved) return;
             bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";
             bool defended = combatEvent.Detail == "Dodge" || combatEvent.Detail == "Parry" || perfect;
             if (combatEvent.Amount > 0 && !combatCueHandled)
                 audio.Play(perfect ? assets.critical : assets.hit);
             if (combatEvent.Detail != "Dodge") world.Impact(perfect ? .25f : defended ? .06f : .16f);
+#if UNITY_EDITOR
+            ResearchContactObserved?.Invoke(combatEvent);
+#endif
         }
 
         public void Tick(float dt, bool paused)
@@ -444,6 +544,8 @@ namespace Rokas.Presentation
             CancelInput();
             reactiveView.ClearReferences();
             reactiveAudio.Reset();
+            ClearPreviewAudio();
+            previewAudioSerial = 0;
             combatHud = null;
             combatFlash = null;
             HitStopRemaining = sparkTime = 0;

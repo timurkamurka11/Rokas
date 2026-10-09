@@ -9,7 +9,8 @@ namespace Rokas.Presentation
     {
         KeikoNormalVocal, KeikoHeavyVocal, NormalWhoosh, HeavyWhoosh,
         NormalFleshContact, HeavyFleshContact, MonsterVocal, MonsterSwing,
-        MonsterFleshContact, GuardMetalContact, DodgeBackstep, ThrowRelease, ThrowFleshContact
+        MonsterFleshContact, GuardMetalContact, DodgeBackstep, ThrowRelease, ThrowFleshContact,
+        StancePreview, StanceConfirm, StanceCancel, SwordReadiness, HeavyWindup, EnemyWarning
     }
 
     public sealed class ReactiveCombatAudioDispatch
@@ -33,22 +34,36 @@ namespace Rokas.Presentation
     {
         private const string AudioRoot = "Combat/ReactiveTurns/Audio/";
         private const string HunterId = "P";
+        private const string FidelityAudioRoot = "Audio/CombatFidelity3/";
 
         private readonly RokasAudio audio;
         private readonly AudioClip[] normalVocals, heavyVocals, monsterAttacks, monsterIdle;
         private readonly AudioClip normalSwing, heavySwing, normalContact, heavyContact;
         private readonly AudioClip monsterContact, guardContact, dodgeMovement;
         private readonly AudioClip throwRelease, throwContact;
-        private readonly HashSet<string> throwActions = new HashSet<string>();
-        private readonly Dictionary<string, string> actionAliases = new Dictionary<string, string>();
-        private readonly Dictionary<string, bool> heavyActions = new Dictionary<string, bool>();
-        private readonly HashSet<string> played = new HashSet<string>();
-        private readonly List<ReactiveCombatAudioDispatch> dispatches = new List<ReactiveCombatAudioDispatch>();
+        private readonly AudioClip stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning;
+        private readonly AudioClip[] fidelityClips;
+        private readonly Dictionary<string, PreviewEntry> previewStates = new Dictionary<string, PreviewEntry>(128, StringComparer.Ordinal);
+        private string activePreviewToken;
+        private readonly HashSet<string> throwActions = new HashSet<string>(128);
+        private readonly Dictionary<string, string> actionAliases = new Dictionary<string, string>(128, StringComparer.Ordinal);
+        private readonly Dictionary<ActionActorIdentity, bool> heavyActions = new Dictionary<ActionActorIdentity, bool>(64);
+        private readonly HashSet<AudioEventIdentity> played = new HashSet<AudioEventIdentity>(512);
+        private readonly List<ReactiveCombatAudioDispatch> dispatches = new List<ReactiveCombatAudioDispatch>(256);
         private int normalVocalIndex, heavyVocalIndex, attackIndex, idleIndex;
         private float idleCountdown;
 
         public IReadOnlyList<ReactiveCombatAudioDispatch> Dispatches { get { return dispatches; } }
         public int PlaybackCount { get; private set; }
+        public bool FidelityClipsReady
+        {
+            get
+            {
+                for (int i = 0; i < fidelityClips.Length; i++)
+                    if (!fidelityClips[i] || fidelityClips[i].loadState != AudioDataLoadState.Loaded) return false;
+                return true;
+            }
+        }
 
         public ReactiveCombatAudio(RokasAudio audio)
         {
@@ -70,7 +85,68 @@ namespace Rokas.Presentation
             dodgeMovement = Load("PolishII/DodgeBackstep");
             throwRelease = Load("FinalVfx/ThrowRelease");
             throwContact = Load("FinalVfx/ThrowContact");
+            stancePreview = LoadFidelity("StancePreview");
+            stanceConfirm = LoadFidelity("StanceConfirm");
+            stanceCancel = LoadFidelity("StanceCancel");
+            swordReadiness = LoadFidelity("SwordReadiness");
+            heavyWindup = LoadFidelity("HeavyWindup");
+            enemyWarning = LoadFidelity("EnemyWarning");
+            fidelityClips = new[] { stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning };
+            // Decode/load and reserve collections before the first gameplay contact.
+            Preload(normalVocals); Preload(heavyVocals); Preload(monsterAttacks); Preload(monsterIdle); Preload(fidelityClips);
+            Preload(new[] { normalSwing, heavySwing, normalContact, heavyContact, monsterContact, guardContact, dodgeMovement, throwRelease, throwContact });
             Reset();
+        }
+
+        /// <summary>Accepted stance selection only. A held hover/sample must reuse the same token.</summary>
+        public bool PresentPreview(string previewToken, string stanceId)
+        {
+            string stance = NormalizeStance(stanceId);
+            if (string.IsNullOrWhiteSpace(previewToken) || stance == null) return false;
+            PreviewEntry existing;
+            if (previewStates.TryGetValue(previewToken, out existing))
+            {
+                if (activePreviewToken != previewToken || existing.State != PreviewState.Active || existing.Stance != stance) return false;
+                return PlayOnce(previewToken, HunterId, null, ReactiveCombatAudioEvent.StancePreview, stancePreview, .18f);
+            }
+            if (!string.IsNullOrEmpty(activePreviewToken) && previewStates.TryGetValue(activePreviewToken, out existing) && existing.State == PreviewState.Active)
+                previewStates[activePreviewToken] = new PreviewEntry(existing.Stance, PreviewState.Canceled);
+            previewStates[previewToken] = new PreviewEntry(stance, PreviewState.Active);
+            activePreviewToken = previewToken;
+            DelayIdle(.75f);
+            return PlayOnce(previewToken, HunterId, null, ReactiveCombatAudioEvent.StancePreview, stancePreview, .18f);
+        }
+        /// <summary>Call only after the current native preview has actually accepted confirmation.</summary>
+        public bool PresentConfirm(string previewToken)
+        {
+            PreviewEntry entry;
+            if (string.IsNullOrEmpty(previewToken) || activePreviewToken != previewToken || !previewStates.TryGetValue(previewToken, out entry) || entry.State == PreviewState.Canceled) return false;
+            previewStates[previewToken] = new PreviewEntry(entry.Stance, PreviewState.Confirmed);
+            DelayIdle(3f);
+            return PlayOnce(previewToken, HunterId, null, ReactiveCombatAudioEvent.StanceConfirm, stanceConfirm, .24f);
+        }
+        /// <summary>Accepted cancel/focus-loss only. Never cancels a confirmed action or emits a later contact.</summary>
+        public bool PresentCancel(string previewToken)
+        {
+            PreviewEntry entry;
+            if (string.IsNullOrEmpty(previewToken) || activePreviewToken != previewToken || !previewStates.TryGetValue(previewToken, out entry) || entry.State == PreviewState.Confirmed) return false;
+            previewStates[previewToken] = new PreviewEntry(entry.Stance, PreviewState.Canceled);
+            return PlayOnce(previewToken, HunterId, null, ReactiveCombatAudioEvent.StanceCancel, stanceCancel, .16f);
+        }
+        /// <summary>Accepted Normal/Heavy action readiness. Keiko effort remains the existing vocal event.</summary>
+        public bool PresentReadiness(string actionId, bool heavy)
+        {
+            DelayIdle(5f);
+            return PlayOnce(Canonical(actionId), HunterId, null,
+                heavy ? ReactiveCombatAudioEvent.HeavyWindup : ReactiveCombatAudioEvent.SwordReadiness,
+                heavy ? heavyWindup : swordReadiness, heavy ? .26f : .21f);
+        }
+        /// <summary>Authoritative incoming attack start. This short Foley layer never replaces monster voice.</summary>
+        public bool PresentEnemyWarning(string actionId, string enemyId)
+        {
+            if (string.IsNullOrWhiteSpace(enemyId) || enemyId == HunterId) return false;
+            DelayIdle(5f);
+            return PlayOnce(Canonical(actionId), enemyId, null, ReactiveCombatAudioEvent.EnemyWarning, enemyWarning, .23f);
         }
 
         /// <summary>Links the pre-commit animation ID to the authoritative Core action ID.</summary>
@@ -216,6 +292,7 @@ namespace Rokas.Presentation
         {
             idleCountdown = 6f;
             actionAliases.Clear(); heavyActions.Clear(); throwActions.Clear(); played.Clear(); dispatches.Clear();
+            previewStates.Clear(); activePreviewToken = null;
             PlaybackCount = 0;
             normalVocalIndex = heavyVocalIndex = attackIndex = idleIndex = 0;
         }
@@ -237,8 +314,8 @@ namespace Rokas.Presentation
                 string.Equals(detail, "heavy", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string ActionActorKey(string sequence, string actor)
-        { return sequence + "|" + actor; }
+        private static ActionActorIdentity ActionActorKey(string sequence, string actor)
+        { return new ActionActorIdentity(sequence, actor); }
 
         private bool PlayBankOnce(string sequence, string actor, string hit, ReactiveCombatAudioEvent eventId,
             AudioClip[] bank, ref int index, float volume)
@@ -251,7 +328,7 @@ namespace Rokas.Presentation
             AudioClip clip, float volume)
         {
             if (string.IsNullOrEmpty(sequence) || string.IsNullOrEmpty(actor)) return false;
-            string key = Key(sequence, actor, hit, eventId);
+            AudioEventIdentity key = Key(sequence, actor, hit, eventId);
             if (played.Contains(key)) return true;
             if (!clip) return false;
             played.Add(key);
@@ -262,8 +339,8 @@ namespace Rokas.Presentation
             return true;
         }
 
-        private static string Key(string sequence, string actor, string hit, ReactiveCombatAudioEvent eventId)
-        { return sequence + "|" + actor + "|" + hit + "|" + eventId; }
+        private static AudioEventIdentity Key(string sequence, string actor, string hit, ReactiveCombatAudioEvent eventId)
+        { return new AudioEventIdentity(sequence, actor, hit, eventId); }
 
         private static bool IsDodge(string detail)
         { return string.Equals(detail, "Dodge", StringComparison.OrdinalIgnoreCase); }
@@ -288,6 +365,49 @@ namespace Rokas.Presentation
         private void DelayIdle(float minimumSeconds)
         {
             idleCountdown = Mathf.Max(idleCountdown, minimumSeconds);
+        }
+
+        private static string NormalizeStance(string stance)
+        {
+            if (string.Equals(stance, "normal", StringComparison.OrdinalIgnoreCase) || string.Equals(stance, "Basic", StringComparison.OrdinalIgnoreCase)) return "normal";
+            if (string.Equals(stance, "heavy", StringComparison.OrdinalIgnoreCase)) return "heavy";
+            if (string.Equals(stance, "throw_blade", StringComparison.OrdinalIgnoreCase)) return "throw_blade";
+            return null;
+        }
+        private enum PreviewState { Active, Confirmed, Canceled }
+        private readonly struct PreviewEntry
+        {
+            public readonly string Stance; public readonly PreviewState State;
+            public PreviewEntry(string stance, PreviewState state) { Stance = stance; State = state; }
+        }
+        private readonly struct ActionActorIdentity : IEquatable<ActionActorIdentity>
+        {
+            private readonly string sequence, actor;
+            public ActionActorIdentity(string sequence, string actor) { this.sequence = sequence; this.actor = actor; }
+            public bool Equals(ActionActorIdentity other) => string.Equals(sequence, other.sequence, StringComparison.Ordinal) && string.Equals(actor, other.actor, StringComparison.Ordinal);
+            public override bool Equals(object other) => other is ActionActorIdentity identity && Equals(identity);
+            public override int GetHashCode() { unchecked { return ((sequence == null ? 0 : StringComparer.Ordinal.GetHashCode(sequence)) * 397) ^ (actor == null ? 0 : StringComparer.Ordinal.GetHashCode(actor)); } }
+        }
+        private readonly struct AudioEventIdentity : IEquatable<AudioEventIdentity>
+        {
+            private readonly string sequence, actor, hit; private readonly ReactiveCombatAudioEvent eventId;
+            public AudioEventIdentity(string sequence, string actor, string hit, ReactiveCombatAudioEvent eventId)
+            { this.sequence = sequence; this.actor = actor; this.hit = hit; this.eventId = eventId; }
+            public bool Equals(AudioEventIdentity other) => eventId == other.eventId && string.Equals(sequence, other.sequence, StringComparison.Ordinal) && string.Equals(actor, other.actor, StringComparison.Ordinal) && string.Equals(hit, other.hit, StringComparison.Ordinal);
+            public override bool Equals(object other) => other is AudioEventIdentity identity && Equals(identity);
+            public override int GetHashCode()
+            {
+                unchecked { int hash = sequence == null ? 0 : StringComparer.Ordinal.GetHashCode(sequence);
+                    hash = hash * 397 ^ (actor == null ? 0 : StringComparer.Ordinal.GetHashCode(actor));
+                    hash = hash * 397 ^ (hit == null ? 0 : StringComparer.Ordinal.GetHashCode(hit));
+                    return hash * 397 ^ (int)eventId; }
+            }
+        }
+        private static AudioClip LoadFidelity(string name) { return Resources.Load<AudioClip>(FidelityAudioRoot + name); }
+        private static void Preload(AudioClip[] bank)
+        {
+            for (int i = 0; i < bank.Length; i++)
+                if (bank[i] && bank[i].loadState != AudioDataLoadState.Loaded) bank[i].LoadAudioData();
         }
 
         private static AudioClip Load(string name) { return Resources.Load<AudioClip>(AudioRoot + name); }

@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: d6e458e8dc494631bc013e019799f954
+AudioImporter:
+  externalObjects: {}
+  serializedVersion: 7
+  defaultSettings:
+    serializedVersion: 2
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 48000
+    compressionFormat: 0
+    quality: 1
+    conversionMode: 0
+    preloadAudioData: 1
+  platformSettingOverrides: {}
+  forceToMono: 0
+  normalize: 0
+  loadInBackground: 0
+  ambisonic: 0
+  3D: 0
+  userData: Original ROKAS procedural Foley 2026-10-09; no external or DD2 waveform
+  assetBundleName:
+  assetBundleVariant:

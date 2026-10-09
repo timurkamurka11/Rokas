@@ -11,6 +11,11 @@ namespace Rokas.Presentation
 {
     public sealed class RokasView : IDisposable
     {
+        private static readonly Unity.Profiling.ProfilerMarker ResearchGlobalRefreshMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.GlobalRefresh");
+#if UNITY_EDITOR
+        internal static Action<int> ResearchRefreshObserved; // 0 global, 1 mission, 2 timing
+#endif
+
         private readonly RokasBootstrap owner;
         private readonly GameSession session;
         private readonly RokasAssets assets;
@@ -340,6 +345,10 @@ namespace Rokas.Presentation
 
         private void Refresh()
         {
+            using var researchRefresh = ResearchGlobalRefreshMarker.Auto();
+#if UNITY_EDITOR
+            ResearchRefreshObserved?.Invoke(0);
+#endif
             RunPhase nextPhase = session.State.phase;
             if (phase != nextPhase)
             {

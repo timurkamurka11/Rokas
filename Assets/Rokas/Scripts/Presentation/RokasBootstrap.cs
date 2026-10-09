@@ -12,6 +12,17 @@ namespace Rokas.Presentation
 {
     public sealed class RokasBootstrap : MonoBehaviour
     {
+        private static readonly Unity.Profiling.ProfilerMarker ResearchInputMarker = new Unity.Profiling.ProfilerMarker("Rokas.Block.InputSubmit");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchAttemptMarker = new Unity.Profiling.ProfilerMarker("Rokas.Block.AttemptPresent");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchAdvanceMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.Advance");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchPresentStepMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.PresentStep");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchCheckpointMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.CheckpointClone");
+        private static readonly Unity.Profiling.ProfilerMarker ResearchSaveMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.SaveCheckpoint");
+#if UNITY_EDITOR
+        internal static Action<ReactiveDevicePress, DefenseAttempt, long> ResearchDefenseObserved;
+        internal static Action<bool> ResearchCheckpointSaveObserved;
+#endif
+
         public GameSession Session { get; private set; }
         public RokasView View { get; private set; }
         public VideoSequencePresenter VideoPresenter { get; private set; }
@@ -601,6 +612,7 @@ namespace Rokas.Presentation
 
         private void PresentReactiveStep(CombatStep step, ReactiveCombatSession combat, long deviceUs)
         {
+            using var researchPresentStep = ResearchPresentStepMarker.Auto();
             foreach (CombatEvent evt in step.Events)
             {
                 AttackSequenceDefinition sequence = evt.Kind == CombatEventKind.AttackStarted
@@ -790,7 +802,8 @@ namespace Rokas.Presentation
             }
 
             long combatNowUs = reactiveClock.CombatTimeAt(now);
-            CombatStep step = combat.Advance(combatNowUs, combatNowUs - 40000);
+            CombatStep step;
+            using (ResearchAdvanceMarker.Auto()) step = combat.Advance(combatNowUs, combatNowUs - 40000);
             PresentReactiveStep(step, combat, now);
             defenseContext = combat.Phase == ReactivePhase.EnemyExecution;
             offenseContext = combat.CurrentPlayerSkillId == "heavy";
@@ -799,14 +812,28 @@ namespace Rokas.Presentation
             reactiveInput.SetDefenseEnabled(defenseContext);
             reactiveInput.SetOffenseEnabled(offenseContext);
 
-            BattleCheckpoint stable = combat.GetStableCheckpoint();
+            BattleCheckpoint stable;
+            using (ResearchCheckpointMarker.Auto()) stable = combat.GetStableCheckpoint();
             if (Session.State.battleCheckpoint == null || stable.revision > Session.State.battleCheckpoint.revision)
-                Session.SaveReactiveCheckpoint();
+            {
+                using var researchSave = ResearchSaveMarker.Auto();
+#if UNITY_EDITOR
+                ResearchCheckpointSaveObserved?.Invoke(true);
+#endif
+                try { Session.SaveReactiveCheckpoint(); }
+                finally
+                {
+#if UNITY_EDITOR
+                    ResearchCheckpointSaveObserved?.Invoke(false);
+#endif
+                }
+            }
             View.RefreshReactiveCombat();
         }
 
         private void SubmitReactiveDevicePress(ReactiveDevicePress press)
         {
+            using var researchInput = ResearchInputMarker.Auto();
             if (press.Epoch != reactiveInput.Epoch || reactiveClock == null || reactiveClock.IsPaused ||
                 reactiveBoundCombat == null || reactiveBoundCombat.Phase != ReactivePhase.EnemyExecution) return;
             long? combatUs = reactiveClock.MapInput(press.DeviceTimeUs, reactiveClock.CurrentEpoch);
@@ -814,7 +841,11 @@ namespace Rokas.Presentation
             DefenseKind kind = press.Kind == ReactivePressKind.Dodge ? DefenseKind.Dodge : DefenseKind.Parry;
             DefenseAttempt attempt = reactiveBoundCombat.SubmitDefense(new DefenseIntent("device-" + press.InputId,
                 reactiveBoundCombat.InputEpoch, kind, combatUs.Value));
-            View.PresentReactiveDefenseAttempt(attempt, combatUs.Value);
+#if UNITY_EDITOR
+            ResearchDefenseObserved?.Invoke(press, attempt, combatUs.Value);
+#endif
+            using (ResearchAttemptMarker.Auto())
+                View.PresentReactiveDefenseAttempt(attempt, combatUs.Value);
         }
 
         private void SubmitReactiveOffensePress(ReactiveOffensePress press)
