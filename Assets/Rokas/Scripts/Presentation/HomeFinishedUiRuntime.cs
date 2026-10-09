@@ -718,7 +718,12 @@ namespace Rokas.Presentation
         {
             float cursor = LivingCursor(time);
             float delta = Mathf.Abs(Mathf.Repeat(location - cursor + .5f, 1f) - .5f);
-            float band = 1f - Mathf.SmoothStep(0f, laptopGold ? .083f : .115f, delta);
+            // SmoothStep's third argument is a normalized 0..1 *t*.
+            // Feeding raw arc distance as t made nearly every segment
+            // glow equally (the band never faded to zero).
+            float bandWidth = laptopGold ? .083f : .115f;
+            float band = 1f - Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01(delta / bandWidth));
             float pulse = Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
                 phase * Mathf.PI * 2f) * .075f;
             // No frame-random flicker. Micro movement is in luminosity only.
@@ -747,9 +752,10 @@ namespace Rokas.Presentation
         {
             float delta = Mathf.Abs(Mathf.Repeat(location - LivingCursor(time) +
                 .5f, 1f) - .5f);
-            float band = 1f - Mathf.SmoothStep(0f,
-                narrow ? (laptopGold ? .050f : .057f) :
-                         (laptopGold ? .100f : .112f), delta);
+            float width = narrow ? (laptopGold ? .050f : .057f) :
+                (laptopGold ? .100f : .112f);
+            float band = 1f - Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01(delta / width));
             float boost = 1f + hoverStrength * .16f;
             return narrow
                 ? new Color(1f, .985f, .83f, Mathf.Clamp01(band * .98f * boost))
