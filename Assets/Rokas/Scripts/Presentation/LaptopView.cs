@@ -46,6 +46,9 @@ namespace Rokas.Presentation
         private float pageTime;
         private Action closed;
         private bool bootConsumedThisHomeVisit;
+        private bool cinematicHoldRequested;
+        private float cinematicHoldRemaining;
+        private RectTransform cinematicHoldScreen;
         public bool IsClosing { get; private set; }
         public bool Booting { get; private set; }
         public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
@@ -83,6 +86,16 @@ namespace Rokas.Presentation
             contentGroup = null;
             clock = null;
             date = null;
+            cinematicHoldRequested = false;
+            cinematicHoldRemaining = 0f;
+            cinematicHoldScreen = null;
+        }
+
+        // This is called only by the Home laptop cinematic handoff, AFTER Reset()
+        // and BEFORE Build(). It never changes hallway/programmatic laptop routes.
+        public void RequestCinematicPostBootHold()
+        {
+            cinematicHoldRequested = true;
         }
 
         public void BeginHomeVisit()
@@ -106,6 +119,7 @@ namespace Rokas.Presentation
             if (!videoTransitions() || bootConsumedThisHomeVisit)
             {
                 Booting = false;
+                cinematicHoldRequested = false;
                 BuildReadyFrame();
                 return;
             }
@@ -117,6 +131,15 @@ namespace Rokas.Presentation
         private void FinishBoot()
         {
             if (!Booting || IsClosing || !frame) return;
+            if (cinematicHoldRequested)
+            {
+                cinematicHoldRequested = false;
+                cinematicHoldRemaining = .5f;
+                cinematicHoldScreen = ui.Rect(frame, "CinematicPostBootHold", 22f, 30f, 1748f, 940f);
+                ui.Box(cinematicHoldScreen, "PoweredLCD", 0, 0, 1748, 940,
+                    new Color(.024f, .044f, .063f, 1f));
+                return;
+            }
             Booting = false;
             BuildReadyFrame();
         }
@@ -300,6 +323,8 @@ namespace Rokas.Presentation
                 video.Cancel();
                 Booting = false;
             }
+            cinematicHoldRemaining = 0f;
+            cinematicHoldRequested = false;
             messages.Hide();
             IsClosing = true;
             closed = complete;
@@ -312,6 +337,18 @@ namespace Rokas.Presentation
         public void Tick(float dt)
         {
             if (!frame || !windowGroup) return;
+            if (Booting && cinematicHoldRemaining > 0f && !IsClosing)
+            {
+                cinematicHoldRemaining = Mathf.Max(0f,
+                    cinematicHoldRemaining - Mathf.Max(0f, Time.unscaledDeltaTime));
+                if (cinematicHoldRemaining <= 0f)
+                {
+                    if (cinematicHoldScreen) UnityEngine.Object.Destroy(cinematicHoldScreen.gameObject);
+                    cinematicHoldScreen = null;
+                    Booting = false;
+                    BuildReadyFrame();
+                }
+            }
             if (IsClosing)
             {
                 openTime = Mathf.Max(0, openTime - dt);
