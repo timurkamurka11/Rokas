@@ -589,11 +589,23 @@ namespace Rokas.Presentation
                 data.haloColor,
                 .58f);
 
+            // The source core is already almost opaque and red-clamped;
+            // multiplying its RGB cannot create an obvious moving highlight.
+            // Put a short warm flare BEHIND the core, followed by a narrow
+            // near-white travelling reflection ABOVE it.
+            if (livingGold)
+                StrokeLivingGold(mesh, data.coreThickness * 4.0f,
+                    Color.white, 1f, 1);
+
             Stroke(
                 mesh,
                 data.coreThickness,
                 data.coreColor,
                 .34f);
+
+            if (livingGold)
+                StrokeLivingGold(mesh, data.coreThickness * 1.45f,
+                    Color.white, 1f, 2);
         }
 
         private void Stroke(
@@ -658,8 +670,9 @@ namespace Rokas.Presentation
         // Walk the actual authored polygon perimeter. Short vertex-colored
         // segments give a continuous glint instead of blinking whole edges.
         // The original points, pivot, hit targets and light mask never move.
+        // pass=0: existing line, 1: soft moving aura, 2: sharp light streak.
         private void StrokeLivingGold(VertexHelper mesh, float thickness,
-            Color source, float strength)
+            Color source, float strength, int pass = 0)
         {
             int edges = data.points.Length - 1 +
                 (data.closed && data.points.Length > 2 ? 1 : 0);
@@ -686,10 +699,14 @@ namespace Rokas.Presentation
                 for (int k = 0; k < steps; k++)
                 {
                     float begin = (float)k / steps, end = (float)(k + 1) / steps;
-                    Color startColor = LivingColor(source,
-                        (distanceAlong + length * begin) / perimeter, strength, time);
-                    Color endColor = LivingColor(source,
-                        (distanceAlong + length * end) / perimeter, strength, time);
+                    float startLocation = (distanceAlong + length * begin) / perimeter;
+                    float endLocation = (distanceAlong + length * end) / perimeter;
+                    Color startColor = pass == 0
+                        ? LivingColor(source, startLocation, strength, time)
+                        : LivingGlintColor(startLocation, time, pass == 2);
+                    Color endColor = pass == 0
+                        ? LivingColor(source, endLocation, strength, time)
+                        : LivingGlintColor(endLocation, time, pass == 2);
                     AddGradientSegment(mesh, Vector2.Lerp(a, b, begin),
                         Vector2.Lerp(a, b, end), width, startColor, endColor);
                 }
@@ -699,7 +716,7 @@ namespace Rokas.Presentation
 
         private Color LivingColor(Color source, float location, float strength, float time)
         {
-            float cursor = Mathf.Repeat(time * (laptopGold ? .175f : .115f) + phase, 1f);
+            float cursor = LivingCursor(time);
             float delta = Mathf.Abs(Mathf.Repeat(location - cursor + .5f, 1f) - .5f);
             float band = 1f - Mathf.SmoothStep(0f, laptopGold ? .083f : .115f, delta);
             float pulse = Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
@@ -716,6 +733,27 @@ namespace Rokas.Presentation
             result.a = Mathf.Clamp01(source.a *
                 (1f + pulse * .7f + sweep * .8f + hoverStrength * .12f));
             return result;
+        }
+
+        // Explicit specular color (not a multiplier of the already saturated
+        // gold). This makes the sweep visible in a normally lit Home scene.
+        // Alpha fades smoothly to zero away from the moving highlight.
+        private float LivingCursor(float time)
+        {
+            return Mathf.Repeat(time * (laptopGold ? .28f : .20f) + phase, 1f);
+        }
+
+        private Color LivingGlintColor(float location, float time, bool narrow)
+        {
+            float delta = Mathf.Abs(Mathf.Repeat(location - LivingCursor(time) +
+                .5f, 1f) - .5f);
+            float band = 1f - Mathf.SmoothStep(0f,
+                narrow ? (laptopGold ? .050f : .057f) :
+                         (laptopGold ? .100f : .112f), delta);
+            float boost = 1f + hoverStrength * .16f;
+            return narrow
+                ? new Color(1f, .985f, .83f, Mathf.Clamp01(band * .98f * boost))
+                : new Color(1f, .79f, .38f, Mathf.Clamp01(band * .38f * boost));
         }
 
         private static void AddGradientSegment(VertexHelper mesh, Vector2 a, Vector2 b,
