@@ -123,6 +123,35 @@ namespace Rokas.Tests
             return Mathf.Ceil(budget + schedulingMargin);
         }
 
+        internal static float PendingPresentationBudget(RokasBootstrap boot, long throughOffsetUs = -1)
+        {
+            var world = GameObject.Find("ReactiveCombatWorld");
+            if (world == null) return 0f;
+            var arena = Arena(boot);
+            float remaining = 0f;
+            foreach (var actor in world.GetComponentsInChildren<ReactiveCombatActorVisual>(true))
+            {
+                var profile = actor.ActiveLicensedProfile;
+                if (profile != null && actor.LicensedContactConfirmed)
+                    remaining = Mathf.Max(remaining, Mathf.Max(0f, profile.Duration - actor.LicensedMotionClock) +
+                        Mathf.Max(arena.HunterReturnDuration, arena.EnemyReturnDuration) + .08f + .16f);
+            }
+            var combat = boot.Session.ReactiveCombat;
+            if (combat?.CurrentAttack != null && throughOffsetUs >= 0)
+            {
+                long elapsed = combat.CurrentCombatUs - combat.CurrentActionStartUs;
+                var enemy = Enemy(arena, combat.ActiveActorId);
+                foreach (var hit in combat.CurrentAttack.Hits)
+                    if (hit.ImpactUs > elapsed && hit.ImpactUs <= throughOffsetUs)
+                    {
+                        var profile = enemy.AttackLicensedProfile(hit.IsHeavy);
+                        Assert.That(profile, Is.Not.Null);
+                        remaining += Mathf.Max(profile.Duration, profile.StageRecoveryTime + arena.EnemyReturnDuration) + .16f + .08f;
+                    }
+            }
+            return Mathf.Ceil(remaining);
+        }
+
         internal static string DescribeAllPendingActors(RokasBootstrap boot)
         {
             const BindingFlags All = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

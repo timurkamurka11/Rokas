@@ -1,0 +1,7 @@
+# Combat Fidelity 3: source-aware return and lifecycle fixtures
+
+Two actual Bootstrap runtime regressions pass (2/2, 80.665 s): held-turn HUD and portal/duel/victory/home/payment/reload. Run SourceAwareReturnAndPayment-1791556485183. Production Combat Core, Bootstrap input gates, save/payment code and presentation runtime were unchanged.
+
+The prior full-loop failure at the five-second deadline was an active normal source transition, not a frozen transform: Core enemy elapsed751516µs, hunter already home/Idle, camera home, no presentation/approach hold, and enemy Approach with0.05000012s remaining. The fixture now waits on the same actual Core timestamp/phase/button predicates, with a finite wall-clock envelope derived from remaining active Native profile duration and actual pending sequence hits. The strict timestamp window remains offset..offset+40000µs. No forced clock advance, skipped animation, disabled input restrictions or unconditional sleep was added.
+
+The held-turn fixture formerly required the passive target to remain exactly at durable home while the saved source target offset was active. It now checks the source offset-to-home envelope and forbids queued enemy approach/attack. Return observations use the arena root-motion phase, because full source FK deliberately retains Attack during outer root return. HUD invisibility, Core-clock/revision immutability, discarded Q input, announcements, exact home/Idle restoration, actual HP/payment and reload assertions remain.

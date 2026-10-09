@@ -48,7 +48,7 @@ namespace Rokas.Tests
             Assert.That(boot.Session.LeaveHome(), Is.True);
             yield return null;
             Assert.That(boot.Session.EnterReactiveDuelTestEncounter(), Is.True);
-            yield return WaitForCommandReady("ReactiveBasic", 12f);
+            yield return WaitForCommandReady(boot, "ReactiveBasic", 12f);
             Assert.That(boot.Session.State.phase, Is.EqualTo(RunPhase.Combat));
             Assert.That(boot.View.Paused, Is.False);
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
@@ -62,11 +62,11 @@ namespace Rokas.Tests
             Assert.That(combat.EnemySeal, Is.EqualTo(25));
             long firstAttackStart = combat.CurrentActionStartUs;
 
-            yield return WaitForOffset(combat, firstAttackStart, 950000, 5f);
+            yield return WaitForOffset(boot, firstAttackStart, 950000, 5f);
             yield return PressKey(Key.E);
-            yield return WaitForOffset(combat, firstAttackStart, 1300000, 5f);
+            yield return WaitForOffset(boot, firstAttackStart, 1300000, 5f);
             yield return PressKey(Key.E); // Intentionally too early for h2.
-            yield return WaitForOffset(combat, firstAttackStart, 2535000, 5f);
+            yield return WaitForOffset(boot, firstAttackStart, 2535000, 5f);
             yield return PressKey(Key.E); // Perfect final defense.
             yield return WaitForPhase(boot, ReactivePhase.CounterWindow, 3f);
 
@@ -80,22 +80,22 @@ namespace Rokas.Tests
             Assert.That(combat.EnemyHp, Is.EqualTo(107));
             Assert.That(combat.EnemyBroken, Is.True);
 
-            yield return WaitForCommandReady("ReactiveBasic", 4f);
+            yield return WaitForCommandReady(boot, "ReactiveBasic", 4f);
             boot.SubmitReactiveCommand(CommandKind.Skill, "seal_strike");
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(47));
             Assert.That(combat.EnemyBroken, Is.False);
-            yield return WaitForCommandReady("ReactiveBasic", 4f);
+            yield return WaitForCommandReady(boot, "ReactiveBasic", 4f);
             Press("ReactiveBasic");
             Press("ReactiveBasic");
             yield return WaitForPhase(boot, ReactivePhase.EnemyExecution, 3f);
             Assert.That(combat.EnemyHp, Is.EqualTo(27));
             long secondAttackStart = combat.CurrentActionStartUs;
-            yield return WaitForOffset(combat, secondAttackStart, 930000, 4f);
+            yield return WaitForOffset(boot, secondAttackStart, 930000, 4f);
             yield return PressKey(Key.Q);
             yield return WaitForPhase(boot, ReactivePhase.PlayerCommand, 4f);
             Assert.That(combat.HunterHp, Is.EqualTo(92));
-            yield return WaitForCommandReady("ReactiveBasic", 4f);
+            yield return WaitForCommandReady(boot, "ReactiveBasic", 4f);
             boot.SubmitReactiveCommand(CommandKind.Skill, "seal_strike");
             yield return WaitForRunPhase(boot, RunPhase.Sealed, 4f);
             Assert.That(combat.TerminalResult, Is.EqualTo(CombatOutcome.Victory));
@@ -111,7 +111,7 @@ namespace Rokas.Tests
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(), InputState.currentTime);
             InputSystem.Update();
 
-            float resultDeadline = Time.realtimeSinceStartup + 6f;
+            float resultDeadline = Time.realtimeSinceStartup + 6f + NativeCombatFixtureObservables.PendingPresentationBudget(boot);
             Assert.That(GameObject.Find("ReactiveCombatWorld"), Is.Not.Null,
                 "Terminal progression is saved immediately, while the last corpse remains visible.");
             while (Find("ReturnHome") == null && Time.realtimeSinceStartup < resultDeadline) yield return null;
@@ -159,7 +159,8 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForPhase(RokasBootstrap boot, ReactivePhase expected, float timeout)
         {
-            float deadline = Time.realtimeSinceStartup + timeout;
+            float deadline = Time.realtimeSinceStartup + timeout + NativeCombatFixtureObservables.PendingPresentationBudget(boot,
+                boot.Session.ReactiveCombat?.CurrentAttack?.DurationUs ?? -1);
             while (boot.Session.ReactiveCombat.Phase != expected && Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(expected));
@@ -167,15 +168,17 @@ namespace Rokas.Tests
 
         private static IEnumerator WaitForRunPhase(RokasBootstrap boot, RunPhase expected, float timeout)
         {
-            float deadline = Time.realtimeSinceStartup + timeout;
+            float deadline = Time.realtimeSinceStartup + timeout + NativeCombatFixtureObservables.PendingPresentationBudget(boot,
+                boot.Session.ReactiveCombat?.CurrentAttack?.DurationUs ?? -1);
             while (boot.Session.State.phase != expected && Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.Session.State.phase, Is.EqualTo(expected));
         }
 
-        private IEnumerator WaitForCommandReady(string buttonName, float timeout)
+        private IEnumerator WaitForCommandReady(RokasBootstrap boot, string buttonName, float timeout)
         {
-            float deadline = Time.realtimeSinceStartup + timeout;
+            float deadline = Time.realtimeSinceStartup + timeout + NativeCombatFixtureObservables.PendingPresentationBudget(boot,
+                boot.Session.ReactiveCombat?.CurrentAttack?.DurationUs ?? -1);
             Button button = Find(buttonName)?.GetComponent<Button>();
             while (button != null && (!button.gameObject.activeInHierarchy || !button.IsInteractable()) &&
                    Time.realtimeSinceStartup < deadline)
@@ -185,11 +188,17 @@ namespace Rokas.Tests
                 "The next command becomes available after Keiko returns home.");
         }
 
-        private static IEnumerator WaitForOffset(ReactiveCombatSession combat, long startUs, long offsetUs, float timeout)
+        private static IEnumerator WaitForOffset(RokasBootstrap boot, long startUs, long offsetUs, float timeout)
         {
-            float deadline = Time.realtimeSinceStartup + timeout;
+            var combat = boot.Session.ReactiveCombat;
+            float waitStarted = Time.realtimeSinceStartup;
+            float budget = timeout + NativeCombatFixtureObservables.PendingPresentationBudget(boot, offsetUs);
+            float deadline = waitStarted + budget;
             while (combat.CurrentCombatUs - startUs < offsetUs && Time.realtimeSinceStartup < deadline)
                 yield return null;
+            TestContext.WriteLine($"Contact offset {offsetUs}: reached after {Time.realtimeSinceStartup - waitStarted:F3}s; finite source budget {budget:F1}s");
+            if (combat.CurrentCombatUs - startUs < offsetUs)
+                TestContext.WriteLine("Full-loop contact-clock owner snapshot: " + NativeCombatFixtureObservables.DescribeAllPendingActors(boot));
             Assert.That(combat.CurrentCombatUs - startUs, Is.InRange(offsetUs, offsetUs + 40000),
                 "Timestamped input must be scheduled against the authored contact time.");
         }

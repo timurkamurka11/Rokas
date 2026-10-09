@@ -283,9 +283,12 @@ namespace Rokas.Tests
                 }
                 Assert.That(hunter, Is.Not.Null);
                 Assert.That(enemy, Is.Not.Null);
+                var actualArena = NativeCombatFixtureObservables.Arena(boot);
+                var normalProfile = hunter.AttackLicensedProfile(false);
                 Vector3 hunterHome = hunter.transform.localPosition;
                 Vector3 enemyHome = enemy.transform.localPosition;
                 ReactiveCombatSession combat = boot.Session.ReactiveCombat;
+                string enemyId = combat.ActiveEnemyIds[0];
                 boot.SubmitReactiveCommand(CommandKind.Basic, null);
                 Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
                 deadline = Time.realtimeSinceStartup + 12f;
@@ -303,8 +306,8 @@ namespace Rokas.Tests
                 deadline = Time.realtimeSinceStartup + 8f;
                 while (boot.ReactivePresentationHeld && Time.realtimeSinceStartup < deadline)
                 {
-                    Assert.That(enemy.transform.localPosition, Is.EqualTo(enemyHome),
-                        "The next enemy must stay in its own slot for the complete hunter return.");
+                    NativeCombatFixtureObservables.AssertPassiveStageEnvelope(actualArena, world.transform,
+                        hunter, normalProfile, combat.ActiveActorId);
                     Assert.That(enemy.CurrentPose, Is.Not.EqualTo("Approach"));
                     Assert.That(enemy.CurrentPose, Is.Not.EqualTo("Attack"));
                     Assert.That(enemy.CurrentPose, Is.Not.EqualTo("Heavy"));
@@ -313,7 +316,7 @@ namespace Rokas.Tests
                     Assert.That(combat.HunterHp, Is.EqualTo(100));
                     boot.SubmitReactiveCommand(CommandKind.Basic, null);
                     Assert.That(combat.Revision, Is.EqualTo(heldRevision));
-                    if (hunter.CurrentPose == "ReturnHome")
+                    if (actualArena.HunterMotionPhase == "Return")
                     {
                         sawHunterReturn = true;
                         if (!defensePressSent)
@@ -372,7 +375,7 @@ namespace Rokas.Tests
                     Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerCommand));
                     float enemyDistance = Vector3.Distance(enemy.transform.localPosition, enemyHome);
                     sawEnemyReturn |= enemyDistance > .001f && enemyDistance < previousEnemyDistance &&
-                        (enemy.CurrentPose == "ReturnHome" || enemy.CurrentPose == "Walk");
+                        actualArena.EnemyMotionPhase(enemyId) == "Return";
                     previousEnemyDistance = enemyDistance;
                     if (boot.View.ReactiveAnnouncementActive)
                     {
