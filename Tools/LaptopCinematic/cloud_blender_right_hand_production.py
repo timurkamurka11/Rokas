@@ -138,9 +138,9 @@ def create_scene(a):
     # Camera local -Z views XY plane, camera up is global +Y.
     camera_data.type="ORTHO";camera_data.ortho_scale=FRAME_LENGTH
     bpy.context.scene.camera=cam
-    add_area("Window_Amber_Key",(-.45,.65,1.35),200,(1.,.66,.40),.75)
-    add_area("Monitor_Warm_Fill",(.65,.15,1.1),125,(1.,.82,.68),.65)
-    add_area("Ambient_Cool_Edge",(0,-.55,1.0),70,(.59,.67,.80),.45)
+    add_area("Window_Amber_Key",(-.45,.65,1.35),65,(1.,.66,.40),.75)
+    add_area("Monitor_Warm_Fill",(.65,.15,1.1),40,(1.,.82,.68),.65)
+    add_area("Ambient_Cool_Edge",(0,-.55,1.0),25,(.59,.67,.80),.45)
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
     scene.cycles.samples=max(2,a.samples)
@@ -154,7 +154,7 @@ def create_scene(a):
     scene.render.filepath=os.path.join(a.output,"HandsRight_0000.png")
     scene.render.image_settings.compression=35
     scene.world=bpy.data.worlds.new("ROKAS_WarmNightEnvironment")
-    scene.world.color=(.12,.12,.12)
+    scene.world.color=(.055,.045,.038)
     scene.camera.data.lens=45
     return rig,hand,sleeve_mesh,cuff_mesh,scene
 
@@ -166,7 +166,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
     tip_x=1415.+(POWER_X-40.-1415.)*reach + 135.*withdraw
-    tip_y=1080.+(POWER_Y-50.-1080.)*reach + 175.*withdraw + 3.*press
+    tip_y=1080.+(POWER_Y+20.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -185,7 +185,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
         if bone.name.startswith("index_"):
             bone.rotation_euler=(0,0,(-.11 if "_01_" in bone.name else -.22)*press)
         elif bone.name.startswith(("middle_","ring_","pinky_")):
-            bone.rotation_euler=(0,0, .48 + .26*reach)
+            bone.rotation_euler=(.46*reach,0, .50 + .30*reach)
         elif bone.name.startswith("thumb_"):
             bone.rotation_euler=(0,0,.055)
         else:
@@ -199,10 +199,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
     # Cloth geometry has real tube cross section, nonuniform diameter and folds.
-    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,-.011)))
+    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,.135)))
     # Narrow rib-knit cuff at hand–sleeve junction, not a flat straight sleeve cap.
     # Make only first two rings from the same tapered profile for smoother join.
-    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.003)))
+    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.145)))
     cf_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
     cf_obj.scale=(.98,.98,.98)
     # Non-cuff sleeve and cuff overlap slightly, which creates a fabric seam.
