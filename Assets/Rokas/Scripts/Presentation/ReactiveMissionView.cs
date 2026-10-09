@@ -64,6 +64,8 @@ namespace Rokas.Presentation
     // The view publishes command and selection intent only. Core remains authoritative.
     public sealed class ReactiveMissionView
     {
+        private static readonly Unity.Profiling.ProfilerMarker ResearchTimingMarker = new Unity.Profiling.ProfilerMarker("Rokas.Combat.TimingRefresh");
+
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly Action basic;
@@ -142,6 +144,8 @@ namespace Rokas.Presentation
         private readonly Action throwingBlade;
         private Button anchorButton;
         private float feedbackTime;
+        private double feedbackStartedAt;
+        private string feedbackTargetId;
         private bool feedbackOnHunter;
         private Color feedbackColor;
         private string selectedTargetId;
@@ -262,6 +266,7 @@ namespace Rokas.Presentation
         {
             root = ui.Rect(parent, "ReactiveArena", 0, 100, 1920, 906);
             arena = new ReactiveCombatArena(ui, root);
+            arena.ActorFrameRendered += RefreshRenderedHitFeedback;
             arena.AttackPresentationStarted += (id, actor, heavy) => AttackPresentationStarted?.Invoke(id, actor, heavy);
             arena.SwingStarted += (id, actor, heavy, hit) => SwingStarted?.Invoke(id, actor, heavy, hit);
             arena.ThrowReleased += id => ThrowReleased?.Invoke(id);
@@ -516,11 +521,15 @@ namespace Rokas.Presentation
             perfectWindow.gameObject.SetActive(false);
             offenseTiming.gameObject.SetActive(false);
             hitFeedback.text = string.Empty;
+            hitFeedback.color = Color.clear;
             waveBanner.gameObject.SetActive(false);
             feedbackTime = 0f;
             hunterHpInitialized = false;
             timingActionId = timingHitId = resolvedActionId = resolvedHitId = null;
             cursorFreezeTime = resolutionHold = 0f;
+            feedbackTime = 0f;
+            feedbackStartedAt = 0d;
+            feedbackTargetId = null;
             foreach (string clutter in new[] { "ReactiveTopShade", "ReactiveLowerShade", "ReactiveEnemyGround",
                 "ReactiveForecastPanel", "ReactiveForecastRule", "ReactiveForecastTitle", "ReactiveForecast",
                 "ReactiveWavePanel", "ReactiveWaveRule", "ReactiveWave", "ReactiveEnemyFacelessCommuter",
@@ -681,12 +690,16 @@ namespace Rokas.Presentation
         public void Present(CombatEvent combatEvent, AttackSequenceDefinition sequence = null)
         {
             if (root == null || combatEvent == null) return;
+            int acceptedBefore = arena == null ? 0 : arena.AcceptedContactCount;
             arena?.Present(combatEvent, sequence);
+            if (combatEvent.Kind == CombatEventKind.HitResolved && arena != null &&
+                arena.AcceptedContactCount == acceptedBefore) return;
             if (combatEvent.Kind == CombatEventKind.AttackStarted)
             {
                 return;
             }
             if (combatEvent.Kind != CombatEventKind.HitResolved) return;
+            feedbackTargetId = combatEvent.Amount > 0 ? combatEvent.TargetId : null;
             feedbackOnHunter = combatEvent.TargetId == ReactiveDuelDefinitions.HunterId;
             feedbackColor = feedbackOnHunter ? UiKit.Red : UiKit.Gold;
             if (feedbackOnHunter)
@@ -718,8 +731,7 @@ namespace Rokas.Presentation
                     : "УДАР  −" + combatEvent.Amount;
             }
             hitFeedback.color = feedbackColor;
-            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin;
-            feedbackTime = .45f;
+            BeginHitFeedback();
         }
 
         public void PresentDefenseAttempt(DefenseAttempt attempt, long pressUs)
@@ -752,9 +764,9 @@ namespace Rokas.Presentation
                         pressUs > latestDisplay.TimingEndUs ? "СЛИШКОМ ПОЗДНО" : "ЗАЩИТА НЕ ПРИНЯТА";
                     break;
             }
-            feedbackTime = .45f;
+            feedbackTargetId = null;
             hitFeedback.color = feedbackColor;
-            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin;
+            BeginHitFeedback();
             RefreshTiming();
         }
 
@@ -888,6 +900,10 @@ namespace Rokas.Presentation
 
         private void RefreshTiming()
         {
+            using var researchTiming = ResearchTimingMarker.Auto();
+#if UNITY_EDITOR
+            RokasView.ResearchRefreshObserved?.Invoke(2);
+#endif
             if (EntryPresentationActive)
             {
                 HideEntryHud();
@@ -993,11 +1009,49 @@ namespace Rokas.Presentation
                     Mathf.Clamp01(targetHpTween[i] / HpTweenDuration));
                 targetHpFills[i].rectTransform.sizeDelta = new Vector2(127f * targetHpCurrent[i], 7f);
             }
-            feedbackTime = Mathf.Max(0, feedbackTime - seconds);
-            float flash = Mathf.Clamp01(feedbackTime / .15f);
-            hitFeedback.color = new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash);
-            hitFeedback.rectTransform.anchoredPosition = feedbackOrigin + new Vector2(0f,
-                (.45f - feedbackTime) * 35f);
+            if (feedbackTime > 0f)
+            {
+                feedbackTime = arena == null ? Mathf.Max(0f, feedbackTime - seconds) :
+                    Mathf.Max(0f, .45f - (float)Math.Max(0d, arena.PresentationClock - feedbackStartedAt));
+                float flash = Mathf.Clamp01(feedbackTime / .15f);
+                hitFeedback.color = new Color(feedbackColor.r, feedbackColor.g, feedbackColor.b, flash);
+                if (feedbackTime <= 0f) hitFeedback.gameObject.SetActive(false);
+                PositionHitFeedback();
+            }
+        }
+
+        private void BeginHitFeedback()
+        {
+            feedbackTime = .45f;
+            feedbackStartedAt = arena == null ? 0d : arena.PresentationClock;
+            hitFeedback.gameObject.SetActive(!EntryPresentationActive);
+            PositionHitFeedback();
+        }
+
+        // Skinned bounds are refreshed by the actor-camera render. Read them before
+        // compositing UI; this callback never advances combat or presentation time.
+        private void RefreshRenderedHitFeedback()
+        {
+            if (feedbackTime > 0f && !EntryPresentationActive) PositionHitFeedback();
+        }
+
+        private void PositionHitFeedback()
+        {
+            if (hitFeedback == null) return;
+            Vector2 anchor = feedbackOrigin;
+            bool projected = !string.IsNullOrEmpty(feedbackTargetId) && arena != null &&
+                arena.TryActorFeedbackAnchor(feedbackTargetId, out anchor);
+            RectTransform rect = hitFeedback.rectTransform;
+            rect.pivot = projected ? new Vector2(.5f, .5f) : new Vector2(0f, 1f);
+            hitFeedback.alignment = projected ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
+            Vector2 position = (projected ? anchor + new Vector2(0f, 12f) : feedbackOrigin) +
+                new Vector2(0f, (.45f - feedbackTime) * 35f);
+            if (projected)
+            {
+                position.x = Mathf.Clamp(position.x, rect.rect.width * .5f, 1920f - rect.rect.width * .5f);
+                position.y = Mathf.Clamp(position.y, -906f + rect.rect.height * .5f, -rect.rect.height * .5f);
+            }
+            rect.anchoredPosition = position;
         }
 
         public void ClearReferences()

@@ -82,6 +82,17 @@ namespace Rokas.Presentation
         private readonly Queue<string> contactHistory = new Queue<string>();
         private RenderTexture texture;
         private RawImage image;
+        private RectTransform cinematicVeilClip;
+        private Image cinematicVeil;
+        private ReactiveCombatActorVisual cinematicFocusPerformer, cinematicFocusTarget;
+        private LicensedCombatMotionProfile cinematicFocusProfile;
+        private string cinematicFocusActionId;
+        private double presentationClock;
+        private int acceptedContactCount;
+        // Own intensity adaptation: source shader strength is not decoded.
+        private const float CinematicVeilMaximum = .24f;
+        private const float CinematicVeilHold = 62f / 60f;
+        private const float CinematicVeilFade = 16f / 60f;
         private Material actorComposite;
         private ReactiveCombatActorVisual hunter;
         private string heavyHunterActionId;
@@ -138,6 +149,7 @@ namespace Rokas.Presentation
         public bool CommandReady => PresentationReady || hunterMotion.Phase == MotionPhase.Preview || PreviewConfirmed;
         public bool SelectedHeavy => hunterMotion.Heavy;
         public bool SelectedThrow => hunterMotion.Throw;
+        public event Action ActorFrameRendered;
         public event Action<string> ThrowReleased;
         public int ThrowReleaseCount => throwEffect == null ? 0 : throwEffect.ReleaseCount;
         public int ThrowContactCount => throwEffect == null ? 0 : throwEffect.ContactCount;
@@ -148,6 +160,10 @@ namespace Rokas.Presentation
         public event Action<string, string, bool, string> SwingStarted;
         public bool LicensedCameraActive => licensedCamera != null && licensedCamera.Active;
         public float LicensedCameraClock => licensedCamera == null ? 0f : licensedCamera.Clock;
+        public double PresentationClock => presentationClock;
+        public int AcceptedContactCount => acceptedContactCount;
+        public float CinematicVeilAlpha => cinematicVeil == null ? 0f : cinematicVeil.color.a;
+        public string CinematicVeilActionId => cinematicFocusActionId;
         public string HunterMotionPhase => hunterMotion.Phase.ToString();
         public string EnemyMotionPhase(string id) => id != null && enemyMotions.TryGetValue(id, out ActorMotion motion)
             ? motion.Phase.ToString() : null;
@@ -238,6 +254,11 @@ namespace Rokas.Presentation
 
         public ReactiveCombatArena(UiKit ui, RectTransform parent)
         {
+            cinematicVeilClip = ui.Rect(parent, "ReactiveCinematicVeilClip", 0, -100, 1920, 1080);
+            cinematicVeilClip.gameObject.AddComponent<RectMask2D>();
+            cinematicVeil = ui.Box(cinematicVeilClip, "ReactiveCinematicVeil", 0, 0, 1920, 1080, Color.clear);
+            cinematicVeil.raycastTarget = false;
+            cinematicVeil.gameObject.SetActive(false);
             image = ui.Art(parent, "ReactiveAnimatedWorld", null, 0, 0, 1920, 906);
             image.color = Color.white;
             // The transparent actor camera already stores premultiplied RGB.
@@ -277,6 +298,7 @@ namespace Rokas.Presentation
             camera.allowHDR = false;
             camera.allowMSAA = true;
             camera.targetTexture = texture;
+            Camera.onPostRender += OnActorCameraRendered;
 
 
             var keyObject = new GameObject("ReactiveActorKey", typeof(Light));
@@ -789,6 +811,7 @@ namespace Rokas.Presentation
 
         private void BeginHunterReturn(bool preserveNativeRecovery)
         {
+            ClearCinematicFocus();
             if (hunter == null || hunterMotion.Phase == MotionPhase.Return) return;
             hunterMotion.ReturnRequested = false;
             hunterCommandPose = HunterCommandPose.None;
@@ -949,6 +972,7 @@ namespace Rokas.Presentation
 
         private void ResetCamera(bool blendNativeExit = false)
         {
+            ClearCinematicFocus();
             if (camera == null) return;
             if (blendNativeExit && licensedCamera != null && licensedCamera.Active)
             {
@@ -964,7 +988,10 @@ namespace Rokas.Presentation
         {
             if (licensedCamera != null && licensedCamera.Active && licensedCameraPerformer != null &&
                 (licensedCameraPerformer.IsDead || licensedCameraPerformer.ActiveLicensedProfile == null))
+            {
+                ClearCinematicFocus();
                 licensedCamera.BeginCancel(.08f);
+            }
         }
 
         public void Present(CombatEvent combatEvent, AttackSequenceDefinition attackSequence = null)
@@ -999,8 +1026,14 @@ namespace Rokas.Presentation
                     bool hunterContact = combatEvent.ActorId == ReactiveDuelDefinitions.HunterId;
                     ReactiveCombatActorVisual performer = hunterContact ? hunter :
                         combatEvent.ActorId != null && enemies.TryGetValue(combatEvent.ActorId, out ReactiveCombatActorVisual sourceActor) ? sourceActor : null;
-                    if (performer != null && performer.ConfirmLicensedContact(combatEvent.ActionId, hunterContact ? null : combatEvent.HitId))
-                        BeginLicensedCamera(performer, hunterContact ? ActorForTarget(combatEvent.TargetId) : hunter);
+                    bool confirmedNativeContact = performer != null &&
+                        performer.ConfirmLicensedContact(combatEvent.ActionId, hunterContact ? null : combatEvent.HitId);
+                    ReactiveCombatActorVisual contactTarget = hunterContact ? ActorForTarget(combatEvent.TargetId) : hunter;
+                    if (confirmedNativeContact)
+                    {
+                        BeginLicensedCamera(performer, contactTarget);
+                        RequestCinematicFocus(combatEvent, performer, contactTarget, hunterContact && heavyContact);
+                    }
                     bool dodge = combatEvent.Detail == "Dodge";
                     bool guard = combatEvent.Detail == "Parry" || combatEvent.Detail == "Perfect";
                     // Native action/shot timelines already contain their source pose holds.
@@ -1090,9 +1123,11 @@ namespace Rokas.Presentation
                         if (pair.Value.Phase != MotionPhase.None) StartEnemyReturn(pair.Key);
                     break;
                 case CombatEventKind.Victory:
+                    ClearCinematicFocus();
                     QueueHunterReturn();
                     break;
                 case CombatEventKind.WaveCleared:
+                    ClearCinematicFocus();
                     QueueHunterReturn();
                     foreach (var pair in enemies) Retire(pair.Key);
                     break;
@@ -1101,6 +1136,7 @@ namespace Rokas.Presentation
                     else QueueEnemyReturn(combatEvent.ActorId, combatEvent.ActionId);
                     break;
                 case CombatEventKind.CommandCancelled:
+                    ClearCinematicFocus();
                     throwEffect?.Cancel();
                     throwHunterActionId = null;
                     StartHunterReturn();
@@ -1115,12 +1151,87 @@ namespace Rokas.Presentation
 
         private bool AcceptPresentationContact(CombatEvent evt)
         {
-            if (string.IsNullOrEmpty(evt.ActionId)) return true;
+            if (string.IsNullOrEmpty(evt.ActionId)) { acceptedContactCount++; return true; }
             string hit = evt.ActorId == ReactiveDuelDefinitions.HunterId ? "" : evt.HitId ?? "";
             string key = evt.ActorId + ":" + evt.TargetId + ":" + evt.ActionId + ":" + hit;
             if (!presentedContacts.Add(key)) return false;
             contactHistory.Enqueue(key);
             while (contactHistory.Count > 32) presentedContacts.Remove(contactHistory.Dequeue());
+            acceptedContactCount++;
+            return true;
+        }
+
+        private static bool KnownFocusProfile(LicensedCombatMotionProfile profile)
+        {
+            if (profile == null || profile.camera == null) return false;
+            switch (profile.sourceSkill)
+            {
+                case "dul_touche_p1": case "hel_bleed_out": case "gr_thrown_dagger":
+                case "foot_soldier_atrophic_cut": case "librarian_backdraft": return true;
+                default: return false;
+            }
+        }
+
+        private void RequestCinematicFocus(CombatEvent contact, ReactiveCombatActorVisual performer,
+            ReactiveCombatActorVisual target, bool hunterHeavyAoe)
+        {
+            if (hunterHeavyAoe || contact.Amount <= 0 || contact.Detail == "Guard" || contact.Detail == "Dodge" ||
+                contact.Detail == "Parry" || contact.Detail == "Perfect" || performer == null || target == null ||
+                performer.IsDead || target.IsDead || !performer.LicensedContactConfirmed ||
+                !KnownFocusProfile(performer.ActiveLicensedProfile) || licensedCamera == null ||
+                !licensedCamera.Active || licensedCamera.IsCancelling || licensedCameraPerformer != performer) return;
+            cinematicFocusPerformer = performer;
+            cinematicFocusTarget = target;
+            cinematicFocusProfile = performer.ActiveLicensedProfile;
+            cinematicFocusActionId = contact.ActionId;
+            // Alpha is applied in Tick, after the same Core step has refreshed its surviving roster.
+        }
+
+        private void UpdateCinematicVeil()
+        {
+            if (cinematicFocusProfile == null) return;
+            ActorMotion motion = MotionForActor(cinematicFocusPerformer);
+            if (cinematicFocusPerformer == null || cinematicFocusTarget == null ||
+                cinematicFocusPerformer.IsDead || cinematicFocusTarget.IsDead ||
+                cinematicFocusPerformer.ActiveLicensedProfile != cinematicFocusProfile ||
+                !cinematicFocusPerformer.LicensedContactConfirmed || licensedCamera == null ||
+                !licensedCamera.Active || licensedCamera.IsCancelling || licensedCameraPerformer != cinematicFocusPerformer ||
+                motion != null && (motion.Phase == MotionPhase.Return || motion.Phase == MotionPhase.ReturnOrient ||
+                    motion.Phase == MotionPhase.HomeOrient))
+            { ClearCinematicFocus(); return; }
+            float sourceClock = licensedCamera.Clock;
+            if (sourceClock >= CinematicVeilHold + CinematicVeilFade)
+            { ClearCinematicFocus(); return; }
+            float fade = Mathf.Clamp01((sourceClock - CinematicVeilHold) / CinematicVeilFade);
+            float weight = 1f - fade * fade * (3f - 2f * fade);
+            cinematicVeil.color = new Color(0f, 0f, 0f, CinematicVeilMaximum * weight);
+            cinematicVeil.gameObject.SetActive(weight > 0f);
+        }
+
+        private void ClearCinematicFocus()
+        {
+            cinematicFocusPerformer = cinematicFocusTarget = null;
+            cinematicFocusProfile = null;
+            cinematicFocusActionId = null;
+            if (cinematicVeil == null) return;
+            cinematicVeil.color = Color.clear;
+            cinematicVeil.gameObject.SetActive(false);
+        }
+
+        // UI reads the same actor camera and bounds; it never moves an actor or samples a second camera.
+        public bool TryActorFeedbackAnchor(string actorId, out Vector2 anchor)
+        {
+            anchor = Vector2.zero;
+            ReactiveCombatActorVisual actor = actorId == ReactiveDuelDefinitions.HunterId ? hunter : ActorForTarget(actorId);
+            if (camera == null || image == null || actor == null) return false;
+            Bounds bounds = actor.BodyBounds;
+            Vector3 point = bounds.center;
+            point.y = bounds.max.y;
+            Vector3 viewport = camera.WorldToViewportPoint(point);
+            if (viewport.z <= 0f || float.IsNaN(viewport.x) || float.IsNaN(viewport.y)) return false;
+            RectTransform rect = image.rectTransform;
+            anchor = rect.anchoredPosition + new Vector2(viewport.x * rect.rect.width,
+                -(1f - viewport.y) * rect.rect.height);
             return true;
         }
 
@@ -1305,6 +1416,7 @@ namespace Rokas.Presentation
             // Death cleanup must capture the actor's durable materials, never the
             // temporary emergence clones which the cancelled entry is about to destroy.
             if (enteringEnemy == id) { emergence?.Dispose(); emergence = null; }
+            if (actor == cinematicFocusPerformer || actor == cinematicFocusTarget) ClearCinematicFocus();
             actor.PlayDeath(DeathFallDuration);
             CancelInterruptedLicensedCamera();
             corpses[id] = new CorpseState { Actor = actor, Origin = actor.transform.localPosition,
@@ -1323,6 +1435,8 @@ namespace Rokas.Presentation
                 hitStopRemaining -= held;
                 motionStep -= held;
             }
+            if (motionStep > 0f && !float.IsNaN(motionStep) && !float.IsInfinity(motionStep))
+                presentationClock += motionStep;
             ReleaseLicensedStageOffsets(motionStep);
             settleRemaining = Mathf.Max(0f, settleRemaining - motionStep);
             TickIntro(motionStep);
@@ -1570,6 +1684,7 @@ namespace Rokas.Presentation
             licensedCamera?.Tick(motionStep);
             hunter?.TickPresentation(step);
             foreach (var pair in enemies) pair.Value?.TickPresentation(step);
+            UpdateCinematicVeil();
             float beforeContact = hunterMotion.StrikeContact - hunterMotion.StrikeElapsed;
             float swingStart = hunter != null && hunter.AttackContactSeconds(hunterMotion.Heavy) > 0f
                 ? hunter.AttackSwingStartSeconds(hunterMotion.Heavy) * hunterMotion.StrikeContact /
@@ -1679,8 +1794,21 @@ namespace Rokas.Presentation
                     (2f * edge * (1f - edge)) : (fraction - edge * .5f) / (1f - edge);
         }
 
+        private void OnActorCameraRendered(Camera rendered)
+        {
+            if (rendered == camera) ActorFrameRendered?.Invoke();
+        }
+
         public void Dispose()
         {
+            Camera.onPostRender -= OnActorCameraRendered;
+            ActorFrameRendered = null;
+            ClearCinematicFocus();
+            if (cinematicVeilClip != null) UnityEngine.Object.Destroy(cinematicVeilClip.gameObject);
+            cinematicVeil = null;
+            cinematicVeilClip = null;
+            presentationClock = 0d;
+            acceptedContactCount = 0;
             licensedCamera?.Cancel();
             licensedCamera = null;
             presentedContacts.Clear();

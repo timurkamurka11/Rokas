@@ -26,6 +26,13 @@ namespace Rokas.Tests
         private GameObject root;
         private RokasBootstrap boot;
         private ReactiveCombatArena arena;
+        private ReactiveMissionView reactiveView;
+        private Text damageFeedback;
+        private int observedFeedbackContacts;
+        private double lastFeedbackObservationClock = -1d;
+        private bool observedNormalFocus, observedThrowFocus, observedVisibleDamage, observedGuardFeedback, observedHeavyFocusExcluded, observedLethalFocusCleared;
+        private readonly FieldInfo feedbackStartedField = typeof(ReactiveMissionView).GetField("feedbackStartedAt", PrivateInstance);
+        private readonly FieldInfo feedbackTargetField = typeof(ReactiveMissionView).GetField("feedbackTargetId", PrivateInstance);
         private ReactiveCombatActorVisual hunter;
         private Dictionary<string, ReactiveCombatActorVisual> enemies;
         private Camera actorCamera, uiCamera;
@@ -38,11 +45,15 @@ namespace Rokas.Tests
         private float previousDistance;
         private Vector3 previousStageScale;
         private Keyboard keyboard;
-        private bool spatialValidation, spatialContactObserved;
+        private bool spatialValidation, spatialContactObserved, visibleFlow;
         private Vector3 spatialTargetHome;
         private bool inputConfigured, keyHeld, capture, measuring, completed, observedEnemyNormal, observedEnemyHeavy, observedBlock;
         private bool observedCoreSuffixCancellation, observedNativeHomeRecovery, observedPassiveStageOffset, confirmCounters = true;
         private readonly List<StageOffsetProbe> stageOffsetProbes = new List<StageOffsetProbe>();
+        private readonly List<DeathEvidence> deaths = new List<DeathEvidence>();
+        private readonly Dictionary<string, DeathEvidence> deathsById = new Dictionary<string, DeathEvidence>();
+        private DeathEvidence displayedCorpse;
+        private readonly FieldInfo actorAnimationField = typeof(ReactiveCombatActorVisual).GetField("animationPlayer", PrivateInstance);
         private string runLabel;
         private readonly List<InterruptEvidence> interruptions = new List<InterruptEvidence>();
         private readonly HashSet<string> interruptedActions = new HashSet<string>();
@@ -145,13 +156,57 @@ namespace Rokas.Tests
                 "05_keiko_heavy_preparation", "06_keiko_heavy_impact", "07_keiko_heavy_recovery",
                 "08_dagger_preparation", "09_dagger_release", "10_dagger_impact",
                 "11_enemy_approach", "12_enemy_impact", "13_enemy_return", "14_block",
-                "15_idle_stance", "16_tactical_camera_restored"
+                "15_idle_stance", "16_tactical_camera_restored", "17_enemy_death"
             };
             foreach (string name in required) Assert.That(screenshots.Contains(name), Is.True, "Missing actual phase capture: " + name);
             Assert.That(plannedCommands, Is.EqualTo(4));
             Assert.That(boot.Session.SaveBlocked, Is.False, boot.Session.SaveError);
+            AssertLiveFoleyDispatches();
+            AssertLiveFeedbackCoverage();
             completed = true;
             WriteManifest("capture", "Capture readback/encoding/file I/O is instrumented overhead; it is not a CPU benchmark.");
+        }
+
+        [UnityTest, Timeout(420000)]
+        public IEnumerator ActualCoreUiVisibleGameViewCompletesNormalHeavyThrowAndEnemyFlow()
+        {
+            capture = false; visibleFlow = true; confirmCounters = true; runLabel = "ContinuousGameView";
+            yield return EnterEncounter();
+            yield return VerifyPreviewSwitchAndCancellation();
+            string[] plan = { "ReactiveBasic", "ReactiveHeavy", "ReactiveThrow", "ReactiveBasic" };
+            foreach (string command in plan)
+            {
+                yield return WaitForCommand();
+                int cost = command == "ReactiveHeavy" ? 5 : command == "ReactiveThrow" ? 2 : 0;
+                while (boot.Session.ReactiveCombat.HunterAp < cost)
+                {
+                    Assert.That(fillerCommands, Is.LessThan(8));
+                    yield return ExecuteCommand("ReactiveBasic", "ap-building");
+                    fillerCommands++;
+                    yield return WaitForCommand();
+                }
+                yield return ExecuteCommand(command, command);
+                plannedCommands++;
+            }
+            while (!observedEnemyHeavy && fillerCommands < 8)
+            {
+                yield return WaitForCommand();
+                yield return ExecuteCommand("ReactiveBasic", "enemy-heavy-coverage");
+                fillerCommands++;
+            }
+            yield return WaitForCommand();
+            Assert.That(observedPassiveStageOffset && observedNativeHomeRecovery, Is.True);
+            Assert.That(observedEnemyNormal && observedEnemyHeavy && observedBlock, Is.True);
+            Assert.That(arena.CameraAtHome && hunter.IdleSettled && boot.View.HunterAtHome, Is.True);
+            Assert.That(arena.ThrowReleaseCount, Is.EqualTo(arena.ThrowContactCount));
+            Assert.That(boot.Session.SaveBlocked, Is.False, boot.Session.SaveError);
+            Assert.That(uiTarget, Is.Null, "Visible run must leave the production GameView/Canvas intact.");
+            Assert.That(sequence.Count, Is.Zero, "External continuous capture must not be replaced by image sequence encoding.");
+            tactical.AssertRestored(actorCamera);
+            AssertLiveFoleyDispatches();
+            AssertLiveFeedbackCoverage();
+            completed = true;
+            WriteManifest("continuous-game-view", "Actual Bootstrap/UI/Core and production visible Canvas. Phase trace only; external WGC continuous video is recorded separately. No framebuffer readback or per-frame file writes in this fixture.");
         }
 
         [UnityTest, Timeout(300000)]
@@ -242,6 +297,7 @@ namespace Rokas.Tests
         {
             frames.Clear(); sequence.Clear(); performance.Clear(); screenshots.Clear(); defended.Clear(); offense.Clear();
             interruptions.Clear(); interruptedActions.Clear(); observedEnemyActions.Clear(); stageOffsetProbes.Clear(); uiItems.Clear();
+            deaths.Clear(); deathsById.Clear(); displayedCorpse = null;
             observedEnemyNormal = observedEnemyHeavy = observedBlock = observedCoreSuffixCancellation = observedNativeHomeRecovery = observedPassiveStageOffset = false;
             measuring = completed = keyHeld = false;
             previousHunterPhase = previousEnemyPhase = lastEnemyId = targetId = null;
@@ -271,6 +327,13 @@ namespace Rokas.Tests
             Assert.That(boot.Session.ReactiveCombat, Is.Not.Null);
             Assert.That(Ready("ReactiveBasic") && !boot.ReactivePresentationHeld, Is.True, "Actual entrance did not settle.");
             arena = FindArena();
+            damageFeedback = Find("ReactiveHitFeedback").GetComponent<Text>();
+            Assert.That(damageFeedback, Is.Not.Null);
+            Assert.That(feedbackStartedField, Is.Not.Null);
+            Assert.That(feedbackTargetField, Is.Not.Null);
+            observedFeedbackContacts = arena.AcceptedContactCount;
+            lastFeedbackObservationClock = -1d;
+            observedNormalFocus = observedThrowFocus = observedVisibleDamage = observedGuardFeedback = observedHeavyFocusExcluded = observedLethalFocusCleared = false;
             GameObject world = GameObject.Find("ReactiveCombatWorld");
             Assert.That(world, Is.Not.Null);
             worldTransform = world.transform;
@@ -305,12 +368,14 @@ namespace Rokas.Tests
                 Assert.That(combat.HunterAp, Is.EqualTo(ap));
                 Assert.That(combat.Revision, Is.EqualTo(revision), "A preview must not commit domain action/damage.");
                 Assert.That(hunter.transform.localPosition, Is.EqualTo(home), "Preview must not approach.");
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Real UI preview cannot request confirmed-contact focus.");
             }
             Assert.That(boot.CancelReactivePreview(), Is.True);
             yield return WaitUntil(() => hunter.IdleSettled && arena.CameraAtHome && Ready("ReactiveBasic"), 5f, "cancel exact home");
             Assert.That(combat.HunterAp, Is.EqualTo(ap));
             Assert.That(combat.Revision, Is.EqualTo(revision));
             tactical.AssertRestored(actorCamera);
+            Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Real preview cancellation clears the background adaptation.");
             Assert.That(hunter.transform.localPosition, Is.EqualTo(home));
             if (capture) Capture("stance_cancel_restored");
         }
@@ -353,6 +418,7 @@ namespace Rokas.Tests
             ReactiveCombatActorVisual targetActor = null;
             enemies.TryGetValue(targetId, out targetActor);
             Vector3 targetHome = targetActor == null ? Vector3.zero : targetActor.transform.localPosition;
+            CombatIdleStance priorCommittedStance = hunter.ConfirmedCombatStance;
             int hp = combat.GetActorState(targetId).Hp;
             int releases = arena.ThrowReleaseCount, contacts = arena.ThrowContactCount;
             Click(button);
@@ -363,6 +429,8 @@ namespace Rokas.Tests
                 // proof that the native equipment handoff has finished.
                 yield return null;
                 yield return WaitUntil(() => PreviewReady(button), 4f, "exact native preview ready");
+                if (capture || spatialValidation || visibleFlow)
+                    Assert.That(arena.CinematicVeilAlpha, Is.Zero, "The actual preview precedes Core contact.");
                 if (capture && button == "ReactiveHeavy") Capture("05_keiko_heavy_preparation");
                 if (capture && button == "ReactiveThrow") Capture("08_dagger_preparation");
                 // Readback can produce a FrameGap suspension on the next update.
@@ -372,14 +440,22 @@ namespace Rokas.Tests
                 Click(button);
             }
             yield return WaitUntil(() => combat.Phase == ReactivePhase.PlayerExecution, 5f, "real commit");
-            CombatIdleStance expectedStance = button == "ReactiveHeavy" ? CombatIdleStance.Heavy :
-                button == "ReactiveBasic" ? CombatIdleStance.Normal : hunter.ConfirmedCombatStance;
-            Assert.That(hunter.ConfirmedCombatStance, Is.EqualTo(expectedStance), "Actual Core commit must own the saved sword stance.");
+            // Domain commitment is presented after the actual approach hold; inspect both
+            // the real motion profile and confirmed sword stance after resolved Core contact.
+            LicensedCombatMotionProfile expectedCommittedMotion = button == "ReactiveHeavy"
+                ? actorLibrary.keiko.licensedHeavy : button == "ReactiveThrow"
+                    ? actorLibrary.keiko.licensedThrow : actorLibrary.keiko.licensedNormal;
             string action = combat.CurrentActionId;
             yield return WaitUntil(() => combat.GetActorState(targetId).Hp < hp, 15f, "real Core hit " + action);
-            Assert.That(hunter.ActiveLicensedProfile, Is.Not.Null);
+            Assert.That(hunter.ActiveLicensedProfile, Is.SameAs(expectedCommittedMotion),
+                "Committed hit must use its real licensed motion profile, not a stale preview or idle.");
+            Assert.That(hunter.ConfirmedCombatStance, Is.EqualTo(button == "ReactiveHeavy" ? CombatIdleStance.Heavy :
+                button == "ReactiveBasic" ? CombatIdleStance.Normal : priorCommittedStance),
+                "Actual presented Core commit owns the sword stance; Throw preserves its last confirmed idle.");
             Assert.That(hunter.LicensedContactConfirmed, Is.True);
-            if ((capture || spatialValidation) && button == "ReactiveBasic")
+            if (capture || spatialValidation || visibleFlow)
+                AssertResolvedPlayerFeedback(button, action, combat.GetActorState(targetId).Hp > 0);
+            if ((capture || spatialValidation || visibleFlow) && button == "ReactiveBasic")
                 yield return VerifyPassiveTargetOffsetAcrossRefresh(targetActor, targetHome);
             if (capture)
                 Capture(button == "ReactiveHeavy" ? "06_keiko_heavy_impact" :
@@ -401,6 +477,8 @@ namespace Rokas.Tests
             yield return WaitUntil(() => boot.View.HunterAtHome && hunter.IdleSettled && arena.CameraAtHome,
                 14f, "real exact return " + action);
             tactical.AssertRestored(actorCamera);
+            if (capture || spatialValidation || visibleFlow)
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Actual tactical return clears contact focus independently of full FK recovery.");
             Assert.That(hunter.WeaponAttachment.CurrentWeapon, Is.SameAs(initialSword));
             Assert.That(initialSword.transform.IsChildOf(hunter.ModelRoot), Is.True);
         }
@@ -560,7 +638,9 @@ namespace Rokas.Tests
                 Assert.That(targetView.x, Is.InRange(0f, 1f));
                 spatialContactObserved = true;
             }
-            if (!capture) return;
+            if (capture || spatialValidation || visibleFlow)
+            { ObserveFeedback(); ObserveRealDeaths(); }
+            if (!capture && !visibleFlow) return;
             var row = new FrameEvidence {
                 index = frames.Count, unityFrame = Time.frameCount, realtime = Time.realtimeSinceStartup - started, frameDelta = Time.unscaledDeltaTime,
                 combatUs = combat.CurrentCombatUs, revision = combat.Revision, actionId = combat.CurrentActionId,
@@ -574,6 +654,16 @@ namespace Rokas.Tests
                 sourceDuration = hunter.ActiveLicensedProfile == null ? 0f : hunter.ActiveLicensedProfile.Duration,
                 contactConfirmed = hunter.LicensedContactConfirmed, cameraClock = arena.LicensedCameraClock,
                 cameraActive = arena.LicensedCameraActive, cameraHome = arena.CameraAtHome,
+                presentationClock = arena.PresentationClock, feedbackStartedAt = (double)feedbackStartedField.GetValue(reactiveView),
+                veilAlpha = arena.CinematicVeilAlpha, veilActionId = arena.CinematicVeilActionId,
+                feedbackActive = damageFeedback.gameObject.activeInHierarchy, feedbackAlpha = damageFeedback.color.a,
+                feedbackText = damageFeedback.text, feedbackTargetId = (string)feedbackTargetField.GetValue(reactiveView),
+                feedbackPosition = damageFeedback.rectTransform.anchoredPosition, feedbackPivot = damageFeedback.rectTransform.pivot,
+                corpseCount = arena.CorpseCount, corpseId = displayedCorpse == null ? null : displayedCorpse.actorId,
+                corpseAge = displayedCorpse == null ? -1f : displayedCorpse.lastCorpseAge,
+                corpsePose = displayedCorpse == null ? null : displayedCorpse.lastPose,
+                corpseActive = displayedCorpse != null && displayedCorpse.lastActorActive,
+                corpseIdleSettled = displayedCorpse != null && displayedCorpse.lastIdleSettled,
                 cameraPosition = actorCamera.transform.localPosition, cameraRotation = actorCamera.transform.localRotation,
                 cameraFov = actorCamera.fieldOfView, swordOwner = hunter.SwordTransformOwner.ToString(),
                 swordParent = initialSword.transform.parent.name, swordWorldPosition = initialSword.transform.position,
@@ -609,6 +699,157 @@ namespace Rokas.Tests
             }
         }
 
+        private void AssertResolvedPlayerFeedback(string button, string action, bool survivingTarget)
+        {
+            Assert.That(damageFeedback.gameObject.activeInHierarchy, Is.True,
+                "Actual Core HitResolved must display damage even after HideEntryHud.");
+            Assert.That(damageFeedback.color.a, Is.GreaterThan(0f));
+            AssertProjectedDamage((string)feedbackTargetField.GetValue(reactiveView));
+            if (button == "ReactiveHeavy")
+            {
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Real HeavyAOE cannot use the BasicDamage adaptation.");
+                observedHeavyFocusExcluded = true;
+            }
+            else if (!survivingTarget)
+            {
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "A real lethal contact must clear surviving-target focus.");
+                observedLethalFocusCleared = true;
+            }
+            else if (button == "ReactiveBasic" || button == "ReactiveThrow")
+            {
+                Assert.That(arena.LicensedCameraActive, Is.True);
+                Assert.That(arena.LicensedCameraClock, Is.LessThan(78f / 60f), "Observe the actual contact before its focus deadline.");
+                Assert.That(arena.CinematicVeilActionId, Is.EqualTo(action));
+                Assert.That(arena.CinematicVeilAlpha, Is.GreaterThan(0f),
+                    "Confirmed surviving Normal/Throw must be visibly focused on the actual Core contact frame.");
+                if (button == "ReactiveThrow") observedThrowFocus = true; else observedNormalFocus = true;
+            }
+            observedVisibleDamage = true;
+        }
+
+        private void ObserveFeedback()
+        {
+            double clock = arena.PresentationClock;
+            Assert.That(clock, Is.GreaterThanOrEqualTo(lastFeedbackObservationClock), "UI reads cannot rewind the arena-owned clock.");
+            lastFeedbackObservationClock = clock;
+            double startedAt = (double)feedbackStartedField.GetValue(reactiveView);
+            double age = Math.Max(0d, clock - startedAt);
+            float expectedAlpha = Mathf.Clamp01((.45f - (float)age) / .15f);
+            Assert.That(damageFeedback.color.a, Is.EqualTo(expectedAlpha).Within(.0001f),
+                "Visible damage fades only on the arena presentation clock, including actual presentation holds.");
+            Assert.That(damageFeedback.gameObject.activeInHierarchy, Is.EqualTo(Mathf.Max(0f, .45f - (float)age) > 0f),
+                "A positive feedback lifetime must be active in the actual mission hierarchy; expiry must hide it.");
+            if (arena.CameraAtHome)
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Tactical restoration may not retain a dark rectangle.");
+            if (!string.IsNullOrEmpty(arena.CinematicVeilActionId))
+            {
+                float fade = Mathf.Clamp01((arena.LicensedCameraClock - 62f / 60f) / (16f / 60f));
+                float weight = 1f - fade * fade * (3f - 2f * fade);
+                Assert.That(arena.CinematicVeilAlpha, Is.EqualTo(.24f * weight).Within(.0001f),
+                    "The own .24 intensity adaptation reads the existing source-camera hold/fade envelope.");
+            }
+            if (arena.AcceptedContactCount == observedFeedbackContacts) return;
+            observedFeedbackContacts = arena.AcceptedContactCount;
+            Assert.That(damageFeedback.gameObject.activeInHierarchy, Is.True, "The newest accepted real contact must be visible.");
+            Assert.That(damageFeedback.color.a, Is.GreaterThan(0f));
+            string shownTarget = (string)feedbackTargetField.GetValue(reactiveView);
+            if (!string.IsNullOrEmpty(shownTarget))
+            {
+                AssertProjectedDamage(shownTarget);
+                var state = boot.Session.ReactiveCombat.GetActorState(shownTarget);
+                Assert.That(state, Is.Not.Null);
+                if (state.Hp <= 0)
+                {
+                    Assert.That(arena.CinematicVeilAlpha, Is.Zero, "The displayed actual death is excluded from surviving-target focus.");
+                    observedLethalFocusCleared = true;
+                }
+                observedVisibleDamage = true;
+            }
+            else if (damageFeedback.text == "БЛОК" || damageFeedback.text == "ИДЕАЛЬНЫЙ БЛОК" || damageFeedback.text == "УКЛОНЕНИЕ")
+            {
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, "Actual resolved defense is excluded from BasicDamage focus.");
+                observedGuardFeedback = true;
+            }
+        }
+
+        private void AssertProjectedDamage(string actorId)
+        {
+            Assert.That(actorId, Is.Not.Null.And.Not.Empty);
+            ReactiveCombatActorVisual actor = actorId == "P" ? hunter : enemies[actorId];
+            Vector3 cameraPosition = actorCamera.transform.position, actorPosition = actor.transform.position;
+            float cameraClock = arena.LicensedCameraClock;
+            double clock = arena.PresentationClock;
+            Assert.That(arena.TryActorFeedbackAnchor(actorId, out Vector2 anchor), Is.True);
+            RawImage actors = Find("ReactiveAnimatedWorld").GetComponent<RawImage>();
+            Vector3 top = actor.BodyBounds.center; top.y = actor.BodyBounds.max.y;
+            Vector3 viewport = actorCamera.WorldToViewportPoint(top);
+            Vector2 projected = actors.rectTransform.anchoredPosition + new Vector2(
+                viewport.x * actors.rectTransform.rect.width, -(1f - viewport.y) * actors.rectTransform.rect.height);
+            Assert.That(Vector2.Distance(anchor, projected), Is.LessThan(.02f), "Actual damage uses the displayed actor-camera viewport.");
+            RectTransform feedback = damageFeedback.rectTransform;
+            Assert.That(feedback.pivot, Is.EqualTo(new Vector2(.5f, .5f)));
+            Assert.That(damageFeedback.alignment, Is.EqualTo(TextAnchor.MiddleCenter));
+            float age = (float)Math.Max(0d, clock - (double)feedbackStartedField.GetValue(reactiveView));
+            Vector2 expected = anchor + new Vector2(0f, 12f + Mathf.Min(.45f, age) * 35f);
+            expected.x = Mathf.Clamp(expected.x, feedback.rect.width * .5f, 1920f - feedback.rect.width * .5f);
+            expected.y = Mathf.Clamp(expected.y, -906f + feedback.rect.height * .5f, -feedback.rect.height * .5f);
+            Assert.That(Vector2.Distance(feedback.anchoredPosition, expected), Is.LessThan(.02f),
+                "Positive damage is centered over its actual actor, with the own rise and viewport clamp.");
+            Assert.That(actorCamera.transform.position, Is.EqualTo(cameraPosition));
+            Assert.That(actor.transform.position, Is.EqualTo(actorPosition));
+            Assert.That(arena.LicensedCameraClock, Is.EqualTo(cameraClock));
+            Assert.That(arena.PresentationClock, Is.EqualTo(clock));
+        }
+
+        private void ObserveRealDeaths()
+        {
+            displayedCorpse = null;
+            foreach (var pair in enemies)
+            {
+                if (!arena.IsCorpse(pair.Key)) continue;
+                ReactiveCombatActorVisual actor = pair.Value;
+                var state = boot.Session.ReactiveCombat.GetActorState(pair.Key);
+                Assert.That(state, Is.Not.Null);
+                Assert.That(state.Hp, Is.LessThanOrEqualTo(0), "The observed corpse must come from actual Core death.");
+                Assert.That(actor != null && actor.IsDead, Is.True);
+                Assert.That(actor.gameObject.activeInHierarchy, Is.True, "An existing falling/held corpse cannot be removed instantly.");
+                Assert.That(actor.ActiveLicensedProfile, Is.Null, "Death must cancel the previous live attack sampler.");
+                float age = arena.CorpseElapsed(pair.Key);
+                Animation legacy = (Animation)actorAnimationField.GetValue(actor);
+                bool hasDeathClip = legacy != null && legacy.GetClip("Death") != null;
+                if (hasDeathClip)
+                    Assert.That(actor.CurrentPose, Is.EqualTo("Death"), "An authored Death actor cannot resume its live Idle alias.");
+                int renderers = ActiveRendererCount(actor.GetComponentsInChildren<Renderer>(true));
+                Assert.That(renderers, Is.GreaterThan(0), "Retained corpse must keep actual enabled model renderers.");
+                if (!deathsById.TryGetValue(pair.Key, out DeathEvidence proof))
+                {
+                    proof = new DeathEvidence { actorId = pair.Key, firstUnityFrame = Time.frameCount,
+                        firstCombatUs = boot.Session.ReactiveCombat.CurrentCombatUs, hp = state.Hp,
+                        firstCorpseAge = age, fallDuration = arena.DeathFallDuration, hasDeathClip = hasDeathClip,
+                        firstPose = actor.CurrentPose, isDead = actor.IsDead, firstIdleSettled = actor.IdleSettled,
+                        firstActorActive = actor.gameObject.activeInHierarchy, firstRendererCount = renderers };
+                    deathsById.Add(pair.Key, proof); deaths.Add(proof);
+                }
+                proof.lastUnityFrame = Time.frameCount; proof.lastCorpseAge = age; proof.lastPose = actor.CurrentPose;
+                proof.lastActorActive = actor.gameObject.activeInHierarchy; proof.lastIdleSettled = actor.IdleSettled;
+                proof.retainedAfterFirstFrame |= Time.frameCount > proof.firstUnityFrame;
+                proof.noLiveIdleAlias |= hasDeathClip && actor.CurrentPose == "Death";
+                displayedCorpse = proof;
+                if (capture && age >= Mathf.Min(.3f, arena.DeathFallDuration * .3f)) Capture("17_enemy_death");
+            }
+        }
+
+        private void AssertLiveFeedbackCoverage()
+        {
+            Assert.That(observedNormalFocus && observedThrowFocus && observedVisibleDamage, Is.True,
+                "The real catalog route must show surviving Normal/Throw focus and active projected damage.");
+            Assert.That(observedGuardFeedback && observedHeavyFocusExcluded && observedLethalFocusCleared, Is.True,
+                "The same real route must show resolved defense, HeavyAOE and death exclusions.");
+            Assert.That(deaths.Count, Is.GreaterThan(0), "The existing route kills an actual enemy; retain its death evidence.");
+            Assert.That(deaths.Exists(item => item.retainedAfterFirstFrame), Is.True,
+                "A dead actor must remain visibly retained on a later actual frame instead of instant removal.");
+        }
+
         private void AssertNativeReturn(ReactiveCombatActorVisual actor, string actorId)
         {
             var profile = actor.ActiveLicensedProfile;
@@ -631,6 +872,8 @@ namespace Rokas.Tests
                 Assert.That(actor.SwordTransformOwner, Is.EqualTo(ReactiveCombatActorVisual.SwordTransformAuthority.NativeMotion),
                     actorId + ": Return must preserve Native equipment authority.");
             Assert.That(arena.CameraAtHome, Is.True, actorId + ": source camera home cue must be respected.");
+            if (capture || spatialValidation || visibleFlow)
+                Assert.That(arena.CinematicVeilAlpha, Is.Zero, actorId + ": layout return may not retain BasicDamage focus.");
         }
 
         private void PrepareCapture()
@@ -701,7 +944,9 @@ namespace Rokas.Tests
                 gcRecorderValid = gcRecorder.Valid, enemyNormalObserved = observedEnemyNormal,
                 enemyHeavyObserved = observedEnemyHeavy, blockObserved = observedBlock, coreSuffixCancellationObserved = observedCoreSuffixCancellation,
                 nativeHomeRecoveryObserved = observedNativeHomeRecovery, passiveStageOffsetObserved = observedPassiveStageOffset,
-                stageOffsetProbes = stageOffsetProbes.ToArray(),
+                normalFocusObserved = observedNormalFocus, throwFocusObserved = observedThrowFocus, visibleDamageObserved = observedVisibleDamage,
+                guardFeedbackObserved = observedGuardFeedback, heavyFocusExcluded = observedHeavyFocusExcluded, lethalFocusCleared = observedLethalFocusCleared,
+                stageOffsetProbes = stageOffsetProbes.ToArray(), deaths = deaths.ToArray(),
                 heldRendererInstanceIds = RendererIds(heldRenderers), flyingRendererInstanceIds = RendererIds(flyingRenderers),
                 plannedCommands = plannedCommands, fillerCommands = fillerCommands
             }, true));
@@ -733,11 +978,30 @@ namespace Rokas.Tests
             return ids;
         }
 
+        private void AssertLiveFoleyDispatches()
+        {
+            object mission = typeof(RokasView).GetField("mission", PrivateInstance).GetValue(boot.View);
+            var cues = (ReactiveCombatAudio)mission.GetType().GetField("reactiveAudio", PrivateInstance).GetValue(mission);
+            Assert.That(cues.FidelityClipsReady, Is.True);
+            var identities = new HashSet<string>();
+            var counts = new Dictionary<ReactiveCombatAudioEvent, int>();
+            foreach (ReactiveCombatAudioDispatch dispatch in cues.Dispatches)
+            {
+                string identity = dispatch.AttackSequenceId + ":" + dispatch.ActorId + ":" + dispatch.HitId + ":" + dispatch.EventId;
+                Assert.That(identities.Add(identity), Is.True, "Duplicate real UI/Core audio dispatch: " + identity);
+                counts.TryGetValue(dispatch.EventId, out int count);
+                counts[dispatch.EventId] = count + 1;
+            }
+            foreach (ReactiveCombatAudioEvent required in new[] { ReactiveCombatAudioEvent.StancePreview, ReactiveCombatAudioEvent.StanceConfirm, ReactiveCombatAudioEvent.StanceCancel, ReactiveCombatAudioEvent.SwordReadiness, ReactiveCombatAudioEvent.HeavyWindup, ReactiveCombatAudioEvent.EnemyWarning, ReactiveCombatAudioEvent.GuardMetalContact, ReactiveCombatAudioEvent.ThrowRelease, ReactiveCombatAudioEvent.ThrowFleshContact })
+                Assert.That(counts.ContainsKey(required), Is.True, "Missing actual UI/Core Foley event: " + required);
+            Assert.That(counts[ReactiveCombatAudioEvent.StanceConfirm], Is.EqualTo(plannedCommands + fillerCommands), "Only accepted UI commands confirm the stance once.");
+        }
+
         private ReactiveCombatArena FindArena()
         {
             object mission = typeof(RokasView).GetField("mission", PrivateInstance).GetValue(boot.View);
-            object reactive = mission.GetType().GetField("reactiveView", PrivateInstance).GetValue(mission);
-            return (ReactiveCombatArena)reactive.GetType().GetField("arena", PrivateInstance).GetValue(reactive);
+            reactiveView = (ReactiveMissionView)mission.GetType().GetField("reactiveView", PrivateInstance).GetValue(mission);
+            return (ReactiveCombatArena)typeof(ReactiveMissionView).GetField("arena", PrivateInstance).GetValue(reactiveView);
         }
 
         private GameObject Find(string name)
@@ -787,6 +1051,7 @@ namespace Rokas.Tests
             if (uiCamera != null) { uiCamera.targetTexture = null; UnityEngine.Object.Destroy(uiCamera.gameObject); }
             if (uiTarget != null) { uiTarget.Release(); UnityEngine.Object.Destroy(uiTarget); }
             if (image != null) UnityEngine.Object.Destroy(image);
+            uiCamera = null; uiTarget = null; image = null; canvas = null; stage = null;
             if (root != null) UnityEngine.Object.Destroy(root);
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             if (inputConfigured)
@@ -818,20 +1083,23 @@ namespace Rokas.Tests
         [Serializable] private sealed class Manifest {
             public string mode, limitation; public bool completed, noUserPersistentSave, realBootstrapCoreUi;
             public bool mainThreadRecorderValid, gcRecorderValid, enemyNormalObserved, enemyHeavyObserved, blockObserved,
-                coreSuffixCancellationObserved, nativeHomeRecoveryObserved, passiveStageOffsetObserved;
+                coreSuffixCancellationObserved, nativeHomeRecoveryObserved, passiveStageOffsetObserved,
+                normalFocusObserved, throwFocusObserved, visibleDamageObserved, guardFeedbackObserved, heavyFocusExcluded, lethalFocusCleared;
             public int[] heldRendererInstanceIds, flyingRendererInstanceIds;
             public int plannedCommands, fillerCommands; public string[] screenshots; public FrameEvidence[] frames;
             public SequenceFrame[] sequence; public PerformanceFrame[] performance; public InterruptEvidence[] interruptions;
-            public StageOffsetProbe[] stageOffsetProbes;
+            public StageOffsetProbe[] stageOffsetProbes; public DeathEvidence[] deaths;
         }
         [Serializable] private sealed class FrameEvidence {
             public int index, unityFrame, heldDaggerInstanceId, flyingDaggerInstanceId, releases, contacts,
-                heldActiveRendererCount, flyingActiveRendererCount;
+                heldActiveRendererCount, flyingActiveRendererCount, corpseCount;
             public long combatUs, revision; public float realtime, frameDelta, sourceClock, enemySourceClock,
-                stageRecoveryCue, sourceDuration, cameraClock, cameraFov;
+                stageRecoveryCue, sourceDuration, cameraClock, cameraFov, veilAlpha, feedbackAlpha, corpseAge;
+            public double presentationClock, feedbackStartedAt;
+            public Vector2 feedbackPosition, feedbackPivot;
             public string actionId, phase, section, enemyId, hunterPhase, enemyPhase, hunterPose, enemyPose,
-                sourceSkill, swordOwner, swordParent;
-            public bool contactConfirmed, cameraActive, cameraHome, heldDaggerVisible, flyingDaggerVisible, coreSuffixCanceled;
+                sourceSkill, swordOwner, swordParent, veilActionId, feedbackText, feedbackTargetId, corpseId, corpsePose;
+            public bool contactConfirmed, cameraActive, cameraHome, heldDaggerVisible, flyingDaggerVisible, coreSuffixCanceled, feedbackActive, corpseActive, corpseIdleSettled;
             public Vector3 hunterRoot, enemyRoot, cameraPosition, swordWorldPosition;
             public Quaternion cameraRotation, swordWorldRotation, swordLocalRotation, spineWorldRotation;
         }
@@ -846,6 +1114,12 @@ namespace Rokas.Tests
         [Serializable] private sealed class StageOffsetProbe {
             public int unityFrame; public string targetId; public float sourceClock, recoveryCue;
             public long coreRevision, combatUs; public Vector3 home, displayed, afterRefresh;
+        }
+        [Serializable] private sealed class DeathEvidence {
+            public string actorId, firstPose, lastPose; public int firstUnityFrame, lastUnityFrame, hp, firstRendererCount;
+            public long firstCombatUs; public float firstCorpseAge, lastCorpseAge, fallDuration;
+            public bool isDead, hasDeathClip, firstIdleSettled, lastIdleSettled, firstActorActive, lastActorActive,
+                retainedAfterFirstFrame, noLiveIdleAlias;
         }
         [Serializable] private sealed class InterruptEvidence {
             public int unityFrame; public float realtime; public long combatUs;
