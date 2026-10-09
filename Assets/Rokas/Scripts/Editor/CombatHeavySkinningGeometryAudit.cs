@@ -106,6 +106,106 @@ namespace Rokas.Editor
             public void Dispose() { if (root != null) Object.DestroyImmediate(root); }
         }
 
+        [Serializable] public sealed class FocusedHandPatch
+        {
+            public string status, modelAsset, modelShaBefore, modelShaAfter, limitation;
+            public bool originalAssetExact;
+            public float sourceClock;
+            public Measurement measurement;
+            public int[] triangleVertices, webTriangleVertices, neighboringTriangles, leftHandTriangles;
+            public VertexDiagnostic[] neighboringVertices, leftHandVertices;
+            public BoneDiagnostic[] bones;
+            public Matrix4x4 weaponToWorld;
+            public Vector3[] weaponVertices;
+            public int[] weaponTriangles;
+        }
+
+        public static string ExportFocusedHeavyIndexPatch(string outputDirectory)
+        {
+            if (EditorApplication.isPlaying) throw new InvalidOperationException("Export outside Play Mode.");
+            string output = string.IsNullOrEmpty(outputDirectory)
+                ? "D:/DD2-Research/Reports/CombatFidelity3-2026-10-08/HeavyGripContinuation" : outputDirectory;
+            Directory.CreateDirectory(output);
+            auditTimer = Stopwatch.StartNew(); auditBudget = 30f; auditOutput = output;
+            using (var s = new Session { root = new GameObject("FocusedHeavyHandResearchOnly") })
+            {
+                var actor = ReactiveCombatActorVisual.Spawn(CombatActorKind.Keiko, s.root.transform);
+                actor.enabled = false;
+                Tick(actor, .12f); actor.SelectHeavyIdleForGeometryAudit();
+                actor.PlayIdle(); Tick(actor, .12f);
+                var renderer = actor.ModelRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Where(r => r.sharedMesh != null && r.bones.Any(b => b != null && b.name.EndsWith("RightHandIndex1", StringComparison.Ordinal)))
+                    .OrderByDescending(r => r.sharedMesh.vertexCount).First();
+                InitializeMesh(s, renderer);
+                var library = Resources.Load<ReactiveCombatActorLibrary>("Combat/ReactiveCombatActorLibrary");
+                string model = AssetDatabase.GetAssetPath(library.keiko.model);
+                string hashBefore = HashFile(model);
+                actor.PlayPreparation(true); Tick(actor, 4.5f);
+                actor.BindLicensedContact("focused-heavy-hand");
+                if (!actor.ConfirmLicensedContact("focused-heavy-hand")) throw new InvalidOperationException("Native contact not authorized.");
+                // Existing actual worst row: Heavy recovery midpoint, not a new source audit.
+                float clock = 2.216667f;
+                Tick(actor, clock);
+                Capture(s, actor, renderer, "Heavy", "focused-index-recovery", actor.LicensedMotionClock);
+                Measurement measured = MeasureAll(s, null, ValidationOrder).Single();
+                int[] triangle = s.handTriangles.Skip(measured.deepestTriangle * 3).Take(3).ToArray();
+                int[] webTriangle = s.handTriangles.Skip(399 * 3).Take(3).ToArray();
+                int[] patchSeed = triangle.Concat(webTriangle).Distinct().ToArray();
+                var adjacent = new List<int>();
+                for (int t = 0; t < s.triangles.Length; t += 3)
+                    if (patchSeed.Contains(s.triangles[t]) || patchSeed.Contains(s.triangles[t + 1]) || patchSeed.Contains(s.triangles[t + 2]))
+                    { adjacent.Add(s.triangles[t]); adjacent.Add(s.triangles[t + 1]); adjacent.Add(s.triangles[t + 2]); }
+                var leftTriangles = new List<int>();
+                bool LeftVertex(int i) => Describe(s.weights[i], s.boneNames).Contains("LeftHand");
+                for (int t = 0; t < s.triangles.Length; t += 3)
+                    if (LeftVertex(s.triangles[t]) || LeftVertex(s.triangles[t + 1]) || LeftVertex(s.triangles[t + 2]))
+                    { leftTriangles.Add(s.triangles[t]); leftTriangles.Add(s.triangles[t + 1]); leftTriangles.Add(s.triangles[t + 2]); }
+                Frame frame = s.frames.Single();
+                Transform weapon = actor.WeaponAttachment.CurrentWeapon.transform;
+                var weaponVertices = new List<Vector3>(); var weaponTriangles = new List<int>();
+                foreach (MeshFilter filter in weapon.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (filter.sharedMesh == null) continue;
+                    int offset = weaponVertices.Count;
+                    Matrix4x4 matrix = weapon.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                    weaponVertices.AddRange(filter.sharedMesh.vertices.Select(v => matrix.MultiplyPoint3x4(v)));
+                    weaponTriangles.AddRange(filter.sharedMesh.triangles.Select(i => i + offset));
+                }
+                var e = new FocusedHandPatch {
+                    status = "ORIGINAL_SINGLE_POSE_EXPORTED_NO_REPAIR_APPLIED", modelAsset = model,
+                    modelShaBefore = hashBefore, modelShaAfter = HashFile(model), sourceClock = actor.LicensedMotionClock,
+                    originalAssetExact = hashBefore == HashFile(model), measurement = measured,
+                    triangleVertices = triangle, webTriangleVertices = webTriangle, neighboringTriangles = adjacent.ToArray(),
+                    neighboringVertices = adjacent.Distinct().Select(i => new VertexDiagnostic {
+                        index = i, bindVertex = s.vertices[i], fourWeights = Describe(s.weights[i], s.boneNames),
+                        fourWeightSum = s.weights[i].weight0 + s.weights[i].weight1 + s.weights[i].weight2 + s.weights[i].weight3,
+                        lbsWorld = Skin(s.weights[i], frame.bones).MultiplyPoint3x4(s.vertices[i]),
+                        bakeTrueTransformPoint = frame.bakedWorld[i],
+                        mismatch = Vector3.Distance(frame.bakedWorld[i], Skin(s.weights[i], frame.bones).MultiplyPoint3x4(s.vertices[i]))
+                    }).ToArray(),
+                    leftHandTriangles = leftTriangles.ToArray(),
+                    leftHandVertices = leftTriangles.Distinct().Select(i => new VertexDiagnostic {
+                        index = i, bindVertex = s.vertices[i], fourWeights = Describe(s.weights[i], s.boneNames),
+                        fourWeightSum = s.weights[i].weight0 + s.weights[i].weight1 + s.weights[i].weight2 + s.weights[i].weight3,
+                        lbsWorld = Skin(s.weights[i], frame.bones).MultiplyPoint3x4(s.vertices[i]),
+                        bakeTrueTransformPoint = frame.bakedWorld[i],
+                        mismatch = Vector3.Distance(frame.bakedWorld[i], Skin(s.weights[i], frame.bones).MultiplyPoint3x4(s.vertices[i]))
+                    }).ToArray(),
+                    bones = s.bones.Select((bone, i) => new BoneDiagnostic {
+                        index = i, name = bone.name, parent = bone.parent == null ? "" : bone.parent.name,
+                        world = bone.localToWorldMatrix, bindpose = s.bindposes[i], skin = frame.bones[i],
+                        localPosition = bone.localPosition, localRotation = bone.localRotation,
+                        localScale = bone.localScale, worldScale = bone.lossyScale
+                    }).ToArray(),
+                    weaponToWorld = frame.weaponToWorld, weaponVertices = weaponVertices.ToArray(), weaponTriangles = weaponTriangles.ToArray(),
+                    limitation = "One original Heavy recovery pose, exact original mesh/FK/socket/scale. Numeric anatomy evidence only; no mesh/weights/rig modification or physical-grip PASS."
+                };
+                string json = JsonUtility.ToJson(e, true);
+                File.WriteAllText(Path.Combine(output, "FocusedHeavyFullLeftHand.json"), json);
+                return json;
+            }
+        }
+
         // Parent can invoke this through a focused EditMode test. A candidate is
         // transient unless the separately called SaveVerifiedDerivative succeeds.
         public static string RunAudit(bool buildCandidate, string outputDirectory)

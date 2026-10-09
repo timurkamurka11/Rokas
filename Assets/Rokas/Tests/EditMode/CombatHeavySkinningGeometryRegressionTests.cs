@@ -77,6 +77,27 @@ namespace Rokas.Tests
             Assert.That(report.candidateRows.All(r => r.maximumDepth <= .001f && r.ambiguousSamples == 0 && r.bakeSkinError <= .00005f), Is.True);
         }
 
+        [Serializable] private sealed class FocusedPatchResult
+        {
+            public bool originalAssetExact;
+            public float sourceClock;
+            public int[] triangleVertices;
+            public Row measurement;
+        }
+
+        [Test]
+        public void FocusedHeavyRecoveryExportsExactOriginalIndexSkinningForAnatomicalRepair()
+        {
+            string json = (string)Tool.GetMethod("ExportFocusedHeavyIndexPatch", BindingFlags.Public | BindingFlags.Static)
+                .Invoke(null, new object[] { null });
+            var result = JsonUtility.FromJson<FocusedPatchResult>(json);
+            Assert.That(result.originalAssetExact, Is.True);
+            Assert.That(result.sourceClock, Is.EqualTo(2.216667f).Within(.0001f));
+            Assert.That(result.triangleVertices.Length, Is.EqualTo(3));
+            Assert.That(result.measurement.bakeSkinError, Is.LessThanOrEqualTo(.00005f));
+            Assert.That(result.measurement.maximumDepth, Is.GreaterThan(.001f), "The unresolved actual triangle defect is exported, not hidden.");
+        }
+
         private static void AssertDistances(Vector3[] vertices, int[] triangles, Vector3[] samples, float[] expected)
         {
             float[] measured = Evaluate(vertices, triangles, samples);
