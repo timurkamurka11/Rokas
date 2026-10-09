@@ -19,6 +19,17 @@ namespace Rokas.Presentation
         }
 
         [Serializable]
+        private sealed class ScreenCalibration
+        {
+            public float topLeftX = 596f, topLeftY = 413f;
+            public float topRightX = 1044f, topRightY = 412f;
+            public float bottomRightX = 1051f, bottomRightY = 676f;
+            public float bottomLeftX = 586f, bottomLeftY = 676f;
+            public float powerX = 1040f, powerY = 708f;
+            public bool debugPowerAnchor;
+        }
+
+        [Serializable]
         private sealed class HandFrame
         {
             public string resource;
@@ -149,18 +160,35 @@ namespace Rokas.Presentation
             ui.Art(povRoot, "UnmodifiedScreenOffPOV", povTexture,
                 imageX, imageY, imageWidth, imageHeight);
 
-            // These four corners are STARTING CALIBRATION VALUES on the approved PNG.
-            // They must be tuned against a rendered hand-press proof in Unity.
+            // Calibration is separate from the approved art and can be edited as JSON.
+            ScreenCalibration calibration = new ScreenCalibration();
+            TextAsset calibrationText = Resources.Load<TextAsset>("LaptopCinematic/screen_calibration");
+            if (calibrationText)
+            {
+                try { calibration = JsonUtility.FromJson<ScreenCalibration>(calibrationText.text)
+                    ?? new ScreenCalibration(); }
+                catch (Exception error)
+                {
+                    Debug.LogWarning("ROKAS laptop calibration ignored: " + error.Message);
+                }
+            }
             RectTransform screenRect = ui.Rect(povRoot, "LaptopWakePolygon",
                 imageX, imageY, imageWidth, imageHeight);
             wake = screenRect.gameObject.AddComponent<LaptopWakeQuad>();
             wake.raycastTarget = false;
             wake.SetCorners(new[]
             {
-                new Vector2(596f, 413f), new Vector2(1044f, 412f),
-                new Vector2(1051f, 676f), new Vector2(586f, 676f)
+                new Vector2(calibration.topLeftX, calibration.topLeftY),
+                new Vector2(calibration.topRightX, calibration.topRightY),
+                new Vector2(calibration.bottomRightX, calibration.bottomRightY),
+                new Vector2(calibration.bottomLeftX, calibration.bottomLeftY)
             }, imageScale);
             wake.color = new Color(.16f, .34f, .48f, 0f);
+            if (calibration.debugPowerAnchor && Debug.isDebugBuild)
+                ui.Box(povRoot, "PowerAnchorDebug",
+                    imageX + calibration.powerX * imageScale - 5f,
+                    imageY + calibration.powerY * imageScale - 5f,
+                    10f, 10f, Color.red);
 
             handsImage = ui.Art(povRoot, "HandAnimationAlphaFrame",
                 frames[0], 0f, 0f, 1f, 1f);
@@ -177,6 +205,7 @@ namespace Rokas.Presentation
                 yield return null;
                 elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
             }
+            running = null; // Natural coroutine completion; do not stop ourselves.
             if (active) Finish(true);
         }
 
