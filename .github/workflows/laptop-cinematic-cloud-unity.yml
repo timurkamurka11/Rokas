@@ -99,7 +99,7 @@ jobs:
           unityVersion: 6000.3.19f1
           testMode: EditMode
           cliVersion: v0.1.60
-          customParameters: -testFilter Rokas.Tests.HomeFinishedUiCleanupTests
+          customParameters: -testFilter Rokas.Tests.LaptopPowerTimelineEditModeTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Laptop Cinematic Unity EditMode
 
