@@ -13,6 +13,7 @@ namespace Rokas.Presentation
         private readonly AudioSource[] effects = new AudioSource[4];
         private readonly AudioSource hubVoice;
         private readonly AudioClip messageArrive;
+        private readonly AudioClip laptopPowerClick;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
         private float homeWeatherMix = 1f;
@@ -52,6 +53,7 @@ namespace Rokas.Presentation
             for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource(audioRoot, false);
             hubVoice = MakeSource(audioRoot, true);
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
+            laptopPowerClick = Resources.Load<AudioClip>("LaptopCinematic/power_click");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
 
@@ -144,6 +146,17 @@ namespace Rokas.Presentation
             source.clip = clip;
             source.volume = vnMuted ? 0f : Mathf.Clamp01(settings.masterVolume * settings.sfxVolume);
             source.Play();
+        }
+
+        // The only Power sound: plays through the existing SFX bus / mute settings.
+        public void PlayLaptopPowerClick()
+        {
+            if (!laptopPowerClick)
+            {
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: missing Power click WAV resource.");
+                return;
+            }
+            PlayScaled(laptopPowerClick, .55f);
         }
 
         public void PlayCombatClip(AudioClip clip, float scale)
