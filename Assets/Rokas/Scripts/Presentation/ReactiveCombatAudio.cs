@@ -10,7 +10,7 @@ namespace Rokas.Presentation
         KeikoNormalVocal, KeikoHeavyVocal, NormalWhoosh, HeavyWhoosh,
         NormalFleshContact, HeavyFleshContact, MonsterVocal, MonsterSwing,
         MonsterFleshContact, GuardMetalContact, DodgeBackstep, ThrowRelease, ThrowFleshContact,
-        StancePreview, StanceConfirm, StanceCancel, SwordReadiness, HeavyWindup, EnemyWarning
+        StancePreview, StanceConfirm, StanceCancel, SwordReadiness, HeavyWindup, EnemyWarning, YokaiDeath
     }
 
     public sealed class ReactiveCombatAudioDispatch
@@ -41,10 +41,11 @@ namespace Rokas.Presentation
         private readonly AudioClip normalSwing, heavySwing, normalContact, heavyContact;
         private readonly AudioClip monsterContact, guardContact, dodgeMovement;
         private readonly AudioClip throwRelease, throwContact;
-        private readonly AudioClip stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning;
+        private readonly AudioClip stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning, yokaiDeath;
         private readonly AudioClip[] fidelityClips;
         private readonly Dictionary<string, PreviewEntry> previewStates = new Dictionary<string, PreviewEntry>(128, StringComparer.Ordinal);
         private string activePreviewToken;
+        private readonly HashSet<string> deadActors = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> throwActions = new HashSet<string>(128);
         private readonly Dictionary<string, string> actionAliases = new Dictionary<string, string>(128, StringComparer.Ordinal);
         private readonly Dictionary<ActionActorIdentity, bool> heavyActions = new Dictionary<ActionActorIdentity, bool>(64);
@@ -91,7 +92,8 @@ namespace Rokas.Presentation
             swordReadiness = LoadFidelity("SwordReadiness");
             heavyWindup = LoadFidelity("HeavyWindup");
             enemyWarning = LoadFidelity("EnemyWarning");
-            fidelityClips = new[] { stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning };
+            yokaiDeath = LoadFidelity("YokaiDeath");
+            fidelityClips = new[] { stancePreview, stanceConfirm, stanceCancel, swordReadiness, heavyWindup, enemyWarning, yokaiDeath };
             // Decode/load and reserve collections before the first gameplay contact.
             Preload(normalVocals); Preload(heavyVocals); Preload(monsterAttacks); Preload(monsterIdle); Preload(fidelityClips);
             Preload(new[] { normalSwing, heavySwing, normalContact, heavyContact, monsterContact, guardContact, dodgeMovement, throwRelease, throwContact });
@@ -147,6 +149,17 @@ namespace Rokas.Presentation
             if (string.IsNullOrWhiteSpace(enemyId) || enemyId == HunterId) return false;
             DelayIdle(5f);
             return PlayOnce(Canonical(actionId), enemyId, null, ReactiveCombatAudioEvent.EnemyWarning, enemyWarning, .23f);
+        }
+
+        /// <summary>Called only for an authoritative positive lethal contact; one cue per dead actor until reset.</summary>
+        public bool PresentDeath(string actionId, string deadActorId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) || string.IsNullOrWhiteSpace(deadActorId) || deadActorId == HunterId) return false;
+            if (deadActors.Contains(deadActorId)) return true;
+            if (!PlayOnce(Canonical(actionId), deadActorId, null, ReactiveCombatAudioEvent.YokaiDeath, yokaiDeath, .32f)) return false;
+            deadActors.Add(deadActorId);
+            DelayIdle(5f);
+            return true;
         }
 
         /// <summary>Links the pre-commit animation ID to the authoritative Core action ID.</summary>
@@ -291,7 +304,7 @@ namespace Rokas.Presentation
         public void Reset()
         {
             idleCountdown = 6f;
-            actionAliases.Clear(); heavyActions.Clear(); throwActions.Clear(); played.Clear(); dispatches.Clear();
+            actionAliases.Clear(); heavyActions.Clear(); throwActions.Clear(); deadActors.Clear(); played.Clear(); dispatches.Clear();
             previewStates.Clear(); activePreviewToken = null;
             PlaybackCount = 0;
             normalVocalIndex = heavyVocalIndex = attackIndex = idleIndex = 0;

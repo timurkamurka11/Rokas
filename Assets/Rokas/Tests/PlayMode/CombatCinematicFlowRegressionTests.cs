@@ -993,8 +993,15 @@ namespace Rokas.Tests
                 counts.TryGetValue(dispatch.EventId, out int count);
                 counts[dispatch.EventId] = count + 1;
             }
-            foreach (ReactiveCombatAudioEvent required in new[] { ReactiveCombatAudioEvent.StancePreview, ReactiveCombatAudioEvent.StanceConfirm, ReactiveCombatAudioEvent.StanceCancel, ReactiveCombatAudioEvent.SwordReadiness, ReactiveCombatAudioEvent.HeavyWindup, ReactiveCombatAudioEvent.EnemyWarning, ReactiveCombatAudioEvent.GuardMetalContact, ReactiveCombatAudioEvent.ThrowRelease, ReactiveCombatAudioEvent.ThrowFleshContact })
+            foreach (ReactiveCombatAudioEvent required in new[] { ReactiveCombatAudioEvent.StancePreview, ReactiveCombatAudioEvent.StanceConfirm, ReactiveCombatAudioEvent.StanceCancel, ReactiveCombatAudioEvent.SwordReadiness, ReactiveCombatAudioEvent.HeavyWindup, ReactiveCombatAudioEvent.EnemyWarning, ReactiveCombatAudioEvent.GuardMetalContact, ReactiveCombatAudioEvent.ThrowRelease, ReactiveCombatAudioEvent.ThrowFleshContact, ReactiveCombatAudioEvent.YokaiDeath })
                 Assert.That(counts.ContainsKey(required), Is.True, "Missing actual UI/Core Foley event: " + required);
+            var deathActors = new HashSet<string>();
+            foreach (ReactiveCombatAudioDispatch dispatch in cues.Dispatches)
+                if (dispatch.EventId == ReactiveCombatAudioEvent.YokaiDeath)
+                {
+                    Assert.That(deathActors.Add(dispatch.ActorId), Is.True, "A real Core actor cannot emit death twice.");
+                    Assert.That(boot.Session.ReactiveCombat.GetActorState(dispatch.ActorId).Alive, Is.False, "Death Foley requires a dead Core actor.");
+                }
             Assert.That(counts[ReactiveCombatAudioEvent.StanceConfirm], Is.EqualTo(plannedCommands + fillerCommands), "Only accepted UI commands confirm the stance once.");
         }
 

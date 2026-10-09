@@ -473,6 +473,10 @@ namespace Rokas.Presentation
                     session.ReactiveCombat?.GetActorState(combatEvent.ActorId)?.Alive == true)
                     reactiveAudio.PresentEnemyWarning(combatEvent.ActionId, combatEvent.ActorId);
                 combatCueHandled = reactiveAudio.Present(combatEvent);
+                if (combatEvent.Kind == CombatEventKind.HitResolved && combatEvent.Amount > 0 &&
+                    !string.IsNullOrWhiteSpace(combatEvent.TargetId) && combatEvent.TargetId != "P" &&
+                    session.ReactiveCombat?.GetActorState(combatEvent.TargetId)?.Alive == false)
+                    reactiveAudio.PresentDeath(combatEvent.ActionId, combatEvent.TargetId);
             }
             if (combatEvent.Kind != CombatEventKind.HitResolved) return;
             bool perfect = combatEvent.Detail == "Perfect" || combatEvent.Detail == "Counter";

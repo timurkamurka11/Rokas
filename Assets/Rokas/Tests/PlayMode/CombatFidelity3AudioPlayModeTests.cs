@@ -128,10 +128,46 @@ namespace Rokas.Tests
             Assert.That(root.GetComponentsInChildren<AudioSource>(true).Length, Is.EqualTo(sourcesBefore));
         }
 
+        [UnityTest]
+        public IEnumerator DeathCuePlaysOncePerDeadActorAndResetAllowsTheNextEncounter()
+        {
+            Assert.That(cues.PresentDeath("lethal-action", "E1"), Is.True);
+            AudioSource source = Source("YokaiDeath");
+            Assert.That(source.isPlaying, Is.True);
+            Assert.That(source.volume, Is.EqualTo(.8f * .5f * .32f).Within(.001f));
+            yield return new WaitForSecondsRealtime(.025f);
+            int progressed = source.timeSamples;
+            Assert.That(progressed, Is.GreaterThan(0));
+            var sourcePcm = new float[512]; var mixPcm = new float[512];
+            float sourcePeak = 0f, mixPeak = 0f;
+            float until = Time.realtimeSinceStartup + .12f;
+            while (Time.realtimeSinceStartup < until)
+            {
+                source.GetOutputData(sourcePcm, 0); AudioListener.GetOutputData(mixPcm, 0);
+                sourcePeak = Mathf.Max(sourcePeak, sourcePcm.Max(v => Mathf.Abs(v)));
+                mixPeak = Mathf.Max(mixPeak, mixPcm.Max(v => Mathf.Abs(v)));
+                yield return null;
+            }
+            var editorUtility = System.Type.GetType("UnityEditor.EditorUtility, UnityEditor.CoreModule", false);
+            object editorMuted = editorUtility?.GetProperty("audioMasterMute", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.GetValue(null);
+            TestContext.WriteLine($"Death DSP: sourcePeak={sourcePeak:R}, mixPeak={mixPeak:R}, sourceVolume={source.volume:R}, sourceMute={source.mute}, sourceVirtual={source.isVirtual}, listenerVolume={AudioListener.volume:R}, listenerPause={AudioListener.pause}, editorMute={editorMuted}, frequency={AudioSettings.outputSampleRate}");
+            Assert.That(sourcePeak, Is.GreaterThan(.00001f), "Actual source PCM must be nonzero; timeSamples alone cannot prove sound output.");
+            Assert.That(cues.PresentDeath("replayed-action", "E1"), Is.True);
+            Assert.That(source.timeSamples, Is.GreaterThanOrEqualTo(progressed), "A duplicate death cannot restart its DSP source.");
+            Assert.That(cues.PlaybackCount, Is.EqualTo(1));
+            Assert.That(cues.PresentDeath("invalid", "P"), Is.False);
+            Assert.That(cues.PresentDeath("", "E2"), Is.False);
+            Assert.That(cues.PresentDeath("second-lethal", "E2"), Is.True);
+            Assert.That(cues.Dispatches.Count(d => d.EventId == ReactiveCombatAudioEvent.YokaiDeath), Is.EqualTo(2));
+            cues.Reset();
+            Assert.That(cues.PresentDeath("next-encounter", "E1"), Is.True);
+            Assert.That(cues.PlaybackCount, Is.EqualTo(1));
+        }
+
         [Test]
         public void OriginalFidelityClipsHavePcmAndResetAllowsNewSelection()
         {
-            foreach (string name in new[] { "StancePreview", "StanceConfirm", "StanceCancel", "SwordReadiness", "HeavyWindup", "EnemyWarning" })
+            foreach (string name in new[] { "StancePreview", "StanceConfirm", "StanceCancel", "SwordReadiness", "HeavyWindup", "EnemyWarning", "YokaiDeath" })
             {
                 var clip = Resources.Load<AudioClip>("Audio/CombatFidelity3/" + name);
                 Assert.That(clip, Is.Not.Null, name);
