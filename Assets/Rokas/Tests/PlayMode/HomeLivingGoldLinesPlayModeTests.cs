@@ -44,6 +44,8 @@ namespace Rokas.Tests
                 // color/alpha must advance smoothly with time on both outlines.
                 AssertLivingColorChanges(door);
                 AssertLivingColorChanges(laptop);
+                AssertMovingGlint(door);
+                AssertMovingGlint(laptop);
 
                 Vector2[] doorPoints = Points(door);
                 Vector2[] laptopPoints = Points(laptop);
@@ -111,6 +113,30 @@ namespace Rokas.Tests
                 Mathf.Abs(before.a - after.a);
             Assert.That(change, Is.GreaterThan(.01f),
                 "Continuous shimmer/pulse must actually change the rendered color.");
+        }
+
+        private static void AssertMovingGlint(Component outline)
+        {
+            MethodInfo cursorMethod = outline.GetType().GetMethod("LivingCursor", Private);
+            MethodInfo glintMethod = outline.GetType().GetMethod("LivingGlintColor", Private);
+            Assert.That(cursorMethod, Is.Not.Null);
+            Assert.That(glintMethod, Is.Not.Null);
+            float start = (float)cursorMethod.Invoke(outline, new object[] { 0f });
+            float later = (float)cursorMethod.Invoke(outline, new object[] { 1.5f });
+            Assert.That(Mathf.Abs(start - later), Is.GreaterThan(.19f),
+                "Glint must visibly progress around the perimeter over 1.5 seconds.");
+            Color peak = (Color)glintMethod.Invoke(outline,
+                new object[] { start, 0f, true });
+            Color away = (Color)glintMethod.Invoke(outline,
+                new object[] { start + .31f, 0f, true });
+            Color travelled = (Color)glintMethod.Invoke(outline,
+                new object[] { start, 1.5f, true });
+            Assert.That(peak.a, Is.GreaterThan(.90f),
+                "A bright near-white head must be visible above the saturated gold core.");
+            Assert.That(peak.g, Is.GreaterThan(.95f));
+            Assert.That(away.a, Is.LessThan(.001f));
+            Assert.That(travelled.a, Is.LessThan(.001f),
+                "The bright spot must leave the original location instead of blinking in place.");
         }
 
         private static bool Living(Component outline)
