@@ -259,7 +259,7 @@ namespace Rokas.Presentation
             cinematicVeil = ui.Box(cinematicVeilClip, "ReactiveCinematicVeil", 0, 0, 1920, 1080, Color.clear);
             cinematicVeil.raycastTarget = false;
             cinematicVeil.gameObject.SetActive(false);
-            image = ui.Art(parent, "ReactiveAnimatedWorld", null, 0, 0, 1920, 906);
+            image = ui.Art(parent, "ReactiveAnimatedWorld", null, 0, -100, 1920, 1080);
             image.color = Color.white;
             // The transparent actor camera already stores premultiplied RGB.
             // Keep that RGB intact when placing its render texture over the arena.
@@ -272,7 +272,7 @@ namespace Rokas.Presentation
             world = new GameObject("ReactiveCombatWorld");
             // Keep models outside all normal cameras, including PlayMode screenshot cameras.
             world.transform.position = new Vector3(1000f, 1000f, 1000f);
-            texture = new RenderTexture(1920, 906, 24, RenderTextureFormat.ARGB32)
+            texture = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32)
             {
                 name = "ReactiveCombatActors",
                 antiAliasing = 2,
@@ -289,7 +289,7 @@ namespace Rokas.Presentation
             camera = cameraObject.GetComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = 4.6f;
-            camera.aspect = 1920f / 906f;
+            camera.aspect = 1920f / 1080f;
             camera.nearClipPlane = .1f;
             camera.farClipPlane = 60f;
             camera.clearFlags = CameraClearFlags.SolidColor;
@@ -298,6 +298,7 @@ namespace Rokas.Presentation
             camera.allowHDR = false;
             camera.allowMSAA = true;
             camera.targetTexture = texture;
+            Camera.onPreCull += PrepareActorFrameProjection;
             Camera.onPostRender += OnActorCameraRendered;
 
 
@@ -1218,6 +1219,16 @@ namespace Rokas.Presentation
             cinematicVeil.gameObject.SetActive(false);
         }
 
+        public Rect ActorFeedbackViewport
+        {
+            get
+            {
+                Rect rect = image.rectTransform.rect;
+                Vector2 offset = image.rectTransform.anchoredPosition;
+                return new Rect(rect.x + offset.x, rect.y + offset.y, rect.width, rect.height);
+            }
+        }
+
         // UI reads the same actor camera and bounds; it never moves an actor or samples a second camera.
         public bool TryActorFeedbackAnchor(string actorId, out Vector2 anchor)
         {
@@ -1794,6 +1805,21 @@ namespace Rokas.Presentation
                     (2f * edge * (1f - edge)) : (fraction - edge * .5f) / (1f - edge);
         }
 
+        // Own render-gate accommodation, not another source-camera controller.
+        // Padding the former 906px gate by 100px above and 74px below preserves
+        // all existing pixel positions/scales while revealing the clipped borders.
+        // Rebuild from the current sampled lens before culling; never cache a shot matrix.
+        private void PrepareActorFrameProjection(Camera rendered)
+        {
+            if (rendered != camera) return;
+            camera.ResetProjectionMatrix();
+            Matrix4x4 projection = camera.projectionMatrix;
+            const float gateScale = 906f / 1080f;
+            projection.SetRow(0, projection.GetRow(0) * gateScale);
+            projection.SetRow(1, projection.GetRow(1) * gateScale - projection.GetRow(3) * (26f / 1080f));
+            camera.projectionMatrix = projection;
+        }
+
         private void OnActorCameraRendered(Camera rendered)
         {
             if (rendered == camera) ActorFrameRendered?.Invoke();
@@ -1801,6 +1827,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            Camera.onPreCull -= PrepareActorFrameProjection;
             Camera.onPostRender -= OnActorCameraRendered;
             ActorFrameRendered = null;
             ClearCinematicFocus();

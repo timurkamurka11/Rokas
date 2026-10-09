@@ -1048,8 +1048,9 @@ namespace Rokas.Presentation
                 new Vector2(0f, (.45f - feedbackTime) * 35f);
             if (projected)
             {
-                position.x = Mathf.Clamp(position.x, rect.rect.width * .5f, 1920f - rect.rect.width * .5f);
-                position.y = Mathf.Clamp(position.y, -906f + rect.rect.height * .5f, -rect.rect.height * .5f);
+                Rect viewport = arena.ActorFeedbackViewport;
+                position.x = Mathf.Clamp(position.x, viewport.xMin + rect.rect.width * .5f, viewport.xMax - rect.rect.width * .5f);
+                position.y = Mathf.Clamp(position.y, viewport.yMin + rect.rect.height * .5f, viewport.yMax - rect.rect.height * .5f);
             }
             rect.anchoredPosition = position;
         }

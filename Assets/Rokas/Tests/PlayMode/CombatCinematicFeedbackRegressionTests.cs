@@ -170,8 +170,10 @@ namespace Rokas.Tests
             Vector3 top = Enemy().BodyBounds.center;
             top.y = Enemy().BodyBounds.max.y;
             Vector3 viewport = camera.WorldToViewportPoint(top);
-            Assert.That(anchor.x, Is.EqualTo(viewport.x * 1920f).Within(.02f));
-            Assert.That(anchor.y, Is.EqualTo(-(1f - viewport.y) * 906f).Within(.02f));
+            var actorImage = arenaRect.Find("ReactiveAnimatedWorld").GetComponent<RawImage>();
+            RectTransform actorRect = actorImage.rectTransform;
+            Assert.That(anchor.x, Is.EqualTo(actorRect.anchoredPosition.x + viewport.x * actorRect.rect.width).Within(.02f));
+            Assert.That(anchor.y, Is.EqualTo(actorRect.anchoredPosition.y - (1f - viewport.y) * actorRect.rect.height).Within(.02f));
             Assert.That(camera.transform.position, Is.EqualTo(cameraPosition));
             Assert.That(Enemy().transform.position, Is.EqualTo(actorPosition));
             Assert.That(arena.LicensedCameraClock, Is.EqualTo(sourceClock));
@@ -179,8 +181,9 @@ namespace Rokas.Tests
             Assert.That(Feedback().rectTransform.pivot, Is.EqualTo(new Vector2(.5f, .5f)));
             Assert.That(Feedback().alignment, Is.EqualTo(TextAnchor.MiddleCenter));
             Vector2 expectedPosition = anchor + new Vector2(0f, 12f);
-            expectedPosition.x = Mathf.Clamp(expectedPosition.x, Feedback().rectTransform.rect.width * .5f, 1920f - Feedback().rectTransform.rect.width * .5f);
-            expectedPosition.y = Mathf.Clamp(expectedPosition.y, -906f + Feedback().rectTransform.rect.height * .5f, -Feedback().rectTransform.rect.height * .5f);
+            Rect displayedViewport = arena.ActorFeedbackViewport;
+            expectedPosition.x = Mathf.Clamp(expectedPosition.x, displayedViewport.xMin + Feedback().rectTransform.rect.width * .5f, displayedViewport.xMax - Feedback().rectTransform.rect.width * .5f);
+            expectedPosition.y = Mathf.Clamp(expectedPosition.y, displayedViewport.yMin + Feedback().rectTransform.rect.height * .5f, displayedViewport.yMax - Feedback().rectTransform.rect.height * .5f);
             Assert.That(Vector2.Distance(Feedback().rectTransform.anchoredPosition, expectedPosition), Is.LessThan(.02f), "Actual actor render may refresh skinned bounds; UI projection must follow without a second combat tick");
             view.Tick(.1f);
             view.Present(contact);
@@ -189,6 +192,71 @@ namespace Rokas.Tests
             Assert.That(Feedback().gameObject.activeSelf, Is.False, "Expired feedback must hide without waiting for a layout refresh");
             Assert.That(arena.LicensedCameraClock, Is.EqualTo(.46f).Within(.00001f), "UI reads cannot independently advance the shot clock");
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator FullActorGateRevealsTheFormerTopBorderWithoutChangingExistingPixelComposition()
+        {
+            Camera actual = rootSceneCamera();
+            RawImage displayed = arenaRect.Find("ReactiveAnimatedWorld").GetComponent<RawImage>();
+            Assert.That(displayed.rectTransform.sizeDelta, Is.EqualTo(new Vector2(1920f, 1080f)));
+            Assert.That(displayed.rectTransform.anchoredPosition, Is.EqualTo(new Vector2(0f, 100f)));
+            Assert.That(actual.targetTexture.width, Is.EqualTo(1920));
+            Assert.That(actual.targetTexture.height, Is.EqualTo(1080));
+            var referenceObject = new GameObject("FormerActorGateProjectionReference", typeof(Camera));
+            Camera reference = referenceObject.GetComponent<Camera>();
+            reference.enabled = false;
+            try
+            {
+                actual.Render();
+                Matrix4x4 homeProjection = actual.projectionMatrix;
+                for (int phase = 0; phase < 2; phase++)
+                {
+                    if (phase == 1) { NormalContact("full-gate-contact"); view.Tick(.1f); }
+                    Vector3 position = actual.transform.position;
+                    Quaternion rotation = actual.transform.rotation;
+                    float lens = actual.fieldOfView;
+                    double presentationTime = arena.PresentationClock;
+                    float sourceTime = arena.LicensedCameraClock;
+                    reference.CopyFrom(actual);
+                    reference.enabled = false;
+                    reference.targetTexture = null;
+                    reference.transform.SetPositionAndRotation(position, rotation);
+                    reference.aspect = 1920f / 906f;
+                    reference.ResetProjectionMatrix();
+                    Vector3[] points = {
+                        reference.ViewportToWorldPoint(new Vector3(.25f, .25f, 10f)),
+                        reference.ViewportToWorldPoint(new Vector3(.5f, .5f, 10f)),
+                        reference.ViewportToWorldPoint(new Vector3(.7f, 1.04f, 10f))
+                    };
+                    actual.Render();
+                    foreach (Vector3 point in points)
+                    {
+                        Vector3 oldView = reference.WorldToViewportPoint(point);
+                        Vector3 newView = actual.WorldToViewportPoint(point);
+                        Vector2 formerStagePixel = new Vector2(oldView.x * 1920f, 100f + (1f - oldView.y) * 906f);
+                        Vector2 actualStagePixel = new Vector2(newView.x * 1920f, (1f - newView.y) * 1080f);
+                        Assert.That(Vector2.Distance(actualStagePixel, formerStagePixel), Is.LessThan(.02f),
+                            "Expanding the render gate must preserve the existing physical pixel scale and composition.");
+                        Assert.That(newView.y, Is.InRange(0f, 1f),
+                            "The former clipped top-border point must be inside the actual rendered frustum.");
+                    }
+                    Assert.That(actual.transform.position, Is.EqualTo(position));
+                    Assert.That(actual.transform.rotation, Is.EqualTo(rotation));
+                    Assert.That(actual.fieldOfView, Is.EqualTo(lens));
+                    Assert.That(arena.PresentationClock, Is.EqualTo(presentationTime));
+                    Assert.That(arena.LicensedCameraClock, Is.EqualTo(sourceTime));
+                }
+                arena.CancelHunterMotion();
+                StepUntil(() => arena.PresentationReady && arena.CameraAtHome, 15f);
+                actual.Render();
+                for (int row = 0; row < 4; row++)
+                    for (int column = 0; column < 4; column++)
+                        Assert.That(actual.projectionMatrix[row, column], Is.EqualTo(homeProjection[row, column]).Within(.00001f),
+                            "Cancellation must restore the actual rendered tactical projection, not just its FOV field.");
+                yield return null;
+            }
+            finally { Object.Destroy(referenceObject); }
         }
 
         private CombatEvent NormalContact(string id)

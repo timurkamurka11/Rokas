@@ -791,8 +791,9 @@ namespace Rokas.Tests
             Assert.That(damageFeedback.alignment, Is.EqualTo(TextAnchor.MiddleCenter));
             float age = (float)Math.Max(0d, clock - (double)feedbackStartedField.GetValue(reactiveView));
             Vector2 expected = anchor + new Vector2(0f, 12f + Mathf.Min(.45f, age) * 35f);
-            expected.x = Mathf.Clamp(expected.x, feedback.rect.width * .5f, 1920f - feedback.rect.width * .5f);
-            expected.y = Mathf.Clamp(expected.y, -906f + feedback.rect.height * .5f, -feedback.rect.height * .5f);
+            Rect displayedViewport = arena.ActorFeedbackViewport;
+            expected.x = Mathf.Clamp(expected.x, displayedViewport.xMin + feedback.rect.width * .5f, displayedViewport.xMax - feedback.rect.width * .5f);
+            expected.y = Mathf.Clamp(expected.y, displayedViewport.yMin + feedback.rect.height * .5f, displayedViewport.yMax - feedback.rect.height * .5f);
             Assert.That(Vector2.Distance(feedback.anchoredPosition, expected), Is.LessThan(.02f),
                 "Positive damage is centered over its actual actor, with the own rise and viewport clamp.");
             Assert.That(actorCamera.transform.position, Is.EqualTo(cameraPosition));
