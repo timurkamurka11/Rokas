@@ -12,6 +12,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -23,6 +24,9 @@ namespace Rokas.Tests
     {
         private const string EvidenceRoot = "D:/DD2-Research/AnimationStudy/CombatFidelity2026-10-08";
         private const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        private const string AuthoredScenePath = "Assets/Rokas/Scenes/Rokas.unity";
+        private Scene authoredScene, previousActiveScene;
+        private bool authoredSceneInitialized;
         private GameObject root;
         private RokasBootstrap boot;
         private ReactiveCombatArena arena;
@@ -171,7 +175,7 @@ namespace Rokas.Tests
         public IEnumerator ActualCoreUiVisibleGameViewCompletesNormalHeavyThrowAndEnemyFlow()
         {
             capture = false; visibleFlow = true; confirmCounters = true; runLabel = "ContinuousGameView";
-            yield return EnterEncounter();
+            yield return EnterEncounter(true);
             yield return VerifyPreviewSwitchAndCancellation();
             string[] plan = { "ReactiveBasic", "ReactiveHeavy", "ReactiveThrow", "ReactiveBasic" };
             foreach (string command in plan)
@@ -206,7 +210,7 @@ namespace Rokas.Tests
             AssertLiveFoleyDispatches();
             AssertLiveFeedbackCoverage();
             completed = true;
-            WriteManifest("continuous-game-view", "Actual Bootstrap/UI/Core and production visible Canvas. Phase trace only; external WGC continuous video is recorded separately. No framebuffer readback or per-frame file writes in this fixture.");
+            WriteManifest("continuous-game-view", "Serialized Rokas.unity Bootstrap/UI/Core and production visible Canvas, initialized with an isolated profile before Start. Phase trace only; external WGC continuous video is recorded separately. No framebuffer readback or per-frame file writes in this fixture.");
         }
 
         [UnityTest, Timeout(300000)]
@@ -293,7 +297,7 @@ namespace Rokas.Tests
             WriteManifest("interrupted-flow", "Read-only observation of the real Core defense ledger suffix cancellation after actual UI command and defensive input; no fabricated interruption event.");
         }
 
-        private IEnumerator EnterEncounter()
+        private IEnumerator EnterEncounter(bool loadAuthoredScene = false)
         {
             frames.Clear(); sequence.Clear(); performance.Clear(); screenshots.Clear(); defended.Clear(); offense.Clear();
             interruptions.Clear(); interruptedActions.Clear(); observedEnemyActions.Clear(); stageOffsetProbes.Clear(); uiItems.Clear();
@@ -312,10 +316,15 @@ namespace Rokas.Tests
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             inputConfigured = true;
             keyboard = InputSystem.AddDevice<Keyboard>();
-            root = new GameObject("CombatCinematicActualCoreFixture");
-            boot = root.AddComponent<RokasBootstrap>();
-            // Explicit isolated path before Start; never loads the user's save.
-            boot.Initialize(Path.Combine(runFolder, "IsolatedProfile"));
+            if (loadAuthoredScene)
+                yield return LoadAuthoredSceneWithIsolatedProfile();
+            else
+            {
+                root = new GameObject("CombatCinematicActualCoreFixture");
+                boot = root.AddComponent<RokasBootstrap>();
+                // Explicit isolated path before Start; never loads the user's save.
+                boot.Initialize(Path.Combine(runFolder, "IsolatedProfile"));
+            }
             boot.SendMessage("OnApplicationFocus", true);
             yield return null;
             Assert.That(boot.Session.AcceptContract() && boot.Session.LeaveHome(), Is.True);
@@ -350,6 +359,45 @@ namespace Rokas.Tests
             heldRenderers = hunter.HeldDagger.GetComponentsInChildren<Renderer>(true);
             spine = hunter.ModelRoot.Find("mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2");
             WriteSourceExpectations();
+        }
+
+        private IEnumerator LoadAuthoredSceneWithIsolatedProfile()
+        {
+            previousActiveScene = SceneManager.GetActiveScene();
+            Exception initializationError = null;
+            UnityEngine.Events.UnityAction<Scene, LoadSceneMode> initialize = (scene, mode) =>
+            {
+                if (scene.path != AuthoredScenePath) return;
+                authoredScene = scene;
+                var bootstraps = new List<RokasBootstrap>();
+                foreach (GameObject item in scene.GetRootGameObjects())
+                    bootstraps.AddRange(item.GetComponentsInChildren<RokasBootstrap>(true));
+                // sceneLoaded runs before Start. Disable first so an initialization
+                // failure cannot fall through into the user's default profile.
+                foreach (var candidate in bootstraps) candidate.enabled = false;
+                if (bootstraps.Count != 1)
+                {
+                    initializationError = new InvalidOperationException("Expected one authored RokasBootstrap, found " + bootstraps.Count);
+                    return;
+                }
+                root = bootstraps[0].gameObject;
+                boot = bootstraps[0];
+                try
+                {
+                    boot.Initialize(Path.Combine(runFolder, "IsolatedProfile"));
+                    authoredSceneInitialized = boot.Session != null && boot.View != null;
+                    boot.enabled = authoredSceneInitialized;
+                }
+                catch (Exception error) { initializationError = error; }
+            };
+            SceneManager.sceneLoaded += initialize;
+            try { yield return SceneManager.LoadSceneAsync(AuthoredScenePath, LoadSceneMode.Additive); }
+            finally { SceneManager.sceneLoaded -= initialize; }
+            Assert.That(initializationError, Is.Null, "Authored scene initialization must succeed before Start.");
+            Assert.That(authoredSceneInitialized, Is.True);
+            Assert.That(authoredScene.IsValid() && authoredScene.isLoaded, Is.True);
+            Assert.That(root.scene.path, Is.EqualTo(AuthoredScenePath));
+            Assert.That(SceneManager.SetActiveScene(authoredScene), Is.True);
         }
 
         private IEnumerator VerifyPreviewSwitchAndCancellation()
@@ -940,6 +988,7 @@ namespace Rokas.Tests
         {
             File.WriteAllText(Path.Combine(runFolder, "manifest.json"), JsonUtility.ToJson(new Manifest {
                 mode = mode, limitation = limitation, completed = completed, noUserPersistentSave = true, realBootstrapCoreUi = true,
+                authoredSceneInitialized = authoredSceneInitialized, authoredScenePath = authoredSceneInitialized ? AuthoredScenePath : "",
                 screenshots = new List<string>(screenshots).ToArray(), frames = frames.ToArray(), sequence = sequence.ToArray(),
                 performance = performance.ToArray(), interruptions = interruptions.ToArray(), mainThreadRecorderValid = mainThreadRecorder.Valid,
                 gcRecorderValid = gcRecorder.Valid, enemyNormalObserved = observedEnemyNormal,
@@ -1060,6 +1109,7 @@ namespace Rokas.Tests
             if (uiTarget != null) { uiTarget.Release(); UnityEngine.Object.Destroy(uiTarget); }
             if (image != null) UnityEngine.Object.Destroy(image);
             uiCamera = null; uiTarget = null; image = null; canvas = null; stage = null;
+            if (previousActiveScene.IsValid() && previousActiveScene.isLoaded) SceneManager.SetActiveScene(previousActiveScene);
             if (root != null) UnityEngine.Object.Destroy(root);
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             if (inputConfigured)
@@ -1068,6 +1118,8 @@ namespace Rokas.Tests
                 InputSystem.settings.backgroundBehavior = priorBackground;
             }
             yield return null;
+            if (authoredScene.IsValid() && authoredScene.isLoaded) yield return SceneManager.UnloadSceneAsync(authoredScene);
+            authoredSceneInitialized = false; authoredScene = default; previousActiveScene = default;
         }
 
         private sealed class CameraSnapshot
@@ -1089,7 +1141,7 @@ namespace Rokas.Tests
         }
 
         [Serializable] private sealed class Manifest {
-            public string mode, limitation; public bool completed, noUserPersistentSave, realBootstrapCoreUi;
+            public string mode, limitation, authoredScenePath; public bool completed, noUserPersistentSave, realBootstrapCoreUi, authoredSceneInitialized;
             public bool mainThreadRecorderValid, gcRecorderValid, enemyNormalObserved, enemyHeavyObserved, blockObserved,
                 coreSuffixCancellationObserved, nativeHomeRecoveryObserved, passiveStageOffsetObserved,
                 normalFocusObserved, throwFocusObserved, visibleDamageObserved, guardFeedbackObserved, heavyFocusExcluded, lethalFocusCleared;
