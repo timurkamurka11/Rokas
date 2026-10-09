@@ -627,8 +627,13 @@ namespace Rokas.Presentation
                 .34f);
 
             if (livingGold)
+            {
+                // A two-sided metallic rim lends depth to the otherwise flat
+                // UI core. Only vertex tint differs; authored points stay fixed.
+                StrokeLivingBevel(mesh, data.coreThickness * .88f);
                 StrokeLivingGold(mesh, data.coreThickness * 1.18f,
                     Color.white, 1f, 2);
+            }
         }
 
         private void Stroke(
@@ -709,7 +714,7 @@ namespace Rokas.Presentation
             // Breathing is confined to width (max 2.2%); contour coordinates
             // remain pixel-identical to the current Door and Laptop assets.
             float breath = 1f + Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
-                phase * Mathf.PI * 2f) * .022f;
+                phase * Mathf.PI * 2f) * .038f;
             float width = thickness * breath * (1f + hoverStrength * .025f);
             float distanceAlong = 0f;
             for (int i = 0; i < edges; i++)
@@ -748,11 +753,13 @@ namespace Rokas.Presentation
             float band = 1f - Mathf.SmoothStep(0f, 1f,
                 Mathf.Clamp01(delta / bandWidth));
             float pulse = Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
-                phase * Mathf.PI * 2f) * .10f;
+                phase * Mathf.PI * 2f) * .115f;
             // No frame-random flicker. Micro movement is in luminosity only.
-            float micro = Mathf.Sin(time * 3.7f + location * 29f +
-                phase * Mathf.PI * 2f) * .012f;
-            float sweep = band * (laptopGold ? .31f : .26f) * strength;
+            // A smooth, counter-moving low-intensity wave makes the whole
+            // edge feel alive even between passes of the travelling spark.
+            float micro = Mathf.Sin(time * 2.4f - location * 23f +
+                phase * Mathf.PI * 2f) * .035f;
+            float sweep = band * (laptopGold ? .39f : .34f) * strength;
             float gain = (1f + pulse + micro + sweep) * (1f + hoverStrength * .14f);
             Color result = source;
             result.r = Mathf.Clamp01(source.r * gain);
@@ -806,10 +813,78 @@ namespace Rokas.Presentation
             // Champagne-gold, NOT opaque white. Most of the visual motion
             // comes from the subtle golden corner pulses and soft halo.
             return narrow
-                ? new Color(1f, .90f, .64f,
-                    Mathf.Clamp01((band * .21f + cornerPulse * .06f) * boost))
-                : new Color(1f, .72f, .30f,
-                    Mathf.Clamp01((band * .17f + cornerPulse * .17f) * boost));
+                ? new Color(1f, .935f, .72f,
+                    Mathf.Clamp01((band * .31f + cornerPulse * .065f) * boost))
+                : new Color(1f, .79f, .365f,
+                    Mathf.Clamp01((band * .27f + cornerPulse * .25f) * boost));
+        }
+
+        // Two-sided, subtly animated rim: warmer shadow on one edge and
+        // champagne reflection on the other. The bevel follows the ORIGINAL
+        // segments, and does not move either side of the authored polygon.
+        private void StrokeLivingBevel(VertexHelper mesh, float thickness)
+        {
+            int edges = data.points.Length - 1 +
+                (data.closed && data.points.Length > 2 ? 1 : 0);
+            float perimeter = 0f;
+            for (int i = 0; i < edges; i++)
+                perimeter += Vector2.Distance(data.points[i],
+                    data.points[(i + 1) % data.points.Length]);
+            if (perimeter < .001f) return;
+
+            float time = Application.isPlaying ? Time.unscaledTime : 0f;
+            float along = 0f;
+            for (int i = 0; i < edges; i++)
+            {
+                Vector2 a = Map(data.points[i]);
+                Vector2 b = Map(data.points[(i + 1) % data.points.Length]);
+                float length = Vector2.Distance(a, b);
+                if (length < .001f) continue;
+                int steps = Mathf.Max(1, Mathf.CeilToInt(length / 18f));
+                for (int step = 0; step < steps; step++)
+                {
+                    float from = (float)step / steps;
+                    float to = (float)(step + 1) / steps;
+                    float startPos = (along + length * from) / perimeter;
+                    float endPos = (along + length * to) / perimeter;
+                    AddBevelSegment(mesh, Vector2.Lerp(a, b, from),
+                        Vector2.Lerp(a, b, to), thickness,
+                        LivingBevelColor(startPos, time, true),
+                        LivingBevelColor(startPos, time, false),
+                        LivingBevelColor(endPos, time, true),
+                        LivingBevelColor(endPos, time, false));
+                }
+                along += length;
+            }
+        }
+
+        private Color LivingBevelColor(float location, float time, bool brightSide)
+        {
+            float wave = .5f + .5f * Mathf.Sin(time * 2.1f -
+                location * Mathf.PI * 4f + phase * Mathf.PI * 2f);
+            float corner = LivingCornerPulse(location, time);
+            float hover = 1f + hoverStrength * .13f;
+            return brightSide
+                ? new Color(1f, .90f, .63f,
+                    Mathf.Clamp01((.19f + wave * .115f + corner * .04f) * hover))
+                : new Color(.48f, .225f, .065f,
+                    Mathf.Clamp01((.12f + (1f - wave) * .045f) * hover));
+        }
+
+        private static void AddBevelSegment(VertexHelper mesh, Vector2 a, Vector2 b,
+            float thickness, Color highA, Color shadeA, Color highB, Color shadeB)
+        {
+            Vector2 delta = b - a;
+            if (delta.sqrMagnitude < .0001f) return;
+            Vector2 normal = new Vector2(-delta.y, delta.x).normalized *
+                thickness * .5f;
+            int first = mesh.currentVertCount;
+            mesh.AddVert(a + normal, highA, Vector2.zero);
+            mesh.AddVert(a - normal, shadeA, Vector2.zero);
+            mesh.AddVert(b + normal, highB, Vector2.zero);
+            mesh.AddVert(b - normal, shadeB, Vector2.zero);
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first + 2, first + 1, first + 3);
         }
 
         private static void AddGradientSegment(VertexHelper mesh, Vector2 a, Vector2 b,
