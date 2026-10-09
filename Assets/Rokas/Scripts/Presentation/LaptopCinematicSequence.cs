@@ -15,6 +15,7 @@ namespace Rokas.Presentation
         private sealed class HandManifest
         {
             public float fps = 24f;
+            public string handedness;
             public HandFrame[] frames;
         }
 
@@ -44,10 +45,9 @@ namespace Rokas.Presentation
         private const float ApproachEnd = 1.2f;
         private const float POVStart = 1.15f;
         private const float POVEnd = 1.8f;
-        private const float HandsStart = 2.0f;
-        private const float PressTime = 3.7f;
-        private const float HandsEnd = 5.45f;
-        private const float FinishTime = 5.7f;
+        private const float HandsStart = 1.8f;
+        private const float HandsEnd = 3.72f;
+        private const float FinishTime = 3.8f;
 
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
@@ -55,6 +55,7 @@ namespace Rokas.Presentation
         private readonly RawImage mainBackground;
         private readonly Action openExistingLaptop;
         private readonly Action cancelled;
+        private readonly Action powerClick;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -70,12 +71,13 @@ namespace Rokas.Presentation
         private float imageY;
         private int shownFrame = -1;
         private bool active;
+        private LaptopPowerTimeline powerTimeline;
 
         public Phase CurrentPhase { get; private set; }
         public bool IsPlaying => active;
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
-            RawImage mainBackground, Action openExistingLaptop, Action cancelled)
+            RawImage mainBackground, Action openExistingLaptop, Action cancelled, Action powerClick)
         {
             this.ui = ui;
             this.owner = owner;
@@ -83,6 +85,7 @@ namespace Rokas.Presentation
             this.mainBackground = mainBackground;
             this.openExistingLaptop = openExistingLaptop;
             this.cancelled = cancelled;
+            this.powerClick = powerClick;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -92,9 +95,17 @@ namespace Rokas.Presentation
             if (!owner || !transitionLayer || !mainBackground || !mainBackground.texture) return false;
 
             povTexture = Resources.Load<Texture2D>("LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF");
-            var json = Resources.Load<TextAsset>("LaptopCinematic/hands_manifest");
-            if (!povTexture || !json) return false;
-            if (povTexture.width != 1672 || povTexture.height != 941) return false;
+            var json = Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest");
+            if (!povTexture || !json)
+            {
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: realistic right-hand art unavailable; using existing laptop route.");
+                return false;
+            }
+            if (povTexture.width != 1672 || povTexture.height != 941)
+            {
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: POV NPOT texture dimensions changed; use NPOT None.");
+                return false;
+            }
 
             try { manifest = JsonUtility.FromJson<HandManifest>(json.text); }
             catch (Exception error)
@@ -103,22 +114,35 @@ namespace Rokas.Presentation
                 return false;
             }
 
-            if (manifest == null || manifest.frames == null || manifest.frames.Length < 2 ||
-                manifest.fps < 1f || manifest.fps > 120f) return false;
+            if (manifest == null || manifest.frames == null || manifest.frames.Length < 36 ||
+                manifest.handedness != "right" || manifest.fps < 1f || manifest.fps > 120f)
+            {
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: invalid right-only art manifest.");
+                return false;
+            }
 
             frames = new Texture2D[manifest.frames.Length];
             for (int i = 0; i < frames.Length; i++)
             {
                 HandFrame frame = manifest.frames[i];
-                if (frame == null || string.IsNullOrEmpty(frame.resource)) return false;
+                if (frame == null || string.IsNullOrEmpty(frame.resource))
+                {
+                    Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: invalid frame definition #" + i);
+                    return false;
+                }
                 frames[i] = Resources.Load<Texture2D>(frame.resource);
                 if (!frames[i] || frame.w <= 0f || frame.h <= 0f ||
                     frames[i].width != Mathf.RoundToInt(frame.w) ||
-                    frames[i].height != Mathf.RoundToInt(frame.h)) return false;
+                    frames[i].height != Mathf.RoundToInt(frame.h))
+                {
+                    Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: frame missing or resized by importer: " + frame.resource);
+                    return false;
+                }
             }
 
             try
             {
+                powerTimeline = new LaptopPowerTimeline();
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
@@ -202,6 +226,8 @@ namespace Rokas.Presentation
             while (active && elapsed < FinishTime)
             {
                 RenderAt(elapsed);
+                if (powerTimeline != null && powerTimeline.Advance(elapsed))
+                    powerClick?.Invoke();
                 yield return null;
                 elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
             }
@@ -220,7 +246,7 @@ namespace Rokas.Presentation
 
             if (t < POVStart) CurrentPhase = Phase.Approach;
             else if (t < POVEnd) CurrentPhase = Phase.POVTransition;
-            else if (t < PressTime) CurrentPhase = Phase.HandsInteraction;
+            else if (t < LaptopPowerTimeline.ContactTime) CurrentPhase = Phase.HandsInteraction;
             else CurrentPhase = Phase.PowerOn;
 
             bool showHands = t >= HandsStart && t <= HandsEnd;
@@ -244,8 +270,12 @@ namespace Rokas.Presentation
             if (wake)
             {
                 Color tint = wake.color;
-                tint.a = t < PressTime ? 0f : .62f *
-                    Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(PressTime, 4.55f, t));
+                var wakeStage = LaptopPowerTimeline.StageAt(t);
+                if (wakeStage == LaptopPowerTimeline.WakeStage.Off) tint.a = 0f;
+                else if (wakeStage == LaptopPowerTimeline.WakeStage.Glow)
+                    tint.a = Mathf.Lerp(.12f, .31f,
+                        Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(LaptopPowerTimeline.ContactTime, LaptopPowerTimeline.GlowEnd, t)));
+                else tint.a = .17f; // subtle powered-on LCD backlight, not dead black
                 wake.color = tint;
             }
         }
@@ -266,6 +296,7 @@ namespace Rokas.Presentation
         {
             if (!active) return;
             active = false; // Guard callbacks and out-of-order coroutine completion.
+            powerTimeline?.Cancel();
             CurrentPhase = shouldOpenLaptop ? Phase.UIOpen : Phase.Idle;
             if (running != null && owner) owner.StopCoroutine(running);
             running = null;
@@ -290,6 +321,7 @@ namespace Rokas.Presentation
             wake = null;
             povGroup = null;
             shownFrame = -1;
+            powerTimeline = null;
         }
     }
 
