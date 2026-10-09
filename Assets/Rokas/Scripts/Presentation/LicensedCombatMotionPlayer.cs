@@ -11,9 +11,23 @@ namespace Rokas.Presentation
         private readonly Animation animation;
         private readonly AnimationClip fallbackIdle;
         private readonly List<string> aliases = new List<string>();
+        private readonly List<string> registeredAliases = new List<string>();
+        private readonly Dictionary<string, RegisteredClip> registeredClips =
+            new Dictionary<string, RegisteredClip>(StringComparer.Ordinal);
         private readonly HashSet<string> consumedContacts = new HashSet<string>(StringComparer.Ordinal);
         private readonly Queue<string> contactHistory = new Queue<string>();
-        private float[] blendIn, blendOut;
+        private float[] blendIn = Array.Empty<float>(), blendOut = Array.Empty<float>();
+        private string[] segmentAliases = Array.Empty<string>();
+
+        private readonly struct RegisteredClip
+        {
+            public readonly AnimationClip source, runtime;
+            public RegisteredClip(AnimationClip source, AnimationClip runtime)
+            {
+                this.source = source;
+                this.runtime = runtime;
+            }
+        }
         private string actionId, anticipationAlias;
         private double clockSeconds;
         private float clock;
@@ -48,8 +62,7 @@ namespace Rokas.Presentation
             Profile = profile;
             actionId = id;
             anticipationAlias = alias;
-            blendIn = new float[profile.segments.Length];
-            blendOut = new float[profile.segments.Length];
+            EnsureSegmentCapacity(profile.segments.Length);
             for (int i = 0; i < profile.segments.Length; i++)
             {
                 LicensedMotionSegment s = profile.segments[i];
@@ -70,7 +83,8 @@ namespace Rokas.Presentation
             Register(profile.anticipation, alias);
             Register(profile.baseIdle ?? fallbackIdle, "Licensed_BaseIdle");
             for (int i = 0; i < profile.segments.Length; i++)
-                Register(profile.segments[i].clip, "Licensed_Segment_" + i);
+                Register(profile.segments[i].clip, segmentAliases[i]);
+            RetireUnusedRegistrations();
             Sample();
         }
 
@@ -80,14 +94,56 @@ namespace Rokas.Presentation
             if (Active && !contacted) actionId = id;
         }
 
+        private void EnsureSegmentCapacity(int count)
+        {
+            if (blendIn.Length >= count) return;
+            blendIn = new float[count];
+            blendOut = new float[count];
+            int previousCount = segmentAliases.Length;
+            Array.Resize(ref segmentAliases, count);
+            for (int i = previousCount; i < count; i++)
+                segmentAliases[i] = "Licensed_Segment_" + i;
+        }
+
         private void Register(AnimationClip clip, string alias)
         {
             if (clip == null) return;
             if (!clip.legacy)
                 throw new InvalidOperationException("Licensed combat clip must be Legacy: " + clip.name);
-            animation.AddClip(clip, alias);
-            animation[alias].wrapMode = WrapMode.ClampForever;
-            aliases.Add(alias);
+            AnimationClip current = animation.GetClip(alias);
+            AnimationState state = animation[alias];
+            bool known = registeredClips.TryGetValue(alias, out RegisteredClip registration);
+            // AddClip creates a named runtime copy. Comparing GetClip to the source
+            // would rebuild that copy on every Begin instead of recognizing it.
+            if (!known || registration.source != clip || current == null ||
+                registration.runtime != current || state == null)
+            {
+                animation.AddClip(clip, alias);
+                current = animation.GetClip(alias);
+                state = animation[alias];
+                if (current == null || state == null)
+                    throw new InvalidOperationException("Licensed combat clip registration failed: " + alias);
+                registeredClips[alias] = new RegisteredClip(clip, current);
+                if (!known) registeredAliases.Add(alias);
+            }
+            // Reassert the sampling contract even if an external writer changed it.
+            state.wrapMode = WrapMode.ClampForever;
+            if (!aliases.Contains(alias)) aliases.Add(alias);
+        }
+
+        private void RetireUnusedRegistrations()
+        {
+            for (int i = registeredAliases.Count - 1; i >= 0; i--)
+            {
+                string alias = registeredAliases[i];
+                if (aliases.Contains(alias)) continue;
+                RegisteredClip registration = registeredClips[alias];
+                // Only remove our own old copy; an externally replaced alias is not ours.
+                if (animation.GetClip(alias) == registration.runtime)
+                    animation.RemoveClip(alias);
+                registeredClips.Remove(alias);
+                registeredAliases.RemoveAt(i);
+            }
         }
 
         public bool ConfirmContact(string id)
@@ -131,7 +187,7 @@ namespace Rokas.Presentation
                 for (int i = 0; i < Profile.segments.Length; i++)
                 {
                     LicensedMotionSegment segment = Profile.segments[i];
-                    Enable("Licensed_Segment_" + i, segment.SampleTime(clock),
+                    Enable(segmentAliases[i], segment.SampleTime(clock),
                         segment.Weight(clock, blendIn[i], blendOut[i]) / normalization);
                 }
                 AnimationClip idle = Profile.baseIdle ?? fallbackIdle;
