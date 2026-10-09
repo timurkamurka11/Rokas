@@ -18,8 +18,8 @@ namespace Rokas.Tests
         {
             if (!Resources.Load<Texture2D>(
                     "LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF") ||
-                !Resources.Load<TextAsset>("LaptopCinematic/hands_manifest"))
-                Assert.Ignore("First install the separate ROKAS Laptop Cinematic Hands Ready asset archive.");
+                !Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest"))
+                Assert.Ignore("First install new right-hand Blender art resources; old PSX frames are not acceptable.");
 
             directory = Path.Combine(Path.GetTempPath(), prefix + Guid.NewGuid().ToString("N"));
             root = new GameObject("LaptopInstalledCinematicFixture");
@@ -54,7 +54,7 @@ namespace Rokas.Tests
             PressLaptop();
             Assert.That(boot.View.LaptopOpen, Is.False,
                 "Repeated clicks during the cinematic must not open an early duplicate laptop panel.");
-            yield return new WaitForSecondsRealtime(3.8f);
+            yield return new WaitForSecondsRealtime(2.8f);
             boot.View.Escape();
             Assert.That(boot.View.LaptopOpen, Is.True, "ESC must end at the existing Laptop UI.");
             Assert.That(Find<RectTransform>("YomiLaptop"), Is.Not.Null);
@@ -71,7 +71,7 @@ namespace Rokas.Tests
             yield return null;
             PressLaptop();
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null);
-            yield return new WaitForSecondsRealtime(6f);
+            yield return new WaitForSecondsRealtime(4.1f);
             Assert.That(boot.View.LaptopOpen, Is.True);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
             boot.View.Escape();
