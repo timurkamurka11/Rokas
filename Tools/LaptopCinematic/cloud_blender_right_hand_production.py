@@ -101,7 +101,21 @@ def create_scene(a):
     if not hand:raise ValueError("Expected skinned high quality right-hand mesh")
     for o in meshes:
         if o != hand:o.hide_render=True
-    skin=mat("Skin_Cinematic_NaturalWarm",(.64,.397,.315),.53,.115)
+    skin=mat("Skin_Cinematic_NaturalWarm",(.57,.355,.286),.66,.125)
+    # Natural skin color breakup: low-frequency blotches and subtle joint redness.
+    nodes=skin.node_tree.nodes
+    links=skin.node_tree.links
+    skin_bsdf=next(n for n in nodes if n.type=="BSDF_PRINCIPLED")
+    pores=nodes.new("ShaderNodeTexNoise")
+    pores.inputs["Scale"].default_value=36.
+    pores.inputs["Detail"].default_value=3.
+    palette=nodes.new("ShaderNodeValToRGB")
+    palette.color_ramp.elements[0].position=.23
+    palette.color_ramp.elements[0].color=(.42,.215,.17,1)
+    palette.color_ramp.elements[1].position=.77
+    palette.color_ramp.elements[1].color=(.71,.45,.37,1)
+    links.new(pores.outputs["Fac"],palette.inputs["Fac"])
+    links.new(palette.outputs["Color"],skin_bsdf.inputs["Base Color"])
     hand.data.materials.clear();hand.data.materials.append(skin)
     # Force mildly animated real finger joints, no frame-to-frame morph cards.
     for bone in rig.pose.bones:
@@ -151,13 +165,13 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     reach=smooth(t/1.30)
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
-    tip_x=1415.+(POWER_X-1415.)*reach + 135.*withdraw
-    tip_y=1080.+(POWER_Y-1080.)*reach + 175.*withdraw + 3.*press
+    tip_x=1415.+(POWER_X-40.-1415.)*reach + 135.*withdraw
+    tip_y=1080.+(POWER_Y-50.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
-    wrist_x=tip_x+165.
-    wrist_y=tip_y+160.
+    wrist_x=tip_x+140.
+    wrist_y=tip_y+95.
     # Wrist tucking rotates the actual glTF armature and leaves the finger mesh skinned.
     base=rig.pose.bones["hand_r"]
     direction=rig.data.bones["index_03_r"].tail_local-rig.data.bones["hand_r"].head_local
@@ -171,7 +185,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
         if bone.name.startswith("index_"):
             bone.rotation_euler=(0,0,(-.11 if "_01_" in bone.name else -.22)*press)
         elif bone.name.startswith(("middle_","ring_","pinky_")):
-            bone.rotation_euler=(0,0, .06 + .04*reach)
+            bone.rotation_euler=(0,0, .48 + .26*reach)
         elif bone.name.startswith("thumb_"):
             bone.rotation_euler=(0,0,.055)
         else:
