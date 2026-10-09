@@ -38,7 +38,16 @@ def main():
     if not rigs:
         raise ValueError("No armature: source not suitable for articulated finger contact")
 
-    points = [o.matrix_world @ Vector(corner) for o in meshes for corner in o.bound_box]
+    # Source contains an auxiliary 42-vertex Icosphere about 2m across.
+    # Framing all meshes hides the real ~0.2m anatomical hand.
+    render_meshes = [o for o in meshes if len(o.data.vertices) >= 1000]
+    if not render_meshes:
+        render_meshes = meshes
+    for o in meshes:
+        if o not in render_meshes:
+            o.hide_render = True
+
+    points = [o.matrix_world @ Vector(corner) for o in render_meshes for corner in o.bound_box]
     lo = Vector([min(p[i] for p in points) for i in range(3)])
     hi = Vector([max(p[i] for p in points) for i in range(3)])
     center = (lo + hi) * .5
@@ -50,7 +59,7 @@ def main():
         "input":os.path.basename(a.input),
         "license_claim":"CC0 - source page https://www.innerscene.com/tools/library/3d-parts/posable-anatomical-right-hand-f6098b4f",
         "blender":bpy.app.version_string,
-        "meshes": [{"name":o.name,"vertices":len(o.data.vertices),"polygons":len(o.data.polygons)} for o in meshes],
+        "meshes": [{"name":o.name,"vertices":len(o.data.vertices),"polygons":len(o.data.polygons), "rendered":o in render_meshes} for o in meshes],
         "armatures":armatures,
         "bounds": {"min":list(lo),"max":list(hi)},
         "status":"IMPORTED_ONLY_NOT_ANIMATED"
