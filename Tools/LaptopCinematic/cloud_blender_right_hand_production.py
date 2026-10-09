@@ -139,6 +139,7 @@ def create_scene(a):
     scene.view_settings.view_transform="AgX"
     scene.render.filepath=os.path.join(a.output,"HandsRight_0000.png")
     scene.render.image_settings.compression=35
+    scene.world=bpy.data.worlds.new("ROKAS_WarmNightEnvironment")
     scene.world.color=(.12,.12,.12)
     scene.camera.data.lens=45
     return rig,hand,sleeve_mesh,cuff_mesh,scene
