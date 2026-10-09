@@ -156,8 +156,8 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
-    wrist_x=tip_x+213.
-    wrist_y=tip_y+215.
+    wrist_x=tip_x+165.
+    wrist_y=tip_y+160.
     # Wrist tucking rotates the actual glTF armature and leaves the finger mesh skinned.
     base=rig.pose.bones["hand_r"]
     direction=rig.data.bones["index_03_r"].tail_local-rig.data.bones["hand_r"].head_local
@@ -192,7 +192,12 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     cf_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
     cf_obj.scale=(.98,.98,.98)
     # Non-cuff sleeve and cuff overlap slightly, which creates a fabric seam.
+    def world_pixel(point):
+        return [round((point.x/(FRAME_LENGTH*W/H)+.5)*W,2), round((.5-point.y/FRAME_LENGTH)*H,2)]
+    after_tip=rig.matrix_world @ rig.pose.bones["index_03_r"].tail
     return {"index":index,"tip_px":[tip_x,tip_y],
+            "actual_bone_tip_px":world_pixel(after_tip),
+            "actual_bone_wrist_px":world_pixel(wrist),
             "contact_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
             "press":round(press,3),
             "wrist_px":[wrist_x,wrist_y]}
