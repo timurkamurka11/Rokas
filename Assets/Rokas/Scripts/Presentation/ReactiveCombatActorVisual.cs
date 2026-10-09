@@ -1040,6 +1040,9 @@ namespace Rokas.Presentation
             if (licensedMotion != null && licensedMotion.Active)
             {
                 if (nativeEntryBlend) nativeEntryElapsed += step;
+                // Remove the previous IK correction before fresh Native FK owns the bones.
+                // Restoring it afterward would overwrite this frame with an older sample.
+                twoHandGrip?.RestoreSample();
                 licensedMotion.Tick(step);
                 sampledLicensedPose = true;
                 if (!licensedMotion.Active) PlayIdle();
@@ -1096,6 +1099,7 @@ namespace Rokas.Presentation
         {
             if (licensedMotion != null && licensedMotion.Active)
             {
+                twoHandGrip?.RestoreSample();
                 licensedMotion.Sample();
                 sampledLicensedPose = true;
                 ApplyLicensedSample();

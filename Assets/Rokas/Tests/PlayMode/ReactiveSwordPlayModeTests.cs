@@ -162,6 +162,8 @@ namespace Rokas.Tests
                 bool sourceSupportHeld = false;
                 foreach (var pose in poses)
                 {
+                    bool priorSupportHeld = sourceSupportHeld;
+                    float previousClosingDistance = float.PositiveInfinity;
                     pose();
                     if (actor.ActiveLicensedProfile != null)
                         sourceSupportHeld = actor.ActiveLicensedProfile.weapon == LicensedWeaponKind.TwoHandedSword;
@@ -171,9 +173,42 @@ namespace Rokas.Tests
                         actor.TickPresentation(i < 4 ? .02f : .12f);
                         if (native)
                         {
-                            bool twoHands = actor.ActiveLicensedProfile != null ? sourceSupportHeld :
-                                actor.CurrentPose == "Idle" ? sourceSupportHeld : sourceSupportHeld || i >= 3;
-                            AssertNativePalmContact(actor, twoHands, actor.CurrentPose + " tick " + i);
+                            bool twoHands = actor.ActiveLicensedProfile != null
+                                ? actor.ActiveLicensedProfile.weapon == LicensedWeaponKind.TwoHandedSword
+                                : actor.CurrentPose == "Idle"
+                                    ? actor.ConfirmedLicensedProfile != null &&
+                                      actor.ConfirmedLicensedProfile.weapon == LicensedWeaponKind.TwoHandedSword
+                                    : sourceSupportHeld || i >= 3;
+                            // Playing a Heavy pose alone does not commit the persistent stance.
+                            // The final EnterBattle returns to the actual confirmed Normal Idle.
+                            Assert.That(actor.ConfirmedCombatStance, Is.EqualTo(CombatIdleStance.Normal));
+                            bool transferringGrip = twoHands && actor.SwordTransformOwner ==
+                                ReactiveCombatActorVisual.SwordTransformAuthority.ExitBlend;
+                            bool closingSupport = transferringGrip && !priorSupportHeld;
+                            AssertNativePalmContact(actor, twoHands && !transferringGrip, actor.CurrentPose + " tick " + i);
+                            if (transferringGrip && priorSupportHeld)
+                            {
+                                Vector3 primaryGrip = actor.ModelRoot.InverseTransformPoint(actor.WeaponAttachment.CurrentWeapon.transform.position);
+                                Vector3 supportGrip = actor.ModelRoot.InverseTransformPoint(grip.position);
+                                Vector3 palm = actor.ModelRoot.InverseTransformPoint(left.TransformPoint(Vector3.up * .0329871997f));
+                                Vector3 segment = supportGrip - primaryGrip;
+                                float t = segment.sqrMagnitude < 1e-12f ? 0f : Vector3.Dot(palm - primaryGrip, segment) / segment.sqrMagnitude;
+                                Assert.That(t, Is.InRange(-.001f, 1.001f), "Support transfer stays between the two actual hilt grips.");
+                                Assert.That(Vector3.Distance(palm, primaryGrip + segment * Mathf.Clamp01(t)), Is.LessThan(.001f),
+                                    $"Source handoff stays attached to the actual hilt: {actor.CurrentPose} tick{i}.");
+                                TestContext.WriteLine($"Hilt transfer {actor.CurrentPose} tick{i}: segmentT={t:R}, hiltLength={segment.magnitude:R}");
+                            }
+                            if (closingSupport)
+                            {
+                                float distance = Vector3.Distance(actor.ModelRoot.InverseTransformPoint(
+                                    left.TransformPoint(Vector3.up * .0329871997f)),
+                                    actor.ModelRoot.InverseTransformPoint(grip.position));
+                                Assert.That(distance, Is.LessThanOrEqualTo(previousClosingDistance + .001f),
+                                    "An actual one-hand to two-hand entry closes continuously instead of requiring instantaneous support contact.");
+                                previousClosingDistance = distance;
+                                TestContext.WriteLine($"Support entry {actor.CurrentPose} tick{i}: gap={distance:R}, owner={actor.SwordTransformOwner}");
+                            }
+                            sourceSupportHeld = twoHands;
                         }
                         else Assert.That(Vector3.Distance(left.TransformPoint(new Vector3(0f, .033f, 0f)),
                             grip.position), Is.LessThan(.025f), actor.CurrentPose + " tick " + i);
