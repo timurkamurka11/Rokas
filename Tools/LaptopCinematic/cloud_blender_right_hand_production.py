@@ -63,12 +63,13 @@ def mat(name,col,rough=.7,subsurface=0.,cloth=False):
         nt.links.new(bump.outputs["Normal"],bsdf.inputs["Normal"])
     return m
 
-def sleeve_geometry(mesh, wrist):
+def sleeve_geometry(mesh, wrist, cuff=False):
     # Four tapered cloth rings: skin cuff hugs the wrist; forearm fabric loosens
     # toward off-screen elbow. Add independent folds with low-frequency harmonics.
     axis=Vector((.56,-.83,0)).normalized()
     across=Vector((axis.y,-axis.x,0)).normalized()
-    rings=[(0.,.029),(.048,.036),(.125,.057),(.23,.078),(.36,.094)]
+    rings=([(0.,.029),(.048,.036),(.125,.057),(.23,.078),(.36,.094)]
+           if not cuff else [(0.,.027),(.018,.028),(.038,.035)])
     N=32; verts=[]; faces=[]
     for ri,(distance,radius) in enumerate(rings):
         c=wrist + axis*distance
@@ -166,7 +167,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
     tip_x=1415.+(POWER_X-40.-1415.)*reach + 135.*withdraw
-    tip_y=1080.+(POWER_Y+20.-1080.)*reach + 175.*withdraw + 3.*press
+    tip_y=1080.+(POWER_Y-90.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -199,10 +200,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
     # Cloth geometry has real tube cross section, nonuniform diameter and folds.
-    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,.135)))
+    sleeve_geometry(sleeve_mesh,wrist + Vector((0,0,.45-wrist.z)))
     # Narrow rib-knit cuff at hand–sleeve junction, not a flat straight sleeve cap.
     # Make only first two rings from the same tapered profile for smoother join.
-    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.145)))
+    sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.46-wrist.z)), cuff=True)
     cf_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
     cf_obj.scale=(.98,.98,.98)
     # Non-cuff sleeve and cuff overlap slightly, which creates a fabric seam.
