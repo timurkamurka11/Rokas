@@ -38,6 +38,7 @@ namespace Rokas.Presentation
         private readonly LaptopView laptop;
         private readonly MessagesNotificationView messageNotifications;
         private readonly HubDialogueController hubDialogue;
+        private readonly LaptopCinematicSequence laptopCinematic;
         private RunPhase phase;
         private string panel;
         private bool transition;
@@ -135,7 +136,7 @@ namespace Rokas.Presentation
                 OpenHubMenu);
             home = new HomeView(
                 ui, assets, session, audio,
-                OpenPanel, Act, Travel, ToastShort, OpenHubDialogue,
+                OpenFromHomeLaptopHotspot, Act, Travel, ToastShort, OpenHubDialogue,
                 () => MoveHomeLocation(HomeLocation.Hallway));
             hallway = new HallwayView(
                 ui, assets, session, audio, Act,
@@ -147,6 +148,9 @@ namespace Rokas.Presentation
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,
                 owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
+            laptopCinematic = new LaptopCinematicSequence(ui, owner, transitions, background,
+                () => { transition = false; OpenPanel("laptop"); },
+                () => { transition = false; SetSceneInteractionsEnabled(true); });
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -389,6 +393,7 @@ namespace Rokas.Presentation
 
         private void RebuildScene()
         {
+            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
             if (hubDialogue != null && hubDialogue.IsOpen)
                 hubDialogue.Close();
             ui.Clear(scene);
@@ -436,6 +441,23 @@ namespace Rokas.Presentation
         }
 
         private void OnHit(CombatHit hit) { mission.OnHit(hit); }
+
+        private void OpenFromHomeLaptopHotspot(string value)
+        {
+            if (value != "laptop") { OpenPanel(value); return; }
+            if (transition || storageBlocked || !string.IsNullOrEmpty(panel) ||
+                (hubDialogue != null && hubDialogue.IsOpen) ||
+                !IsHomeLocation(phase) || homeSubLocation != HomeLocation.MainRoom)
+                return;
+            if (laptopCinematic != null && laptopCinematic.TryStart())
+            {
+                transition = true;
+                SetSceneInteractionsEnabled(false);
+                return;
+            }
+            // Unavailable or incomplete production art: retain the old laptop UX.
+            OpenPanel("laptop");
+        }
 
         private void OpenPanel(string value)
         {
@@ -523,6 +545,11 @@ namespace Rokas.Presentation
 
         public void Escape()
         {
+            if (laptopCinematic != null && laptopCinematic.IsPlaying)
+            {
+                laptopCinematic.SkipToLaptop();
+                return;
+            }
             if (transition || storageBlocked) return;
             if (hubDialogue != null && hubDialogue.IsOpen)
             {
@@ -635,6 +662,7 @@ namespace Rokas.Presentation
         public void ShowStorageBlock(string message)
         {
             storageBlocked = true;
+            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
             ui.Clear(transitions);
             ui.Box(transitions, "StorageBlock", 0, 0, 1920, 1080, UiKit.Ink, true);
             ui.Label(transitions, "StorageTitle", "РџСЂРѕС„РёР»СЊ Р·Р°С‰РёС‰С‘РЅ", 360, 310, 1200, 110, 48, UiKit.Paper, true);
@@ -644,6 +672,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
             mission.ClearReferences();
             effects.Dispose();
             hubDialogue?.Dispose();
