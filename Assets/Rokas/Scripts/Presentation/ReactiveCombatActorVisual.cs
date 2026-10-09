@@ -314,6 +314,9 @@ namespace Rokas.Presentation
                             gripFingers[i] = bone;
             }
             confirmedCombatStance = CombatIdleStance.Normal;
+            // Register the normal native bank before interactive entrance/first contact.
+            // Prepare performs no Sample/Play/Tick and preserves the rig and contact history.
+            licensedMotion.Prepare(GetLicensedProfile(false), "Licensed_Anticipation");
             PlayIdle();
         }
 

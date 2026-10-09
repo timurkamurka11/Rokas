@@ -62,6 +62,23 @@ namespace Rokas.Presentation
             Profile = profile;
             actionId = id;
             anticipationAlias = alias;
+            RegisterProfileClips(profile, alias);
+            Sample();
+        }
+
+        // Prepare only the inactive default bank. Registration does not sample or own a pose.
+        public bool Prepare(LicensedCombatMotionProfile profile, string anticipationAlias)
+        {
+            if (Active || profile == null) return false;
+            RegisterProfileClips(profile, anticipationAlias);
+            // AddClip can leave a new state's default weight nonzero. Disable only
+            // owned aliases, preserving contact history and all unrelated states.
+            Cancel();
+            return true;
+        }
+
+        private void RegisterProfileClips(LicensedCombatMotionProfile profile, string alias)
+        {
             EnsureSegmentCapacity(profile.segments.Length);
             for (int i = 0; i < profile.segments.Length; i++)
             {
@@ -85,7 +102,6 @@ namespace Rokas.Presentation
             for (int i = 0; i < profile.segments.Length; i++)
                 Register(profile.segments[i].clip, segmentAliases[i]);
             RetireUnusedRegistrations();
-            Sample();
         }
 
         // A preplayed presentation may acquire its domain ID after approach or release.
