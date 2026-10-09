@@ -44,9 +44,9 @@ FBX/GLB/Blend, bare hands texture and UVs into
 `ApartmentNight.png`; intentional background blur is untouched.
 The glove variant is not installed as the final style.
 
-### Transparent hands sequence requirement (not yet produced)
+### Transparent hands sequence (rendered offline; not yet imported or verified in Unity)
 
-With Blender or a real rig-aware render environment:
+The following production instructions remain available for further polish with Blender or another rig-aware render environment:
 1. Use `arms_rig.blend` / FBX (hand rig, 52 joints; includes push/relax samples).
 2. Adapt the rig to an illustrated POV with **bare fingers** and **loose matte
    graphite/navy sleeves**. Author left brace, right index reach, calibrated
@@ -63,8 +63,7 @@ python Tools/LaptopCinematic/install_assets.py --pack "ROKAS_Laptop_Cinematic_Cl
 This crops transparent frames losslessly and creates
 `Assets/Rokas/Resources/LaptopCinematic/hands_manifest.json` with exact
 per-frame crop/pivot placement. Maintain ordered `0000.png` naming. Budget
-about 83 frames for `2.0s..5.45s` at 24fps. Final frame count, animation
-timing, alpha/lighting and Blender sleeve geometry are **still pending**.
+about 83 frames for `2.0s..5.45s` at 24fps. An 84-frame, 24fps transparent RGBA sequence was rendered offline with a glTF skinning + VTK pipeline, and packed into the separately delivered `ROKAS_Laptop_Cinematic_Hands_Ready_20261009.zip`. Frame rectangles are losslessly cropped and recorded in `hands_manifest.json`; it is **not committed into GitHub**. This is a first-pass animation: Blender-quality cloth modeling, definitive Power contact accuracy and Unity visual proof remain pending.
 
 ## Unity verification gates (NOT EXECUTED in this cloud runtime)
 
@@ -89,3 +88,15 @@ https://drillimpact.itch.io/psx-first-person-arms-free
 The provided archive does not carry its own LICENSE text, so this is the
 publisher's explicit publicly stated license. Keep this attribution note as
 provenance; the original source files are not authored by ROKAS.
+
+## 2026-10-09 asset follow-up (packaged outside GitHub)
+
+Chat attachment: `ROKAS_Laptop_Cinematic_Hands_Ready_20261009.zip` (visual resources, 84 cropped RGBA frames, 24fps manifest, screen calibration and Python installer). All frames were generated from the licensed glTF hand rig with actual bone weights and selected animation channels using an offline VTK pipeline, plus procedurally drawn non-tactical matte dark sleeves. The hands are intentionally preliminary low-poly and need final visual approval. The approved POV SHA-256 remains `567d9a6006af6bc8dc4009abf89400913859525093f91de5f0d141d695b39ac3`.
+
+After checking out the PR feature branch, unpack the separate chat asset ZIP and execute:
+
+```powershell
+python INSTALL_UNITY_READY.py --project "D:\\Rokas\\Rokas-FULL-R11-FINISHED-UI COPY"
+```
+
+The installer refuses to overwrite differing existing resources unless `--force` is supplied, and requires Pillow. The pack also includes a 5.7s **offline** preview (not an in-game recording). Python smoke: 87 resources copied into test folder; 6 RGBA reconstruction hashes matched pixel-for-pixel. No Unity Editor was available in the cloud; in-game end-to-end validation remains unexecuted.
