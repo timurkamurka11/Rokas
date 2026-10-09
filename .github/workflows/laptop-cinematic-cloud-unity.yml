@@ -1,0 +1,90 @@
+name: ROKAS Laptop Cinematic Cloud Unity Verification
+
+on:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: laptop-cinematic-cloud-unity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editmode:
+    name: Compile and Home Overlay EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: laptop-cinematic-editmode-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Compile real presentation assemblies and run EditMode
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.HomeFinishedUiCleanupTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Cinematic Unity EditMode
+      - name: Save test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laptop-cinematic-editmode-proof
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+  playmode:
+    name: Laptop cinematic fallback PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: laptop-cinematic-playmode-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+      - name: Test actual Home hotspot and original Laptop UI fallback
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopCinematicFallbackPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Cinematic Unity PlayMode
+      - name: Save test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laptop-cinematic-playmode-proof
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
