@@ -131,12 +131,37 @@ namespace Rokas.Tests
                 new object[] { start + .31f, 0f, true });
             Color travelled = (Color)glintMethod.Invoke(outline,
                 new object[] { start, 1.5f, true });
-            Assert.That(peak.a, Is.GreaterThan(.90f),
-                "A bright near-white head must be visible above the saturated gold core.");
-            Assert.That(peak.g, Is.GreaterThan(.95f));
+            Assert.That(peak.a, Is.InRange(.15f, .30f),
+                "Specular highlight should be warm and translucent, not a blinding white stripe.");
+            Assert.That(peak.g, Is.InRange(.85f, .94f));
             Assert.That(away.a, Is.LessThan(.001f));
             Assert.That(travelled.a, Is.LessThan(.001f),
                 "The bright spot must leave the original location instead of blinking in place.");
+
+            // Follow the actual authored first corner: the amber emphasis
+            // must rise as the sweep reaches it, and fade between corners.
+            FieldInfo cornersField = outline.GetType().GetField("cornerPositions", Private);
+            MethodInfo cornerMethod = outline.GetType().GetMethod("LivingCornerPulse", Private);
+            Assert.That(cornersField, Is.Not.Null);
+            Assert.That(cornerMethod, Is.Not.Null);
+            var corners = cornersField.GetValue(outline) as float[];
+            Assert.That(corners, Is.Not.Null);
+            Assert.That(corners.Length, Is.GreaterThanOrEqualTo(5));
+            float speed = (float)cursorMethod.Invoke(outline, new object[] { 1f }) - start;
+            Assert.That(speed, Is.GreaterThan(.1f));
+            float arrivingTime = (1f - start) / speed;
+            float atCorner = (float)cornerMethod.Invoke(outline,
+                new object[] { corners[0], arrivingTime });
+            float awayFromCorner = (float)cornerMethod.Invoke(outline,
+                new object[] { corners[0] + .24f, arrivingTime });
+            Assert.That(atCorner, Is.GreaterThan(.95f),
+                "Golden halo must bloom softly when the moving sweep reaches a corner.");
+            Assert.That(awayFromCorner, Is.LessThan(.05f),
+                "Corner glow should stay localized, not illuminate the whole outline.");
+            Color gentleCorner = (Color)glintMethod.Invoke(outline,
+                new object[] { corners[0], arrivingTime, false });
+            Assert.That(gentleCorner.a, Is.InRange(.23f, .36f),
+                "Warm corner pulse is stronger than idle but remains translucent.");
         }
 
         private static bool Living(Component outline)
