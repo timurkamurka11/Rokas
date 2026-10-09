@@ -46,6 +46,8 @@ namespace Rokas.Tests
                 AssertLivingColorChanges(laptop);
                 AssertMovingGlint(door);
                 AssertMovingGlint(laptop);
+                AssertDimensionalBevel(door);
+                AssertDimensionalBevel(laptop);
 
                 Vector2[] doorPoints = Points(door);
                 Vector2[] laptopPoints = Points(laptop);
@@ -131,9 +133,9 @@ namespace Rokas.Tests
                 new object[] { start + .31f, 0f, true });
             Color travelled = (Color)glintMethod.Invoke(outline,
                 new object[] { start, 1.5f, true });
-            Assert.That(peak.a, Is.InRange(.15f, .30f),
+            Assert.That(peak.a, Is.InRange(.28f, .42f),
                 "Specular highlight should be warm and translucent, not a blinding white stripe.");
-            Assert.That(peak.g, Is.InRange(.85f, .94f));
+            Assert.That(peak.g, Is.InRange(.89f, .95f));
             Assert.That(away.a, Is.LessThan(.001f));
             Assert.That(travelled.a, Is.LessThan(.001f),
                 "The bright spot must leave the original location instead of blinking in place.");
@@ -160,8 +162,29 @@ namespace Rokas.Tests
                 "Corner glow should stay localized, not illuminate the whole outline.");
             Color gentleCorner = (Color)glintMethod.Invoke(outline,
                 new object[] { corners[0], arrivingTime, false });
-            Assert.That(gentleCorner.a, Is.InRange(.23f, .36f),
+            Assert.That(gentleCorner.a, Is.InRange(.44f, .61f),
                 "Warm corner pulse is stronger than idle but remains translucent.");
+        }
+
+        private static void AssertDimensionalBevel(Component outline)
+        {
+            MethodInfo bevel = outline.GetType().GetMethod("LivingBevelColor", Private);
+            Assert.That(bevel, Is.Not.Null,
+                "Both interaction outlines must render a two-sided metallic rim.");
+
+            Color brightA = (Color)bevel.Invoke(outline,
+                new object[] { .31f, 0f, true });
+            Color brightB = (Color)bevel.Invoke(outline,
+                new object[] { .31f, .75f, true });
+            Color shade = (Color)bevel.Invoke(outline,
+                new object[] { .31f, 0f, false });
+            Assert.That(brightA.g, Is.GreaterThan(shade.g + .5f),
+                "Gold edges should have a distinct champagne-lit and amber-shaded side.");
+            Assert.That(brightA.a, Is.InRange(.18f, .38f),
+                "Metallic bevel stays translucent instead of becoming a white bar.");
+            Assert.That(shade.a, Is.InRange(.10f, .19f));
+            Assert.That(Mathf.Abs(brightA.a - brightB.a), Is.GreaterThan(.02f),
+                "Subtle flowing light should animate even between corner pulses.");
         }
 
         private static bool Living(Component outline)
