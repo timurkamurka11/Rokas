@@ -42,6 +42,7 @@ namespace Rokas.Presentation
         private RunPhase phase;
         private string panel;
         private bool transition;
+        private bool cinematicLaptopHandoff;
         private bool storageBlocked;
         private float toastTime;
         private int laptopOpenedFrame = -1;
@@ -149,8 +150,15 @@ namespace Rokas.Presentation
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,
                 owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
             laptopCinematic = new LaptopCinematicSequence(ui, owner, transitions, background,
-                () => { transition = false; OpenPanel("laptop"); },
-                () => { transition = false; SetSceneInteractionsEnabled(true); });
+                () =>
+                {
+                    transition = false;
+                    cinematicLaptopHandoff = true;
+                    try { OpenPanel("laptop"); }
+                    finally { cinematicLaptopHandoff = false; }
+                },
+                () => { transition = false; SetSceneInteractionsEnabled(true); },
+                () => audio.PlayLaptopPowerClick());
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -471,6 +479,7 @@ namespace Rokas.Presentation
             {
                 if (IsHomeLocation(phase) && homeSubLocation != HomeLocation.MainRoom) return;
                 laptop.Reset();
+                if (cinematicLaptopHandoff) laptop.RequestCinematicPostBootHold();
                 laptopOpenedFrame = Time.frameCount;
             }
             mission.CancelInput();
