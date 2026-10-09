@@ -70,8 +70,7 @@ namespace Rokas.Tests
             Press("ReactiveBasic");
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerExecution, 3f);
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
-            yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerCommand &&
-                boot.View.ReactivePresentationReady && !boot.ReactivePresentationHeld, 18f);
+            yield return NativeCombatFixtureObservables.WaitForFirstNormalRoundReady(boot);
             Assert.That(combat.HunterAp, Is.GreaterThanOrEqualTo(5));
             Assert.That(combat.GetActorState("E1").Hp, Is.EqualTo(40));
             Assert.That(combat.GetActorState("E2").Hp, Is.EqualTo(60));
@@ -89,7 +88,7 @@ namespace Rokas.Tests
             Assert.That(boot.View.GenericClickCount, Is.EqualTo(clicksBeforeHeavy),
                 "The Heavy command must not layer a generic UI click over its single contact cue.");
             yield return WaitFor(boot, () => combat.Phase == ReactivePhase.PlayerExecution, 3f);
-            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            NativeCombatFixtureObservables.AssertTacticalCamera(boot);
             Assert.That(combat.CurrentPlayerSkillId, Is.EqualTo("heavy"));
             boot.SelectReactiveTarget("E3");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),
@@ -155,13 +154,15 @@ namespace Rokas.Tests
             InputSystem.Update();
         }
 
-        private static IEnumerator WaitFor(RokasBootstrap boot, Func<bool> ready, float seconds)
+        private static IEnumerator WaitFor(RokasBootstrap boot, Func<bool> ready, float seconds,
+            [System.Runtime.CompilerServices.CallerLineNumber] int callerLine = 0)
         {
             float deadline = Time.realtimeSinceStartup + seconds;
             while ((!ready() || boot.View.Paused) && Time.realtimeSinceStartup < deadline)
                 yield return null;
             Assert.That(boot.View.Paused, Is.False);
-            Assert.That(ready(), Is.True, "Timed out waiting for the combat phase.");
+            Assert.That(ready(), Is.True, "Heavy wait at caller line " + callerLine +
+                " exceeded " + seconds + "s: " + NativeCombatFixtureObservables.Describe(boot));
         }
 
         private void Press(string name)

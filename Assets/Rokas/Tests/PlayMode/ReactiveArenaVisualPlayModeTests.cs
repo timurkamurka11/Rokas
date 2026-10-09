@@ -140,27 +140,29 @@ namespace Rokas.Tests
 
                 arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
                     actionId: "basic-action", detail: "Basic"));
-                Assert.That(hunterAnimation.IsPlaying("Attack"), Is.True);
+                NativeCombatFixtureObservables.AssertNativeAnticipation(hunterActor, hunterActor.DefaultLicensedProfile, "Attack");
                 arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
                     actionId: "defend-action", detail: "Defend"));
                 arena.Tick(.2f);
                 yield return new WaitForSecondsRealtime(.2f);
-                Assert.That(hunterAnimation.IsPlaying("Attack"), Is.False,
-                    "Defend must stop the ordinary attack pose.");
+                Assert.That(hunterActor.CurrentPose, Is.EqualTo("Guard"));
+                Assert.That(hunterActor.ActiveLicensedProfile, Is.Null,
+                    "Defend must cancel Native anticipation and take pose ownership.");
 
                 arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
                     actionId: "heavy-hunter", detail: "heavy"));
-                Assert.That(hunterAnimation.IsPlaying("Heavy"), Is.True);
+                NativeCombatFixtureObservables.AssertNativeAnticipation(hunterActor, hunterActor.AttackLicensedProfile(true), "Heavy");
                 arena.Present(new CombatEvent(CombatEventKind.AttackStarted,
                     actorId: "E1", actionId: "heavy-enemy", detail: "heavy"));
                 Assert.That(enemyAnimation.IsPlaying("Heavy"), Is.False,
                     "The enemy approaches before its strike pose starts.");
                 for (int tick = 0; !arena.EnemyApproachComplete("E1") && tick < 100; tick++) arena.Tick(.02f);
                 yield return null;
-                Assert.That(enemyAnimation.IsPlaying("Heavy"), Is.True);
+                NativeCombatFixtureObservables.AssertNativeAnticipation(enemyActor, enemyActor.AttackLicensedProfile(true), "Heavy");
                 arena.Present(new CombatEvent(CombatEventKind.HitResolved,
                     targetId: "E1", actionId: "heavy-hunter", amount: 8));
-                Assert.That(enemyAnimation.IsPlaying("Stagger"), Is.True);
+                Assert.That(enemyActor.CurrentPose, Is.EqualTo("Stagger"));
+                Assert.That(enemyAnimation.GetClip("Stagger"), Is.Not.Null);
             }
             finally
             {
@@ -190,8 +192,10 @@ namespace Rokas.Tests
                 for (int warmup = 0; !arena.PresentationReady && warmup < 100; warmup++) arena.Tick(.02f);
                 Vector3 home = hunterActor.transform.localPosition;
 
+                int actionOrdinal = 0;
                 foreach (string enemyId in new[] { "E1", "E2", "E1" })
                 {
+                    string actionId = "run-action-" + actionOrdinal++ + "-" + enemyId;
                     Assert.That(arena.StartHunterApproach(enemyId), Is.True);
                     int approachTicks = 0;
                     while ((hunterActor.CurrentPose != "Approach" ||
@@ -208,24 +212,26 @@ namespace Rokas.Tests
                     }
                     Assert.That(arena.HunterApproachComplete, Is.True);
                     arena.Present(new CombatEvent(CombatEventKind.CommandCommitted,
-                        actorId: ReactiveDuelDefinitions.HunterId, actionId: enemyId,
+                        actorId: ReactiveDuelDefinitions.HunterId, actionId: actionId,
                         detail: "Basic"));
                     yield return null;
-                    Assert.That(animation.IsPlaying("Attack"), Is.True);
+                    NativeCombatFixtureObservables.AssertNativeAnticipation(hunterActor, hunterActor.DefaultLicensedProfile, "Attack");
                     arena.Tick(.2f);
                     arena.Present(new CombatEvent(CombatEventKind.HitResolved,
                         actorId: ReactiveDuelDefinitions.HunterId, targetId: enemyId,
-                        actionId: enemyId, amount: 8));
+                        actionId: actionId, amount: 8));
                     arena.Present(new CombatEvent(CombatEventKind.ActionSettled,
-                        actorId: ReactiveDuelDefinitions.HunterId, actionId: enemyId));
+                        actorId: ReactiveDuelDefinitions.HunterId, actionId: actionId));
                     deadline = Time.realtimeSinceStartup + 3f;
-                    while (!animation.IsPlaying("ReturnHome") && !arena.HunterAtHome &&
+                    while (arena.HunterMotionPhase != "Return" && !arena.HunterAtHome &&
                            Time.realtimeSinceStartup < deadline)
                     {
                         arena.Tick(.04f);
                         yield return null;
                     }
-                    Assert.That(animation.IsPlaying("ReturnHome"), Is.True);
+                    Assert.That(arena.HunterMotionPhase, Is.EqualTo("Return"));
+                    Assert.That(hunterActor.LicensedContactConfirmed, Is.True);
+                    Assert.That(hunterActor.LicensedMotionClock, Is.GreaterThanOrEqualTo(hunterActor.LicensedStageRecoveryTime));
                     while (!arena.PresentationReady && Time.realtimeSinceStartup < deadline)
                     {
                         arena.Tick(.04f);

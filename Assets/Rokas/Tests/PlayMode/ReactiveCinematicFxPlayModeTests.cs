@@ -119,14 +119,25 @@ namespace Rokas.Tests
                 Present(arena, terminal, combat.CurrentAttack);
                 arena.SetEnemies(combat.ActiveEnemyIds, null, new[] { "E1" });
                 Assert.That(arena.PresentationReady, Is.False);
+                Assert.That(arena.CorpseCount, Is.EqualTo(1),
+                    "The lethal contact must retain the actual corpse before cosmetic cleanup.");
+                ReactiveCombatActorVisual hunter = null;
+                foreach (var actor in GameObject.Find("ReactiveCombatWorld").GetComponentsInChildren<ReactiveCombatActorVisual>())
+                    if (actor.name == "CombatActor_Keiko") hunter = actor;
+                Assert.That(hunter, Is.Not.Null);
+                Assert.That(hunter.ActiveLicensedProfile, Is.Not.Null);
+                float remainingSource = hunter.ActiveLicensedProfile.Duration - hunter.LicensedMotionClock;
+                // Contact starts the authored source timeline at zero. Command readiness
+                // also waits for its Idle handoff; the old three-second bound truncated it.
+                int sourceBound = Mathf.CeilToInt((remainingSource + arena.HunterReturnDuration + .2f) / .02f);
                 steps = 0;
-                while (!arena.PresentationReady && steps++ < 150) arena.Tick(.02f);
+                while (!arena.PresentationReady && steps++ < sourceBound) arena.Tick(.02f);
                 Assert.That(arena.PresentationReady, Is.True,
-                    "Victory must finish return and settle without waiting for an event Core never emits.");
+                    "Victory must finish the authored recovery and return without waiting for an event Core never emits.");
                 Assert.That(arena.HunterAtHome, Is.True);
                 Assert.That(arena.HunterPosition, Is.EqualTo(home));
-                Assert.That(arena.CorpseCount, Is.EqualTo(1),
-                    "Cosmetic ash cleanup continues independently after terminal return is complete.");
+                Assert.That(arena.VisibleEnemyCount, Is.Zero,
+                    "A retired enemy cannot become live again when terminal readiness returns.");
                 yield return null;
             }
             finally

@@ -105,7 +105,7 @@ namespace Rokas.Tests
             float confirmDeadline = Time.realtimeSinceStartup + 3f;
             while (combat.Phase != ReactivePhase.PlayerExecution && Time.realtimeSinceStartup < confirmDeadline) yield return null;
             Assert.That(combat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
-            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize, Is.EqualTo(4.6f).Within(.001f));
+            NativeCombatFixtureObservables.AssertTacticalCamera(boot);
             boot.SelectReactiveTarget("E3");
             Assert.That(combat.SelectedTargetId, Is.EqualTo("E2"),
                 "The committed target remains frozen during the action.");

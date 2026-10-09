@@ -30,6 +30,10 @@ namespace Rokas.Editor
         {
             public string unityVersion, projectPath, activeScene, activeScenePath, testApiError;
             public bool isPlaying, isPlayingOrWillChangePlaymode, isCompiling, isUpdating, activeSceneIsDirty, testRunActive;
+            public string editorAudioMasterMute;
+            public float listenerVolume;
+            public bool listenerPaused;
+            public int outputSampleRate;
             public SceneInfo[] scenes;
             public ConsoleEntry[] consoleEntries;
         }
@@ -247,8 +251,20 @@ namespace Rokas.Editor
                 isPlaying = EditorApplication.isPlaying, isPlayingOrWillChangePlaymode = EditorApplication.isPlayingOrWillChangePlaymode,
                 isCompiling = EditorApplication.isCompiling, isUpdating = EditorApplication.isUpdating,
                 activeScene = scene.name, activeScenePath = scene.path, activeSceneIsDirty = scene.isDirty,
+                editorAudioMasterMute = ReadEditorAudioMute(), listenerVolume = AudioListener.volume,
+                listenerPaused = AudioListener.pause, outputSampleRate = AudioSettings.outputSampleRate,
                 scenes = scenes.ToArray(), testRunActive = running, testApiError = apiError,
                 consoleEntries = ReadConsole() };
+        }
+
+        private static string ReadEditorAudioMute()
+        {
+            try
+            {
+                PropertyInfo mute = typeof(EditorUtility).GetProperty("audioMasterMute", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                return mute == null ? "unavailable" : mute.GetValue(null)?.ToString();
+            }
+            catch (Exception e) { return "unavailable: " + e.GetType().Name; }
         }
 
         private static ConsoleEntry[] ReadConsole()

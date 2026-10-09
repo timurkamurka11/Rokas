@@ -176,8 +176,7 @@ namespace Rokas.Tests
             while ((boot.Session.ReactiveCombat.Phase != ReactivePhase.PlayerExecution || boot.View.Paused) &&
                 Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(boot.Session.ReactiveCombat.Phase, Is.EqualTo(ReactivePhase.PlayerExecution));
-            Assert.That(GameObject.Find("ReactiveActorCamera").GetComponent<Camera>().orthographicSize,
-                Is.EqualTo(4.6f).Within(.001f), "Camera restore precedes command execution.");
+            NativeCombatFixtureObservables.AssertTacticalCamera(boot);
         }
 
         private static IEnumerator WaitForCommandReady(RokasBootstrap boot)
