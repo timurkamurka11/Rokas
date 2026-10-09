@@ -534,6 +534,7 @@ namespace Rokas.Presentation
         private bool livingGold;
         private bool laptopGold;
         private float hoverStrength;
+        private float[] cornerPositions;
         public bool Hovered { get; set; }
 
         public void Configure(HomeFinalOutline source)
@@ -544,6 +545,29 @@ namespace Rokas.Presentation
             // Identical phase after scene recreation; Cat retains its old style.
             phase = livingGold ? (laptopGold ? .57f : .13f) :
                 Mathf.Repeat(Mathf.Abs(GetInstanceID()) * .000173f, 1f);
+
+            // Cache each authored corner's arc-length position once. Moving
+            // warm light can then pause and softly breathe at corners without
+            // changing the physical outline or creating per-frame allocations.
+            cornerPositions = null;
+            if (livingGold && source.points != null && source.points.Length > 2)
+            {
+                int count = source.points.Length;
+                var offsets = new float[count];
+                float total = 0f;
+                for (int i = 0; i < count; i++)
+                {
+                    offsets[i] = total;
+                    total += Vector2.Distance(source.points[i],
+                        source.points[(i + 1) % count]);
+                }
+                if (total > .001f)
+                {
+                    for (int i = 0; i < count; i++)
+                        offsets[i] /= total;
+                    cornerPositions = offsets;
+                }
+            }
 
             SetVerticesDirty();
         }
@@ -589,12 +613,11 @@ namespace Rokas.Presentation
                 data.haloColor,
                 .58f);
 
-            // The source core is already almost opaque and red-clamped;
-            // multiplying its RGB cannot create an obvious moving highlight.
-            // Put a short warm flare BEHIND the core, followed by a narrow
-            // near-white travelling reflection ABOVE it.
+            // A faint warm halo moves along the existing gold border and
+            // becomes a little brighter when arriving at an authored corner.
+            // Keep it behind the opaque core to avoid a harsh white stripe.
             if (livingGold)
-                StrokeLivingGold(mesh, data.coreThickness * 4.0f,
+                StrokeLivingGold(mesh, data.coreThickness * 2.8f,
                     Color.white, 1f, 1);
 
             Stroke(
@@ -604,7 +627,7 @@ namespace Rokas.Presentation
                 .34f);
 
             if (livingGold)
-                StrokeLivingGold(mesh, data.coreThickness * 1.45f,
+                StrokeLivingGold(mesh, data.coreThickness * 1.18f,
                     Color.white, 1f, 2);
         }
 
@@ -725,11 +748,11 @@ namespace Rokas.Presentation
             float band = 1f - Mathf.SmoothStep(0f, 1f,
                 Mathf.Clamp01(delta / bandWidth));
             float pulse = Mathf.Sin(time * (laptopGold ? 1.73f : 1.21f) +
-                phase * Mathf.PI * 2f) * .075f;
+                phase * Mathf.PI * 2f) * .10f;
             // No frame-random flicker. Micro movement is in luminosity only.
             float micro = Mathf.Sin(time * 3.7f + location * 29f +
                 phase * Mathf.PI * 2f) * .012f;
-            float sweep = band * (laptopGold ? .47f : .38f) * strength;
+            float sweep = band * (laptopGold ? .31f : .26f) * strength;
             float gain = (1f + pulse + micro + sweep) * (1f + hoverStrength * .14f);
             Color result = source;
             result.r = Mathf.Clamp01(source.r * gain);
@@ -745,21 +768,48 @@ namespace Rokas.Presentation
         // Alpha fades smoothly to zero away from the moving highlight.
         private float LivingCursor(float time)
         {
-            return Mathf.Repeat(time * (laptopGold ? .28f : .20f) + phase, 1f);
+            return Mathf.Repeat(time * (laptopGold ? .205f : .145f) + phase, 1f);
+        }
+
+        // Only the neighbouring corners glow as the highlight approaches.
+        // The pulses are smooth and follow the exact authored polygon corners;
+        // nothing jitters or moves off the original geometry.
+        private float LivingCornerPulse(float location, float time)
+        {
+            if (cornerPositions == null) return 0f;
+            float cursor = LivingCursor(time);
+            float result = 0f;
+            for (int i = 0; i < cornerPositions.Length; i++)
+            {
+                float corner = cornerPositions[i];
+                float spatial = Mathf.Abs(Mathf.Repeat(location - corner + .5f, 1f) - .5f);
+                float timing = Mathf.Abs(Mathf.Repeat(cursor - corner + .5f, 1f) - .5f);
+                float nearCorner = 1f - Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(spatial / .045f));
+                float approaching = 1f - Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(timing / .105f));
+                result = Mathf.Max(result, nearCorner * approaching);
+            }
+            return result;
         }
 
         private Color LivingGlintColor(float location, float time, bool narrow)
         {
             float delta = Mathf.Abs(Mathf.Repeat(location - LivingCursor(time) +
                 .5f, 1f) - .5f);
-            float width = narrow ? (laptopGold ? .050f : .057f) :
-                (laptopGold ? .100f : .112f);
+            float width = narrow ? (laptopGold ? .061f : .066f) :
+                (laptopGold ? .112f : .122f);
             float band = 1f - Mathf.SmoothStep(0f, 1f,
                 Mathf.Clamp01(delta / width));
-            float boost = 1f + hoverStrength * .16f;
+            float cornerPulse = LivingCornerPulse(location, time);
+            float boost = 1f + hoverStrength * .14f;
+            // Champagne-gold, NOT opaque white. Most of the visual motion
+            // comes from the subtle golden corner pulses and soft halo.
             return narrow
-                ? new Color(1f, .985f, .83f, Mathf.Clamp01(band * .98f * boost))
-                : new Color(1f, .79f, .38f, Mathf.Clamp01(band * .38f * boost));
+                ? new Color(1f, .90f, .64f,
+                    Mathf.Clamp01((band * .21f + cornerPulse * .06f) * boost))
+                : new Color(1f, .72f, .30f,
+                    Mathf.Clamp01((band * .17f + cornerPulse * .17f) * boost));
         }
 
         private static void AddGradientSegment(VertexHelper mesh, Vector2 a, Vector2 b,
