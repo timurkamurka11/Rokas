@@ -167,7 +167,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
     tip_x=1415.+(POWER_X-40.-1415.)*reach + 135.*withdraw
-    tip_y=1080.+(POWER_Y-90.-1080.)*reach + 175.*withdraw + 3.*press
+    tip_y=1080.+(POWER_Y-35.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -204,6 +204,12 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # Narrow rib-knit cuff at hand–sleeve junction, not a flat straight sleeve cap.
     # Make only first two rings from the same tapered profile for smoother join.
     sleeve_geometry(cuff_mesh,wrist + Vector((0,0,.46-wrist.z)), cuff=True)
+    # Mesh.clear_geometry() may drop slots in Blender 4.5; rebind the actual
+    # dark sweatshirt and dark ribbed cuff every frame, never grey default.
+    sleeve_mesh.materials.clear()
+    sleeve_mesh.materials.append(bpy.data.materials["Graphite_HomeSweatshirt_Cotton"])
+    cuff_mesh.materials.clear()
+    cuff_mesh.materials.append(bpy.data.materials["Cuff_Graphite"])
     cf_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
     cf_obj.scale=(.98,.98,.98)
     # Non-cuff sleeve and cuff overlap slightly, which creates a fabric seam.
