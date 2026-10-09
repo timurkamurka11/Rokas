@@ -22,11 +22,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Authenticate Docker Hub with retry on HTTP 500
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DOCKERHUB_USERNAME}" ] || [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "::error::Both DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets are required."
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5; do
+            echo "Docker Hub login attempt ${attempt}/5"
+            if printf '%s' "${DOCKERHUB_TOKEN}" | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin > /tmp/rokas-docker-login.log 2>&1; then
+              echo "Docker Hub login succeeded."
+              exit 0
+            fi
+            # Do not keep retrying an invalid token; 5xx/network errors are transient.
+            if grep -Eiq 'unauthorized|incorrect username|invalid credentials|access denied' /tmp/rokas-docker-login.log; then
+              echo "::error::Docker Hub rejected the account or access token. Check repository secrets."
+              exit 1
+            fi
+            tail -n 2 /tmp/rokas-docker-login.log || true
+            if [ "${attempt}" -eq 5 ]; then
+              echo "::error::Docker Hub login unavailable after retries; service/network issue."
+              exit 1
+            fi
+            delay=$(( attempt * 15 ))
+            echo "::warning::Docker Hub returned a temporary error; retrying in ${delay}s."
+            sleep "${delay}"
+          done
 
       - name: Pull GameCI Unity editor with retry and backoff
         shell: bash
