@@ -49,7 +49,7 @@ namespace Rokas.Tests
 
             string folder = Path.Combine(Application.dataPath, "..", "ROKAS_Unity_Art_Captures");
             Directory.CreateDirectory(folder);
-            float[] stamps = { 1.85f, 2.6f, 3.08f, 3.22f, 3.51f, 3.85f };
+            float[] stamps = { 1.85f, 2.6f, 3.08f, 3.22f, 3.51f, 4.16f };
             float elapsed = 0f;
             for (int i = 0; i < stamps.Length; i++)
             {
@@ -58,8 +58,15 @@ namespace Rokas.Tests
                 elapsed = stamps[i];
                 string target = Path.Combine(folder, "Unity_Laptop_Stage_" + i.ToString("00") + ".png");
                 ScreenCapture.CaptureScreenshot(target);
-                yield return null;
-                Debug.Log("[ROKAS-UNITY-CAPTURE] "+stamps[i]+"s -> "+target);
+                // Batchmode can log a screenshot path without writing a single image.
+                // Do not report visual proof unless the actual PNG exists and has bytes.
+                for (int attempt = 0; attempt < 60 && !File.Exists(target); attempt++)
+                    yield return null;
+                Assert.That(File.Exists(target), Is.True,
+                    "No real Game View PNG produced in cloud Unity batch mode.");
+                Assert.That(new FileInfo(target).Length, Is.GreaterThan(256),
+                    "Empty Unity screenshot file.");
+                Debug.Log("[ROKAS-UNITY-CAPTURE-VERIFIED] "+stamps[i]+"s -> "+target);
             }
             Assert.That(boot.View.LaptopOpen, Is.True);
             UnityEngine.Object.Destroy(root);

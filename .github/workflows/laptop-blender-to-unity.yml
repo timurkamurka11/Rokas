@@ -60,6 +60,22 @@ jobs:
             --width 1672 --height 941
           test "$(find "$RUNNER_TEMP/ROKAS_RightHand_49" -name 'HandsRight_*.png' | wc -l)" = 49
           test -s "$RUNNER_TEMP/ROKAS_RightHand_49/ROKAS_RightHand_Editable.blend"
+      - name: Validate actual visible index-finger pixels at Power
+        shell: bash
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          import os
+          from PIL import Image
+          from pathlib import Path
+          img=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/'HandsRight_0031.png').convert('RGBA')
+          assert img.size==(1672,941)
+          # Grounded Power anchor on user's approved POV is at 1040,708.
+          nearby=[img.getpixel((x,y))[3] for y in range(695,722) for x in range(1026,1055)]
+          peak=max(nearby)
+          print('VISIBLE_POWER_CONTACT_ALPHA',peak)
+          assert peak>=128, 'Real fingertip misses Power button; rig bone alone is not proof'
+          PY
       - name: Crop frames without modifying pixels, create right_hand_manifest.json
         shell: bash
         run: |
@@ -74,6 +90,7 @@ jobs:
           if-no-files-found: error
           retention-days: 20
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ROKAS-Blender49-Source-Renders
           path: ${{ runner.temp }}/ROKAS_RightHand_49/

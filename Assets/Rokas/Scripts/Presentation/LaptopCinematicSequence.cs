@@ -46,8 +46,8 @@ namespace Rokas.Presentation
         private const float POVStart = 1.15f;
         private const float POVEnd = 1.8f;
         private const float HandsStart = 1.8f;
-        private const float HandsEnd = 3.72f;
-        private const float FinishTime = 3.8f;
+        private const float HandsEnd = 3.84f;
+        private const float FinishTime = 3.92f;
 
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
