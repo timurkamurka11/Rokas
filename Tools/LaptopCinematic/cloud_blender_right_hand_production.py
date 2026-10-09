@@ -159,7 +159,7 @@ def create_scene(a):
     scene.render.image_settings.color_mode="RGBA"
     scene.render.image_settings.color_depth="8"
     scene.view_settings.view_transform="AgX"
-    scene.view_settings.exposure=-1.25
+    scene.view_settings.exposure=-1.75
     scene.render.fps=FPS
     scene.render.filepath=os.path.join(a.output,"HandsRight_0000.png")
     scene.render.image_settings.compression=35
@@ -176,10 +176,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
     # Visible skinned finger apex is ~95px to the right of the index bone reference.
-    tip_x=1415.+(POWER_X-95.-1415.)*reach + 135.*withdraw
+    tip_x=1415.+(POWER_X-87.-1415.)*reach + 135.*withdraw
     # The glTF index-bone tail differs from the visible skinned fingertip by about +84px vertically.
     # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
-    tip_y=1080.+(POWER_Y-46.-1080.)*reach + 175.*withdraw + 3.*press
+    tip_y=1080.+(POWER_Y-62.-1080.)*reach + 175.*withdraw + 3.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
