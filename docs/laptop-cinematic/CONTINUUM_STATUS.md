@@ -44,3 +44,16 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 - Found source defect: SetPromptVisibility(false) turned blue Power LED off immediately on E/Power confirmation, before the animated fingertip reaches the physical button.
 - Patch keeps the standby LED visible during hand approach and hides it at LaptopPowerTimeline.ContactTime; PlayMode test extended to check before/after contact. Requires new Unity run, no PASS claim until tested.
 - No alterations to user-approved background, UI textures, SFX, persistence, YOMI, or Blender art from source a38e6cba.
+
+## V8 FULL NATIVE RENDER VERIFIED (2026-10-10, approx 19:15 UTC)
+- Source SHA a38e6cba9b1f34fd2976ade27f50cdf3328e9a7f.
+- Full Blender art job of run 38077862962 completed SUCCESS (overall run Unity job STILL IN PROGRESS when checked).
+- NEW raw source 49 PNG + editable .blend: artifact 11679419922, 15525638 bytes, source a38e6cba.
+- NEW cropped Unity Resources + 49 manifest: artifact 11679634496, 1221523 bytes, same SHA.
+- Verified in local sandbox: exact 49/49 RGBA source files 1672x941 24fps, 16 bones, 8120 vertices, lossless visible-pixel roundtrip of all 49 Unity crops, first and last frame empty, Power alpha contact 30–34 and release at 35, evaluated skin-tip 2D screen error 0px. STRUCTURAL PASS, not physical button 3D collision proof.
+- New 6-second normal+slow Blender QA MP4/contact sheet/Power closeups produced from EXACT artifact 11679419922, uploaded to Firestorage: https://firestorage.ai/ja/f/1D20YyTaD0ST (not actual Unity game capture).
+- Visual inspection: smaller/less bright nail plates and full approach→press→retract visible; source camera cannot prove actual finger penetration because the laptop is the user-approved 2D POV photograph, not 3D button geometry.
+- New art Unity Game View capture job from run 38077862962 IN PROGRESS at checkpoint update; verify NUnit test outcome and PNG capture files before marking PASS.
+- Runtime LED fix f3a422e44f9e961be6236a13721463aefdb93705 tested: V3.4 Power session run 38078513722 PASS 1/1 NUnit test, artifact 11679229958; V3.3 seated choice run 38078513725 PASS 3/3 tests, artifact 11679524478. Both use separately pinned/older art resources, not a proof of newest combined 49 frames.
+- Local D: project UNMODIFIED. Restricted rollback-safe asset-only installer templates built but NOT Windows runtime-tested and NOT released as final. Full integration in approved room must be verified on local Windows Unity.
+- NEXT: inspect final state of run 38077862962 Unity Game View job; if FAIL inspect playmode-results.xml for actual blocker. If PASS review actual RenderTexture stage captures (must show real Power click, not merely static UI), then prepare restricted 49-frame SHA-manifest asset package and dry-run safely before local installation. Update this checkpoint with final CI/run IDs; do not rerender from scratch.
