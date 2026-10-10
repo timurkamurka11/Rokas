@@ -89,3 +89,6 @@ try {
 } finally {
  Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+# Reset the last expected negative child-process exit code after all assertions pass.
+exit 0
