@@ -12,6 +12,7 @@ function Check([bool]$p,[string]$msg){if(-not $p){throw "FAILED: $msg"}}
 function Invoke-Test([string[]]$opts,[bool]$expectSuccess){
  & pwsh -NoProfile -File (Join-Path $pack 'INSTALL_SAFE.ps1') -Target $unity @opts *> (Join-Path $root 'last.log')
  $ok=$LASTEXITCODE -eq 0
+ if ($ok -ne $expectSuccess) { Write-Host ('INSTALLER_DIAGNOSTIC: ' + (Get-Content -LiteralPath (Join-Path $root 'last.log') -Raw)) }
  Check ($ok -eq $expectSuccess) ("Unexpected exit $LASTEXITCODE for: "+($opts -join ' '))
 }
 try {
