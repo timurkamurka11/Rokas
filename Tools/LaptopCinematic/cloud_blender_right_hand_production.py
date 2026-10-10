@@ -152,53 +152,63 @@ def create_nail_objects():
 
 
 def update_nail_positions(hand, rig, frame):
-    """Use actual posed skinned vertices, not potentially offset GLB bone tails."""
+    """Position keratin onto real deforming distal skin, not offset GLB bones."""
     dg=bpy.context.evaluated_depsgraph_get()
     eval_hand=hand.evaluated_get(dg)
     evaluated=eval_hand.to_mesh()
+    report={}
     try:
         mw=eval_hand.matrix_world
+        wrist=rig.matrix_world @ rig.pose.bones["hand_r"].head
         for digit in ("index","middle","ring","pinky","thumb"):
-            name=f"{digit}_03_r"
-            group=hand.vertex_groups.get(name)
-            bone=rig.pose.bones.get(name)
+            group=hand.vertex_groups.get(f"{digit}_03_r")
             obj=bpy.data.objects.get(f"ROKAS_AnatomicalNail_{digit}")
-            if not group or not bone or not obj:continue
-            source=[]
+            if group is None or obj is None:raise RuntimeError("No distal nail/weight group: "+digit)
+            vertices=[]
             for vertex in hand.data.vertices:
-                try: w=group.weight(vertex.index)
+                try:weight=group.weight(vertex.index)
                 except RuntimeError:continue
-                if w>.42 and vertex.index < len(evaluated.vertices):
-                    source.append(mw @ evaluated.vertices[vertex.index].co)
-            if len(source)<4:
-                obj.hide_render=True
-                continue
+                if weight>.34 and vertex.index<len(evaluated.vertices):
+                    vertices.append((mw @ evaluated.vertices[vertex.index].co,weight))
+            if len(vertices)<8:
+                raise RuntimeError(f"Not enough skinned fingertip surface vertices for {digit}: {len(vertices)}")
+            # Distal-most 15% of the actual vertex cloud, not nominal GLB
+            # bone.tail, which can be 80-95px away from the rendered surface.
+            def dist2(v):
+                dx=v.x-wrist.x;dy=v.y-wrist.y
+                return dx*dx+dy*dy
+            vertices.sort(key=lambda p:dist2(p[0]),reverse=True)
+            tips=[v for v,w in vertices[:max(8,len(vertices)//7)]]
+            tip=sum(tips,Vector())/len(tips)
+            direction=Vector((tip.x-wrist.x,tip.y-wrist.y))
+            if direction.length<1e-5:raise RuntimeError("No digit axis for "+digit)
+            direction.normalize()
+            # Nail center is behind the fingertip, on the keratin plate,
+            # instead of over the swollen tip pad or dorsal knuckle.
+            cx=tip.x-direction.x*.0085
+            cy=tip.y-direction.y*.0085
+            near=[v for v,w in vertices if
+                  (v.x-cx)**2+(v.y-cy)**2 <= .013**2]
+            if len(near)<4:
+                near=[v for v,w in vertices if
+                      (v.x-cx)**2+(v.y-cy)**2 <= .018**2]
+            if len(near)<4:raise RuntimeError("No nail bed found for "+digit)
+            # Nail front plate must be on the camera-facing +Z surface.
+            surface=max(v.z for v in near)
             obj.hide_render=False
-            # Mesh vertices in this GLB are authoritative for distal anatomy.
-            bone_head=rig.matrix_world @ bone.head
-            bone_tail=rig.matrix_world @ bone.tail
-            direction=bone_tail-bone_head
-            if direction.length<1e-6: obj.hide_render=True;continue
-            axis=direction.normalized()
-            # Restrict vertices to the distal nail bed, not the entire bone's
-            # highest dorsal knuckle (which caused floating, displaced nails).
-            projected=[(v,(v-bone_head).dot(axis)) for v in source]
-            near=[v for v,t in projected if .25*direction.length<=t<=.92*direction.length]
-            if len(near)<6:
-                near=source
-            near.sort(key=lambda v:v.z,reverse=True)
-            top=near[:max(5,len(near)//5)]
-            avg=sum(top,Vector())/len(top)
-            surface=max(v.z for v in top)
-            obj.location=(avg.x,avg.y,surface+.00035)
+            obj.location=(cx,cy,surface+.00038)
             obj.rotation_euler=(0.,0.,math.atan2(direction.y,direction.x)-math.pi*.5)
-            width=.82 if digit=="pinky" else 1.05 if digit=="thumb" else 1.
-            obj.scale=(width,1.,1.)
+            obj.scale=(.85 if digit=="pinky" else 1.02 if digit=="thumb" else .95, .88, 1.)
             obj.keyframe_insert(data_path="location",frame=frame)
             obj.keyframe_insert(data_path="rotation_euler",frame=frame)
             obj.keyframe_insert(data_path="scale",frame=frame)
+            report[digit]={"tip_distance_mm":round((tip-wrist).length*1000,2),
+                           "nail_to_tip_mm":round(math.hypot(tip.x-cx,tip.y-cy)*1000,2),
+                           "nail_skin_z_gap_mm":.38,
+                           "nail_bed_vertices":len(near)}
     finally:
         eval_hand.to_mesh_clear()
+    return report
 
 
 def add_area(name,loc,watts,rgb,size):
@@ -335,7 +345,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     rig.location.y += wanted.y-tip_now.y
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
-    update_nail_positions(hand,rig,index+1)
+    nail_report=update_nail_positions(hand,rig,index+1)
     # Locally modeled cloth follows the wrist with real keyframed transforms.
     sleeve_obj=bpy.data.objects["RIGHT_FreeHomeSleeve"]
     cuff_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
@@ -372,6 +382,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             "skeleton_reference_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
             "cuff_wrist_distance_mm":round(seam_distance*1000,2),
             "nail_objects_present":len(nails),
+            "nail_skin_metrics":nail_report,
             "press":round(press,3),
             "wrist_px":[wrist_x,wrist_y]}
 
