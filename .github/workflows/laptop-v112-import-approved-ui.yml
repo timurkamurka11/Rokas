@@ -44,20 +44,14 @@ jobs:
             print('PAGE_HEAD',page.title())
             print('BUTTONS',[x.inner_text() for x in page.locator('button').all()][:25])
             print('ROWS',page.locator('tr').count())
-            for src,dest in files.items():
-              cell=page.get_by_text(src,exact=True).first
-              row=cell.locator('xpath=ancestor::tr[1]')
-              if row.count()==0:
-                row=cell.locator('xpath=ancestor::*[contains(@class,"row")][1]')
-              if row.count()==0:
-                raise RuntimeError('Cannot locate download row for '+src)
-              buttons=row.get_by_role('button',name=re.compile('Download|ダウンロード',re.I))
-              if buttons.count()==0:
-                buttons=row.get_by_text('Download',exact=True)
-              if buttons.count()==0:
-                raise RuntimeError('Download button missing for '+src+': '+row.inner_text()[:350])
+            downloads=page.get_by_role('button',name='Download',exact=True)
+            if downloads.count()!=len(files):
+              raise RuntimeError('Expected exactly five ordered file download buttons, got '+str(downloads.count()))
+            for i,(src,dest) in enumerate(files.items()):
+              if page.get_by_role('button',name=src,exact=True).count()!=1:
+                raise RuntimeError('Missing user asset '+src)
               with page.expect_download(timeout=45000) as d:
-                buttons.first.click()
+                downloads.nth(i).click()
               download=d.value
               loc=target/dest
               download.save_as(str(loc))
@@ -93,4 +87,6 @@ jobs:
           git add -- Assets/Rokas/Resources/LaptopCinematic/UI
           git diff --cached --check
           git commit -m 'assets(laptop-v11.2): import original user chibi and golden UI PNGs without retouching'
+          git fetch origin codex/fidelity3-resume-5779190
+          git rebase origin/codex/fidelity3-resume-5779190
           git push origin HEAD:codex/fidelity3-resume-5779190
