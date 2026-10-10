@@ -26,7 +26,7 @@ namespace Rokas.Presentation
         // laptop display. It is a second PRESENTATION of the same YOMI model.
         internal static int DesktopAppCount => Names.Length;
         internal static string DesktopAppTitle(int index) =>
-            Names[index].Substring("Laptop".Length).ToUpperInvariant();
+            Titles[index].ToUpperInvariant();
         internal static Color DesktopAppColor(int index) => TileColors[index];
 
         private readonly UiKit ui;
