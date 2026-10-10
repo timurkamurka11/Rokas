@@ -29,23 +29,25 @@ jobs:
       - name: Reuse existing full Blender render - no rerender
         uses: actions/download-artifact@v4
         with:
-          name: ROKAS-Blender49-Source-Renders
+          name: ROKAS-Blender49-UnityResources
           run-id: 38077862962
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: LatestBlender49
-      - name: Pack untouched pinned 49 Blender renders into Unity Resources
+          path: .
+      - name: Verify ORIGINAL pinned 49 Unity frame resources (no repack or rerender)
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet Pillow
-          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py --frames LatestBlender49 --output . --count 49
           python3 - <<'PY'
           import json
           from pathlib import Path
-          p=Path('Assets/Rokas/Resources/LaptopCinematic/right_hand_manifest.json')
-          m=json.loads(p.read_text())
-          assert m['handedness']=='right' and len(m['frames'])==49 and m['fps']==24
-          print('ORIGINAL_49_FRAMES_UNALTERED')
+          p=Path('Assets/Rokas/Resources/LaptopCinematic')
+          m=json.loads((p/'right_hand_manifest.json').read_text(encoding='utf-8-sig'))
+          assert m['fps']==24 and m['handedness']=='right' and len(m['frames'])==49
+          for i,fr in enumerate(m['frames']):
+            expected='LaptopCinematic/HandsRight/Hand_%04d'%i
+            assert fr['resource']==expected,(i,fr)
+            assert (p/'HandsRight'/('Hand_%04d.png'%i)).is_file(),i
+          print('ORIGINAL_PINNED_49_FRAME_RESOURCES_UNTOUCHED')
           PY
       - name: Synthetic test-only POV, never overwrite approved art
         shell: bash
