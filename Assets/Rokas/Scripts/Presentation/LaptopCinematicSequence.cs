@@ -59,6 +59,7 @@ namespace Rokas.Presentation
         private readonly Action powerClick;
         private readonly Action returningToRoom;
         private readonly Func<int> unreadMessages;
+        private readonly Action<float> updateRoomCamera;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -100,13 +101,15 @@ namespace Rokas.Presentation
         {
             if (!pendingVisualHandoff) return;
             pendingVisualHandoff = false;
+            updateRoomCamera?.Invoke(0f);
             Cleanup();
         }
         public bool IsAwaitingPowerChoice => active && CurrentPhase == Phase.PreBootChoice;
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
-            Action powerClick, Action returningToRoom, Func<int> unreadMessages = null)
+            Action powerClick, Action returningToRoom, Func<int> unreadMessages = null,
+            Action<float> updateRoomCamera = null)
         {
             this.ui = ui;
             this.owner = owner;
@@ -117,6 +120,7 @@ namespace Rokas.Presentation
             this.powerClick = powerClick;
             this.returningToRoom = returningToRoom;
             this.unreadMessages = unreadMessages;
+            this.updateRoomCamera = updateRoomCamera;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -495,6 +499,9 @@ namespace Rokas.Presentation
         {
             if (!root) { Finish(true); return; }
 
+            // Focus the existing LIVE home scene and glowing hotspots together;
+            // never animate a disconnected or stale home screenshot.
+            updateRoomCamera?.Invoke(Mathf.Clamp01(t / HandsStart));
             float ease = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / ApproachEnd));
             wideImage.rectTransform.localScale = Vector3.one * (1f + .065f * ease);
             // Grounded body settle: weight drops with a damped rebound as Keiki
@@ -602,6 +609,7 @@ namespace Rokas.Presentation
 
         private void Cleanup()
         {
+            updateRoomCamera?.Invoke(0f);
             pendingVisualHandoff = false;
             if (root)
             {
