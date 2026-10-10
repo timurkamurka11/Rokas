@@ -22,6 +22,13 @@ namespace Rokas.Presentation
             new Color(.37f, .55f, .35f), new Color(.38f, .30f, .52f), new Color(.23f, .49f, .54f),
             new Color(.69f, .35f, .40f), new Color(.39f, .42f, .44f), new Color(.76f, .39f, .16f)
         };
+        // Share the same app catalog, labels and palette with the physical
+        // laptop display. It is a second PRESENTATION of the same YOMI model.
+        internal static int DesktopAppCount => Names.Length;
+        internal static string DesktopAppTitle(int index) =>
+            Names[index].Substring("Laptop".Length).ToUpperInvariant();
+        internal static Color DesktopAppColor(int index) => TileColors[index];
+
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly GameSession session;
@@ -48,6 +55,12 @@ namespace Rokas.Presentation
         private bool bootConsumedThisHomeVisit;
         public bool IsClosing { get; private set; }
         public bool Booting { get; private set; }
+        // The incoming laptop scene is ready only after a real video frame is
+        // visible or the prewarmed desktop has become visible. This is used by
+        // the cinematic handoff to avoid ever exposing the Hub in between.
+        public bool IsVisualReady => frame && windowGroup && windowGroup.alpha >= .98f &&
+            (!Booting || video.FirstFramePresented);
+        public float WindowOpacity => windowGroup ? windowGroup.alpha : 0f;
         public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
         public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
@@ -85,9 +98,22 @@ namespace Rokas.Presentation
             date = null;
         }
 
+        // Legacy compatibility: V11 intentionally removes the black
+        // post-boot hold; the ready desktop is constructed before playback.
+        public void RequestCinematicPostBootHold() { }
+
         public void BeginHomeVisit()
         {
-            bootConsumedThisHomeVisit = false;
+            // Never restart LaptopBoot.mp4 when the player returns to the hub.
+            // Only a real game-process restart resets LaptopPowerSession.
+            bootConsumedThisHomeVisit = LaptopPowerSession.PoweredOn;
+        }
+
+        // Physical Power never restarts the boot after the first successful boot.
+        // Kept as a narrow compatibility hook for existing RokasView routing.
+        public void BeginNewPhysicalPowerCycle()
+        {
+            if (!LaptopPowerSession.PoweredOn) bootConsumedThisHomeVisit = false;
         }
 
         public void Build(RectTransform parent)
@@ -103,22 +129,34 @@ namespace Rokas.Presentation
             clock = null;
             date = null;
             clockMinute = -1;
-            if (!videoTransitions() || bootConsumedThisHomeVisit)
+            if (!videoTransitions() || bootConsumedThisHomeVisit || LaptopPowerSession.PoweredOn)
             {
                 Booting = false;
+                if (!LaptopPowerSession.PoweredOn && !videoTransitions())
+                    LaptopPowerSession.CompleteFirstBoot();
                 BuildReadyFrame();
                 return;
             }
             bootConsumedThisHomeVisit = true;
             Booting = true;
+            // Prewarm the actual interactive YOMI desktop underneath the video.
+            // The video is added last, above it. No empty frame/black 0.5s hold
+            // is permitted when VideoPlayer fires its completion callback.
+            BuildReadyFrame();
+            windowGroup.interactable = false;
             video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
         }
 
         private void FinishBoot()
         {
             if (!Booting || IsClosing || !frame) return;
+            // Completed VideoPlayer callback is the sole source of truth for
+            // first boot success; a cancelled playback must not power the laptop.
+            LaptopPowerSession.CompleteFirstBoot();
+            // The video surface is removed synchronously; the completed,
+            // already-built desktop is revealed in that same frame.
             Booting = false;
-            BuildReadyFrame();
+            windowGroup.interactable = true;
         }
 
         private void BuildReadyFrame()

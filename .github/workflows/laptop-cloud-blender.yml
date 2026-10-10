@@ -1,0 +1,82 @@
+name: ROKAS Cloud Blender - Right Hand Rig Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+    paths:
+      - '.github/workflows/laptop-cloud-blender.yml'
+      - 'Tools/LaptopCinematic/cloud_blender_probe.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rokas-cloud-blender-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Blender 4.5.14 - CC0 right-hand rig import and preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache official Blender release
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rokas-blender/blender-4.5.14-linux-x64.tar.xz
+          key: blender-4.5.14-linux-x64-v1
+
+      - name: Download and verify official Blender 4.5 LTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.cache/rokas-blender" "$RUNNER_TEMP/rokas-blender"
+          cd "$HOME/.cache/rokas-blender"
+          name="blender-4.5.14-linux-x64.tar.xz"
+          base="https://download.blender.org/release/Blender4.5"
+          if [ ! -s "$name" ]; then
+            curl -fL --retry 4 --retry-all-errors --connect-timeout 30 -o "$name.tmp" "$base/$name"
+            mv "$name.tmp" "$name"
+          fi
+          curl -fL --retry 4 --retry-all-errors -o release.sha256 "$base/blender-4.5.14.sha256"
+          grep -F "$name" release.sha256 | sed "s@\\*@@g" | sha256sum -c -
+          tar -xJf "$name" -C "$RUNNER_TEMP/rokas-blender"
+          "$RUNNER_TEMP/rokas-blender/blender-4.5.14-linux-x64/blender" --background --version
+
+      - name: Download CC0 articulated anatomical right-hand source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rokas-source"
+          curl -fL --retry 3 --retry-all-errors --connect-timeout 20 \
+            --header 'Accept: model/gltf-binary,application/octet-stream,*/*' \
+            -o "$RUNNER_TEMP/rokas-source/right_hand_CC0.glb" \
+            'https://www.innerscene.com/api/library/posable-anatomical-right-hand-f6098b4f/download'
+          python3 -c 'from pathlib import Path; f=Path(__import__("os").environ["RUNNER_TEMP"])/"rokas-source/right_hand_CC0.glb"; data=f.read_bytes(); assert data[:4]==b"glTF", "Source download is not a valid GLB"; print("Right hand CC0 GLB valid, bytes:",len(data))'
+
+      - name: Render Blender rig proof without local editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rokas-blender-proof"
+          "$RUNNER_TEMP/rokas-blender/blender-4.5.14-linux-x64/blender" \
+            --background --factory-startup --threads 2 \
+            --python Tools/LaptopCinematic/cloud_blender_probe.py -- \
+            --input "$RUNNER_TEMP/rokas-source/right_hand_CC0.glb" \
+            --output "$RUNNER_TEMP/rokas-blender-proof"
+          test -s "$RUNNER_TEMP/rokas-blender-proof/right_hand_rig_preview.png"
+          test -s "$RUNNER_TEMP/rokas-blender-proof/right_hand_cloud_probe.blend"
+          test -s "$RUNNER_TEMP/rokas-blender-proof/rig_report.json"
+
+      - name: Upload Blender artifact for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-cloud-Blender-right-hand-rig-probe
+          path: ${{ runner.temp }}/rokas-blender-proof/
+          if-no-files-found: warn
+          retention-days: 14

@@ -18,11 +18,14 @@ namespace Rokas.Presentation
         private readonly Action save;
         private readonly UiKit ui;
         private readonly RectTransform stage;
+        private readonly RectTransform roomCameraRig;
         private readonly RectTransform scene;
         private readonly CanvasGroup sceneInput;
         private readonly RectTransform globalChrome;
         private readonly Button settingsButton;
         private readonly RectTransform panels;
+        private readonly CanvasGroup laptopModalLayer;
+        private readonly int panelsOriginalSiblingIndex;
         private readonly RectTransform transitions;
         private readonly Text wallet;
         private readonly Text status;
@@ -38,9 +41,12 @@ namespace Rokas.Presentation
         private readonly LaptopView laptop;
         private readonly MessagesNotificationView messageNotifications;
         private readonly HubDialogueController hubDialogue;
+        private readonly LaptopCinematicSequence laptopCinematic;
         private RunPhase phase;
         private string panel;
         private bool transition;
+        private bool cinematicLaptopHandoff;
+        private bool laptopOpenedFromSeatedCinematic;
         private bool storageBlocked;
         private float toastTime;
         private int laptopOpenedFrame = -1;
@@ -104,9 +110,15 @@ namespace Rokas.Presentation
             stage = ui.Rect(canvasObject.transform, "AuthoredStage", 0, 0, 1920, 1080);
             stage.anchorMin = stage.anchorMax = new Vector2(.5f, .5f);
             stage.pivot = new Vector2(.5f, .5f);
-            background = ui.Art(stage, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
-            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings, audio, owner.transform);
-            scene = ui.Rect(stage, "SceneInteractions", 0, 0, 1920, 1080);
+            // A dedicated room plane keeps live CustomGlow, authored home
+            // composition, and WorldEffects on the SAME projection during the
+            // 2.5D approach. No stale room screenshot is substituted.
+            roomCameraRig = ui.Rect(stage, "HomeCameraRig2_5D", 0, 0, 1920, 1080);
+            roomCameraRig.pivot = new Vector2(.57f, .47f);
+            roomCameraRig.anchoredPosition = new Vector2(1920f * .57f, -1080f * .53f);
+            background = ui.Art(roomCameraRig, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
+            effects = new WorldEffects(ui, roomCameraRig, background.rectTransform, session.State.settings, audio, owner.transform);
+            scene = ui.Rect(roomCameraRig, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
             globalChrome = ui.Rect(stage, "GlobalChrome", 0, 0, 1920, 1080);
@@ -121,6 +133,9 @@ namespace Rokas.Presentation
             ui.Label(globalChrome, "Controls", "TAB  РІС‹Р±СЂР°С‚СЊ РїСЂРµРґРјРµС‚    ENTER  РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ    ESC  РїР°СѓР·Р° / РЅР°Р·Р°Рґ", 58, 1018, 1220, 37, 17, UiKit.Muted);
             saved = ui.Label(globalChrome, "SaveStatus", "РџР РћР¤РР›Р¬ РЎРћРҐР РђРќРЃРќ", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
             panels = ui.Rect(stage, "Panels", 0, 0, 1920, 1080);
+            panelsOriginalSiblingIndex = panels.GetSiblingIndex();
+            laptopModalLayer = panels.gameObject.AddComponent<CanvasGroup>();
+            laptopModalLayer.alpha = 1f;
             toast = ui.Label(stage, "Toast", "", 310, 925, 1300, 60, 23, UiKit.Paper, false, TextAnchor.MiddleCenter);
             var toastOutline = toast.gameObject.AddComponent<Outline>();
             toastOutline.effectColor = new Color(0, 0, 0, .9f);
@@ -135,7 +150,7 @@ namespace Rokas.Presentation
                 OpenHubMenu);
             home = new HomeView(
                 ui, assets, session, audio,
-                OpenPanel, Act, Travel, ToastShort, OpenHubDialogue,
+                OpenFromHomeLaptopHotspot, Act, Travel, ToastShort, OpenHubDialogue,
                 () => MoveHomeLocation(HomeLocation.Hallway));
             hallway = new HallwayView(
                 ui, assets, session, audio, Act,
@@ -147,6 +162,24 @@ namespace Rokas.Presentation
             contracts = new ContractPanels(ui, session, Act, RefreshPanel, Travel, ClosePanel);
             laptop = new LaptopView(ui, assets, session, contracts, Act, audio.LaptopMouseClick, ToastShort, ClosePanel,
                 owner.VideoPresenter, () => audio.VideoVolume, () => owner.VideoTransitionsEnabled);
+            laptopCinematic = new LaptopCinematicSequence(ui, owner, transitions, background,
+                () =>
+                {
+                    transition = false;
+                    cinematicLaptopHandoff = true;
+                    try { OpenPanel("laptop"); }
+                    finally { cinematicLaptopHandoff = false; }
+                },
+                () =>
+                {
+                    transition = false;
+                    laptopOpenedFromSeatedCinematic = false;
+                    SetSceneInteractionsEnabled(true);
+                },
+                () => audio.PlayLaptopPowerClick(),
+                () => audio.PlayLaptopStandUp(),
+                () => session.Messages.TotalUnread,
+                UpdateHomeCameraBlend);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -389,6 +422,10 @@ namespace Rokas.Presentation
 
         private void RebuildScene()
         {
+            laptopOpenedFromSeatedCinematic = false;
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             if (hubDialogue != null && hubDialogue.IsOpen)
                 hubDialogue.Close();
             ui.Clear(scene);
@@ -437,6 +474,34 @@ namespace Rokas.Presentation
 
         private void OnHit(CombatHit hit) { mission.OnHit(hit); }
 
+        // Perspective-consistent 2.5D focal approach: room art, live window
+        // parallax, animated outlines and hotspots move as one continuous plane.
+        // At full POV the approved bitmap is shown unmodified.
+        private void UpdateHomeCameraBlend(float progress)
+        {
+            float eased = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
+            if (roomCameraRig) roomCameraRig.localScale =
+                Vector3.one * (1f + .20f * eased);
+        }
+
+        private void OpenFromHomeLaptopHotspot(string value)
+        {
+            if (value != "laptop") { OpenPanel(value); return; }
+            if (transition || storageBlocked || !string.IsNullOrEmpty(panel) ||
+                (hubDialogue != null && hubDialogue.IsOpen) ||
+                !IsHomeLocation(phase) || homeSubLocation != HomeLocation.MainRoom)
+                return;
+            if (laptopCinematic != null && laptopCinematic.TryStart())
+            {
+                transition = true;
+                audio.PlayLaptopSit();
+                SetSceneInteractionsEnabled(false);
+                return;
+            }
+            // Unavailable or incomplete production art: retain the old laptop UX.
+            OpenPanel("laptop");
+        }
+
         private void OpenPanel(string value)
         {
             // Workbench is laptop-only. Reject the legacy in-room route before any modal state is created.
@@ -449,6 +514,11 @@ namespace Rokas.Presentation
             {
                 if (IsHomeLocation(phase) && homeSubLocation != HomeLocation.MainRoom) return;
                 laptop.Reset();
+                // Every explicit physical Power press is a new boot cycle.
+                // Programmatic laptop routes retain the existing policy.
+                laptopOpenedFromSeatedCinematic = cinematicLaptopHandoff;
+                if (cinematicLaptopHandoff)
+                    laptop.BeginNewPhysicalPowerCycle();
                 laptopOpenedFrame = Time.frameCount;
             }
             mission.CancelInput();
@@ -460,6 +530,7 @@ namespace Rokas.Presentation
         private void RefreshPanel()
         {
             ui.Clear(panels);
+            laptopModalLayer.alpha = 1f;
             bool sceneEnabled =
                 string.IsNullOrEmpty(panel) &&
                 (hubDialogue == null || !hubDialogue.IsOpen);
@@ -476,6 +547,8 @@ namespace Rokas.Presentation
             }
             if (panel == "laptop")
             {
+                // The modal must remain above the approved POV while fading.
+                panels.SetAsLastSibling();
                 laptop.Build(panels);
                 return;
             }
@@ -485,16 +558,52 @@ namespace Rokas.Presentation
 
         private void ClosePanel()
         {
-            if (panel == "laptop") { laptop.BeginClose(FinishClosePanel); return; }
+            if (panel == "laptop")
+            {
+                if (laptop.IsClosing) return;
+                // Prepare the seated POV under YOMI BEFORE starting the fade.
+                if (laptopOpenedFromSeatedCinematic && !storageBlocked &&
+                    IsHomeLocation(phase) && homeSubLocation == HomeLocation.MainRoom &&
+                    laptopCinematic.TryStart(resumeFromLaptop: true))
+                {
+                    transition = true;
+                    SetSceneInteractionsEnabled(false);
+                }
+                laptop.BeginClose(FinishClosePanel);
+                return;
+            }
             FinishClosePanel();
         }
 
         private void FinishClosePanel()
         {
             bool fromLaptop = panel == "laptop";
+            bool returnToSeatedChoice = fromLaptop && laptopOpenedFromSeatedCinematic &&
+                !storageBlocked && IsHomeLocation(phase) &&
+                homeSubLocation == HomeLocation.MainRoom;
             panel = null;
             audio.SetLaptopMode(false);
             ui.Clear(panels);
+            laptopModalLayer.alpha = 1f;
+            panels.SetSiblingIndex(panelsOriginalSiblingIndex);
+            if (fromLaptop && laptopCinematic.HasPendingVisualHandoff)
+                laptopCinematic.CompleteVisualHandoff();
+            // Close animation has completed: clear IsClosing and old VideoPlayer
+            // state BEFORE allowing the next physical Power request. Reset keeps
+            // bootConsumedThisHomeVisit intact until the player presses Power.
+            if (fromLaptop) laptop.Reset();
+            // Recreate the already-seated POV. Stand up only on Esc/Back,
+            // not when closing the powered laptop and staying at the desk.
+            if (returnToSeatedChoice &&
+                (laptopCinematic.IsPlaying || laptopCinematic.TryStart(resumeFromLaptop: true)))
+            {
+                transition = true;
+                SetSceneInteractionsEnabled(false);
+                if (EventSystem.current)
+                    EventSystem.current.SetSelectedGameObject(null);
+                return;
+            }
+            laptopOpenedFromSeatedCinematic = false;
             bool sceneEnabled =
                 hubDialogue == null || !hubDialogue.IsOpen;
             sceneInput.interactable = sceneEnabled;
@@ -523,6 +632,12 @@ namespace Rokas.Presentation
 
         public void Escape()
         {
+            if (laptopCinematic != null && laptopCinematic.IsPlaying)
+            {
+                if (!laptopCinematic.BackToRoom())
+                    laptopCinematic.SkipToLaptop();
+                return;
+            }
             if (transition || storageBlocked) return;
             if (hubDialogue != null && hubDialogue.IsOpen)
             {
@@ -558,6 +673,8 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool focused = true)
         {
+            if (focused && laptopCinematic != null && laptopCinematic.IsAwaitingPowerChoice &&
+                Input.GetKeyDown(KeyCode.E)) laptopCinematic.TryPressPower();
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
@@ -580,6 +697,11 @@ namespace Rokas.Presentation
                 if (Time.frameCount != laptopOpenedFrame && Input.GetMouseButtonDown(0))
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
+                if (panel == "laptop" && laptop.IsClosing)
+                    laptopModalLayer.alpha = laptop.WindowOpacity;
+                if (panel == "laptop" && laptopCinematic.HasPendingVisualHandoff &&
+                    laptop.IsVisualReady)
+                    laptopCinematic.CompleteVisualHandoff();
             }
             messageNotifications.SetSuppressed(phase == RunPhase.Portal ||
                 (session.CombatMode == CombatMode.ReactiveTurns &&
@@ -635,6 +757,9 @@ namespace Rokas.Presentation
         public void ShowStorageBlock(string message)
         {
             storageBlocked = true;
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             ui.Clear(transitions);
             ui.Box(transitions, "StorageBlock", 0, 0, 1920, 1080, UiKit.Ink, true);
             ui.Label(transitions, "StorageTitle", "РџСЂРѕС„РёР»СЊ Р·Р°С‰РёС‰С‘РЅ", 360, 310, 1200, 110, 48, UiKit.Paper, true);
@@ -644,6 +769,9 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             mission.ClearReferences();
             effects.Dispose();
             hubDialogue?.Dispose();

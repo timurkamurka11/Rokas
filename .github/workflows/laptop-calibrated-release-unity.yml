@@ -1,0 +1,122 @@
+name: ROKAS Laptop Calibrated Release Unity QA
+
+on:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+    paths:
+      - '.github/workflows/laptop-calibrated-release-unity.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+
+jobs:
+  unity-calibrated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve previously rendered 49-frame keyed Blender source
+        uses: actions/download-artifact@v4
+        with:
+          name: ROKAS-Blender49-Source-Renders
+          run-id: 38006376378
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: BlenderSource
+
+      - name: Pack alpha without rerender and assert temporal Power contact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py \
+            --frames BlenderSource --output . --count 49
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+          folder=Path('Assets/Rokas/Resources/LaptopCinematic')
+          path=folder/'right_hand_manifest.json'
+          m=json.loads(path.read_text(encoding='utf-8'))
+          for i,dy in {31:-4,32:-13,33:-13,34:-13,35:-4}.items():
+            m['frames'][i]['y']+=dy
+          path.write_text(json.dumps(m,indent=2),encoding='utf-8')
+          def coverage(i):
+            f=m['frames'][i]
+            img=Image.open(folder/'HandsRight'/('Hand_%04d.png'%i)).convert('RGBA')
+            x,y=1040-int(f['x']),708-int(f['y'])
+            return img.getpixel((x,y))[3] if 0<=x<img.width and 0<=y<img.height else 0
+          vals={i:coverage(i) for i in range(28,37)}
+          print('REAL_POWER_ALPHA_TIMELINE',vals)
+          assert vals[29] < 100, 'Finger touches key too early'
+          assert vals[30] >= 160, 'First touch missing'
+          assert all(vals[i]>=160 for i in range(31,35)), 'Power press/hold is not continuous'
+          assert vals[35]<100, 'Finger did not release Power'
+          assert m['handedness']=='right' and len(m['frames'])==49
+          print('CALIBRATED_ART_TEMPORAL_CONTACT_PASS')
+          PY
+
+      - name: Isolated test backdrop — not user's approved photo
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
+          assert not p.exists(), 'Never overwrite genuine user art in CI'
+          p.parent.mkdir(parents=True,exist_ok=True)
+          im=Image.new('RGB',(1672,941),(37,26,22))
+          draw=ImageDraw.Draw(im)
+          draw.polygon([(596,413),(1044,412),(1051,676),(586,676)],fill=(4,7,10))
+          draw.rectangle((560,690,1110,845),fill=(53,44,38))
+          im.save(p)
+          print('Synthetic background (not approved artwork)')
+          PY
+
+      - name: Login and download real Unity editor
+        shell: bash
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4; do
+            if printf '%s' "$TOKEN" | docker login -u "$USERNAME" --password-stdin >/dev/null; then break; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((15*i))
+          done
+          for i in 1 2 3 4; do
+            if docker pull unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3; then exit 0; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((30*i))
+          done
+      - name: Unity PlayMode with calibrated 49 frames and real RenderTexture pixels
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.LaptopUnityOffscreenProofPlayModeTests
+          checkName: Calibrated ROKAS Power Real Unity Pixels
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload real Unity screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Unity-Calibrated-Real-Visual-Proof
+          path: |
+            ROKAS_Unity_OffscreenProof/
+            ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

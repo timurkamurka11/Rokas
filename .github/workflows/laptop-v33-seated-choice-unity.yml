@@ -1,0 +1,119 @@
+name: ROKAS Laptop V3.3 Return To Seated Choice PlayMode
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+    paths:
+      - '.github/workflows/laptop-v33-seated-choice-unity.yml'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopView.cs'
+      - 'Assets/Rokas/Tests/PlayMode/LaptopCinematicInstalledPlayModeTests.cs'
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  verify:
+    name: Real Unity 6000.3 PlayMode with 49 real right-hand frames
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse existing full Blender render - no rerender
+        uses: actions/download-artifact@v4
+        with:
+          name: ROKAS-Blender49-Source-Renders
+          run-id: 38034339981
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: LatestBlender49
+      - name: Build Unity right-hand PNG manifest and calibrate physical Power contact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py \
+            --frames LatestBlender49 --output . --count 49
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+          folder=Path('Assets/Rokas/Resources/LaptopCinematic')
+          p=folder/'right_hand_manifest.json'
+          a=json.loads(p.read_text(encoding='utf-8'))
+          offsets={29:(-8,1),30:(-14,2),31:(-14,2),32:(-14,2),33:(-14,2),34:(-14,2),35:(-8,1)}
+          for k,(dx,dy) in offsets.items():
+            a['frames'][k]['x']+=dx
+            a['frames'][k]['y']+=dy
+          for i in range(27,38):
+            f=a['frames'][i]
+            img=Image.open(folder/'HandsRight'/('Hand_%04d.png'%i)).convert('RGBA')
+            x,y=1040-int(f['x']),708-int(f['y'])
+            v=img.getpixel((x,y))[3] if 0<=x<img.width and 0<=y<img.height else 0
+            print('RIGHT_FINGER_POWER_ALPHA',i,v)
+            if i in (30,31,32,33,34): assert v>=160, ('Key contact missing at',i,v)
+            if i in (27,28,29,35,36,37):assert v<100, ('Key touched before/after event',i,v)
+          p.write_text(json.dumps(a,indent=2),encoding='utf-8')
+          assert len(a['frames'])==49 and a['handedness']=='right'
+          PY
+      - name: Synthetic test-only POV, never overwrite approved art
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
+          assert not p.exists()
+          p.parent.mkdir(parents=True,exist_ok=True)
+          image=Image.new('RGB',(1672,941),(37,26,22))
+          d=ImageDraw.Draw(image)
+          d.polygon([(596,413),(1044,412),(1051,676),(586,676)], fill=(3,8,15))
+          d.rectangle((560,690,1110,845), fill=(52,42,38))
+          image.save(p)
+          print('TEST_SYNTHETIC_POV_ONLY')
+          PY
+      - name: Authenticate Docker Hub and fetch Unity
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4; do
+            if printf '%s' "$TOKEN" | docker login -u "$USERNAME" --password-stdin >/dev/null; then break; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((i*15))
+          done
+          for i in 1 2 3 4; do
+            if docker pull unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3; then exit 0; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((i*30))
+          done
+      - name: Unity PlayMode - seated loop, repeated Power and Stand exit
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.LaptopCinematicInstalledPlayModeTests
+          checkName: ROKAS Seated Return Loop GameCI
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save genuine GameCI result files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-V33-PhysicalLaptopSeatedReturn-Unity-Results
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

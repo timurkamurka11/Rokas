@@ -1,0 +1,204 @@
+name: ROKAS Right Hand Full Blender To Unity
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+    paths:
+      - '.github/workflows/laptop-blender-to-unity.yml'
+      - 'Tools/LaptopCinematic/cloud_blender_right_hand_production.py'
+      - 'Tools/LaptopCinematic/pack_right_hand_for_unity.py'
+      - 'Assets/Rokas/Tests/PlayMode/LaptopCinematicCapturePlayModeTests.cs'
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: rokas-blender-unity-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  art:
+    name: Blender 49-frame native-resolution RGBA & 3D source
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/rokas-blender/blender-4.5.14-linux-x64.tar.xz
+          key: blender-4.5.14-linux-x64-v1
+      - name: Install official Blender LTS and verify sha
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/blender" "$HOME/.cache/rokas-blender"
+          cd "$HOME/.cache/rokas-blender"
+          name="blender-4.5.14-linux-x64.tar.xz"
+          base="https://download.blender.org/release/Blender4.5"
+          if [ ! -s "$name" ]; then curl -fL --retry 5 --retry-all-errors -o "$name" "$base/$name"; fi
+          curl -fL --retry 4 --retry-all-errors -o release.sha256 "$base/blender-4.5.14.sha256"
+          grep -F "$name" release.sha256 | sed 's/\*//g' | sha256sum -c -
+          tar -xJf "$name" -C "$RUNNER_TEMP/blender"
+      - name: Fetch and validate CC0 anatomical rig
+        run: |
+          set -euo pipefail
+          curl -fL --retry 4 --retry-all-errors -o "$RUNNER_TEMP/hand.glb" \
+            'https://www.innerscene.com/api/library/posable-anatomical-right-hand-f6098b4f/download'
+          test "$(head -c4 "$RUNNER_TEMP/hand.glb")" = glTF
+      - name: Render all 49 alpha frames @ 1672x941
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/ROKAS_RightHand_49"
+          "$RUNNER_TEMP/blender/blender-4.5.14-linux-x64/blender" \
+            --background --factory-startup -t 2 \
+            --python Tools/LaptopCinematic/cloud_blender_right_hand_production.py -- \
+            --input "$RUNNER_TEMP/hand.glb" \
+            --output "$RUNNER_TEMP/ROKAS_RightHand_49" --samples 7 --frames 49 \
+            --width 1672 --height 941
+          test "$(find "$RUNNER_TEMP/ROKAS_RightHand_49" -name 'HandsRight_*.png' | wc -l)" = 49
+          test -s "$RUNNER_TEMP/ROKAS_RightHand_49/ROKAS_RightHand_Editable.blend"
+      - name: Validate actual visible index-finger pixels at Power
+        shell: bash
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          import os
+          from PIL import Image
+          from pathlib import Path
+          img=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/'HandsRight_0031.png').convert('RGBA')
+          assert img.size==(1672,941)
+          # Grounded Power anchor on user's approved POV is at 1040,708.
+          import json,math
+          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/'production_report.json').read_text())
+          poses={p['index']:p for p in report['pose_reports']}
+          assert sorted(poses)==list(range(49)), 'Missing full Blender geometry evaluation'
+          vals={}
+          for frame in range(27,37):
+              f=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/f'HandsRight_{frame:04d}.png').convert('RGBA')
+              alpha=f.getpixel((1040,708))[3]
+              local_max=max(f.getpixel((1040+dx,708+dy))[3]
+                            for dx in (-1,0,1) for dy in (-1,0,1))
+              tip=poses[frame]['actual_skin_tip_px']
+              distance=math.hypot(tip[0]-1040,tip[1]-708)
+              vals[frame]=(alpha,local_max,round(distance,2))
+              if 30<=frame<=34:
+                  assert poses[frame]['contact_skin_error_px']<=4, ('Distal skin geometry not on Power',frame)
+                  assert distance<=5, ('Evaluated index skin misses Power',frame,distance)
+                  # The pad moves down 2.2 source pixels on full press.
+                  # Centre alpha=146 on that frame is antialiasing; still
+                  # require actual visible pad coverage near the key.
+                  assert alpha>=100 and local_max>=220, ('Visible skinned contact absent',frame,alpha,local_max)
+              else:
+                  assert alpha<120, ('Power touched outside contact window',frame,alpha)
+          for a,b in zip(report['pose_reports'],report['pose_reports'][1:]):
+              delta=math.dist(a['actual_skin_tip_px'],b['actual_skin_tip_px'])
+              cap=26 if b['index']<=35 else 45
+              assert delta<=cap, ('Visible index fingertip motion snaps between Blender frames',a['index'],b['index'],delta,cap)
+          # The first and last frames must show no hand or sleeve at all.
+          for end_frame in (0,48):
+              alpha_end=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/f'HandsRight_{end_frame:04d}.png').convert('RGBA').getchannel('A')
+              assert alpha_end.getbbox() is None, ('FPS hand did not fully leave frame',end_frame,alpha_end.getbbox())
+          print('VISIBLE_SKIN_POWER_CONTACT_TIMELINE',vals)
+          # No presumed approach direction: legitimate contact from screen-right
+          # need not have a finger shaft 15px *below* the Power key.
+          PY
+      - name: Crop frames without modifying pixels, create right_hand_manifest.json
+        shell: bash
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py \
+            --frames "$RUNNER_TEMP/ROKAS_RightHand_49" \
+            --output "$RUNNER_TEMP/UnityStage" --count 49
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Blender49-UnityResources
+          path: ${{ runner.temp }}/UnityStage/
+          if-no-files-found: error
+          retention-days: 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ROKAS-Blender49-Source-Renders
+          path: ${{ runner.temp }}/ROKAS_RightHand_49/
+          if-no-files-found: error
+          retention-days: 20
+
+  unity:
+    name: Unity 6000.3.19f1 Real Game View + resource loading
+    needs: art
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ROKAS-Blender49-UnityResources
+          path: .
+      - name: Install testing-only POV stand-in (actual user POV stays local)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
+          assert not p.exists(), 'CI must never override a real user-approved POV'
+          p.parent.mkdir(parents=True,exist_ok=True)
+          canvas=Image.new('RGBA',(1672,941),(37,26,22,255))
+          brush=ImageDraw.Draw(canvas)
+          brush.polygon([(596,413),(1044,412),(1051,676),(586,676)],fill=(4,7,10,255))
+          brush.rectangle((560,690,1110,845),fill=(51,44,39,255))
+          canvas.save(p)
+          print('TEST_ONLY_SYNTHETIC_POV - not proof of exact user-approved room art.')
+          PY
+      - name: Authenticate Docker Hub
+        shell: bash
+        env:
+          U: ${{ secrets.DOCKERHUB_USERNAME }}
+          T: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for n in 1 2 3 4; do
+            if printf '%s' "$T" | docker login --username "$U" --password-stdin; then break; fi
+            if [ "$n" -eq 4 ]; then exit 1; fi
+            sleep $((n*15))
+          done
+      - name: Pull Unity editor with Docker Hub retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in 1 2 3 4; do
+            if docker pull unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3; then exit 0; fi
+            if [ "$n" -eq 4 ]; then exit 1; fi
+            sleep $((n*30))
+          done
+      - name: 'Unity PlayMode: installed art, contact and Game View screenshots'
+        id: game
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopCinematicCapturePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS Cinematic Right Hand Real Game View
+      - name: Upload real Unity screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Unity-GameView-RightHand
+          path: |
+            ROKAS_Unity_Art_Captures/
+            ${{ steps.game.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

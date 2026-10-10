@@ -1,0 +1,103 @@
+name: ROKAS Unity Latest Calibrated 49 Real Pixel Proof
+
+on:
+  push:
+    branches:
+      - codex/laptop-pov-cinematic-20261009
+    paths:
+      - '.github/workflows/laptop-unity-latest-art.yml'
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ROKAS-Blender49-Source-Renders
+          run-id: 38006376378
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ROKAS_Latest_Blender_Raw
+      - name: Convert rendered 49 frames to Unity Resources and verify edge contact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py --frames ROKAS_Latest_Blender_Raw --output . --count 49
+          python3 - <<'PY'
+          from PIL import Image
+          im=Image.open('ROKAS_Latest_Blender_Raw/HandsRight_0031.png').convert('RGBA')
+          a=im.getchannel('A')
+          center=a.getpixel((1040,708))
+          opaque=sum(a.getpixel((x,y))>=160 for y in range(705,712) for x in range(1037,1044))
+          above=a.getpixel((1040,690))
+          below=a.getpixel((1040,723))
+          print('PHYSICAL_POWER_CONTACT_PIXELS',center,opaque,above,below)
+          assert center>=64 and opaque>=10 and above<=120 and below>=100
+          PY
+      - name: Provide clearly marked synthetic POV for isolated test
+        shell: bash
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image,ImageDraw
+          from pathlib import Path
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
+          assert not p.exists()
+          p.parent.mkdir(parents=True,exist_ok=True)
+          img=Image.new('RGB',(1672,941),(37,26,22))
+          d=ImageDraw.Draw(img)
+          d.polygon([(596,413),(1044,412),(1051,676),(586,676)], fill=(4,7,10))
+          d.rectangle((560,690,1110,845),fill=(53,44,38))
+          img.save(p)
+          print('SYNTHETIC POC ONLY; NOT USER ORIGINAL')
+          PY
+      - name: Docker Hub login and cached pull
+        shell: bash
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4; do
+            if printf '%s' "$TOKEN" | docker login -u "$USERNAME" --password-stdin >/dev/null; then break; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((15*i))
+          done
+          for i in 1 2 3 4; do
+            if docker pull unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3; then exit 0; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((30*i))
+          done
+      - name: Run actual Unity offscreen texture proof
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.LaptopUnityOffscreenProofPlayModeTests
+          checkName: ROKAS Real Unity UI Offscreen Pixels
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Collect actual PNG evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Unity-LatestRightHand-CalibratedPixels
+          path: |
+            ROKAS_Unity_OffscreenProof/
+            ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14
