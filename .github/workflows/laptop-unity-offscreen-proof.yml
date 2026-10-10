@@ -1,4 +1,4 @@
-name: ROKAS Unity Offscreen Right Hand Visual Proof
+name: ROKAS Unity V5 Verified Blender49 Offscreen Visual Proof
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ROKAS-Blender49-UnityResources
-          run-id: 38004091592
+          run-id: 38067367922
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: .
       - name: Provide clearly marked synthetic POV for isolated test
