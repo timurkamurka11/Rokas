@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/laptop-cloud-blender-production.yml'
       - 'Tools/LaptopCinematic/cloud_blender_right_hand_production.py'
+      - 'Tools/LaptopCinematic/cloud_blender_nail_cuff_audit.py'
 
 permissions:
   contents: read
@@ -53,6 +54,18 @@ jobs:
             --width 960 --height 540 --samples 8 --only 6,22,31,41
           test -s "$RUNNER_TEMP/right_hand_preview/HandsRight_0031.png"
           test -s "$RUNNER_TEMP/right_hand_preview/production_report.json"
+      - name: Render diagnostic nail, cuff, and hand ID masks in real Blender
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/right_hand_preview/QA"
+          "$RUNNER_TEMP/blender/blender-4.5.14-linux-x64/blender" \
+            --background --factory-startup -t 2 \
+            --python Tools/LaptopCinematic/cloud_blender_nail_cuff_audit.py -- \
+            --input "$RUNNER_TEMP/right_hand_preview/ROKAS_RightHand_Editable.blend" \
+            --output "$RUNNER_TEMP/right_hand_preview/QA" --frame 32
+          test -s "$RUNNER_TEMP/right_hand_preview/QA/NAIL_ONLY_frame32.png"
+          test -s "$RUNNER_TEMP/right_hand_preview/QA/CUFF_ONLY_frame32.png"
+          test -s "$RUNNER_TEMP/right_hand_preview/QA/HAND_ONLY_frame32.png"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
