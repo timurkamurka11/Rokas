@@ -87,6 +87,105 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     mesh.from_pydata(verts,[],faces);mesh.update()
     for p in mesh.polygons:p.use_smooth=True
 
+def apply_subtle_finger_slimming(hand, rig):
+    """Trim swollen-looking fingers 7%, preserving skin weights and joint lengths."""
+    mesh=hand.data
+    inv=hand.matrix_world.inverted()
+    changed=0
+    for digit in ("index","middle","ring","pinky","thumb"):
+        for segment in ("01","02","03"):
+            name=f"{digit}_{segment}_r"
+            group=hand.vertex_groups.get(name)
+            bone=rig.data.bones.get(name)
+            if not group or not bone: continue
+            root=inv @ (rig.matrix_world @ bone.head_local)
+            end=inv @ (rig.matrix_world @ bone.tail_local)
+            axis=end-root
+            if axis.length < 1e-6: continue
+            axis.normalize()
+            for vertex in mesh.vertices:
+                try: weight=group.weight(vertex.index)
+                except RuntimeError: continue
+                if weight < .2: continue
+                parallel=axis * (vertex.co-root).dot(axis)
+                radial=vertex.co-root-parallel
+                vertex.co -= radial * .075 * min(1.,weight)
+                changed+=1
+    mesh.update()
+    print("ROKAS_SLIM_FINGER_VERTICES",changed,flush=True)
+
+
+def create_nail_objects():
+    """Pale satin keratin with subtle curved edges, not chunky sphere caps."""
+    matte=bpy.data.materials.new("Nail_Natural_Keratin_Subtle")
+    matte.diffuse_color=(.63,.48,.43,1.)
+    matte.use_nodes=True
+    bsdf=next(node for node in matte.node_tree.nodes if node.type=="BSDF_PRINCIPLED")
+    bsdf.inputs["Base Color"].default_value=(.63,.48,.43,1.)
+    bsdf.inputs["Roughness"].default_value=.49
+    if "Coat Weight" in bsdf.inputs: bsdf.inputs["Coat Weight"].default_value=.12
+    for digit in ("index","middle","ring","pinky","thumb"):
+        verts=[]; faces=[]
+        # Dorsal oval shield, 11 x 7 vertex lattice, slight convexity
+        for yi in range(11):
+            yy=-1.+2*yi/10
+            for xi in range(7):
+                xx=-1.+2*xi/6
+                outline=max(0.,1.-(xx**2*.84+yy**2))
+                verts.append((xx*.007, yy*.010, .0019*outline))
+        for yi in range(10):
+            for xi in range(6):
+                a=yi*7+xi
+                faces.append((a,a+1,a+8,a+7))
+        mesh=bpy.data.meshes.new(f"Nail_{digit}_SmoothSurface")
+        mesh.from_pydata(verts,[],faces);mesh.update()
+        obj=bpy.data.objects.new(f"ROKAS_AnatomicalNail_{digit}",mesh)
+        bpy.context.collection.objects.link(obj)
+        mesh.materials.append(matte)
+        for poly in mesh.polygons:poly.use_smooth=True
+
+
+def update_nail_positions(hand, rig, frame):
+    """Use actual posed skinned vertices, not potentially offset GLB bone tails."""
+    dg=bpy.context.evaluated_depsgraph_get()
+    eval_hand=hand.evaluated_get(dg)
+    evaluated=eval_hand.to_mesh()
+    try:
+        mw=eval_hand.matrix_world
+        for digit in ("index","middle","ring","pinky","thumb"):
+            name=f"{digit}_03_r"
+            group=hand.vertex_groups.get(name)
+            bone=rig.pose.bones.get(name)
+            obj=bpy.data.objects.get(f"ROKAS_AnatomicalNail_{digit}")
+            if not group or not bone or not obj:continue
+            source=[]
+            for vertex in hand.data.vertices:
+                try: w=group.weight(vertex.index)
+                except RuntimeError:continue
+                if w>.42 and vertex.index < len(evaluated.vertices):
+                    source.append(mw @ evaluated.vertices[vertex.index].co)
+            if len(source)<4:
+                obj.hide_render=True
+                continue
+            obj.hide_render=False
+            # Mesh vertices in this GLB are authoritative for distal anatomy.
+            source.sort(key=lambda v:v.z,reverse=True)
+            top=source[:max(5,len(source)//7)]
+            avg=sum(top,Vector())/len(top)
+            bone_head=rig.matrix_world @ bone.head
+            bone_tail=rig.matrix_world @ bone.tail
+            direction=bone_tail-bone_head
+            obj.location=(avg.x,avg.y,max(v.z for v in top)+.001)
+            obj.rotation_euler=(0.,0.,math.atan2(direction.y,direction.x)-math.pi*.5)
+            width=.82 if digit=="pinky" else 1.05 if digit=="thumb" else 1.
+            obj.scale=(width,1.,1.)
+            obj.keyframe_insert(data_path="location",frame=frame)
+            obj.keyframe_insert(data_path="rotation_euler",frame=frame)
+            obj.keyframe_insert(data_path="scale",frame=frame)
+    finally:
+        eval_hand.to_mesh_clear()
+
+
 def add_area(name,loc,watts,rgb,size):
     ld=bpy.data.lights.new(name,"AREA");o=bpy.data.objects.new(name,ld);bpy.context.collection.objects.link(o)
     o.location=Vector(loc);ld.energy=watts;ld.color=rgb;ld.shape="DISK";ld.size=size
@@ -118,6 +217,8 @@ def create_scene(a):
     links.new(pores.outputs["Fac"],palette.inputs["Fac"])
     links.new(palette.outputs["Color"],skin_bsdf.inputs["Base Color"])
     hand.data.materials.clear();hand.data.materials.append(skin)
+    apply_subtle_finger_slimming(hand,rig)
+    create_nail_objects()
     # Force mildly animated real finger joints, no frame-to-frame morph cards.
     for bone in rig.pose.bones:
         bone.rotation_mode="XYZ"
@@ -211,6 +312,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     rig.location.y += wanted.y-tip_now.y
     bpy.context.view_layer.update()
     wrist=rig.matrix_world @ base.head
+    update_nail_positions(hand,rig,index+1)
     # Locally modeled cloth follows the wrist with real keyframed transforms.
     sleeve_obj=bpy.data.objects["RIGHT_FreeHomeSleeve"]
     cuff_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
