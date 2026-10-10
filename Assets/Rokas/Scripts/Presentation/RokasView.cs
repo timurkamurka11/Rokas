@@ -170,7 +170,8 @@ namespace Rokas.Presentation
                     SetSceneInteractionsEnabled(true);
                 },
                 () => audio.PlayLaptopPowerClick(),
-                () => audio.PlayLaptopStandUp());
+                () => audio.PlayLaptopStandUp(),
+                () => session.Messages.TotalUnread);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
