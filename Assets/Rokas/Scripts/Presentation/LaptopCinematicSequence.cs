@@ -393,6 +393,24 @@ namespace Rokas.Presentation
                 0f, 0f, lcdW, lcdH);
             physicalMiniYomiImage.color = Color.white;
             physicalMiniYomiImage.raycastTarget = false;
+            // Exact same nine vector glyphs as fullscreen LaptopView, drawn
+            // directly on the mini LCD. Not generic placeholder symbols.
+            float miniScaleX = lcdW / 640f;
+            float miniScaleY = lcdH / 360f;
+            for (int i = 0; i < LaptopView.DesktopAppCount; i++)
+            {
+                int tileX = 18 + (i % 4) * 152;
+                int tileY = 58 + (i / 4) * 86;
+                RectTransform iconRect = ui.Rect(physicalMiniYomiViewport,
+                    "PhysicalMiniYomiAppIcon_" + i,
+                    (tileX + 7) * miniScaleX, (tileY + 18) * miniScaleY,
+                    34f * miniScaleX, 38f * miniScaleY);
+                iconRect.gameObject.AddComponent<CanvasRenderer>();
+                var glyph = iconRect.gameObject.AddComponent<LaptopIcon>();
+                glyph.Glyph = (LaptopGlyph)i;
+                glyph.color = Color.white;
+                glyph.raycastTarget = false;
+            }
             noSignalScreen.gameObject.SetActive(false);
             physicalMiniYomiViewport.gameObject.SetActive(false);
             // Load the three EXACT approved transparent user PNGs when installed.
