@@ -111,8 +111,8 @@ namespace Rokas.Tests
             Assert.That(reopen.gameObject.activeInHierarchy,Is.True);
             Assert.That(Find<RawImage>("ExactGoldenOpenPrompt").texture,
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open")));
-            Assert.That(reopen.GetComponent<LaptopChoiceHover>(),Is.Not.Null,
-                "Gold powered-YOMI action shares the hover effect");
+            Assert.That(Find<LaptopChoiceHover>("ExactGoldenOpenPrompt"),Is.Not.Null,
+                "Original gold powered-YOMI PNG must have hover on its own Graphic");
             Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
             yield return null;
             Assert.That(boot.View.LaptopOpen,Is.True);
