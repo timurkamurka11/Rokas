@@ -417,6 +417,11 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
+    # Smooth anatomical wrist settling into the Power plane. This is a
+    # gradual 3D reach, not a Unity sprite/PNG translation. It removes the
+    # frame 29->30 / 34->35 fingertip snap seen in the 49-frame V4 review.
+    key_settle=smooth((index-26.)/4.)*(1.-smooth((index-34.)/4.))
+    tip_y+=20.5*key_settle
     wrist_x=tip_x+98.
     wrist_y=tip_y+82.
     # Wrist tucking rotates the actual glTF armature and leaves the finger mesh skinned.
