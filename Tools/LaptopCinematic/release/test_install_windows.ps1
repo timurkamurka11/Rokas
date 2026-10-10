@@ -17,7 +17,7 @@ function Invoke-Test([string[]]$opts,[bool]$expectSuccess){
 try {
  New-Item -ItemType Directory -Path $pack,$unity -Force|Out-Null
  Copy-Item -LiteralPath $InstallerSource -Destination (Join-Path $pack 'INSTALL_SAFE.ps1')
- foreach($r in @('ProjectSettings/ProjectVersion.txt','Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs',$pre+'LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')){
+ foreach($r in @('ProjectSettings/ProjectVersion.txt','Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs',($pre+'LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png'))){
   $d=D $r;New-Item -ItemType Directory -Path (Split-Path -Parent $d) -Force|Out-Null
   [IO.File]::WriteAllText($d,('fixture HandsRight right_hand_manifest '+$r))
  }
