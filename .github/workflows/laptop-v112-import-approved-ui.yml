@@ -1,0 +1,121 @@
+name: ROKAS V11.2 Import Approved User PNGs
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths:
+      - '.github/workflows/laptop-v112-import-approved-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  exact-png-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fidelity3-resume-5779190
+          fetch-depth: 1
+      - name: Download original, unmodified user image files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install chromium --with-deps
+          python3 - <<'PY'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          import re
+          source='https://firestorage.ai/en/f/gAYbcSi6ee1n'
+          files={
+            'image(20261010-223111).png':'rokas_no_signal_chibi.png',
+            'image(20261010-222134).png':'prompt_open.png',
+            'image(20261010-222139).png':'prompt_back.png',
+            'image(20261010-222147).png':'prompt_power.png',
+            'image(20261010-222151).png':'back_arrow.png',
+          }
+          target=Path('Assets/Rokas/Resources/LaptopCinematic/UI')
+          target.mkdir(parents=True,exist_ok=True)
+          with sync_playwright() as p:
+            browser=p.chromium.launch(headless=True)
+            page=browser.new_page(accept_downloads=True,locale='en-US')
+            page.goto(source,wait_until='domcontentloaded',timeout=50000)
+            page.get_by_text('image(20261010-223111).png',exact=True).first.wait_for(timeout=30000)
+            print('PAGE_HEAD',page.title())
+            print('BUTTONS',[x.inner_text() for x in page.locator('button').all()][:25])
+            print('ROWS',page.locator('tr').count())
+            for src,dest in files.items():
+              cell=page.get_by_text(src,exact=True).first
+              row=cell.locator('xpath=ancestor::tr[1]')
+              if row.count()==0:
+                row=cell.locator('xpath=ancestor::*[contains(@class,"row")][1]')
+              if row.count()==0:
+                raise RuntimeError('Cannot locate download row for '+src)
+              buttons=row.get_by_role('button',name=re.compile('Download|ダウンロード',re.I))
+              if buttons.count()==0:
+                buttons=row.get_by_text('Download',exact=True)
+              if buttons.count()==0:
+                raise RuntimeError('Download button missing for '+src+': '+row.inner_text()[:350])
+              with page.expect_download(timeout=45000) as d:
+                buttons.first.click()
+              download=d.value
+              loc=target/dest
+              download.save_as(str(loc))
+              if loc.read_bytes()[:8]!=bytes.fromhex('89504e470d0a1a0a'):
+                raise RuntimeError('Not a PNG: '+str(loc))
+              print('APPROVED_ORIGINAL_IMPORTED',dest,loc.stat().st_size)
+            browser.close()
+          PY
+      - name: Add deterministic Unity importer meta for user PNGs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          folder=Path('Assets/Rokas/Resources/LaptopCinematic/UI')
+          names=['rokas_no_signal_chibi.png','prompt_open.png','prompt_back.png','prompt_power.png','back_arrow.png']
+          for i,name in enumerate(names):
+            guid='95b2cc43d4f74a08a2f7e23170021%03x'%i
+            data='''fileFormatVersion: 2
+guid: %s
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+  isReadable: 0
+  sRGBTexture: 1
+  alphaSource: 1
+  alphaIsTransparency: 1
+  textureType: 0
+  textureShape: 1
+  maxTextureSize: 4096
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  platformSettings: []
+  spriteSheet:
+    serializedVersion: 2
+    sprites: []
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+'''%guid
+            (folder/(name+'.meta')).write_text(data)
+          PY
+      - name: Commit original user PNGs directly to main development branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Assets/Rokas/Resources/LaptopCinematic/UI
+          git diff --cached --check
+          git commit -m 'assets(laptop-v11.2): import original user chibi and golden UI PNGs without retouching'
+          git push origin HEAD:codex/fidelity3-resume-5779190
