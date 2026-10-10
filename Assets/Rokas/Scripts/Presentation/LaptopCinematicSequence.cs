@@ -75,6 +75,7 @@ namespace Rokas.Presentation
         private bool active;
         private bool powerConfirmed;
         private bool returnRequested;
+        private bool returningFromLaptop;
         private Text powerHint;
         private Text backHint;
         private RawImage powerHintArt;
@@ -103,7 +104,7 @@ namespace Rokas.Presentation
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
-        public bool TryStart()
+        public bool TryStart(bool resumeFromLaptop = false)
         {
             if (active) return true;
             if (!owner || !transitionLayer || !mainBackground || !mainBackground.texture) return false;
@@ -159,6 +160,7 @@ namespace Rokas.Presentation
                 powerTimeline = new LaptopPowerTimeline();
                 powerConfirmed = false;
                 returnRequested = false;
+                returningFromLaptop = resumeFromLaptop;
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
@@ -308,16 +310,31 @@ namespace Rokas.Presentation
             SetPromptVisibility(false);
         }
 
-        // The initial camera movement is followed by an INDEFINITE player choice.
-        // No finger motion or power audio may happen until confirmed.
+        // Enter from the room with a grounded settle; closing YOMI instead
+        // returns to the already seated POV without replaying sit audio.
         private IEnumerator Play()
         {
             float elapsed = 0f;
-            while (active && elapsed < HandsStart)
+            if (returningFromLaptop)
             {
-                RenderAt(elapsed);
-                yield return null;
-                elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+                // Small LCD-to-idle crossfade, no body teleport/sitting replay.
+                for (float phase = 0f; active && phase < .28f;
+                    phase += Mathf.Min(Time.unscaledDeltaTime, .06f))
+                {
+                    RenderAt(HandsStart);
+                    povGroup.alpha = Mathf.SmoothStep(0f, 1f, phase / .28f);
+                    yield return null;
+                }
+                elapsed = HandsStart;
+            }
+            else
+            {
+                while (active && elapsed < HandsStart)
+                {
+                    RenderAt(elapsed);
+                    yield return null;
+                    elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+                }
             }
             if (!active) yield break;
             RenderAt(HandsStart);
@@ -397,6 +414,14 @@ namespace Rokas.Presentation
 
             float ease = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / ApproachEnd));
             wideImage.rectTransform.localScale = Vector3.one * (1f + .065f * ease);
+            // Grounded body settle: weight drops with a damped rebound as Keiki
+            // sits at the low table. The reverse follows the same motion.
+            float settled = Mathf.Clamp01(t / HandsStart);
+            float sitDrop = -14f * Mathf.SmoothStep(0f, 1f, settled) +
+                2.5f * Mathf.Sin(settled * Mathf.PI * 2.3f) * Mathf.Exp(-4f * settled);
+            wideImage.rectTransform.anchoredPosition =
+                new Vector2(StageWidth * .59f,
+                    -StageHeight * .47f + sitDrop);
             povGroup.alpha = Mathf.SmoothStep(0f, 1f,
                 Mathf.InverseLerp(POVStart, POVEnd, t));
 
@@ -484,6 +509,7 @@ namespace Rokas.Presentation
             shownFrame = -1;
             powerConfirmed = false;
             returnRequested = false;
+            returningFromLaptop = false;
             powerHint = null;
             backHint = null;
             powerHintArt = null;
