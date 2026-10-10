@@ -55,7 +55,7 @@ try {
  Check ((Get-Content -LiteralPath $prior -Raw) -ceq 'USER_OLD') 'interruption damaged user file'
  Check (-not (Test-Path -LiteralPath (D ($pre+'HandsRight/Hand_0000.png')))) 'interruption left new file'
  Invoke-Test @() $true
- foreach($e in $entries){Check ((H (D $e.relative)) -ceq $e.sha256) 'installed hash mismatch'}
+ foreach($e in $entries){Check ((FileSha (D $e.relative)) -ceq $e.sha256) 'installed hash mismatch'}
  $backroot=Join-Path $unity 'ROKAS_LaptopCinematic_Backups'
  $id=(Get-Content -LiteralPath (Join-Path $backroot 'last_install.txt') -Raw).Trim()
  $saved=Join-Path $backroot ($id+'/previous/'+$pre+'HandsRight/Hand_0031.png')
