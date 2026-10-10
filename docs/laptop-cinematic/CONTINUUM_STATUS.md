@@ -89,3 +89,17 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 2. Verify approved local POV, original UI PNG, sitting/stand-up/user power SFX and their mixed volumes on target Unity; cloud synthetic tests do not verify these private assets.
 3. Ensure Windows installer release package includes same approved 49 source frames, sourceSha/artifact identity, batch launcher, safety-script SHA, backup/rollback. Do NOT change validation to VISUAL_AND_UNITY_QA_APPROVED until these user-visible gates pass.
 4. Perform local Unity acceptance on D: only when the user elects to install. Never claim a cloud workflow changed local user files.
+
+
+## V9 final Windows hardening checkpoint — 2026-10-10
+- Branch: codex/laptop-pov-cinematic-20261009, PR #7 open DRAFT.
+- Code HEAD before this checkpoint: e9bad215f794f37140ebfa547b1643ddf91be72c.
+- Canonical installer scripts staged (not approved release): Tools/LaptopCinematic/release/INSTALL_SAFE.ps1, 00_ONE_CLICK_INSTALL_AND_OPEN.bat, 01_ROLLBACK_LAST_INSTALL.bat, test_install_windows.ps1.
+- Production assets are NOT in that source folder; do not distribute it as a completed installer. The release manifest must remain gated (VISUAL_AND_UNITY_QA_APPROVED only after complete real-scene acceptance).
+- Original Windows safety suite: https://github.com/timurkamurka11/Rokas/actions/runs/38079916382 PASS.
+- Expanded Windows PowerShell **5.1** safety suite: https://github.com/timurkamurka11/Rokas/actions/runs/38080156757 PASS, source commit e9bad215f794f37140ebfa547b1643ddf91be72c, marker ROKAS_WINDOWS_INSTALLER_SAFETY_PASS.
+- Verified on isolated temporary ROKAS-shaped project: dry run, SHA256/missing/tampered resources, review-only release rejection, interrupted install recovery, backup/rollback, corruption and user-edit protection, wrong Unity root rejection and Windows junction defense. No local D: access or mutations.
+- Blender source still a38e6cba9b1f34fd2976ade27f50cdf3328e9a7f; full 49-frame and Unity real RenderTexture art job 38077862962 SUCCESS; artifacts raw 11679419922, cropped 11679634496, Unity game-capture 11680315164. No rerender is required.
+- Visual open issue: contact proven in 2D screen pixels, but not true 3D button surface penetration in the original photographed POV. Last CI Game View uses explicit synthetic POV. Do not claim native room/user audio acceptance.
+- Local target D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY remains untouched; visual and runtime acceptance in real Unity must precede release flag and installing package.
+- NEXT EXACT STEP: Obtain/verify real approved room POV + original UI/audio in target Unity, watch full normal-speed animation and Power contact, record user acceptance; only then populate signed-off SHA256 manifest and make final release archive with 49 new frames and canonical tested installer. Investigate generic Core behavior pre-existing failures separately if global merge is needed.
