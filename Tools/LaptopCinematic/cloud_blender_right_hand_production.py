@@ -306,6 +306,75 @@ def create_scene(a):
     scene.camera.data.lens=45
     return rig,hand,sleeve_mesh,cuff_mesh,scene
 
+
+# Real skinned contact is measured from the evaluated distal skin, never from
+# the glTF bone tail (which is offset from the visible fingertip).
+def index_skin_tip_px(hand,rig):
+    dg=bpy.context.evaluated_depsgraph_get()
+    evaluated_obj=hand.evaluated_get(dg)
+    evaluated_mesh=evaluated_obj.to_mesh()
+    try:
+        grp=hand.vertex_groups.get("index_03_r")
+        if grp is None:raise RuntimeError("Skinned index distal vertex group missing")
+        wrist=rig.matrix_world @ rig.pose.bones["hand_r"].head
+        cloud=[]
+        for vertex in hand.data.vertices:
+            try:w=grp.weight(vertex.index)
+            except RuntimeError:continue
+            if w >= .45 and vertex.index<len(evaluated_mesh.vertices):
+                v=evaluated_obj.matrix_world @ evaluated_mesh.vertices[vertex.index].co
+                cloud.append((v,(v.x-wrist.x)**2+(v.y-wrist.y)**2))
+        if len(cloud)<12:raise RuntimeError("Index distal surface does not contain enough weighted vertices")
+        cloud.sort(key=lambda x:x[1],reverse=True)
+        # Extremal skin surface, not the displaced bone reference.
+        tip=sum((p for p,d in cloud[:max(8,len(cloud)//9)]),Vector())/max(8,len(cloud)//9)
+        return ((tip.x/(FRAME_LENGTH*W/H)+.5)*W,
+                (.5-tip.y/FRAME_LENGTH)*H)
+    finally:
+        evaluated_obj.to_mesh_clear()
+
+def articulate_index(rig,reach,curl,yaw,downstroke):
+    # MCP/PIP/DIP have independently keyed X rotations; the knuckle points
+    # the pad downward while PIP/DIP shorten the silhouette naturally.
+    for joint,mult,base in (("01",.42,.08),("02",.75,.12),("03",.46,.075)):
+        pb=rig.pose.bones["index_"+joint+"_r"]
+        pb.rotation_euler=(mult*curl,0.,base*reach+yaw*(1. if joint=="01" else .32)+
+                           (.028 if joint=="03" else 0.)*downstroke)
+
+def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
+    # This is rig-space articulation and skinned-mesh QA, not a sprite/PNG
+    # offset. Anchor the wrist before applying curl and solve only finger joints.
+    target=(POWER_X,POWER_Y+(1.8 if downstroke else 0.))
+    candidates=[]
+    for curl in (.65,.85,1.05,1.25,1.45,1.65):
+        for yaw in (-.55,-.38,-.20,0.,.20,.38,.55):
+            articulate_index(rig,reach,curl,yaw,downstroke)
+            bpy.context.view_layer.update()
+            px=index_skin_tip_px(hand,rig)
+            d=math.hypot(px[0]-target[0],px[1]-target[1])
+            candidates.append((d,curl,yaw,px))
+    candidates.sort(key=lambda x:x[0])
+    best=candidates[0]
+    # Refinement around the best anatomical joint configuration.
+    for step in (.11,.045):
+        tests=[]
+        for curl in (max(.55,best[1]-step),best[1],min(1.75,best[1]+step)):
+            for yaw in (max(-.65,best[2]-step),best[2],min(.65,best[2]+step)):
+                articulate_index(rig,reach,curl,yaw,downstroke)
+                bpy.context.view_layer.update()
+                px=index_skin_tip_px(hand,rig)
+                tests.append((math.hypot(px[0]-target[0],px[1]-target[1]),curl,yaw,px))
+        best=min(tests,key=lambda x:x[0])
+    articulate_index(rig,reach,best[1],best[2],downstroke)
+    bpy.context.view_layer.update()
+    measured=index_skin_tip_px(hand,rig)
+    error=math.hypot(measured[0]-target[0],measured[1]-target[1])
+    print("ROKAS_SKIN_CONTACT_SOLVER",frame,"skin",measured,"target",target,
+          "error_px",round(error,2),"curl",best[1],"yaw",best[2],flush=True)
+    if error>9.:
+        raise RuntimeError("Real skinned fingertip misses Power at frame %s: %.2fpx" %(frame,error))
+    return measured,error
+
 def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     t=index/FPS
     # First entry at bottom-right, confident anatomical motion toward upper-right
@@ -338,11 +407,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # The mesh may have its own parent transform; Blender's skin modifier resolves its rig.
     for bone in rig.pose.bones:
         if bone.name.startswith("index_"):
+            # Articulated separately after the palm is placed. The bone tail
+            # must NOT determine the wrist translation after finger flexion.
             joint=bone.name.split("_")[1]
-            # Index leads; one flexion chain instead of a rigid pointing stick.
-            baseline={"01":.08,"02":.12,"03":.075}.get(joint,.04)
-            down={"01":-.08,"02":-.23,"03":-.25}.get(joint,-.06)
-            bone.rotation_euler=(.025*reach, 0,baseline*reach+down*press)
+            bone.rotation_euler=(0.,0.,{"01":.08,"02":.12,"03":.075}.get(joint,.04)*reach)
         elif bone.name.startswith(("middle_","ring_","pinky_")):
             digit=bone.name.split("_")[0]
             joint=bone.name.split("_")[1]
@@ -350,9 +418,11 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             curls={"middle":(.38,.32,.19),"ring":(.48,.39,.26),
                    "pinky":(.56,.46,.32)}
             flex=curls[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
-            bone.rotation_euler=(.03*reach if joint=="01" else 0.,
+            # X is the actual out-of-plane PIP/DIP bend. Z alone was
+            # spreading straight fingers across the approved laptop POV.
+            bone.rotation_euler=(flex*(.64+.36*reach),
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else 0.)*reach,
-                                 flex*(.58+.42*reach))
+                                 (.025 if digit=="pinky" else -.018 if digit=="ring" else .008)*reach)
         elif bone.name.startswith("thumb_"):
             joint=bone.name.split("_")[1]
             bone.rotation_euler=(.025*reach, -.06*reach,
@@ -366,6 +436,18 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     rig.location.x += wanted.x-tip_now.x
     rig.location.y += wanted.y-tip_now.y
     bpy.context.view_layer.update()
+    # From this point onward keep the wrist fixed. All reach/contact
+    # correction happens through the three index phalanges.
+    approach=smooth((index-17.)/13.)
+    retract=smooth((index-34.)/10.)
+    curl=(.16+.94*approach)*(1.-retract)
+    articulate_index(rig,reach,curl,0.,0.)
+    bpy.context.view_layer.update()
+    contact_error=None
+    if 30<=index<=34:
+        # CONTACT 30, PRESS 31-33, RELEASE 34. No PNG positioning tricks.
+        pad,contact_error=fit_index_pad_to_power(rig,hand,reach,index,index in (31,32,33))
+    measured_pad=index_skin_tip_px(hand,rig)
     wrist=rig.matrix_world @ base.head
     nail_report=update_nail_positions(hand,rig,index+1)
     # Locally modeled cloth follows the wrist with real keyframed transforms.
@@ -400,6 +482,9 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     after_tip=rig.matrix_world @ rig.pose.bones["index_03_r"].tail
     return {"index":index,"tip_px":[tip_x,tip_y],
             "actual_bone_tip_px":world_pixel(after_tip),
+            "actual_skin_tip_px":[round(measured_pad[0],2),round(measured_pad[1],2)],
+            "skin_tip_power_distance_px":round(math.hypot(measured_pad[0]-POWER_X,measured_pad[1]-POWER_Y),2),
+            "contact_skin_error_px":round(contact_error,2) if contact_error is not None else None,
             "actual_bone_wrist_px":world_pixel(wrist),
             "skeleton_reference_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
             "cuff_wrist_distance_mm":round(seam_distance*1000,2),
@@ -431,7 +516,7 @@ def main():
         "armature_bones":len(rig.pose.bones),"handedness":"right","frames":a.frames,
         "fps":FPS,"pixel_canvas":[W,H],"contact_index":CONTACT_INDEX,
         "target_power":[POWER_X,POWER_Y],"pose_reports":poses,
-        "note":"PRODUCTION PASS 1 - must be visually approved in real Unity"}
+        "note":"V4 ART QA PENDING: skinned contact rig solve is a geometry gate, not a visual approval"}
     with open(os.path.join(a.output,"production_report.json"),"w",encoding="utf-8") as f:json.dump(report,f,indent=2)
     print("ROKAS_PRODUCTION_RENDER_PASS",len(poses),flush=True)
 if __name__=="__main__":
