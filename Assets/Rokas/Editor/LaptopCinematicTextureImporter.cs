@@ -23,8 +23,9 @@ namespace Rokas.Editor
             importer.sRGBTexture = true;
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.filterMode = FilterMode.Bilinear;
-            if (assetPath.IndexOf("/HandsRight/", StringComparison.OrdinalIgnoreCase) >= 0)
-                importer.alphaIsTransparency = true;
+            if (assetPath.IndexOf("/HandsRight/", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                assetPath.IndexOf("/UI/", StringComparison.OrdinalIgnoreCase) >= 0)
+                importer.alphaIsTransparency = true; // preserve original PNG glow and chibi edges
         }
     }
 }
