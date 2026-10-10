@@ -182,7 +182,7 @@ namespace Rokas.Presentation
                     laptopOpenedFromSeatedCinematic = false;
                     SetSceneInteractionsEnabled(true);
                 },
-                () => audio.PlayLaptopPowerClick(),
+                () => { audio.PlayLaptopPowerClick(); LaptopPowerSession.CompleteFirstBoot(); },
                 () => audio.PlayLaptopStandUp(),
                 () => session.Messages.TotalUnread,
                 UpdateHomeCameraBlend);

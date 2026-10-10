@@ -129,7 +129,8 @@ namespace Rokas.Presentation
             clock = null;
             date = null;
             clockMinute = -1;
-            if (!videoTransitions() || bootConsumedThisHomeVisit || LaptopPowerSession.PoweredOn)
+            // Power latched at physical contact; still play Boot exactly once.
+            if (!videoTransitions() || bootConsumedThisHomeVisit)
             {
                 Booting = false;
                 if (!LaptopPowerSession.PoweredOn && !videoTransitions())
