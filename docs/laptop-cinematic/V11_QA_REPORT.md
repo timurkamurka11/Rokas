@@ -65,3 +65,13 @@ V11 LCD regression discovered real nonopaque pixels (7662 pixels) in the first r
 4. If and only if native video and local acceptance pass, sign off a safe V11 release/rollback installer with source SHA and actual payload SHA-256. Investigate generic Core CI independently without expanding the FPS-hand scope.
 
 **This report is intentionally evidence-bounded.** Cloud test-only synthetic POV and absence of actual audio/scene cannot be represented as native visual approval.
+
+
+## V11 Windows code-sync review supplement (post-runtime QA)
+
+- V11 code-only integration tool (does not alter runtime source): `Tools/LaptopCinematic/v11_code_review/V11_CODE_SYNC.ps1`. It is **not** the V10 art installer, and it never touches 49 hand PNGs or other assets.
+- Isolated Windows PS5.1 security and rollback test: [38086344713](https://github.com/timurkamurka11/Rokas/actions/runs/38086344713) **SUCCESS**; review-only ZIP artifact 11682232992. Exact extracted SHA256 `d258596bfd0d9fa4bfb88888f09f1a4443eb6a3e7f9080827e22afe1b3724fb9`.
+- Default CLI read-only audit: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\V11_CODE_SYNC.ps1 -Target 'D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY'`. It checks 5 C# baseline vs tested V11 source hashes. Any user-modified/different source is blocked from automatic replacement.
+- Apply only with explicit `-Mode Apply -ConfirmCodeSync` and Unity closed; rollback requires `-Mode Rollback -ConfirmCodeSync` and hash-consistent original backup. No local changes were performed from cloud.
+- After safety confirmation at HEAD, pre-existing V10 installer Windows safety [38086379520](https://github.com/timurkamurka11/Rokas/actions/runs/38086379520) also **SUCCESS**; base Blender/Unity gameplay dependencies remain unchanged.
+- **Final V11 release remains blocked** by real approved-room 2.5D screen visual QA, user PNG hover, actual audio listening/peaks, native Game View capture, and project-wide Core behavior validation.
