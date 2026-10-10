@@ -84,6 +84,10 @@ namespace Rokas.Presentation
         private RectTransform powerGlowRoot;
         private Text noSignalText;
         private LaptopPowerTimeline powerTimeline;
+        private LaptopPerspectiveQuad poweredWallpaper;
+        private LaptopPhysicalDesktopClock desktopClock;
+        private Button poweredDesktopClick;
+        private Text poweredOpenHint;
 
         public Phase CurrentPhase { get; private set; }
         public bool IsPlaying => active;
@@ -178,10 +182,14 @@ namespace Rokas.Presentation
         private void BuildOverlay()
         {
             root = ui.Rect(transitionLayer, "LaptopCinematicOverlay", 0f, 0f, StageWidth, StageHeight);
-            // The overlay is also the input blocker, including during the crossfade.
-            ui.Box(root, "OpaqueUnderlay", 0f, 0f, StageWidth, StageHeight, Color.black, true);
+            // Transparent blocker: the ACTUAL animated Home view remains alive
+            // under the camera settle. Never replace CustomGlow/idle lines with
+            // a stale background-only screenshot (reported in user gameplay).
+            ui.Box(root, "TransparentInputBlocker", 0f, 0f,
+                StageWidth, StageHeight, Color.clear, true);
             wideImage = ui.Art(root, "OriginalHomeApproach", mainBackground.texture,
                 0f, 0f, StageWidth, StageHeight);
+            wideImage.gameObject.SetActive(false); // not a render source
             wideImage.uvRect = mainBackground.uvRect;
 
             RectTransform zoom = wideImage.rectTransform;
@@ -226,6 +234,45 @@ namespace Rokas.Presentation
                 new Vector2(calibration.bottomLeftX, calibration.bottomLeftY)
             }, imageScale);
             wake.color = new Color(.16f, .34f, .48f, 0f);
+
+            // User-approved physical desktop screenshot is ONLY the base art.
+            // Its overlay contains a live, real-system clock and animated status,
+            // perspective mapped within these same four calibrated LCD corners.
+            Vector2[] lcdCorners =
+            {
+                new Vector2(calibration.topLeftX, calibration.topLeftY),
+                new Vector2(calibration.topRightX, calibration.topRightY),
+                new Vector2(calibration.bottomRightX, calibration.bottomRightY),
+                new Vector2(calibration.bottomLeftX, calibration.bottomLeftY)
+            };
+            RectTransform desktopRect = ui.Rect(povRoot, "LaptopPhysicalDesktop",
+                imageX, imageY, imageWidth, imageHeight);
+            poweredWallpaper = desktopRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
+            poweredWallpaper.SetCorners(lcdCorners, imageScale);
+            Texture2D approvedDesktop = Resources.Load<Texture2D>(
+                "LaptopCinematic/UI/physical_desktop_reference");
+            poweredWallpaper.SetImage(approvedDesktop);
+            poweredWallpaper.color = approvedDesktop
+                ? Color.white : new Color(.08f, .16f, .27f, 1f);
+            poweredWallpaper.raycastTarget = false;
+            RectTransform liveClockRect = ui.Rect(povRoot, "PhysicalDesktopLiveClock",
+                imageX, imageY, imageWidth, imageHeight);
+            desktopClock = liveClockRect.gameObject.AddComponent<LaptopPhysicalDesktopClock>();
+            desktopClock.SetCorners(lcdCorners, imageScale);
+            desktopClock.raycastTarget = false;
+            desktopClock.Initialize();
+            RectTransform lcdHit = ui.Rect(povRoot, "PhysicalDesktopClickTarget",
+                imageX + calibration.topLeftX * imageScale,
+                imageY + calibration.topLeftY * imageScale,
+                (calibration.topRightX - calibration.topLeftX) * imageScale,
+                (calibration.bottomLeftY - calibration.topLeftY) * imageScale);
+            var lcdTouch = lcdHit.gameObject.AddComponent<Image>();
+            lcdTouch.color = new Color(0f, 0f, 0f, .002f);
+            poweredDesktopClick = lcdHit.gameObject.AddComponent<Button>();
+            poweredDesktopClick.targetGraphic = lcdTouch;
+            poweredDesktopClick.transition = Selectable.Transition.None;
+            poweredDesktopClick.onClick.AddListener(() => TryPressPower());
+
             if (calibration.debugPowerAnchor && Debug.isDebugBuild)
                 ui.Box(povRoot, "PowerAnchorDebug",
                     imageX + calibration.powerX * imageScale - 5f,
@@ -277,7 +324,11 @@ namespace Rokas.Presentation
                 float w = 390f;
                 powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 570f, 933f,
                     w, w * (float)onArt.height / onArt.width);
-                powerHintArt.raycastTarget = false;
+                powerHintArt.raycastTarget = true;
+                var startButton = powerHintArt.gameObject.AddComponent<Button>();
+                startButton.transition = Selectable.Transition.None;
+                startButton.onClick.AddListener(() => TryPressPower());
+                powerHintArt.gameObject.AddComponent<LaptopChoiceHover>();
             }
             else
                 powerHint = ui.Label(povRoot, "PowerChoiceHint", "E  —  ВКЛЮЧИТЬ НОУТБУК",
@@ -287,7 +338,11 @@ namespace Rokas.Presentation
                 float w = 390f;
                 backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1045f, 933f,
                     w, w * (float)exitArt.height / exitArt.width);
-                backHintArt.raycastTarget = false;
+                backHintArt.raycastTarget = true;
+                var leaveButton = backHintArt.gameObject.AddComponent<Button>();
+                leaveButton.transition = Selectable.Transition.None;
+                leaveButton.onClick.AddListener(() => BackToRoom());
+                backHintArt.gameObject.AddComponent<LaptopChoiceHover>();
             }
             else
                 backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
@@ -302,11 +357,14 @@ namespace Rokas.Presentation
                 onScreenBack.targetGraphic = arrow;
                 onScreenBack.transition = Selectable.Transition.ColorTint;
                 onScreenBack.onClick.AddListener(() => BackToRoom());
+                arrow.gameObject.AddComponent<LaptopChoiceHover>();
             }
             else
                 onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
                     92f, 915f, 72f, 58f, () => BackToRoom(), playClickSound: false);
-            SetPromptVisibility(false);
+            poweredOpenHint = ui.Label(povRoot, "PoweredLaptopOpenHint",
+                "E — ОТКРЫТЬ YOMI", 564f, 955f, 480f, 44f, 20,
+                new Color(.79f, .87f, 1f, .92f));
             SetPromptVisibility(false);
         }
 
@@ -343,6 +401,8 @@ namespace Rokas.Presentation
             while (active && !powerConfirmed && !returnRequested)
             {
                 RenderAt(HandsStart);
+                if (LaptopPowerSession.PoweredOn && desktopClock)
+                    desktopClock.UpdateClockIfNecessary();
                 yield return null;
             }
             if (!active) yield break;
@@ -382,13 +442,23 @@ namespace Rokas.Presentation
 
         private void SetPromptVisibility(bool show)
         {
-            if (powerHint) powerHint.gameObject.SetActive(show);
+            bool powered = LaptopPowerSession.PoweredOn;
+            if (powerHint) powerHint.gameObject.SetActive(show && !powered);
             if (backHint) backHint.gameObject.SetActive(show);
-            if (powerHintArt) powerHintArt.gameObject.SetActive(show);
+            if (powerHintArt) powerHintArt.gameObject.SetActive(show && !powered);
             if (backHintArt) backHintArt.gameObject.SetActive(show);
             if (onScreenBack) onScreenBack.gameObject.SetActive(show);
-            if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(show);
-            if (noSignalText) noSignalText.gameObject.SetActive(show);
+            if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(show && !powered);
+            if (noSignalText) noSignalText.gameObject.SetActive(show && !powered);
+            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered);
+            if (desktopClock) desktopClock.gameObject.SetActive(show && powered);
+            if (poweredDesktopClick) poweredDesktopClick.gameObject.SetActive(show && powered);
+            if (poweredOpenHint) poweredOpenHint.gameObject.SetActive(show && powered);
+            if (povGroup)
+            {
+                povGroup.blocksRaycasts = show;
+                povGroup.interactable = show;
+            }
         }
 
         public bool TryPressPower()
@@ -396,6 +466,12 @@ namespace Rokas.Presentation
             if (!IsAwaitingPowerChoice || powerConfirmed || returnRequested) return false;
             powerConfirmed = true;
             SetPromptVisibility(false);
+            if (LaptopPowerSession.PoweredOn)
+            {
+                // Already running: clicking the live LCD or pressing E opens
+                // existing YOMI directly, with no hand animation or boot.
+                Finish(true);
+            }
             return true;
         }
 
@@ -512,6 +588,10 @@ namespace Rokas.Presentation
             returningFromLaptop = false;
             powerHint = null;
             backHint = null;
+            poweredWallpaper = null;
+            desktopClock = null;
+            poweredDesktopClick = null;
+            poweredOpenHint = null;
             powerHintArt = null;
             backHintArt = null;
             onScreenBack = null;
