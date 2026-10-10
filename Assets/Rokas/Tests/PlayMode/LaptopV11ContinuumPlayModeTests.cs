@@ -54,9 +54,11 @@ namespace Rokas.Tests
                 if (!before[i].Equals(after[i])) differences++;
             Assert.That(differences, Is.GreaterThan(100),
                 "Session unread changes must repaint the real physical LCD.");
+            int transparent = 0;
             for (int i = 0; i < after.Length; i++)
-                Assert.That(after[i].a, Is.EqualTo(255),
-                    "ON-state must not expose a static screenshot beneath the live LCD.");
+                if (after[i].a != 255) transparent++;
+            Assert.That(transparent, Is.EqualTo(0),
+                "ON-state must not expose a static screenshot beneath the live LCD.");
             UnityEngine.Object.Destroy(go);
             yield return null;
         }
