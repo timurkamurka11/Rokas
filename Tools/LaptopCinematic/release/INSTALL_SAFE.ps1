@@ -28,8 +28,11 @@ function NoLinks([string]$root,[string]$rel) {
   }
  }
 }
+# Never allow a network/device destination or relative path to become a target.
+if($Target -match '^(\\\\|//)' -or -not [IO.Path]::IsPathRooted($Target)){throw 'UNC, device or relative target path refused'}
 if(-not (Test-Path -LiteralPath $Target -PathType Container)){throw 'Target folder is missing'}
 $Target=(Resolve-Path -LiteralPath $Target).Path
+if(((Get-Item -LiteralPath $Target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw 'Target root itself is a reparse point'}
 $backups=Join-Path $Target 'ROKAS_LaptopCinematic_Backups'
 NoLinks $Target 'ROKAS_LaptopCinematic_Backups'
 if($Rollback) {
@@ -97,6 +100,19 @@ foreach($f in $m.files) {
  if(-not (Test-Path -LiteralPath $src -PathType Leaf) -or (FileSha $src) -cne ([string]$f.sha256).ToLowerInvariant()){throw "Missing or corrupted payload: $r"}
 }
 if($expected.Count -ne 0){throw 'Missing expected hand resources'}
+# Unity uses the inside-the-payload manifest; validate that it actually
+# enumerates the pinned right-hand art in the same 24fps order.
+$handManifest = Get-Content -LiteralPath (P (Join-Path $here 'payload') $manifestRel) -Raw | ConvertFrom-Json
+if([double]$handManifest.fps -ne 24 -or [string]$handManifest.handedness -cne 'right' -or
+   @($handManifest.frames).Count -ne 49) {throw 'Invalid inner hand manifest header'}
+for($n=0;$n -lt 49;$n++){
+ $frame=$handManifest.frames[$n]
+ $expectedResource='LaptopCinematic/HandsRight/Hand_{0:d4}' -f $n
+ if([string]$frame.resource -cne $expectedResource) {throw "Incorrect Unity frame order at $n"}
+ $x=[int]$frame.x; $y=[int]$frame.y; $w=[int]$frame.w; $h=[int]$frame.h
+ if($x -lt 0 -or $y -lt 0 -or $w -lt 1 -or $h -lt 1 -or
+    ($x+$w) -gt 1672 -or ($y+$h) -gt 941) {throw "Invalid Unity frame crop at $n"}
+}
 if($DryRun){Write-Host 'INSTALL_DRYRUN_PASS';return}
 New-Item -ItemType Directory -Path $backups -Force|Out-Null
 $id=(Get-Date -Format 'yyyyMMdd_HHmmss')+'_'+[Guid]::NewGuid().ToString('N').Substring(0,8)
