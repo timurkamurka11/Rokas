@@ -23,6 +23,8 @@ namespace Rokas.Presentation
         private readonly RectTransform globalChrome;
         private readonly Button settingsButton;
         private readonly RectTransform panels;
+        private readonly CanvasGroup laptopModalLayer;
+        private readonly int panelsOriginalSiblingIndex;
         private readonly RectTransform transitions;
         private readonly Text wallet;
         private readonly Text status;
@@ -124,6 +126,9 @@ namespace Rokas.Presentation
             ui.Label(globalChrome, "Controls", "TAB  РІС‹Р±СЂР°С‚СЊ РїСЂРµРґРјРµС‚    ENTER  РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ    ESC  РїР°СѓР·Р° / РЅР°Р·Р°Рґ", 58, 1018, 1220, 37, 17, UiKit.Muted);
             saved = ui.Label(globalChrome, "SaveStatus", "РџР РћР¤РР›Р¬ РЎРћРҐР РђРќРЃРќ", 1420, 1018, 440, 37, 15, UiKit.Muted, false, TextAnchor.MiddleRight);
             panels = ui.Rect(stage, "Panels", 0, 0, 1920, 1080);
+            panelsOriginalSiblingIndex = panels.GetSiblingIndex();
+            laptopModalLayer = panels.gameObject.AddComponent<CanvasGroup>();
+            laptopModalLayer.alpha = 1f;
             toast = ui.Label(stage, "Toast", "", 310, 925, 1300, 60, 23, UiKit.Paper, false, TextAnchor.MiddleCenter);
             var toastOutline = toast.gameObject.AddComponent<Outline>();
             toastOutline.effectColor = new Color(0, 0, 0, .9f);
@@ -409,7 +414,9 @@ namespace Rokas.Presentation
         private void RebuildScene()
         {
             laptopOpenedFromSeatedCinematic = false;
-            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             if (hubDialogue != null && hubDialogue.IsOpen)
                 hubDialogue.Close();
             ui.Clear(scene);
@@ -492,10 +499,7 @@ namespace Rokas.Presentation
                 // Programmatic laptop routes retain the existing policy.
                 laptopOpenedFromSeatedCinematic = cinematicLaptopHandoff;
                 if (cinematicLaptopHandoff)
-                {
                     laptop.BeginNewPhysicalPowerCycle();
-                    laptop.RequestCinematicPostBootHold();
-                }
                 laptopOpenedFrame = Time.frameCount;
             }
             mission.CancelInput();
@@ -507,6 +511,7 @@ namespace Rokas.Presentation
         private void RefreshPanel()
         {
             ui.Clear(panels);
+            laptopModalLayer.alpha = 1f;
             bool sceneEnabled =
                 string.IsNullOrEmpty(panel) &&
                 (hubDialogue == null || !hubDialogue.IsOpen);
@@ -523,6 +528,8 @@ namespace Rokas.Presentation
             }
             if (panel == "laptop")
             {
+                // The modal must remain above the approved POV while fading.
+                panels.SetAsLastSibling();
                 laptop.Build(panels);
                 return;
             }
@@ -532,7 +539,20 @@ namespace Rokas.Presentation
 
         private void ClosePanel()
         {
-            if (panel == "laptop") { laptop.BeginClose(FinishClosePanel); return; }
+            if (panel == "laptop")
+            {
+                if (laptop.IsClosing) return;
+                // Prepare the seated POV under YOMI BEFORE starting the fade.
+                if (laptopOpenedFromSeatedCinematic && !storageBlocked &&
+                    IsHomeLocation(phase) && homeSubLocation == HomeLocation.MainRoom &&
+                    laptopCinematic.TryStart(resumeFromLaptop: true))
+                {
+                    transition = true;
+                    SetSceneInteractionsEnabled(false);
+                }
+                laptop.BeginClose(FinishClosePanel);
+                return;
+            }
             FinishClosePanel();
         }
 
@@ -545,13 +565,18 @@ namespace Rokas.Presentation
             panel = null;
             audio.SetLaptopMode(false);
             ui.Clear(panels);
+            laptopModalLayer.alpha = 1f;
+            panels.SetSiblingIndex(panelsOriginalSiblingIndex);
+            if (fromLaptop && laptopCinematic.HasPendingVisualHandoff)
+                laptopCinematic.CompleteVisualHandoff();
             // Close animation has completed: clear IsClosing and old VideoPlayer
             // state BEFORE allowing the next physical Power request. Reset keeps
             // bootConsumedThisHomeVisit intact until the player presses Power.
             if (fromLaptop) laptop.Reset();
             // Recreate the already-seated POV. Stand up only on Esc/Back,
             // not when closing the powered laptop and staying at the desk.
-            if (returnToSeatedChoice && laptopCinematic.TryStart(resumeFromLaptop: true))
+            if (returnToSeatedChoice &&
+                (laptopCinematic.IsPlaying || laptopCinematic.TryStart(resumeFromLaptop: true)))
             {
                 transition = true;
                 SetSceneInteractionsEnabled(false);
@@ -653,6 +678,11 @@ namespace Rokas.Presentation
                 if (Time.frameCount != laptopOpenedFrame && Input.GetMouseButtonDown(0))
                     audio.LaptopMouseClick();
                 laptop.Tick(dt);
+                if (panel == "laptop" && laptop.IsClosing)
+                    laptopModalLayer.alpha = laptop.WindowOpacity;
+                if (panel == "laptop" && laptopCinematic.HasPendingVisualHandoff &&
+                    laptop.IsVisualReady)
+                    laptopCinematic.CompleteVisualHandoff();
             }
             messageNotifications.SetSuppressed(phase == RunPhase.Portal ||
                 (session.CombatMode == CombatMode.ReactiveTurns &&
@@ -708,7 +738,9 @@ namespace Rokas.Presentation
         public void ShowStorageBlock(string message)
         {
             storageBlocked = true;
-            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             ui.Clear(transitions);
             ui.Box(transitions, "StorageBlock", 0, 0, 1920, 1080, UiKit.Ink, true);
             ui.Label(transitions, "StorageTitle", "РџСЂРѕС„РёР»СЊ Р·Р°С‰РёС‰С‘РЅ", 360, 310, 1200, 110, 48, UiKit.Paper, true);
@@ -718,7 +750,9 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
-            if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
+            if (laptopCinematic != null &&
+                (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
+                laptopCinematic.Cancel();
             mission.ClearReferences();
             effects.Dispose();
             hubDialogue?.Dispose();
