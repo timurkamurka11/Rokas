@@ -345,7 +345,7 @@ def articulate_index(rig,reach,curl,yaw,press_amount):
     for joint,mult,base in (("01",.34,.08),("02",.64,.12),("03",.42,.075)):
         pb=rig.pose.bones["index_"+joint+"_r"]
         pb.rotation_euler=(mult*curl,0.,base*reach+yaw*(1. if joint=="01" else .32)+
-                           (.028 if joint=="03" else 0.)*downstroke)
+                           (.028 if joint=="03" else 0.)*press_amount)
 
 def fit_index_pad_to_power(rig,hand,reach,frame,press_amount):
     # Geometry-space 2D calibration of the actual pad to the approved
