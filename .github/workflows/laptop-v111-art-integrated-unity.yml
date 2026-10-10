@@ -14,6 +14,8 @@ on:
       - 'Assets/Rokas/Scripts/Presentation/LaptopPowerSession.cs'
       - 'Assets/Rokas/Scripts/Presentation/LaptopPhysicalDesktop.cs'
       - 'Assets/Rokas/Editor/LaptopCinematicTextureImporter.cs'
+      - 'Assets/Rokas/Resources/LaptopCinematic/UI/**'
+      - 'Assets/Rokas/Tests/PlayMode/LaptopV111SeamlessPOVPlayModeTests.cs'
 
 permissions:
   contents: read
