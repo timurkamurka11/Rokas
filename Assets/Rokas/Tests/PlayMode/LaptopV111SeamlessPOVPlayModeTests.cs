@@ -42,8 +42,18 @@ namespace Rokas.Tests
                 "POV must cover vertical screen edges");
             var initial=Find<Text>("StandbyNoSignal");
             Assert.That(initial,Is.Not.Null);
-            Assert.That(initial.gameObject.activeInHierarchy,Is.True,
-                "Before Power, NO SIGNAL is deliberately shown");
+            var standby=Find<RectTransform>("ROKASNoSignalScreen");
+            Assert.That(standby,Is.Not.Null,"OFF state must cover physical LCD");
+            Assert.That(standby.GetComponent<RectMask2D>(),Is.Not.Null);
+            if (Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi"))
+            {
+                var chibi=Find<RawImage>("ROKASNoSignalChibiDVD");
+                Assert.That(chibi,Is.Not.Null,"Original ROKAS chibi must appear in LCD");
+                Assert.That(chibi.gameObject.activeInHierarchy,Is.True);
+                Assert.That(Find<LaptopNoSignalBounce>("ROKASNoSignalScreen"),Is.Not.Null);
+            }
+            else
+                Assert.That(initial.gameObject.activeInHierarchy,Is.True);
             Find<Button>("PowerKeyClickTarget").onClick.Invoke();
             yield return new WaitForSecondsRealtime(2.35f);
             Assert.That(LaptopPowerSession.PoweredOn,Is.True,
@@ -60,6 +70,12 @@ namespace Rokas.Tests
             var live=Find<LaptopPhysicalDesktopClock>("PhysicalDesktopLiveClock");
             Assert.That(live,Is.Not.Null);
             Assert.That(live.gameObject.activeInHierarchy,Is.True);
+            var mini=Find<RawImage>("PhysicalMiniYomiVisible");
+            Assert.That(mini,Is.Not.Null,"ON laptop must display a real mini YOMI layer");
+            Assert.That(mini.gameObject.activeInHierarchy,Is.True);
+            Assert.That(mini.texture,Is.Not.Null);
+            Assert.That(mini.GetComponentInParent<RectMask2D>(),Is.Not.Null,
+                "Mini YOMI must be clipped to the calibrated physical LCD");
             Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy,Is.False);
             var reopen=Find<RectTransform>("PoweredLaptopOpenHint");
             Assert.That(reopen,Is.Not.Null);
