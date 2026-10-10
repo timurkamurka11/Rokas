@@ -48,7 +48,7 @@ namespace Rokas.Presentation
         private const float HandsStart = 1.8f;
         private const float HandsEnd = 3.84f;
         private const float FinishTime = 3.92f;
-        private const float ReturnDuration = .42f;
+        private const float ReturnDuration = .72f;
 
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
