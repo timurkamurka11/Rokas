@@ -79,7 +79,10 @@ foreach($r in @(
  if(-not (Test-Path -LiteralPath (P $Target $r) -PathType Leaf)){throw "Wrong ROKAS Unity target, missing $r"}
 }
 $cs=Get-Content -LiteralPath (P $Target 'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs') -Raw
-if(-not $cs.Contains('HandsRight') -or -not $cs.Contains('right_hand_manifest')){throw 'Incompatible Unity runtime'}
+# ROKAS loads hand resources dynamically from the JSON, not a literal 'HandsRight' C# string.
+$loadsManifest=[regex]::IsMatch($cs, 'Resources\s*\.\s*Load\s*<\s*TextAsset\s*>\s*\(\s*"LaptopCinematic/right_hand_manifest"')
+$loadsFrames=[regex]::IsMatch($cs, 'Resources\s*\.\s*Load\s*<\s*Texture2D\s*>\s*\(\s*frame\s*\.\s*resource\s*\)')
+if(-not $loadsManifest -or -not $loadsFrames){throw 'Incompatible Unity runtime: dynamic manifest+frame loader missing'}
 if(@(Get-Process -Name Unity -ErrorAction SilentlyContinue).Count -gt 0){throw 'Close Unity first'}
 $release=Join-Path $here 'RELEASE_MANIFEST.json'
 if(-not (Test-Path -LiteralPath $release)){throw 'Release manifest missing'}
