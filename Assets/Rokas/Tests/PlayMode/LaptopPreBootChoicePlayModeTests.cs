@@ -16,6 +16,7 @@ namespace Rokas.Tests
 
         private RokasBootstrap StartGame()
         {
+            LaptopPowerSession.ResetForTests();
             if (!Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest") ||
                 !Resources.Load<Texture2D>("LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF"))
                 Assert.Ignore("Install 49 right-hand alpha frames and the approved/synthetic POV for this test.");
@@ -44,7 +45,8 @@ namespace Rokas.Tests
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null);
             Assert.That(Find<Text>("StandbyNoSignal"), Is.Not.Null);
             Assert.That(Find<RectTransform>("PowerKeyBlueStandby"), Is.Not.Null);
-            Assert.That(Find<Text>("PowerChoiceHint").gameObject.activeInHierarchy, Is.True);
+            // Either installed approved prompt art or fallback label is valid.
+            Assert.That(Find<RectTransform>("PowerChoiceHint").gameObject.activeInHierarchy, Is.True);
             Assert.That(boot.View.LaptopOpen, Is.False);
             boot.View.Escape();
             yield return new WaitForSecondsRealtime(1.15f);
@@ -78,6 +80,7 @@ namespace Rokas.Tests
         {
             if (root) UnityEngine.Object.Destroy(root);
             root = null;
+            LaptopPowerSession.ResetForTests();
             yield return null;
             if (!string.IsNullOrEmpty(saveDirectory) && Directory.Exists(saveDirectory))
                 Directory.Delete(saveDirectory, true);
