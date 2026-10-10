@@ -43,6 +43,7 @@ namespace Rokas.Presentation
         private string panel;
         private bool transition;
         private bool cinematicLaptopHandoff;
+        private bool laptopOpenedFromSeatedCinematic;
         private bool storageBlocked;
         private float toastTime;
         private int laptopOpenedFrame = -1;
@@ -157,7 +158,12 @@ namespace Rokas.Presentation
                     try { OpenPanel("laptop"); }
                     finally { cinematicLaptopHandoff = false; }
                 },
-                () => { transition = false; SetSceneInteractionsEnabled(true); },
+                () =>
+                {
+                    transition = false;
+                    laptopOpenedFromSeatedCinematic = false;
+                    SetSceneInteractionsEnabled(true);
+                },
                 () => audio.PlayLaptopPowerClick(),
                 () => audio.PlayLaptopStandUp());
             messageNotifications = new MessagesNotificationView(ui, stage, session);
@@ -402,6 +408,7 @@ namespace Rokas.Presentation
 
         private void RebuildScene()
         {
+            laptopOpenedFromSeatedCinematic = false;
             if (laptopCinematic != null && laptopCinematic.IsPlaying) laptopCinematic.Cancel();
             if (hubDialogue != null && hubDialogue.IsOpen)
                 hubDialogue.Close();
@@ -481,7 +488,14 @@ namespace Rokas.Presentation
             {
                 if (IsHomeLocation(phase) && homeSubLocation != HomeLocation.MainRoom) return;
                 laptop.Reset();
-                if (cinematicLaptopHandoff) laptop.RequestCinematicPostBootHold();
+                // Every explicit physical Power press is a new boot cycle.
+                // Programmatic laptop routes retain the existing policy.
+                laptopOpenedFromSeatedCinematic = cinematicLaptopHandoff;
+                if (cinematicLaptopHandoff)
+                {
+                    laptop.BeginNewPhysicalPowerCycle();
+                    laptop.RequestCinematicPostBootHold();
+                }
                 laptopOpenedFrame = Time.frameCount;
             }
             mission.CancelInput();
@@ -525,9 +539,23 @@ namespace Rokas.Presentation
         private void FinishClosePanel()
         {
             bool fromLaptop = panel == "laptop";
+            bool returnToSeatedChoice = fromLaptop && laptopOpenedFromSeatedCinematic &&
+                !storageBlocked && IsHomeLocation(phase) &&
+                homeSubLocation == HomeLocation.MainRoom;
             panel = null;
             audio.SetLaptopMode(false);
             ui.Clear(panels);
+            // Recreate the already-seated POV. Stand up only on Esc/Back,
+            // not when closing the powered laptop and staying at the desk.
+            if (returnToSeatedChoice && laptopCinematic.TryStart(resumeFromLaptop: true))
+            {
+                transition = true;
+                SetSceneInteractionsEnabled(false);
+                if (EventSystem.current)
+                    EventSystem.current.SetSelectedGameObject(null);
+                return;
+            }
+            laptopOpenedFromSeatedCinematic = false;
             bool sceneEnabled =
                 hubDialogue == null || !hubDialogue.IsOpen;
             sceneInput.interactable = sceneEnabled;
