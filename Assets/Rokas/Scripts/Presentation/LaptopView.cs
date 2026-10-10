@@ -100,15 +100,16 @@ namespace Rokas.Presentation
 
         public void BeginHomeVisit()
         {
-            bootConsumedThisHomeVisit = false;
+            // Never restart LaptopBoot.mp4 when the player returns to the hub.
+            // Only a real game-process restart resets LaptopPowerSession.
+            bootConsumedThisHomeVisit = LaptopPowerSession.PoweredOn;
         }
 
-        // E / physical Power after returning to seated POV is an intentional
-        // second power cycle: the existing LaptopBoot.mp4 must play once again.
-        // Does not affect the normal programmatic or hallway laptop routes.
+        // Physical Power never restarts the boot after the first successful boot.
+        // Kept as a narrow compatibility hook for existing RokasView routing.
         public void BeginNewPhysicalPowerCycle()
         {
-            bootConsumedThisHomeVisit = false;
+            if (!LaptopPowerSession.PoweredOn) bootConsumedThisHomeVisit = false;
         }
 
         public void Build(RectTransform parent)
@@ -124,10 +125,12 @@ namespace Rokas.Presentation
             clock = null;
             date = null;
             clockMinute = -1;
-            if (!videoTransitions() || bootConsumedThisHomeVisit)
+            if (!videoTransitions() || bootConsumedThisHomeVisit || LaptopPowerSession.PoweredOn)
             {
                 Booting = false;
                 cinematicHoldRequested = false;
+                if (!LaptopPowerSession.PoweredOn && !videoTransitions())
+                    LaptopPowerSession.CompleteFirstBoot();
                 BuildReadyFrame();
                 return;
             }
@@ -139,6 +142,9 @@ namespace Rokas.Presentation
         private void FinishBoot()
         {
             if (!Booting || IsClosing || !frame) return;
+            // Completed VideoPlayer callback is the sole source of truth for
+            // first boot success; a cancelled playback must not power the laptop.
+            LaptopPowerSession.CompleteFirstBoot();
             if (cinematicHoldRequested)
             {
                 cinematicHoldRequested = false;
