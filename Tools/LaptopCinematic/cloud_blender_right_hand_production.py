@@ -319,8 +319,8 @@ def index_skin_tip_px(hand,rig):
         wrist=rig.matrix_world @ rig.pose.bones["hand_r"].head
         cloud=[]
         for vertex in hand.data.vertices:
-            try:w=grp.weight(vertex.index)
-            except RuntimeError:continue
+            w=next((membership.weight for membership in vertex.groups
+                    if membership.group==grp.index),0.)
             if w >= .45 and vertex.index<len(evaluated_mesh.vertices):
                 v=evaluated_obj.matrix_world @ evaluated_mesh.vertices[vertex.index].co
                 cloud.append((v,(v.x-wrist.x)**2+(v.y-wrist.y)**2))
@@ -336,30 +336,33 @@ def index_skin_tip_px(hand,rig):
 def articulate_index(rig,reach,curl,yaw,downstroke):
     # MCP/PIP/DIP have independently keyed X rotations; the knuckle points
     # the pad downward while PIP/DIP shorten the silhouette naturally.
-    for joint,mult,base in (("01",.42,.08),("02",.75,.12),("03",.46,.075)):
+    for joint,mult,base in (("01",.34,.08),("02",.64,.12),("03",.42,.075)):
         pb=rig.pose.bones["index_"+joint+"_r"]
         pb.rotation_euler=(mult*curl,0.,base*reach+yaw*(1. if joint=="01" else .32)+
                            (.028 if joint=="03" else 0.)*downstroke)
 
 def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
-    # This is rig-space articulation and skinned-mesh QA, not a sprite/PNG
-    # offset. Anchor the wrist before applying curl and solve only finger joints.
+    # Geometry-space 2D calibration of the actual pad to the approved
+    # photographed button. The fingertip articulates independently of the
+    # whole hand; at most a short (<=24px) anatomical wrist approach follows.
     target=(POWER_X,POWER_Y+(1.8 if downstroke else 0.))
     candidates=[]
-    for curl in (.65,.85,1.05,1.25,1.45,1.65):
-        for yaw in (-.55,-.38,-.20,0.,.20,.38,.55):
+    for curl in (.12,.22,.32,.44,.56,.70,.84):
+        for yaw in (-.35,-.20,-.08,0.,.08,.20,.35):
             articulate_index(rig,reach,curl,yaw,downstroke)
             bpy.context.view_layer.update()
             px=index_skin_tip_px(hand,rig)
             d=math.hypot(px[0]-target[0],px[1]-target[1])
             candidates.append((d,curl,yaw,px))
     candidates.sort(key=lambda x:x[0])
+    print("ROKAS_FINGER_GRID",frame,
+          [(round(x[0],1),x[1],x[2],tuple(round(v,1) for v in x[3])) for x in candidates[:6]],
+          flush=True)
     best=candidates[0]
-    # Refinement around the best anatomical joint configuration.
-    for step in (.11,.045):
+    for step in (.065,.025):
         tests=[]
-        for curl in (max(.55,best[1]-step),best[1],min(1.75,best[1]+step)):
-            for yaw in (max(-.65,best[2]-step),best[2],min(.65,best[2]+step)):
+        for curl in (max(.10,best[1]-step),best[1],min(.95,best[1]+step)):
+            for yaw in (max(-.45,best[2]-step),best[2],min(.45,best[2]+step)):
                 articulate_index(rig,reach,curl,yaw,downstroke)
                 bpy.context.view_layer.update()
                 px=index_skin_tip_px(hand,rig)
@@ -367,12 +370,24 @@ def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
         best=min(tests,key=lambda x:x[0])
     articulate_index(rig,reach,best[1],best[2],downstroke)
     bpy.context.view_layer.update()
+    pad=index_skin_tip_px(hand,rig)
+    dx=target[0]-pad[0];dy=target[1]-pad[1]
+    shift=math.hypot(dx,dy)
+    # If the finger is too far away, the anatomy is still wrong. Do not
+    # "fix" it by pulling the entire mesh across the image.
+    if shift>24.:
+        raise RuntimeError("Finger anatomy unable to reach Power at frame %s: %.2fpx"%(frame,shift))
+    # Natural final wrist approach (not PNG transform), limited to 24px.
+    rig.location.x += dx*FRAME_LENGTH/H
+    rig.location.y -= dy*FRAME_LENGTH/H
+    bpy.context.view_layer.update()
     measured=index_skin_tip_px(hand,rig)
     error=math.hypot(measured[0]-target[0],measured[1]-target[1])
     print("ROKAS_SKIN_CONTACT_SOLVER",frame,"skin",measured,"target",target,
-          "error_px",round(error,2),"curl",best[1],"yaw",best[2],flush=True)
-    if error>9.:
-        raise RuntimeError("Real skinned fingertip misses Power at frame %s: %.2fpx" %(frame,error))
+          "error_px",round(error,2),"curl",best[1],"yaw",best[2],
+          "wrist_shift_px",round(shift,2),flush=True)
+    if error>4.:
+        raise RuntimeError("Real skinned fingertip misses Power at frame %s: %.2fpx"%(frame,error))
     return measured,error
 
 def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
@@ -420,7 +435,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             flex=curls[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
             # X is the actual out-of-plane PIP/DIP bend. Z alone was
             # spreading straight fingers across the approved laptop POV.
-            bone.rotation_euler=(flex*(.64+.36*reach),
+            bone.rotation_euler=(flex*(.36+.24*reach),
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else 0.)*reach,
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else .008)*reach)
         elif bone.name.startswith("thumb_"):
