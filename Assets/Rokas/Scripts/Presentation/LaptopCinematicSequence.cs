@@ -106,7 +106,7 @@ namespace Rokas.Presentation
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
-            Action powerClick, Action returningToRoom, Func<int> unreadMessages)
+            Action powerClick, Action returningToRoom, Func<int> unreadMessages = null)
         {
             this.ui = ui;
             this.owner = owner;
