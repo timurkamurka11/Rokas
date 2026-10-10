@@ -48,8 +48,8 @@ def mat(name,col,rough=.7,subsurface=0.,cloth=False):
         noise.inputs["Scale"].default_value=135.
         noise.inputs["Detail"].default_value=2.
         bump=nt.nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value=.085
-        bump.inputs["Distance"].default_value=.003
+        bump.inputs["Strength"].default_value=.052
+        bump.inputs["Distance"].default_value=.0015
         nt.links.new(noise.outputs["Fac"],bump.inputs["Height"])
         nt.links.new(bump.outputs["Normal"],bsdf.inputs["Normal"])
     else:
@@ -70,21 +70,33 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     across=Vector((axis.y,-axis.x,0)).normalized()
     # Sleeve layers overlap real skin ~35mm under the wrist, not float above
     # the hand in depth. End of the sleeve is looser than its knit cuff.
-    rings=([(-.040,.029),(-.018,.031),(0.,.036),(.050,.043),(.14,.061),(.28,.088),(.36,.098)]
-           if not cuff else [(-.044,.027),(-.025,.028),(-.008,.030),(.010,.033),(.033,.039)])
-    N=32; verts=[]; faces=[]
+    rings=([(-.048,.029),(-.036,.029),(-.022,.030),(-.009,.033),(0.,.037),
+            (.027,.043),(.059,.050),(.102,.058),(.157,.067),(.214,.079),
+            (.280,.090),(.352,.102),(.432,.116)]
+           if not cuff else [(-.049,.027),(-.037,.0275),(-.025,.029),
+                              (-.012,.032),(.0,.034),(.012,.036),(.032,.039),
+                              (.046,.040)])
+    N=64; verts=[]; faces=[]
     for ri,(distance,radius) in enumerate(rings):
         c=wrist + axis*distance
         for j in range(N):
             theta=2*math.pi*j/N
-            fold=1+.052*math.sin(theta*7+ri*.8)+.026*math.cos(theta*11-ri*.7)
+            # Organic soft fabric folds, different radii down the forearm.
+            # The extended outer ring continues out of frame rather than
+            # terminating as a visible square cylinder cap.
+            fold=1+.027*math.sin(theta*5+ri*.45)+.019*math.cos(theta*9-ri*.35)
+            if cuff:fold+=.008*math.cos(theta*32)
             d=radius*fold
-            verts.append((c+across*math.cos(theta)*d+Vector((0,0,1))*math.sin(theta)*d*.63).to_tuple())
+            axial_warp=0.004*math.sin(theta*6+ri*.37)*(0.3 if cuff else 1)
+            verts.append((c+axis*axial_warp+across*math.cos(theta)*d+
+                          Vector((0,0,1))*math.sin(theta)*d*.67).to_tuple())
     for ri in range(len(rings)-1):
         for j in range(N):
             a=ri*N+j;b=ri*N+(j+1)%N
             faces.append((a,b,b+N,a+N))
-    faces += [tuple(reversed(range(N))),tuple((len(rings)-1)*N+j for j in range(N))]
+    # Back of fabric is outside the camera crop; retain only the under-wrist
+    # cap. Capping the distant end makes the obvious flat square plug.
+    faces.append(tuple(reversed(range(N))))
     mesh.clear_geometry()
     mesh.from_pydata(verts,[],faces);mesh.update()
     for p in mesh.polygons:p.use_smooth=True
@@ -305,39 +317,49 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     tip_x=1415.+(POWER_X-87.-1415.)*reach + 135.*withdraw
     # The glTF index-bone tail differs from the visible skinned fingertip by about +84px vertically.
     # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
-    tip_y=1080.+(POWER_Y-62.-1080.)*reach + 175.*withdraw + 3.*press
+    # Finger approaches from above the illuminated Power key, then depresses
+    # through the last 5px instead of translating sideways over the key.
+    tip_y=1080.+(POWER_Y-62.-1080.)*reach + 175.*withdraw + 5.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
-    wrist_x=tip_x+100.
-    wrist_y=tip_y+68.
+    wrist_x=tip_x+98.
+    wrist_y=tip_y+82.
     # Wrist tucking rotates the actual glTF armature and leaves the finger mesh skinned.
     base=rig.pose.bones["hand_r"]
     direction=rig.data.bones["index_03_r"].tail_local-rig.data.bones["hand_r"].head_local
     desired=camera_xy(tip_x,tip_y)-camera_xy(wrist_x,wrist_y)
     rot=math.atan2(desired.y,desired.x)-math.atan2(direction.y,direction.x)
-    rig.rotation_mode="XYZ";rig.rotation_euler=(0.03,0.0,rot)
+    # Wrist rolls gently down into the key; the visual contact is still
+    # calibrated from the visible index-finger surface.
+    rig.rotation_mode="XYZ";rig.rotation_euler=(.025+.07*reach, -.035*reach, rot)
     length=max(.001,Vector((direction.x,direction.y)).length)
     rig.scale=Vector((desired.length/length,)*3)
     # The mesh may have its own parent transform; Blender's skin modifier resolves its rig.
     for bone in rig.pose.bones:
         if bone.name.startswith("index_"):
-            bone.rotation_euler=(0,0,(-.11 if "_01_" in bone.name else -.22)*press)
+            joint=bone.name.split("_")[1]
+            # Index leads; one flexion chain instead of a rigid pointing stick.
+            baseline={"01":.08,"02":.12,"03":.075}.get(joint,.04)
+            down={"01":-.08,"02":-.23,"03":-.25}.get(joint,-.06)
+            bone.rotation_euler=(.025*reach, 0,baseline*reach+down*press)
         elif bone.name.startswith(("middle_","ring_","pinky_")):
             digit=bone.name.split("_")[0]
             joint=bone.name.split("_")[1]
-            relaxed={"middle":(.17,.19,.12),"ring":(.24,.24,.16),"pinky":(.31,.25,.17)}
-            flex=relaxed[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
-            bone.rotation_euler=(.09*reach if joint=="01" else .02*reach,
-                                 (-.06 if digit=="pinky" else .03 if digit=="ring" else 0)*reach,
-                                 flex*(.44+.56*reach))
+            # Individually curled, grouped fingers: no splayed starfish pose.
+            curls={"middle":(.38,.32,.19),"ring":(.48,.39,.26),
+                   "pinky":(.56,.46,.32)}
+            flex=curls[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
+            bone.rotation_euler=(.03*reach if joint=="01" else 0.,
+                                 (.025 if digit=="pinky" else -.018 if digit=="ring" else 0.)*reach,
+                                 flex*(.58+.42*reach))
         elif bone.name.startswith("thumb_"):
             joint=bone.name.split("_")[1]
             bone.rotation_euler=(.025*reach, -.06*reach,
-                                 {"01":.14,"02":.09,"03":.055}.get(joint,.04)*reach)
+                                 {"01":.28,"02":.20,"03":.11}.get(joint,.04)*(0.65+.35*reach))
         else:
             bone.rotation_euler=(0,0,0)
-    rig.location=(0,0,0)
+    rig.location=(0,0,-.0035*press)
     bpy.context.view_layer.update()
     tip_now=rig.matrix_world @ rig.pose.bones["index_03_r"].tail
     wanted=camera_xy(tip_x,tip_y)
@@ -351,9 +373,9 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     cuff_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
     # Important: wrist is the actual posed rig coordinate. Fixed Z=1.10
     # made the cuff float almost a metre in front of the original skinned mesh.
-    sleeve_obj.location=(wrist.x, wrist.y, wrist.z-.007)
-    cuff_obj.location=(wrist.x, wrist.y, wrist.z+.006)
-    cuff_obj.scale=(.98,.98,.98)
+    sleeve_obj.location=(wrist.x, wrist.y, wrist.z-.009)
+    cuff_obj.location=(wrist.x, wrist.y, wrist.z+.003)
+    cuff_obj.scale=(.99,.99,.99)
     # Keyframe every control: the saved .blend contains 49 editable animation keys,
     # not merely a snapshot of the final pose.
     k=index+1
