@@ -1,8 +1,8 @@
 # ROKAS Laptop Cinematic V11.2 — main GitHub integration
 
-Status: **V11.2 code + five original attached PNGs committed. Focused cloud Unity QA PASS. Original QHD-room visual acceptance remains user-local.**
+Status: **Original chibi + four gold PNGs correctly imported, strict art-integrated Unity PlayMode PASS and focused Unity EditMode/PlayMode PASS. Real QHD-room visual acceptance remains user-local.**
 Branch: `codex/fidelity3-resume-5779190`.
-**Exact code/asset SHA verified by cloud Unity:** `d00b22fc30d6fd392c3829e6e16c133ecaa7b6bc`.
+**Verified runtime + exact PNG importer fix SHA:** `f37c7175ba7e09735596c1d2a5026375948799dc`. (Previous `d00b22f` checks were insufficient for PNG import, as noted below.)
 Previous tested V11.1 base: `7ffa90bb76195d6f12f9e2037fd9e285ac7775ac`.
 
 ## Original assets uploaded to GitHub, unchanged
@@ -24,13 +24,51 @@ Stable Unity meta GUIDs are committed. `LaptopCinematicTextureImporter.cs` prese
 - **PNG prompts:** Original gold `prompt_power`, `prompt_back`, `prompt_open` and `back_arrow` loaded directly from Resources; fully white tint, original transparency + glow, existing hover/pulse/press preserved, increased displayed width and moved to fit within frame. `prompt_open_yomi` resource is supported if a future exact authored PNG exists; otherwise the original user's `prompt_open` is used for the powered action (no flat placeholder).
 - Original 49 right-hand frames, Blender source, camera speed, physical Power key timing, audio gains and Combat/VN scripts **NOT modified**.
 
-## Actual CI evidence (same code/asset SHA d00b22f)
+## Earlier CI evidence (d00b22f): does not establish original PNG import
 
 - [Unity compile, EditMode, baseline PlayMode, five V11 PlayMode cases: **PASS**](https://github.com/timurkamurka11/Rokas/actions/runs/38094323055).
 - [Unity PlayMode with pinned real 49 right-hand PNGs, imported original chibi and gold prompts, DVD movement, 9 real mini YOMI icons, live nonblack atlas, correct powering & return: **PASS**](https://github.com/timurkamurka11/Rokas/actions/runs/38094323040).
 - [Exact original user PNG import: **PASS**](https://github.com/timurkamurka11/Rokas/actions/runs/38094082016).
 
 In the art-integrated cloud run the approved-size 1672x941 actual-room photograph is a clearly labeled **synthetic test-only** stand-in. Thus CI does NOT prove 100% correct full-size photo color grading, exact physical bezel polygon clipping, actual audio peaks, or actual local Unity Game View quality. The user must check after pulling.
+
+## 2026-10-11 importer recovery and mandatory original-art acceptance
+
+The original five PNGs WERE committed earlier, but all five tracked
+`.png.meta` files contained **literal backslash-n characters**, not real
+YAML newlines. Unity's editor log stated that the files **did not have valid
+GUIDs and would be ignored**. The earlier green art-integrated test silently
+accepted the fallback `NO SIGNAL` text and alternate prompt graphics.
+That earlier green badge was **not valid visual acceptance of the original PNGs**.
+
+Corrective commits on this SAME main integration branch:
+
+- Five `.png.meta` files rebuilt with full valid `TextureImporter` YAML, stable
+  unchanged GUIDs, 4096 max texture dimension, uncompressed RGBA/NPOT
+  settings. Original PNG bytes **unchanged**.
+- `.github/workflows/laptop-v112-import-approved-ui.yml` preserves these
+  existing metas and is idempotent, rather than producing single-line escaped
+  YAML again.
+- `LaptopV111SeamlessPOVPlayModeTests` now REQUIRES all five exact Unity
+  `Resources.Load<Texture2D>` assets, an animated real chibi and actual
+  original PNG prompt textures; text fallback cannot pass the test.
+  Hover is asserted on the golden child Graphic where it actually lives.
+
+New authoritative checks on `f37c7175ba7e09735596c1d2a5026375948799dc`:
+
+- [**Art-integrated Unity 6000.3 PlayMode PASS 1/1**](https://github.com/timurkamurka11/Rokas/actions/runs/38095453550).
+  Downloaded `playmode-results.xml` confirmed passed=1, failed=0,
+  skipped=0. The actual Unity `playmode.log` contained **no** `does not
+  have a valid GUID` or `chibi sticker resource missing` diagnostics.
+  The fixture includes the pinned 49 original hand PNG resources; the
+  POV photograph remains clearly labeled synthetic test-only.
+- [**Focused cloud Unity EditMode and PlayMode PASS**](https://github.com/timurkamurka11/Rokas/actions/runs/38095453603).
+- [**Idempotent exact PNG import workflow PASS**](https://github.com/timurkamurka11/Rokas/actions/runs/38095185724).
+
+No edits to 49 hand frames, POV artwork, Combat, VN or game audio were made in
+this hotfix. The original Windows QHD scene/rendering, precise LCD bezel
+perspective, scene color grading and SFX playback still require inspection
+on the user's local Unity project. **Do not claim final local visual QA PASS.**
 
 ## Delivery and next step
 
