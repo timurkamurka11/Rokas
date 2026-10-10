@@ -382,19 +382,21 @@ def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
     # If the finger is too far away, the anatomy is still wrong. Do not
     # "fix" it by pulling the entire mesh across the image.
     if shift>24.:
-        raise RuntimeError("Finger anatomy unable to reach Power at frame %s: %.2fpx"%(frame,shift))
-    # Natural final wrist approach (not PNG transform), limited to 24px.
-    delta_world=camera_xy(target[0],target[1])-camera_xy(pad[0],pad[1])
-    rig.location.x += delta_world.x
-    rig.location.y += delta_world.y
-    bpy.context.view_layer.update()
+        # Keep the failed 3D pose for diagnosis; never shift the rig beyond
+        # the natural anatomical bound. Final run still FAILS after rendering.
+        print("ROKAS_POWER_OUT_OF_REACH",frame,round(shift,2),flush=True)
+    else:
+        delta_world=camera_xy(target[0],target[1])-camera_xy(pad[0],pad[1])
+        rig.location.x += delta_world.x
+        rig.location.y += delta_world.y
+        bpy.context.view_layer.update()
     measured=index_skin_tip_px(hand,rig)
     error=math.hypot(measured[0]-target[0],measured[1]-target[1])
     print("ROKAS_SKIN_CONTACT_SOLVER",frame,"skin",measured,"target",target,
           "error_px",round(error,2),"curl",best[1],"yaw",best[2],
           "wrist_shift_px",round(shift,2),flush=True)
     if error>4.:
-        raise RuntimeError("Real skinned fingertip misses Power at frame %s: %.2fpx"%(frame,error))
+        print("ROKAS_SKIN_CONTACT_QA_FAIL",frame,round(error,2),flush=True)
     return measured,error
 
 def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
@@ -541,6 +543,10 @@ def main():
         "target_power":[POWER_X,POWER_Y],"pose_reports":poses,
         "note":"V4 ART QA PENDING: skinned contact rig solve is a geometry gate, not a visual approval"}
     with open(os.path.join(a.output,"production_report.json"),"w",encoding="utf-8") as f:json.dump(report,f,indent=2)
+    failed=[(p["index"],p["contact_skin_error_px"]) for p in poses
+            if p["contact_skin_error_px"] is not None and p["contact_skin_error_px"]>4.]
+    if failed:
+        raise RuntimeError("V4 CONTACT QA FAIL (renders retained for diagnosis): "+str(failed))
     print("ROKAS_PRODUCTION_RENDER_PASS",len(poses),flush=True)
 if __name__=="__main__":
     try:main()
