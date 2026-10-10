@@ -89,6 +89,13 @@ namespace Rokas.Tests
                 "Mini YOMI must carry readable colored app UI, not a black texture");
             Assert.That(mini.GetComponentInParent<RectMask2D>(),Is.Not.Null,
                 "Mini YOMI must be clipped to the calibrated physical LCD");
+            for (int i=0;i<9;i++)
+            {
+                var icon=Find<LaptopIcon>("PhysicalMiniYomiAppIcon_"+i);
+                Assert.That(icon,Is.Not.Null,
+                    "The mini desktop must use the SAME vector glyphs as YOMI.");
+                Assert.That(icon.gameObject.activeInHierarchy,Is.True);
+            }
             Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy,Is.False);
             var reopen=Find<RectTransform>("PoweredLaptopOpenHint");
             Assert.That(reopen,Is.Not.Null);
