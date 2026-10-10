@@ -138,14 +138,14 @@ def apply_subtle_finger_slimming(hand, rig):
 
 
 def create_nail_objects():
-    """Pale satin keratin with subtle curved edges, not chunky sphere caps."""
+    """Small low-sheen keratin plates nested into the distal skin, not white fingertip caps."""
     matte=bpy.data.materials.new("Nail_Natural_Keratin_Subtle")
-    matte.diffuse_color=(.63,.48,.43,1.)
+    matte.diffuse_color=(.43,.315,.292,1.)
     matte.use_nodes=True
     bsdf=next(node for node in matte.node_tree.nodes if node.type=="BSDF_PRINCIPLED")
-    bsdf.inputs["Base Color"].default_value=(.63,.48,.43,1.)
-    bsdf.inputs["Roughness"].default_value=.49
-    if "Coat Weight" in bsdf.inputs: bsdf.inputs["Coat Weight"].default_value=.12
+    bsdf.inputs["Base Color"].default_value=(.43,.315,.292,1.)
+    bsdf.inputs["Roughness"].default_value=.76
+    if "Coat Weight" in bsdf.inputs: bsdf.inputs["Coat Weight"].default_value=.025
     for digit in ("index","middle","ring","pinky","thumb"):
         verts=[]; faces=[]
         # Dorsal oval shield, 11 x 7 vertex lattice, slight convexity
@@ -155,8 +155,8 @@ def create_nail_objects():
                 xx=-1.+2*xi/6
                 outline=max(0.,1.-(xx**2*.84+yy**2))
                 # Nail plate sits flush at the edges: only center gently domed.
-                width=.0058*max(.14,math.sqrt(max(0.,1.-yy*yy)))
-                verts.append((xx*width, yy*.0081, .00065*outline))
+                width=.0045*max(.14,math.sqrt(max(0.,1.-yy*yy)))
+                verts.append((xx*width, yy*.0063, .00032*outline))
         for yi in range(10):
             for xi in range(6):
                 a=yi*7+xi
@@ -203,8 +203,8 @@ def update_nail_positions(hand, rig, frame):
             direction.normalize()
             # Nail center is behind the fingertip, on the keratin plate,
             # instead of over the swollen tip pad or dorsal knuckle.
-            cx=tip.x-direction.x*.0085
-            cy=tip.y-direction.y*.0085
+            cx=tip.x-direction.x*.0110
+            cy=tip.y-direction.y*.0110
             near=[v for v,w in vertices if
                   (v.x-cx)**2+(v.y-cy)**2 <= .013**2]
             if len(near)<4:
@@ -214,7 +214,7 @@ def update_nail_positions(hand, rig, frame):
             # Nail front plate must be on the camera-facing +Z surface.
             surface=max(v.z for v in near)
             obj.hide_render=False
-            obj.location=(cx,cy,surface+.00038)
+            obj.location=(cx,cy,surface+.00020)
             obj.rotation_euler=(0.,0.,math.atan2(direction.y,direction.x)-math.pi*.5)
             obj.scale=(.85 if digit=="pinky" else 1.02 if digit=="thumb" else .95, .88, 1.)
             obj.keyframe_insert(data_path="location",frame=frame)
@@ -222,7 +222,7 @@ def update_nail_positions(hand, rig, frame):
             obj.keyframe_insert(data_path="scale",frame=frame)
             report[digit]={"tip_distance_mm":round((tip-wrist).length*1000,2),
                            "nail_to_tip_mm":round(math.hypot(tip.x-cx,tip.y-cy)*1000,2),
-                           "nail_skin_z_gap_mm":.38,
+                           "nail_skin_z_gap_mm":.20,
                            "nail_bed_vertices":len(near)}
     finally:
         eval_hand.to_mesh_clear()
@@ -453,7 +453,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             flex=curls[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
             # X is the actual out-of-plane PIP/DIP bend. Z alone was
             # spreading straight fingers across the approved laptop POV.
-            bone.rotation_euler=(flex*(.20+.10*reach),
+            bone.rotation_euler=(flex*(.44+.30*reach),
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else 0.)*reach,
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else .008)*reach)
         elif bone.name.startswith("thumb_"):
