@@ -124,3 +124,22 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 2. If real-room visual and functional acceptance passes, authorize the matching 49 cropped PNGs from Blender SHA a38e6cba; only then construct final Windows installation ZIP with the canonical V10 tested scripts, release manifest SHA-256 and locked source SHA. Do NOT flip release flag without this evidence.
 3. Address or explicitly disposition `Core behavior` HD/WAV failures before declaring the entire repo release ready; do not modify unrelated game systems under FPS-hand-only scope.
 4. Keep checkpoint and PR updated after actual verified steps, do not duplicate Blender render run 38077862962.
+
+
+## V11 Continuum — cloud implementation + verified QA (2026-10-10)
+
+- Existing PR: [#7](https://github.com/timurkamurka11/Rokas/pull/7) **OPEN/DRAFT**; branch `codex/laptop-pov-cinematic-20261009`.
+- **Verified Unity-tested code HEAD**: `f7fc0779bbe16c1b2dd4ffc25dc4ddc2d69d74dc`. Most recent doc-only pre-checkpoint HEAD: `9bffec8a49af214e1f1573f744072f9c8b3dc681`; later docs updates do not imply another Unity-tested runtime.
+- Full QA report: [docs/laptop-cinematic/V11_QA_REPORT.md](./V11_QA_REPORT.md). This is the evidence and before/after + release-gate source of truth.
+- V11 source: only five Presentation .cs files modified (LaptopView, LaptopCinematicSequence, LaptopPhysicalDesktop, RokasView, RokasAudio), focused Unity tests and one existing workflow. NO changes to Blender source, 49 pinned hand frames, Combat, VN Composer, or unrelated scene code.
+- Live Home 2.5D focal transform retains CustomGlow, hotspots and WorldEffects until original POV is visible; original off-state POV source/calibration untouched; 2D→POV perspective quality remains a **visual acceptance gate**, not proven just by code.
+- Original PNGs retained: idle pulse, hover and press anim; YOMI-on physical LCD is live opaque 640x360 app-catalog/unread/system-clock presentation with original calibrated screen corners. Clicking opens the same full YOMI. Not pixel-identical fullscreen YOMI.
+- Power persists until game restart; no second boot; hand/Power timeline preserved. YOMI desktop prewarmed under boot video (0.5s artificial black hold removed), YOMI now overlays retained approved POV until ready; YOMI→POV prewarm prevents intermediary Hub exposure. Both Sit and Stand use existing Stand Up AudioClip at .77 scale respecting master/mute.
+- Focused Unity 6000.3.19f1 EditMode + fallback + **5/5 V11 PlayMode tests** all PASS: https://github.com/timurkamurka11/Rokas/actions/runs/38085553868, code `f7fc077`. Pixel alpha bug exposed by initial failed run `38085187111` fixed with proper compositing and verified on `38085553868`.
+- Art-integrated 49-frame right-hand powered laptop Unity PlayMode PASS at same verified code: https://github.com/timurkamurka11/Rokas/actions/runs/38085553865.
+- Art-integrated seat/close/reenter/stand Unity PlayMode PASS: https://github.com/timurkamurka11/Rokas/actions/runs/38085184270 (code `f494e9c`, preceding only the live-LCD alpha compositor change and docs).
+- Existing V10 Windows PS5.1 installer safety run `38081352711` PASS. Do not mislabel it as a V11 local patch installer: V10 only ships 49 hand PNGs + JSON manifest.
+- Generic `Core behavior` at tested HEAD run `38085557541` FAIL (known unrelated project-wide HD image and audio/WAV asset validators). Do not mark whole-project CI PASS.
+- **Native user-approved room/color/perspective, original local PNGs, full normal-speed video, real Stand Up WAV mix/clipping, actual local Unity use NOT verified.** Cloud current runs use synthetic POV and lack user SFX. Local `D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY` NOT remotely modified.
+- **FINAL RELEASE remains BLOCKED** by required real-room video/audio/native Unity acceptance and global Core release validation. No `VISUAL_AND_UNITY_QA_APPROVED` flag, no final V11 installer/ZIP, no deceptive PASS claim.
+- **NEXT EXACT ACTION**: Safely merge only the five V11 C# changes into local main Unity copy after verifying/backup of local edited files, ensure hand PNG + approved POV + user SFX are present, run exact end-to-end flow (Hub → POV → contact → Boot → YOMI → POV → Stand → Hub → repeat powered). Obtain per-frame recording and audio peak/listening QA. Then authorize scoped V11 installer, release only after user-visible signoff.
