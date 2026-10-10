@@ -264,6 +264,55 @@ namespace Rokas.Presentation
     }
 
     /// <summary>
+    /// A scaled, transparent user chibi sticker moves inside the masked physical
+    /// laptop LCD like an old DVD screensaver. This changes no photos or frames.
+    /// </summary>
+    public sealed class LaptopNoSignalBounce : MonoBehaviour
+    {
+        private RectTransform viewport;
+        private RectTransform sticker;
+        private Vector2 point = new Vector2(8f, 14f);
+        private Vector2 velocity = new Vector2(42f, 29f);
+
+        public void Initialize(RectTransform area, RectTransform target)
+        {
+            viewport = area;
+            sticker = target;
+            point = new Vector2(8f, 14f);
+            Apply();
+        }
+
+        private static float Bounce(ref float direction, float value, float low, float high)
+        {
+            if (high <= low) return low;
+            while (value < low || value > high)
+            {
+                if (value < low) { value = low + low - value; direction = Mathf.Abs(direction); }
+                if (value > high) { value = high + high - value; direction = -Mathf.Abs(direction); }
+            }
+            return value;
+        }
+
+        private void Update()
+        {
+            if (!viewport || !sticker) return;
+            float dt = Mathf.Min(Time.unscaledDeltaTime, .12f);
+            float vx = velocity.x, vy = velocity.y;
+            point.x = Bounce(ref vx, point.x + vx * dt,
+                5f, viewport.rect.width - sticker.rect.width - 5f);
+            point.y = Bounce(ref vy, point.y + vy * dt,
+                5f, viewport.rect.height - sticker.rect.height - 5f);
+            velocity = new Vector2(vx, vy);
+            Apply();
+        }
+
+        private void Apply()
+        {
+            if (sticker) sticker.anchoredPosition = new Vector2(point.x, -point.y);
+        }
+    }
+
+    /// <summary>
     /// Subtle idle pulse + responsive hover/press on the ORIGINAL approved PNG.
     /// The source art is never modified and disable/reopen resets all state.
     /// </summary>

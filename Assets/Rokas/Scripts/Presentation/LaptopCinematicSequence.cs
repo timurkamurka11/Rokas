@@ -86,6 +86,10 @@ namespace Rokas.Presentation
         private Button onScreenBack;
         private RectTransform powerGlowRoot;
         private Text noSignalText;
+        private RectTransform noSignalScreen;
+        private RawImage physicalMiniYomiImage;
+        private RectTransform physicalMiniYomiViewport;
+        private LaptopNoSignalBounce noSignalBounce;
         private LaptopPowerTimeline powerTimeline;
         private LaptopPerspectiveQuad poweredWallpaper;
         private LaptopPhysicalDesktopClock desktopClock;
@@ -337,11 +341,58 @@ namespace Rokas.Presentation
                 + calibration.bottomLeftX + calibration.bottomRightX) * .25f;
             float centerY = (calibration.topLeftY + calibration.topRightY
                 + calibration.bottomLeftY + calibration.bottomRightY) * .25f;
-            noSignalText = ui.Label(povRoot, "StandbyNoSignal", "NO SIGNAL",
-                imageX + (centerX - 130f) * imageScale,
-                imageY + (centerY - 11f) * imageScale,
-                260f * imageScale, 24f * imageScale, 14,
-                new Color(.37f, .59f, .77f, .33f), false, TextAnchor.MiddleCenter);
+            // The underlying custom four-corner LCD mesh is retained, but
+            // uGUI RawImage + RectMask2D supplies a dependable *visible* screen
+            // compositor even on graphics configurations where Mesh UI vanished.
+            // Inset from the calibrated polygon so no edge leaks onto the bezel.
+            float lcdX = imageX + (calibration.topLeftX + 10f) * imageScale;
+            float lcdY = imageY + (calibration.topLeftY + 10f) * imageScale;
+            float lcdW = (calibration.topRightX - calibration.topLeftX - 20f) * imageScale;
+            float lcdH = (calibration.bottomLeftY - calibration.topLeftY - 20f) * imageScale;
+            lcdW = Mathf.Max(80f, lcdW);
+            lcdH = Mathf.Max(48f, lcdH);
+            noSignalScreen = ui.Rect(povRoot, "ROKASNoSignalScreen", lcdX, lcdY, lcdW, lcdH);
+            var unpoweredPanel = noSignalScreen.gameObject.AddComponent<Image>();
+            unpoweredPanel.color = new Color(.003f, .007f, .015f, 1f);
+            unpoweredPanel.raycastTarget = false;
+            noSignalScreen.gameObject.AddComponent<RectMask2D>();
+            Texture2D chibi = Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi");
+            if (chibi)
+            {
+                float w = Mathf.Min(lcdW * .34f, lcdH * .55f);
+                var sticker = ui.Art(noSignalScreen, "ROKASNoSignalChibiDVD",
+                    chibi, 10f, 10f, w, w * chibi.height / chibi.width);
+                sticker.color = Color.white;
+                sticker.raycastTarget = false;
+                noSignalBounce = noSignalScreen.gameObject.AddComponent<LaptopNoSignalBounce>();
+                noSignalBounce.Initialize(noSignalScreen, sticker.rectTransform);
+            }
+            else
+            {
+                Debug.LogWarning("ROKAS V11.2: chibi sticker resource missing; use fallback NO SIGNAL until art is installed.");
+            }
+            // Retain a readable fallback for incomplete resource installations.
+            noSignalText = ui.Label(noSignalScreen, "StandbyNoSignal", "NO SIGNAL",
+                10f, lcdH * .42f, lcdW - 20f, 30f, 18,
+                new Color(.70f, .82f, 1f, .92f), false, TextAnchor.MiddleCenter);
+            noSignalText.gameObject.SetActive(!chibi);
+
+            // Display the SAME runtime YOMI atlas as a passive miniature.
+            // It stays within an inset calibrated screen mask and never
+            // opens fullscreen YOMI without an explicit E/click action.
+            physicalMiniYomiViewport = ui.Rect(povRoot, "PhysicalMiniYomiViewport",
+                lcdX, lcdY, lcdW, lcdH);
+            var miniMaskBackground = physicalMiniYomiViewport.gameObject.AddComponent<Image>();
+            miniMaskBackground.color = new Color(.01f, .025f, .05f, 1f);
+            miniMaskBackground.raycastTarget = false;
+            physicalMiniYomiViewport.gameObject.AddComponent<RectMask2D>();
+            physicalMiniYomiImage = ui.Art(physicalMiniYomiViewport,
+                "PhysicalMiniYomiVisible", desktopClock.mainTexture,
+                0f, 0f, lcdW, lcdH);
+            physicalMiniYomiImage.color = Color.white;
+            physicalMiniYomiImage.raycastTarget = false;
+            noSignalScreen.gameObject.SetActive(false);
+            physicalMiniYomiViewport.gameObject.SetActive(false);
             // Load the three EXACT approved transparent user PNGs when installed.
             // If V3.2 art was not installed, preserve readable V3.1 text fallbacks.
             Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
@@ -349,8 +400,8 @@ namespace Rokas.Presentation
             Texture2D arrowArt = Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow");
             if (onArt)
             {
-                float w = 390f;
-                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 570f, 933f,
+                float w = 535f;
+                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 905f,
                     w, w * (float)onArt.height / onArt.width);
                 powerHintArt.color = Color.white; // full original PNG intensity
                 powerHintArt.raycastTarget = true;
@@ -364,8 +415,8 @@ namespace Rokas.Presentation
                     575f, 955f, 475f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
             if (exitArt)
             {
-                float w = 390f;
-                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1045f, 933f,
+                float w = 460f;
+                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 921f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
                 backHintArt.raycastTarget = true;
@@ -393,23 +444,40 @@ namespace Rokas.Presentation
             else
                 onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
                     92f, 915f, 72f, 58f, () => BackToRoom(), playClickSound: false);
-            // Gold illuminated button with its own correct YOMI label.
-            // Do NOT reuse the "ВКЛЮЧИТЬ" PNG, which says the wrong action.
-            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 568f, 932f, 482f, 66f);
-            var openSurface = poweredOpenRoot.gameObject.AddComponent<LaptopSurface>();
-            openSurface.Radius = 22f;
-            openSurface.color = new Color(.40f, .19f, .06f, 1f);
-            openSurface.raycastTarget = true;
-            var openButton = poweredOpenRoot.gameObject.AddComponent<Button>();
-            openButton.targetGraphic = openSurface;
-            openButton.transition = Selectable.Transition.None;
-            openButton.onClick.AddListener(() => TryPressPower());
-            poweredOpenRoot.gameObject.AddComponent<LaptopChoiceHover>();
-            ui.Box(poweredOpenRoot, "WarmGoldRule", 12f, 5f, 458f, 2f,
-                new Color(1f, .78f, .42f, .90f));
-            poweredOpenHint = ui.Label(poweredOpenRoot, "OpenYomiGoldText",
-                "E — ОТКРЫТЬ YOMI", 16f, 9f, 448f, 46f, 24,
-                new Color(1f, .88f, .64f, 1f), false, TextAnchor.MiddleCenter);
+            // The original user's golden "ОТКРЫТЬ НОУТБУК" PNG is not a
+            // made-up flat UI. An optional exact "ОТКРЫТЬ YOMI" PNG has
+            // first priority if installed; either gets the same hover.
+            Texture2D openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open_yomi");
+            if (!openArt)
+                openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open");
+            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 913f, 560f, 144f);
+            if (openArt)
+            {
+                var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
+                    openArt, 0f, 0f, 560f, 560f * openArt.height / openArt.width);
+                openImage.color = Color.white;
+                openImage.raycastTarget = true;
+                var openButton = openImage.gameObject.AddComponent<Button>();
+                openButton.targetGraphic = openImage;
+                openButton.transition = Selectable.Transition.None;
+                openButton.onClick.AddListener(() => TryPressPower());
+                openImage.gameObject.AddComponent<LaptopChoiceHover>();
+            }
+            else
+            {
+                // Only used if the user PNG was not installed.
+                var openSurface = poweredOpenRoot.gameObject.AddComponent<LaptopSurface>();
+                openSurface.Radius = 22f;
+                openSurface.color = new Color(.65f, .31f, .08f, 1f);
+                var openButton = poweredOpenRoot.gameObject.AddComponent<Button>();
+                openButton.targetGraphic = openSurface;
+                openButton.transition = Selectable.Transition.None;
+                openButton.onClick.AddListener(() => TryPressPower());
+                poweredOpenRoot.gameObject.AddComponent<LaptopChoiceHover>();
+                poweredOpenHint = ui.Label(poweredOpenRoot, "OpenYomiGoldText",
+                    "E — ОТКРЫТЬ YOMI", 18f, 25f, 520f, 72f, 26,
+                    new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
+            }
             SetPromptVisibility(false);
         }
 
@@ -492,7 +560,10 @@ namespace Rokas.Presentation
             if (onScreenBack) onScreenBack.gameObject.SetActive(show);
             if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(!powered && !returnRequested &&
                 (show || (powerConfirmed && CurrentPhase != Phase.PowerOn && CurrentPhase != Phase.UIOpen)));
-            if (noSignalText) noSignalText.gameObject.SetActive(show && !powered);
+            if (noSignalScreen) noSignalScreen.gameObject.SetActive(show && !powered);
+            if (noSignalText && noSignalScreen && noSignalScreen.gameObject.activeSelf)
+                noSignalText.gameObject.SetActive(noSignalBounce == null);
+            if (physicalMiniYomiViewport) physicalMiniYomiViewport.gameObject.SetActive(show && powered);
             if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered);
             if (desktopClock) desktopClock.gameObject.SetActive(show && powered);
             if (poweredDesktopClick) poweredDesktopClick.gameObject.SetActive(show && powered);
@@ -628,6 +699,8 @@ namespace Rokas.Presentation
                     desktopClock.gameObject.SetActive(true);
                     desktopClock.UpdateClockIfNecessary(true);
                 }
+                if (physicalMiniYomiViewport && LaptopPowerSession.PoweredOn)
+                    physicalMiniYomiViewport.gameObject.SetActive(true);
                 if (poweredWallpaper && LaptopPowerSession.PoweredOn)
                     poweredWallpaper.gameObject.SetActive(true);
                 if (povGroup) povGroup.alpha = 1f;
@@ -680,6 +753,10 @@ namespace Rokas.Presentation
             onScreenBack = null;
             powerGlowRoot = null;
             noSignalText = null;
+            noSignalScreen = null;
+            noSignalBounce = null;
+            physicalMiniYomiImage = null;
+            physicalMiniYomiViewport = null;
             powerTimeline = null;
         }
     }
