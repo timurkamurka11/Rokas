@@ -76,6 +76,7 @@ namespace Rokas.Presentation
         private bool powerConfirmed;
         private bool returnRequested;
         private bool returningFromLaptop;
+        private bool pendingVisualHandoff;
         private Text powerHint;
         private Text backHint;
         private RawImage powerHintArt;
@@ -91,6 +92,15 @@ namespace Rokas.Presentation
 
         public Phase CurrentPhase { get; private set; }
         public bool IsPlaying => active;
+        public bool HasPendingVisualHandoff => pendingVisualHandoff;
+        // The previous approved POV stays drawn until the first REAL YOMI
+        // frame has been presented, never exposing the underlying Hub.
+        public void CompleteVisualHandoff()
+        {
+            if (!pendingVisualHandoff) return;
+            pendingVisualHandoff = false;
+            Cleanup();
+        }
         public bool IsAwaitingPowerChoice => active && CurrentPhase == Phase.PreBootChoice;
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
@@ -110,6 +120,7 @@ namespace Rokas.Presentation
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
         public bool TryStart(bool resumeFromLaptop = false)
         {
+            if (active || pendingVisualHandoff) return false;
             if (active) return true;
             if (!owner || !transitionLayer || !mainBackground || !mainBackground.texture) return false;
 
@@ -375,14 +386,10 @@ namespace Rokas.Presentation
             float elapsed = 0f;
             if (returningFromLaptop)
             {
-                // Small LCD-to-idle crossfade, no body teleport/sitting replay.
-                for (float phase = 0f; active && phase < .28f;
-                    phase += Mathf.Min(Time.unscaledDeltaTime, .06f))
-                {
-                    RenderAt(HandsStart);
-                    povGroup.alpha = Mathf.SmoothStep(0f, 1f, phase / .28f);
-                    yield return null;
-                }
+                // The YOMI panel fades away over an ALREADY-READY seated POV.
+                // No alpha=0 frame, so neither Hub nor empty canvas can flash.
+                RenderAt(HandsStart);
+                povGroup.alpha = 1f;
                 elapsed = HandsStart;
             }
             else
@@ -560,6 +567,7 @@ namespace Rokas.Presentation
         public void Cancel()
         {
             if (active) Finish(false);
+            else CompleteVisualHandoff();
         }
 
         private void Finish(bool shouldOpenLaptop)
@@ -570,13 +578,32 @@ namespace Rokas.Presentation
             CurrentPhase = shouldOpenLaptop ? Phase.UIOpen : Phase.Idle;
             if (running != null && owner) owner.StopCoroutine(running);
             running = null;
-            Cleanup();
-            if (shouldOpenLaptop) openExistingLaptop?.Invoke();
-            else cancelled?.Invoke();
+            if (shouldOpenLaptop)
+            {
+                // Keep the original approved POV covering Home until YOMI
+                // reports its first visible video/desktop frame.
+                SetPromptVisibility(false);
+                if (handsImage) handsImage.gameObject.SetActive(false);
+                if (povGroup) povGroup.alpha = 1f;
+                pendingVisualHandoff = true;
+                try { openExistingLaptop?.Invoke(); }
+                catch (Exception e)
+                {
+                    Debug.LogError("ROKAS laptop handoff failed: " + e);
+                    CompleteVisualHandoff();
+                    cancelled?.Invoke();
+                }
+            }
+            else
+            {
+                Cleanup();
+                cancelled?.Invoke();
+            }
         }
 
         private void Cleanup()
         {
+            pendingVisualHandoff = false;
             if (root)
             {
                 root.gameObject.SetActive(false);
