@@ -10,7 +10,7 @@ function S([string]$p){Join-Path (Join-Path $pack 'payload') $p.Replace('/',[IO.
 function FileSha([string]$p){(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Check([bool]$p,[string]$msg){if(-not $p){throw "FAILED: $msg"}}
 function Invoke-Test([string[]]$opts,[bool]$expectSuccess){
- & pwsh -NoProfile -File (Join-Path $pack 'INSTALL_SAFE.ps1') -Target $unity @opts *> (Join-Path $root 'last.log')
+ & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pack 'INSTALL_SAFE.ps1') -Target $unity @opts *> (Join-Path $root 'last.log')
  $ok=$LASTEXITCODE -eq 0
  if ($ok -ne $expectSuccess) { Write-Host ('INSTALLER_DIAGNOSTIC: ' + (Get-Content -LiteralPath (Join-Path $root 'last.log') -Raw)) }
  Check ($ok -eq $expectSuccess) ("Unexpected exit $LASTEXITCODE for: "+($opts -join ' '))
@@ -71,7 +71,21 @@ try {
  Invoke-Test @('-Rollback','-RunId',$id) $true
  Check ((Get-Content -LiteralPath $prior -Raw) -ceq 'USER_OLD') 'rollback not restored'
  Check (-not (Test-Path -LiteralPath (D ($pre+'HandsRight/Hand_0000.png')))) 'rollback left created file'
- Write-Host 'ROKAS_WINDOWS_INSTALLER_SAFETY_PASS: dryrun, hashes, missing, gate, interrupted, backup, guarded rollback, backup integrity'
+ # Reject a wrong target even when it is a writable directory.
+ $wrong=Join-Path $root 'wrong_project'
+ New-Item -ItemType Directory -Path $wrong -Force | Out-Null
+ & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pack 'INSTALL_SAFE.ps1') -Target $wrong -DryRun *> (Join-Path $root 'wrong.log')
+ Check ($LASTEXITCODE -ne 0) 'wrong Unity root was accepted'
+ # Reject directory junction pointing outside the isolated Unity tree.
+ $hands=D ($pre+'HandsRight')
+ Remove-Item -LiteralPath $hands -Recurse -Force
+ $outside=Join-Path $root 'outside'
+ New-Item -ItemType Directory -Path $outside | Out-Null
+ New-Item -ItemType Junction -Path $hands -Target $outside | Out-Null
+ Invoke-Test @('-DryRun') $false
+ Check (@(Get-ChildItem -LiteralPath $outside -Force).Count -eq 0) 'junction escaped Unity'
+ Remove-Item -LiteralPath $hands -Force
+ Write-Host 'ROKAS_WINDOWS_INSTALLER_SAFETY_PASS: PS5.1, dryrun, hashes, missing, gate, interruption, backups, guarded rollback, wrong root, junction'
 } finally {
  Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
 }
