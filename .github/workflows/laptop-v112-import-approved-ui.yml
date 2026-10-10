@@ -69,7 +69,38 @@ jobs:
           names=['rokas_no_signal_chibi.png','prompt_open.png','prompt_back.png','prompt_power.png','back_arrow.png']
           for i,name in enumerate(names):
             guid='95b2cc43d4f74a08a2f7e23170021%03x'%i
-            (folder/(name+'.meta')).write_text('fileFormatVersion: 2\\nguid: '+guid+'\\n')
+            # Keep already-tracked GUIDs/import settings. Never turn a valid
+            # Unity .meta into escaped single-line text again.
+            meta=folder/(name+'.meta')
+            if meta.exists():
+              existing=meta.read_text(encoding='utf-8')
+              if ('guid: '+guid not in existing
+                  or 'TextureImporter:' not in existing
+                  or not existing.startswith('fileFormatVersion: 2\n')):
+                raise RuntimeError('Invalid/mismatched Unity meta; refusing overwrite: '+str(meta))
+              print('EXISTING_IMPORT_SETTINGS_PRESERVED',name)
+              continue
+            import re
+            template=Path('Assets/Rokas/Resources/VN/RuntimeIntro/Characters/onboarded_mina_mina_serious.png.meta').read_text(encoding='utf-8')
+            assert '\nTextureImporter:\n' in template
+            body=re.sub(r'(?m)^guid: [0-9a-f]{32}
+          PY
+      - name: Commit original user PNGs directly to main development branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Assets/Rokas/Resources/LaptopCinematic/UI
+          git diff --cached --check
+          git commit -m 'assets(laptop-v11.2): import original user chibi and golden UI PNGs without retouching'
+          git fetch origin codex/fidelity3-resume-5779190
+          git rebase origin/codex/fidelity3-resume-5779190
+          git push origin HEAD:codex/fidelity3-resume-5779190
+,'guid: '+guid,template,count=1)
+            body=body.replace('maxTextureSize: 2048','maxTextureSize: 4096')
+            body=body.replace('textureCompression: 1','textureCompression: 0')
+            meta.write_text(body,encoding='utf-8')
           PY
       - name: Commit original user PNGs directly to main development branch
         shell: bash
