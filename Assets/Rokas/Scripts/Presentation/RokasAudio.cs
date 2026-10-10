@@ -168,8 +168,11 @@ namespace Rokas.Presentation
 
         public void PlayLaptopSit()
         {
-            if (laptopSit) PlayScaled(laptopSit, .62f); // ~+5 dB; respects SFX volume/mute
-            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: sitting WAV not installed.");
+            // The user selected the SAME Stand Up SFX for both motions.
+            // Sitting.wav is no longer played. Gain remains audible and obeys
+            // the existing master SFX bus / mute settings.
+            if (laptopStandUp) PlayScaled(laptopStandUp, .62f);
+            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
         public void PlayLaptopStandUp()
