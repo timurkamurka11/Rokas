@@ -70,7 +70,7 @@ if($Rollback) {
 foreach($r in @(
  'ProjectSettings/ProjectVersion.txt',
  'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs',
- $prefix+'LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png'
+ ($prefix+'LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
 )) {
  NoLinks $Target $r
  if(-not (Test-Path -LiteralPath (P $Target $r) -PathType Leaf)){throw "Wrong ROKAS Unity target, missing $r"}
