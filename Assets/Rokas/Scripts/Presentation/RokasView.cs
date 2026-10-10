@@ -11,6 +11,12 @@ namespace Rokas.Presentation
 {
     public sealed class RokasView : IDisposable
     {
+#if UNITY_EDITOR
+        // The existing Combat mission presenters report refresh counts here.
+        // Retained when integrating Laptop V11 so old combat instrumentation
+        // continues compiling and can be subscribed to by EditMode tests.
+        public static Action<int> ResearchRefreshObserved;
+#endif
         private readonly RokasBootstrap owner;
         private readonly GameSession session;
         private readonly RokasAssets assets;
