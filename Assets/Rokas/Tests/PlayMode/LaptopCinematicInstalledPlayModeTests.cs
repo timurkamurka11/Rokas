@@ -44,44 +44,53 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator SkipAtPressAndRepeatClickOpenExistingLaptopExactlyOnce()
+        public IEnumerator ConfirmPowerThenCloseReturnsToSeatedChoiceWithoutStanding()
         {
-            RokasBootstrap boot = Initialize("rokas-laptop-alpha-skip-");
+            RokasBootstrap boot = Initialize("rokas-laptop-seat-cycle-");
             yield return null;
             PressLaptop();
+            PressLaptop(); // repeated room click must not open the laptop
+            yield return new WaitForSecondsRealtime(2.05f);
+            Assert.That(boot.View.LaptopOpen, Is.False);
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null);
+            Assert.That(Find<Button>("PowerKeyClickTarget"), Is.Not.Null);
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke(); // one Power event
+            yield return new WaitForSecondsRealtime(2.55f);
+            Assert.That(boot.View.LaptopOpen, Is.True);
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
+            boot.View.Escape(); // Close YOMI, but DO NOT stand
+            yield return new WaitForSecondsRealtime(.85f);
+            Assert.That(boot.View.LaptopOpen, Is.False);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null,
-                "The installed hand manifest must activate cinematic playback.");
-            PressLaptop();
-            Assert.That(boot.View.LaptopOpen, Is.False,
-                "Repeated clicks during the cinematic must not open an early duplicate laptop panel.");
-            yield return new WaitForSecondsRealtime(2.8f);
-            boot.View.Escape();
-            Assert.That(boot.View.LaptopOpen, Is.True, "ESC must end at the existing Laptop UI.");
-            Assert.That(Find<RectTransform>("YomiLaptop"), Is.Not.Null);
-            yield return null;
-            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null,
-                "The cinematic overlay must be destroyed after the skip.");
-            Assert.That(Find<RectTransform>("YomiLaptop"), Is.Not.Null);
+                "Closing physical laptop must return to seated Power/Stand choice.");
+            Assert.That(Find<Button>("PowerKeyClickTarget"), Is.Not.Null);
+            Assert.That(Find<Button>("LaptopHotspot").IsInteractable(), Is.False);
+            Assert.That(Find<RectTransform>("PowerKeyBlueStandby"), Is.Not.Null);
+            boot.View.Escape(); // This Escape stands up and returns to hub
+            yield return new WaitForSecondsRealtime(1.05f);
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
+            Assert.That(Find<Button>("LaptopHotspot").IsInteractable(), Is.True);
         }
 
         [UnityTest]
-        public IEnumerator NaturalCompletionAndCloseRestoreHomeHotspot()
+        public IEnumerator RepeatedPowerFromSeatedChoiceStartsAnotherSingleBootCycle()
         {
-            RokasBootstrap boot = Initialize("rokas-laptop-alpha-complete-");
+            RokasBootstrap boot = Initialize("rokas-laptop-reboot-cycle-");
             yield return null;
             PressLaptop();
-            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null);
-            yield return new WaitForSecondsRealtime(4.1f);
+            yield return new WaitForSecondsRealtime(2.05f);
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.55f);
+            Assert.That(boot.View.LaptopOpen, Is.True);
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.85f);
+            Assert.That(boot.View.LaptopOpen, Is.False);
+            Assert.That(Find<Button>("PowerKeyClickTarget"), Is.Not.Null);
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.55f);
             Assert.That(boot.View.LaptopOpen, Is.True);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
-            boot.View.Escape();
-            yield return new WaitForSecondsRealtime(.5f);
-            Assert.That(boot.View.LaptopOpen, Is.False,
-                "Closing the existing panel must restore the room.");
-            Button homeHotspot = Find<Button>("LaptopHotspot");
-            Assert.That(homeHotspot, Is.Not.Null);
-            Assert.That(homeHotspot.IsInteractable(), Is.True,
-                "The old home hotspot must remain enabled.");
         }
 
         [UnityTearDown]
