@@ -112,24 +112,26 @@ namespace Rokas.Presentation
             // No separate data model, reset, fake clickable app, or second boot.
             for (int i = 0; i < LaptopView.DesktopAppCount; i++)
             {
-                int x = 22 + (i % 3) * 202;
-                int y = 57 + (i / 3) * 85;
-                Rect(x, y, 192, 76, new Color32(20, 34, 52, 255));
-                Rect(x + 1, y + 1, 190, 74, new Color32(28, 46, 67, 255));
+                // Physical LCD mirrors the fullscreen YOMI desktop's 4-column
+                // arrangement, with nine real app names/colors (not fake apps).
+                int x = 18 + (i % 4) * 152;
+                int y = 58 + (i / 4) * 86;
+                Rect(x, y, 142, 76, new Color32(20, 34, 52, 255));
+                Rect(x + 1, y + 1, 140, 74, new Color32(28, 46, 67, 255));
                 Color tint = LaptopView.DesktopAppColor(i);
                 Color32 tile = new Color32(
                     (byte)Mathf.RoundToInt(tint.r * 210f),
                     (byte)Mathf.RoundToInt(tint.g * 210f),
                     (byte)Mathf.RoundToInt(tint.b * 210f), 255);
-                Rect(x + 9, y + 11, 52, 52, tile);
-                Rect(x + 15, y + 16, 40, 2, new Color32(234, 231, 222, 230));
-                Rect(x + 19, y + 27, 32, 22, new Color32(26, 39, 55, 140));
-                DrawText(LaptopView.DesktopAppTitle(i), x + 68, y + 25, 1,
+                Rect(x + 7, y + 18, 34, 38, tile);
+                Rect(x + 13, y + 22, 21, 2, new Color32(234, 231, 222, 230));
+                Rect(x + 16, y + 29, 16, 19, new Color32(26, 39, 55, 140));
+                DrawText(LaptopView.DesktopAppTitle(i), x + 44, y + 35, 1,
                     new Color32(222, 234, 247, 255));
                 if (i == 6 && unread > 0)
                 {
-                    Rect(x + 38, y + 5, 27, 19, new Color32(163, 49, 55, 255));
-                    DrawText(unread.ToString(), x + 43, y + 10, 1,
+                    Rect(x + 23, y + 5, 26, 19, new Color32(163, 49, 55, 255));
+                    DrawText(unread.ToString(), x + 27, y + 10, 1,
                         new Color32(255, 245, 233, 255));
                 }
             }
@@ -171,7 +173,7 @@ namespace Rokas.Presentation
             if (string.IsNullOrEmpty(text)) return;
             for (int i = 0; i < text.Length; i++)
             {
-                string[] rows = Glyph(text[i]);
+                string[] rows = Glyph(char.ToUpperInvariant(text[i]));
                 for (int ry = 0; ry < rows.Length; ry++)
                     for (int rx = 0; rx < rows[ry].Length; rx++)
                         if (rows[ry][rx] == '1')
@@ -220,6 +222,33 @@ namespace Rokas.Presentation
                 case 'X':return new[]{"10001","10001","01010","00100","01010","10001","10001"};
                 case 'Y':return new[]{"10001","10001","01010","00100","00100","00100","00100"};
                 case 'Z':return new[]{"11111","00001","00010","00100","01000","10000","11111"};
+                case 'А':return new[]{"01110","10001","10001","11111","10001","10001","10001"};
+                case 'Б':return new[]{"11111","10000","10000","11110","10001","10001","11110"};
+                case 'В':return new[]{"11110","10001","10001","11110","10001","10001","11110"};
+                case 'Г':return new[]{"11111","10000","10000","10000","10000","10000","10000"};
+                case 'Д':return new[]{"00110","01010","01010","01010","10010","11111","10001"};
+                case 'Е':return new[]{"11111","10000","10000","11110","10000","10000","11111"};
+                case 'И':return new[]{"10001","10011","10101","10101","11001","10001","10001"};
+                case 'Й':return new[]{"01010","00100","10011","10101","10101","11001","10001"};
+                case 'К':return new[]{"10001","10010","10100","11000","10100","10010","10001"};
+                case 'Л':return new[]{"00111","01001","01001","01001","10001","10001","10001"};
+                case 'Н':return new[]{"10001","10001","10001","11111","10001","10001","10001"};
+                case 'О':return new[]{"01110","10001","10001","10001","10001","10001","01110"};
+                case 'П':return new[]{"11111","10001","10001","10001","10001","10001","10001"};
+                case 'Р':return new[]{"11110","10001","10001","11110","10000","10000","10000"};
+                case 'С':return new[]{"01111","10000","10000","10000","10000","10000","01111"};
+                case 'Т':return new[]{"11111","00100","00100","00100","00100","00100","00100"};
+                case 'У':return new[]{"10001","10001","01010","00100","00100","01000","10000"};
+                case 'Ф':return new[]{"00100","01110","10101","10101","01110","00100","00100"};
+                case 'Ы':return new[]{"10001","10001","11101","10101","11101","10001","10001"};
+                case 'Ь':return new[]{"10000","10000","11110","10001","10001","10001","11110"};
+                case 'Я':return new[]{"01111","10001","10001","01111","00101","01001","10001"};
+                case 'Щ':return new[]{"10101","10101","10101","10101","10101","11111","00001"};
+                case 'М':return new[]{"10001","11011","10101","10101","10001","10001","10001"};
+                case 'Ж':return new[]{"10101","10101","01110","00100","01110","10101","10101"};
+                case 'З':return new[]{"11110","00001","00001","00110","00001","00001","11110"};
+                case 'Ч':return new[]{"10001","10001","10001","01111","00001","00001","00001"};
+                case 'Ш':return new[]{"10101","10101","10101","10101","10101","10101","11111"};
                 case ':':return new[]{"00000","00100","00100","00000","00100","00100","00000"};
                 case '-':return new[]{"00000","00000","00000","11111","00000","00000","00000"};
                 default:return new[]{"00000","00000","00000","00000","00000","00000","00000"};
