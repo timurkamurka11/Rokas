@@ -74,14 +74,14 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     # toward off-screen elbow. Add independent folds with low-frequency harmonics.
     axis=Vector((.56,-.83,0)).normalized()
     across=Vector((axis.y,-axis.x,0)).normalized()
-    # Sleeve layers overlap real skin ~35mm under the wrist, not float above
-    # the hand in depth. End of the sleeve is looser than its knit cuff.
-    rings=([(-.048,.029),(-.036,.029),(-.022,.030),(-.009,.033),(0.,.037),
+    # Sleeve enters skin only ~10mm at the wrist, never buries the palm; no floating seam.
+    # The back of the sleeve broadens toward the offscreen elbow.
+    rings=([(-.012,.028),(-.010,.029),(-.007,.030),(-.003,.033),(0.,.035),
             (.027,.043),(.059,.050),(.102,.058),(.157,.064),(.214,.073),
             (.280,.080),(.352,.088),(.432,.096)]
-           if not cuff else [(-.049,.027),(-.037,.0275),(-.025,.029),
-                              (-.012,.032),(.0,.034),(.012,.036),(.032,.039),
-                              (.046,.040)])
+           if not cuff else [(-.014,.027),(-.010,.0275),(-.006,.029),
+                              (-.002,.031),(.004,.034),(.010,.036),(.022,.039),
+                              (.031,.040)])
     N=64; verts=[]; faces=[]
     for ri,(distance,radius) in enumerate(rings):
         c=wrist + axis*distance
