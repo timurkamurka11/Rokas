@@ -22,7 +22,9 @@ try {
  Copy-Item -LiteralPath $InstallerSource -Destination (Join-Path $pack 'INSTALL_SAFE.ps1')
  foreach($r in @('ProjectSettings/ProjectVersion.txt','Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs',($pre+'LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png'))){
   $d=D $r;New-Item -ItemType Directory -Path (Split-Path -Parent $d) -Force|Out-Null
-  [IO.File]::WriteAllText($d,('fixture HandsRight right_hand_manifest '+$r))
+  $fixture='fixture '+$r
+  if($r -like '*LaptopCinematicSequence.cs'){$fixture='var json = Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest"); frames[i] = Resources.Load<Texture2D>(frame.resource);'}
+  [IO.File]::WriteAllText($d,$fixture)
  }
  $prior=D ($pre+'HandsRight/Hand_0031.png')
  New-Item -ItemType Directory -Path (Split-Path -Parent $prior) -Force|Out-Null
@@ -46,6 +48,14 @@ try {
  $meta=@{sourceSha=('a'*40);validation='VISUAL_AND_UNITY_QA_APPROVED';files=$entries}
  function Save-Meta{$meta|ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $pack 'RELEASE_MANIFEST.json')}
  Save-Meta
+ Invoke-Test @('-DryRun') $true
+ # Regression: the real C# loader has NO literal HandsRight and must still be accepted.
+ $csPath=D 'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs'
+ $csBefore=Get-Content -LiteralPath $csPath -Raw
+ Check (-not $csBefore.Contains('HandsRight')) 'fixture must reproduce real data-driven loader'
+ [IO.File]::WriteAllText($csPath,'// old runtime without dynamic frame loader')
+ Invoke-Test @('-DryRun') $false
+ [IO.File]::WriteAllText($csPath,$csBefore)
  Invoke-Test @('-DryRun') $true
  Check ((Get-Content -LiteralPath $prior -Raw) -ceq 'USER_OLD') 'dry run mutated target'
  $damaged=S ($pre+'HandsRight/Hand_0015.png')
