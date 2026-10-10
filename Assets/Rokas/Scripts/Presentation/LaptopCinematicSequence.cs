@@ -9,7 +9,7 @@ namespace Rokas.Presentation
     // Missing POV / hand frames deliberately cause a safe fallback to the old laptop route.
     public sealed class LaptopCinematicSequence
     {
-        public enum Phase { Idle, Approach, POVTransition, HandsInteraction, PowerOn, UIOpen }
+        public enum Phase { Idle, Approach, POVTransition, PreBootChoice, HandsInteraction, PowerOn, CancelBack, UIOpen }
 
         [Serializable]
         private sealed class HandManifest
@@ -48,6 +48,7 @@ namespace Rokas.Presentation
         private const float HandsStart = 1.8f;
         private const float HandsEnd = 3.84f;
         private const float FinishTime = 3.92f;
+        private const float ReturnDuration = .42f;
 
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
@@ -56,6 +57,7 @@ namespace Rokas.Presentation
         private readonly Action openExistingLaptop;
         private readonly Action cancelled;
         private readonly Action powerClick;
+        private readonly Action returningToRoom;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -71,13 +73,22 @@ namespace Rokas.Presentation
         private float imageY;
         private int shownFrame = -1;
         private bool active;
+        private bool powerConfirmed;
+        private bool returnRequested;
+        private Text powerHint;
+        private Text backHint;
+        private Button onScreenBack;
+        private RectTransform powerGlowRoot;
+        private Text noSignalText;
         private LaptopPowerTimeline powerTimeline;
 
         public Phase CurrentPhase { get; private set; }
         public bool IsPlaying => active;
+        public bool IsAwaitingPowerChoice => active && CurrentPhase == Phase.PreBootChoice;
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
-            RawImage mainBackground, Action openExistingLaptop, Action cancelled, Action powerClick)
+            RawImage mainBackground, Action openExistingLaptop, Action cancelled,
+            Action powerClick, Action returningToRoom)
         {
             this.ui = ui;
             this.owner = owner;
@@ -86,6 +97,7 @@ namespace Rokas.Presentation
             this.openExistingLaptop = openExistingLaptop;
             this.cancelled = cancelled;
             this.powerClick = powerClick;
+            this.returningToRoom = returningToRoom;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -143,6 +155,8 @@ namespace Rokas.Presentation
             try
             {
                 powerTimeline = new LaptopPowerTimeline();
+                powerConfirmed = false;
+                returnRequested = false;
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
@@ -218,11 +232,89 @@ namespace Rokas.Presentation
                 frames[0], 0f, 0f, 1f, 1f);
             handsImage.gameObject.SetActive(false);
             handsImage.raycastTarget = false;
+
+            // One physical backlit Power key. A small concentric halo keeps the
+            // keyboard readable without coloring the bezel or entire desk.
+            float keyX = imageX + calibration.powerX * imageScale;
+            float keyY = imageY + calibration.powerY * imageScale;
+            powerGlowRoot = ui.Rect(povRoot, "PowerKeyBlueStandby", keyX - 18f, keyY - 18f, 36f, 36f);
+            ui.Box(powerGlowRoot, "KeyOuterHalo", 0f, 0f, 36f, 36f,
+                new Color(.02f, .22f, .82f, .055f));
+            ui.Box(powerGlowRoot, "KeyInnerHalo", 12f, 12f, 12f, 12f,
+                new Color(.13f, .58f, 1f, .24f));
+            ui.Box(powerGlowRoot, "KeyLED", 15f, 15f, 6f, 6f,
+                new Color(.24f, .72f, 1f, .85f));
+
+            // UI hit target over the calibrated physical Power key, not a fake
+            // full-screen confirmation button. E remains the primary shortcut.
+            var hit = ui.Rect(povRoot, "PowerKeyClickTarget", keyX - 26f, keyY - 27f, 52f, 54f);
+            var target = hit.gameObject.AddComponent<Image>();
+            target.color = new Color(0f, 0f, 0f, .002f);
+            var button = hit.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(() => TryPressPower());
+
+            float centerX = (calibration.topLeftX + calibration.topRightX
+                + calibration.bottomLeftX + calibration.bottomRightX) * .25f;
+            float centerY = (calibration.topLeftY + calibration.topRightY
+                + calibration.bottomLeftY + calibration.bottomRightY) * .25f;
+            noSignalText = ui.Label(povRoot, "StandbyNoSignal", "NO SIGNAL",
+                imageX + (centerX - 130f) * imageScale,
+                imageY + (centerY - 11f) * imageScale,
+                260f * imageScale, 24f * imageScale, 14,
+                new Color(.37f, .59f, .77f, .33f), false, TextAnchor.MiddleCenter);
+            powerHint = ui.Label(povRoot, "PowerChoiceHint", "E  —  ВКЛЮЧИТЬ НОУТБУК",
+                575f, 955f, 475f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+            backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
+                1080f, 955f, 320f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+            onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
+                92f, 915f, 72f, 58f, () => BackToRoom());
+            SetPromptVisibility(false);
         }
 
+        // The initial camera movement is followed by an INDEFINITE player choice.
+        // No finger motion or power audio may happen until confirmed.
         private IEnumerator Play()
         {
             float elapsed = 0f;
+            while (active && elapsed < HandsStart)
+            {
+                RenderAt(elapsed);
+                yield return null;
+                elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+            }
+            if (!active) yield break;
+            RenderAt(HandsStart);
+            CurrentPhase = Phase.PreBootChoice;
+            SetPromptVisibility(true);
+            while (active && !powerConfirmed && !returnRequested)
+            {
+                RenderAt(HandsStart);
+                yield return null;
+            }
+            if (!active) yield break;
+            SetPromptVisibility(false);
+            if (returnRequested)
+            {
+                CurrentPhase = Phase.CancelBack;
+                float exitElapsed = 0f;
+                while (active && exitElapsed < ReturnDuration)
+                {
+                    // Gently reverse the camera blend; never start LaptopBoot.
+                    RenderAt(Mathf.Lerp(HandsStart, 0f,
+                        Mathf.SmoothStep(0f, 1f, exitElapsed / ReturnDuration)));
+                    CurrentPhase = Phase.CancelBack;
+                    yield return null;
+                    exitElapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+                }
+                running = null;
+                if (active) Finish(false);
+                yield break;
+            }
+
+            // User confirmed E/Power. Timeline keeps contact and one click
+            // frame-rate-independent; press animation begins only now.
+            elapsed = HandsStart;
             while (active && elapsed < FinishTime)
             {
                 RenderAt(elapsed);
@@ -231,8 +323,34 @@ namespace Rokas.Presentation
                 yield return null;
                 elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
             }
-            running = null; // Natural coroutine completion; do not stop ourselves.
+            running = null;
             if (active) Finish(true);
+        }
+
+        private void SetPromptVisibility(bool show)
+        {
+            if (powerHint) powerHint.gameObject.SetActive(show);
+            if (backHint) backHint.gameObject.SetActive(show);
+            if (onScreenBack) onScreenBack.gameObject.SetActive(show);
+            if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(show);
+            if (noSignalText) noSignalText.gameObject.SetActive(show);
+        }
+
+        public bool TryPressPower()
+        {
+            if (!IsAwaitingPowerChoice || powerConfirmed || returnRequested) return false;
+            powerConfirmed = true;
+            SetPromptVisibility(false);
+            return true;
+        }
+
+        public bool BackToRoom()
+        {
+            if (!IsAwaitingPowerChoice || returnRequested || powerConfirmed) return false;
+            returnRequested = true;
+            returningToRoom?.Invoke();
+            SetPromptVisibility(false);
+            return true;
         }
 
         private void RenderAt(float t)
@@ -249,7 +367,7 @@ namespace Rokas.Presentation
             else if (t < LaptopPowerTimeline.ContactTime) CurrentPhase = Phase.HandsInteraction;
             else CurrentPhase = Phase.PowerOn;
 
-            bool showHands = t >= HandsStart && t <= HandsEnd;
+            bool showHands = powerConfirmed && t >= HandsStart && t <= HandsEnd;
             handsImage.gameObject.SetActive(showHands);
             if (showHands)
             {
@@ -271,7 +389,8 @@ namespace Rokas.Presentation
             {
                 Color tint = wake.color;
                 var wakeStage = LaptopPowerTimeline.StageAt(t);
-                if (wakeStage == LaptopPowerTimeline.WakeStage.Off) tint.a = 0f;
+                if (wakeStage == LaptopPowerTimeline.WakeStage.Off)
+                    tint.a = powerConfirmed ? 0f : .042f; // subtle standby LCD in NO SIGNAL state
                 else if (wakeStage == LaptopPowerTimeline.WakeStage.Glow)
                     tint.a = Mathf.Lerp(.12f, .31f,
                         Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(LaptopPowerTimeline.ContactTime, LaptopPowerTimeline.GlowEnd, t)));
@@ -280,7 +399,7 @@ namespace Rokas.Presentation
             }
         }
 
-        // Escape / skip goes to the real Laptop UI, even during approach or finger press.
+        // Skip is available ONLY after Power confirmation: Esc in PreBootChoice returns to room.
         public void SkipToLaptop()
         {
             if (active) Finish(true);
@@ -321,6 +440,13 @@ namespace Rokas.Presentation
             wake = null;
             povGroup = null;
             shownFrame = -1;
+            powerConfirmed = false;
+            returnRequested = false;
+            powerHint = null;
+            backHint = null;
+            onScreenBack = null;
+            powerGlowRoot = null;
+            noSignalText = null;
             powerTimeline = null;
         }
     }

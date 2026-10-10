@@ -158,7 +158,8 @@ namespace Rokas.Presentation
                     finally { cinematicLaptopHandoff = false; }
                 },
                 () => { transition = false; SetSceneInteractionsEnabled(true); },
-                () => audio.PlayLaptopPowerClick());
+                () => audio.PlayLaptopPowerClick(),
+                () => audio.PlayLaptopStandUp());
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -460,6 +461,7 @@ namespace Rokas.Presentation
             if (laptopCinematic != null && laptopCinematic.TryStart())
             {
                 transition = true;
+                audio.PlayLaptopSit();
                 SetSceneInteractionsEnabled(false);
                 return;
             }
@@ -556,7 +558,8 @@ namespace Rokas.Presentation
         {
             if (laptopCinematic != null && laptopCinematic.IsPlaying)
             {
-                laptopCinematic.SkipToLaptop();
+                if (!laptopCinematic.BackToRoom())
+                    laptopCinematic.SkipToLaptop();
                 return;
             }
             if (transition || storageBlocked) return;
@@ -594,6 +597,8 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool focused = true)
         {
+            if (focused && laptopCinematic != null && laptopCinematic.IsAwaitingPowerChoice &&
+                Input.GetKeyDown(KeyCode.E)) laptopCinematic.TryPressPower();
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);

@@ -14,6 +14,9 @@ namespace Rokas.Presentation
         private readonly AudioSource hubVoice;
         private readonly AudioClip messageArrive;
         private readonly AudioClip laptopPowerClick;
+        private readonly AudioClip laptopPowerClickUser;
+        private readonly AudioClip laptopSit;
+        private readonly AudioClip laptopStandUp;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
         private float homeWeatherMix = 1f;
@@ -54,6 +57,9 @@ namespace Rokas.Presentation
             hubVoice = MakeSource(audioRoot, true);
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
             laptopPowerClick = Resources.Load<AudioClip>("LaptopCinematic/power_click");
+            laptopPowerClickUser = Resources.Load<AudioClip>("LaptopCinematic/power_click_user");
+            laptopSit = Resources.Load<AudioClip>("LaptopCinematic/sitting");
+            laptopStandUp = Resources.Load<AudioClip>("LaptopCinematic/stand_up");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
 
@@ -151,12 +157,25 @@ namespace Rokas.Presentation
         // The only Power sound: plays through the existing SFX bus / mute settings.
         public void PlayLaptopPowerClick()
         {
-            if (!laptopPowerClick)
+            AudioClip clip = laptopPowerClickUser ? laptopPowerClickUser : laptopPowerClick;
+            if (!clip)
             {
-                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: missing Power click WAV resource.");
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: missing Power click SFX.");
                 return;
             }
-            PlayScaled(laptopPowerClick, .55f);
+            PlayScaled(clip, .55f);
+        }
+
+        public void PlayLaptopSit()
+        {
+            if (laptopSit) PlayScaled(laptopSit, .35f);
+            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: sitting WAV not installed.");
+        }
+
+        public void PlayLaptopStandUp()
+        {
+            if (laptopStandUp) PlayScaled(laptopStandUp, .42f);
+            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
         public void PlayCombatClip(AudioClip clip, float scale)
