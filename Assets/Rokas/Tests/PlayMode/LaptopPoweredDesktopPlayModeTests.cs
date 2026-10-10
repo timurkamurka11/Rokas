@@ -22,6 +22,26 @@ namespace Rokas.Tests
             return null;
         }
 
+        // V11 deliberately preserves the outgoing POV until YOMI is visible.
+        // This is a compositing assertion, not an extra black-delay tolerance.
+        private IEnumerator AssertAtomicYomiHandoff()
+        {
+            RectTransform pov = Find<RectTransform>("LaptopCinematicOverlay");
+            if (pov)
+            {
+                RectTransform modal = Find<RectTransform>("Panels");
+                RectTransform overlay = Find<RectTransform>("Transitions");
+                Assert.That(modal, Is.Not.Null);
+                Assert.That(overlay, Is.Not.Null);
+                Assert.That(modal.GetSiblingIndex(), Is.GreaterThan(overlay.GetSiblingIndex()),
+                    "YOMI MUST render above the outgoing seated POV, never exposing Hub.");
+            }
+            for (int i = 0; i < 40 && Find<RectTransform>("LaptopCinematicOverlay"); i++)
+                yield return new WaitForSecondsRealtime(.05f);
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null,
+                "Outgoing approved POV MUST be released once YOMI has its first ready frame.");
+        }
+
         [UnityTest]
         public IEnumerator BootOnceThenOpenLivePhysicalDesktopWithoutRerunningHand()
         {
@@ -72,7 +92,7 @@ namespace Rokas.Tests
             Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
             yield return null;
             Assert.That(boot.View.LaptopOpen, Is.True);
-            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
+            yield return AssertAtomicYomiHandoff();
             Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(1));
 
             boot.View.Escape();
