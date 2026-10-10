@@ -77,8 +77,8 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     # Sleeve layers overlap real skin ~35mm under the wrist, not float above
     # the hand in depth. End of the sleeve is looser than its knit cuff.
     rings=([(-.048,.029),(-.036,.029),(-.022,.030),(-.009,.033),(0.,.037),
-            (.027,.043),(.059,.050),(.102,.058),(.157,.067),(.214,.079),
-            (.280,.090),(.352,.102),(.432,.116)]
+            (.027,.043),(.059,.050),(.102,.058),(.157,.064),(.214,.073),
+            (.280,.080),(.352,.088),(.432,.096)]
            if not cuff else [(-.049,.027),(-.037,.0275),(-.025,.029),
                               (-.012,.032),(.0,.034),(.012,.036),(.032,.039),
                               (.046,.040)])
@@ -406,13 +406,13 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     reach=smooth(t/1.30)
     withdraw=smooth((t-1.40)/.55)
     press=smooth((t-1.27)/.06)*(1-smooth((t-1.40)/.07))
-    # Visible skinned finger apex is ~95px to the right of the index bone reference.
-    tip_x=1415.+(POWER_X-87.-1415.)*reach + 135.*withdraw
-    # The glTF index-bone tail differs from the visible skinned fingertip by about +84px vertically.
+    # Camera-calibrated armature reach; index curl is solved separately in deformed skin space.
+    tip_x=1415.+(POWER_X+41.-1415.)*reach + 135.*withdraw
+    # Skinned fingertip and bone tail differ; apply the measured 3D reach, not sprite offsets.
     # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
     # Finger approaches from above the illuminated Power key, then depresses
     # through the last 5px instead of translating sideways over the key.
-    tip_y=1080.+(POWER_Y-62.-1080.)*reach + 175.*withdraw + 5.*press
+    tip_y=1080.+(POWER_Y-16.-1080.)*reach + 175.*withdraw + 5.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
@@ -444,7 +444,7 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             flex=curls[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
             # X is the actual out-of-plane PIP/DIP bend. Z alone was
             # spreading straight fingers across the approved laptop POV.
-            bone.rotation_euler=(flex*(.36+.24*reach),
+            bone.rotation_euler=(flex*(.20+.10*reach),
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else 0.)*reach,
                                  (.025 if digit=="pinky" else -.018 if digit=="ring" else .008)*reach)
         elif bone.name.startswith("thumb_"):
