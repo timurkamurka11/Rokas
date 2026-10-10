@@ -95,7 +95,12 @@ jobs:
                   assert alpha<120, ('Power touched outside contact window',frame,alpha)
           for a,b in zip(report['pose_reports'],report['pose_reports'][1:]):
               delta=math.dist(a['actual_skin_tip_px'],b['actual_skin_tip_px'])
-              assert delta<=26, ('Visible index fingertip motion snaps between Blender frames',a['index'],b['index'],delta)
+              cap=26 if b['index']<=35 else 45
+              assert delta<=cap, ('Visible index fingertip motion snaps between Blender frames',a['index'],b['index'],delta,cap)
+          # The first and last frames must show no hand or sleeve at all.
+          for end_frame in (0,48):
+              alpha_end=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/f'HandsRight_{end_frame:04d}.png').convert('RGBA').getchannel('A')
+              assert alpha_end.getbbox() is None, ('FPS hand did not fully leave frame',end_frame,alpha_end.getbbox())
           print('VISIBLE_SKIN_POWER_CONTACT_TIMELINE',vals)
           # No presumed approach direction: legitimate contact from screen-right
           # need not have a finger shaft 15px *below* the Power key.

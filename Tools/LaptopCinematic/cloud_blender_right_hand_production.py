@@ -413,7 +413,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # Calibrated against actual alpha pixels in the user-approved 1672x941 POV.
     # Finger approaches from above the illuminated Power key, then depresses
     # through the last 5px instead of translating sideways over the key.
-    tip_y=1080.+(POWER_Y-16.-1080.)*reach + 175.*withdraw + 5.*press
+    # The hand must fully vanish below the POV by frame 48. The old
+    # +175px withdrawal left its skin silhouette visible at image y=843.
+    # +305px gives an extra ~130px of smooth skinned 3D return travel.
+    tip_y=1080.+(POWER_Y-16.-1080.)*reach + 305.*withdraw + 5.*press
     # Effortless low-frequency breathing; suppress during physical contact.
     tip_x+=2.2*math.sin(3.5*t)*(1-press)*smooth(t/.4)
     tip_y+=1.3*math.sin(3.2*t+1.2)*(1-press)*smooth(t/.4)
