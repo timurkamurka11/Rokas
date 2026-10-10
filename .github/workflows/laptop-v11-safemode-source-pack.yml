@@ -1,0 +1,44 @@
+name: ROKAS V11 Safe Mode Source Pack
+on:
+  push:
+    branches: [codex/laptop-pov-cinematic-20261009]
+    paths:
+      - '.github/workflows/laptop-v11-safemode-source-pack.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage-pinned-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Capture exact tested V11, common base and required runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=c863b588a88eba8398ffdc785ac9a1c8f0ce083f
+          tested=f7fc0779bbe16c1b2dd4ffc25dc4ddc2d69d74dc
+          for f in LaptopCinematicSequence.cs LaptopPhysicalDesktop.cs LaptopView.cs RokasAudio.cs RokasView.cs; do
+            file="Assets/Rokas/Scripts/Presentation/${f}"
+            mkdir -p "staged/base/$(dirname "$file")" "staged/tested/$(dirname "$file")"
+            git show "$base:$file" > "staged/base/$file"
+            git show "$tested:$file" > "staged/tested/$file"
+          done
+          for f in LaptopPowerSession.cs LaptopPowerSession.cs.meta; do
+            file="Assets/Rokas/Scripts/Presentation/${f}"
+            mkdir -p "staged/dependency/$(dirname "$file")"
+            git show "$tested:$file" > "staged/dependency/$file"
+          done
+          test "$(find staged/base -name '*.cs' | wc -l)" -eq 5
+          test "$(find staged/tested -name '*.cs' | wc -l)" -eq 5
+          test -s staged/dependency/Assets/Rokas/Scripts/Presentation/LaptopPowerSession.cs
+          (cd staged && sha256sum base/Assets/Rokas/Scripts/Presentation/*.cs tested/Assets/Rokas/Scripts/Presentation/*.cs dependency/Assets/Rokas/Scripts/Presentation/* > PINNED_SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-V11-SafeMode-Exact-Source
+          path: staged
+          if-no-files-found: error
+          retention-days: 14
