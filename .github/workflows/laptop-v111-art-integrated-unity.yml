@@ -13,6 +13,7 @@ on:
       - 'Assets/Rokas/Tests/PlayMode/LaptopPoweredDesktopPlayModeTests.cs'
       - 'Assets/Rokas/Scripts/Presentation/LaptopPowerSession.cs'
       - 'Assets/Rokas/Scripts/Presentation/LaptopPhysicalDesktop.cs'
+      - 'Assets/Rokas/Editor/LaptopCinematicTextureImporter.cs'
 
 permissions:
   contents: read
