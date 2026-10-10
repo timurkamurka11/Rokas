@@ -401,10 +401,12 @@ namespace Rokas.Presentation
             }
         }
 
-        // Skip is available ONLY after Power confirmation: Esc in PreBootChoice returns to room.
+        // Never open boot/YOMI before the real calibrated fingertip contact.
+        // Esc while the hand is reaching cannot silently bypass the Power press.
         public void SkipToLaptop()
         {
-            if (active) Finish(true);
+            if (active && CurrentPhase == Phase.PowerOn && powerTimeline != null)
+                Finish(true);
         }
 
         // Called on scene disposal, game phase changes, or a protected-save overlay.
