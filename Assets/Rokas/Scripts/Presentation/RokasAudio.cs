@@ -15,7 +15,6 @@ namespace Rokas.Presentation
         private readonly AudioClip messageArrive;
         private readonly AudioClip laptopPowerClick;
         private readonly AudioClip laptopPowerClickUser;
-        private readonly AudioClip laptopSit;
         private readonly AudioClip laptopStandUp;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
@@ -58,7 +57,6 @@ namespace Rokas.Presentation
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
             laptopPowerClick = Resources.Load<AudioClip>("LaptopCinematic/power_click");
             laptopPowerClickUser = Resources.Load<AudioClip>("LaptopCinematic/power_click_user");
-            laptopSit = Resources.Load<AudioClip>("LaptopCinematic/sitting");
             laptopStandUp = Resources.Load<AudioClip>("LaptopCinematic/stand_up");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
@@ -171,13 +169,13 @@ namespace Rokas.Presentation
             // The user selected the SAME Stand Up SFX for both motions.
             // Sitting.wav is no longer played. Gain remains audible and obeys
             // the existing master SFX bus / mute settings.
-            if (laptopStandUp) PlayScaled(laptopStandUp, .62f);
+            if (laptopStandUp) PlayScaled(laptopStandUp, .77f); // louder, one approved clip; master SFX/mute retained
             else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
         public void PlayLaptopStandUp()
         {
-            if (laptopStandUp) PlayScaled(laptopStandUp, .59f); // ~+3 dB; respects SFX volume/mute
+            if (laptopStandUp) PlayScaled(laptopStandUp, .77f); // same level/clip as sitting; respects SFX volume/mute
             else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
