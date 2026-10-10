@@ -1,0 +1,71 @@
+name: ROKAS V11 Scoped Code Review Windows QA
+on:
+  push:
+    branches: [codex/laptop-pov-cinematic-20261009]
+    paths:
+      - '.github/workflows/laptop-v11-code-review-windows-qa.yml'
+      - 'Tools/LaptopCinematic/v11_code_review/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-verified-code-review:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Copy EXACT pinned V11 code + old baseline bytes into separate fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          tested='f7fc0779bbe16c1b2dd4ffc25dc4ddc2d69d74dc'
+          before='c863b588a88eba8398ffdc785ac9a1c8f0ce083f'
+          mkdir -p _v11_ci_package/payload _v11_ci_base
+          for n in LaptopCinematicSequence.cs LaptopPhysicalDesktop.cs LaptopView.cs RokasAudio.cs RokasView.cs; do
+            path="Assets/Rokas/Scripts/Presentation/$n"
+            mkdir -p "_v11_ci_package/payload/$(dirname "$path")" "_v11_ci_base/$(dirname "$path")"
+            git show "$tested:$path" > "_v11_ci_package/payload/$path"
+            git show "$before:$path" > "_v11_ci_base/$path"
+            test -s "_v11_ci_package/payload/$path"
+            test -s "_v11_ci_base/$path"
+          done
+          cp Tools/LaptopCinematic/v11_code_review/V11_CODE_SYNC.ps1 _v11_ci_package/
+          cp Tools/LaptopCinematic/v11_code_review/README.md _v11_ci_package/
+      - name: Create SHA-256 manifest for five REAL pinned C# sources
+        shell: pwsh
+        run: |
+          $names = @('LaptopCinematicSequence.cs','LaptopPhysicalDesktop.cs','LaptopView.cs','RokasAudio.cs','RokasView.cs')
+          $files = @($names | ForEach-Object {
+            $rel = 'Assets/Rokas/Scripts/Presentation/' + $_
+            @{
+              relative = $rel
+              beforeSha = (Get-FileHash -LiteralPath ("_v11_ci_base/" + $rel) -Algorithm SHA256).Hash.ToLowerInvariant()
+              afterSha = (Get-FileHash -LiteralPath ("_v11_ci_package/payload/" + $rel) -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          })
+          $manifest = @{
+            validation = 'V11_CODE_REVIEW_ONLY_NOT_FINAL_RELEASE'
+            sourceSha = 'f7fc0779bbe16c1b2dd4ffc25dc4ddc2d69d74dc'
+            baseSha = 'c863b588a88eba8398ffdc785ac9a1c8f0ce083f'
+            files = $files
+          }
+          $manifest | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath '_v11_ci_package/V11_CODE_MANIFEST.json' -Encoding UTF8
+      - name: Windows PowerShell 5.1 audit/apply/rollback and security fixture QA
+        shell: pwsh
+        run: |
+          & ./Tools/LaptopCinematic/v11_code_review/test_v11_code_sync_windows.ps1 -PackageRoot (Resolve-Path ./_v11_ci_package).Path -BaseRoot (Resolve-Path ./_v11_ci_base).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Create clearly labeled CODE-ONLY review archive (not a final installer)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./_v11_ci_package/* -DestinationPath ./ROKAS_LAPTOP_V11_CODE_REVIEW_ONLY.zip -CompressionLevel Optimal
+          $zip=Get-Item -LiteralPath ./ROKAS_LAPTOP_V11_CODE_REVIEW_ONLY.zip
+          Write-Host "V11_CODE_REVIEW_BUNDLE_SHA256=$((Get-FileHash -LiteralPath $zip.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Laptop-V11-Code-Review-Only
+          path: ROKAS_LAPTOP_V11_CODE_REVIEW_ONLY.zip
+          if-no-files-found: error
+          retention-days: 20
