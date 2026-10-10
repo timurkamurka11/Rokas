@@ -18,7 +18,7 @@ function Allowed([string]$p) {
  return $s
 }
 function P([string]$root,[string]$rel) { Join-Path $root $rel.Replace('/',[IO.Path]::DirectorySeparatorChar) }
-function H([string]$file) { (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() }
+function FileSha([string]$file) { (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() }
 function NoLinks([string]$root,[string]$rel) {
  $cursor=$root
  foreach($part in $rel.Replace('\','/').Split('/')) {
@@ -51,11 +51,11 @@ if($Rollback) {
   if($seen.ContainsKey($r)){throw "Duplicate record: $r"}; $seen[$r]=$true
   NoLinks $Target $r
   $dest=P $Target $r
-  if(-not (Test-Path -LiteralPath $dest -PathType Leaf) -or (H $dest) -cne ([string]$f.installedSha).ToLowerInvariant()) {throw "User modified installed resource: $r"}
+  if(-not (Test-Path -LiteralPath $dest -PathType Leaf) -or (FileSha $dest) -cne ([string]$f.installedSha).ToLowerInvariant()) {throw "User modified installed resource: $r"}
   if([bool]$f.existed) {
    NoLinks $backup ('previous/'+$r)
    $old=P $backup ('previous/'+$r)
-   if(-not (Test-Path -LiteralPath $old -PathType Leaf) -or (H $old) -cne ([string]$f.previousSha).ToLowerInvariant()){throw "Backup damaged: $r"}
+   if(-not (Test-Path -LiteralPath $old -PathType Leaf) -or (FileSha $old) -cne ([string]$f.previousSha).ToLowerInvariant()){throw "Backup damaged: $r"}
   }
  }
  if($DryRun){Write-Host 'ROLLBACK_DRYRUN_PASS';return}
@@ -94,7 +94,7 @@ foreach($f in $m.files) {
  $src=P (Join-Path $here 'payload') $r
  NoLinks (Join-Path $here 'payload') $r
  NoLinks $Target $r
- if(-not (Test-Path -LiteralPath $src -PathType Leaf) -or (H $src) -cne ([string]$f.sha256).ToLowerInvariant()){throw "Missing or corrupted payload: $r"}
+ if(-not (Test-Path -LiteralPath $src -PathType Leaf) -or (FileSha $src) -cne ([string]$f.sha256).ToLowerInvariant()){throw "Missing or corrupted payload: $r"}
 }
 if($expected.Count -ne 0){throw 'Missing expected hand resources'}
 if($DryRun){Write-Host 'INSTALL_DRYRUN_PASS';return}
@@ -109,10 +109,10 @@ foreach($f in $m.files) {
  $exists=Test-Path -LiteralPath $dest -PathType Leaf
  $prev=$null
  if($exists){
-  $prev=H $dest;$saved=P $backup ('previous/'+$r)
+  $prev=FileSha $dest;$saved=P $backup ('previous/'+$r)
   New-Item -ItemType Directory -Path (Split-Path -Parent $saved) -Force|Out-Null
   Copy-Item -LiteralPath $dest -Destination $saved
-  if((H $saved) -cne $prev){throw "Backup SHA mismatch: $r"}
+  if((FileSha $saved) -cne $prev){throw "Backup SHA mismatch: $r"}
  }
  $record.files+=@{relative=$r;existed=$exists;previousSha=$prev;installedSha=([string]$f.sha256).ToLowerInvariant()}
 }
@@ -124,7 +124,7 @@ try {
   New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force|Out-Null
   $written+= $r
   Copy-Item -LiteralPath (P (Join-Path $here 'payload') $r) -Destination $dest -Force
-  if((H $dest) -cne ([string]$f.sha256).ToLowerInvariant()){throw "Postcopy SHA mismatch: $r"}
+  if((FileSha $dest) -cne ([string]$f.sha256).ToLowerInvariant()){throw "Postcopy SHA mismatch: $r"}
   if($TestInterruptAt -gt 0 -and $written.Count -eq $TestInterruptAt){throw 'Simulated interruption in CI test'}
  }
 } catch {

@@ -7,7 +7,7 @@ $pack=Join-Path $root 'pack';$unity=Join-Path $root 'unity'
 $pre='Assets/Rokas/Resources/LaptopCinematic/'
 function D([string]$p){Join-Path $unity $p.Replace('/',[IO.Path]::DirectorySeparatorChar)}
 function S([string]$p){Join-Path (Join-Path $pack 'payload') $p.Replace('/',[IO.Path]::DirectorySeparatorChar)}
-function H([string]$p){(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()}
+function FileSha([string]$p){(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Check([bool]$p,[string]$msg){if(-not $p){throw "FAILED: $msg"}}
 function Invoke-Test([string[]]$opts,[bool]$expectSuccess){
  & pwsh -NoProfile -File (Join-Path $pack 'INSTALL_SAFE.ps1') -Target $unity @opts *> (Join-Path $root 'last.log')
@@ -30,11 +30,11 @@ try {
   $r=$pre+('HandsRight/Hand_{0:d4}.png' -f $i)
   $f=S $r;New-Item -ItemType Directory -Path (Split-Path -Parent $f) -Force|Out-Null
   [IO.File]::WriteAllBytes($f,$data)
-  $entries+=@{relative=$r;sha256=(H $f)}
+  $entries+=@{relative=$r;sha256=(FileSha $f)}
  }
  $r=$pre+'right_hand_manifest.json';$f=S $r
  [IO.File]::WriteAllText($f,'{"fps":24,"frames":49}')
- $entries+=@{relative=$r;sha256=(H $f)}
+ $entries+=@{relative=$r;sha256=(FileSha $f)}
  $meta=@{sourceSha=('a'*40);validation='VISUAL_AND_UNITY_QA_APPROVED';files=$entries}
  function Save-Meta{$meta|ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $pack 'RELEASE_MANIFEST.json')}
  Save-Meta
