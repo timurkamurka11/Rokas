@@ -52,6 +52,7 @@ jobs:
       - name: Synthetic test-only POV, never overwrite approved art
         shell: bash
         run: |
+          python3 -m pip install --quiet Pillow
           python3 - <<'PY'
           from pathlib import Path
           from PIL import Image,ImageDraw
