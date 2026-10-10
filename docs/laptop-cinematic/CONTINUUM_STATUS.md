@@ -30,3 +30,12 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 3. Recheck UI, audio, desktop/system time/YOMI, scene interaction and test outputs on the same source SHA.
 4. Build only safe, verified installer with correct 49 new frames and backups, never overwrite local D: copy remotely.
 5. Update this checkpoint with new run/artifact/commit IDs and remaining work. Avoid frequent redundant CI polling.
+
+## V8 source patch evidence (2026-10-10, 19:05 UTC)
+- Latest art source SHA before this checkpoint: a38e6cba9b1f34fd2976ade27f50cdf3328e9a7f (inset nail geometry, Power RenderTexture C# test).
+- Full new Blender→Unity run: https://github.com/timurkamurka11/Rokas/actions/runs/38077862962, status IN PROGRESS, Blender rendering 49 frames at last inspection. DO NOT start duplicate.
+- Four-pose Blender diagnostics: run 38077862965 SUCCESS, artifact 11678567790, source SHA a38e6cba. Nail-only mask reduced from 490 to 220 opaque pixels at reduced-size QA frame; full-size 49-frame Visual QA still PENDING.
+- Offscreen Unity proof: run 38077863044 SUCCESS, artifact 11678508307, BUT workflow uses old frame artifact from run 38067367922. NOT proof for a38e6cba hand resources.
+- Last full art QA on cb0e15bb: all 49 frames and full Unity crop reconstruction structurally PASS. Visual FAIL for pale detached-looking nails; corrected candidate requires new full render.
+- Installer and rollback drafts exist only as UNRELEASED working-container templates; no production installer has been signed off. Local D: not touched.
+- NEXT: wait for run 38077862962 art job to finish, download raw+Unity artifacts from that exact run, inspect full 49-frame motion and finger contact before creating release. Verify real Power interaction in Unity capture job. Do not mistake old offscreen artifact for new version.
