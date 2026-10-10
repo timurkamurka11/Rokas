@@ -339,7 +339,7 @@ def index_skin_tip_px(hand,rig):
     finally:
         evaluated_obj.to_mesh_clear()
 
-def articulate_index(rig,reach,curl,yaw,downstroke):
+def articulate_index(rig,reach,curl,yaw,press_amount):
     # MCP/PIP/DIP have independently keyed X rotations; the knuckle points
     # the pad downward while PIP/DIP shorten the silhouette naturally.
     for joint,mult,base in (("01",.34,.08),("02",.64,.12),("03",.42,.075)):
@@ -347,15 +347,16 @@ def articulate_index(rig,reach,curl,yaw,downstroke):
         pb.rotation_euler=(mult*curl,0.,base*reach+yaw*(1. if joint=="01" else .32)+
                            (.028 if joint=="03" else 0.)*downstroke)
 
-def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
+def fit_index_pad_to_power(rig,hand,reach,frame,press_amount):
     # Geometry-space 2D calibration of the actual pad to the approved
     # photographed button. The fingertip articulates independently of the
     # whole hand; at most a short (<=24px) anatomical wrist approach follows.
-    target=(POWER_X,POWER_Y+(1.8 if downstroke else 0.))
+    target=(POWER_X,POWER_Y+2.2*press_amount)
+    curl_floor=.15+.34*press_amount
     candidates=[]
-    for curl in (.12,.22,.32,.44,.56,.70,.84):
+    for curl in (curl_floor,curl_floor+.07,curl_floor+.14,curl_floor+.21,curl_floor+.28):
         for yaw in (-.35,-.20,-.08,0.,.08,.20,.35):
-            articulate_index(rig,reach,curl,yaw,downstroke)
+            articulate_index(rig,reach,curl,yaw,press_amount)
             bpy.context.view_layer.update()
             px=index_skin_tip_px(hand,rig)
             d=math.hypot(px[0]-target[0],px[1]-target[1])
@@ -367,14 +368,14 @@ def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
     best=candidates[0]
     for step in (.065,.025):
         tests=[]
-        for curl in (max(.10,best[1]-step),best[1],min(.95,best[1]+step)):
+        for curl in (max(curl_floor,best[1]-step),best[1],min(.95,best[1]+step)):
             for yaw in (max(-.45,best[2]-step),best[2],min(.45,best[2]+step)):
-                articulate_index(rig,reach,curl,yaw,downstroke)
+                articulate_index(rig,reach,curl,yaw,press_amount)
                 bpy.context.view_layer.update()
                 px=index_skin_tip_px(hand,rig)
                 tests.append((math.hypot(px[0]-target[0],px[1]-target[1]),curl,yaw,px))
         best=min(tests,key=lambda x:x[0])
-    articulate_index(rig,reach,best[1],best[2],downstroke)
+    articulate_index(rig,reach,best[1],best[2],press_amount)
     bpy.context.view_layer.update()
     pad=index_skin_tip_px(hand,rig)
     dx=target[0]-pad[0];dy=target[1]-pad[1]
@@ -464,13 +465,13 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # correction happens through the three index phalanges.
     approach=smooth((index-17.)/13.)
     retract=smooth((index-34.)/10.)
-    curl=(.16+.94*approach)*(1.-retract)
+    curl=(.07+.11*approach)*(1.-retract)
     articulate_index(rig,reach,curl,0.,0.)
     bpy.context.view_layer.update()
     contact_error=None
     if 30<=index<=34:
         # CONTACT 30, PRESS 31-33, RELEASE 34. No PNG positioning tricks.
-        pad,contact_error=fit_index_pad_to_power(rig,hand,reach,index,index in (31,32,33))
+        pad,contact_error=fit_index_pad_to_power(rig,hand,reach,index,{30:0.,31:.50,32:1.,33:.50,34:0.}[index])
     measured_pad=index_skin_tip_px(hand,rig)
     wrist=rig.matrix_world @ base.head
     nail_report=update_nail_positions(hand,rig,index+1)
