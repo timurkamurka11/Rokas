@@ -60,6 +60,7 @@ namespace Rokas.Presentation
         private readonly Action returningToRoom;
         private readonly Func<int> unreadMessages;
         private readonly Action<float> updateRoomCamera;
+        private readonly Texture yomiWallpaper;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -113,7 +114,7 @@ namespace Rokas.Presentation
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
             Action powerClick, Action returningToRoom, Func<int> unreadMessages = null,
-            Action<float> updateRoomCamera = null)
+            Action<float> updateRoomCamera = null, Texture yomiWallpaper = null)
         {
             this.ui = ui;
             this.owner = owner;
@@ -125,6 +126,7 @@ namespace Rokas.Presentation
             this.returningToRoom = returningToRoom;
             this.unreadMessages = unreadMessages;
             this.updateRoomCamera = updateRoomCamera;
+            this.yomiWallpaper = yomiWallpaper;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -292,7 +294,7 @@ namespace Rokas.Presentation
             desktopClock = liveClockRect.gameObject.AddComponent<LaptopPhysicalDesktopClock>();
             desktopClock.SetCorners(lcdCorners, imageScale);
             desktopClock.raycastTarget = false;
-            desktopClock.Initialize(unreadMessages);
+            desktopClock.Initialize(unreadMessages, yomiWallpaper);
             RectTransform lcdHit = ui.Rect(povRoot, "PhysicalDesktopClickTarget",
                 imageX + calibration.topLeftX * imageScale,
                 imageY + calibration.topLeftY * imageScale,

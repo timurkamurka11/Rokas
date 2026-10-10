@@ -63,12 +63,48 @@ namespace Rokas.Presentation
         private Texture2D live;
         private Color32[] working;
         private Func<int> unreadProvider;
+        private Color32[] wallpaperPixels;
         private long lastSecond = -1;
         private int lastUnread = -1;
 
-        public void Initialize(Func<int> getUnread = null)
+        public void Initialize(Func<int> getUnread = null, Texture wallpaper = null)
         {
             unreadProvider = getUnread;
+            wallpaperPixels = null;
+            // Capture the SAME Tokyo/blue YOMI wallpaper used by fullscreen
+            // LaptopView, once. GPU copy also works when texture Read/Write is off.
+            if (wallpaper)
+            {
+                RenderTexture target = null;
+                RenderTexture previous = RenderTexture.active;
+                Texture2D snapshot = null;
+                try
+                {
+                    target = RenderTexture.GetTemporary(Width, Height, 0,
+                        RenderTextureFormat.ARGB32);
+                    Graphics.Blit(wallpaper, target);
+                    RenderTexture.active = target;
+                    snapshot = new Texture2D(Width, Height,
+                        TextureFormat.RGBA32, false);
+                    snapshot.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                    snapshot.Apply(false, false);
+                    wallpaperPixels = snapshot.GetPixels32();
+                    for (int i = 0; i < wallpaperPixels.Length; i++)
+                        wallpaperPixels[i].a = 255;
+                }
+                catch (Exception error)
+                {
+                    wallpaperPixels = null;
+                    Debug.LogWarning("ROKAS Mini YOMI: wallpaper snapshot unavailable: "
+                        + error.Message);
+                }
+                finally
+                {
+                    RenderTexture.active = previous;
+                    if (snapshot) Destroy(snapshot);
+                    if (target) RenderTexture.ReleaseTemporary(target);
+                }
+            }
             live = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
             live.name = "ROKAS_YOMI_LivePhysicalDesktop";
             live.filterMode = FilterMode.Bilinear;
@@ -96,12 +132,17 @@ namespace Rokas.Presentation
         {
             // Fill every pixel with an OPAQUE live-rendered desktop; the approved
             // screen-OFF photo remains untouched and is revealed while powered off.
-            for (int y = 0; y < Height; y++)
+            if (wallpaperPixels != null && wallpaperPixels.Length == working.Length)
+                Array.Copy(wallpaperPixels, working, working.Length);
+            else
             {
-                byte r = (byte)(12 + y * 10 / Height);
-                byte g = (byte)(25 + y * 15 / Height);
-                byte b = (byte)(42 + y * 19 / Height);
-                Rect(0, y, Width, 1, new Color32(r, g, b, 255));
+                for (int y = 0; y < Height; y++)
+                {
+                    byte r = (byte)(12 + y * 10 / Height);
+                    byte g = (byte)(25 + y * 15 / Height);
+                    byte b = (byte)(42 + y * 19 / Height);
+                    Rect(0, y, Width, 1, new Color32(r, g, b, 255));
+                }
             }
             Rect(0, 0, Width, 43, new Color32(11, 20, 34, 255));
             Rect(0, 43, Width, 1, new Color32(83, 126, 158, 150));
@@ -259,6 +300,7 @@ namespace Rokas.Presentation
         {
             if (live) Destroy(live);
             live = null;
+            wallpaperPixels = null;
             base.OnDestroy();
         }
     }

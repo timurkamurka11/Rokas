@@ -185,7 +185,8 @@ namespace Rokas.Presentation
                 () => { audio.PlayLaptopPowerClick(); LaptopPowerSession.CompleteFirstBoot(); },
                 () => audio.PlayLaptopStandUp(),
                 () => session.Messages.TotalUnread,
-                UpdateHomeCameraBlend);
+                UpdateHomeCameraBlend,
+                assets.laptopWallpaper);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
