@@ -364,6 +364,8 @@ namespace Rokas.Presentation
 
             if (t < POVStart) CurrentPhase = Phase.Approach;
             else if (t < POVEnd) CurrentPhase = Phase.POVTransition;
+            else if (returnRequested) CurrentPhase = Phase.CancelBack;
+            else if (!powerConfirmed) CurrentPhase = Phase.PreBootChoice;
             else if (t < LaptopPowerTimeline.ContactTime) CurrentPhase = Phase.HandsInteraction;
             else CurrentPhase = Phase.PowerOn;
 
