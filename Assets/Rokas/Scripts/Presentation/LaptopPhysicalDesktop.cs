@@ -145,52 +145,71 @@ namespace Rokas.Presentation
         }
     }
 
-    /// <summary>Subtle hover-only pulse on the exact PNG, no static animation.</summary>
+    /// <summary>
+    /// Subtle idle pulse + responsive hover/press on the ORIGINAL approved PNG.
+    /// The source art is never modified and disable/reopen resets all state.
+    /// </summary>
     public sealed class LaptopChoiceHover : MonoBehaviour,
-        IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler
+        IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler,
+        IPointerUpHandler
     {
         private RectTransform rect;
         private Graphic graphic;
         private bool hovering;
         private float time;
+        private float hoverWeight;
+        private float pressRemaining;
         private Color initialTint;
+        private Vector3 initialScale;
 
         private void Awake()
         {
             rect = transform as RectTransform;
             graphic = GetComponent<Graphic>();
+            initialScale = rect ? rect.localScale : Vector3.one;
             if (graphic) initialTint = graphic.color;
         }
 
-        public void OnPointerEnter(PointerEventData data) { hovering = true; time = 0f; }
+        public void OnPointerEnter(PointerEventData data) { hovering = true; }
         public void OnPointerExit(PointerEventData data) { hovering = false; }
-        public void OnPointerDown(PointerEventData data) { time = 0f; }
+        public void OnPointerDown(PointerEventData data) { pressRemaining = .14f; }
+        public void OnPointerUp(PointerEventData data) { pressRemaining = Mathf.Min(pressRemaining, .06f); }
 
         private void Update()
         {
             if (!rect) return;
-            float goal = 1f;
-            float intensity = 1f;
-            if (hovering)
-            {
-                time += Time.unscaledDeltaTime;
-                goal = 1.035f + .012f * Mathf.Sin(time * 5.2f);
-                intensity = 1.13f + .06f * Mathf.Sin(time * 5.2f);
-            }
-            float k = 1f - Mathf.Exp(-12f * Time.unscaledDeltaTime);
-            float next = Mathf.Lerp(rect.localScale.x, goal, k);
-            rect.localScale = new Vector3(next,next,1f);
+            float dt = Time.unscaledDeltaTime;
+            time += dt;
+            hoverWeight = Mathf.MoveTowards(hoverWeight, hovering ? 1f : 0f, dt * 6.5f);
+            pressRemaining = Mathf.Max(0f, pressRemaining - dt);
+
+            float idlePulse = .005f * Mathf.Sin(time * 2.1f);
+            float hoverPulse = .014f * Mathf.Sin(time * 5.2f);
+            float press = -.055f * Mathf.Clamp01(pressRemaining / .14f);
+            float targetScale = 1f + idlePulse +
+                hoverWeight * (.035f + hoverPulse) + press;
+            float smooth = 1f - Mathf.Exp(-15f * dt);
+            rect.localScale = Vector3.Lerp(rect.localScale,
+                initialScale * targetScale, smooth);
             if (graphic)
-                graphic.color = Color.Lerp(graphic.color,
-                    initialTint * intensity, k);
+            {
+                float gain = 1f + .018f * Mathf.Sin(time * 2.1f) +
+                    hoverWeight * (.10f + .045f * Mathf.Sin(time * 5.2f));
+                Color target = new Color(
+                    Mathf.Clamp01(initialTint.r * gain),
+                    Mathf.Clamp01(initialTint.g * gain),
+                    Mathf.Clamp01(initialTint.b * gain), initialTint.a);
+                graphic.color = Color.Lerp(graphic.color, target, smooth);
+            }
         }
 
         private void OnDisable()
         {
             hovering = false;
-            time = 0f;
-            if (rect) rect.localScale = Vector3.one;
+            time = hoverWeight = pressRemaining = 0f;
+            if (rect) rect.localScale = initialScale;
             if (graphic) graphic.color = initialTint;
         }
     }
+
 }
