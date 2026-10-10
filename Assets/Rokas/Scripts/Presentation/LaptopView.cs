@@ -103,6 +103,14 @@ namespace Rokas.Presentation
             bootConsumedThisHomeVisit = false;
         }
 
+        // E / physical Power after returning to seated POV is an intentional
+        // second power cycle: the existing LaptopBoot.mp4 must play once again.
+        // Does not affect the normal programmatic or hallway laptop routes.
+        public void BeginNewPhysicalPowerCycle()
+        {
+            bootConsumedThisHomeVisit = false;
+        }
+
         public void Build(RectTransform parent)
         {
             Surface(parent, "LaptopShadow", 66, 50, 1792, 1008, 22, new Color(0, 0, 0, .5f));
