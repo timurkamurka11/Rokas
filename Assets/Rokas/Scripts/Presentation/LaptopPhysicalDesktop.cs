@@ -144,9 +144,26 @@ namespace Rokas.Presentation
 
         private void Rect(int x, int y, int w, int h, Color32 color)
         {
+            // The physical LCD is an OPAQUE powered panel. Decorative alpha
+            // values are visual blending weights, NEVER texture transparency:
+            // transparency here exposed the OFF-state photo underneath YOMI.
+            int a = color.a, inv = 255 - a;
             for (int py = Mathf.Max(0, y); py < Mathf.Min(Height, y + h); py++)
                 for (int px = Mathf.Max(0, x); px < Mathf.Min(Width, x + w); px++)
-                    working[(Height - 1 - py) * Width + px] = color;
+                {
+                    int index = (Height - 1 - py) * Width + px;
+                    if (a == 255)
+                    {
+                        working[index] = color;
+                        continue;
+                    }
+                    Color32 baseColor = working[index];
+                    working[index] = new Color32(
+                        (byte)((color.r * a + baseColor.r * inv + 127) / 255),
+                        (byte)((color.g * a + baseColor.g * inv + 127) / 255),
+                        (byte)((color.b * a + baseColor.b * inv + 127) / 255),
+                        255);
+                }
         }
 
         private void DrawText(string text, int x, int y, int size, Color32 color)
