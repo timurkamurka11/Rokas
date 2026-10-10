@@ -77,6 +77,8 @@ namespace Rokas.Presentation
         private bool returnRequested;
         private Text powerHint;
         private Text backHint;
+        private RawImage powerHintArt;
+        private RawImage backHintArt;
         private Button onScreenBack;
         private RectTransform powerGlowRoot;
         private Text noSignalText;
@@ -263,12 +265,46 @@ namespace Rokas.Presentation
                 imageY + (centerY - 11f) * imageScale,
                 260f * imageScale, 24f * imageScale, 14,
                 new Color(.37f, .59f, .77f, .33f), false, TextAnchor.MiddleCenter);
-            powerHint = ui.Label(povRoot, "PowerChoiceHint", "E  —  ВКЛЮЧИТЬ НОУТБУК",
-                575f, 955f, 475f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
-            backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
-                1080f, 955f, 320f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
-            onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
-                92f, 915f, 72f, 58f, () => BackToRoom());
+            // Load the three EXACT approved transparent user PNGs when installed.
+            // If V3.2 art was not installed, preserve readable V3.1 text fallbacks.
+            Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
+            Texture2D exitArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back");
+            Texture2D arrowArt = Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow");
+            if (onArt)
+            {
+                float w = 390f;
+                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 570f, 933f,
+                    w, w * (float)onArt.height / onArt.width);
+                powerHintArt.raycastTarget = false;
+            }
+            else
+                powerHint = ui.Label(povRoot, "PowerChoiceHint", "E  —  ВКЛЮЧИТЬ НОУТБУК",
+                    575f, 955f, 475f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+            if (exitArt)
+            {
+                float w = 390f;
+                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1045f, 933f,
+                    w, w * (float)exitArt.height / exitArt.width);
+                backHintArt.raycastTarget = false;
+            }
+            else
+                backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
+                    1080f, 955f, 320f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+            if (arrowArt)
+            {
+                float iconSize = 82f;
+                RawImage arrow = ui.Art(povRoot, "LaptopBackChoice", arrowArt,
+                    80f, 916f, iconSize, iconSize * (float)arrowArt.height / arrowArt.width);
+                arrow.raycastTarget = true;
+                onScreenBack = arrow.gameObject.AddComponent<Button>();
+                onScreenBack.targetGraphic = arrow;
+                onScreenBack.transition = Selectable.Transition.ColorTint;
+                onScreenBack.onClick.AddListener(() => BackToRoom());
+            }
+            else
+                onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
+                    92f, 915f, 72f, 58f, () => BackToRoom(), playClickSound: false);
+            SetPromptVisibility(false);
             SetPromptVisibility(false);
         }
 
@@ -331,6 +367,8 @@ namespace Rokas.Presentation
         {
             if (powerHint) powerHint.gameObject.SetActive(show);
             if (backHint) backHint.gameObject.SetActive(show);
+            if (powerHintArt) powerHintArt.gameObject.SetActive(show);
+            if (backHintArt) backHintArt.gameObject.SetActive(show);
             if (onScreenBack) onScreenBack.gameObject.SetActive(show);
             if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(show);
             if (noSignalText) noSignalText.gameObject.SetActive(show);
@@ -448,6 +486,8 @@ namespace Rokas.Presentation
             returnRequested = false;
             powerHint = null;
             backHint = null;
+            powerHintArt = null;
+            backHintArt = null;
             onScreenBack = null;
             powerGlowRoot = null;
             noSignalText = null;
