@@ -75,38 +75,13 @@ jobs:
           names=['rokas_no_signal_chibi.png','prompt_open.png','prompt_back.png','prompt_power.png','back_arrow.png']
           for i,name in enumerate(names):
             guid='95b2cc43d4f74a08a2f7e23170021%03x'%i
-            data='''fileFormatVersion: 2
-guid: %s
-TextureImporter:
-  internalIDToNameTable: []
-  externalObjects: {}
-  serializedVersion: 13
-  mipmaps:
-    mipMapMode: 0
-    enableMipMap: 0
-  isReadable: 0
-  sRGBTexture: 1
-  alphaSource: 1
-  alphaIsTransparency: 1
-  textureType: 0
-  textureShape: 1
-  maxTextureSize: 4096
-  textureSettings:
-    serializedVersion: 2
-    filterMode: 1
-    aniso: 1
-    mipBias: 0
-    wrapU: 1
-    wrapV: 1
-    wrapW: 1
-  platformSettings: []
-  spriteSheet:
-    serializedVersion: 2
-    sprites: []
-  userData:
-  assetBundleName:
-  assetBundleVariant:
-'''%guid
+            data=('fileFormatVersion: 2\\nguid: %s\\nTextureImporter:\\n'
+                  '  serializedVersion: 13\\n  sRGBTexture: 1\\n'
+                  '  alphaSource: 1\\n  alphaIsTransparency: 1\\n'
+                  '  isReadable: 0\\n  textureType: 0\\n'
+                  '  maxTextureSize: 4096\\n  mipmaps:\\n    enableMipMap: 0\\n'
+                  '  textureSettings:\\n    filterMode: 1\\n    wrapU: 1\\n'
+                  '    wrapV: 1\\n    wrapW: 1\\n' % guid)d
             (folder/(name+'.meta')).write_text(data)
           PY
       - name: Commit original user PNGs directly to main development branch
