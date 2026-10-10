@@ -51,6 +51,11 @@ namespace Rokas.Tests
                 Assert.That(chibi,Is.Not.Null,"Original ROKAS chibi must appear in LCD");
                 Assert.That(chibi.gameObject.activeInHierarchy,Is.True);
                 Assert.That(Find<LaptopNoSignalBounce>("ROKASNoSignalScreen"),Is.Not.Null);
+                Vector2 before=chibi.rectTransform.anchoredPosition;
+                yield return new WaitForSecondsRealtime(.20f);
+                Vector2 after=chibi.rectTransform.anchoredPosition;
+                Assert.That(Vector2.Distance(before,after),Is.GreaterThan(2f),
+                    "DVD standby sticker must animate even when full YOMI is closed");
             }
             else
                 Assert.That(initial.gameObject.activeInHierarchy,Is.True);
@@ -74,6 +79,14 @@ namespace Rokas.Tests
             Assert.That(mini,Is.Not.Null,"ON laptop must display a real mini YOMI layer");
             Assert.That(mini.gameObject.activeInHierarchy,Is.True);
             Assert.That(mini.texture,Is.Not.Null);
+            var atlas=mini.texture as Texture2D;
+            Assert.That(atlas,Is.Not.Null);
+            var colors=atlas.GetPixels32();
+            int populated=0;
+            for(int i=0;i<colors.Length;i++)
+                if(colors[i].r>85 && colors[i].g>55 && colors[i].b>55)populated++;
+            Assert.That(populated,Is.GreaterThan(700),
+                "Mini YOMI must carry readable colored app UI, not a black texture");
             Assert.That(mini.GetComponentInParent<RectMask2D>(),Is.Not.Null,
                 "Mini YOMI must be clipped to the calibrated physical LCD");
             Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy,Is.False);
