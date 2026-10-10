@@ -18,6 +18,7 @@ namespace Rokas.Presentation
         private readonly Action save;
         private readonly UiKit ui;
         private readonly RectTransform stage;
+        private readonly RectTransform roomCameraRig;
         private readonly RectTransform scene;
         private readonly CanvasGroup sceneInput;
         private readonly RectTransform globalChrome;
@@ -109,9 +110,15 @@ namespace Rokas.Presentation
             stage = ui.Rect(canvasObject.transform, "AuthoredStage", 0, 0, 1920, 1080);
             stage.anchorMin = stage.anchorMax = new Vector2(.5f, .5f);
             stage.pivot = new Vector2(.5f, .5f);
-            background = ui.Art(stage, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
-            effects = new WorldEffects(ui, stage, background.rectTransform, session.State.settings, audio, owner.transform);
-            scene = ui.Rect(stage, "SceneInteractions", 0, 0, 1920, 1080);
+            // A dedicated room plane keeps live CustomGlow, authored home
+            // composition, and WorldEffects on the SAME projection during the
+            // 2.5D approach. No stale room screenshot is substituted.
+            roomCameraRig = ui.Rect(stage, "HomeCameraRig2_5D", 0, 0, 1920, 1080);
+            roomCameraRig.pivot = new Vector2(.57f, .47f);
+            roomCameraRig.anchoredPosition = new Vector2(1920f * .57f, -1080f * .53f);
+            background = ui.Art(roomCameraRig, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
+            effects = new WorldEffects(ui, roomCameraRig, background.rectTransform, session.State.settings, audio, owner.transform);
+            scene = ui.Rect(roomCameraRig, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
             globalChrome = ui.Rect(stage, "GlobalChrome", 0, 0, 1920, 1080);
@@ -171,7 +178,8 @@ namespace Rokas.Presentation
                 },
                 () => audio.PlayLaptopPowerClick(),
                 () => audio.PlayLaptopStandUp(),
-                () => session.Messages.TotalUnread);
+                () => session.Messages.TotalUnread,
+                UpdateHomeCameraBlend);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -465,6 +473,16 @@ namespace Rokas.Presentation
         }
 
         private void OnHit(CombatHit hit) { mission.OnHit(hit); }
+
+        // Perspective-consistent 2.5D focal approach: room art, live window
+        // parallax, animated outlines and hotspots move as one continuous plane.
+        // At full POV the approved bitmap is shown unmodified.
+        private void UpdateHomeCameraBlend(float progress)
+        {
+            float eased = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
+            if (roomCameraRig) roomCameraRig.localScale =
+                Vector3.one * (1f + .20f * eased);
+        }
 
         private void OpenFromHomeLaptopHotspot(string value)
         {
