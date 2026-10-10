@@ -16,6 +16,7 @@ namespace Rokas.Tests
 
         private RokasBootstrap Initialize(string prefix)
         {
+            LaptopPowerSession.ResetForTests(); // tests simulate separate launches
             if (!Resources.Load<Texture2D>(
                     "LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF") ||
                 !Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest"))
@@ -93,11 +94,43 @@ namespace Rokas.Tests
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
         }
 
+        [UnityTest]
+        public IEnumerator PoweredLaptopShowsLiveClockAndReopensWithoutHandOrBoot()
+        {
+            RokasBootstrap boot = Initialize("rokas-laptop-powered-desktop-");
+            yield return null;
+            PressLaptop();
+            yield return new WaitForSecondsRealtime(2.05f);
+            Assert.That(Find<Button>("PowerKeyClickTarget"), Is.Not.Null);
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.55f);
+            Assert.That(boot.View.LaptopOpen, Is.True);
+            // Simulate the VideoPlayer completing the FIRST and ONLY boot.
+            // Real playback completion is tested via the normal VideoPresenter.
+            LaptopPowerSession.CompleteFirstBoot();
+            Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(1));
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.9f);
+            var live = Find<LaptopPhysicalDesktopClock>("PhysicalDesktopLiveClock");
+            Assert.That(live, Is.Not.Null);
+            Assert.That(live.gameObject.activeInHierarchy, Is.True);
+            Assert.That(Find<RectTransform>("PowerKeyBlueStandby").gameObject.activeInHierarchy, Is.False);
+            Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy, Is.False);
+            Assert.That(Find<Button>("PhysicalDesktopClickTarget"), Is.Not.Null);
+            Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
+            yield return null;
+            Assert.That(boot.View.LaptopOpen, Is.True,
+                "Clicking the powered physical LCD should directly reopen YOMI.");
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
+            Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(1));
+        }
+
         [UnityTearDown]
         public IEnumerator Cleanup()
         {
             if (root) UnityEngine.Object.Destroy(root);
             root = null;
+            LaptopPowerSession.ResetForTests();
             yield return null;
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
                 Directory.Delete(directory, true);
