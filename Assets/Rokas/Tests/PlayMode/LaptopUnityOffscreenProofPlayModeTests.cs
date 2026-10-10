@@ -80,6 +80,8 @@ namespace Rokas.Tests
             camera.targetTexture = rt;
             var previous = source.renderMode;
             var previousCamera = source.worldCamera;
+            var scaler = source.GetComponent<CanvasScaler>();
+            float priorScale = scaler ? scaler.scaleFactor : 1f;
             var oldRT = RenderTexture.active;
             Texture2D texture = null;
             try
@@ -87,6 +89,9 @@ namespace Rokas.Tests
                 source.renderMode = RenderMode.ScreenSpaceCamera;
                 source.worldCamera = camera;
                 source.planeDistance = 5f;
+                // GameCI editor screen is typically ~640x360; RenderTexture is 1920x1080.
+                // Scale the authored 1920x1080 stage into the offscreen capture, not a tiny 1/3 postcard.
+                if (scaler) scaler.scaleFactor = priorScale * w / Mathf.Max(1f, Screen.width);
                 Canvas.ForceUpdateCanvases();
                 camera.Render();
                 RenderTexture.active = rt;
@@ -99,6 +104,7 @@ namespace Rokas.Tests
             {
                 source.renderMode = previous;
                 source.worldCamera = previousCamera;
+                if (scaler) scaler.scaleFactor = priorScale;
                 RenderTexture.active = oldRT;
                 camera.targetTexture = null;
                 if (texture) UnityEngine.Object.DestroyImmediate(texture);

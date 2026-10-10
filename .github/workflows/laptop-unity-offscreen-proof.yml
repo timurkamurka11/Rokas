@@ -6,6 +6,7 @@ on:
       - codex/laptop-pov-cinematic-20261009
     paths:
       - '.github/workflows/laptop-unity-offscreen-proof.yml'
+      - 'Assets/Rokas/Tests/PlayMode/LaptopUnityOffscreenProofPlayModeTests.cs'
 
 permissions:
   contents: read
