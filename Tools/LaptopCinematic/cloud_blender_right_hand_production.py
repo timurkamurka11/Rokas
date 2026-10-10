@@ -57,8 +57,8 @@ def mat(name,col,rough=.7,subsurface=0.,cloth=False):
         noise.inputs["Scale"].default_value=185.
         noise.inputs["Detail"].default_value=2.
         bump=nt.nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value=.035
-        bump.inputs["Distance"].default_value=.00025
+        bump.inputs["Strength"].default_value=.018
+        bump.inputs["Distance"].default_value=.00009
         nt.links.new(noise.outputs["Fac"],bump.inputs["Height"])
         nt.links.new(bump.outputs["Normal"],bsdf.inputs["Normal"])
     return m
@@ -68,10 +68,10 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     # toward off-screen elbow. Add independent folds with low-frequency harmonics.
     axis=Vector((.56,-.83,0)).normalized()
     across=Vector((axis.y,-axis.x,0)).normalized()
-    # The first sleeve rings extend 25–30mm under the skinned wrist.
-    # Overlap eliminates the alpha hole / floating cuff visible in user screenshots.
-    rings=([(-.030,.027),(0.,.031),(.048,.038),(.125,.057),(.23,.078),(.36,.094)]
-           if not cuff else [(-.036,.027),(-.018,.028),(.0,.030),(.025,.036)])
+    # Sleeve layers overlap real skin ~35mm under the wrist, not float above
+    # the hand in depth. End of the sleeve is looser than its knit cuff.
+    rings=([(-.040,.029),(-.018,.031),(0.,.036),(.050,.043),(.14,.061),(.28,.088),(.36,.098)]
+           if not cuff else [(-.044,.027),(-.025,.028),(-.008,.030),(.010,.033),(.033,.039)])
     N=32; verts=[]; faces=[]
     for ri,(distance,radius) in enumerate(rings):
         c=wrist + axis*distance
@@ -90,31 +90,33 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     for p in mesh.polygons:p.use_smooth=True
 
 def apply_subtle_finger_slimming(hand, rig):
-    """Trim swollen-looking fingers 7%, preserving skin weights and joint lengths."""
+    """Single 6% radial edit per skinned vertex; no cumulative joint shrink."""
     mesh=hand.data
     inv=hand.matrix_world.inverted()
-    changed=0
+    influences={}
     for digit in ("index","middle","ring","pinky","thumb"):
         for segment in ("01","02","03"):
             name=f"{digit}_{segment}_r"
             group=hand.vertex_groups.get(name)
             bone=rig.data.bones.get(name)
-            if not group or not bone: continue
+            if group is None or bone is None: continue
             root=inv @ (rig.matrix_world @ bone.head_local)
-            end=inv @ (rig.matrix_world @ bone.tail_local)
-            axis=end-root
-            if axis.length < 1e-6: continue
+            axis=(inv @ (rig.matrix_world @ bone.tail_local))-root
+            if axis.length<1e-6:continue
             axis.normalize()
             for vertex in mesh.vertices:
                 try: weight=group.weight(vertex.index)
-                except RuntimeError: continue
-                if weight < .2: continue
-                parallel=axis * (vertex.co-root).dot(axis)
-                radial=vertex.co-root-parallel
-                vertex.co -= radial * .075 * min(1.,weight)
-                changed+=1
+                except RuntimeError:continue
+                if weight>.25 and (vertex.index not in influences or weight>influences[vertex.index][0]):
+                    influences[vertex.index]=(weight,root.copy(),axis.copy())
+    for vertex in mesh.vertices:
+        entry=influences.get(vertex.index)
+        if entry is None:continue
+        weight,root,axis=entry
+        radial=vertex.co-root-axis*(vertex.co-root).dot(axis)
+        vertex.co-=radial*(.062*min(1.,weight))
     mesh.update()
-    print("ROKAS_SLIM_FINGER_VERTICES",changed,flush=True)
+    print("ROKAS_SLIM_FINGER_UNIQUE_VERTICES",len(influences),flush=True)
 
 
 def create_nail_objects():
@@ -134,7 +136,9 @@ def create_nail_objects():
             for xi in range(7):
                 xx=-1.+2*xi/6
                 outline=max(0.,1.-(xx**2*.84+yy**2))
-                verts.append((xx*.007*max(.2,math.sqrt(max(0.,1.-yy*yy))), yy*.010, .0019*outline))
+                # Nail plate sits flush at the edges: only center gently domed.
+                width=.0058*max(.14,math.sqrt(max(0.,1.-yy*yy)))
+                verts.append((xx*width, yy*.0081, .00065*outline))
         for yi in range(10):
             for xi in range(6):
                 a=yi*7+xi
@@ -171,13 +175,22 @@ def update_nail_positions(hand, rig, frame):
                 continue
             obj.hide_render=False
             # Mesh vertices in this GLB are authoritative for distal anatomy.
-            source.sort(key=lambda v:v.z,reverse=True)
-            top=source[:max(5,len(source)//7)]
-            avg=sum(top,Vector())/len(top)
             bone_head=rig.matrix_world @ bone.head
             bone_tail=rig.matrix_world @ bone.tail
             direction=bone_tail-bone_head
-            obj.location=(avg.x,avg.y,max(v.z for v in top)+.001)
+            if direction.length<1e-6: obj.hide_render=True;continue
+            axis=direction.normalized()
+            # Restrict vertices to the distal nail bed, not the entire bone's
+            # highest dorsal knuckle (which caused floating, displaced nails).
+            projected=[(v,(v-bone_head).dot(axis)) for v in source]
+            near=[v for v,t in projected if .25*direction.length<=t<=.92*direction.length]
+            if len(near)<6:
+                near=source
+            near.sort(key=lambda v:v.z,reverse=True)
+            top=near[:max(5,len(near)//5)]
+            avg=sum(top,Vector())/len(top)
+            surface=max(v.z for v in top)
+            obj.location=(avg.x,avg.y,surface+.00035)
             obj.rotation_euler=(0.,0.,math.atan2(direction.y,direction.x)-math.pi*.5)
             width=.82 if digit=="pinky" else 1.05 if digit=="thumb" else 1.
             obj.scale=(width,1.,1.)
@@ -203,7 +216,7 @@ def create_scene(a):
     if not hand:raise ValueError("Expected skinned high quality right-hand mesh")
     for o in meshes:
         if o != hand:o.hide_render=True
-    skin=mat("Skin_Cinematic_NaturalWarm",(.57,.355,.286),.66,.125)
+    skin=mat("Skin_Cinematic_NaturalWarm",(.55,.365,.305),.72,.085)
     # Natural skin color breakup: low-frequency blotches and subtle joint redness.
     nodes=skin.node_tree.nodes
     links=skin.node_tree.links
@@ -213,9 +226,9 @@ def create_scene(a):
     pores.inputs["Detail"].default_value=3.
     palette=nodes.new("ShaderNodeValToRGB")
     palette.color_ramp.elements[0].position=.23
-    palette.color_ramp.elements[0].color=(.29,.15,.12,1)
+    palette.color_ramp.elements[0].color=(.39,.235,.19,1)
     palette.color_ramp.elements[1].position=.77
-    palette.color_ramp.elements[1].color=(.55,.305,.235,1)
+    palette.color_ramp.elements[1].color=(.58,.38,.31,1)
     links.new(pores.outputs["Fac"],palette.inputs["Fac"])
     links.new(palette.outputs["Color"],skin_bsdf.inputs["Base Color"])
     hand.data.materials.clear();hand.data.materials.append(skin)
@@ -301,9 +314,17 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
         if bone.name.startswith("index_"):
             bone.rotation_euler=(0,0,(-.11 if "_01_" in bone.name else -.22)*press)
         elif bone.name.startswith(("middle_","ring_","pinky_")):
-            bone.rotation_euler=(.46*reach,0, .50 + .30*reach)
+            digit=bone.name.split("_")[0]
+            joint=bone.name.split("_")[1]
+            relaxed={"middle":(.17,.19,.12),"ring":(.24,.24,.16),"pinky":(.31,.25,.17)}
+            flex=relaxed[digit][{"01":0,"02":1,"03":2}.get(joint,0)]
+            bone.rotation_euler=(.09*reach if joint=="01" else .02*reach,
+                                 (-.06 if digit=="pinky" else .03 if digit=="ring" else 0)*reach,
+                                 flex*(.44+.56*reach))
         elif bone.name.startswith("thumb_"):
-            bone.rotation_euler=(0,0,.055)
+            joint=bone.name.split("_")[1]
+            bone.rotation_euler=(.025*reach, -.06*reach,
+                                 {"01":.14,"02":.09,"03":.055}.get(joint,.04)*reach)
         else:
             bone.rotation_euler=(0,0,0)
     rig.location=(0,0,0)
@@ -318,8 +339,10 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
     # Locally modeled cloth follows the wrist with real keyframed transforms.
     sleeve_obj=bpy.data.objects["RIGHT_FreeHomeSleeve"]
     cuff_obj=bpy.data.objects["RIGHT_SleeveSoftCuff"]
-    sleeve_obj.location=(wrist.x, wrist.y, 1.10)
-    cuff_obj.location=(wrist.x, wrist.y, 1.11)
+    # Important: wrist is the actual posed rig coordinate. Fixed Z=1.10
+    # made the cuff float almost a metre in front of the original skinned mesh.
+    sleeve_obj.location=(wrist.x, wrist.y, wrist.z-.007)
+    cuff_obj.location=(wrist.x, wrist.y, wrist.z+.006)
     cuff_obj.scale=(.98,.98,.98)
     # Keyframe every control: the saved .blend contains 49 editable animation keys,
     # not merely a snapshot of the final pose.
@@ -331,6 +354,14 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
         bone.keyframe_insert(data_path="rotation_euler",frame=k)
     sleeve_obj.keyframe_insert(data_path="location",frame=k)
     cuff_obj.keyframe_insert(data_path="location",frame=k)
+    # Distance and overlap QA on every render frame, not just the press pose.
+    seam_distance=(Vector(cuff_obj.location)-wrist).length
+    if seam_distance>.025:
+        raise RuntimeError(f"Wrist seam detached at frame {index}: {seam_distance:.5f} m")
+    nails=[bpy.data.objects.get(f"ROKAS_AnatomicalNail_{d}")
+           for d in ("index","middle","ring","pinky","thumb")]
+    if any(n is None for n in nails):
+        raise RuntimeError("Anatomical nail mesh absent in Blender frame")
     # Non-cuff sleeve and cuff overlap slightly, forming the fabric seam.
     def world_pixel(point):
         return [round((point.x/(FRAME_LENGTH*W/H)+.5)*W,2), round((.5-point.y/FRAME_LENGTH)*H,2)]
@@ -339,6 +370,8 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
             "actual_bone_tip_px":world_pixel(after_tip),
             "actual_bone_wrist_px":world_pixel(wrist),
             "skeleton_reference_delta_px":math.hypot(tip_x-POWER_X,tip_y-POWER_Y),
+            "cuff_wrist_distance_mm":round(seam_distance*1000,2),
+            "nail_objects_present":len(nails),
             "press":round(press,3),
             "wrist_px":[wrist_x,wrist_y]}
 
