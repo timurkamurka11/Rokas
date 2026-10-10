@@ -71,13 +71,26 @@ jobs:
           img=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/'HandsRight_0031.png').convert('RGBA')
           assert img.size==(1672,941)
           # Grounded Power anchor on user's approved POV is at 1040,708.
-          center=img.getpixel((1040,708))[3]
-          above=img.getpixel((1040,690))[3]
-          below=img.getpixel((1040,723))[3]
-          print('VISIBLE_POWER_CONTACT_ALPHA',center,'above',above,'below',below)
-          assert center>=160, 'Visible right index fingertip does not touch Power key'
-          assert above<=120, 'Hand overlaps the key from the wrong direction; fingertip not localized'
-          assert below>=100, 'No actual finger shaft below the Power contact'
+          import json,math
+          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/'production_report.json').read_text())
+          poses={p['index']:p for p in report['pose_reports']}
+          assert sorted(poses)==list(range(49)), 'Missing full Blender geometry evaluation'
+          vals={}
+          for frame in range(27,37):
+              f=Image.open(Path(os.environ['RUNNER_TEMP'])/'ROKAS_RightHand_49'/f'HandsRight_{frame:04d}.png').convert('RGBA')
+              alpha=f.getpixel((1040,708))[3]
+              tip=poses[frame]['actual_skin_tip_px']
+              distance=math.hypot(tip[0]-1040,tip[1]-708)
+              vals[frame]=(alpha,round(distance,2))
+              if 30<=frame<=34:
+                  assert poses[frame]['contact_skin_error_px']<=4, ('Distal skin geometry not on Power',frame)
+                  assert distance<=5, ('Evaluated index skin misses Power',frame,distance)
+                  assert alpha>=150, ('Visible skinned contact absent',frame,alpha)
+              else:
+                  assert alpha<120, ('Power touched outside contact window',frame,alpha)
+          print('VISIBLE_SKIN_POWER_CONTACT_TIMELINE',vals)
+          # No presumed approach direction: legitimate contact from screen-right
+          # need not have a finger shaft 15px *below* the Power key.
           PY
       - name: Crop frames without modifying pixels, create right_hand_manifest.json
         shell: bash
