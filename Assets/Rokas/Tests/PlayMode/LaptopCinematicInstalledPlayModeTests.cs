@@ -75,7 +75,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator RepeatedPowerFromSeatedChoiceStartsAnotherSingleBootCycle()
+        public IEnumerator RepeatedAccessFromSeatedChoiceSkipsFurtherBootCycles()
         {
             RokasBootstrap boot = Initialize("rokas-laptop-reboot-cycle-");
             yield return null;
@@ -87,10 +87,13 @@ namespace Rokas.Tests
             boot.View.Escape();
             yield return new WaitForSecondsRealtime(.85f);
             Assert.That(boot.View.LaptopOpen, Is.False);
-            Assert.That(Find<Button>("PowerKeyClickTarget"), Is.Not.Null);
-            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
-            yield return new WaitForSecondsRealtime(2.55f);
+            LaptopPowerSession.CompleteFirstBoot();
+            Assert.That(Find<Button>("PhysicalDesktopClickTarget"), Is.Not.Null);
+            Assert.That(Find<Button>("PhysicalDesktopClickTarget").gameObject.activeInHierarchy, Is.True);
+            Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
+            yield return null;
             Assert.That(boot.View.LaptopOpen, Is.True);
+            Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(1));
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Null);
         }
 
@@ -117,6 +120,7 @@ namespace Rokas.Tests
             Assert.That(Find<RectTransform>("PowerKeyBlueStandby").gameObject.activeInHierarchy, Is.False);
             Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy, Is.False);
             Assert.That(Find<Button>("PhysicalDesktopClickTarget"), Is.Not.Null);
+            Assert.That(Find<Button>("PhysicalDesktopClickTarget").gameObject.activeInHierarchy, Is.True);
             Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
             yield return null;
             Assert.That(boot.View.LaptopOpen, Is.True,
