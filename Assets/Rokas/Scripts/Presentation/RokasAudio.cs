@@ -13,6 +13,9 @@ namespace Rokas.Presentation
         private readonly AudioSource[] effects = new AudioSource[4];
         private readonly AudioSource hubVoice;
         private readonly AudioClip messageArrive;
+        private readonly AudioClip laptopPowerClick;
+        private readonly AudioClip laptopPowerClickUser;
+        private readonly AudioClip laptopStandUp;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
         private float homeWeatherMix = 1f;
@@ -52,6 +55,9 @@ namespace Rokas.Presentation
             for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource(audioRoot, false);
             hubVoice = MakeSource(audioRoot, true);
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
+            laptopPowerClick = Resources.Load<AudioClip>("LaptopCinematic/power_click");
+            laptopPowerClickUser = Resources.Load<AudioClip>("LaptopCinematic/power_click_user");
+            laptopStandUp = Resources.Load<AudioClip>("LaptopCinematic/stand_up");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
 
@@ -144,6 +150,33 @@ namespace Rokas.Presentation
             source.clip = clip;
             source.volume = vnMuted ? 0f : Mathf.Clamp01(settings.masterVolume * settings.sfxVolume);
             source.Play();
+        }
+
+        // The only Power sound: plays through the existing SFX bus / mute settings.
+        public void PlayLaptopPowerClick()
+        {
+            AudioClip clip = laptopPowerClickUser ? laptopPowerClickUser : laptopPowerClick;
+            if (!clip)
+            {
+                Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: missing Power click SFX.");
+                return;
+            }
+            PlayScaled(clip, .55f);
+        }
+
+        public void PlayLaptopSit()
+        {
+            // The user selected the SAME Stand Up SFX for both motions.
+            // Sitting.wav is no longer played. Gain remains audible and obeys
+            // the existing master SFX bus / mute settings.
+            if (laptopStandUp) PlayScaled(laptopStandUp, .77f); // louder, one approved clip; master SFX/mute retained
+            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
+        }
+
+        public void PlayLaptopStandUp()
+        {
+            if (laptopStandUp) PlayScaled(laptopStandUp, .77f); // same level/clip as sitting; respects SFX volume/mute
+            else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
         public void PlayCombatClip(AudioClip clip, float scale)
