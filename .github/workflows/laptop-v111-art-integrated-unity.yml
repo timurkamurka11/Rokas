@@ -1,0 +1,106 @@
+name: ROKAS V11.1 Main Combat and Art Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/fidelity3-resume-5779190
+    paths:
+      - '.github/workflows/laptop-v34-powered-desktop-unity.yml'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopView.cs'
+      - 'Assets/Rokas/Tests/PlayMode/LaptopPoweredDesktopPlayModeTests.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopPowerSession.cs'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopPhysicalDesktop.cs'
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  verify:
+    name: Unity 6000.3 local Combat-compatible YOMI/POV with pinned hand PNGs
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse existing full Blender render - no rerender
+        uses: actions/download-artifact@v4
+        with:
+          name: ROKAS-Blender49-Source-Renders
+          run-id: 38077862962
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: LatestBlender49
+      - name: Pack untouched pinned 49 Blender renders into Unity Resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 Tools/LaptopCinematic/pack_right_hand_for_unity.py --frames LatestBlender49 --output . --count 49
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/right_hand_manifest.json')
+          m=json.loads(p.read_text())
+          assert m['handedness']=='right' and len(m['frames'])==49 and m['fps']==24
+          print('ORIGINAL_49_FRAMES_UNALTERED')
+          PY
+      - name: Synthetic test-only POV, never overwrite approved art
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          p=Path('Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF.png')
+          assert not p.exists()
+          p.parent.mkdir(parents=True,exist_ok=True)
+          image=Image.new('RGB',(1672,941),(37,26,22))
+          d=ImageDraw.Draw(image)
+          d.polygon([(596,413),(1044,412),(1051,676),(586,676)], fill=(3,8,15))
+          d.rectangle((560,690,1110,845), fill=(52,42,38))
+          image.save(p)
+          print('TEST_SYNTHETIC_POV_ONLY')
+          PY
+      - name: Authenticate Docker Hub and fetch Unity
+        env:
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4; do
+            if printf '%s' "$TOKEN" | docker login -u "$USERNAME" --password-stdin >/dev/null; then break; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((i*15))
+          done
+          for i in 1 2 3 4; do
+            if docker pull unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3; then exit 0; fi
+            if [ "$i" -eq 4 ]; then exit 1; fi
+            sleep $((i*30))
+          done
+      - name: 'Unity PlayMode: powered desktop clock, one boot, no blue LED, YOMI reentry'
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          cliVersion: v0.1.60
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.LaptopV111SeamlessPOVPlayModeTests
+          checkName: ROKAS V3.4 Powered Desktop GameCI
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save genuine GameCI result files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-V111-ApprovedHand-LocalCombat-Unity-Results
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14
