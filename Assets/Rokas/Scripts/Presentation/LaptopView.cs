@@ -22,6 +22,13 @@ namespace Rokas.Presentation
             new Color(.37f, .55f, .35f), new Color(.38f, .30f, .52f), new Color(.23f, .49f, .54f),
             new Color(.69f, .35f, .40f), new Color(.39f, .42f, .44f), new Color(.76f, .39f, .16f)
         };
+        // Share the same app catalog, labels and palette with the physical
+        // laptop display. It is a second PRESENTATION of the same YOMI model.
+        internal static int DesktopAppCount => Names.Length;
+        internal static string DesktopAppTitle(int index) =>
+            Names[index].Substring("Laptop".Length).ToUpperInvariant();
+        internal static Color DesktopAppColor(int index) => TileColors[index];
+
         private readonly UiKit ui;
         private readonly RokasAssets assets;
         private readonly GameSession session;
