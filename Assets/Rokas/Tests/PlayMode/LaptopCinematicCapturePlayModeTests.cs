@@ -47,28 +47,37 @@ namespace Rokas.Tests
             Assert.That(overlay, Is.Not.Null,
                 "Missing right-hand manifest or wrong NPOT importer size: cinematic fell back.");
 
+            // In Linux batch mode ScreenCapture may report a destination
+            // without actually producing a file. Use genuine offscreen camera
+            // RenderTexture pixels from the proven LaptopUnityOffscreenProof test.
+            Button power = null;
+            foreach (Button btn in root.GetComponentsInChildren<Button>(true))
+                if (btn.name == "PowerKeyClickTarget") { power = btn; break; }
+            yield return new WaitForSecondsRealtime(1.90f);
+            Assert.That(power, Is.Not.Null);
+            Assert.That(power.gameObject.activeInHierarchy, Is.True,
+                "Power selection must be visible before the finger interaction.");
+            power.onClick.Invoke();
+
             string folder = Path.Combine(Application.dataPath, "..", "ROKAS_Unity_Art_Captures");
             Directory.CreateDirectory(folder);
-            float[] stamps = { 1.85f, 2.6f, 3.08f, 3.22f, 3.51f, 4.16f };
+            // These timestamps are seconds after clicking Power. The 49-frame
+            // overlay starts at local t=1.8 and contacts Power near t=3.1.
+            float[] offsets = { .04f, .70f, 1.17f, 1.30f, 1.38f, 1.54f, 2.65f };
             float elapsed = 0f;
-            for (int i = 0; i < stamps.Length; i++)
+            for (int i = 0; i < offsets.Length; i++)
             {
-                float wait = Mathf.Max(.01f, stamps[i] - elapsed);
-                yield return new WaitForSecondsRealtime(wait);
-                elapsed = stamps[i];
+                yield return new WaitForSecondsRealtime(Mathf.Max(.01f, offsets[i] - elapsed));
+                elapsed = offsets[i];
                 string target = Path.Combine(folder, "Unity_Laptop_Stage_" + i.ToString("00") + ".png");
-                ScreenCapture.CaptureScreenshot(target);
-                // Batchmode can log a screenshot path without writing a single image.
-                // Do not report visual proof unless the actual PNG exists and has bytes.
-                for (int attempt = 0; attempt < 60 && !File.Exists(target); attempt++)
-                    yield return null;
-                Assert.That(File.Exists(target), Is.True,
-                    "No real Game View PNG produced in cloud Unity batch mode.");
-                Assert.That(new FileInfo(target).Length, Is.GreaterThan(256),
-                    "Empty Unity screenshot file.");
-                Debug.Log("[ROKAS-UNITY-CAPTURE-VERIFIED] "+stamps[i]+"s -> "+target);
+                LaptopUnityOffscreenProofPlayModeTests.RenderUI(root, target);
+                Assert.That(File.Exists(target), Is.True, "Missing Unity RenderTexture PNG: " + target);
+                Assert.That(new FileInfo(target).Length, Is.GreaterThan(3000),
+                    "Empty Unity offscreen screenshot at offset " + offsets[i]);
+                Debug.Log("[ROKAS-UNITY-REAL-POWER-CAPTURE] " + offsets[i] + "s -> " + target);
             }
-            Assert.That(boot.View.LaptopOpen, Is.True);
+            Assert.That(boot.View.LaptopOpen, Is.True,
+                "The first Power interaction must complete and open the existing YOMI.");
             UnityEngine.Object.Destroy(root);
             yield return null;
             if (Directory.Exists(saves)) Directory.Delete(saves,true);

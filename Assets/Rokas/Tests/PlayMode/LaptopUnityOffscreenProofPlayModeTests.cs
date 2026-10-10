@@ -57,7 +57,7 @@ namespace Rokas.Tests
             if (Directory.Exists(save)) Directory.Delete(save, true);
         }
 
-        private static void RenderUI(GameObject root, string file)
+        internal static void RenderUI(GameObject root, string file)
         {
             Canvas source = null;
             foreach (var canvas in root.GetComponentsInChildren<Canvas>(true))

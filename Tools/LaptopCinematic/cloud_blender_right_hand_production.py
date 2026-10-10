@@ -155,8 +155,8 @@ def create_nail_objects():
                 xx=-1.+2*xi/6
                 outline=max(0.,1.-(xx**2*.84+yy**2))
                 # Nail plate sits flush at the edges: only center gently domed.
-                width=.0045*max(.14,math.sqrt(max(0.,1.-yy*yy)))
-                verts.append((xx*width, yy*.0063, .00032*outline))
+                width=.0038*max(.14,math.sqrt(max(0.,1.-yy*yy)))
+                verts.append((xx*width, yy*.0050, .00023*outline))
         for yi in range(10):
             for xi in range(6):
                 a=yi*7+xi
@@ -212,17 +212,17 @@ def update_nail_positions(hand, rig, frame):
                       (v.x-cx)**2+(v.y-cy)**2 <= .018**2]
             if len(near)<4:raise RuntimeError("No nail bed found for "+digit)
             # Nail front plate must be on the camera-facing +Z surface.
-            surface=max(v.z for v in near)
+            surface=sorted(v.z for v in near)[int((len(near)-1)*.86)]
             obj.hide_render=False
-            obj.location=(cx,cy,surface+.00020)
+            obj.location=(cx,cy,surface+.00006)
             obj.rotation_euler=(0.,0.,math.atan2(direction.y,direction.x)-math.pi*.5)
-            obj.scale=(.85 if digit=="pinky" else 1.02 if digit=="thumb" else .95, .88, 1.)
+            obj.scale=(.69 if digit=="pinky" else .72 if digit=="thumb" else .78, .74, 1.)
             obj.keyframe_insert(data_path="location",frame=frame)
             obj.keyframe_insert(data_path="rotation_euler",frame=frame)
             obj.keyframe_insert(data_path="scale",frame=frame)
             report[digit]={"tip_distance_mm":round((tip-wrist).length*1000,2),
                            "nail_to_tip_mm":round(math.hypot(tip.x-cx,tip.y-cy)*1000,2),
-                           "nail_skin_z_gap_mm":.20,
+                           "nail_skin_z_gap_mm":.06,
                            "nail_bed_vertices":len(near)}
     finally:
         eval_hand.to_mesh_clear()

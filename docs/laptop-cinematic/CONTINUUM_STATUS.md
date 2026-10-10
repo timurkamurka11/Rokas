@@ -24,9 +24,9 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 - Approved room/background, E/Esc/YOMI/audio/UI and camera must be preserved.
 - Final installer based on new 49 frames NOT verified or released. Rollback script not confirmed in branch; do not run destructive tests.
 
-## Precise next action
-1. Inspect artifact 11678497101: 49 PNG frames, production_report.json, editable .blend, actual motion and Power close-up. Generate new SHA-labeled video and contact sheet.
-2. If visually approved, integrate artifact 11678691854 into cloud Unity. Replace unreliable batch ScreenCapture test with correct offscreen RenderTexture proof with actual Power click.
+## Latest V8 visual QA and fix batch,- Latest original Blender frames inspected: source cb0e15bb, 49/49 PNG valid, original report 16 bones/8120 vertices, contact skin screen positions 1040,708 -> 1040,710.2 -> 1040,708 for frames 30-34.,- Visual QA: FAIL for conspicuously raised, pale oval nail plates; the index finger screen-plane contact alone does not establish actual collision with laptop surface (photo-based background).,- New source patch prepared with smaller, embedded nail plates and less prominent nail surfaces. Source re-render required; prior 49 frames must NOT be labeled final.,- Real Unity Game View failure diagnosed from artifacts/playmode-results.xml: 'No real Game View PNG produced in cloud Unity batch mode' at the old ScreenCapture test.,- Real Power capture PlayMode updated to click Power after PreBootChoice and use RenderTexture screenshots via the existing verified helper. Await new run; no PASS claim yet.,- Avoid releasing old frame artifact 11678497101 as new polish.,,## Precise next action
+1. Fetch NEW Blender artifacts after this fix batch. Inspect all 49 frames, production_report.json, nail/cuff closeups and video; only use new source commit SHA. Previous cb0e15bb had visual FAIL.
+2. Check current full Blender→Unity run and new RenderTexture Power click capture, not the old screenshot artifact. Do not mark completed before Unity test proves real power frames.
 3. Recheck UI, audio, desktop/system time/YOMI, scene interaction and test outputs on the same source SHA.
 4. Build only safe, verified installer with correct 49 new frames and backups, never overwrite local D: copy remotely.
 5. Update this checkpoint with new run/artifact/commit IDs and remaining work. Avoid frequent redundant CI polling.
