@@ -121,6 +121,24 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Laptop Cinematic Unity PlayMode
 
+      - name: V11 live desktop, hover, power and hub transition regression PlayMode
+        id: v11_playmode
+        uses: game-ci/unity-test-runner@v4
+        continue-on-error: true
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopV11ContinuumPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop V11 Continuum Unity PlayMode
+
       - name: Preserve Unity logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,18 +147,21 @@ jobs:
           path: |
             ${{ steps.editmode.outputs.artifactsPath }}
             ${{ steps.playmode.outputs.artifactsPath }}
+            ${{ steps.v11_playmode.outputs.artifactsPath }}
           if-no-files-found: warn
 
-      - name: Require both real Unity test steps to pass
+      - name: Require all three real Unity test steps to pass
         if: always()
         env:
           EDIT: ${{ steps.editmode.outcome }}
           PLAY: ${{ steps.playmode.outcome }}
+          V11: ${{ steps.v11_playmode.outcome }}
         shell: bash
         run: |
           echo "EditMode outcome: ${EDIT}"
           echo "PlayMode outcome: ${PLAY}"
-          if [ "${EDIT}" != "success" ] || [ "${PLAY}" != "success" ]; then
-            echo "::error::Unity EditMode and PlayMode must both pass."
+          echo "V11 PlayMode outcome: ${V11}"
+          if [ "${EDIT}" != "success" ] || [ "${PLAY}" != "success" ] || [ "${V11}" != "success" ]; then
+            echo "::error::Unity EditMode, baseline PlayMode and V11 PlayMode must ALL pass."
             exit 1
           fi
