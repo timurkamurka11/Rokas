@@ -58,6 +58,7 @@ namespace Rokas.Presentation
         private readonly Action cancelled;
         private readonly Action powerClick;
         private readonly Action returningToRoom;
+        private readonly Func<int> unreadMessages;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -105,7 +106,7 @@ namespace Rokas.Presentation
 
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
-            Action powerClick, Action returningToRoom)
+            Action powerClick, Action returningToRoom, Func<int> unreadMessages)
         {
             this.ui = ui;
             this.owner = owner;
@@ -115,6 +116,7 @@ namespace Rokas.Presentation
             this.cancelled = cancelled;
             this.powerClick = powerClick;
             this.returningToRoom = returningToRoom;
+            this.unreadMessages = unreadMessages;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -246,9 +248,9 @@ namespace Rokas.Presentation
             }, imageScale);
             wake.color = new Color(.16f, .34f, .48f, 0f);
 
-            // User-approved physical desktop screenshot is ONLY the base art.
-            // Its overlay contains a live, real-system clock and animated status,
-            // perspective mapped within these same four calibrated LCD corners.
+            // Physical LCD is fully live (YOMI's real app catalog + unread
+            // session state + real OS clock). No screenshot of a desktop is used.
+            // The approved OFF-state POV and screen corners stay unchanged.
             Vector2[] lcdCorners =
             {
                 new Vector2(calibration.topLeftX, calibration.topLeftY),
@@ -260,18 +262,15 @@ namespace Rokas.Presentation
                 imageX, imageY, imageWidth, imageHeight);
             poweredWallpaper = desktopRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
             poweredWallpaper.SetCorners(lcdCorners, imageScale);
-            Texture2D approvedDesktop = Resources.Load<Texture2D>(
-                "LaptopCinematic/UI/physical_desktop_reference");
-            poweredWallpaper.SetImage(approvedDesktop);
-            poweredWallpaper.color = approvedDesktop
-                ? Color.white : new Color(.08f, .16f, .27f, 1f);
+            poweredWallpaper.SetImage(null); // live atlas is the sole ON-state image
+            poweredWallpaper.color = new Color(.08f, .16f, .27f, 1f);
             poweredWallpaper.raycastTarget = false;
             RectTransform liveClockRect = ui.Rect(povRoot, "PhysicalDesktopLiveClock",
                 imageX, imageY, imageWidth, imageHeight);
             desktopClock = liveClockRect.gameObject.AddComponent<LaptopPhysicalDesktopClock>();
             desktopClock.SetCorners(lcdCorners, imageScale);
             desktopClock.raycastTarget = false;
-            desktopClock.Initialize();
+            desktopClock.Initialize(unreadMessages);
             RectTransform lcdHit = ui.Rect(povRoot, "PhysicalDesktopClickTarget",
                 imageX + calibration.topLeftX * imageScale,
                 imageY + calibration.topLeftY * imageScale,
