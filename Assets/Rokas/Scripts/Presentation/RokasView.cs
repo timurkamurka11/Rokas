@@ -545,6 +545,10 @@ namespace Rokas.Presentation
             panel = null;
             audio.SetLaptopMode(false);
             ui.Clear(panels);
+            // Close animation has completed: clear IsClosing and old VideoPlayer
+            // state BEFORE allowing the next physical Power request. Reset keeps
+            // bootConsumedThisHomeVisit intact until the player presses Power.
+            if (fromLaptop) laptop.Reset();
             // Recreate the already-seated POV. Stand up only on Esc/Back,
             // not when closing the powered laptop and staying at the desk.
             if (returnToSeatedChoice && laptopCinematic.TryStart(resumeFromLaptop: true))
