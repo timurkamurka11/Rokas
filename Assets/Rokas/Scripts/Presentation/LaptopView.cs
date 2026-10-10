@@ -46,11 +46,14 @@ namespace Rokas.Presentation
         private float pageTime;
         private Action closed;
         private bool bootConsumedThisHomeVisit;
-        private bool cinematicHoldRequested;
-        private float cinematicHoldRemaining;
-        private RectTransform cinematicHoldScreen;
         public bool IsClosing { get; private set; }
         public bool Booting { get; private set; }
+        // The incoming laptop scene is ready only after a real video frame is
+        // visible or the prewarmed desktop has become visible. This is used by
+        // the cinematic handoff to avoid ever exposing the Hub in between.
+        public bool IsVisualReady => frame && windowGroup && windowGroup.alpha >= .98f &&
+            (!Booting || video.FirstFramePresented);
+        public float WindowOpacity => windowGroup ? windowGroup.alpha : 0f;
         public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
         public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
@@ -86,17 +89,11 @@ namespace Rokas.Presentation
             contentGroup = null;
             clock = null;
             date = null;
-            cinematicHoldRequested = false;
-            cinematicHoldRemaining = 0f;
-            cinematicHoldScreen = null;
         }
 
-        // This is called only by the Home laptop cinematic handoff, AFTER Reset()
-        // and BEFORE Build(). It never changes hallway/programmatic laptop routes.
-        public void RequestCinematicPostBootHold()
-        {
-            cinematicHoldRequested = true;
-        }
+        // Legacy compatibility: V11 intentionally removes the black
+        // post-boot hold; the ready desktop is constructed before playback.
+        public void RequestCinematicPostBootHold() { }
 
         public void BeginHomeVisit()
         {
@@ -128,7 +125,6 @@ namespace Rokas.Presentation
             if (!videoTransitions() || bootConsumedThisHomeVisit || LaptopPowerSession.PoweredOn)
             {
                 Booting = false;
-                cinematicHoldRequested = false;
                 if (!LaptopPowerSession.PoweredOn && !videoTransitions())
                     LaptopPowerSession.CompleteFirstBoot();
                 BuildReadyFrame();
@@ -136,6 +132,11 @@ namespace Rokas.Presentation
             }
             bootConsumedThisHomeVisit = true;
             Booting = true;
+            // Prewarm the actual interactive YOMI desktop underneath the video.
+            // The video is added last, above it. No empty frame/black 0.5s hold
+            // is permitted when VideoPlayer fires its completion callback.
+            BuildReadyFrame();
+            windowGroup.interactable = false;
             video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
         }
 
@@ -145,17 +146,10 @@ namespace Rokas.Presentation
             // Completed VideoPlayer callback is the sole source of truth for
             // first boot success; a cancelled playback must not power the laptop.
             LaptopPowerSession.CompleteFirstBoot();
-            if (cinematicHoldRequested)
-            {
-                cinematicHoldRequested = false;
-                cinematicHoldRemaining = .5f;
-                cinematicHoldScreen = ui.Rect(frame, "CinematicPostBootHold", 22f, 30f, 1748f, 940f);
-                ui.Box(cinematicHoldScreen, "PoweredLCD", 0, 0, 1748, 940,
-                    new Color(.024f, .044f, .063f, 1f));
-                return;
-            }
+            // The video surface is removed synchronously; the completed,
+            // already-built desktop is revealed in that same frame.
             Booting = false;
-            BuildReadyFrame();
+            windowGroup.interactable = true;
         }
 
         private void BuildReadyFrame()
@@ -337,8 +331,6 @@ namespace Rokas.Presentation
                 video.Cancel();
                 Booting = false;
             }
-            cinematicHoldRemaining = 0f;
-            cinematicHoldRequested = false;
             messages.Hide();
             IsClosing = true;
             closed = complete;
@@ -351,18 +343,6 @@ namespace Rokas.Presentation
         public void Tick(float dt)
         {
             if (!frame || !windowGroup) return;
-            if (Booting && cinematicHoldRemaining > 0f && !IsClosing)
-            {
-                cinematicHoldRemaining = Mathf.Max(0f,
-                    cinematicHoldRemaining - Mathf.Max(0f, Time.unscaledDeltaTime));
-                if (cinematicHoldRemaining <= 0f)
-                {
-                    if (cinematicHoldScreen) UnityEngine.Object.Destroy(cinematicHoldScreen.gameObject);
-                    cinematicHoldScreen = null;
-                    Booting = false;
-                    BuildReadyFrame();
-                }
-            }
             if (IsClosing)
             {
                 openTime = Mathf.Max(0, openTime - dt);
