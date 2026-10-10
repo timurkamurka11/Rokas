@@ -6,7 +6,7 @@ on:
     branches:
       - codex/fidelity3-resume-5779190
     paths:
-      - '.github/workflows/laptop-v34-powered-desktop-unity.yml'
+      - '.github/workflows/laptop-v111-art-integrated-unity.yml'
       - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Scripts/Presentation/LaptopCinematicSequence.cs'
       - 'Assets/Rokas/Scripts/Presentation/LaptopView.cs'
