@@ -27,7 +27,13 @@ def args():
     return p.parse_args(argv)
 
 def camera_xy(px,py):
-    return Vector(((px/W-.5)*FRAME_LENGTH*W/H, (.5-py/H)*FRAME_LENGTH,0))
+    # Exact inverse of the currently configured Blender orthographic viewport.
+    # Do not guess whether ortho_scale denotes horizontal or vertical size.
+    sc=bpy.context.scene
+    corners=sc.camera.data.view_frame(scene=sc)
+    xmin=min(v.x for v in corners);xmax=max(v.x for v in corners)
+    ymin=min(v.y for v in corners);ymax=max(v.y for v in corners)
+    return Vector((xmin+(px/W)*(xmax-xmin),ymax-(py/H)*(ymax-ymin),0.))
 
 def smooth(v):
     v=max(0.,min(1.,v))
@@ -328,8 +334,8 @@ def index_skin_tip_px(hand,rig):
         cloud.sort(key=lambda x:x[1],reverse=True)
         # Extremal skin surface, not the displaced bone reference.
         tip=sum((p for p,d in cloud[:max(8,len(cloud)//9)]),Vector())/max(8,len(cloud)//9)
-        return ((tip.x/(FRAME_LENGTH*W/H)+.5)*W,
-                (.5-tip.y/FRAME_LENGTH)*H)
+        uv=world_to_camera_view(bpy.context.scene,bpy.context.scene.camera,tip)
+        return (uv.x*W,(1.-uv.y)*H)
     finally:
         evaluated_obj.to_mesh_clear()
 
@@ -378,8 +384,9 @@ def fit_index_pad_to_power(rig,hand,reach,frame,downstroke):
     if shift>24.:
         raise RuntimeError("Finger anatomy unable to reach Power at frame %s: %.2fpx"%(frame,shift))
     # Natural final wrist approach (not PNG transform), limited to 24px.
-    rig.location.x += dx*FRAME_LENGTH/H
-    rig.location.y -= dy*FRAME_LENGTH/H
+    delta_world=camera_xy(target[0],target[1])-camera_xy(pad[0],pad[1])
+    rig.location.x += delta_world.x
+    rig.location.y += delta_world.y
     bpy.context.view_layer.update()
     measured=index_skin_tip_px(hand,rig)
     error=math.hypot(measured[0]-target[0],measured[1]-target[1])
@@ -493,7 +500,8 @@ def pose_for_frame(rig,hand,sleeve_mesh,cuff_mesh,scene,index,total):
         raise RuntimeError("Anatomical nail mesh absent in Blender frame")
     # Non-cuff sleeve and cuff overlap slightly, forming the fabric seam.
     def world_pixel(point):
-        return [round((point.x/(FRAME_LENGTH*W/H)+.5)*W,2), round((.5-point.y/FRAME_LENGTH)*H,2)]
+        uv=world_to_camera_view(scene,scene.camera,point)
+        return [round(uv.x*W,2),round((1.-uv.y)*H,2)]
     after_tip=rig.matrix_world @ rig.pose.bones["index_03_r"].tail
     return {"index":index,"tip_px":[tip_x,tip_y],
             "actual_bone_tip_px":world_pixel(after_tip),
