@@ -27,6 +27,11 @@ namespace Rokas.Tests
             if (!Resources.Load<TextAsset>("LaptopCinematic/right_hand_manifest") ||
                 !Resources.Load<Texture2D>("LaptopCinematic/LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF"))
                 Assert.Ignore("Requires explicitly staged art and test-only POV");
+            // An art-integrated Unity test must never accept fallback text in place of the original assets.
+            foreach (string name in new[] { "rokas_no_signal_chibi", "prompt_open",
+                "prompt_back", "prompt_power", "back_arrow" })
+                Assert.That(Resources.Load<Texture2D>("LaptopCinematic/UI/" + name),
+                    Is.Not.Null, "Original approved PNG missing from Unity Resources: " + name);
             dir=Path.Combine(Path.GetTempPath(),"rokas-v111-pov-"+Guid.NewGuid().ToString("N"));
             root=new GameObject("V111POVTest");
             var boot=root.AddComponent<RokasBootstrap>();
@@ -45,20 +50,24 @@ namespace Rokas.Tests
             var standby=Find<RectTransform>("ROKASNoSignalScreen");
             Assert.That(standby,Is.Not.Null,"OFF state must cover physical LCD");
             Assert.That(standby.GetComponent<RectMask2D>(),Is.Not.Null);
-            if (Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi"))
-            {
-                var chibi=Find<RawImage>("ROKASNoSignalChibiDVD");
-                Assert.That(chibi,Is.Not.Null,"Original ROKAS chibi must appear in LCD");
-                Assert.That(chibi.gameObject.activeInHierarchy,Is.True);
-                Assert.That(Find<LaptopNoSignalBounce>("ROKASNoSignalScreen"),Is.Not.Null);
-                Vector2 before=chibi.rectTransform.anchoredPosition;
-                yield return new WaitForSecondsRealtime(.20f);
-                Vector2 after=chibi.rectTransform.anchoredPosition;
-                Assert.That(Vector2.Distance(before,after),Is.GreaterThan(2f),
-                    "DVD standby sticker must animate even when full YOMI is closed");
-            }
-            else
-                Assert.That(initial.gameObject.activeInHierarchy,Is.True);
+            var chibi=Find<RawImage>("ROKASNoSignalChibiDVD");
+            Assert.That(chibi,Is.Not.Null,"Original chibi must be imported and shown");
+            Assert.That(chibi.texture,
+                Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi")));
+            Assert.That(chibi.gameObject.activeInHierarchy,Is.True);
+            Assert.That(initial.gameObject.activeInHierarchy,Is.False,
+                "Fallback NO SIGNAL text is not acceptable in art-integrated CI");
+            Assert.That(Find<LaptopNoSignalBounce>("ROKASNoSignalScreen"),Is.Not.Null);
+            Vector2 before=chibi.rectTransform.anchoredPosition;
+            yield return new WaitForSecondsRealtime(.20f);
+            Vector2 after=chibi.rectTransform.anchoredPosition;
+            Assert.That(Vector2.Distance(before,after),Is.GreaterThan(2f));
+            Assert.That(Find<RawImage>("PowerChoiceHint").texture,
+                Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power")));
+            Assert.That(Find<RawImage>("BackChoiceHint").texture,
+                Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back")));
+            Assert.That(Find<RawImage>("LaptopBackChoice").texture,
+                Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
             Find<Button>("PowerKeyClickTarget").onClick.Invoke();
             yield return new WaitForSecondsRealtime(2.35f);
             Assert.That(LaptopPowerSession.PoweredOn,Is.True,
@@ -100,6 +109,8 @@ namespace Rokas.Tests
             var reopen=Find<RectTransform>("PoweredLaptopOpenHint");
             Assert.That(reopen,Is.Not.Null);
             Assert.That(reopen.gameObject.activeInHierarchy,Is.True);
+            Assert.That(Find<RawImage>("ExactGoldenOpenPrompt").texture,
+                Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open")));
             Assert.That(reopen.GetComponent<LaptopChoiceHover>(),Is.Not.Null,
                 "Gold powered-YOMI action shares the hover effect");
             Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
