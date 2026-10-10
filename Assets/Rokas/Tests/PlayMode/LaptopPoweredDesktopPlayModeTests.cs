@@ -43,7 +43,13 @@ namespace Rokas.Tests
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"), Is.Not.Null);
             Assert.That(Find<RectTransform>("PowerKeyBlueStandby").gameObject.activeInHierarchy, Is.True);
             Find<Button>("PowerKeyClickTarget").onClick.Invoke();
-            yield return new WaitForSecondsRealtime(2.55f);
+            yield return new WaitForSecondsRealtime(.30f);
+            Assert.That(Find<RectTransform>("PowerKeyBlueStandby").gameObject.activeInHierarchy, Is.True,
+                "Blue Power LED must remain lit until the finger makes real contact.");
+            yield return new WaitForSecondsRealtime(1.20f);
+            Assert.That(Find<RectTransform>("PowerKeyBlueStandby").gameObject.activeInHierarchy, Is.False,
+                "Blue Power LED must go dark at finger contact, not at initial E confirmation.");
+            yield return new WaitForSecondsRealtime(1.05f);
             Assert.That(boot.View.LaptopOpen, Is.True);
 
             // VideoPresenter is independently responsible for the real

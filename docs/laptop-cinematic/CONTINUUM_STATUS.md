@@ -39,3 +39,8 @@ Local D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY NOT modified from cloud.
 - Last full art QA on cb0e15bb: all 49 frames and full Unity crop reconstruction structurally PASS. Visual FAIL for pale detached-looking nails; corrected candidate requires new full render.
 - Installer and rollback drafts exist only as UNRELEASED working-container templates; no production installer has been signed off. Local D: not touched.
 - NEXT: wait for run 38077862962 art job to finish, download raw+Unity artifacts from that exact run, inspect full 49-frame motion and finger contact before creating release. Verify real Power interaction in Unity capture job. Do not mistake old offscreen artifact for new version.
+
+## Power LED contact-timing fix candidate
+- Found source defect: SetPromptVisibility(false) turned blue Power LED off immediately on E/Power confirmation, before the animated fingertip reaches the physical button.
+- Patch keeps the standby LED visible during hand approach and hides it at LaptopPowerTimeline.ContactTime; PlayMode test extended to check before/after contact. Requires new Unity run, no PASS claim until tested.
+- No alterations to user-approved background, UI textures, SFX, persistence, YOMI, or Blender art from source a38e6cba.

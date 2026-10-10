@@ -448,7 +448,8 @@ namespace Rokas.Presentation
             if (powerHintArt) powerHintArt.gameObject.SetActive(show && !powered);
             if (backHintArt) backHintArt.gameObject.SetActive(show);
             if (onScreenBack) onScreenBack.gameObject.SetActive(show);
-            if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(show && !powered);
+            if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(!powered && !returnRequested &&
+                (show || (powerConfirmed && CurrentPhase != Phase.PowerOn && CurrentPhase != Phase.UIOpen)));
             if (noSignalText) noSignalText.gameObject.SetActive(show && !powered);
             if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered);
             if (desktopClock) desktopClock.gameObject.SetActive(show && powered);
@@ -507,6 +508,13 @@ namespace Rokas.Presentation
             else if (!powerConfirmed) CurrentPhase = Phase.PreBootChoice;
             else if (t < LaptopPowerTimeline.ContactTime) CurrentPhase = Phase.HandsInteraction;
             else CurrentPhase = Phase.PowerOn;
+
+            // Physical blue LED stays illuminated during finger approach and
+            // is extinguished only at the actual calibrated contact timestamp.
+            if (powerGlowRoot)
+                powerGlowRoot.gameObject.SetActive(!LaptopPowerSession.PoweredOn && !returnRequested &&
+                    ((!powerConfirmed && CurrentPhase == Phase.PreBootChoice) ||
+                     (powerConfirmed && t < LaptopPowerTimeline.ContactTime)));
 
             bool showHands = powerConfirmed && t >= HandsStart && t <= HandsEnd;
             handsImage.gameObject.SetActive(showHands);
