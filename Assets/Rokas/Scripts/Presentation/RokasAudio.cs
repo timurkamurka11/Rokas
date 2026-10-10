@@ -168,13 +168,13 @@ namespace Rokas.Presentation
 
         public void PlayLaptopSit()
         {
-            if (laptopSit) PlayScaled(laptopSit, .35f);
+            if (laptopSit) PlayScaled(laptopSit, .62f); // ~+5 dB; respects SFX volume/mute
             else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: sitting WAV not installed.");
         }
 
         public void PlayLaptopStandUp()
         {
-            if (laptopStandUp) PlayScaled(laptopStandUp, .42f);
+            if (laptopStandUp) PlayScaled(laptopStandUp, .59f); // ~+3 dB; respects SFX volume/mute
             else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
         }
 
