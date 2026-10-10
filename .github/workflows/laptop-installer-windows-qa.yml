@@ -1,0 +1,20 @@
+name: ROKAS Laptop Windows Installer Safety
+on:
+  push:
+    branches: [codex/laptop-pov-cinematic-20261009]
+    paths:
+      - '.github/workflows/laptop-installer-windows-qa.yml'
+      - 'Tools/LaptopCinematic/release/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated PowerShell install, backup and rollback verification
+        shell: pwsh
+        run: |
+          ./Tools/LaptopCinematic/release/test_install_windows.ps1 -InstallerSource ./Tools/LaptopCinematic/release/INSTALL_SAFE.ps1
