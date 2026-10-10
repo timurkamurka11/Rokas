@@ -1,0 +1,167 @@
+name: ROKAS V11.1 Main Branch Unity Verification
+
+on:
+  push:
+    branches:
+      - codex/fidelity3-resume-5779190
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: rokas-v111-main-unity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unity-tests:
+    name: Unity 6000.3.19f1 Cinematic EditMode + PlayMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate Docker Hub with retry on HTTP 500
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DOCKERHUB_USERNAME}" ] || [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "::error::Both DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets are required."
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5; do
+            echo "Docker Hub login attempt ${attempt}/5"
+            if printf '%s' "${DOCKERHUB_TOKEN}" | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin > /tmp/rokas-docker-login.log 2>&1; then
+              echo "Docker Hub login succeeded."
+              exit 0
+            fi
+            # Do not keep retrying an invalid token; 5xx/network errors are transient.
+            if grep -Eiq 'unauthorized|incorrect username|invalid credentials|access denied' /tmp/rokas-docker-login.log; then
+              echo "::error::Docker Hub rejected the account or access token. Check repository secrets."
+              exit 1
+            fi
+            tail -n 2 /tmp/rokas-docker-login.log || true
+            if [ "${attempt}" -eq 5 ]; then
+              echo "::error::Docker Hub login unavailable after retries; service/network issue."
+              exit 1
+            fi
+            delay=$(( attempt * 15 ))
+            echo "::warning::Docker Hub returned a temporary error; retrying in ${delay}s."
+            sleep "${delay}"
+          done
+
+      - name: Pull GameCI Unity editor with retry and backoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE='unityci/editor:ubuntu-6000.3.19f1-linux-il2cpp-3'
+          # Docker Hub occasionally returns 5xx or transient CDN failures even after login.
+          for attempt in 1 2 3 4; do
+            echo "::group::Unity image pull attempt ${attempt}/4"
+            if docker pull "${IMAGE}"; then
+              echo "::endgroup::"
+              echo "Unity CI image is available in the local Docker cache."
+              exit 0
+            fi
+            echo "::endgroup::"
+            if [ "${attempt}" -eq 4 ]; then
+              echo "::error::Unity image unavailable after 4 attempts. Check Docker Hub status and image tag."
+              exit 1
+            fi
+            delay=$(( attempt * 30 ))
+            echo "::warning::Docker Hub temporarily unavailable; retrying after ${delay}s."
+            sleep "${delay}"
+          done
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: laptop-cinematic-unity-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Library-${{ runner.os }}-
+
+      - name: Compile project and run Home EditMode
+        id: editmode
+        uses: game-ci/unity-test-runner@v4
+        continue-on-error: true
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopPowerTimelineEditModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Cinematic Unity EditMode
+
+      - name: Home laptop cinematic fallback PlayMode
+        id: playmode
+        uses: game-ci/unity-test-runner@v4
+        continue-on-error: true
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopCinematicFallbackPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop Cinematic Unity PlayMode
+
+      - name: V11 live desktop, hover, power and hub transition regression PlayMode
+        id: v11_playmode
+        uses: game-ci/unity-test-runner@v4
+        continue-on-error: true
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.LaptopV11ContinuumPlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Laptop V11 Continuum Unity PlayMode
+
+      - name: Preserve Unity logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laptop-cinematic-cloud-unity-proof
+          path: |
+            ${{ steps.editmode.outputs.artifactsPath }}
+            ${{ steps.playmode.outputs.artifactsPath }}
+            ${{ steps.v11_playmode.outputs.artifactsPath }}
+          if-no-files-found: warn
+
+      - name: Require all three real Unity test steps to pass
+        if: always()
+        env:
+          EDIT: ${{ steps.editmode.outcome }}
+          PLAY: ${{ steps.playmode.outcome }}
+          V11: ${{ steps.v11_playmode.outcome }}
+        shell: bash
+        run: |
+          echo "EditMode outcome: ${EDIT}"
+          echo "PlayMode outcome: ${PLAY}"
+          echo "V11 PlayMode outcome: ${V11}"
+          if [ "${EDIT}" != "success" ] || [ "${PLAY}" != "success" ] || [ "${V11}" != "success" ]; then
+            echo "::error::Unity EditMode, baseline PlayMode and V11 PlayMode must ALL pass."
+            exit 1
+          fi
