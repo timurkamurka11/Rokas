@@ -68,8 +68,10 @@ def sleeve_geometry(mesh, wrist, cuff=False):
     # toward off-screen elbow. Add independent folds with low-frequency harmonics.
     axis=Vector((.56,-.83,0)).normalized()
     across=Vector((axis.y,-axis.x,0)).normalized()
-    rings=([(0.,.029),(.048,.036),(.125,.057),(.23,.078),(.36,.094)]
-           if not cuff else [(0.,.027),(.018,.028),(.038,.035)])
+    # The first sleeve rings extend 25–30mm under the skinned wrist.
+    # Overlap eliminates the alpha hole / floating cuff visible in user screenshots.
+    rings=([(-.030,.027),(0.,.031),(.048,.038),(.125,.057),(.23,.078),(.36,.094)]
+           if not cuff else [(-.036,.027),(-.018,.028),(.0,.030),(.025,.036)])
     N=32; verts=[]; faces=[]
     for ri,(distance,radius) in enumerate(rings):
         c=wrist + axis*distance
@@ -132,7 +134,7 @@ def create_nail_objects():
             for xi in range(7):
                 xx=-1.+2*xi/6
                 outline=max(0.,1.-(xx**2*.84+yy**2))
-                verts.append((xx*.007, yy*.010, .0019*outline))
+                verts.append((xx*.007*max(.2,math.sqrt(max(0.,1.-yy*yy))), yy*.010, .0019*outline))
         for yi in range(10):
             for xi in range(6):
                 a=yi*7+xi
