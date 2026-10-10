@@ -403,7 +403,7 @@ namespace Rokas.Presentation
             if (onArt)
             {
                 float w = 535f;
-                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 905f,
+                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 870f,
                     w, w * (float)onArt.height / onArt.width);
                 powerHintArt.color = Color.white; // full original PNG intensity
                 powerHintArt.raycastTarget = true;
@@ -418,7 +418,7 @@ namespace Rokas.Presentation
             if (exitArt)
             {
                 float w = 460f;
-                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 921f,
+                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 887f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
                 backHintArt.raycastTarget = true;
@@ -452,7 +452,7 @@ namespace Rokas.Presentation
             Texture2D openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open_yomi");
             if (!openArt)
                 openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open");
-            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 913f, 560f, 144f);
+            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 868f, 560f, 190f);
             if (openArt)
             {
                 var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
