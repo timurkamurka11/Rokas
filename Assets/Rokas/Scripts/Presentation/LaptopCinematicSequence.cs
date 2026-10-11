@@ -483,9 +483,34 @@ namespace Rokas.Presentation
             // LCD source pixels. Never add the legacy 32/38/5px insets twice.
             ScreenCalibration calibration = new ScreenCalibration();
             bool userCalibratedV2 = false;
+            Vector2[] warpEdges = null;
+            Vector2[] warpHelpers = null;
+            // Prefer complete V4 LCD shape: all sixteen owner's controls.
+            // Bezel reference points are diagnostics, NOT the fitted LCD.
+            TextAsset v4Text = Resources.Load<TextAsset>(
+                "LaptopCinematic/screen_calibration_v4");
+            if (v4Text)
+            {
+                try
+                {
+                    var candidate = JsonUtility.FromJson<ScreenCalibration>(v4Text.text);
+                    if (TryBuildV4Warp(candidate, povTexture,
+                        out _, out warpEdges, out warpHelpers))
+                    {
+                        calibration = candidate;
+                        userCalibratedV2 = true;
+                    }
+                    else Debug.LogError(
+                        "ROKAS LCD: invalid V4; falling back to approved V2 geometry.");
+                }
+                catch (Exception error)
+                {
+                    Debug.LogError("ROKAS LCD V4 JSON rejected: " + error.Message);
+                }
+            }
             TextAsset v2Text = Resources.Load<TextAsset>(
                 "LaptopCinematic/screen_calibration_v2");
-            if (v2Text)
+            if (!userCalibratedV2 && v2Text)
             {
                 try
                 {
@@ -531,12 +556,16 @@ namespace Rokas.Presentation
                     new Vector2(calibration.bottomRightX - 5f, calibration.bottomRightY - 5f),
                     new Vector2(calibration.bottomLeftX + 38f, calibration.bottomLeftY - 5f)
                 };
+            ComputeLCDBounds(safeCorners, warpEdges, warpHelpers,
+                out float minLcdX, out float minLcdY,
+                out float maxLcdX, out float maxLcdY);
             RectTransform screenRect = ui.Rect(povRoot, "LaptopWakePolygon",
                 imageX, imageY, imageWidth, imageHeight);
             wake = screenRect.gameObject.AddComponent<LaptopWakeQuad>();
             wake.raycastTarget = false;
             wake.SetCorners(safeCorners, imageScale);
-            ConfigureRoundedLCD(wake, userCalibratedV2, calibration);
+            ConfigureRoundedLCD(wake, userCalibratedV2, calibration,
+                warpEdges, warpHelpers);
             wake.color = new Color(.16f, .34f, .48f, 0f);
 
             // Physical LCD is fully live (YOMI's real app catalog + unread
@@ -547,7 +576,8 @@ namespace Rokas.Presentation
                 imageX, imageY, imageWidth, imageHeight);
             poweredWallpaper = desktopRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
             poweredWallpaper.SetCorners(lcdCorners, imageScale);
-            ConfigureRoundedLCD(poweredWallpaper, userCalibratedV2, calibration);
+            ConfigureRoundedLCD(poweredWallpaper, userCalibratedV2, calibration,
+                warpEdges, warpHelpers);
             poweredWallpaper.SetImage(null); // live atlas is the sole ON-state image
             poweredWallpaper.color = new Color(.08f, .16f, .27f, 1f);
             poweredWallpaper.raycastTarget = false;
@@ -555,16 +585,15 @@ namespace Rokas.Presentation
                 imageX, imageY, imageWidth, imageHeight);
             desktopClock = liveClockRect.gameObject.AddComponent<LaptopPhysicalDesktopClock>();
             desktopClock.SetCorners(lcdCorners, imageScale);
-            ConfigureRoundedLCD(desktopClock, userCalibratedV2, calibration);
+            ConfigureRoundedLCD(desktopClock, userCalibratedV2, calibration,
+                warpEdges, warpHelpers);
             desktopClock.raycastTarget = false;
             desktopClock.Initialize(unreadMessages, yomiWallpaper);
             RectTransform lcdHit = ui.Rect(povRoot, "PhysicalDesktopClickTarget",
-                imageX + Mathf.Min(safeCorners[0].x, safeCorners[3].x) * imageScale,
-                imageY + Mathf.Min(safeCorners[0].y, safeCorners[1].y) * imageScale,
-                (Mathf.Max(safeCorners[1].x, safeCorners[2].x)
-                    - Mathf.Min(safeCorners[0].x, safeCorners[3].x)) * imageScale,
-                (Mathf.Max(safeCorners[2].y, safeCorners[3].y)
-                    - Mathf.Min(safeCorners[0].y, safeCorners[1].y)) * imageScale);
+                imageX + minLcdX * imageScale,
+                imageY + minLcdY * imageScale,
+                (maxLcdX - minLcdX) * imageScale,
+                (maxLcdY - minLcdY) * imageScale);
             var lcdTouch = lcdHit.gameObject.AddComponent<Image>();
             lcdTouch.color = new Color(0f, 0f, 0f, .002f);
             poweredDesktopClick = lcdHit.gameObject.AddComponent<Button>();
@@ -612,10 +641,8 @@ namespace Rokas.Presentation
             // use the SAME polygon as all fallback desktop/backlight layers.
             // Right edge is unchanged; only the photographed left edge is
             // moved further inside (previous top/bottom: 22/26).
-            float minLcdX = Mathf.Min(safeCorners[0].x, safeCorners[3].x);
-            float maxLcdX = Mathf.Max(safeCorners[1].x, safeCorners[2].x);
-            float minLcdY = Mathf.Min(safeCorners[0].y, safeCorners[1].y);
-            float maxLcdY = Mathf.Max(safeCorners[2].y, safeCorners[3].y);
+            // Extents already include all curved V4 side/tangent controls.
+            // The inner bounding clip is now larger than their visible mesh.
             float lcdX = imageX + minLcdX * imageScale;
             float lcdY = imageY + minLcdY * imageScale;
             float lcdW = Mathf.Max(80f, (maxLcdX - minLcdX) * imageScale);
@@ -628,7 +655,7 @@ namespace Rokas.Presentation
             noSignalScreen = ui.Rect(povRoot, "ROKASNoSignalScreen", lcdX, lcdY, lcdW, lcdH);
             AddLcdStencil(noSignalScreen, localCorners, imageScale,
                 new Color(.003f, .007f, .015f, 1f),
-                userCalibratedV2, calibration);
+                userCalibratedV2, calibration, warpEdges, warpHelpers);
             Texture2D chibi = Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi");
             if (chibi)
             {
@@ -657,7 +684,7 @@ namespace Rokas.Presentation
                 lcdX, lcdY, lcdW, lcdH);
             AddLcdStencil(physicalMiniYomiViewport, localCorners, imageScale,
                 new Color(.01f, .025f, .05f, 1f),
-                userCalibratedV2, calibration);
+                userCalibratedV2, calibration, warpEdges, warpHelpers);
             physicalMiniYomiImage = ui.Art(physicalMiniYomiViewport,
                 "PhysicalMiniYomiVisible", desktopClock.mainTexture,
                 0f, 0f, lcdW, lcdH);
@@ -668,7 +695,8 @@ namespace Rokas.Presentation
             exactQuadRect.gameObject.AddComponent<CanvasRenderer>();
             physicalExactYomiQuad = exactQuadRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
             physicalExactYomiQuad.SetCorners(localCorners, imageScale);
-            ConfigureRoundedLCD(physicalExactYomiQuad, userCalibratedV2, calibration);
+            ConfigureRoundedLCD(physicalExactYomiQuad, userCalibratedV2,
+                calibration, warpEdges, warpHelpers);
             physicalExactYomiQuad.color = Color.white;
             physicalExactYomiQuad.raycastTarget = false;
             physicalExactYomiQuad.gameObject.SetActive(false);
@@ -847,17 +875,20 @@ namespace Rokas.Presentation
         }
 
         private static void ConfigureRoundedLCD(LaptopPerspectiveQuad quad,
-            bool userCalibratedV2, ScreenCalibration calibration)
+            bool calibratedLCD, ScreenCalibration calibration,
+            Vector2[] warpEdges, Vector2[] warpHelpers)
         {
             if (!quad || calibration == null) return;
-            quad.SetRoundedCorners(userCalibratedV2 && calibration.enableRoundedMask,
+            quad.SetRoundedCorners(calibratedLCD && calibration.enableRoundedMask,
                 calibration.topLeftRadius, calibration.topRightRadius,
                 calibration.bottomRightRadius, calibration.bottomLeftRadius);
+            quad.SetWarpOffsets(warpEdges, warpHelpers);
         }
 
         private static void AddLcdStencil(RectTransform viewport, Vector2[] localCorners,
-            float scale, Color screenBackground, bool userCalibratedV2,
-            ScreenCalibration calibration)
+            float scale, Color screenBackground, bool calibratedLCD,
+            ScreenCalibration calibration, Vector2[] warpEdges,
+            Vector2[] warpHelpers)
         {
             // A visible Graphic supplies the stencil shape to Unity UI Mask.
             // RectMask2D is retained as a second, conservative bounding clip.
@@ -868,7 +899,8 @@ namespace Rokas.Presentation
                 viewport.gameObject.AddComponent<CanvasRenderer>();
             var quad = viewport.gameObject.AddComponent<LaptopPerspectiveQuad>();
             quad.SetCorners(localCorners, scale);
-            ConfigureRoundedLCD(quad, userCalibratedV2, calibration);
+            ConfigureRoundedLCD(quad, calibratedLCD, calibration,
+                warpEdges, warpHelpers);
             quad.color = screenBackground;
             quad.raycastTarget = false;
             var polygonMask = viewport.gameObject.AddComponent<Mask>();
