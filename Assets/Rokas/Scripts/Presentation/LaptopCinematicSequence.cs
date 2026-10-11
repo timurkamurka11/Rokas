@@ -242,6 +242,7 @@ namespace Rokas.Presentation
         private readonly Action<float> updateRoomCamera;
         private readonly Texture yomiWallpaper;
         private readonly Action bounceSound;
+        private readonly LaptopCinematicLightPresentation lighting;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -285,6 +286,14 @@ namespace Rokas.Presentation
 
         public Phase CurrentPhase { get; private set; }
         public bool IsPlaying => active;
+        public LaptopCinematicLightPresentation Lighting => lighting;
+
+        /// <summary>Called by the host view even while YOMI owns the focus.
+        /// Updates the same photograph instead of creating a second scene.</summary>
+        public void UpdateLighting(float deltaTime)
+        {
+            if (root) lighting?.Tick(deltaTime);
+        }
         public bool HasPendingVisualHandoff => pendingVisualHandoff;
         // The previous approved POV stays drawn until the first REAL YOMI
         // frame has been presented, never exposing the underlying Hub.
@@ -331,7 +340,8 @@ namespace Rokas.Presentation
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
             Action powerClick, Action returningToRoom, Func<int> unreadMessages = null,
             Action<float> updateRoomCamera = null, Texture yomiWallpaper = null,
-            Action bounceSound = null)
+            Action bounceSound = null, Func<bool> roomLightOn = null,
+            Func<bool> hallwayLightOn = null)
         {
             this.ui = ui;
             this.owner = owner;
@@ -345,6 +355,7 @@ namespace Rokas.Presentation
             this.updateRoomCamera = updateRoomCamera;
             this.yomiWallpaper = yomiWallpaper;
             this.bounceSound = bounceSound;
+            lighting = new LaptopCinematicLightPresentation(roomLightOn, hallwayLightOn);
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -476,8 +487,12 @@ namespace Rokas.Presentation
             float imageHeight = povTexture.height * imageScale;
             imageX = (StageWidth - imageWidth) * .5f;
             imageY = (StageHeight - imageHeight) * .5f;
-            ui.Art(povRoot, "UnmodifiedScreenOffPOV", povTexture,
+            RawImage povPhoto = ui.Art(povRoot, "UnmodifiedScreenOffPOV", povTexture,
                 imageX, imageY, imageWidth, imageHeight);
+            // The original 1672x941 photo remains the source texture. The
+            // unified two-zone GPU mask only changes the displayed lighting.
+            // Bind samples GameSession BEFORE the first cinematic frame.
+            lighting.Bind(povPhoto);
 
             // V11.9: use the actual owner's Workshop V2 export as FINAL inner
             // LCD source pixels. Never add the legacy 32/38/5px insets twice.
@@ -1208,6 +1223,7 @@ namespace Rokas.Presentation
 
         private void Cleanup()
         {
+            lighting?.Dispose();
             updateRoomCamera?.Invoke(0f);
             pendingVisualHandoff = false;
             standbyHeldForFirstBoot = false;
