@@ -81,23 +81,27 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             }
             float DoorwayPolygon(float2 p)
             {
-                // Clockwise around the actual visible opening (image origin at top-left).
-                const float2 a=float2(293,-6);
-                const float2 b=float2(383,-6);
-                const float2 c=float2(389,180);
-                const float2 d=float2(396,405);
-                const float2 e=float2(400,469); // right inner sill corner
-                const float2 f=float2(329,489); // left sloped sill; no room floor
-                const float2 g=float2(328,425);
-                const float2 h=float2(325,297);
-                const float2 j=float2(293,296); // cabinet occludes left corridor
-                float edgeDist = min(
-                   min(min(SignedEdge(a,b,p),SignedEdge(b,c,p)),
-                       min(SignedEdge(c,d,p),SignedEdge(d,e,p))),
-                   min(min(SignedEdge(e,f,p),SignedEdge(f,g,p)),
-                       min(min(SignedEdge(g,h,p),SignedEdge(h,j,p)),
-                           SignedEdge(j,a,p))));
-                return smoothstep(-2.25,2.25,edgeDist);
+                // The cabinet interrupts the left jamb at y≈296. A single
+                // convex half-plane test was wrong for this CONCAVE outline;
+                // represent it as a union of TWO convex aligned masks instead.
+                const float2 upperA=float2(293,-6);
+                const float2 upperB=float2(383,-6);
+                const float2 upperC=float2(393,296);
+                const float2 upperD=float2(293,296);
+                float upper=min(
+                    min(SignedEdge(upperA,upperB,p),SignedEdge(upperB,upperC,p)),
+                    min(SignedEdge(upperC,upperD,p),SignedEdge(upperD,upperA,p)));
+
+                const float2 lowerA=float2(325,296);
+                const float2 lowerB=float2(393,296);
+                const float2 lowerC=float2(400,469);
+                const float2 lowerD=float2(329,489);
+                float lower=min(
+                    min(SignedEdge(lowerA,lowerB,p),SignedEdge(lowerB,lowerC,p)),
+                    min(SignedEdge(lowerC,lowerD,p),SignedEdge(lowerD,lowerA,p)));
+
+                return max(smoothstep(-2.25,2.25,upper),
+                           smoothstep(-2.25,2.25,lower));
             }
             float SoftEllipse(float2 p,float2 center,float2 reach)
             {
