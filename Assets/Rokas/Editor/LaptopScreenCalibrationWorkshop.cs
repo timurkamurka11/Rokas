@@ -1443,6 +1443,43 @@ namespace Rokas.Editor
                         }
                     }
             }
+            if (referenceDefined)
+            {
+                if (referenceCorners == null || referenceCorners.Length != 4 ||
+                    referenceEdgeOffsets == null || referenceEdgeOffsets.Length != 4 ||
+                    referenceHelperOffsets == null ||
+                    referenceHelperOffsets.Length != 8)
+                {
+                    message = "Incomplete independent bezel reference.";
+                    return false;
+                }
+                for (int i = 0; i < 4; ++i)
+                {
+                    Vector2 rp = referenceCorners[i];
+                    if (float.IsNaN(rp.x) || float.IsNaN(rp.y) ||
+                        rp.x < 0 || rp.y < 0 ||
+                        rp.x >= source.width || rp.y >= source.height)
+                    {
+                        message = "Reference bezel corner outside photo.";
+                        return false;
+                    }
+                }
+                for (int u = 0; u < 24; ++u)
+                    for (int v = 0; v < 24; ++v)
+                    {
+                        float x = u / 24f, y = v / 24f, h = 1f / 24f;
+                        Vector2 a = MapReferenceUV(new Vector2(x, y));
+                        Vector2 b = MapReferenceUV(new Vector2(x + h, y));
+                        Vector2 d = MapReferenceUV(new Vector2(x, y + h));
+                        float cross = (b.x - a.x) * (d.y - a.y) -
+                            (b.y - a.y) * (d.x - a.x);
+                        if (float.IsNaN(cross) || cross <= .0001f)
+                        {
+                            message = "Traced reference crosses/folds itself.";
+                            return false;
+                        }
+                    }
+            }
             if (enableRoundedMask)
             {
                 float cap = MaxCornerRadius();
@@ -1522,71 +1559,103 @@ namespace Rokas.Editor
             EditorUtility.RevealInFinder(path);
         }
 
+        private void ApplyPreset(Preset data)
+        {
+            if (data == null)
+                throw new InvalidDataException("Calibration JSON is null.");
+            corners = new[]
+            {
+                new Vector2(data.topLeftX, data.topLeftY),
+                new Vector2(data.topRightX, data.topRightY),
+                new Vector2(data.bottomRightX, data.bottomRightY),
+                new Vector2(data.bottomLeftX, data.bottomLeftY)
+            };
+            bool legacy = data.formatVersion < 2;
+            enableRoundedMask = !legacy && data.enableRoundedMask;
+            topLeftRadius = legacy ? 0f : data.topLeftRadius;
+            topRightRadius = legacy ? 0f : data.topRightRadius;
+            bottomRightRadius = legacy ? 0f : data.bottomRightRadius;
+            bottomLeftRadius = legacy ? 0f : data.bottomLeftRadius;
+            edgeOffsets = new Vector2[4];
+            enableEdgeControlPoints = data.formatVersion >= 3 &&
+                data.enableEdgeControlPoints;
+            if (enableEdgeControlPoints)
+            {
+                SetEdgePoint(0, new Vector2(data.topMidX, data.topMidY));
+                SetEdgePoint(1, new Vector2(data.rightMidX, data.rightMidY));
+                SetEdgePoint(2, new Vector2(data.bottomMidX, data.bottomMidY));
+                SetEdgePoint(3, new Vector2(data.leftMidX, data.leftMidY));
+            }
+            cornerHelperOffsets = new Vector2[8];
+            enableCornerHelpers = data.formatVersion >= 4 &&
+                data.enableCornerHelpers;
+            if (enableCornerHelpers)
+            {
+                enableEdgeControlPoints = true;
+                SetCornerHelper(0, new Vector2(data.tlHx, data.tlHy));
+                SetCornerHelper(1, new Vector2(data.tlVx, data.tlVy));
+                SetCornerHelper(2, new Vector2(data.trHx, data.trHy));
+                SetCornerHelper(3, new Vector2(data.trVx, data.trVy));
+                SetCornerHelper(4, new Vector2(data.brHx, data.brHy));
+                SetCornerHelper(5, new Vector2(data.brVx, data.brVy));
+                SetCornerHelper(6, new Vector2(data.blHx, data.blHy));
+                SetCornerHelper(7, new Vector2(data.blVx, data.blVy));
+            }
+            var reference = data.bezelReference;
+            referenceDefined = reference != null &&
+                reference.corners != null && reference.corners.Length == 4 &&
+                reference.midpointOffsets != null &&
+                reference.midpointOffsets.Length == 4 &&
+                reference.tangentOffsets != null &&
+                reference.tangentOffsets.Length == 8;
+            if (referenceDefined)
+            {
+                referenceCorners = (Vector2[])reference.corners.Clone();
+                referenceEdgeOffsets = (Vector2[])reference.midpointOffsets.Clone();
+                referenceHelperOffsets = (Vector2[])reference.tangentOffsets.Clone();
+                referenceHasEdges = reference.useMidpoints;
+                referenceHasHelpers = reference.useTangents;
+            }
+            else
+            {
+                referenceCorners = null;
+                referenceEdgeOffsets = new Vector2[4];
+                referenceHelperOffsets = new Vector2[8];
+                referenceHasEdges = referenceHasHelpers = false;
+            }
+            originalPowerX = data.powerX;
+            originalPowerY = data.powerY;
+            traceReference = false;
+            selected = -1;
+        }
+
         private void LoadJson()
         {
             string path = EditorUtility.OpenFilePanel("Load ROKAS LCD preset",
                 Path.GetDirectoryName(Application.dataPath), "json");
             if (string.IsNullOrEmpty(path)) return;
+            Preset previous = null;
             try
             {
                 Preset data = JsonUtility.FromJson<Preset>(File.ReadAllText(path));
-                if (data == null || data.coordinateSpace != "source_image_pixels_top_left" ||
+                if (data == null ||
+                    data.coordinateSpace != "source_image_pixels_top_left" ||
                     (source && (data.sourceWidth != source.width ||
                         data.sourceHeight != source.height)))
-                    throw new InvalidDataException("The preset must use matching original-photo pixels.");
-                var proposed = new[]
-                {
-                    new Vector2(data.topLeftX, data.topLeftY),
-                    new Vector2(data.topRightX, data.topRightY),
-                    new Vector2(data.bottomRightX, data.bottomRightY),
-                    new Vector2(data.bottomLeftX, data.bottomLeftY)
-                };
-                Vector2[] previous = corners;
-                Vector2[] oldOffsets = edgeOffsets == null
-                    ? new Vector2[4] : (Vector2[])edgeOffsets.Clone();
-                bool oldEdgeEnabled = enableEdgeControlPoints;
-                bool oldEnabled = enableRoundedMask;
-                float oldTL = topLeftRadius, oldTR = topRightRadius;
-                float oldBR = bottomRightRadius, oldBL = bottomLeftRadius;
-                corners = proposed;
-                // Older V1 presets had no rounded parameters. Honor their
-                // rectangle until explicitly switched to rounded preview.
-                bool legacy = data.formatVersion < 2;
-                enableRoundedMask = !legacy && data.enableRoundedMask;
-                topLeftRadius = legacy ? 0f : data.topLeftRadius;
-                topRightRadius = legacy ? 0f : data.topRightRadius;
-                bottomRightRadius = legacy ? 0f : data.bottomRightRadius;
-                bottomLeftRadius = legacy ? 0f : data.bottomLeftRadius;
-                edgeOffsets = new Vector2[4];
-                enableEdgeControlPoints = data.formatVersion >= 3 &&
-                    data.enableEdgeControlPoints;
-                if (enableEdgeControlPoints)
-                {
-                    SetEdgePoint(0, new Vector2(data.topMidX, data.topMidY));
-                    SetEdgePoint(1, new Vector2(data.rightMidX, data.rightMidY));
-                    SetEdgePoint(2, new Vector2(data.bottomMidX, data.bottomMidY));
-                    SetEdgePoint(3, new Vector2(data.leftMidX, data.leftMidY));
-                }
-                if (!ValidateCorners(out string radiusError))
-                {
-                    // Loading invalid JSON must never destroy a good
-                    // in-progress manual calibration (corners AND radii).
-                    corners = previous;
-                    edgeOffsets = oldOffsets;
-                    enableEdgeControlPoints = oldEdgeEnabled;
-                    enableRoundedMask = oldEnabled;
-                    topLeftRadius = oldTL;
-                    topRightRadius = oldTR;
-                    bottomRightRadius = oldBR;
-                    bottomLeftRadius = oldBL;
-                    throw new InvalidDataException(radiusError);
-                }
-                originalPowerX = data.powerX;
-                originalPowerY = data.powerY;
-                selected = -1; Repaint();
+                    throw new InvalidDataException(
+                        "Calibration must use the original source-photo pixels.");
+                previous = MakePreset();
+                ApplyPreset(data);
+                if (!ValidateCorners(out string reason))
+                    throw new InvalidDataException(reason);
+                Repaint();
+                ShowNotification(new GUIContent("LCD V" +
+                    data.formatVersion + " calibration loaded"));
             }
             catch (Exception e)
             {
+                if (previous != null)
+                    ApplyPreset(previous); // atomic undo incl. tangents/reference
                 EditorUtility.DisplayDialog("Unable to load LCD calibration",
                     e.Message, "OK");
             }
