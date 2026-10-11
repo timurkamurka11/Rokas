@@ -88,6 +88,7 @@ namespace Rokas.Presentation
         private RawImage powerHintArt;
         private RawImage backHintArt;
         private Button onScreenBack;
+        private Button poweredStandButton;
         private RectTransform powerGlowRoot;
         private Text noSignalText;
         private RectTransform noSignalScreen;
@@ -475,6 +476,7 @@ namespace Rokas.Presentation
             Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
             Texture2D exitArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back");
             Texture2D arrowArt = Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow");
+            Texture2D standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand");
             if (onArt)
             {
                 float w = 535f;
@@ -524,6 +526,25 @@ namespace Rokas.Presentation
             else
                 onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
                     92f, 915f, 72f, 58f, () => BackToRoom(), playClickSound: false);
+            // When the LCD is already powered, replace ONLY the little arrow
+            // with the user's exact E — ВСТАТЬ gold PNG. Mouse click calls the
+            // existing stand-up/back-to-room animation; keyboard E continues
+            // to open YOMI as agreed (ESC also stands up).
+            if (standArt)
+            {
+                const float standWidth = 438f;
+                var standImage = ui.Art(povRoot, "PoweredStandOriginalPNG",
+                    standArt, 92f, 883f, standWidth,
+                    standWidth * (float)standArt.height / standArt.width);
+                standImage.color = Color.white;
+                AddGoldEmissionBoost(standImage, standArt);
+                standImage.raycastTarget = true;
+                poweredStandButton = standImage.gameObject.AddComponent<Button>();
+                poweredStandButton.targetGraphic = standImage;
+                poweredStandButton.transition = Selectable.Transition.None;
+                poweredStandButton.onClick.AddListener(() => BackToRoom());
+                standImage.gameObject.AddComponent<LaptopChoiceHover>();
+            }
             // The original user's golden "ОТКРЫТЬ НОУТБУК" PNG is not a
             // made-up flat UI. An optional exact "ОТКРЫТЬ YOMI" PNG has
             // first priority if installed; either gets the same hover.
@@ -568,6 +589,10 @@ namespace Rokas.Presentation
             // A visible Graphic supplies the stencil shape to Unity UI Mask.
             // RectMask2D is retained as a second, conservative bounding clip.
             // Both the bouncing chibi and the real YOMI photo use this shape.
+            // MaskableGraphic needs a CanvasRenderer even on code-built objects.
+            // Without it Unity throws MissingComponentException in PlayMode.
+            if (!viewport.GetComponent<CanvasRenderer>())
+                viewport.gameObject.AddComponent<CanvasRenderer>();
             var quad = viewport.gameObject.AddComponent<LaptopPerspectiveQuad>();
             quad.SetCorners(localCorners, scale);
             quad.color = screenBackground;
@@ -666,7 +691,8 @@ namespace Rokas.Presentation
             if (backHint) backHint.gameObject.SetActive(show);
             if (powerHintArt) powerHintArt.gameObject.SetActive(show && !powered);
             if (backHintArt) backHintArt.gameObject.SetActive(show);
-            if (onScreenBack) onScreenBack.gameObject.SetActive(show);
+            if (onScreenBack) onScreenBack.gameObject.SetActive(show && (!powered || !poweredStandButton));
+            if (poweredStandButton) poweredStandButton.gameObject.SetActive(show && powered);
             if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(!powered && !returnRequested &&
                 (show || (powerConfirmed && CurrentPhase != Phase.PowerOn && CurrentPhase != Phase.UIOpen)));
             if (noSignalScreen) noSignalScreen.gameObject.SetActive(show && !powered);
@@ -819,9 +845,8 @@ namespace Rokas.Presentation
                     povGroup.blocksRaycasts = false;
                     povGroup.interactable = false;
                 }
-                // Keep the original approved POV covering Home until YOMI
-                // reports its first visible video/desktop frame.
-                SetPromptVisibility(false);
+                // Preserve chibi and standby artwork until the first boot
+                // frame is presented, not on the Power confirmation input.
                 if (handsImage) handsImage.gameObject.SetActive(false);
                 // The already powered LCD stays drawn behind fullscreen YOMI.
                 // NEVER flash a loaded physical desktop before LaptopBoot.mp4:
@@ -878,6 +903,7 @@ namespace Rokas.Presentation
             powerHintArt = null;
             backHintArt = null;
             onScreenBack = null;
+            poweredStandButton = null;
             powerGlowRoot = null;
             noSignalText = null;
             noSignalScreen = null;
