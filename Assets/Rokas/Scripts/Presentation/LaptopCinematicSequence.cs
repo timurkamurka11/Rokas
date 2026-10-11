@@ -61,6 +61,7 @@ namespace Rokas.Presentation
         private readonly Func<int> unreadMessages;
         private readonly Action<float> updateRoomCamera;
         private readonly Texture yomiWallpaper;
+        private readonly Action bounceSound;
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -111,10 +112,36 @@ namespace Rokas.Presentation
         }
         public bool IsAwaitingPowerChoice => active && CurrentPhase == Phase.PreBootChoice;
 
+        // Physical screen uses the identical pixels actually presented by
+        // fullscreen YOMI, captured before its close animation. Never generate
+        // a second imitation desktop when those pixels are available.
+        public void RefreshExactYomiMirror()
+        {
+            if (!physicalMiniYomiImage || !physicalMiniYomiViewport) return;
+            Texture2D exact = LaptopYomiMirror.Current;
+            if (!exact) return;
+            physicalMiniYomiImage.texture = exact;
+            RectTransform canvasRect = physicalMiniYomiImage.rectTransform;
+            float w = physicalMiniYomiViewport.rect.width;
+            float h = physicalMiniYomiViewport.rect.height;
+            float scale = Mathf.Min(w / exact.width, h / exact.height);
+            float targetW = exact.width * scale;
+            float targetH = exact.height * scale;
+            canvasRect.sizeDelta = new Vector2(targetW, targetH);
+            canvasRect.anchoredPosition = new Vector2((w - targetW) * .5f, -(h - targetH) * .5f);
+            // Remove ALL synthetic 640x360 glyph overlays once the original
+            // screenshot source is ready; they must never contaminate 1:1 UI.
+            foreach (var glyph in physicalMiniYomiViewport.GetComponentsInChildren<LaptopIcon>(true))
+                glyph.gameObject.SetActive(false);
+            if (desktopClock) desktopClock.gameObject.SetActive(false);
+            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(false);
+        }
+
         public LaptopCinematicSequence(UiKit ui, MonoBehaviour owner, RectTransform transitionLayer,
             RawImage mainBackground, Action openExistingLaptop, Action cancelled,
             Action powerClick, Action returningToRoom, Func<int> unreadMessages = null,
-            Action<float> updateRoomCamera = null, Texture yomiWallpaper = null)
+            Action<float> updateRoomCamera = null, Texture yomiWallpaper = null,
+            Action bounceSound = null)
         {
             this.ui = ui;
             this.owner = owner;
@@ -127,6 +154,7 @@ namespace Rokas.Presentation
             this.unreadMessages = unreadMessages;
             this.updateRoomCamera = updateRoomCamera;
             this.yomiWallpaper = yomiWallpaper;
+            this.bounceSound = bounceSound;
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
@@ -367,7 +395,7 @@ namespace Rokas.Presentation
                 sticker.color = Color.white;
                 sticker.raycastTarget = false;
                 noSignalBounce = noSignalScreen.gameObject.AddComponent<LaptopNoSignalBounce>();
-                noSignalBounce.Initialize(noSignalScreen, sticker.rectTransform);
+                noSignalBounce.Initialize(noSignalScreen, sticker.rectTransform, bounceSound);
             }
             else
             {
@@ -413,6 +441,7 @@ namespace Rokas.Presentation
             }
             noSignalScreen.gameObject.SetActive(false);
             physicalMiniYomiViewport.gameObject.SetActive(false);
+            RefreshExactYomiMirror();
             // Load the three EXACT approved transparent user PNGs when installed.
             // If V3.2 art was not installed, preserve readable V3.1 text fallbacks.
             Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
@@ -423,7 +452,8 @@ namespace Rokas.Presentation
                 float w = 535f;
                 powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 870f,
                     w, w * (float)onArt.height / onArt.width);
-                powerHintArt.color = Color.white; // full original PNG intensity
+                powerHintArt.color = Color.white; // original RGB/alpha, no tint
+                AddGoldEmissionBoost(powerHintArt, onArt);
                 powerHintArt.raycastTarget = true;
                 var startButton = powerHintArt.gameObject.AddComponent<Button>();
                 startButton.transition = Selectable.Transition.None;
@@ -439,6 +469,7 @@ namespace Rokas.Presentation
                 backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 887f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
+                AddGoldEmissionBoost(backHintArt, exitArt);
                 backHintArt.raycastTarget = true;
                 var leaveButton = backHintArt.gameObject.AddComponent<Button>();
                 leaveButton.transition = Selectable.Transition.None;
@@ -454,6 +485,7 @@ namespace Rokas.Presentation
                 RawImage arrow = ui.Art(povRoot, "LaptopBackChoice", arrowArt,
                     80f, 916f, iconSize, iconSize * (float)arrowArt.height / arrowArt.width);
                 arrow.color = Color.white;
+                AddGoldEmissionBoost(arrow, arrowArt);
                 arrow.raycastTarget = true;
                 onScreenBack = arrow.gameObject.AddComponent<Button>();
                 onScreenBack.targetGraphic = arrow;
@@ -476,6 +508,7 @@ namespace Rokas.Presentation
                 var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
                     openArt, 0f, 0f, 560f, 560f * openArt.height / openArt.width);
                 openImage.color = Color.white;
+                AddGoldEmissionBoost(openImage, openArt);
                 openImage.raycastTarget = true;
                 var openButton = openImage.gameObject.AddComponent<Button>();
                 openButton.targetGraphic = openImage;
@@ -499,6 +532,19 @@ namespace Rokas.Presentation
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
             SetPromptVisibility(false);
+        }
+
+        private void AddGoldEmissionBoost(RawImage original, Texture2D approved)
+        {
+            // The PNGs were mastered over black. Alpha compositing their
+            // delicate gold glow over a busy lit desk made them look grey.
+            // Draw the very SAME source art a second time (no new artwork,
+            // hue change, dark tint, or material substitution).
+            RectTransform rect = original.rectTransform;
+            var glow = ui.Art(rect, "OriginalGoldLuminance", approved,
+                0f, 0f, rect.rect.width, rect.rect.height);
+            glow.color = new Color(1f, 1f, 1f, .8f);
+            glow.raycastTarget = false;
         }
 
         // Enter from the room with a grounded settle; closing YOMI instead
@@ -536,9 +582,9 @@ namespace Rokas.Presentation
                 yield return null;
             }
             if (!active) yield break;
-            SetPromptVisibility(false);
             if (returnRequested)
             {
+                SetPromptVisibility(false);
                 CurrentPhase = Phase.CancelBack;
                 float exitElapsed = 0f;
                 while (active && exitElapsed < ReturnDuration)
@@ -584,8 +630,9 @@ namespace Rokas.Presentation
             if (noSignalText && noSignalScreen && noSignalScreen.gameObject.activeSelf)
                 noSignalText.gameObject.SetActive(noSignalBounce == null);
             if (physicalMiniYomiViewport) physicalMiniYomiViewport.gameObject.SetActive(show && powered);
-            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered);
-            if (desktopClock) desktopClock.gameObject.SetActive(show && powered);
+            if (show && powered && LaptopYomiMirror.Current) RefreshExactYomiMirror();
+            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered && !LaptopYomiMirror.Current);
+            if (desktopClock) desktopClock.gameObject.SetActive(show && powered && !LaptopYomiMirror.Current);
             if (poweredDesktopClick) poweredDesktopClick.gameObject.SetActive(show && powered);
             if (poweredOpenRoot) poweredOpenRoot.gameObject.SetActive(show && powered);
             if (povGroup)
@@ -599,11 +646,12 @@ namespace Rokas.Presentation
         {
             if (!IsAwaitingPowerChoice || powerConfirmed || returnRequested) return false;
             powerConfirmed = true;
-            SetPromptVisibility(false);
+            // Do NOT remove chibi or gold prompts on keyboard/mouse input.
+            // They remain through the 49-frame hand press until actual boot.
             if (LaptopPowerSession.PoweredOn)
             {
-                // Already running: clicking the live LCD or pressing E opens
-                // existing YOMI directly, with no hand animation or boot.
+                // Already powered: the click explicitly opens fullscreen YOMI.
+                SetPromptVisibility(false);
                 Finish(true);
             }
             return true;
@@ -709,20 +757,19 @@ namespace Rokas.Presentation
             running = null;
             if (shouldOpenLaptop)
             {
+                // Atomic handoff: standby prompts disappear only as we create
+                // the real boot/YOMI surface, never at the E/Power input.
+                SetPromptVisibility(false);
                 // Keep the original approved POV covering Home until YOMI
                 // reports its first visible video/desktop frame.
                 SetPromptVisibility(false);
                 if (handsImage) handsImage.gameObject.SetActive(false);
                 // The already powered LCD stays drawn behind fullscreen YOMI.
-                if (desktopClock && LaptopPowerSession.PoweredOn)
-                {
-                    desktopClock.gameObject.SetActive(true);
-                    desktopClock.UpdateClockIfNecessary(true);
-                }
-                if (physicalMiniYomiViewport && LaptopPowerSession.PoweredOn)
-                    physicalMiniYomiViewport.gameObject.SetActive(true);
-                if (poweredWallpaper && LaptopPowerSession.PoweredOn)
-                    poweredWallpaper.gameObject.SetActive(true);
+                // NEVER flash a loaded physical desktop before LaptopBoot.mp4:
+                // first boot is already electrically latched at fingertip
+                // contact, but visual startup is independently gated by video.
+                if (LaptopPowerSession.CompletedBoots > 0 && !LaptopYomiMirror.Current)
+                    desktopClock?.UpdateClockIfNecessary(true);
                 if (povGroup) povGroup.alpha = 1f;
                 pendingVisualHandoff = true;
                 try { openExistingLaptop?.Invoke(); }
