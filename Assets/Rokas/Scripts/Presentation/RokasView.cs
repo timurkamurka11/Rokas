@@ -573,8 +573,8 @@ namespace Rokas.Presentation
 
         private void ClosePanel()
         {
-            if (panel == "laptop" && !laptop.IsClosing && !capturingLaptopMirror &&
-                laptopOpenedFromSeatedCinematic && !storageBlocked &&
+            if (panel == "laptop" && !laptop.IsClosing && !laptop.Booting &&
+                !capturingLaptopMirror && laptopOpenedFromSeatedCinematic && !storageBlocked &&
                 IsHomeLocation(phase) && homeSubLocation == HomeLocation.MainRoom)
             {
                 capturingLaptopMirror = true;
