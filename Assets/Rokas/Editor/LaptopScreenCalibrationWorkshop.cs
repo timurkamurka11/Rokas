@@ -47,6 +47,17 @@ namespace Rokas.Editor
             public float trHx, trHy, trVx, trVy;
             public float brHx, brHy, brVx, brVy;
             public float blHx, blHy, blVx, blVy;
+            public BezelReference bezelReference;
+        }
+
+        [Serializable]
+        private sealed class BezelReference
+        {
+            public Vector2[] corners;
+            public Vector2[] midpointOffsets;
+            public Vector2[] tangentOffsets;
+            public bool useMidpoints;
+            public bool useTangents;
         }
 
         private enum ViewMode { YomiPreview, BlackScreen, Mask, Outline }
@@ -560,21 +571,23 @@ namespace Rokas.Editor
             }
             using (new EditorGUI.DisabledScope(!valid))
             {
-                if (GUILayout.Button(enableEdgeControlPoints
-                    ? "COPY 8-POINT V3 JSON" : "COPY 4-CORNER V2 JSON",
+                if (GUILayout.Button(enableCornerHelpers
+                    ? "COPY 16-POINT V4 JSON" : enableEdgeControlPoints
+                        ? "COPY 8-POINT V3 JSON" : "COPY 4-CORNER V2 JSON",
                     GUILayout.Height(27)))
                 {
                     GUIUtility.systemCopyBuffer = JsonUtility.ToJson(MakePreset(), true);
                     ShowNotification(new GUIContent("Calibration JSON copied"));
                 }
-                if (GUILayout.Button(enableEdgeControlPoints
-                    ? "SAVE / EXPORT V3 JSON..." : "SAVE / EXPORT V2 JSON...",
+                if (GUILayout.Button(enableCornerHelpers
+                    ? "SAVE / EXPORT V4 JSON..." : enableEdgeControlPoints
+                        ? "SAVE / EXPORT V3 JSON..." : "SAVE / EXPORT V2 JSON...",
                     GUILayout.Height(30)))
                     ExportJson();
             }
             EditorGUILayout.HelpBox(
-                "Save never overwrites the live game. V3 edge pins are experimental " +
-                "until their exact geometry is approved and separately integrated.",
+                "V4 exports are REVIEW-ONLY. They do not change the approved " +
+                "V2 in-game screen or its original textures.",
                 MessageType.None);
         }
 
@@ -703,7 +716,7 @@ namespace Rokas.Editor
         private void ZoomToSelected(float magnification)
         {
             if (!source || corners == null || selected < 0 ||
-                selected >= (enableEdgeControlPoints ? 8 : 4)) return;
+                selected >= HandleCount) return;
             zoom = Mathf.Clamp(magnification, 1f, 12f);
             Vector2 focus = new Vector2(.5f, .56f);
             float w = Mathf.Max(50f, lastCanvasSize.x - 16f);
@@ -1362,7 +1375,7 @@ namespace Rokas.Editor
                 message = "LCD polygon has almost no visible area.";
                 return false;
             }
-            if (enableEdgeControlPoints)
+            if (enableEdgeControlPoints || enableCornerHelpers)
             {
                 if (edgeOffsets == null || edgeOffsets.Length != 4)
                 {
@@ -1386,9 +1399,33 @@ namespace Rokas.Editor
                         return false;
                     }
                 }
+                if (enableCornerHelpers)
+                {
+                    if (cornerHelperOffsets == null ||
+                        cornerHelperOffsets.Length != 8)
+                    {
+                        message = "V4 requires all eight corner helpers.";
+                        return false;
+                    }
+                    for (int i = 0; i < 8; ++i)
+                    {
+                        Vector2 pt = GetCornerHelper(i);
+                        Vector2 delta = cornerHelperOffsets[i];
+                        if (float.IsNaN(pt.x) || float.IsNaN(pt.y) ||
+                            float.IsInfinity(pt.x) || float.IsInfinity(pt.y) ||
+                            pt.x < 0f || pt.y < 0f ||
+                            pt.x >= source.width || pt.y >= source.height ||
+                            delta.magnitude > 65f)
+                        {
+                            message = "Corner helper " + PointLabels[i + 8] +
+                                " is too far from its original bezel arc.";
+                            return false;
+                        }
+                    }
+                }
                 // Reject folded/crossing warped LCDs: UV must retain positive
                 // orientation at all dense grid sample cells.
-                const int cells = 12;
+                const int cells = 24;
                 for (int u = 0; u < cells; ++u)
                     for (int v = 0; v < cells; ++v)
                     {
@@ -1427,7 +1464,8 @@ namespace Rokas.Editor
         {
             return new Preset
             {
-                formatVersion = enableEdgeControlPoints ? 3 : 2,
+                formatVersion = enableCornerHelpers ? 4 :
+                    enableEdgeControlPoints ? 3 : 2,
                 coordinateSpace = "source_image_pixels_top_left",
                 sourceWidth = source.width, sourceHeight = source.height,
                 topLeftX = corners[0].x, topLeftY = corners[0].y,
@@ -1444,7 +1482,24 @@ namespace Rokas.Editor
                 topMidX = GetEdgePoint(0).x, topMidY = GetEdgePoint(0).y,
                 rightMidX = GetEdgePoint(1).x, rightMidY = GetEdgePoint(1).y,
                 bottomMidX = GetEdgePoint(2).x, bottomMidY = GetEdgePoint(2).y,
-                leftMidX = GetEdgePoint(3).x, leftMidY = GetEdgePoint(3).y
+                leftMidX = GetEdgePoint(3).x, leftMidY = GetEdgePoint(3).y,
+                enableCornerHelpers = enableCornerHelpers,
+                tlHx = GetCornerHelper(0).x, tlHy = GetCornerHelper(0).y,
+                tlVx = GetCornerHelper(1).x, tlVy = GetCornerHelper(1).y,
+                trHx = GetCornerHelper(2).x, trHy = GetCornerHelper(2).y,
+                trVx = GetCornerHelper(3).x, trVy = GetCornerHelper(3).y,
+                brHx = GetCornerHelper(4).x, brHy = GetCornerHelper(4).y,
+                brVx = GetCornerHelper(5).x, brVy = GetCornerHelper(5).y,
+                blHx = GetCornerHelper(6).x, blHy = GetCornerHelper(6).y,
+                blVx = GetCornerHelper(7).x, blVy = GetCornerHelper(7).y,
+                bezelReference = referenceDefined ? new BezelReference
+                {
+                    corners = (Vector2[])referenceCorners.Clone(),
+                    midpointOffsets = (Vector2[])referenceEdgeOffsets.Clone(),
+                    tangentOffsets = (Vector2[])referenceHelperOffsets.Clone(),
+                    useMidpoints = referenceHasEdges,
+                    useTangents = referenceHasHelpers
+                } : null
             };
         }
 
@@ -1461,8 +1516,9 @@ namespace Rokas.Editor
             if (string.IsNullOrEmpty(path)) return;
             File.WriteAllText(path, JsonUtility.ToJson(MakePreset(), true) + "\n",
                 new UTF8Encoding(false));
-            ShowNotification(new GUIContent(enableEdgeControlPoints
-                ? "V3 8-point LCD exported" : "V2 4-corner LCD exported"));
+            ShowNotification(new GUIContent(enableCornerHelpers
+                ? "V4 16-point LCD exported" : enableEdgeControlPoints
+                    ? "V3 8-point LCD exported" : "V2 4-corner LCD exported"));
             EditorUtility.RevealInFinder(path);
         }
 
