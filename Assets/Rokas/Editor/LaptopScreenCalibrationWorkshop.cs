@@ -273,7 +273,7 @@ namespace Rokas.Editor
             showGrid = EditorGUILayout.Toggle("UV / perspective grid", showGrid);
             showOutline = EditorGUILayout.Toggle("Show outer polygon", showOutline);
             showRoundedOutline = EditorGUILayout.Toggle("Show rounded LCD", showRoundedOutline);
-            showHandles = EditorGUILayout.Toggle("Show corner handles", showHandles);
+            showHandles = EditorGUILayout.Toggle("Show corner / edge pins", showHandles);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Fit full photo"))
@@ -585,9 +585,15 @@ namespace Rokas.Editor
                         DrawPosition(localImage, GetHandle(i));
                     Handles.color = i < 4 ? PointColors[i] :
                         new Color(.97f, .31f, .93f, 1f);
-                    Handles.DrawSolidDisc(position, Vector3.forward,
-                        i == selected ? 9f : i < 4 ? 6f : 7.5f);
-                    Rect label = new Rect(position.x + 9, position.y - 13, 36, 18);
+                    float radius = i == selected ? 10f : i < 4 ? 7f : 8f;
+                    // High-contrast ring keeps pins visible on the bright
+                    // lantern, YOMI, or dim photographic bezel.
+                    Handles.color = Color.black;
+                    Handles.DrawSolidDisc(position, Vector3.forward, radius + 2f);
+                    Handles.color = i < 4 ? PointColors[i] :
+                        new Color(.97f, .31f, .93f, 1f);
+                    Handles.DrawSolidDisc(position, Vector3.forward, radius);
+                    Rect label = new Rect(position.x + 10, position.y - 14, 36, 18);
                     GUI.Label(label, PointLabels[i], EditorStyles.whiteBoldLabel);
                 }
             }
@@ -815,7 +821,7 @@ namespace Rokas.Editor
                 return;
             if (e.type == EventType.ScrollWheel)
             {
-                zoom = Mathf.Clamp(zoom * (e.delta.y > 0 ? .87f : 1.15f), 1f, 8f);
+                zoom = Mathf.Clamp(zoom * (e.delta.y > 0 ? .87f : 1.15f), 1f, 12f);
                 e.Use(); Repaint(); return;
             }
             Vector2 mouse = e.mousePosition;
