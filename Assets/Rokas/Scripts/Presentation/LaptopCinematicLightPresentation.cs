@@ -59,10 +59,21 @@ namespace Rokas.Presentation
                 offPhoto.width == ReferenceWidth && offPhoto.height == ReferenceHeight;
             if (!photoValid)
             {
-                Debug.LogError("ROKAS laptop lighting: the 1672x941 photographic OFF " +
-                    "reference is missing or incorrectly sized at Resources/" +
-                    OffPhotoResource + ". Falling back to approximate dark grading.");
+                Debug.LogError("ROKAS laptop lighting: REQUIRED original 1672x941 " +
+                    "photographic OFF PNG is missing or incorrectly sized at Resources/" +
+                    OffPhotoResource + ". No fake darkening is applied. " +
+                    "Install the provided photo first; preserving original image.");
                 offPhoto = null;
+                return;
+            }
+
+            if (!source.texture ||
+                source.texture.width != ReferenceWidth ||
+                source.texture.height != ReferenceHeight)
+            {
+                Debug.LogError("ROKAS laptop lighting: source ON photograph must be " +
+                    "exactly 1672x941, matching the supplied OFF image.");
+                return;
             }
 
             material = new Material(shader)
@@ -70,8 +81,8 @@ namespace Rokas.Presentation
                 name = "ROKAS-Laptop-Two-Zone-Lighting",
                 hideFlags = HideFlags.DontSave
             };
-            if (offPhoto) material.SetTexture(OffTexProperty, offPhoto);
-            material.SetFloat(OffReadyProperty, offPhoto ? 1f : 0f);
+            material.SetTexture(OffTexProperty, offPhoto);
+            material.SetFloat(OffReadyProperty, 1f);
             background = source;
             Snap();
             background.material = material;

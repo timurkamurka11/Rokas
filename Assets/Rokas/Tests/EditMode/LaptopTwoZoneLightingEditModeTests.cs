@@ -140,6 +140,8 @@ namespace Rokas.Tests
                     LaptopCinematicLightPresentation.OffPhotoResource);
                 Assert.That(presenter.Material.GetTexture("_OffTex"),Is.SameAs(reference));
                 Assert.That(image.material,Is.SameAs(presenter.Material));
+                Assert.That(presenter.Material.GetTexture("_MainTex"),Is.Not.SameAs(reference),
+                    "Only the OFF texture belongs to the separate OFF channel.");
                 Assert.That(image.texture,Is.Not.SameAs(reference),
                     "Approved original photo must stay the ON reference.");
 

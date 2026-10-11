@@ -109,20 +109,17 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     return fixed4(lerp(float3(.07,.17,.72),
                          float3(.12,.85,.22),doorway)+float3(spillZone,.0,.0),1)*i.color;
 
+                // OFF is always the exact supplied photographic asset.
+                // Material is never bound without the asset; in particular,
+                // do not try to suppress baked lamp highlights with grading.
                 fixed4 offPhoto=tex2D(_OffTex,i.uv);
-                if (_OffPhotoReady < .5)
-                {
-                    // Diagnostic fallback only: do not silently claim that an
-                    // ON photo can reproduce true OFF practical lights.
-                    // The photographic OFF reference must be installed.
-                    offPhoto.rgb = saturate(onPhoto.rgb*float3(.26,.34,.47));
-                    offPhoto.a=onPhoto.a;
-                }
 
                 float roomOn=saturate(_RoomLightOn);
                 float hallOn=saturate(_HallwayLightOn);
-                float lightMix=lerp(roomOn,hallOn,doorway);
-                float3 composed=lerp(offPhoto.rgb,onPhoto.rgb,lightMix);
+                float roomMask=1.0-doorway;
+                float hallwayMask=doorway;
+                float lightMix=roomMask*roomOn+hallwayMask*hallOn;
+                float3 composed=lerp(offPhoto.rgb,onPhoto.rgb,saturate(lightMix));
 
                 // The real corridor ON photo contributes its own captured
                 // illumination to the jamb and nearby floor, but ONLY when

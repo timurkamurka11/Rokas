@@ -61,3 +61,9 @@ Canonical user copy: `D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY`. After Codex sto
 - Inspector `Show zone mask (diagnostic only)` at 1 colors the corridor green, room blue and spill red; return it to 0 after checking the mask.
 - Capture *four actual Unity Game View screenshots* with the two physical switches and inspect the desk, window, curtain, left door lintel/sill and spilled light. Code-level test passes do not replace visual acceptance.
 - The local canonical working copy may have unpublished commits and unstaged unrelated asset .meta changes. Preserve them; no reset/clean/force checkout. Do not claim a full Unity test PASS until Unity compilation and render evidence are available.
+
+## V3.1 STRICT PHOTOGRAPHIC MODE
+
+The user's Game View recording proved that grading the warm ON image produces visible glowing lamps underneath the dark filter. This is **rejected**. Shader code no longer contains a grading fallback; `LaptopCinematicLightPresentation.Bind` refuses to attach the lighting material when either photographic source is missing or of the wrong dimensions. A clear Unity Console error identifies the missing resource. Correct installation is the bundled exact user's OFF asset at `Assets/Rokas/Resources/LaptopCinematic/LaptopPOV_lights_off_APPROVED.png`.
+
+`_MainTex` is the old warm ON photo (name includes screen_off ONLY because the LCD is off). `_OffTex` is the actual supplied dark-blue photo. `roomMask = 1 - CorridorDoorMask`, `hallwayMask = CorridorDoorMask`, and `spillMask` covers only the nearby jamb and threshold. Explicitly check physical pixel alignment and preserve all laptop overlays. Never claim that the non-installed OFF photo is available merely because the shader was successfully imported.
