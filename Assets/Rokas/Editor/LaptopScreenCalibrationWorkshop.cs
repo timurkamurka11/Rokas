@@ -980,10 +980,10 @@ namespace Rokas.Editor
                 {
                     Vector2 a = MapCornerUV(uv[i]);
                     Vector2 b = MapCornerUV(uv[(i + 1) % n]);
-                    Vector3 aScreen = new Vector3(
+                    Vector3 aScreen = new Vector2(
                         (a.x - origin.x) * magnifierZoom + area.width * .5f,
                         (a.y - origin.y) * magnifierZoom + area.height * .5f);
-                    Vector3 bScreen = new Vector3(
+                    Vector3 bScreen = new Vector2(
                         (b.x - origin.x) * magnifierZoom + area.width * .5f,
                         (b.y - origin.y) * magnifierZoom + area.height * .5f);
                     Handles.color = new Color(.1f, 1f, .9f, 1f);
@@ -994,10 +994,10 @@ namespace Rokas.Editor
                         Vector2 rb = MapReferenceUV(uv[(i + 1) % n]);
                         Handles.color = new Color(1f, .75f, .15f, .9f);
                         Handles.DrawAAPolyLine(1.5f,
-                            new Vector3((ra.x - origin.x) * magnifierZoom +
+                            new Vector2((ra.x - origin.x) * magnifierZoom +
                                 area.width * .5f,
                                 (ra.y - origin.y) * magnifierZoom + area.height * .5f),
-                            new Vector3((rb.x - origin.x) * magnifierZoom +
+                            new Vector2((rb.x - origin.x) * magnifierZoom +
                                 area.width * .5f,
                                 (rb.y - origin.y) * magnifierZoom + area.height * .5f));
                     }
@@ -1005,11 +1005,11 @@ namespace Rokas.Editor
                 Vector2 middle = local.center;
                 Handles.color = Color.white;
                 Handles.DrawAAPolyLine(1f,
-                    new Vector3(middle.x - 9f, middle.y),
-                    new Vector3(middle.x + 9f, middle.y));
+                    new Vector2(middle.x - 9f, middle.y),
+                    new Vector2(middle.x + 9f, middle.y));
                 Handles.DrawAAPolyLine(1f,
-                    new Vector3(middle.x, middle.y - 9f),
-                    new Vector3(middle.x, middle.y + 9f));
+                    new Vector2(middle.x, middle.y - 9f),
+                    new Vector2(middle.x, middle.y + 9f));
             }
             finally { GUI.EndGroup(); }
             EditorGUILayout.LabelField(PointLabels[selected] +
