@@ -40,14 +40,14 @@ namespace Rokas.Tests
             Assert.That(p.coordinateSpace, Is.EqualTo("source_image_pixels_top_left"));
             Assert.That(p.sourceWidth, Is.EqualTo(1672));
             Assert.That(p.sourceHeight, Is.EqualTo(941));
-            Assert.That(p.topLeftX, Is.EqualTo(609.4470825f).Within(.001f));
-            Assert.That(p.topLeftY, Is.EqualTo(410.0942993f).Within(.001f));
-            Assert.That(p.topRightX, Is.EqualTo(1060.8300781f).Within(.001f));
-            Assert.That(p.topRightY, Is.EqualTo(411.2428589f).Within(.001f));
-            Assert.That(p.bottomRightX, Is.EqualTo(1075.1870117f).Within(.001f));
-            Assert.That(p.bottomRightY, Is.EqualTo(680.5795288f).Within(.001f));
-            Assert.That(p.bottomLeftX, Is.EqualTo(595.0900879f).Within(.001f));
-            Assert.That(p.bottomLeftY, Is.EqualTo(680.0052490f).Within(.001f));
+            Assert.That(p.topLeftX, Is.EqualTo(608.9489746f).Within(.001f));
+            Assert.That(p.topLeftY, Is.EqualTo(412.8598938f).Within(.001f));
+            Assert.That(p.topRightX, Is.EqualTo(1059.7675781f).Within(.001f));
+            Assert.That(p.topRightY, Is.EqualTo(412.5315247f).Within(.001f));
+            Assert.That(p.bottomRightX, Is.EqualTo(1073.5581055f).Within(.001f));
+            Assert.That(p.bottomRightY, Is.EqualTo(677.5065308f).Within(.001f));
+            Assert.That(p.bottomLeftX, Is.EqualTo(594.8300781f).Within(.001f));
+            Assert.That(p.bottomLeftY, Is.EqualTo(680.1333008f).Within(.001f));
             Assert.That(p.powerX, Is.EqualTo(1014f));
             Assert.That(p.powerY, Is.EqualTo(703f));
             Assert.That(p.enableRoundedMask, Is.True);
@@ -67,10 +67,10 @@ namespace Rokas.Tests
                 var graphic = host.AddComponent<LaptopCalibrationQuadProbe>();
                 graphic.SetCorners(new[]
                 {
-                    new Vector2(609.44708f, 410.0943f),
-                    new Vector2(1060.8301f, 411.24286f),
-                    new Vector2(1075.187f, 680.5795f),
-                    new Vector2(595.0901f, 680.00525f)
+                    new Vector2(608.94897f, 412.85989f),
+                    new Vector2(1059.76758f, 412.53152f),
+                    new Vector2(1073.55811f, 677.50653f),
+                    new Vector2(594.83008f, 680.13330f)
                 }, 1f);
                 graphic.SetRoundedCorners(true, 18f, 18f, 6f, 6f);
                 Assert.That(graphic.RoundedCornersEnabled, Is.True);
