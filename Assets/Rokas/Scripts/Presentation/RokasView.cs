@@ -727,8 +727,15 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool focused = true)
         {
-            if (focused && laptopCinematic != null && laptopCinematic.IsAwaitingPowerChoice &&
-                Input.GetKeyDown(KeyCode.E)) laptopCinematic.TryPressPower();
+            if (focused && laptopCinematic != null && laptopCinematic.IsAwaitingPowerChoice)
+            {
+                // R = stand up from powered seated POV, E = open the YOMI.
+                // Never let R reach unrelated scene input while seated.
+                if (LaptopPowerSession.PoweredOn && Input.GetKeyDown(KeyCode.R))
+                    laptopCinematic.BackToRoom();
+                else if (Input.GetKeyDown(KeyCode.E))
+                    laptopCinematic.TryPressPower();
+            }
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
