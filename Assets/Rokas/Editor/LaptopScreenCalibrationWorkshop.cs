@@ -33,10 +33,17 @@ namespace Rokas.Editor
             public float topRightRadius = 18f;
             public float bottomRightRadius = 6f;
             public float bottomLeftRadius = 6f;
+            // Experimental V3: additional contact points on physical LCD
+            // edges. V2 remains fully supported as the production format.
+            public bool enableEdgeControlPoints;
+            public float topMidX, topMidY;
+            public float rightMidX, rightMidY;
+            public float bottomMidX, bottomMidY;
+            public float leftMidX, leftMidY;
         }
 
         private enum ViewMode { YomiPreview, BlackScreen, Mask, Outline }
-        private static readonly string[] PointLabels = { "TL", "TR", "BR", "BL" };
+        private static readonly string[] PointLabels = { "TL", "TR", "BR", "BL", "TM", "RM", "BM", "LM" };
         private static readonly Color[] PointColors =
         {
             new Color(.35f, .95f, 1f), new Color(1f, .78f, .31f),
@@ -50,6 +57,13 @@ namespace Rokas.Editor
         [SerializeField] private Texture2D source;
         [SerializeField] private Texture2D yomiProjectTexture;
         [SerializeField] private Vector2[] corners;
+        // Offsets relative to each straight-edge midpoint: when a CORNER
+        // moves, the corresponding extra contact points follow naturally.
+        [SerializeField] private Vector2[] edgeOffsets;
+        [SerializeField] private bool enableEdgeControlPoints;
+        [SerializeField] private bool showEdgeGuides = true;
+        [SerializeField] private bool showContactTickMarks = true;
+        [SerializeField] private Vector2 lastCanvasSize;
         [SerializeField] private float zoom = 1f;
         [SerializeField] private Vector2 pan;
         [SerializeField] private Vector2 toolsScroll;
@@ -87,6 +101,8 @@ namespace Rokas.Editor
         {
             if (!source) FindOriginalPOV();
             if (corners == null || corners.Length != 4) ResetToCurrent();
+            if (edgeOffsets == null || edgeOffsets.Length != 4)
+                edgeOffsets = new Vector2[4];
             if (!guide) guide = MakeGuide();
             wantsMouseMove = true;
         }
@@ -118,34 +134,68 @@ namespace Rokas.Editor
 
         private void ResetToCurrent()
         {
-            // Current V11.8 defaults are RAW calibration + the actual safe inset.
-            // Exported preset contains the FINAL inside-the-bezel corners.
-            var raw = new Preset
-            {
-                topLeftX = 596, topLeftY = 413, topRightX = 1044,
-                topRightY = 412, bottomRightX = 1051, bottomRightY = 676,
-                bottomLeftX = 586, bottomLeftY = 676
-            };
-            TextAsset json = AssetDatabase.LoadAssetAtPath<TextAsset>(LegacyJson);
-            if (json)
+            // IMPORTANT: prefer the currently APPROVED user V2 Resources asset,
+            // not the obsolete V11.8 32/38/5px fallback. The Workshop starts
+            // from exactly the same FINAL inner pixels as the runtime LCD.
+            TextAsset current = AssetDatabase.LoadAssetAtPath<TextAsset>(
+                "Assets/Rokas/Resources/LaptopCinematic/screen_calibration_v2.json");
+            if (current)
             {
                 try
                 {
-                    var parsed = JsonUtility.FromJson<Preset>(json.text);
-                    if (parsed != null && parsed.topRightX > parsed.topLeftX &&
-                        parsed.bottomRightY > parsed.topRightY)
+                    Preset saved = JsonUtility.FromJson<Preset>(current.text);
+                    if (saved != null && saved.formatVersion >= 2 &&
+                        saved.coordinateSpace == "source_image_pixels_top_left" &&
+                        saved.sourceWidth == (source ? source.width : 1672) &&
+                        saved.sourceHeight == (source ? source.height : 941))
+                    {
+                        corners = new[]
+                        {
+                            new Vector2(saved.topLeftX, saved.topLeftY),
+                            new Vector2(saved.topRightX, saved.topRightY),
+                            new Vector2(saved.bottomRightX, saved.bottomRightY),
+                            new Vector2(saved.bottomLeftX, saved.bottomLeftY)
+                        };
+                        topLeftRadius = saved.topLeftRadius;
+                        topRightRadius = saved.topRightRadius;
+                        bottomRightRadius = saved.bottomRightRadius;
+                        bottomLeftRadius = saved.bottomLeftRadius;
+                        enableRoundedMask = saved.enableRoundedMask;
+                        originalPowerX = saved.powerX;
+                        originalPowerY = saved.powerY;
+                        edgeOffsets = new Vector2[4];
+                        enableEdgeControlPoints = false;
+                        selected = -1;
+                        pan = Vector2.zero;
+                        Repaint();
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("ROKAS LCD Workshop: bad V2 preset: " + e.Message);
+                }
+            }
+            // Use the previous V11.8 geometry only when no valid V2 exists.
+            var raw = new Preset
+            {
+                topLeftX = 596, topLeftY = 413, topRightX = 1044,
+                topRightY = 412, bottomRightX = 1051, bottomRightY = 676
+            };
+            TextAsset legacy = AssetDatabase.LoadAssetAtPath<TextAsset>(LegacyJson);
+            if (legacy)
+            {
+                try
+                {
+                    Preset parsed = JsonUtility.FromJson<Preset>(legacy.text);
+                    if (parsed != null && parsed.topRightX > parsed.topLeftX)
                         raw = parsed;
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning("ROKAS LCD Workshop: ignoring bad legacy JSON: " + e.Message);
+                    Debug.LogWarning("ROKAS LCD Workshop: bad legacy JSON: " + e.Message);
                 }
             }
-            originalPowerX = raw.powerX;
-            originalPowerY = raw.powerY;
-            enableRoundedMask = true;
-            topLeftRadius = topRightRadius = 18f;
-            bottomRightRadius = bottomLeftRadius = 6f;
             corners = new[]
             {
                 new Vector2(raw.topLeftX + 32f, raw.topLeftY + 5f),
@@ -153,6 +203,13 @@ namespace Rokas.Editor
                 new Vector2(raw.bottomRightX - 5f, raw.bottomRightY - 5f),
                 new Vector2(raw.bottomLeftX + 38f, raw.bottomLeftY - 5f)
             };
+            originalPowerX = raw.powerX;
+            originalPowerY = raw.powerY;
+            enableRoundedMask = true;
+            topLeftRadius = topRightRadius = 18f;
+            bottomRightRadius = bottomLeftRadius = 6f;
+            edgeOffsets = new Vector2[4];
+            enableEdgeControlPoints = false;
             selected = -1;
             pan = Vector2.zero;
             Repaint();
@@ -165,8 +222,8 @@ namespace Rokas.Editor
                 "ROKAS  /  LAPTOP LCD CALIBRATION WORKSHOP",
                 EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Move TL / TR / BR / BL on the ORIGINAL POV image. These are FINAL LCD pixels. " +
-                "Save exports a standalone JSON; nothing changes in the game until the preset is reviewed and applied.",
+                "Adjust TL/TR/BR/BL, then optionally enable 4 extra edge pins " +
+                "(TM/RM/BM/LM). V2 is live in the game; experimental V3 is EXPORT ONLY.",
                 MessageType.Info);
 
             using (new EditorGUILayout.HorizontalScope())
@@ -187,7 +244,7 @@ namespace Rokas.Editor
                 }
             }
             GUILayout.Space(4);
-            GUILayout.Label("Drag colored handles • Middle mouse / Space+drag pans • Wheel zooms • Arrow keys nudge selected point • Shift = 10 px",
+            GUILayout.Label("4 corners + optional 4 edge pins • Middle mouse / Alt+drag pan • Wheel zoom • Arrow keys ±1 px (Shift ±10)",
                 EditorStyles.miniLabel);
         }
 
