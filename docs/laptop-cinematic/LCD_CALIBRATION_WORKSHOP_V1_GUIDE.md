@@ -31,3 +31,44 @@ Open in Unity Editor via **ROKAS → Laptop → Screen Calibration Workshop**. Y
 Existing Codex Combat WIP in the branch has previously failed Unity compilation with missing `CombatShotBounds` and `CombatShotBoundsProjection` (`ReactiveCombatArena.cs`), independent of the workshop. Unity Editor must compile the scripts to load a newly added EditorWindow; **the window may not appear until that compile blocker is fixed**. The workshop itself makes no modifications to combat or the compiler environment.
 
 The master calibration image may live in the user's **local Unity Resources and not in GitHub**; the workshop intentionally loads the user's original local asset, rather than shipping a blurry screenshot.
+
+## V2 update — rounded LCD calibration (2026-10-11)
+
+The **same** Unity menu `ROKAS → Laptop → Screen Calibration Workshop` now includes true independently rounded top-left, top-right, bottom-right and bottom-left corners. No new window or gameplay changes.
+
+1. Drag the four TL/TR/BR/BL handles to the **outer bounding corners of the visible LCD** as before. The orange `Show outer polygon` outline is for the rectangular/trapezoidal bounds.
+2. Tick `Enable rounded mask`. The `Top left radius`, `Top right radius`, `Bottom right radius`, `Bottom left radius` sliders control curvature in original-photo pixels. Default: top 18px each; bottom 6px each. The cyan/green `Show rounded LCD` outline shows the actual *visible* edge after curvature. Tune it so it matches the black glass/rounded bezel without colored gaps.
+3. `YomiPreview`, `BlackScreen` and `Mask` now all use the **same rounded UV geometry and the same source-photo render target as the handles**. The floating blue preview from the first screenshot was fixed separately in V1.1; rounded clipping is built on that corrected alignment. For best matching use **Choose captured YOMI PNG...** (an original full display screenshot). If no real screenshot is selected, the blue picture is intentionally a labeled diagnostic grid, not a new YOMI wallpaper.
+4. Toggle `Show outer polygon` and `Show rounded LCD` independently to distinguish placement from corner clipping. Use zoom / arrows for pixel precision. The right properties column scrolls on small monitor windows.
+5. `SAVE / EXPORT JSON...` and `COPY CORNERS JSON` now include `formatVersion: 2`, `enableRoundedMask` and four named radii in addition to the original four corners, dimensions and Power key anchor. The export is still **non-destructive**.
+
+### Format V2 example
+
+```json
+{
+  "formatVersion": 2,
+  "coordinateSpace": "source_image_pixels_top_left",
+  "sourceWidth": 1672,
+  "sourceHeight": 941,
+  "topLeftX": 628.0,
+  "topLeftY": 418.0,
+  "topRightX": 1039.0,
+  "topRightY": 417.0,
+  "bottomRightX": 1046.0,
+  "bottomRightY": 671.0,
+  "bottomLeftX": 624.0,
+  "bottomLeftY": 671.0,
+  "powerX": 1040.0,
+  "powerY": 708.0,
+  "debugPowerAnchor": false,
+  "enableRoundedMask": true,
+  "topLeftRadius": 18.0,
+  "topRightRadius": 18.0,
+  "bottomRightRadius": 6.0,
+  "bottomLeftRadius": 6.0
+}
+```
+
+Values above are STARTING points, **not final user-approved calibration**. Rounding is applied *inside* the selected corners in UV space, not by moving the four handles or post-processing the source PNG. V1 presets remain loadable as unrounded rectangles until the user enables rounding. Invalid polygons or impossible radii are refused without discarding the user's previous calibration.
+
+**Very important:** Runtime `LaptopCinematicSequence` / `LaptopPerspectiveQuad` still do **not** consume rounded V2 presets. Do not copy this file blindly over the current legacy `screen_calibration.json`, because the runtime would add its own extra insets and still draw square quad corners. After the user sends the calibrated V2 JSON, adapt runtime geometry and masking in a separately approved change. No combat or VN files were modified by the Editor workshop update.
