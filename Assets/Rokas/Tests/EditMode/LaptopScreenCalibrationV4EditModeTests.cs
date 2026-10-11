@@ -158,8 +158,14 @@ namespace Rokas.Tests
                     Near(center.uv0, new Vector2(.5f, .5f), .0001f);
                     UIVertex outer = UIVertex.simpleVert;
                     vertices.PopulateUIVertex(ref outer, 1 + 9 * 28);
+                    Vector2[] bounds = Corners(p);
+                    float height = (Vector2.Distance(bounds[0], bounds[3]) +
+                        Vector2.Distance(bounds[1], bounds[2])) * .5f;
+                    // First actual rounded boundary point (TL, 180 deg).
+                    Vector2 firstUV = new Vector2(0f, p.topLeftRadius / height);
+                    Near(outer.uv0, new Vector2(firstUV.x, 1f - firstUV.y), .0001f);
                     Near(new Vector2(outer.position.x, -outer.position.y),
-                        quad.EvaluateLCDPixel(new Vector2(0f, 12f / 270f)), 20f);
+                        quad.EvaluateLCDPixel(firstUV), .02f);
                 }
                 // Exactly the same screen component is used as physical
                 // wake glow, chibi/YOMI stencils, exact desktop and fallback.
