@@ -666,6 +666,9 @@ namespace Rokas.Editor
             referenceHasHelpers = enableCornerHelpers;
             referenceDefined = traceReference = true;
             showErrorHeatmap = true;
+            // Expose the actual photographic bezel while reference points
+            // are being traced; tinted preview must not hide its edge.
+            mode = ViewMode.Outline;
             selected = -1;
             Repaint();
         }
