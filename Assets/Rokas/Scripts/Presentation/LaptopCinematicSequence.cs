@@ -549,9 +549,14 @@ namespace Rokas.Presentation
             if (standArt)
             {
                 const float standWidth = 438f;
+                // Preserve the exact PREVIOUS on-screen R placement: in
+                // V11.5 it was laid out to lower edge y=1045 after creation.
+                // Bake that final position here, so we never move R again.
+                float standHeight = standWidth * (float)standArt.height / standArt.width;
+                const float approvedStandLowerEdge = 1045f;
                 var standImage = ui.Art(povRoot, "PoweredStandOriginalPNG",
-                    standArt, 92f, 883f, standWidth,
-                    standWidth * (float)standArt.height / standArt.width);
+                    standArt, 92f, approvedStandLowerEdge - standHeight,
+                    standWidth, standHeight);
                 standImage.color = Color.white;
                 AddGoldEmissionBoost(standImage, standArt);
                 standImage.raycastTarget = true;
@@ -680,7 +685,7 @@ namespace Rokas.Presentation
                 {
                     RenderAt(elapsed);
                     yield return null;
-                    // 0.72s approach = seated-to-standing return; keep 49-frame hand timing unchanged.
+                    // Gentle seated-to-standing return; keep the 49-frame hand timing unchanged.
                     elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f) * (HandsStart / ReturnDuration);
                 }
             }
