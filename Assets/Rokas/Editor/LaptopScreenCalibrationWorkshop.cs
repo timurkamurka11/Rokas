@@ -532,11 +532,29 @@ namespace Rokas.Editor
                 for (int step = 1; step <= 7; step++)
                 {
                     float t = step / 8f;
-                    Handles.DrawAAPolyLine(1f, Vector2.Lerp(p[0], p[1], t),
-                        Vector2.Lerp(p[3], p[2], t));
-                    Handles.DrawAAPolyLine(1f, Vector2.Lerp(p[0], p[3], t),
-                        Vector2.Lerp(p[1], p[2], t));
+                    DrawUVLine(localImage, new Vector2(t, 0f),
+                        new Vector2(t, 1f), 1f);
+                    DrawUVLine(localImage, new Vector2(0f, t),
+                        new Vector2(1f, t), 1f);
                 }
+            }
+            if (enableEdgeControlPoints && showEdgeGuides)
+            {
+                Handles.color = new Color(1f, .3f, .9f, .95f);
+                for (int edge = 0; edge < 4; ++edge)
+                    DrawUVLine(localImage, EdgeUV(edge, 0f),
+                        EdgeUV(edge, 1f), 2f);
+            }
+            if (showContactTickMarks)
+            {
+                Handles.color = new Color(1f, 1f, 1f, .9f);
+                for (int edge = 0; edge < 4; ++edge)
+                    foreach (float fraction in new[] { .25f, .5f, .75f })
+                    {
+                        Vector2 px = MapCornerUV(EdgeUV(edge, fraction));
+                        Vector2 spot = DrawPosition(localImage, px);
+                        Handles.DrawSolidDisc(spot, Vector3.forward, 2.2f);
+                    }
             }
             if (showOutline)
             {
@@ -560,14 +578,53 @@ namespace Rokas.Editor
             }
             if (showHandles)
             {
-                for (int i = 0; i < 4; i++)
+                int count = enableEdgeControlPoints ? 8 : 4;
+                for (int i = 0; i < count; i++)
                 {
-                    Handles.color = PointColors[i];
-                    Handles.DrawSolidDisc(p[i], Vector3.forward, i == selected ? 8f : 6f);
-                    var labelRect = new Rect(p[i].x + 9, p[i].y - 13, 28, 18);
-                    GUI.Label(labelRect, PointLabels[i], EditorStyles.whiteBoldLabel);
+                    Vector2 position = i < 4 ? p[i] :
+                        DrawPosition(localImage, GetHandle(i));
+                    Handles.color = i < 4 ? PointColors[i] :
+                        new Color(.97f, .31f, .93f, 1f);
+                    Handles.DrawSolidDisc(position, Vector3.forward,
+                        i == selected ? 9f : i < 4 ? 6f : 7.5f);
+                    Rect label = new Rect(position.x + 9, position.y - 13, 36, 18);
+                    GUI.Label(label, PointLabels[i], EditorStyles.whiteBoldLabel);
                 }
             }
+        }
+
+        private Vector2 DrawPosition(Rect localImage, Vector2 sourcePoint)
+        {
+            return new Vector2(localImage.x + sourcePoint.x * localImage.width / source.width,
+                localImage.y + sourcePoint.y * localImage.height / source.height);
+        }
+
+        // Clockwise side order: Top, Right, Bottom, Left. Guides are auxiliary
+        // physical-glass touchpoints, not additional imaginary corners.
+        private static Vector2 EdgeUV(int edge, float t)
+        {
+            switch (edge)
+            {
+                case 0: return new Vector2(t, 0f);
+                case 1: return new Vector2(1f, t);
+                case 2: return new Vector2(1f - t, 1f);
+                default: return new Vector2(0f, 1f - t);
+            }
+        }
+
+        private void DrawUVLine(Rect rect, Vector2 startUV, Vector2 endUV,
+            float thickness)
+        {
+            const int subdivisions = 24;
+            Vector3[] path = new Vector3[subdivisions + 1];
+            for (int i = 0; i <= subdivisions; i++)
+            {
+                Vector2 uv = Vector2.Lerp(startUV, endUV,
+                    i / (float)subdivisions);
+                Vector2 pt = DrawPosition(rect, MapCornerUV(uv));
+                path[i] = new Vector3(pt.x, pt.y, 0f);
+            }
+            Handles.DrawAAPolyLine(thickness, path);
         }
 
         private RenderTexture RenderTexturedLCD(Texture image, Color tint)
@@ -616,22 +673,32 @@ namespace Rokas.Editor
                         overlayAlpha * tint.a * (mode == ViewMode.Mask ? .65f : 1f));
                     if (previewMaterial.SetPass(0))
                     {
-                        // UV mask is applied AFTER mapping to the quadrilateral:
-                        // vertices follow rounded arcs in normalized (u,v)
-                        // space, and are mapped onto the identical LCD corners.
-                        // The solid interior remains a UV triangle fan.
-                        List<Vector2> outline = BuildRoundedBoundaryUV();
-                        Vector2 centerUV = new Vector2(.5f, .5f);
-                        Vector2 centerPx = MapCornerUV(centerUV);
+                        // Dense rings preserve texture UVs when mid-edge
+                        // controls bend the glass. A center-only fan would
+                        // visually shear the checkerboard vs the guides.
+                        List<Vector2> border = BuildRoundedBoundaryUV();
+                        Vector2 center = new Vector2(.5f, .5f);
                         GL.Begin(GL.TRIANGLES);
                         GL.Color(Color.white);
-                        for (int i = 0; i < outline.Count; i++)
+                        const int radialSteps = 10;
+                        for (int ring = 1; ring <= radialSteps; ring++)
                         {
-                            Vector2 a = outline[i];
-                            Vector2 b = outline[(i + 1) % outline.Count];
-                            Emit(centerPx, centerUV.x, 1f - centerUV.y);
-                            Emit(MapCornerUV(a), a.x, 1f - a.y);
-                            Emit(MapCornerUV(b), b.x, 1f - b.y);
+                            float inner = (ring - 1f) / radialSteps;
+                            float outer = ring / (float)radialSteps;
+                            for (int i = 0; i < border.Count; i++)
+                            {
+                                Vector2 a = border[i];
+                                Vector2 b = border[(i + 1) % border.Count];
+                                Vector2 ua = Vector2.Lerp(center, a, inner);
+                                Vector2 ub = Vector2.Lerp(center, b, inner);
+                                Vector2 va = Vector2.Lerp(center, a, outer);
+                                Vector2 vb = Vector2.Lerp(center, b, outer);
+                                EmitWarped(ua); EmitWarped(va); EmitWarped(vb);
+                                if (ring > 1)
+                                {
+                                    EmitWarped(ua); EmitWarped(vb); EmitWarped(ub);
+                                }
+                            }
                         }
                         GL.End();
                     }
@@ -642,14 +709,29 @@ namespace Rokas.Editor
             return previewTarget;
         }
 
-        // UV (u,v) starts at TOP LEFT and ends at BOTTOM RIGHT.
-        // Exactly the same bilinear projection is used for image pixels,
-        // outline and handles. No later screen-specific rectangle offset.
+        private void EmitWarped(Vector2 uv)
+        {
+            Vector2 pixel = MapCornerUV(uv);
+            Emit(pixel, uv.x, 1f - uv.y);
+        }
+
+        // V2: bilinear quad. Optional V3: four edge midpoint offsets bend
+        // the physical boundaries while preserving ALL original corners.
+        // 4u(1-u) = 1 at the top/bottom midpoint; zero at corners.
         private Vector2 MapCornerUV(Vector2 uv)
         {
             Vector2 top = Vector2.Lerp(corners[0], corners[1], uv.x);
             Vector2 bottom = Vector2.Lerp(corners[3], corners[2], uv.x);
-            return Vector2.Lerp(top, bottom, uv.y);
+            Vector2 result = Vector2.Lerp(top, bottom, uv.y);
+            if (enableEdgeControlPoints && edgeOffsets != null &&
+                edgeOffsets.Length == 4)
+            {
+                float h = 4f * uv.x * (1f - uv.x);
+                float v = 4f * uv.y * (1f - uv.y);
+                result += h * Vector2.Lerp(edgeOffsets[0], edgeOffsets[2], uv.y);
+                result += v * Vector2.Lerp(edgeOffsets[3], edgeOffsets[1], uv.x);
+            }
+            return result;
         }
 
         private float MaxCornerRadius()
