@@ -847,6 +847,160 @@ namespace Rokas.Editor
             }
         }
 
+        private List<Vector2> DenseBoundaryUV()
+        {
+            List<Vector2> original = BuildRoundedBoundaryUV();
+            var dense = new List<Vector2>(original.Count * 3);
+            for (int i = 0; i < original.Count; ++i)
+            {
+                Vector2 a = original[i];
+                Vector2 b = original[(i + 1) % original.Count];
+                int count = Mathf.Max(1, Mathf.CeilToInt(
+                    Vector2.Distance(a, b) * 90f));
+                for (int step = 0; step < count; ++step)
+                    dense.Add(Vector2.Lerp(a, b, step / (float)count));
+            }
+            return dense;
+        }
+
+        private static Vector2 OutwardNormal(Vector2 before, Vector2 after)
+        {
+            Vector2 tangent = after - before;
+            Vector2 outward = new Vector2(tangent.y, -tangent.x);
+            return outward.sqrMagnitude > 1e-10f
+                ? outward.normalized : Vector2.zero;
+        }
+
+        private void DrawReferenceAndMargins(Rect localImage)
+        {
+            if (!showSafeBorder && !referenceDefined) return;
+            List<Vector2> uv = DenseBoundaryUV();
+            int count = uv.Count;
+            if (count < 4) return;
+
+            if (showSafeBorder)
+            {
+                var inset = new Vector3[count + 1];
+                for (int i = 0; i < count; ++i)
+                {
+                    Vector2 before = MapCornerUV(uv[(i + count - 1) % count]);
+                    Vector2 point = MapCornerUV(uv[i]);
+                    Vector2 after = MapCornerUV(uv[(i + 1) % count]);
+                    Vector2 normal = OutwardNormal(before, after);
+                    inset[i] = DrawPosition(localImage,
+                        point - safeBorderPixels * normal);
+                }
+                inset[count] = inset[0];
+                Handles.color = new Color(.64f, .90f, 1f, .85f);
+                Handles.DrawAAPolyLine(1.2f, inset);
+            }
+
+            if (!referenceDefined || referenceCorners == null ||
+                referenceCorners.Length != 4) return;
+            var reference = new Vector3[count + 1];
+            for (int i = 0; i < count; ++i)
+                reference[i] = DrawPosition(localImage, MapReferenceUV(uv[i]));
+            reference[count] = reference[0];
+            Handles.color = new Color(1f, .69f, .08f, .95f);
+            Handles.DrawAAPolyLine(2.5f, reference);
+            if (!showErrorHeatmap) return;
+
+            for (int i = 0; i < count; ++i)
+            {
+                int j = (i + 1) % count;
+                Vector2 refPrevious = MapReferenceUV(uv[(i + count - 1) % count]);
+                Vector2 refHere = MapReferenceUV(uv[i]);
+                Vector2 refNext = MapReferenceUV(uv[j]);
+                Vector2 normal = OutwardNormal(refPrevious, refNext);
+                Vector2 fitted = MapCornerUV(uv[i]);
+                float signedError = Vector2.Dot(fitted - refHere, normal);
+                Color shade = signedError > errorTolerancePixels
+                    ? new Color(1f, .13f, .16f, .9f)
+                    : signedError < -errorTolerancePixels
+                        ? new Color(.12f, .85f, 1f, .9f)
+                        : new Color(.2f, 1f, .40f, .9f);
+                Vector3 a = DrawPosition(localImage, fitted);
+                Vector3 b = DrawPosition(localImage, MapCornerUV(uv[j]));
+                Handles.color = shade;
+                Handles.DrawAAPolyLine(2.5f, a, b);
+                // Sampled cross-ticks show actual distance to independently
+                // traced reference, instead of relying on pixel color guesses.
+                if ((i % 5) == 0 &&
+                    Mathf.Abs(signedError) > errorTolerancePixels)
+                {
+                    Handles.color = new Color(shade.r, shade.g, shade.b, .55f);
+                    Handles.DrawAAPolyLine(1f,
+                        DrawPosition(localImage, refHere), a);
+                }
+            }
+        }
+
+        private void DrawMagnifier()
+        {
+            Rect area = GUILayoutUtility.GetRect(240f, 182f,
+                GUILayout.ExpandWidth(true));
+            GUI.Box(area, GUIContent.none, EditorStyles.helpBox);
+            if (!source || selected < 0 || selected >= HandleCount)
+            {
+                GUI.Label(area, "Select TL/TR/BR/BL or a helper point",
+                    EditorStyles.centeredGreyMiniLabel);
+                return;
+            }
+            Vector2 origin = GetHandle(selected);
+            float visibleWidth = area.width / Mathf.Max(1, magnifierZoom);
+            float visibleHeight = area.height / Mathf.Max(1, magnifierZoom);
+            Rect texCoords = new Rect(
+                (origin.x - visibleWidth * .5f) / source.width,
+                1f - (origin.y + visibleHeight * .5f) / source.height,
+                visibleWidth / source.width, visibleHeight / source.height);
+            GUI.BeginGroup(area);
+            try
+            {
+                Rect local = new Rect(0f, 0f, area.width, area.height);
+                GUI.DrawTextureWithTexCoords(local, source, texCoords, false);
+                List<Vector2> uv = DenseBoundaryUV();
+                int n = uv.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    Vector2 a = MapCornerUV(uv[i]);
+                    Vector2 b = MapCornerUV(uv[(i + 1) % n]);
+                    Vector3 aScreen = new Vector3(
+                        (a.x - origin.x) * magnifierZoom + area.width * .5f,
+                        (a.y - origin.y) * magnifierZoom + area.height * .5f);
+                    Vector3 bScreen = new Vector3(
+                        (b.x - origin.x) * magnifierZoom + area.width * .5f,
+                        (b.y - origin.y) * magnifierZoom + area.height * .5f);
+                    Handles.color = new Color(.1f, 1f, .9f, 1f);
+                    Handles.DrawAAPolyLine(1.5f, aScreen, bScreen);
+                    if (referenceDefined && referenceCorners != null)
+                    {
+                        Vector2 ra = MapReferenceUV(uv[i]);
+                        Vector2 rb = MapReferenceUV(uv[(i + 1) % n]);
+                        Handles.color = new Color(1f, .75f, .15f, .9f);
+                        Handles.DrawAAPolyLine(1.5f,
+                            new Vector3((ra.x - origin.x) * magnifierZoom +
+                                area.width * .5f,
+                                (ra.y - origin.y) * magnifierZoom + area.height * .5f),
+                            new Vector3((rb.x - origin.x) * magnifierZoom +
+                                area.width * .5f,
+                                (rb.y - origin.y) * magnifierZoom + area.height * .5f));
+                    }
+                }
+                Vector2 middle = local.center;
+                Handles.color = Color.white;
+                Handles.DrawAAPolyLine(1f,
+                    new Vector3(middle.x - 9f, middle.y),
+                    new Vector3(middle.x + 9f, middle.y));
+                Handles.DrawAAPolyLine(1f,
+                    new Vector3(middle.x, middle.y - 9f),
+                    new Vector3(middle.x, middle.y + 9f));
+            }
+            finally { GUI.EndGroup(); }
+            EditorGUILayout.LabelField(PointLabels[selected] +
+                " · " + origin.x.ToString("F2") + ", " +
+                origin.y.ToString("F2") + " px", EditorStyles.miniLabel);
+        }
+
         private Vector2 DrawPosition(Rect localImage, Vector2 sourcePoint)
         {
             return new Vector2(localImage.x + sourcePoint.x * localImage.width / source.width,
