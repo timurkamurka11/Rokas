@@ -12,6 +12,11 @@ namespace Rokas.Presentation
     public sealed class LaptopCinematicLightPresentation : IDisposable
     {
         public const string ShaderResource = "Shaders/LaptopCinematicLightStates";
+        public const string OffPhotoResource = "LaptopCinematic/LaptopPOV_lights_off_APPROVED";
+        public const int ReferenceWidth = 1672;
+        public const int ReferenceHeight = 941;
+        private static readonly int OffTexProperty = Shader.PropertyToID("_OffTex");
+        private static readonly int OffReadyProperty = Shader.PropertyToID("_OffPhotoReady");
         private static readonly int RoomProperty = Shader.PropertyToID("_RoomLightOn");
         private static readonly int HallProperty = Shader.PropertyToID("_HallwayLightOn");
 
@@ -19,10 +24,12 @@ namespace Rokas.Presentation
         private readonly Func<bool> hallwayLight;
         private Material material;
         private RawImage background;
+        private Texture2D offPhoto;
         private float roomValue;
         private float hallValue;
 
         public Material Material => material;
+        public bool HasOffPhoto => offPhoto != null;
         public float RoomValue => roomValue;
         public float HallwayValue => hallValue;
 
@@ -47,11 +54,24 @@ namespace Rokas.Presentation
                 return;
             }
 
+            offPhoto = Resources.Load<Texture2D>(OffPhotoResource);
+            bool photoValid = offPhoto &&
+                offPhoto.width == ReferenceWidth && offPhoto.height == ReferenceHeight;
+            if (!photoValid)
+            {
+                Debug.LogError("ROKAS laptop lighting: the 1672x941 photographic OFF " +
+                    "reference is missing or incorrectly sized at Resources/" +
+                    OffPhotoResource + ". Falling back to approximate dark grading.");
+                offPhoto = null;
+            }
+
             material = new Material(shader)
             {
                 name = "ROKAS-Laptop-Two-Zone-Lighting",
                 hideFlags = HideFlags.DontSave
             };
+            if (offPhoto) material.SetTexture(OffTexProperty, offPhoto);
+            material.SetFloat(OffReadyProperty, offPhoto ? 1f : 0f);
             background = source;
             Snap();
             background.material = material;
@@ -102,6 +122,7 @@ namespace Rokas.Presentation
             }
             material = null;
             background = null;
+            offPhoto = null;
         }
     }
 }

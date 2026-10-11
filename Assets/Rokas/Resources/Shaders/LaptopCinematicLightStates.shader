@@ -2,10 +2,13 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
 {
     Properties
     {
-        [PerRendererData] _MainTex ("Original approved laptop POV", 2D) = "white" {}
+        [PerRendererData] _MainTex ("Room and hallway ON reference", 2D) = "white" {}
+        [NoScaleOffset] _OffTex ("Room and hallway OFF reference", 2D) = "black" {}
         _Color ("Tint", Color) = (1,1,1,1)
         _RoomLightOn ("Main room light", Range(0,1)) = 0
         _HallwayLightOn ("Hallway light", Range(0,1)) = 0
+        [HideInInspector] _OffPhotoReady ("OFF reference installed", Float) = 0
+        _MaskDebug ("Show zone mask (diagnostic only)", Range(0,1)) = 0
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
         _StencilOp ("Stencil Operation", Float) = 0
@@ -16,7 +19,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
     SubShader
     {
         Tags { "Queue"="Transparent" "IgnoreProjector"="True"
-            "RenderType"="Transparent" "PreviewType"="Plane" }
+               "RenderType"="Transparent" "PreviewType"="Plane" }
         Stencil
         {
             Ref [_Stencil] Comp [_StencilComp] Pass [_StencilOp]
@@ -36,9 +39,12 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             #include "UnityCG.cginc"
 
             sampler2D _MainTex;
+            sampler2D _OffTex;
             fixed4 _Color;
             float _RoomLightOn;
             float _HallwayLightOn;
+            float _OffPhotoReady;
+            float _MaskDebug;
 
             struct appdata
             {
@@ -61,17 +67,14 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 return o;
             }
 
-            // Coordinates are locked to the ORIGINAL unmodified 1672x941
-            // LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF photograph.
-            // Polygon follows the blue corridor visible behind the left
-            // jamb, BLACK CURTAIN and sloping bottom threshold. The opening
-            // reaches the photo's top edge: an older y=75 cutoff would leave
-            // a strip with the WRONG room illumination over its lintel.
+            // TOP-LEFT coordinates of the unmodified 1672x941 approved POV.
+            // The six-sided polygon covers the visible left corridor, black
+            // curtain and sloped threshold; room surfaces remain outside it.
             float Cross2(float2 a, float2 b) { return a.x*b.y - a.y*b.x; }
             float InsideEdge(float2 a,float2 b,float2 p)
             {
-                float2 edge = b-a;
-                return Cross2(edge,p-a) / max(length(edge),.0001);
+                float2 edge=b-a;
+                return Cross2(edge,p-a)/max(length(edge),.0001);
             }
             float CorridorDoorMask(float2 p)
             {
@@ -85,56 +88,52 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     min(min(InsideEdge(a,b,p),InsideEdge(b,c,p)),
                         min(InsideEdge(c,d,p),InsideEdge(d,e,p))),
                     min(InsideEdge(e,f,p),InsideEdge(f,a,p)));
-                return smoothstep(-2.5,2.5,signedDistance);
+                return smoothstep(-3.5,3.5,signedDistance);
             }
-
             float SoftEllipse(float2 p,float2 center,float2 reach)
             {
                 float2 q=(p-center)/reach;
-                float r=dot(q,q);
-                return 1.0-smoothstep(.12,1.0,r);
+                return 1.0-smoothstep(.10,1.0,dot(q,q));
             }
 
             fixed4 frag(v2f i) : SV_Target
             {
-                fixed4 original = tex2D(_MainTex,i.uv);
-                float roomOn=saturate(_RoomLightOn);
-                float hallwayOn=saturate(_HallwayLightOn);
-                // At both OFF the original night photograph is reproduced
-                // exactly (other than the standard UI vertex tint).
-                if (roomOn <= .0001 && hallwayOn <= .0001)
-                    return original * i.color;
-
+                fixed4 onPhoto=tex2D(_MainTex,i.uv);
                 float2 p=float2(i.uv.x*1672.0,(1.0-i.uv.y)*941.0);
                 float doorway=CorridorDoorMask(p);
-                float inRoom=1.0-doorway;
+                float spillZone=(1.0-doorway)*
+                    saturate(.47*SoftEllipse(p,float2(384,456),float2(190,155))+
+                             .25*SoftEllipse(p,float2(400,535),float2(250,122)));
 
-                // A restrained warm photographic lift on existing details:
-                // preserves shelves, keyboard, walls and their image pixels.
-                float roomPractical =
-                    .24*SoftEllipse(p,float2(520,265),float2(340,370)) +
-                    .19*SoftEllipse(p,float2(1070,302),float2(310,410)) +
-                    .16*SoftEllipse(p,float2(1370,205),float2(320,390));
-                float warmRoom=roomOn*inRoom;
-                float3 roomColor=original.rgb*(1.0+warmRoom*(.18+roomPractical));
-                roomColor += warmRoom*float3(.075,.043,.016)*(.85+roomPractical);
+                if (_MaskDebug > .5)
+                    return fixed4(lerp(float3(.07,.17,.72),
+                         float3(.12,.85,.22),doorway)+float3(spillZone,.0,.0),1)*i.color;
 
-                // Corridor is a DIFFERENT electrical zone. Even if the main
-                // lamp is ON the interior of this left doorway stays tied to
-                // hallwayOn, with source photo's cool ambient still present.
-                float3 hallColor=original.rgb*(1.0+hallwayOn*.54);
-                hallColor += hallwayOn*float3(.12,.071,.024);
-                float3 composed=lerp(roomColor,hallColor,doorway);
+                fixed4 offPhoto=tex2D(_OffTex,i.uv);
+                if (_OffPhotoReady < .5)
+                {
+                    // Diagnostic fallback only: do not silently claim that an
+                    // ON photo can reproduce true OFF practical lights.
+                    // The photographic OFF reference must be installed.
+                    offPhoto.rgb = saturate(onPhoto.rgb*float3(.26,.34,.47));
+                    offPhoto.a=onPhoto.a;
+                }
 
-                // Light carried across the threshold softly touches the
-                // inside jamb and nearest floor; it fades within the room.
-                // Suppressed in the full night-off configuration.
-                float spill=hallwayOn*(1.0-doorway);
-                spill*= .40*SoftEllipse(p,float2(384,456),float2(200,155)) +
-                        .19*SoftEllipse(p,float2(399,540),float2(275,134));
-                composed+=spill*float3(.12,.071,.034);
+                float roomOn=saturate(_RoomLightOn);
+                float hallOn=saturate(_HallwayLightOn);
+                float lightMix=lerp(roomOn,hallOn,doorway);
+                float3 composed=lerp(offPhoto.rgb,onPhoto.rgb,lightMix);
 
-                return fixed4(saturate(composed), original.a) * i.color;
+                // The real corridor ON photo contributes its own captured
+                // illumination to the jamb and nearby floor, but ONLY when
+                // the main room is OFF and the corridor switch is ON.
+                float spill=hallOn*(1.0-roomOn)*spillZone;
+                composed+=max(onPhoto.rgb-offPhoto.rgb,0)*spill;
+
+                // Both OFF is the exact OFF reference. Both ON is the exact
+                // original approved ON photo. No geometry, laptop LCD or
+                // UI overlays are modified by this shader.
+                return fixed4(saturate(composed),onPhoto.a)*i.color;
             }
             ENDCG
         }

@@ -27,6 +27,9 @@ namespace Rokas.Tests
             {
                 Assert.That(material.HasProperty("_RoomLightOn"), Is.True);
                 Assert.That(material.HasProperty("_HallwayLightOn"), Is.True);
+                Assert.That(material.HasProperty("_OffTex"), Is.True);
+                Assert.That(material.HasProperty("_OffPhotoReady"), Is.True);
+                Assert.That(material.HasProperty("_MaskDebug"), Is.True);
             }
             finally { Object.DestroyImmediate(material); }
         }
@@ -104,6 +107,51 @@ namespace Rokas.Tests
             finally
             {
                 presenter.Dispose();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+
+        [Test]
+        public void PhotographicOffReferenceIsFullResolutionAndAvailable()
+        {
+            Texture2D photo=Resources.Load<Texture2D>(
+                LaptopCinematicLightPresentation.OffPhotoResource);
+            Assert.That(photo, Is.Not.Null,
+                "Install the supplied 1672x941 OFF PNG in Resources/LaptopCinematic first.");
+            Assert.That(photo.width,Is.EqualTo(LaptopCinematicLightPresentation.ReferenceWidth));
+            Assert.That(photo.height,Is.EqualTo(LaptopCinematicLightPresentation.ReferenceHeight));
+        }
+
+        [Test]
+        public void MaterialActuallySamplesTheSeparateOffReferencePhoto()
+        {
+            bool room=false,hall=false;
+            GameObject root=CreateBackground(out RawImage image);
+            image.texture=new Texture2D(2,2,TextureFormat.RGBA32,false);
+            var presenter=new LaptopCinematicLightPresentation(()=>room,()=>hall);
+            try
+            {
+                presenter.Bind(image);
+                Assert.That(presenter.HasOffPhoto,Is.True,
+                    "Missing photographic OFF asset: old one-photo shader cannot switch lights.");
+                Assert.That(presenter.Material.GetFloat("_OffPhotoReady"),Is.EqualTo(1f));
+                Texture2D reference=Resources.Load<Texture2D>(
+                    LaptopCinematicLightPresentation.OffPhotoResource);
+                Assert.That(presenter.Material.GetTexture("_OffTex"),Is.SameAs(reference));
+                Assert.That(image.material,Is.SameAs(presenter.Material));
+                Assert.That(image.texture,Is.Not.SameAs(reference),
+                    "Approved original photo must stay the ON reference.");
+
+                hall=true;
+                presenter.Snap();
+                Assert.That(presenter.Material.GetFloat("_RoomLightOn"),Is.EqualTo(0f));
+                Assert.That(presenter.Material.GetFloat("_HallwayLightOn"),Is.EqualTo(1f));
+            }
+            finally
+            {
+                presenter.Dispose();
+                Object.DestroyImmediate(image.texture);
                 Object.DestroyImmediate(root);
             }
         }
