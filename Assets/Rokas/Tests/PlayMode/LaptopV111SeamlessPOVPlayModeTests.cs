@@ -29,7 +29,7 @@ namespace Rokas.Tests
                 Assert.Ignore("Requires explicitly staged art and test-only POV");
             // An art-integrated Unity test must never accept fallback text in place of the original assets.
             foreach (string name in new[] { "rokas_no_signal_chibi", "prompt_open",
-                "prompt_back", "prompt_power", "back_arrow" })
+                "prompt_back", "prompt_power", "back_arrow", "prompt_stand" })
                 Assert.That(Resources.Load<Texture2D>("LaptopCinematic/UI/" + name),
                     Is.Not.Null, "Original approved PNG missing from Unity Resources: " + name);
             Assert.That(Resources.Load<AudioClip>("LaptopCinematic/chibi_bounce"), Is.Not.Null,
@@ -151,6 +151,18 @@ namespace Rokas.Tests
             var reopen=Find<RectTransform>("PoweredLaptopOpenHint");
             Assert.That(reopen,Is.Not.Null);
             Assert.That(reopen.gameObject.activeInHierarchy,Is.True);
+            var standArt = Find<RawImage>("PoweredStandOriginalPNG");
+            Assert.That(standArt, Is.Not.Null,
+                "Use exact user-provided E — ВСТАТЬ button rather than old arrow");
+            Assert.That(standArt.texture, Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand")));
+            Assert.That(standArt.gameObject.activeInHierarchy, Is.True);
+            Assert.That(standArt.color, Is.EqualTo(Color.white),
+                "Do not dim/retint original golden PNG");
+            Assert.That(standArt.GetComponent<LaptopChoiceHover>(), Is.Not.Null);
+            Assert.That(standArt.transform.Find("OriginalGoldLuminance"), Is.Not.Null);
+            Assert.That(Find<RawImage>("LaptopBackChoice").gameObject.activeInHierarchy, Is.False,
+                "Old standalone arrow must disappear only after laptop is powered");
+            Assert.That(Find<Button>("PoweredStandOriginalPNG"), Is.Not.Null);
             Assert.That(Find<RawImage>("ExactGoldenOpenPrompt").texture,
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open")));
             Assert.That(Find<LaptopChoiceHover>("ExactGoldenOpenPrompt"),Is.Not.Null,
@@ -160,6 +172,19 @@ namespace Rokas.Tests
             Assert.That(boot.View.LaptopOpen,Is.True);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"),Is.Not.Null);
             Assert.That(LaptopPowerSession.CompletedBoots,Is.EqualTo(1));
+
+            // Close fullscreen YOMI again, then ACTUALLY click the new PNG.
+            // The original standing/cancel sequence must restore the room.
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.75f);
+            Assert.That(boot.View.LaptopOpen,Is.False);
+            var stand = Find<Button>("PoweredStandOriginalPNG");
+            Assert.That(stand,Is.Not.Null);
+            Assert.That(stand.gameObject.activeInHierarchy,Is.True);
+            stand.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(1.0f);
+            Assert.That(Find<RectTransform>("LaptopCinematicOverlay"),Is.Null,
+                "Stand control must run the real return-to-room animation and exit seated POV");
         }
 
         [UnityTest]
