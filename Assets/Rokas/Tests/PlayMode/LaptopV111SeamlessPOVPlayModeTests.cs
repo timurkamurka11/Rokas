@@ -52,6 +52,19 @@ namespace Rokas.Tests
             var standby=Find<RectTransform>("ROKASNoSignalScreen");
             Assert.That(standby,Is.Not.Null,"OFF state must cover physical LCD");
             Assert.That(standby.GetComponent<RectMask2D>(),Is.Not.Null);
+            Assert.That(standby.GetComponent<Mask>(), Is.Not.Null,
+                "Standby chibi must be clipped by the actual four-corner LCD stencil");
+            Assert.That(standby.GetComponent<LaptopPerspectiveQuad>(), Is.Not.Null,
+                "OFF state uses the real asymmetric LCD polygon, not just a rectangle");
+            var poweredViewport = Find<RectTransform>("PhysicalMiniYomiViewport");
+            Assert.That(poweredViewport, Is.Not.Null);
+            Assert.That(poweredViewport.GetComponent<Mask>(), Is.Not.Null,
+                "ON state must use the same four-corner LCD stencil");
+            Assert.That(poweredViewport.GetComponent<LaptopPerspectiveQuad>(), Is.Not.Null);
+            Assert.That(poweredViewport.rect.width, Is.EqualTo(standby.rect.width).Within(.01f));
+            Assert.That(poweredViewport.rect.height, Is.EqualTo(standby.rect.height).Within(.01f));
+            Assert.That(standby.rect.width, Is.GreaterThan(400f),
+                "LCD must fill the physical screen instead of stopping before lower-right bezel");
             var chibi=Find<RawImage>("ROKASNoSignalChibiDVD");
             Assert.That(chibi,Is.Not.Null,"Original chibi must be imported and shown");
             Assert.That(chibi.texture,
@@ -72,6 +85,8 @@ namespace Rokas.Tests
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
             var originalPower = Find<RawImage>("PowerChoiceHint");
             var originalBack = Find<RawImage>("BackChoiceHint");
+            Assert.That(originalPower.rectTransform.anchoredPosition.y, Is.EqualTo(-903f).Within(.1f));
+            Assert.That(originalBack.rectTransform.anchoredPosition.y, Is.EqualTo(-920f).Within(.1f));
             Assert.That(originalPower, Is.Not.Null);
             Assert.That(originalBack, Is.Not.Null);
             Assert.That(originalPower.GetComponentInChildren<RawImage>().color.a, Is.EqualTo(1f));
