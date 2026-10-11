@@ -55,6 +55,7 @@ namespace Rokas.Editor
         private Texture2D loadedExternalYomi;
         private Texture2D guide;
         private Material previewMaterial;
+        private RenderTexture previewTarget;
         private bool draggingPoint;
         private bool panning;
         private Vector2 lastMouse;
@@ -82,6 +83,11 @@ namespace Rokas.Editor
             if (loadedExternalYomi) DestroyImmediate(loadedExternalYomi);
             if (guide) DestroyImmediate(guide);
             if (previewMaterial) DestroyImmediate(previewMaterial);
+            if (previewTarget)
+            {
+                previewTarget.Release();
+                DestroyImmediate(previewTarget);
+            }
         }
 
         private void FindOriginalPOV()
@@ -287,17 +293,27 @@ namespace Rokas.Editor
             for (int i = 0; i < 4; i++)
                 points[i] = new Vector2(localImage.x + corners[i].x * scale,
                     localImage.y + corners[i].y * scale);
-            DrawPreview(points, area);
+            DrawPreview(points, localImage);
             GUI.EndGroup();
             ProcessInput(area, imageRect, scale);
         }
 
-        private void DrawPreview(Vector2[] p, Rect area)
+        private void DrawPreview(Vector2[] p, Rect localImage)
         {
             if (Event.current.type != EventType.Repaint) return;
             if (mode == ViewMode.YomiPreview)
-                DrawTexturedQuad(p, yomiProjectTexture ? yomiProjectTexture :
-                    loadedExternalYomi ? loadedExternalYomi : guide, area);
+            {
+                // The original preview drew GL directly into an IMGUI group,
+                // applying a DIFFERENT pixel matrix from GUI.DrawTexture and
+                // Handles. It showed a floating blue patch away from handles.
+                // Render into the SOURCE IMAGE pixel coordinate space first,
+                // then composite using the EXACT SAME localImage GUI rect.
+                Texture preview = yomiProjectTexture ? yomiProjectTexture :
+                    loadedExternalYomi ? loadedExternalYomi : guide;
+                RenderTexture aligned = RenderTexturedLCD(preview);
+                if (aligned)
+                    GUI.DrawTexture(localImage, aligned, ScaleMode.StretchToFill, true);
+            }
             else if (mode == ViewMode.BlackScreen || mode == ViewMode.Mask)
             {
                 Handles.color = mode == ViewMode.BlackScreen ?
@@ -334,30 +350,66 @@ namespace Rokas.Editor
             }
         }
 
-        private void DrawTexturedQuad(Vector2[] p, Texture image, Rect area)
+        private RenderTexture RenderTexturedLCD(Texture image)
         {
-            if (!image || overlayAlpha <= 0f) return;
+            if (!image || !source || overlayAlpha <= 0f) return null;
             if (!previewMaterial)
             {
                 Shader shader = Shader.Find("Unlit/Transparent");
                 if (!shader) shader = Shader.Find("Sprites/Default");
-                if (!shader) return;
+                if (!shader) return null;
                 previewMaterial = new Material(shader)
                     { hideFlags = HideFlags.HideAndDontSave };
             }
-            previewMaterial.mainTexture = image;
-            previewMaterial.color = new Color(1f, 1f, 1f, overlayAlpha);
-            GL.PushMatrix();
-            GL.LoadPixelMatrix(0f, area.width, area.height, 0f);
-            if (previewMaterial.SetPass(0))
+            // A separate transparent RT avoids IMGUI GUI.BeginGroup / GL
+            // projection mismatch. Its geometry uses unscaled ORIGINAL PHOTO
+            // pixels, exactly the same four values displayed in the sidebar.
+            if (!previewTarget || previewTarget.width != source.width ||
+                previewTarget.height != source.height)
             {
-                GL.Begin(GL.TRIANGLES);
-                GL.Color(Color.white); // material tint controls opacity for Unlit/Transparent
-                Emit(p[0], 0f, 1f); Emit(p[1], 1f, 1f); Emit(p[2], 1f, 0f);
-                Emit(p[0], 0f, 1f); Emit(p[2], 1f, 0f); Emit(p[3], 0f, 0f);
-                GL.End();
+                if (previewTarget)
+                {
+                    previewTarget.Release();
+                    DestroyImmediate(previewTarget);
+                }
+                previewTarget = new RenderTexture(source.width, source.height,
+                    0, RenderTextureFormat.ARGB32)
+                {
+                    name = "ROKAS_Laptop_CalibrationPreview_EditorOnly",
+                    hideFlags = HideFlags.HideAndDontSave,
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                previewTarget.Create();
             }
-            GL.PopMatrix();
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                RenderTexture.active = previewTarget;
+                GL.Clear(true, true, Color.clear);
+                GL.PushMatrix();
+                try
+                {
+                    GL.LoadPixelMatrix(0f, source.width, source.height, 0f);
+                    previewMaterial.mainTexture = image;
+                    previewMaterial.color = new Color(1f, 1f, 1f, overlayAlpha);
+                    if (previewMaterial.SetPass(0))
+                    {
+                        GL.Begin(GL.TRIANGLES);
+                        GL.Color(Color.white);
+                        Emit(corners[0], 0f, 1f);
+                        Emit(corners[1], 1f, 1f);
+                        Emit(corners[2], 1f, 0f);
+                        Emit(corners[0], 0f, 1f);
+                        Emit(corners[2], 1f, 0f);
+                        Emit(corners[3], 0f, 0f);
+                        GL.End();
+                    }
+                }
+                finally { GL.PopMatrix(); }
+            }
+            finally { RenderTexture.active = previous; }
+            return previewTarget;
         }
 
         private static void Emit(Vector2 p, float u, float v)
