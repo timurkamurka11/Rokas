@@ -44,8 +44,8 @@ namespace Rokas.Tests
             Assert.That(p.topLeftY, Is.EqualTo(412.8598938f).Within(.001f));
             Assert.That(p.topRightX, Is.EqualTo(1059.7675781f).Within(.001f));
             Assert.That(p.topRightY, Is.EqualTo(412.5315247f).Within(.001f));
-            Assert.That(p.bottomRightX, Is.EqualTo(1073.5581055f).Within(.001f));
-            Assert.That(p.bottomRightY, Is.EqualTo(677.5065308f).Within(.001f));
+            Assert.That(p.bottomRightX, Is.EqualTo(1075.6923828f).Within(.001f));
+            Assert.That(p.bottomRightY, Is.EqualTo(680.4259033f).Within(.001f));
             Assert.That(p.bottomLeftX, Is.EqualTo(594.8300781f).Within(.001f));
             Assert.That(p.bottomLeftY, Is.EqualTo(680.1333008f).Within(.001f));
             Assert.That(p.powerX, Is.EqualTo(1014f));
@@ -69,7 +69,7 @@ namespace Rokas.Tests
                 {
                     new Vector2(608.94897f, 412.85989f),
                     new Vector2(1059.76758f, 412.53152f),
-                    new Vector2(1073.55811f, 677.50653f),
+                    new Vector2(1075.69238f, 680.42590f),
                     new Vector2(594.83008f, 680.13330f)
                 }, 1f);
                 graphic.SetRoundedCorners(true, 18f, 18f, 6f, 6f);
