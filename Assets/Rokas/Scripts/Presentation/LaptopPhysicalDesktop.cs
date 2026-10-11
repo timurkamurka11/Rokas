@@ -1,19 +1,28 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Rokas.Presentation
 {
-    /// <summary>Perspective-correct-enough four-corner UI quad aligned to the
-    /// approved POV image. Never alters the source photo.</summary>
+    /// <summary>
+    /// The physical LCD texture and UI stencil share identical source-photo
+    /// corners. V2 supports per-corner rounded UV clipping without modifying
+    /// the approved laptop artwork or cropping YOMI pixels on a rectangle.
+    /// </summary>
     public class LaptopPerspectiveQuad : MaskableGraphic
     {
         private Vector2[] corners;
         private float factor = 1f;
         private Texture image;
+        private bool roundedCorners;
+        // TL, TR, BR, BL radii in *source-photo pixels*, not UI stage pixels.
+        private Vector4 radii;
 
         public override Texture mainTexture => image ? image : Texture2D.whiteTexture;
+        public bool RoundedCornersEnabled => roundedCorners;
+        public Vector4 CornerRadiiSourcePixels => radii;
 
         public void SetImage(Texture value)
         {
@@ -31,22 +40,105 @@ namespace Rokas.Presentation
             SetVerticesDirty();
         }
 
+        public void SetRoundedCorners(bool enable, float topLeft, float topRight,
+            float bottomRight, float bottomLeft)
+        {
+            roundedCorners = enable;
+            radii = new Vector4(topLeft, topRight, bottomRight, bottomLeft);
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
             if (corners == null || corners.Length != 4) return;
-            for (int i = 0; i < 4; i++)
+            if (!roundedCorners)
             {
-                UIVertex v = UIVertex.simpleVert;
-                v.position = new Vector3(corners[i].x * factor,
-                    -corners[i].y * factor, 0f);
-                v.uv0 = new Vector2(i == 1 || i == 2 ? 1f : 0f,
-                    i >= 2 ? 0f : 1f);
-                v.color = color;
-                vh.AddVert(v);
+                // Retain the exact historical 4-vertex fallback when no
+                // approved V2 calibration is installed.
+                for (int i = 0; i < 4; i++)
+                {
+                    UIVertex v = UIVertex.simpleVert;
+                    v.position = new Vector3(corners[i].x * factor,
+                        -corners[i].y * factor, 0f);
+                    v.uv0 = new Vector2(i == 1 || i == 2 ? 1f : 0f,
+                        i >= 2 ? 0f : 1f);
+                    v.color = color;
+                    vh.AddVert(v);
+                }
+                vh.AddTriangle(0, 1, 2);
+                vh.AddTriangle(0, 2, 3);
+                return;
             }
-            vh.AddTriangle(0, 1, 2);
-            vh.AddTriangle(0, 2, 3);
+
+            // A rounded UV polygon is projected onto the SAME 4 physical LCD
+            // corners, matching the Calibration Workshop V2 algorithm.
+            // It becomes the actual Unity UI stencil for chibi / YOMI, not
+            // merely a rounded decorative border drawn above the screen.
+            List<Vector2> border = RoundedBoundaryUV(corners, radii);
+            AddUVVertex(vh, new Vector2(.5f, .5f));
+            for (int i = 0; i < border.Count; i++)
+                AddUVVertex(vh, border[i]);
+            for (int i = 0; i < border.Count; i++)
+                vh.AddTriangle(0, i + 1, ((i + 1) % border.Count) + 1);
+        }
+
+        private void AddUVVertex(VertexHelper vh, Vector2 uv)
+        {
+            Vector2 upper = Vector2.Lerp(corners[0], corners[1], uv.x);
+            Vector2 lower = Vector2.Lerp(corners[3], corners[2], uv.x);
+            Vector2 point = Vector2.Lerp(upper, lower, uv.y);
+            UIVertex vertex = UIVertex.simpleVert;
+            vertex.position = new Vector3(point.x * factor, -point.y * factor, 0f);
+            vertex.uv0 = new Vector2(uv.x, 1f - uv.y);
+            vertex.color = color;
+            vh.AddVert(vertex);
+        }
+
+        private static List<Vector2> RoundedBoundaryUV(Vector2[] p, Vector4 cornersRadii)
+        {
+            float width = Mathf.Max(1f, (Vector2.Distance(p[0], p[1]) +
+                Vector2.Distance(p[3], p[2])) * .5f);
+            float height = Mathf.Max(1f, (Vector2.Distance(p[0], p[3]) +
+                Vector2.Distance(p[1], p[2])) * .5f);
+            float cap = Mathf.Max(0f, Mathf.Min(120f,
+                .45f * Mathf.Min(width, height)));
+            float tl = Mathf.Clamp(cornersRadii.x, 0f, cap);
+            float tr = Mathf.Clamp(cornersRadii.y, 0f, cap);
+            float br = Mathf.Clamp(cornersRadii.z, 0f, cap);
+            float bl = Mathf.Clamp(cornersRadii.w, 0f, cap);
+            float tlx = tl / width, tly = tl / height;
+            float trx = tr / width, tryy = tr / height;
+            float brx = br / width, bry = br / height;
+            float blx = bl / width, bly = bl / height;
+            var points = new List<Vector2>(52);
+            Arc(points, new Vector2(tlx, tly), tlx, tly,
+                180f, 270f, Vector2.zero);
+            Arc(points, new Vector2(1f - trx, tryy), trx, tryy,
+                270f, 360f, Vector2.right);
+            Arc(points, new Vector2(1f - brx, 1f - bry), brx, bry,
+                0f, 90f, Vector2.one);
+            Arc(points, new Vector2(blx, 1f - bly), blx, bly,
+                90f, 180f, Vector2.up);
+            return points;
+        }
+
+        private static void Arc(List<Vector2> points, Vector2 center,
+            float rx, float ry, float start, float end, Vector2 sharpCorner)
+        {
+            if (rx <= .00001f || ry <= .00001f)
+            {
+                points.Add(sharpCorner);
+                return;
+            }
+            const int segments = 12;
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = Mathf.Lerp(start, end,
+                    i / (float)segments) * Mathf.Deg2Rad;
+                points.Add(new Vector2(center.x + Mathf.Cos(angle) * rx,
+                    center.y + Mathf.Sin(angle) * ry));
+            }
         }
     }
 
