@@ -187,7 +187,9 @@ namespace Rokas.Presentation
                 () => session.Messages.TotalUnread,
                 UpdateHomeCameraBlend,
                 assets.laptopWallpaper,
-                () => audio.PlayChibiBounce());
+                () => audio.PlayChibiBounce(),
+                () => session.State.lampOn,
+                () => session.HallwayLightOn);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -739,6 +741,9 @@ namespace Rokas.Presentation
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
+            // Poll the SAME saved switches used by HomeView and HallwayView;
+            // no parallel laptop lighting flags or delayed scene rebuilds.
+            laptopCinematic?.UpdateLighting(dt);
             home.Tick(dt);
             hallway.Tick(dt);
             mission.Tick(dt, Paused || !focused);
