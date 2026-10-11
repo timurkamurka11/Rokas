@@ -395,7 +395,7 @@ namespace Rokas.Editor
             GUILayout.FlexibleSpace();
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Reset to V11.8")) ResetToCurrent();
+                if (GUILayout.Button("Reset to approved V2")) ResetToCurrent();
                 if (GUILayout.Button("Load JSON...")) LoadJson();
             }
             using (new EditorGUI.DisabledScope(!valid))
