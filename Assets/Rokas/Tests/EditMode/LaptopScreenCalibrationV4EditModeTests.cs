@@ -102,12 +102,12 @@ namespace Rokas.Tests
             Assert.That(p.sourceHeight, Is.EqualTo(941));
             Assert.That(p.enableEdgeControlPoints && p.enableCornerHelpers &&
                 p.enableRoundedMask, Is.True);
-            Near(new Vector2(p.topLeftX,p.topLeftY), new Vector2(610.5944824f, 412.7184753f));
-            Near(new Vector2(p.topRightX,p.topRightY), new Vector2(1060.3664551f, 412.9056396f));
-            Near(new Vector2(p.bottomRightX,p.bottomRightY), new Vector2(1075.3397217f, 680.2075195f));
-            Near(new Vector2(p.bottomLeftX,p.bottomLeftY), new Vector2(595.5665894f, 680.2011719f));
-            Assert.That(p.topLeftRadius, Is.EqualTo(12f));
-            Assert.That(p.topRightRadius, Is.EqualTo(12f));
+            Near(new Vector2(p.topLeftX,p.topLeftY), new Vector2(608.9489746f, 412.8598938f));
+            Near(new Vector2(p.topRightX,p.topRightY), new Vector2(1059.7675781f, 412.5315247f));
+            Near(new Vector2(p.bottomRightX,p.bottomRightY), new Vector2(1075.6923828f, 680.4259033f));
+            Near(new Vector2(p.bottomLeftX,p.bottomLeftY), new Vector2(594.8300781f, 680.1333008f));
+            Assert.That(p.topLeftRadius, Is.EqualTo(14f));
+            Assert.That(p.topRightRadius, Is.EqualTo(14f));
             Assert.That(p.bottomRightRadius, Is.EqualTo(0f));
             Assert.That(p.bottomLeftRadius, Is.EqualTo(0f));
             Assert.That(p.powerX, Is.EqualTo(1014f));
@@ -115,24 +115,24 @@ namespace Rokas.Tests
             Vector2[] actualMidpoints = Middle(p);
             Vector2[] expectedMidpoints =
             {
-                new Vector2(835.48046875f, 412.8120728f),
-                new Vector2(1067.8530273f, 546.5565796f),
-                new Vector2(831.5167236f, 679.7022095f),
-                new Vector2(601.0888062f, 544.4634399f)
+                new Vector2(834.3582764f, 412.6957092f),
+                new Vector2(1067.7299805f, 546.4786987f),
+                new Vector2(835.2612305f, 680.2796021f),
+                new Vector2(601.4862671f, 546.4616089f)
             };
             for (int i = 0; i < 4; i++)
                 Near(actualMidpoints[i], expectedMidpoints[i], .0002f);
 
             Vector2[] exactTangentPoints =
             {
-                new Vector2(692.2182007f, 411.7046204f),
-                new Vector2(606.3240967f, 460.2456360f),
-                new Vector2(979.3407593f, 409.6516113f),
-                new Vector2(1063.0616455f, 461.0199890f),
-                new Vector2(986.6564941f, 679.9099121f),
-                new Vector2(1072.6445313f, 632.0932007f),
-                new Vector2(677.2249146f, 680.1013794f),
-                new Vector2(598.7528076f, 630.0874023f)
+                new Vector2(690.0963135f, 412.8007813f),
+                new Vector2(606.3204956f, 460.8742676f),
+                new Vector2(978.6202393f, 412.5906372f),
+                new Vector2(1062.6340332f, 460.7525024f),
+                new Vector2(989.137146f, 680.37323f),
+                new Vector2(1072.8259277f, 632.204895f),
+                new Vector2(681.3853149f, 680.1859741f),
+                new Vector2(596.2125854f, 633.5982666f)
             };
             Vector2[] actualTangents = Tangents(p);
             for (int i = 0; i < 8; i++)
