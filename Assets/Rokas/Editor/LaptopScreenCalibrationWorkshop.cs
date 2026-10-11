@@ -328,6 +328,8 @@ namespace Rokas.Editor
                 }
                 if (GUILayout.Button("Zoom selected (5x)"))
                     ZoomToSelected(5f);
+                if (GUILayout.Button("Zoom 12x"))
+                    ZoomToSelected(12f);
             }
 
             yomiProjectTexture = (Texture2D)EditorGUILayout.ObjectField(
@@ -360,8 +362,15 @@ namespace Rokas.Editor
             GUILayout.Space(7);
             EditorGUILayout.LabelField("EDGE CONTACT POINTS (optional V3)",
                 EditorStyles.boldLabel);
-            enableEdgeControlPoints = EditorGUILayout.Toggle(
-                "Enable 4 edge pins", enableEdgeControlPoints);
+            if (!traceReference)
+            {
+                enableEdgeControlPoints = EditorGUILayout.Toggle(
+                    "Enable 4 edge pins", enableEdgeControlPoints);
+                if (enableCornerHelpers) enableEdgeControlPoints = true;
+            }
+            else
+                EditorGUILayout.LabelField("Tracing reference, not moving mask",
+                    EditorStyles.miniLabel);
             showEdgeGuides = EditorGUILayout.Toggle(
                 "Show curved edge lines", showEdgeGuides);
             showContactTickMarks = EditorGUILayout.Toggle(
@@ -385,15 +394,16 @@ namespace Rokas.Editor
                             selected = handleId;
                         EditorGUI.BeginChangeCheck();
                         Vector2 edited = EditorGUILayout.Vector2Field("",
-                            GetEdgePoint(i));
+                            GetHandle(handleId));
                         if (EditorGUI.EndChangeCheck())
                         {
-                            SetEdgePoint(i, edited);
+                            SetHandle(handleId, edited);
                             Repaint();
                         }
                     }
                 }
-                if (GUILayout.Button("Straighten all four edges"))
+                if (!traceReference &&
+                    GUILayout.Button("Straighten all four edges"))
                 {
                     edgeOffsets = new Vector2[4];
                     Repaint();
@@ -404,9 +414,44 @@ namespace Rokas.Editor
                 EditorGUILayout.LabelField(
                     "Off = exact V2 4-corner mask; no extra deformation.",
                     EditorStyles.miniLabel);
-                if (selected >= 4) selected = -1;
+                if (!traceReference && selected >= 4) selected = -1;
             }
 
+            GUILayout.Space(7);
+            EditorGUILayout.LabelField("CORNER TANGENT HELPERS (V4)",
+                EditorStyles.boldLabel);
+            if (!traceReference)
+                enableCornerHelpers = EditorGUILayout.Toggle(
+                    "Enable 8 corner helpers", enableCornerHelpers);
+            if (enableCornerHelpers) enableEdgeControlPoints = true;
+            if (enableCornerHelpers || (traceReference && referenceHasHelpers))
+            {
+                EditorGUILayout.HelpBox(
+                    "8 small local points near the rounded corners. " +
+                    "H adjusts top/bottom; V adjusts left/right without " +
+                    "dragging the entire side.", MessageType.Info);
+                for (int i = 0; i < 8; i++)
+                {
+                    int id = i + 8;
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Toggle(selected == id, PointLabels[id],
+                            "Button", GUILayout.Width(53))) selected = id;
+                        EditorGUI.BeginChangeCheck();
+                        Vector2 value = EditorGUILayout.Vector2Field("",
+                            GetHandle(id));
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            SetHandle(id, value); Repaint();
+                        }
+                    }
+                }
+                if (!traceReference && GUILayout.Button("Reset corner helpers"))
+                {
+                    cornerHelperOffsets = new Vector2[8];
+                    Repaint();
+                }
+            }
             GUILayout.Space(7);
             EditorGUILayout.LabelField("FOUR CORNERS (source pixels)",
                 EditorStyles.boldLabel);
@@ -419,11 +464,12 @@ namespace Rokas.Editor
                         if (GUILayout.Toggle(selected == i, PointLabels[i],
                                 "Button", GUILayout.Width(34))) selected = i;
                         EditorGUI.BeginChangeCheck();
-                        var updated = EditorGUILayout.Vector2Field("", corners[i],
+                        var updated = EditorGUILayout.Vector2Field("",
+                            GetHandle(i),
                             GUILayout.Height(EditorGUIUtility.singleLineHeight));
                         if (EditorGUI.EndChangeCheck())
                         {
-                            corners[i] = updated;
+                            SetHandle(i, updated);
                             Repaint();
                         }
                     }
@@ -433,9 +479,11 @@ namespace Rokas.Editor
             bool valid = ValidateCorners(out string error);
             if (!valid) EditorGUILayout.HelpBox(error, MessageType.Error);
             else EditorGUILayout.HelpBox(
-                enableEdgeControlPoints
-                    ? "Valid 8-point curve — export V3 for review. NOT applied to the game."
-                    : "Valid 4-corner LCD polygon — export V2 for the game.",
+                enableCornerHelpers
+                    ? "V4 16-point mask — export for review (NOT in game)."
+                    : enableEdgeControlPoints
+                        ? "V3 8-point mask — export for review (NOT in game)."
+                        : "V2 4-corner mask — export for review.",
                 MessageType.Info);
 
             GUILayout.FlexibleSpace();
@@ -504,8 +552,9 @@ namespace Rokas.Editor
             cornerHelperOffsets[index] = point - MapBaseUV(CornerHelperUV[index]);
         }
 
-        private int HandleCount => enableCornerHelpers ? 16 :
-            enableEdgeControlPoints ? 8 : 4;
+        private int HandleCount => traceReference && referenceDefined
+            ? (referenceHasHelpers ? 16 : referenceHasEdges ? 8 : 4)
+            : (enableCornerHelpers ? 16 : enableEdgeControlPoints ? 8 : 4);
 
         private Vector2 GetHandle(int index)
         {
@@ -525,6 +574,64 @@ namespace Rokas.Editor
             if (index < 4) corners[index] = point;
             else if (index < 8) SetEdgePoint(index - 4, point);
             else SetCornerHelper(index - 8, point);
+        }
+
+        private void BeginReferenceTracing()
+        {
+            referenceCorners = (Vector2[])corners.Clone();
+            referenceEdgeOffsets = edgeOffsets == null ?
+                new Vector2[4] : (Vector2[])edgeOffsets.Clone();
+            referenceHelperOffsets = cornerHelperOffsets == null ?
+                new Vector2[8] : (Vector2[])cornerHelperOffsets.Clone();
+            referenceHasEdges = enableEdgeControlPoints;
+            referenceHasHelpers = enableCornerHelpers;
+            referenceDefined = traceReference = true;
+            showErrorHeatmap = true;
+            selected = -1;
+            Repaint();
+        }
+
+        private Vector2 MapReferenceUV(Vector2 uv)
+        {
+            return MapUV(uv, referenceCorners, referenceEdgeOffsets,
+                referenceHelperOffsets, referenceHasEdges, referenceHasHelpers);
+        }
+
+        private Vector2 GetReferenceHandle(int index)
+        {
+            if (index < 4) return referenceCorners[index];
+            if (index < 8)
+            {
+                int edge = index - 4;
+                Vector2 midpoint = (referenceCorners[edge] +
+                    referenceCorners[(edge + 1) % 4]) * .5f;
+                return midpoint + referenceEdgeOffsets[edge];
+            }
+            int helper = index - 8;
+            return MapUV(CornerHelperUV[helper], referenceCorners,
+                referenceEdgeOffsets, null, referenceHasEdges, false) +
+                referenceHelperOffsets[helper];
+        }
+
+        private void SetReferenceHandle(int index, Vector2 point)
+        {
+            if (index < 4)
+            {
+                referenceCorners[index] = point;
+                return;
+            }
+            if (index < 8)
+            {
+                int edge = index - 4;
+                Vector2 midpoint = (referenceCorners[edge] +
+                    referenceCorners[(edge + 1) % 4]) * .5f;
+                referenceEdgeOffsets[edge] = point - midpoint;
+                return;
+            }
+            int helper = index - 8;
+            referenceHelperOffsets[helper] = point -
+                MapUV(CornerHelperUV[helper], referenceCorners,
+                    referenceEdgeOffsets, null, referenceHasEdges, false);
         }
 
         private void ZoomToSelected(float magnification)
