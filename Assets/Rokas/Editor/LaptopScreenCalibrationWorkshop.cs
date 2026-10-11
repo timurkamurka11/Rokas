@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEditor;
@@ -17,7 +18,7 @@ namespace Rokas.Editor
         [Serializable]
         private sealed class Preset
         {
-            public int formatVersion = 1;
+            public int formatVersion = 2;
             public string coordinateSpace = "source_image_pixels_top_left";
             public int sourceWidth = 1672;
             public int sourceHeight = 941;
@@ -27,6 +28,11 @@ namespace Rokas.Editor
             public float bottomLeftX, bottomLeftY;
             public float powerX = 1040f, powerY = 708f;
             public bool debugPowerAnchor;
+            public bool enableRoundedMask = true;
+            public float topLeftRadius = 18f;
+            public float topRightRadius = 18f;
+            public float bottomRightRadius = 6f;
+            public float bottomLeftRadius = 6f;
         }
 
         private enum ViewMode { YomiPreview, BlackScreen, Mask, Outline }
@@ -48,7 +54,13 @@ namespace Rokas.Editor
         [SerializeField] private Vector2 pan;
         [SerializeField] private int selected = -1;
         [SerializeField] private bool showGrid = true;
-        [SerializeField] private bool showOutline = true;
+        [SerializeField] private bool showOutline = true; // outer four-sided polygon
+        [SerializeField] private bool showRoundedOutline = true;
+        [SerializeField] private bool enableRoundedMask = true;
+        [SerializeField] private float topLeftRadius = 18f;
+        [SerializeField] private float topRightRadius = 18f;
+        [SerializeField] private float bottomRightRadius = 6f;
+        [SerializeField] private float bottomLeftRadius = 6f;
         [SerializeField] private bool showHandles = true;
         [SerializeField] private float overlayAlpha = .88f;
         [SerializeField] private ViewMode mode = ViewMode.YomiPreview;
@@ -130,6 +142,9 @@ namespace Rokas.Editor
             }
             originalPowerX = raw.powerX;
             originalPowerY = raw.powerY;
+            enableRoundedMask = true;
+            topLeftRadius = topRightRadius = 18f;
+            bottomRightRadius = bottomLeftRadius = 6f;
             corners = new[]
             {
                 new Vector2(raw.topLeftX + 32f, raw.topLeftY + 5f),
@@ -195,7 +210,8 @@ namespace Rokas.Editor
             overlayAlpha = EditorGUILayout.Slider("Overlay opacity", overlayAlpha, 0f, 1f);
             zoom = EditorGUILayout.Slider("Zoom", zoom, 1f, 8f);
             showGrid = EditorGUILayout.Toggle("UV / perspective grid", showGrid);
-            showOutline = EditorGUILayout.Toggle("LCD outline", showOutline);
+            showOutline = EditorGUILayout.Toggle("Show outer polygon", showOutline);
+            showRoundedOutline = EditorGUILayout.Toggle("Show rounded LCD", showRoundedOutline);
             showHandles = EditorGUILayout.Toggle("Show corner handles", showHandles);
             if (GUILayout.Button("Center / fit view"))
             {
@@ -211,6 +227,24 @@ namespace Rokas.Editor
                 EditorGUILayout.HelpBox("Showing a CHECKER GRID, not actual YOMI. " +
                     "Select an existing YOMI screenshot PNG for exact preview.",
                     MessageType.None);
+
+            GUILayout.Space(7);
+            EditorGUILayout.LabelField("ROUNDED LCD (source pixels)",
+                EditorStyles.boldLabel);
+            enableRoundedMask = EditorGUILayout.Toggle("Enable rounded mask",
+                enableRoundedMask);
+            using (new EditorGUI.DisabledScope(!enableRoundedMask))
+            {
+                float maxRadius = MaxCornerRadius();
+                topLeftRadius = EditorGUILayout.Slider("Top left radius", topLeftRadius, 0f, maxRadius);
+                topRightRadius = EditorGUILayout.Slider("Top right radius", topRightRadius, 0f, maxRadius);
+                bottomRightRadius = EditorGUILayout.Slider("Bottom right radius", bottomRightRadius, 0f, maxRadius);
+                bottomLeftRadius = EditorGUILayout.Slider("Bottom left radius", bottomLeftRadius, 0f, maxRadius);
+            }
+            EditorGUILayout.LabelField("Radius rounds the VISIBLE pixels inside each",
+                EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("corner. The four handles stay on outer LCD bounds.",
+                EditorStyles.miniLabel);
 
             GUILayout.Space(7);
             EditorGUILayout.LabelField("FOUR CORNERS (source pixels)",
@@ -301,25 +335,20 @@ namespace Rokas.Editor
         private void DrawPreview(Vector2[] p, Rect localImage)
         {
             if (Event.current.type != EventType.Repaint) return;
-            if (mode == ViewMode.YomiPreview)
+            if (mode != ViewMode.Outline)
             {
-                // The original preview drew GL directly into an IMGUI group,
-                // applying a DIFFERENT pixel matrix from GUI.DrawTexture and
-                // Handles. It showed a floating blue patch away from handles.
-                // Render into the SOURCE IMAGE pixel coordinate space first,
-                // then composite using the EXACT SAME localImage GUI rect.
-                Texture preview = yomiProjectTexture ? yomiProjectTexture :
-                    loadedExternalYomi ? loadedExternalYomi : guide;
-                RenderTexture aligned = RenderTexturedLCD(preview);
+                // All previews use ONE UV-clipped polygon in original source
+                // pixels; no separate Handles polygon leaking beyond the LCD.
+                Texture preview = mode == ViewMode.YomiPreview ?
+                    (yomiProjectTexture ? yomiProjectTexture :
+                     loadedExternalYomi ? loadedExternalYomi : guide) :
+                    Texture2D.whiteTexture;
+                Color tint = mode == ViewMode.BlackScreen ? Color.black :
+                    mode == ViewMode.Mask ? new Color(.15f, .85f, 1f, 1f) :
+                    Color.white;
+                RenderTexture aligned = RenderTexturedLCD(preview, tint);
                 if (aligned)
                     GUI.DrawTexture(localImage, aligned, ScaleMode.StretchToFill, true);
-            }
-            else if (mode == ViewMode.BlackScreen || mode == ViewMode.Mask)
-            {
-                Handles.color = mode == ViewMode.BlackScreen ?
-                    new Color(0, 0, 0, overlayAlpha) :
-                    new Color(.15f, .85f, 1f, overlayAlpha * .65f);
-                Handles.DrawAAConvexPolygon(p[0], p[1], p[2], p[3]);
             }
             if (showGrid)
             {
@@ -338,6 +367,21 @@ namespace Rokas.Editor
                 Handles.color = new Color(1f, .86f, .18f, 1f);
                 Handles.DrawAAPolyLine(2.5f, p[0], p[1], p[2], p[3], p[0]);
             }
+            if (showRoundedOutline && enableRoundedMask)
+            {
+                List<Vector2> boundary = BuildRoundedBoundaryUV();
+                Vector3[] outline = new Vector3[boundary.Count + 1];
+                for (int i = 0; i < boundary.Count; i++)
+                {
+                    Vector2 photoPx = MapCornerUV(boundary[i]);
+                    outline[i] = new Vector3(
+                        localImage.x + photoPx.x * localImage.width / source.width,
+                        localImage.y + photoPx.y * localImage.height / source.height, 0f);
+                }
+                outline[boundary.Count] = outline[0];
+                Handles.color = new Color(.2f, 1f, .75f, .96f);
+                Handles.DrawAAPolyLine(2.25f, outline);
+            }
             if (showHandles)
             {
                 for (int i = 0; i < 4; i++)
@@ -350,7 +394,7 @@ namespace Rokas.Editor
             }
         }
 
-        private RenderTexture RenderTexturedLCD(Texture image)
+        private RenderTexture RenderTexturedLCD(Texture image, Color tint)
         {
             if (!image || !source || overlayAlpha <= 0f) return null;
             if (!previewMaterial)
@@ -392,17 +436,27 @@ namespace Rokas.Editor
                 {
                     GL.LoadPixelMatrix(0f, source.width, source.height, 0f);
                     previewMaterial.mainTexture = image;
-                    previewMaterial.color = new Color(1f, 1f, 1f, overlayAlpha);
+                    previewMaterial.color = new Color(tint.r, tint.g, tint.b,
+                        overlayAlpha * tint.a * (mode == ViewMode.Mask ? .65f : 1f));
                     if (previewMaterial.SetPass(0))
                     {
+                        // UV mask is applied AFTER mapping to the quadrilateral:
+                        // vertices follow rounded arcs in normalized (u,v)
+                        // space, and are mapped onto the identical LCD corners.
+                        // The solid interior remains a UV triangle fan.
+                        List<Vector2> outline = BuildRoundedBoundaryUV();
+                        Vector2 centerUV = new Vector2(.5f, .5f);
+                        Vector2 centerPx = MapCornerUV(centerUV);
                         GL.Begin(GL.TRIANGLES);
                         GL.Color(Color.white);
-                        Emit(corners[0], 0f, 1f);
-                        Emit(corners[1], 1f, 1f);
-                        Emit(corners[2], 1f, 0f);
-                        Emit(corners[0], 0f, 1f);
-                        Emit(corners[2], 1f, 0f);
-                        Emit(corners[3], 0f, 0f);
+                        for (int i = 0; i < outline.Count; i++)
+                        {
+                            Vector2 a = outline[i];
+                            Vector2 b = outline[(i + 1) % outline.Count];
+                            Emit(centerPx, centerUV.x, 1f - centerUV.y);
+                            Emit(MapCornerUV(a), a.x, 1f - a.y);
+                            Emit(MapCornerUV(b), b.x, 1f - b.y);
+                        }
                         GL.End();
                     }
                 }
@@ -410,6 +464,83 @@ namespace Rokas.Editor
             }
             finally { RenderTexture.active = previous; }
             return previewTarget;
+        }
+
+        // UV (u,v) starts at TOP LEFT and ends at BOTTOM RIGHT.
+        // Exactly the same bilinear projection is used for image pixels,
+        // outline and handles. No later screen-specific rectangle offset.
+        private Vector2 MapCornerUV(Vector2 uv)
+        {
+            Vector2 top = Vector2.Lerp(corners[0], corners[1], uv.x);
+            Vector2 bottom = Vector2.Lerp(corners[3], corners[2], uv.x);
+            return Vector2.Lerp(top, bottom, uv.y);
+        }
+
+        private float MaxCornerRadius()
+        {
+            if (corners == null || corners.Length != 4) return 80f;
+            float top = Vector2.Distance(corners[0], corners[1]);
+            float bottom = Vector2.Distance(corners[3], corners[2]);
+            float left = Vector2.Distance(corners[0], corners[3]);
+            float right = Vector2.Distance(corners[1], corners[2]);
+            return Mathf.Max(0f, Mathf.Min(120f,
+                .45f * Mathf.Min((top + bottom) * .5f, (left + right) * .5f)));
+        }
+
+        private List<Vector2> BuildRoundedBoundaryUV()
+        {
+            var outline = new List<Vector2>(48);
+            if (!enableRoundedMask)
+            {
+                outline.Add(Vector2.zero);
+                outline.Add(Vector2.right);
+                outline.Add(Vector2.one);
+                outline.Add(Vector2.up);
+                return outline;
+            }
+            float width = Mathf.Max(1f, (Vector2.Distance(corners[0], corners[1])
+                + Vector2.Distance(corners[3], corners[2])) * .5f);
+            float height = Mathf.Max(1f, (Vector2.Distance(corners[0], corners[3])
+                + Vector2.Distance(corners[1], corners[2])) * .5f);
+            float cap = MaxCornerRadius();
+            float tl = Mathf.Clamp(topLeftRadius, 0f, cap);
+            float tr = Mathf.Clamp(topRightRadius, 0f, cap);
+            float br = Mathf.Clamp(bottomRightRadius, 0f, cap);
+            float bl = Mathf.Clamp(bottomLeftRadius, 0f, cap);
+            float tlx = tl / width, tly = tl / height;
+            float trx = tr / width, tryy = tr / height;
+            float brx = br / width, bry = br / height;
+            float blx = bl / width, bly = bl / height;
+            // Clockwise, starting at the left edge near TL. Each arc's
+            // terminal tangent joins the next arc with a straight edge.
+            AddRoundedArc(outline, new Vector2(tlx, tly), tlx, tly,
+                180f, 270f, Vector2.zero);
+            AddRoundedArc(outline, new Vector2(1f - trx, tryy), trx, tryy,
+                270f, 360f, Vector2.right);
+            AddRoundedArc(outline, new Vector2(1f - brx, 1f - bry), brx, bry,
+                0f, 90f, Vector2.one);
+            AddRoundedArc(outline, new Vector2(blx, 1f - bly), blx, bly,
+                90f, 180f, Vector2.up);
+            return outline;
+        }
+
+        private static void AddRoundedArc(List<Vector2> outline,
+            Vector2 center, float radiusX, float radiusY,
+            float startAngle, float endAngle, Vector2 squareCorner)
+        {
+            if (radiusX <= .00001f || radiusY <= .00001f)
+            {
+                outline.Add(squareCorner);
+                return;
+            }
+            const int subdivisions = 12;
+            for (int i = 0; i <= subdivisions; i++)
+            {
+                float angle = Mathf.Lerp(startAngle, endAngle,
+                    i / (float)subdivisions) * Mathf.Deg2Rad;
+                outline.Add(new Vector2(center.x + Mathf.Cos(angle) * radiusX,
+                    center.y + Mathf.Sin(angle) * radiusY));
+            }
         }
 
         private static void Emit(Vector2 p, float u, float v)
@@ -524,6 +655,20 @@ namespace Rokas.Editor
                 message = "LCD polygon has almost no visible area.";
                 return false;
             }
+            if (enableRoundedMask)
+            {
+                float cap = MaxCornerRadius();
+                foreach (float radius in new[] {
+                    topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius })
+                {
+                    if (float.IsNaN(radius) || float.IsInfinity(radius) ||
+                        radius < 0f || radius > cap + .01f)
+                    {
+                        message = "LCD corner radii must be finite and fit inside the current polygon.";
+                        return false;
+                    }
+                }
+            }
             return true;
         }
 
@@ -531,14 +676,19 @@ namespace Rokas.Editor
         {
             return new Preset
             {
-                formatVersion = 1,
+                formatVersion = 2,
                 coordinateSpace = "source_image_pixels_top_left",
                 sourceWidth = source.width, sourceHeight = source.height,
                 topLeftX = corners[0].x, topLeftY = corners[0].y,
                 topRightX = corners[1].x, topRightY = corners[1].y,
                 bottomRightX = corners[2].x, bottomRightY = corners[2].y,
                 bottomLeftX = corners[3].x, bottomLeftY = corners[3].y,
-                powerX = originalPowerX, powerY = originalPowerY
+                powerX = originalPowerX, powerY = originalPowerY,
+                enableRoundedMask = enableRoundedMask,
+                topLeftRadius = topLeftRadius,
+                topRightRadius = topRightRadius,
+                bottomRightRadius = bottomRightRadius,
+                bottomLeftRadius = bottomLeftRadius
             };
         }
 
@@ -584,6 +734,19 @@ namespace Rokas.Editor
                 {
                     corners = previous;
                     throw new InvalidDataException(reason);
+                }
+                // Older V1 presets had no rounded parameters. Honor their
+                // rectangle until explicitly switched to rounded preview.
+                bool legacy = data.formatVersion < 2;
+                enableRoundedMask = !legacy && data.enableRoundedMask;
+                topLeftRadius = legacy ? 0f : data.topLeftRadius;
+                topRightRadius = legacy ? 0f : data.topRightRadius;
+                bottomRightRadius = legacy ? 0f : data.bottomRightRadius;
+                bottomLeftRadius = legacy ? 0f : data.bottomLeftRadius;
+                if (!ValidateCorners(out string radiusError))
+                {
+                    corners = previous;
+                    throw new InvalidDataException(radiusError);
                 }
                 originalPowerX = data.powerX;
                 originalPowerY = data.powerY;
