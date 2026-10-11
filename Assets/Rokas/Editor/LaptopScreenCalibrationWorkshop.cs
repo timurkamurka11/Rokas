@@ -269,12 +269,12 @@ namespace Rokas.Editor
                 Mathf.Max(50, area.width - 16), Mathf.Max(50, area.height - 16));
             float scale = Mathf.Min(inner.width / source.width,
                 inner.height / source.height) * zoom;
-            Vector2 focus = new Vector2(.5f, .5f);
-            if (zoom > 1.001f)
-            {
-                Vector2 center = (corners[0] + corners[1] + corners[2] + corners[3]) * .25f;
-                focus = new Vector2(center.x / source.width, center.y / source.height);
-            }
+            // Keep focus FIXED while handles are dragged. Moving the camera
+            // according to the moving polygon centroid caused feedback/jitter.
+            // At zoom 1 this is the exact image center, at zoom > 1 the
+            // factory LCD center is comfortably in view.
+            Vector2 focus = zoom > 1.001f
+                ? new Vector2(.5f, .56f) : new Vector2(.5f, .5f);
             var imageRect = new Rect(inner.center.x - focus.x * source.width * scale + pan.x,
                 inner.center.y - focus.y * source.height * scale + pan.y,
                 source.width * scale, source.height * scale);
