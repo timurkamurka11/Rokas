@@ -1,0 +1,80 @@
+name: ROKAS V11.5 Import Original R Stand PNG
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths: ['.github/workflows/laptop-v115-import-r-stand-png.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  approved-stand-png:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fidelity3-resume-5779190
+          fetch-depth: 1
+      - name: Import exact user's transparent original PNG (no redraw/compression)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install chromium --with-deps
+          python3 - <<'PY'
+          import hashlib, re
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          destination=Path('Assets/Rokas/Resources/LaptopCinematic/UI/prompt_stand_r.png')
+          wanted_sha256='e56a6ee3e9c16838b07191fca1ff08dcb19ebf5b3a6b31ebf79cd4890b1e3c46'
+          if not destination.exists():
+            with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True)
+              page=browser.new_page(accept_downloads=True,locale='en-US')
+              page.goto('https://firestorage.ai/en/f/28vttT5lIZaT',wait_until='domcontentloaded',timeout=60000)
+              page.get_by_text('image(20261011-094331).png',exact=False).first.wait_for(timeout=45000)
+              buttons=page.get_by_role('button',name='Download',exact=True)
+              if buttons.count()!=1:
+                raise RuntimeError('Expected a single original transparent PNG download, got '+str(buttons.count()))
+              with page.expect_download(timeout=60000) as transfer:
+                buttons.first.click()
+              destination.parent.mkdir(parents=True,exist_ok=True)
+              transfer.value.save_as(str(destination))
+              browser.close()
+          data=destination.read_bytes()
+          assert len(data)==667984, 'Original user PNG byte size mismatch'
+          assert hashlib.sha256(data).hexdigest()==wanted_sha256, 'Refusing substituted/reprocessed image'
+          assert data[:8]==bytes.fromhex('89504e470d0a1a0a'), 'Not a PNG'
+          import struct
+          assert struct.unpack('>II',data[16:24])==(2048,682), 'Wrong original aspect'
+          assert data[25]==6, 'Requires original RGBA alpha source'
+          print('ORIGINAL_STAND_PNG_VERIFIED',len(data),wanted_sha256)
+          meta=destination.with_suffix('.png.meta')
+          guid='8e0f287b41a743929f1a86f4de132bc0'
+          if meta.exists():
+            current=meta.read_text(encoding='utf-8')
+            assert 'guid: '+guid in current and '\nTextureImporter:\n' in current, 'Existing meta is invalid'
+          else:
+            source=Path('Assets/Rokas/Resources/VN/RuntimeIntro/Characters/onboarded_mina_mina_serious.png.meta').read_text(encoding='utf-8')
+            assert '\nTextureImporter:\n' in source
+            source=re.sub(r'(?m)^guid: [0-9a-f]{32}$', 'guid: '+guid,source,count=1)
+            source=source.replace('maxTextureSize: 2048','maxTextureSize: 4096').replace('textureCompression: 1','textureCompression: 0')
+            meta.write_text('\n'.join(line.rstrip() for line in source.splitlines())+'\n',encoding='utf-8')
+          assert '\nTextureImporter:\n' in meta.read_text(encoding='utf-8')
+          PY
+      - name: Commit exact source PNG to already-existing main ROKAS working branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Assets/Rokas/Resources/LaptopCinematic/UI/prompt_stand_r.png Assets/Rokas/Resources/LaptopCinematic/UI/prompt_stand_r.png.meta
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Original stand art and Unity importer are already committed"
+            exit 0
+          fi
+          git commit -m "assets(laptop-v11.4): import exact user-provided stand button PNG and Unity metadata"
+          git fetch origin codex/fidelity3-resume-5779190
+          git rebase origin/codex/fidelity3-resume-5779190
+          git push origin HEAD:codex/fidelity3-resume-5779190
