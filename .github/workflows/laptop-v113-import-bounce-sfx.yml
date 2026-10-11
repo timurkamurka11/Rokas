@@ -1,0 +1,77 @@
+name: ROKAS Laptop V11.3 Import Original Chibi Bounce SFX
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths: ['.github/workflows/laptop-v113-import-bounce-sfx.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-approved-bounce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fidelity3-resume-5779190
+          fetch-depth: 1
+      - name: Download exact user MP3; never synthesize or replace waveform
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install chromium --with-deps
+          python3 - <<'PY'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          import subprocess
+          asset=Path('Assets/Rokas/Resources/LaptopCinematic/chibi_bounce.mp3')
+          if asset.exists():
+              assert asset.stat().st_size==14336, 'Unexpected existing bounce MP3'
+              print('EXACT_APPROVED_MP3_ALREADY_PRESENT')
+          else:
+              with sync_playwright() as p:
+                  browser=p.chromium.launch(headless=True)
+                  page=browser.new_page(accept_downloads=True,locale='en-US')
+                  page.goto('https://firestorage.ai/ja/f/1PatX3l4FS-R',wait_until='domcontentloaded',timeout=60000)
+                  page.get_by_text('free-sound-1674855877.mp3',exact=False).first.wait_for(timeout=45000)
+                  downloads=page.get_by_role('button',name='Download',exact=True)
+                  if downloads.count()!=1:
+                      raise RuntimeError('Expected exactly one user audio Download button, got '+str(downloads.count()))
+                  with page.expect_download(timeout=60000) as transfer:
+                      downloads.first.click()
+                  asset.parent.mkdir(parents=True,exist_ok=True)
+                  transfer.value.save_as(str(asset))
+                  browser.close()
+              assert asset.stat().st_size==14336, 'Original user audio size mismatch'
+              print('EXACT_USER_CHIBI_BOUNCE_MP3',asset.stat().st_size)
+          PY
+      - name: Preserve stable Unity AudioImporter GUID
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          dest=Path('Assets/Rokas/Resources/LaptopCinematic/chibi_bounce.mp3.meta')
+          guid='da19573f7e154ac1aa81df38cb319a13'
+          if dest.exists():
+              body=dest.read_text(encoding='utf-8')
+              assert 'guid: '+guid in body and 'AudioImporter:' in body, 'Refusing to overwrite divergent Unity audio meta'
+          else:
+              template=Path('Assets/Rokas/Resources/Audio/CombatFidelity3/EnemyWarning.wav.meta').read_text(encoding='utf-8')
+              body=re.sub(r'(?m)^guid: [0-9a-f]{32}$','guid: '+guid,template,count=1)
+              dest.write_text(body,encoding='utf-8')
+          PY
+      - name: Commit exact original audio to user's existing branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Assets/Rokas/Resources/LaptopCinematic/chibi_bounce.mp3 Assets/Rokas/Resources/LaptopCinematic/chibi_bounce.mp3.meta
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'assets(laptop-v11.3): import exact user-provided bounce MP3 and stable Unity meta'
+          git fetch origin codex/fidelity3-resume-5779190
+          git rebase origin/codex/fidelity3-resume-5779190
+          git push origin HEAD:codex/fidelity3-resume-5779190
