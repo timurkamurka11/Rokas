@@ -59,7 +59,7 @@ jobs:
             assert '\nTextureImporter:\n' in source
             source=re.sub(r'(?m)^guid: [0-9a-f]{32}$', 'guid: '+guid,source,count=1)
             source=source.replace('maxTextureSize: 2048','maxTextureSize: 4096').replace('textureCompression: 1','textureCompression: 0')
-            meta.write_text(source,encoding='utf-8')
+            meta.write_text('\\n'.join(line.rstrip() for line in source.splitlines())+'\\n',encoding='utf-8')
           assert '\nTextureImporter:\n' in meta.read_text(encoding='utf-8')
           PY
       - name: Commit exact source PNG to already-existing main ROKAS working branch
