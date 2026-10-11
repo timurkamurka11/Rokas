@@ -829,9 +829,10 @@ namespace Rokas.Editor
                 {
                     int nearest = -1;
                     float distance = 17f;
-                    for (int i = 0; i < 4; ++i)
+                    int count = enableEdgeControlPoints ? 8 : 4;
+                    for (int i = 0; i < count; ++i)
                     {
-                        Vector2 handle = imageRect.position + corners[i] * scale;
+                        Vector2 handle = imageRect.position + GetHandle(i) * scale;
                         float d = Vector2.Distance(handle, mouse);
                         if (d < distance) { nearest = i; distance = d; }
                     }
@@ -846,9 +847,9 @@ namespace Rokas.Editor
             {
                 if (draggingPoint && selected >= 0)
                 {
-                    corners[selected] = new Vector2(
+                    SetHandle(selected, new Vector2(
                         Mathf.Clamp((mouse.x - imageRect.x) / scale, 0f, source.width - 1f),
-                        Mathf.Clamp((mouse.y - imageRect.y) / scale, 0f, source.height - 1f));
+                        Mathf.Clamp((mouse.y - imageRect.y) / scale, 0f, source.height - 1f)));
                     e.Use(); Repaint(); return;
                 }
                 if (panning)
@@ -861,7 +862,8 @@ namespace Rokas.Editor
             {
                 draggingPoint = panning = false; e.Use(); Repaint(); return;
             }
-            if (e.type == EventType.KeyDown && selected >= 0 && selected < 4)
+            if (e.type == EventType.KeyDown && selected >= 0 &&
+                selected < (enableEdgeControlPoints ? 8 : 4))
             {
                 float delta = e.shift ? 10f : 1f;
                 Vector2 move = Vector2.zero;
@@ -871,10 +873,10 @@ namespace Rokas.Editor
                 if (e.keyCode == KeyCode.DownArrow) move.y = delta;
                 if (move != Vector2.zero)
                 {
-                    corners[selected] += move;
-                    corners[selected] = new Vector2(
-                        Mathf.Clamp(corners[selected].x, 0f, source.width - 1f),
-                        Mathf.Clamp(corners[selected].y, 0f, source.height - 1f));
+                    Vector2 current = GetHandle(selected) + move;
+                    SetHandle(selected, new Vector2(
+                        Mathf.Clamp(current.x, 0f, source.width - 1f),
+                        Mathf.Clamp(current.y, 0f, source.height - 1f)));
                     e.Use(); Repaint();
                 }
             }
@@ -913,6 +915,50 @@ namespace Rokas.Editor
                 message = "LCD polygon has almost no visible area.";
                 return false;
             }
+            if (enableEdgeControlPoints)
+            {
+                if (edgeOffsets == null || edgeOffsets.Length != 4)
+                {
+                    message = "Four edge contact pins have not been initialized.";
+                    return false;
+                }
+                float edgeAllowance = Mathf.Min(100f,
+                    .34f * Mathf.Min(
+                        Vector2.Distance(corners[0], corners[3]),
+                        Vector2.Distance(corners[1], corners[2])));
+                for (int edge = 0; edge < 4; ++edge)
+                {
+                    Vector2 pin = GetEdgePoint(edge);
+                    if (float.IsNaN(pin.x) || float.IsNaN(pin.y) ||
+                        float.IsInfinity(pin.x) || float.IsInfinity(pin.y) ||
+                        pin.x < 0f || pin.y < 0f ||
+                        pin.x >= source.width || pin.y >= source.height ||
+                        edgeOffsets[edge].magnitude > edgeAllowance)
+                    {
+                        message = "Edge pin outside the source photo or too far from its side.";
+                        return false;
+                    }
+                }
+                // Reject folded/crossing warped LCDs: UV must retain positive
+                // orientation at all dense grid sample cells.
+                const int cells = 12;
+                for (int u = 0; u < cells; ++u)
+                    for (int v = 0; v < cells; ++v)
+                    {
+                        float x = u / (float)cells, y = v / (float)cells;
+                        float h = 1f / cells;
+                        Vector2 a = MapCornerUV(new Vector2(x, y));
+                        Vector2 b = MapCornerUV(new Vector2(x + h, y));
+                        Vector2 d = MapCornerUV(new Vector2(x, y + h));
+                        float determinant = (b.x - a.x) * (d.y - a.y) -
+                            (b.y - a.y) * (d.x - a.x);
+                        if (determinant <= .0001f)
+                        {
+                            message = "Warped LCD folds over itself; reduce edge pin displacement.";
+                            return false;
+                        }
+                    }
+            }
             if (enableRoundedMask)
             {
                 float cap = MaxCornerRadius();
@@ -934,7 +980,7 @@ namespace Rokas.Editor
         {
             return new Preset
             {
-                formatVersion = 2,
+                formatVersion = enableEdgeControlPoints ? 3 : 2,
                 coordinateSpace = "source_image_pixels_top_left",
                 sourceWidth = source.width, sourceHeight = source.height,
                 topLeftX = corners[0].x, topLeftY = corners[0].y,
@@ -946,7 +992,12 @@ namespace Rokas.Editor
                 topLeftRadius = topLeftRadius,
                 topRightRadius = topRightRadius,
                 bottomRightRadius = bottomRightRadius,
-                bottomLeftRadius = bottomLeftRadius
+                bottomLeftRadius = bottomLeftRadius,
+                enableEdgeControlPoints = enableEdgeControlPoints,
+                topMidX = GetEdgePoint(0).x, topMidY = GetEdgePoint(0).y,
+                rightMidX = GetEdgePoint(1).x, rightMidY = GetEdgePoint(1).y,
+                bottomMidX = GetEdgePoint(2).x, bottomMidY = GetEdgePoint(2).y,
+                leftMidX = GetEdgePoint(3).x, leftMidY = GetEdgePoint(3).y
             };
         }
 
@@ -963,7 +1014,8 @@ namespace Rokas.Editor
             if (string.IsNullOrEmpty(path)) return;
             File.WriteAllText(path, JsonUtility.ToJson(MakePreset(), true) + "\n",
                 new UTF8Encoding(false));
-            ShowNotification(new GUIContent("4 corners exported"));
+            ShowNotification(new GUIContent(enableEdgeControlPoints
+                ? "V3 8-point LCD exported" : "V2 4-corner LCD exported"));
             EditorUtility.RevealInFinder(path);
         }
 
@@ -987,6 +1039,9 @@ namespace Rokas.Editor
                     new Vector2(data.bottomLeftX, data.bottomLeftY)
                 };
                 Vector2[] previous = corners;
+                Vector2[] oldOffsets = edgeOffsets == null
+                    ? new Vector2[4] : (Vector2[])edgeOffsets.Clone();
+                bool oldEdgeEnabled = enableEdgeControlPoints;
                 bool oldEnabled = enableRoundedMask;
                 float oldTL = topLeftRadius, oldTR = topRightRadius;
                 float oldBR = bottomRightRadius, oldBL = bottomLeftRadius;
@@ -999,11 +1054,23 @@ namespace Rokas.Editor
                 topRightRadius = legacy ? 0f : data.topRightRadius;
                 bottomRightRadius = legacy ? 0f : data.bottomRightRadius;
                 bottomLeftRadius = legacy ? 0f : data.bottomLeftRadius;
+                edgeOffsets = new Vector2[4];
+                enableEdgeControlPoints = data.formatVersion >= 3 &&
+                    data.enableEdgeControlPoints;
+                if (enableEdgeControlPoints)
+                {
+                    SetEdgePoint(0, new Vector2(data.topMidX, data.topMidY));
+                    SetEdgePoint(1, new Vector2(data.rightMidX, data.rightMidY));
+                    SetEdgePoint(2, new Vector2(data.bottomMidX, data.bottomMidY));
+                    SetEdgePoint(3, new Vector2(data.leftMidX, data.leftMidY));
+                }
                 if (!ValidateCorners(out string radiusError))
                 {
                     // Loading invalid JSON must never destroy a good
                     // in-progress manual calibration (corners AND radii).
                     corners = previous;
+                    edgeOffsets = oldOffsets;
+                    enableEdgeControlPoints = oldEdgeEnabled;
                     enableRoundedMask = oldEnabled;
                     topLeftRadius = oldTL;
                     topRightRadius = oldTR;
