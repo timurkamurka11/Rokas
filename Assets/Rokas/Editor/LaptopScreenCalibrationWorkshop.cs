@@ -355,15 +355,20 @@ namespace Rokas.Editor
             GUILayout.Space(7);
             EditorGUILayout.LabelField("ROUNDED LCD (source pixels)",
                 EditorStyles.boldLabel);
-            enableRoundedMask = EditorGUILayout.Toggle("Enable rounded mask",
-                enableRoundedMask);
-            using (new EditorGUI.DisabledScope(!enableRoundedMask))
+            // While tracing the independent gold bezel reference, never
+            // silently modify the user's fitted mask rounded radii.
+            using (new EditorGUI.DisabledScope(traceReference))
             {
-                float maxRadius = MaxCornerRadius();
-                topLeftRadius = EditorGUILayout.Slider("Top left radius", topLeftRadius, 0f, maxRadius);
-                topRightRadius = EditorGUILayout.Slider("Top right radius", topRightRadius, 0f, maxRadius);
-                bottomRightRadius = EditorGUILayout.Slider("Bottom right radius", bottomRightRadius, 0f, maxRadius);
-                bottomLeftRadius = EditorGUILayout.Slider("Bottom left radius", bottomLeftRadius, 0f, maxRadius);
+                enableRoundedMask = EditorGUILayout.Toggle("Enable rounded mask",
+                    enableRoundedMask);
+                using (new EditorGUI.DisabledScope(!enableRoundedMask))
+                {
+                    float maxRadius = MaxCornerRadius();
+                    topLeftRadius = EditorGUILayout.Slider("Top left radius", topLeftRadius, 0f, maxRadius);
+                    topRightRadius = EditorGUILayout.Slider("Top right radius", topRightRadius, 0f, maxRadius);
+                    bottomRightRadius = EditorGUILayout.Slider("Bottom right radius", bottomRightRadius, 0f, maxRadius);
+                    bottomLeftRadius = EditorGUILayout.Slider("Bottom left radius", bottomLeftRadius, 0f, maxRadius);
+                }
             }
             EditorGUILayout.LabelField("Radius rounds the VISIBLE pixels inside each",
                 EditorStyles.miniLabel);
