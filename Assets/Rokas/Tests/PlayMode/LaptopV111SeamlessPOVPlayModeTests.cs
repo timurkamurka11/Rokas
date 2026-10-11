@@ -40,6 +40,21 @@ namespace Rokas.Tests
             boot.Initialize(dir);
             yield return null;
             Find<Button>("LaptopHotspot").onClick.Invoke();
+            yield return null;
+            // No delayed 1.8s pop: original art is already active on the
+            // FIRST seating frame and fades with its entire POV canvas.
+            var approachPov = Find<RectTransform>("ApprovedPOV");
+            Assert.That(approachPov, Is.Not.Null);
+            var approachGroup = approachPov.GetComponent<CanvasGroup>();
+            Assert.That(approachGroup, Is.Not.Null);
+            Assert.That(approachGroup.blocksRaycasts, Is.False,
+                "Early rendered prompts must not accept clicks until seated");
+            Assert.That(Find<RawImage>("PowerChoiceHint").gameObject.activeInHierarchy,
+                Is.True, "Original E power PNG must exist from first seating frame");
+            Assert.That(Find<RawImage>("BackChoiceHint").gameObject.activeInHierarchy,
+                Is.True, "Original ESC PNG must fade in with the room POV");
+            Assert.That(Find<RectTransform>("ROKASNoSignalScreen").gameObject.activeInHierarchy,
+                Is.True, "Chibi and OFF LCD must appear with the first POV frame");
             yield return new WaitForSecondsRealtime(.95f);
             var image=Find<RawImage>("UnmodifiedScreenOffPOV");
             Assert.That(image,Is.Not.Null);
@@ -63,6 +78,23 @@ namespace Rokas.Tests
             Assert.That(poweredViewport.GetComponent<LaptopPerspectiveQuad>(), Is.Not.Null);
             Assert.That(poweredViewport.rect.width, Is.EqualTo(standby.rect.width).Within(.01f));
             Assert.That(poweredViewport.rect.height, Is.EqualTo(standby.rect.height).Within(.01f));
+            // All potential ON layers must now share the same physical
+            // trapezoid, instead of leaking through the mask at left.
+            var fallbackSurface = Find<LaptopPerspectiveQuad>("LaptopPhysicalDesktop");
+            var fallbackClock = Find<LaptopPhysicalDesktopClock>("PhysicalDesktopLiveClock");
+            var screenStencil = poweredViewport.GetComponent<LaptopPerspectiveQuad>();
+            Assert.That(fallbackSurface, Is.Not.Null);
+            Assert.That(fallbackClock, Is.Not.Null);
+            Assert.That(screenStencil, Is.Not.Null);
+            var field = typeof(LaptopPerspectiveQuad).GetField("corners",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            var wallpaperCorners = (Vector2[])field.GetValue(fallbackSurface);
+            var clockCorners = (Vector2[])field.GetValue(fallbackClock);
+            Assert.That(wallpaperCorners.Length, Is.EqualTo(4));
+            for (int i = 0; i < 4; ++i)
+                Assert.That(clockCorners[i], Is.EqualTo(wallpaperCorners[i]),
+                    "Fallback clock and desktop must use identical LCD calibration");
             Assert.That(standby.rect.width, Is.GreaterThan(400f),
                 "LCD must fill the physical screen instead of stopping before lower-right bezel");
             var chibi=Find<RawImage>("ROKASNoSignalChibiDVD");
