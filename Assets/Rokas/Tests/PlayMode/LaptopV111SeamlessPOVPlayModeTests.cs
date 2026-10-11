@@ -99,11 +99,21 @@ namespace Rokas.Tests
             Assert.That(boot.View.LaptopOpen,Is.False);
             var live=Find<LaptopPhysicalDesktopClock>("PhysicalDesktopLiveClock");
             Assert.That(live,Is.Not.Null);
-            Assert.That(live.gameObject.activeInHierarchy,Is.True);
+            bool hasExactYomi = LaptopYomiMirror.Current != null;
+            Assert.That(live.gameObject.activeInHierarchy,Is.EqualTo(!hasExactYomi),
+                "Real full-YOMI screenshot must replace the simulated 640x360 clock atlas");
             var mini=Find<RawImage>("PhysicalMiniYomiVisible");
             Assert.That(mini,Is.Not.Null,"ON laptop must display a real mini YOMI layer");
             Assert.That(mini.gameObject.activeInHierarchy,Is.True);
             Assert.That(mini.texture,Is.Not.Null);
+            if (hasExactYomi)
+            {
+                Assert.That(mini.texture, Is.SameAs(LaptopYomiMirror.Current),
+                    "Mini LCD must display exactly the captured real fullscreen YOMI pixels");
+                Assert.That(mini.rectTransform.rect.width / mini.rectTransform.rect.height,
+                    Is.EqualTo((float)mini.texture.width / mini.texture.height).Within(.012f),
+                    "Physical LCD must preserve true image aspect instead of stretching");
+            }
             var atlas=mini.texture as Texture2D;
             Assert.That(atlas,Is.Not.Null);
             var colors=atlas.GetPixels32();
@@ -119,7 +129,8 @@ namespace Rokas.Tests
                 var icon=Find<LaptopIcon>("PhysicalMiniYomiAppIcon_"+i);
                 Assert.That(icon,Is.Not.Null,
                     "The mini desktop must use the SAME vector glyphs as YOMI.");
-                Assert.That(icon.gameObject.activeInHierarchy,Is.True);
+                Assert.That(icon.gameObject.activeInHierarchy,Is.EqualTo(!hasExactYomi),
+                    "Do not overlay synthetic app drawings on captured real YOMI image");
             }
             Assert.That(Find<Text>("StandbyNoSignal").gameObject.activeInHierarchy,Is.False);
             var reopen=Find<RectTransform>("PoweredLaptopOpenHint");
