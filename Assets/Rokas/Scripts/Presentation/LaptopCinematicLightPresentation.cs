@@ -95,7 +95,11 @@ namespace Rokas.Presentation
                 background.material = null;
                 background.SetMaterialDirty();
             }
-            if (material) UnityEngine.Object.Destroy(material);
+            if (material)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(material);
+                else UnityEngine.Object.DestroyImmediate(material);
+            }
             material = null;
             background = null;
         }
