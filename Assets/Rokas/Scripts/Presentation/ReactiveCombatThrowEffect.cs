@@ -29,6 +29,7 @@ namespace Rokas.Presentation
         public int ReleaseCount { get; private set; }
         public int ContactCount { get; private set; }
         public Vector3 ContactPosition => goal;
+        public Transform ProjectileRoot => projectile.transform;
         public bool InFlight => released && !resolved && elapsed < duration;
         public int ParticleCount => motes.particleCount;
 

@@ -72,7 +72,16 @@ namespace Rokas.Presentation
         private static readonly Vector3 SourceZoomFloor = new Vector3(0f, 0f, -7f);
         private LicensedCombatCameraPlayer licensedCamera;
         private ReactiveCombatActorVisual stageOffsetPerformer;
-        private ReactiveCombatActorVisual licensedCameraPerformer;
+        private ReactiveCombatActorVisual licensedCameraPerformer, licensedCameraTarget;
+        private readonly Dictionary<ReactiveCombatActorVisual, CombatShotBounds> shotBounds = new Dictionary<ReactiveCombatActorVisual, CombatShotBounds>();
+        private CombatShotBounds projectileShotBounds;
+        private bool shotFramesAllTargets;
+        private float widestShotScale = 1f;
+        public float ShotFramingScale { get; private set; } = 1f;
+        public float ShotFramingRequiredScale { get; private set; } = 1f;
+        public bool ShotFramingValid { get; private set; } = true;
+        public bool ShotFramingFallback { get; private set; }
+        private static readonly Vector2 ShotSafeMargin = new Vector2(.04f, .06f);
         private bool tacticalCameraOrthographic = true;
         private float tacticalCameraSize = 4.6f;
         private float tacticalCameraFov = 60f;
@@ -342,8 +351,10 @@ namespace Rokas.Presentation
                 hunter.SetFacing(true);
                 hunter.PlayIdle();
                 hunter.PrepareCommandMotionBank();
+                shotBounds[hunter] = new CombatShotBounds(hunter.transform);
                 swordEffect = new ReactiveCombatSwordEffect(hunter);
                 throwEffect = new ReactiveCombatThrowEffect(world.transform, ActorLayer, hunter.ThrowingDaggerPrefab);
+                projectileShotBounds = new CombatShotBounds(throwEffect.ProjectileRoot);
             }
             ConfigureTacticalCamera();
             licensedCamera = new LicensedCombatCameraPlayer(camera);
@@ -592,6 +603,7 @@ namespace Rokas.Presentation
                         SetLayerRecursive(actor.gameObject, ActorLayer);
                         actor.SetFacing(false);
                         actor.PlayWaveEnter();
+                        shotBounds[actor] = new CombatShotBounds(actor.transform);
                         if (cinematicEnabled)
                         {
                             actor.gameObject.SetActive(false);
@@ -992,7 +1004,8 @@ namespace Rokas.Presentation
                 return;
             }
             licensedCamera?.Cancel();
-            licensedCameraPerformer = null;
+            licensedCameraPerformer = licensedCameraTarget = null;
+            widestShotScale = 1f;
             ApplyTacticalCamera();
         }
 
@@ -1307,6 +1320,9 @@ namespace Rokas.Presentation
             licensedCamera.Begin(profile.camera, origin, Mathf.Max(.001f, scale), world.transform.rotation,
                 parentPosition, parentEuler);
             licensedCameraPerformer = performer;
+            licensedCameraTarget = target;
+            shotFramesAllTargets = performer == hunter && hunterMotion.Heavy;
+            widestShotScale = 1f;
         }
 
         private ActorMotion MotionForActor(ReactiveCombatActorVisual actor)
@@ -1842,7 +1858,49 @@ namespace Rokas.Presentation
             const float gateScale = 906f / 1080f;
             projection.SetRow(0, projection.GetRow(0) * gateScale);
             projection.SetRow(1, projection.GetRow(1) * gateScale - projection.GetRow(3) * (26f / 1080f));
+            ShotFramingScale = ShotFramingRequiredScale = 1f;
+            ShotFramingValid = true;
+            ShotFramingFallback = false;
+            if (licensedCamera != null && licensedCamera.Active && licensedCameraPerformer != null)
+            {
+                // Own mesh/weapon accommodation in the existing projection owner.
+                // Source pose, lens, cut, clock and depth remain sampled unchanged.
+                Matrix4x4 worldToClip = projection * camera.worldToCameraMatrix;
+                IncludeShotGeometry(licensedCameraPerformer, worldToClip);
+                if (shotFramesAllTargets)
+                {
+                    foreach (ReactiveCombatActorVisual target in enemies.Values)
+                        if (target != null && target.gameObject.activeInHierarchy && (!target.IsDead || target == licensedCameraTarget)) IncludeShotGeometry(target, worldToClip);
+                }
+                else if (licensedCameraTarget != null) IncludeShotGeometry(licensedCameraTarget, worldToClip);
+                if (projectileShotBounds != null && throwEffect != null && throwEffect.ProjectileRoot.gameObject.activeInHierarchy)
+                    IncludeShotProjection(projectileShotBounds.Project(worldToClip, ShotSafeMargin));
+                if (ShotFramingValid)
+                {
+                    widestShotScale = Mathf.Min(widestShotScale, ShotFramingRequiredScale);
+                    // Retain the widest required frame through the shot. Its return follows
+                    // the source outgoing weight or existing interruption handoff. Never
+                    // attenuate a live fit twice, which would clip the returning pose again.
+                    ShotFramingScale = Mathf.Min(ShotFramingRequiredScale, Mathf.Lerp(1f, widestShotScale, licensedCamera.CompositionWeight));
+                    projection.SetRow(0, projection.GetRow(0) * ShotFramingScale);
+                    projection.SetRow(1, projection.GetRow(1) * ShotFramingScale);
+                }
+            }
+            else widestShotScale = 1f;
             camera.projectionMatrix = projection;
+        }
+
+        private void IncludeShotGeometry(ReactiveCombatActorVisual actor, Matrix4x4 worldToClip)
+        {
+            if (!shotBounds.TryGetValue(actor, out CombatShotBounds bounds)) { ShotFramingValid = false; return; }
+            IncludeShotProjection(bounds.Project(worldToClip, ShotSafeMargin));
+        }
+
+        private void IncludeShotProjection(CombatShotBoundsProjection projected)
+        {
+            ShotFramingValid &= projected.IsValid;
+            ShotFramingFallback |= projected.UsesConservativeFallback;
+            if (projected.IsValid) ShotFramingRequiredScale = Mathf.Min(ShotFramingRequiredScale, projected.RequiredUniformScale);
         }
 
         private void OnActorCameraRendered(Camera rendered)
@@ -1890,6 +1948,8 @@ namespace Rokas.Presentation
             image = null;
             hunter = null;
             enemies.Clear();
+            shotBounds.Clear();
+            projectileShotBounds = null;
             corpses.Clear();
             enemyMotions.Clear();
             hunterMotion.Phase = MotionPhase.None;

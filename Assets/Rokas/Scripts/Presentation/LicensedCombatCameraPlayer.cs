@@ -48,6 +48,9 @@ namespace Rokas.Presentation
         public bool Active => source != null;
         public bool IsCancelling => cancelDuration > 0f;
         public float Clock => (float)elapsedClock;
+        // Read-only return envelope for the arena's own geometry accommodation.
+        public float CompositionWeight => !Active ? 0f : IsCancelling
+            ? 1f - Mathf.Clamp01(cancelElapsed / cancelDuration) : source.Weight(Clock);
         public bool IsHome => !Active && camera != null &&
             camera.orthographic == homeOrthographic &&
             camera.orthographicSize == homeSize &&

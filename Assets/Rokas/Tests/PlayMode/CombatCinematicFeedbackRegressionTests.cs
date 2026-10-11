@@ -195,7 +195,7 @@ namespace Rokas.Tests
         }
 
         [UnityTest]
-        public IEnumerator FullActorGateRevealsTheFormerTopBorderWithoutChangingExistingPixelComposition()
+        public IEnumerator FullActorGatePreservesSourceProjectionBeforeMeshFitAndRestoresTactical()
         {
             Camera actual = rootSceneCamera();
             RawImage displayed = arenaRect.Find("ReactiveAnimatedWorld").GetComponent<RawImage>();
@@ -236,8 +236,12 @@ namespace Rokas.Tests
                         Vector3 newView = actual.WorldToViewportPoint(point);
                         Vector2 formerStagePixel = new Vector2(oldView.x * 1920f, 100f + (1f - oldView.y) * 906f);
                         Vector2 actualStagePixel = new Vector2(newView.x * 1920f, (1f - newView.y) * 1080f);
-                        Assert.That(Vector2.Distance(actualStagePixel, formerStagePixel), Is.LessThan(.02f),
-                            "Expanding the render gate must preserve the existing physical pixel scale and composition.");
+                        // The gate retains exact source pixels; the independently tested
+                        // mesh fit is an explicit uniform optical accommodation around gate centre.
+                        Vector2 centre = new Vector2(960f, 540f);
+                        Vector2 expectedStagePixel = centre + (formerStagePixel - centre) * arena.ShotFramingScale;
+                        Assert.That(Vector2.Distance(actualStagePixel, expectedStagePixel), Is.LessThan(.02f),
+                            "Render gate/source projection plus one explicit mesh fit must reproduce actual pixels.");
                         Assert.That(newView.y, Is.InRange(0f, 1f),
                             "The former clipped top-border point must be inside the actual rendered frustum.");
                     }

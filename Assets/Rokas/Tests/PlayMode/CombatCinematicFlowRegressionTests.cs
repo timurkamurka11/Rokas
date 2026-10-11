@@ -300,6 +300,7 @@ namespace Rokas.Tests
             yield return new WaitForEndOfFrame();
             ScreenCapture.CaptureScreenshot(Path.Combine(runFolder, "tactical-start.png"));
             yield return new WaitForSecondsRealtime(.6f); // Intentional visual evidence hold, not an input readiness workaround.
+            yield return WaitUntil(() => Ready("ReactiveBasic") && Ready("ReactiveTarget1"), 5f, "initial screenshot frame-gap rearm");
             yield return VerifyPreviewSwitchAndCancellation();
             string[] plan = { "ReactiveBasic", "ReactiveHeavy", "ReactiveThrow", "ReactiveBasic" };
             foreach (string command in plan)
