@@ -131,7 +131,7 @@ namespace Rokas.Presentation
                 // Match Workshop V4: rounded UV boundary + ten concentric
                 // triangle-fan rings. This is the ACTUAL stencil geometry
                 // and the texture's UV geometry, not a four-point approximation.
-                List<Vector2> border = roundedCorners
+                List<Vector2> v4Boundary = roundedCorners
                     ? RoundedBoundaryUV(corners, radii)
                     : new List<Vector2>
                     {
@@ -139,13 +139,13 @@ namespace Rokas.Presentation
                     };
                 AddUVVertex(vh, new Vector2(.5f, .5f));
                 const int rings = 10;
-                int count = border.Count;
+                int count = v4Boundary.Count;
                 for (int ring = 1; ring <= rings; ++ring)
                 {
                     float progress = ring / (float)rings;
                     for (int i = 0; i < count; ++i)
                         AddUVVertex(vh, Vector2.Lerp(new Vector2(.5f, .5f),
-                            border[i], progress));
+                            v4Boundary[i], progress));
                 }
                 // Ring 1 attaches to the center; successive rings are
                 // quads split into two triangles with the same winding.
