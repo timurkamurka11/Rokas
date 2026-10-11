@@ -586,6 +586,15 @@ namespace Rokas.Presentation
 
         private IEnumerator CaptureOriginalYomiBeforeClose()
         {
+            // Unity never guarantees WaitForEndOfFrame during batchmode
+            // (headless GameCI). Do not deadlock the user's close route.
+            // Actual rendered YOMI capture is verified on a graphical Game View.
+            if (Application.isBatchMode)
+            {
+                capturingLaptopMirror = false;
+                if (panel == "laptop") ClosePanelCore();
+                yield break;
+            }
             // We photograph the already-rendered ORIGINAL YOMI UI. The image
             // is taken before any close fade/modal alpha change, not from a
             // hand-authored copy of its 9 icons or wallpaper.
