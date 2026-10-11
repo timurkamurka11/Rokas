@@ -51,6 +51,12 @@ namespace Rokas.Presentation
         private const float FinishTime = 3.92f;
         private const float ReturnDuration = .84f;
 
+        // Move every gold UI action 50 stage pixels down from V11.6:
+        // OFF E / ESC / arrow and ON R / E / ESC share this single offset.
+        // Original PNG scale, texture bytes and optical spacing remain unchanged.
+        private const float GoldPromptDrop = 50f;
+        private const float PreviouslyApprovedStandBottom = 1045f;
+
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
         private readonly RectTransform transitionLayer;
@@ -397,8 +403,8 @@ namespace Rokas.Presentation
             // after V11.5 the right edge fits, but the upper/lower LEFT
             // stencil pixels extend onto the lid. Trim only the left edge.
             // These values are original-source pixels (scaled by imageScale).
-            const float leftTopInset = 15f;
-            const float leftBottomInset = 18f;
+            const float leftTopInset = 22f;
+            const float leftBottomInset = 26f;
             const float rightInset = 5f;
             const float verticalInset = 5f;
             Vector2[] safeCorners =
@@ -508,7 +514,8 @@ namespace Rokas.Presentation
             }
             else
                 powerHint = ui.Label(povRoot, "PowerChoiceHint", "E  —  ВКЛЮЧИТЬ НОУТБУК",
-                    575f, 955f, 475f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+                    575f, 955f + GoldPromptDrop, 475f, 44f, 20,
+                    new Color(.8f, .85f, .9f, .88f));
             if (exitArt)
             {
                 float w = 460f;
@@ -524,12 +531,14 @@ namespace Rokas.Presentation
             }
             else
                 backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
-                    1080f, 955f, 320f, 44f, 20, new Color(.8f, .85f, .9f, .88f));
+                    1080f, 955f + GoldPromptDrop, 320f, 44f, 20,
+                    new Color(.8f, .85f, .9f, .88f));
             if (arrowArt)
             {
                 float iconSize = 82f;
                 RawImage arrow = ui.Art(povRoot, "LaptopBackChoice", arrowArt,
-                    80f, 942f, iconSize, iconSize * (float)arrowArt.height / arrowArt.width);
+                    80f, 942f + GoldPromptDrop, iconSize,
+                    iconSize * (float)arrowArt.height / arrowArt.width);
                 arrow.color = Color.white;
                 AddGoldEmissionBoost(arrow, arrowArt);
                 arrow.raycastTarget = true;
@@ -541,7 +550,8 @@ namespace Rokas.Presentation
             }
             else
                 onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
-                    92f, 915f, 72f, 58f, () => BackToRoom(), playClickSound: false);
+                    92f, 915f + GoldPromptDrop, 72f, 58f,
+                    () => BackToRoom(), playClickSound: false);
             // When the LCD is already powered, replace ONLY the little arrow
             // with the user's exact E — ВСТАТЬ gold PNG. Mouse click calls the
             // existing stand-up/back-to-room animation; keyboard E continues
@@ -549,11 +559,11 @@ namespace Rokas.Presentation
             if (standArt)
             {
                 const float standWidth = 438f;
-                // Preserve the exact PREVIOUS on-screen R placement: in
-                // V11.5 it was laid out to lower edge y=1045 after creation.
-                // Bake that final position here, so we never move R again.
+                // The prior approved V11.6 R lower edge was 1045.
+                // User explicitly requested ALL gold controls 50px lower,
+                // so R moves by the SAME amount as E and ESC.
                 float standHeight = standWidth * (float)standArt.height / standArt.width;
-                const float approvedStandLowerEdge = 1045f;
+                float approvedStandLowerEdge = PreviouslyApprovedStandBottom + GoldPromptDrop;
                 var standImage = ui.Art(povRoot, "PoweredStandOriginalPNG",
                     standArt, 92f, approvedStandLowerEdge - standHeight,
                     standWidth, standHeight);
@@ -601,16 +611,17 @@ namespace Rokas.Presentation
                     "E — ОТКРЫТЬ YOMI", 18f, 25f, 520f, 72f, 26,
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
-            // The APPROVED placement is the R — ВСТАТЬ button as already
-            // displayed (do not lift or move it). Unlike uniform graphic
+            // R — ВСТАТЬ defines the alignment after the shared 50px
+            // drop. Unlike uniform graphic
             // rectangles, the supplied transparent PNGs have unequal alpha
             // padding, so matching RectTransform bottoms was visibly wrong.
-            // Align other prompts to the R button's optical lower edge.
+            // Align other prompts to the R button's optical lower edge, preserving
+            // V11.6 optical corrections of +19 (E) / +13 (ESC).
             RectTransform standRect = poweredStandButton
                 ? poweredStandButton.GetComponent<RectTransform>() : null;
             float referenceBottom = standRect
                 ? -standRect.anchoredPosition.y + standRect.rect.height
-                : 1045f; // fallback only when optional original stand art is missing
+                : PreviouslyApprovedStandBottom + GoldPromptDrop; // same 50px shift in fallback
             const float openOpticalDown = 19f; // measured in approved Game View
             const float backOpticalDown = 13f;
             if (powerHintArt) PlaceGoldPromptOnBaseline(powerHintArt.rectTransform,
