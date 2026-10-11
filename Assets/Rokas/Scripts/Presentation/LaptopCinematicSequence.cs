@@ -43,12 +43,13 @@ namespace Rokas.Presentation
         private const float StageWidth = 1920f;
         private const float StageHeight = 1080f;
         private const float ApproachEnd = 1.2f;
-        private const float POVStart = 1.15f;
+        // Soften both sit-down and stand-up fade. Preserve camera/hand timeline.
+        private const float POVStart = .78f;
         private const float POVEnd = 1.8f;
         private const float HandsStart = 1.8f;
         private const float HandsEnd = 3.84f;
         private const float FinishTime = 3.92f;
-        private const float ReturnDuration = .72f;
+        private const float ReturnDuration = .84f;
 
         private readonly UiKit ui;
         private readonly MonoBehaviour owner;
@@ -392,14 +393,20 @@ namespace Rokas.Presentation
             // to reach the lower-right corner in the user's 2026-10-11 frame.
             // Clip both OFF and ON content by the SAME four-corner stencil,
             // with a small inset measured *inside* the original bezel.
-            const float horizontalInset = 5f;
+            // The real bezel is asymmetrical in the approved POV photo:
+            // after V11.5 the right edge fits, but the upper/lower LEFT
+            // stencil pixels extend onto the lid. Trim only the left edge.
+            // These values are original-source pixels (scaled by imageScale).
+            const float leftTopInset = 15f;
+            const float leftBottomInset = 18f;
+            const float rightInset = 5f;
             const float verticalInset = 5f;
             Vector2[] safeCorners =
             {
-                new Vector2(calibration.topLeftX + horizontalInset, calibration.topLeftY + verticalInset),
-                new Vector2(calibration.topRightX - horizontalInset, calibration.topRightY + verticalInset),
-                new Vector2(calibration.bottomRightX - horizontalInset, calibration.bottomRightY - verticalInset),
-                new Vector2(calibration.bottomLeftX + horizontalInset, calibration.bottomLeftY - verticalInset)
+                new Vector2(calibration.topLeftX + leftTopInset, calibration.topLeftY + verticalInset),
+                new Vector2(calibration.topRightX - rightInset, calibration.topRightY + verticalInset),
+                new Vector2(calibration.bottomRightX - rightInset, calibration.bottomRightY - verticalInset),
+                new Vector2(calibration.bottomLeftX + leftBottomInset, calibration.bottomLeftY - verticalInset)
             };
             float minLcdX = Mathf.Min(safeCorners[0].x, safeCorners[3].x);
             float maxLcdX = Mathf.Max(safeCorners[1].x, safeCorners[2].x);
@@ -589,15 +596,26 @@ namespace Rokas.Presentation
                     "E — ОТКРЫТЬ YOMI", 18f, 25f, 520f, 72f, 26,
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
-            // A shared lower baseline stops R/OPEN/BACK from floating on
-            // different heights. Preserve the original PNG dimensions/glow.
-            const float bottomLine = 1045f;
-            if (powerHintArt) PlaceGoldPromptOnBaseline(powerHintArt.rectTransform, bottomLine);
-            if (backHintArt) PlaceGoldPromptOnBaseline(backHintArt.rectTransform, bottomLine);
-            if (poweredStandButton) PlaceGoldPromptOnBaseline(
-                poweredStandButton.GetComponent<RectTransform>(), bottomLine);
-            if (poweredOpenRoot) PlaceGoldPromptOnBaseline(poweredOpenRoot, bottomLine,
+            // The APPROVED placement is the R — ВСТАТЬ button as already
+            // displayed (do not lift or move it). Unlike uniform graphic
+            // rectangles, the supplied transparent PNGs have unequal alpha
+            // padding, so matching RectTransform bottoms was visibly wrong.
+            // Align other prompts to the R button's optical lower edge.
+            RectTransform standRect = poweredStandButton
+                ? poweredStandButton.GetComponent<RectTransform>() : null;
+            float referenceBottom = standRect
+                ? -standRect.anchoredPosition.y + standRect.rect.height
+                : 1045f; // fallback only when optional original stand art is missing
+            const float openOpticalDown = 19f; // measured in approved Game View
+            const float backOpticalDown = 13f;
+            if (powerHintArt) PlaceGoldPromptOnBaseline(powerHintArt.rectTransform,
+                referenceBottom + openOpticalDown);
+            if (backHintArt) PlaceGoldPromptOnBaseline(backHintArt.rectTransform,
+                referenceBottom + backOpticalDown);
+            if (poweredOpenRoot) PlaceGoldPromptOnBaseline(poweredOpenRoot,
+                referenceBottom + openOpticalDown,
                 poweredOpenRoot.GetComponentInChildren<RawImage>(true));
+            // Keep the existing R position unchanged; do NOT re-baseline it.
             SetPromptVisibility(false);
         }
 
@@ -680,14 +698,18 @@ namespace Rokas.Presentation
             if (!active) yield break;
             if (returnRequested)
             {
-                SetPromptVisibility(false);
+                // Keep the original buttons and powered screen rendered during
+                // the return animation; they inherit the easing POV fade,
+                // instead of abruptly disappearing on the R/Esc input.
                 CurrentPhase = Phase.CancelBack;
                 float exitElapsed = 0f;
                 while (active && exitElapsed < ReturnDuration)
                 {
                     // Gently reverse the camera blend; never start LaptopBoot.
-                    RenderAt(Mathf.Lerp(HandsStart, 0f,
-                        Mathf.SmoothStep(0f, 1f, exitElapsed / ReturnDuration)));
+                    float progress = Mathf.Clamp01(exitElapsed / ReturnDuration);
+                    float smooth = progress * progress * progress *
+                        (progress * (progress * 6f - 15f) + 10f);
+                    RenderAt(Mathf.Lerp(HandsStart, 0f, smooth));
                     CurrentPhase = Phase.CancelBack;
                     yield return null;
                     exitElapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
@@ -774,7 +796,13 @@ namespace Rokas.Presentation
             if (!IsAwaitingPowerChoice || returnRequested || powerConfirmed) return false;
             returnRequested = true;
             returningToRoom?.Invoke();
-            SetPromptVisibility(false);
+            // Fade with the approved POV, not an instant SetActive(false).
+            // Disallow clicks while exiting, but keep visual children alive.
+            if (povGroup)
+            {
+                povGroup.blocksRaycasts = false;
+                povGroup.interactable = false;
+            }
             return true;
         }
 
@@ -795,8 +823,11 @@ namespace Rokas.Presentation
             wideImage.rectTransform.anchoredPosition =
                 new Vector2(StageWidth * .59f,
                     -StageHeight * .47f + sitDrop);
-            povGroup.alpha = Mathf.SmoothStep(0f, 1f,
-                Mathf.InverseLerp(POVStart, POVEnd, t));
+            float visibility = Mathf.InverseLerp(POVStart, POVEnd, t);
+            // Quintic smootherstep avoids sharp alpha acceleration when the
+            // photographed laptop enters/leaves the frame.
+            povGroup.alpha = visibility * visibility * visibility *
+                (visibility * (visibility * 6f - 15f) + 10f);
             // Chibi is already present in the final ~0.1s of seating,
             // instead of popping in only after the camera finishes settling.
             // This does not change the original POV art or the hand timeline.
