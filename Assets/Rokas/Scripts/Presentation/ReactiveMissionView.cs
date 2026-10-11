@@ -660,6 +660,30 @@ namespace Rokas.Presentation
                 rect.rect.height - 19, 53, 16, 13, UiKit.Jade, true, TextAnchor.MiddleRight);
         }
 
+        private readonly float[] projectedCardLeft = new float[4];
+        private void PositionTargetCards()
+        {
+            if (arena == null || !arena.CameraAtHome) return;
+            const float width = 205f, gap = 8f;
+            float rowY = float.PositiveInfinity, priorRight = float.NegativeInfinity;
+            int first = -1, last = -1;
+            for (int slot = 0; slot < targetIds.Length; slot++)
+            {
+                if (targetIds[slot] == null || !arena.TryActorFloorAnchor(targetIds[slot], out Vector2 floor)) continue;
+                rowY = Mathf.Min(rowY, floor.y - 16f);
+                float left = Mathf.Max(floor.x - width * .5f, priorRight + gap);
+                projectedCardLeft[slot] = left; priorRight = left + width;
+                if (first < 0) first = slot;
+                last = slot;
+            }
+            if (first < 0) return;
+            float shift = Mathf.Min(0f, 1880f - (projectedCardLeft[last] + width));
+            shift = Mathf.Max(shift, 40f - projectedCardLeft[first]);
+            for (int slot = first; slot <= last; slot++)
+                if (targetIds[slot] != null)
+                    targetSlotRects[slot].anchoredPosition = new Vector2(projectedCardLeft[slot] + shift, rowY);
+        }
+
         private static float TargetSlotX(int waveSlotCount, int slot)
         {
             if (waveSlotCount <= 1) return 1320f;
@@ -859,8 +883,8 @@ namespace Rokas.Presentation
                         targetHpGoal[slot] = hpGoal;
                         targetHpTween[slot] = 0f;
                     }
-                    targetSlotRects[slot].anchoredPosition = new Vector2(
-                        TargetSlotX(waveSlotCount, slot), -320f);
+                    // The projected tactical formation owns card placement.
+                    // Refresh changes content/visibility, never restores stale art-layout coordinates.
                 }
             }
             for (int i = 0; i < targetButtons.Length; i++)
@@ -872,6 +896,7 @@ namespace Rokas.Presentation
                 if (visible) targetButtons[i].interactable =
                     display.Phase == ReactiveDisplayPhase.Command && !presentationLocked && PresentationReady;
             }
+            PositionTargetCards();
             UpdateTargetHighlights();
 
             bool preserveSuspendedTiming = (display.Phase == ReactiveDisplayPhase.Suspended ||
@@ -975,6 +1000,7 @@ namespace Rokas.Presentation
         {
             if (root == null) return;
             arena?.Tick(seconds);
+            PositionTargetCards();
             if (selectedAction != null)
             {
                 selectedAction.gameObject.SetActive(arena != null && arena.SelectionVisible);
@@ -1032,6 +1058,7 @@ namespace Rokas.Presentation
         // compositing UI; this callback never advances combat or presentation time.
         private void RefreshRenderedHitFeedback()
         {
+            PositionTargetCards();
             if (feedbackTime > 0f && !EntryPresentationActive) PositionHitFeedback();
         }
 

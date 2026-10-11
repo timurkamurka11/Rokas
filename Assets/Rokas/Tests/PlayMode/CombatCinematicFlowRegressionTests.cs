@@ -88,6 +88,126 @@ namespace Rokas.Tests
         private int sequenceFrame, plannedCommands, fillerCommands;
         private ProfilerRecorder mainThreadRecorder, gcRecorder;
 
+        // Rejects the old small tactical composition through the actual authored UI route.
+        [UnityTest, Timeout(180000)]
+        public IEnumerator AuthoredSceneTacticalCompositionKeepsThreeYokaiReadableAndReturnsToCurrentAnchors()
+        {
+            capture = false; visibleFlow = true; confirmCounters = true; runLabel = "Polish4Tactical";
+            yield return EnterEncounter(true);
+            yield return WaitUntil(() => hunter.IdleSettled && arena.CameraAtHome &&
+                Ready("ReactiveBasic") && Ready("ReactiveTarget1") && Ready("ReactiveTarget2") && Ready("ReactiveTarget3"),
+                5f, "settled tactical composition and visible target cards");
+            Assert.That(boot.Session.ReactiveCombat.ActiveEnemyIds.Count, Is.EqualTo(3));
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(Path.Combine(runFolder, "tactical.png"));
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            // PNG readback can trigger the existing >100ms frame-gap pause.
+            // Observe its real rearm; never inspect hidden suspended UI as ready.
+            yield return WaitUntil(() => boot.Session.ReactiveCombat.Phase != ReactivePhase.Suspended &&
+                Ready("ReactiveBasic") && Ready("ReactiveTarget1") && Ready("ReactiveTarget2") && Ready("ReactiveTarget3"),
+                5f, "target cards after screenshot frame-gap rearm");
+            yield return new WaitForEndOfFrame();
+            var rows = new List<TacticalActorEvidence>();
+            rows.Add(MeasureTacticalActor("Keiko", hunter, arena.HunterHome));
+            foreach (string id in boot.Session.ReactiveCombat.ActiveEnemyIds)
+                rows.Add(MeasureTacticalActor(id, enemies[id], arena.EnemyHome(id)));
+            File.WriteAllText(Path.Combine(runFolder, "tactical-composition.json"), JsonUtility.ToJson(
+                new TacticalCompositionEvidence { screenWidth = Screen.width, screenHeight = Screen.height,
+                    cameraPosition = actorCamera.transform.localPosition, cameraFov = actorCamera.fieldOfView,
+                    actors = rows.ToArray() }, true));
+            // Independent visible-frame acceptance; skin vertices, rather than inflated renderer bounds.
+            Assert.That(rows[0].screenBounds.height, Is.GreaterThanOrEqualTo(.36f), "Keiko must occupy at least 36% of the full tactical frame.");
+            foreach (TacticalActorEvidence row in rows)
+            {
+                Assert.That(row.screenBounds.yMin, Is.GreaterThanOrEqualTo(.08f), "Head must stay below the top chrome: " + row.id);
+                Assert.That(row.screenBounds.yMax, Is.LessThanOrEqualTo(.78f), "Feet must stay above the command HUD: " + row.id);
+                Assert.That(row.screenBounds.xMin, Is.GreaterThanOrEqualTo(.08f), "Actor left edge: " + row.id);
+                Assert.That(row.screenBounds.xMax, Is.LessThanOrEqualTo(.92f), "Actor right edge: " + row.id);
+            }
+            Assert.That(rows[1].home.x - rows[0].home.x, Is.LessThan(2.3f), "Formation must be physically closer, independently of the tactical lens.");
+            RectTransform[] cards = (RectTransform[])typeof(ReactiveMissionView).GetField("targetSlotRects", PrivateInstance).GetValue(reactiveView);
+            var cardBounds = new List<Rect>();
+            foreach (RectTransform card in cards)
+            {
+                Button cardButton = card.GetComponentInChildren<Button>(true);
+                if (cardButton == null || !cardButton.gameObject.activeInHierarchy) continue;
+                Vector3[] corners = new Vector3[4]; card.GetWorldCorners(corners);
+                Vector2 topLeft = RectTransformUtility.WorldToScreenPoint(null, corners[1]);
+                Vector2 bottomRight = RectTransformUtility.WorldToScreenPoint(null, corners[3]);
+                Rect bounds = Rect.MinMaxRect(topLeft.x / Screen.width, 1f - topLeft.y / Screen.height,
+                    bottomRight.x / Screen.width, 1f - bottomRight.y / Screen.height);
+                foreach (TacticalActorEvidence row in rows)
+                    Assert.That(bounds.Overlaps(row.screenBounds), Is.False, "Tactical HP card must not cover an actor body: " + row.id);
+                foreach (Rect prior in cardBounds)
+                    Assert.That(bounds.Overlaps(prior), Is.False, "Tactical HP cards must not overlap each other.");
+                Assert.That(bounds.yMax, Is.LessThan(.80f), "HP cards must stay above the command HUD.");
+                cardBounds.Add(bounds);
+            }
+            Assert.That(cardBounds.Count, Is.EqualTo(3), "Rendered target cards must be ready; Core=" +
+                boot.Session.ReactiveCombat.Phase + "; held=" + boot.ReactivePresentationHeld + "; command=" + Ready("ReactiveBasic"));
+            string target = boot.Session.ReactiveCombat.ActiveEnemyIds[0];
+            yield return ExecuteCommand("ReactiveBasic", "polish4-normal-current-anchors", target);
+            yield return WaitForCommand();
+            Assert.That(hunter.transform.localPosition, Is.EqualTo(arena.HunterHome));
+            tactical.AssertRestored(actorCamera);
+            Assert.That(arena.HunterAtHome && hunter.IdleSettled, Is.True);
+            completed = true;
+            WriteManifest("polish4-tactical", "Authored scene, real UI/Core route, isolated save. One native Game View screenshot; measured live skinned vertices in the actor render gate. No synthetic presentation replacement.");
+        }
+
+        [Serializable] private sealed class TacticalActorEvidence
+        {
+            public string id;
+            public Vector3 home;
+            public Vector2 rootScreen;
+            public Rect screenBounds;
+        }
+        [Serializable] private sealed class TacticalCompositionEvidence
+        {
+            public int screenWidth, screenHeight;
+            public Vector3 cameraPosition;
+            public float cameraFov;
+            public TacticalActorEvidence[] actors;
+        }
+        private TacticalActorEvidence MeasureTacticalActor(string id, ReactiveCombatActorVisual actor, Vector3 home)
+        {
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            var baked = new Mesh();
+            try
+            {
+                foreach (SkinnedMeshRenderer skin in actor.ModelRoot.GetComponentsInChildren<SkinnedMeshRenderer>())
+                {
+                    if (!skin.enabled || !skin.gameObject.activeInHierarchy) continue;
+                    skin.BakeMesh(baked, true);
+                    foreach (Vector3 vertex in baked.vertices)
+                    {
+                        Vector3 uv = actorCamera.WorldToViewportPoint(skin.transform.TransformPoint(vertex));
+                        Vector2 point = ActorViewportToScreen(uv);
+                        min = Vector2.Min(min, point); max = Vector2.Max(max, point);
+                    }
+                }
+            }
+            finally { UnityEngine.Object.Destroy(baked); }
+            Vector3 rootUv = actorCamera.WorldToViewportPoint(actor.transform.position);
+            return new TacticalActorEvidence { id = id, home = home,
+                rootScreen = ActorViewportToScreen(rootUv),
+                screenBounds = Rect.MinMaxRect(min.x, min.y, max.x, max.y) };
+        }
+
+        private Vector2 ActorViewportToScreen(Vector3 uv)
+        {
+            RectTransform actorGate = Find("ReactiveAnimatedWorld").GetComponent<RectTransform>();
+            Canvas ownerCanvas = actorGate.GetComponentInParent<Canvas>();
+            Camera uiProjection = ownerCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : ownerCanvas.worldCamera;
+            Vector3 gatePoint = actorGate.TransformPoint(new Vector3(
+                actorGate.rect.xMin + uv.x * actorGate.rect.width,
+                actorGate.rect.yMin + uv.y * actorGate.rect.height, 0f));
+            Vector2 pixel = RectTransformUtility.WorldToScreenPoint(uiProjection, gatePoint);
+            return new Vector2(pixel.x / Screen.width, 1f - pixel.y / Screen.height);
+        }
+
         [UnityTest, Timeout(180000)]
         public IEnumerator ActualCoreUiUsesCompactSourceFormationAndRelativeZoomCamera()
         {
@@ -95,11 +215,11 @@ namespace Rokas.Tests
             yield return EnterEncounter();
             float scale = hunter.ModelRoot.lossyScale.y * hunter.DefaultLicensedProfile.sourceToTargetScale;
             string first = boot.Session.ReactiveCombat.ActiveEnemyIds[0];
-            Assert.That(arena.HunterHome.x / scale, Is.EqualTo(-.7f).Within(.001f), "Size-one source front hero is -.7, rather than the old wide -5.25 anchor.");
-            Assert.That(arena.EnemyHome(first).x / scale, Is.EqualTo(.7f).Within(.001f), "First source enemy slot must use the other compact front anchor.");
+            Assert.That(arena.HunterHome.x / scale, Is.EqualTo(-.55f).Within(.001f), "The own compact frontage must remain symmetric and closer than the original -.7 source front.");
+            Assert.That(arena.EnemyHome(first).x / scale, Is.EqualTo(.55f).Within(.001f), "The first own enemy slot uses the symmetric closer front.");
             for (int i = 0; i < boot.Session.ReactiveCombat.ActiveEnemyIds.Count; i++)
                 Assert.That(arena.EnemyHome(boot.Session.ReactiveCombat.ActiveEnemyIds[i]).x / scale,
-                    Is.EqualTo(.7f + .9f * i).Within(.001f), "Active size-one ranks use the source .9 spacing.");
+                    Is.EqualTo(.55f + .9f * i).Within(.001f), "Closer own frontage retains source .9 adjacent-rank spacing.");
             spatialValidation = true;
             spatialTargetHome = arena.EnemyHome(first);
             yield return VerifyPreviewSwitchAndCancellation();
@@ -110,7 +230,7 @@ namespace Rokas.Tests
             tactical.AssertRestored(actorCamera);
             Assert.That(arena.HunterAtHome && hunter.IdleSettled, Is.True);
             completed = true;
-            WriteManifest("source-spatial", "Actual Bootstrap/UI/Core route with source size-one front anchors, mirrored team offsets and camera translated from source ZoomIn floor Z=-7. No capture readback.");
+            WriteManifest("source-spatial", "Actual Bootstrap/UI/Core route with own compact front anchors, source adjacent-rank spacing, mirrored team offsets and camera translated from source ZoomIn floor Z=-7. No capture readback.");
         }
 
         [UnityTest, Timeout(420000)]
@@ -174,8 +294,12 @@ namespace Rokas.Tests
         [UnityTest, Timeout(420000)]
         public IEnumerator ActualCoreUiVisibleGameViewCompletesNormalHeavyThrowAndEnemyFlow()
         {
-            capture = false; visibleFlow = true; confirmCounters = true; runLabel = "ContinuousGameView";
+            capture = false; visibleFlow = true; confirmCounters = true; runLabel = "Polish4ContinuousGameView";
             yield return EnterEncounter(true);
+            yield return WaitUntil(() => Ready("ReactiveTarget1") && Ready("ReactiveBasic"), 5f, "visible initial command HUD");
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(Path.Combine(runFolder, "tactical-start.png"));
+            yield return new WaitForSecondsRealtime(.6f); // Intentional visual evidence hold, not an input readiness workaround.
             yield return VerifyPreviewSwitchAndCancellation();
             string[] plan = { "ReactiveBasic", "ReactiveHeavy", "ReactiveThrow", "ReactiveBasic" };
             foreach (string command in plan)
@@ -308,7 +432,9 @@ namespace Rokas.Tests
             sequenceFrame = plannedCommands = fillerCommands = 0; lastObservedFrame = -1; nextSequenceTime = 0f;
             flying = null; flyingRenderers = null; section = "entry";
             started = Time.realtimeSinceStartup;
-            runFolder = Path.Combine(EvidenceRoot, runLabel + "-" + Guid.NewGuid().ToString("N"));
+            runFolder = Path.Combine(runLabel.StartsWith("Polish4", StringComparison.Ordinal) ?
+                "D:/DD2-Research/Reports/CombatPolish4-2026-10-11/Runtime" : EvidenceRoot,
+                runLabel + "-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(runFolder);
             priorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
             priorBackground = InputSystem.settings.backgroundBehavior;
@@ -698,6 +824,8 @@ namespace Rokas.Tests
                 hunterRoot = hunter.transform.localPosition, enemyRoot = enemy == null ? Vector3.zero : enemy.transform.localPosition,
                 sourceClock = hunter.LicensedMotionClock, enemySourceClock = enemy == null ? 0f : enemy.LicensedMotionClock,
                 sourceSkill = hunter.ActiveLicensedProfile == null ? null : hunter.ActiveLicensedProfile.sourceSkill,
+                confirmedStance = hunter.ConfirmedCombatStance.ToString(),
+                confirmedProfile = hunter.ConfirmedLicensedProfile == null ? null : hunter.ConfirmedLicensedProfile.sourceSkill,
                 stageRecoveryCue = hunter.ActiveLicensedProfile == null ? 0f : hunter.ActiveLicensedProfile.StageRecoveryTime,
                 sourceDuration = hunter.ActiveLicensedProfile == null ? 0f : hunter.ActiveLicensedProfile.Duration,
                 contactConfirmed = hunter.LicensedContactConfirmed, cameraClock = arena.LicensedCameraClock,
@@ -1158,7 +1286,7 @@ namespace Rokas.Tests
             public double presentationClock, feedbackStartedAt;
             public Vector2 feedbackPosition, feedbackPivot;
             public string actionId, phase, section, enemyId, hunterPhase, enemyPhase, hunterPose, enemyPose,
-                sourceSkill, swordOwner, swordParent, veilActionId, feedbackText, feedbackTargetId, corpseId, corpsePose;
+                sourceSkill, confirmedStance, confirmedProfile, swordOwner, swordParent, veilActionId, feedbackText, feedbackTargetId, corpseId, corpsePose;
             public bool contactConfirmed, cameraActive, cameraHome, heldDaggerVisible, flyingDaggerVisible, coreSuffixCanceled, feedbackActive, corpseActive, corpseIdleSettled;
             public Vector3 hunterRoot, enemyRoot, cameraPosition, swordWorldPosition;
             public Quaternion cameraRotation, swordWorldRotation, swordLocalRotation, spineWorldRotation;

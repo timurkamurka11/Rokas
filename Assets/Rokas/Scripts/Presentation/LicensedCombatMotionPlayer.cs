@@ -18,6 +18,30 @@ namespace Rokas.Presentation
         private readonly Queue<string> contactHistory = new Queue<string>();
         private float[] blendIn = Array.Empty<float>(), blendOut = Array.Empty<float>();
         private string[] segmentAliases = Array.Empty<string>();
+        private string baseIdleAlias = "Licensed_BaseIdle";
+        private LicensedCombatMotionProfile registeredProfile;
+        private readonly Dictionary<LicensedCombatMotionProfile, PreparedBank> preparedBanks =
+            new Dictionary<LicensedCombatMotionProfile, PreparedBank>();
+        private readonly HashSet<string> preparedAliases = new HashSet<string>(StringComparer.Ordinal);
+
+        private sealed class PreparedBank
+        {
+            public readonly string anticipation, idle, prefix;
+            public string[] segments = Array.Empty<string>();
+            public PreparedBank(string prefix, string anticipation)
+            {
+                this.prefix = prefix;
+                this.anticipation = anticipation;
+                idle = prefix + "_BaseIdle";
+            }
+            public void EnsureCapacity(int count)
+            {
+                if (segments.Length >= count) return;
+                int oldCount = segments.Length;
+                Array.Resize(ref segments, count);
+                for (int i = oldCount; i < count; i++) segments[i] = prefix + "_Segment_" + i;
+            }
+        }
 
         private readonly struct RegisteredClip
         {
@@ -77,9 +101,43 @@ namespace Rokas.Presentation
             return true;
         }
 
+        // Opt in only at inactive scene preparation. Distinct profile aliases keep
+        // first-use AddClip and later stance-switch replacement outside live input.
+        // The default-only Prepare contract remains unchanged for other actors.
+        public bool PrepareBank(params LicensedCombatMotionProfile[] profiles)
+        {
+            if (Active || profiles == null || profiles.Length == 0) return false;
+            bool prepared = false;
+            foreach (LicensedCombatMotionProfile profile in profiles)
+            {
+                if (profile == null) continue;
+                if (!preparedBanks.TryGetValue(profile, out PreparedBank bank))
+                {
+                    // Adopt the existing default Normal copies rather than register
+                    // them again. Extra requested profiles receive their own aliases.
+                    bool adopt = preparedBanks.Count == 0 && registeredProfile == profile;
+                    string prefix = adopt ? "Licensed" : "Licensed_Bank_" + preparedBanks.Count;
+                    bank = new PreparedBank(prefix, adopt ? anticipationAlias : prefix + "_Anticipation");
+                    preparedBanks.Add(profile, bank);
+                }
+                RegisterProfileClips(profile, bank.anticipation);
+                // AddClip may create enabled states. Disable only our new/used bank,
+                // without sampling the rig or touching unowned Idle/contact history.
+                Cancel();
+                prepared = true;
+            }
+            return prepared;
+        }
+
         private void RegisterProfileClips(LicensedCombatMotionProfile profile, string alias)
         {
             EnsureSegmentCapacity(profile.segments.Length);
+            preparedBanks.TryGetValue(profile, out PreparedBank bank);
+            bank?.EnsureCapacity(profile.segments.Length);
+            anticipationAlias = bank == null ? alias : bank.anticipation;
+            baseIdleAlias = bank == null ? "Licensed_BaseIdle" : bank.idle;
+            for (int i = 0; i < profile.segments.Length; i++)
+                segmentAliases[i] = bank == null ? "Licensed_Segment_" + i : bank.segments[i];
             for (int i = 0; i < profile.segments.Length; i++)
             {
                 LicensedMotionSegment s = profile.segments[i];
@@ -97,11 +155,18 @@ namespace Rokas.Presentation
                     if (overlap > 0) blendOut[i] = Mathf.Min(s.duration, overlap);
                 }
             }
-            Register(profile.anticipation, alias);
-            Register(profile.baseIdle ?? fallbackIdle, "Licensed_BaseIdle");
+            Register(profile.anticipation, anticipationAlias);
+            Register(profile.baseIdle ?? fallbackIdle, baseIdleAlias);
             for (int i = 0; i < profile.segments.Length; i++)
                 Register(profile.segments[i].clip, segmentAliases[i]);
+            if (bank != null)
+            {
+                preparedAliases.Add(bank.anticipation);
+                preparedAliases.Add(bank.idle);
+                foreach (string segment in bank.segments) preparedAliases.Add(segment);
+            }
             RetireUnusedRegistrations();
+            registeredProfile = profile;
         }
 
         // A preplayed presentation may acquire its domain ID after approach or release.
@@ -152,7 +217,7 @@ namespace Rokas.Presentation
             for (int i = registeredAliases.Count - 1; i >= 0; i--)
             {
                 string alias = registeredAliases[i];
-                if (aliases.Contains(alias)) continue;
+                if (aliases.Contains(alias) || preparedAliases.Contains(alias)) continue;
                 RegisteredClip registration = registeredClips[alias];
                 // Only remove our own old copy; an externally replaced alias is not ours.
                 if (animation.GetClip(alias) == registration.runtime)
@@ -207,7 +272,7 @@ namespace Rokas.Presentation
                         segment.Weight(clock, blendIn[i], blendOut[i]) / normalization);
                 }
                 AnimationClip idle = Profile.baseIdle ?? fallbackIdle;
-                Enable("Licensed_BaseIdle", idle == null ? 0 :
+                Enable(baseIdleAlias, idle == null ? 0 :
                     Mathf.Repeat(clock * Profile.idleSpeed, Mathf.Max(.001f, idle.length)), Mathf.Max(0, 1 - sum));
             }
             animation.Sample();

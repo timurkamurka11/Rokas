@@ -78,6 +78,10 @@ namespace Rokas.Presentation
         private float tacticalCameraFov = 60f;
         private Vector3 tacticalCameraPosition = new Vector3(0f, 2.25f, -20f);
         private Quaternion tacticalCameraRotation = Quaternion.identity;
+        // Own Keiko/Yokai composition adaptation; licensed action shot curves remain unchanged.
+        private const float TacticalFrontSource = .55f;
+        private const float TacticalDepthRatio = .70f;
+        private const float TacticalCenterSource = .90f;
         private readonly HashSet<string> presentedContacts = new HashSet<string>(StringComparer.Ordinal);
         private readonly Queue<string> contactHistory = new Queue<string>();
         private RenderTexture texture;
@@ -332,12 +336,14 @@ namespace Rokas.Presentation
                 hunter.SetStandingHeight(4.0f);
                 if (hunter.DefaultLicensedProfile != null)
                     formationSourceScale = hunter.ModelRoot.lossyScale.y * hunter.DefaultLicensedProfile.sourceToTargetScale;
-                hunter.transform.localPosition = new Vector3(-.7f * formationSourceScale, -.62f, 0f);
+                hunter.transform.localPosition = new Vector3(-TacticalFrontSource * formationSourceScale, -.62f, 0f);
                 hunterMotion.Home = hunter.transform.localPosition;
                 SetLayerRecursive(hunter.gameObject, ActorLayer);
                 hunter.SetFacing(true);
                 hunter.PlayIdle();
+                hunter.PrepareCommandMotionBank();
                 swordEffect = new ReactiveCombatSwordEffect(hunter);
+                throwEffect = new ReactiveCombatThrowEffect(world.transform, ActorLayer, hunter.ThrowingDaggerPrefab);
             }
             ConfigureTacticalCamera();
             licensedCamera = new LicensedCombatCameraPlayer(camera);
@@ -656,9 +662,12 @@ namespace Rokas.Presentation
                     z = i == 1 || i == 2 ? 1.5f : 0f;
                     scale = .71f;
                 }
-                // Source Front origin .2 plus size-one half-width .5; adjacent centers
-                // advance Width(1) + spacing(-.1). Existing depth/stature adaptation stays.
-                x = (.7f + .9f * rank) * formationSourceScale;
+                // Own closer frontage, retaining source Width(1) + spacing(-.1)
+                // between enemy ranks. Depth remains the existing arena adaptation.
+                x = (TacticalFrontSource + .9f * rank) * formationSourceScale;
+                // Rank depth already expresses perspective. Avoid a second, unrelated
+                // art-layout shrink which made back-rank Yokai unreadably small.
+                if (count <= 3) scale = 1f;
                 Vector3 slot = new Vector3(x, y, z);
                 ActorMotion motion;
                 if (!enemyMotions.TryGetValue(id, out motion))
@@ -955,8 +964,10 @@ namespace Rokas.Presentation
                 float scale = hunter.ModelRoot.lossyScale.y * profile.sourceToTargetScale;
                 tacticalCameraPosition = new Vector3(0f, hunterMotion.Home.y, 0f) +
                     profile.camera.basePosition * scale;
+                tacticalCameraPosition.x += TacticalCenterSource * scale;
+                tacticalCameraPosition.z *= TacticalDepthRatio;
                 tacticalCameraFov = profile.camera.baseFov;
-                float depth = -profile.camera.basePosition.z * scale;
+                float depth = -tacticalCameraPosition.z;
                 tacticalCameraSize = depth * Mathf.Tan(tacticalCameraFov * Mathf.Deg2Rad * .5f);
             }
             ApplyTacticalCamera();
@@ -1239,6 +1250,20 @@ namespace Rokas.Presentation
             Vector3 point = bounds.center;
             point.y = bounds.max.y;
             Vector3 viewport = camera.WorldToViewportPoint(point);
+            if (viewport.z <= 0f || float.IsNaN(viewport.x) || float.IsNaN(viewport.y)) return false;
+            RectTransform rect = image.rectTransform;
+            anchor = rect.anchoredPosition + new Vector2(viewport.x * rect.rect.width,
+                -(1f - viewport.y) * rect.rect.height);
+            return true;
+        }
+
+        // Formation HUD reads the displayed floor point, never writes actor positioning.
+        public bool TryActorFloorAnchor(string actorId, out Vector2 anchor)
+        {
+            anchor = Vector2.zero;
+            ReactiveCombatActorVisual actor = ActorForTarget(actorId);
+            if (camera == null || image == null || actor == null || actor.IsDead) return false;
+            Vector3 viewport = camera.WorldToViewportPoint(actor.transform.position);
             if (viewport.z <= 0f || float.IsNaN(viewport.x) || float.IsNaN(viewport.y)) return false;
             RectTransform rect = image.rectTransform;
             anchor = rect.anchoredPosition + new Vector2(viewport.x * rect.rect.width,

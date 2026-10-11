@@ -135,6 +135,9 @@ namespace Rokas.Presentation
         public Transform ModelRoot => modelRoot;
         public Vector3 TorsoPoint => torsoBone == null ? BodyBounds.center : torsoBone.position;
         public bool IsDead => dead;
+        // Prepare inactive command profiles before live preview/confirm can consume an entry blend.
+        public bool PrepareCommandMotionBank() => licensedMotion != null &&
+            licensedMotion.PrepareBank(clips.licensedNormal, clips.licensedHeavy, clips.licensedThrow);
         public bool IsFacingRight => facingRight;
         public float HitStopRemaining => hitStopRemaining;
         public string CurrentPose => activeAlias;
