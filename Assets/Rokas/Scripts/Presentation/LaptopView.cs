@@ -41,6 +41,8 @@ namespace Rokas.Presentation
         private readonly Func<float> videoVolume;
         private readonly Func<bool> videoTransitions;
         private RectTransform frame;
+        private RectTransform mirrorSourceScreen;
+        private RectTransform bootPrivacyShield;
         private RectTransform content;
         private CanvasGroup windowGroup;
         private CanvasGroup contentGroup;
@@ -61,6 +63,9 @@ namespace Rokas.Presentation
         public bool IsVisualReady => frame && windowGroup && windowGroup.alpha >= .98f &&
             (!Booting || video.FirstFramePresented);
         public float WindowOpacity => windowGroup ? windowGroup.alpha : 0f;
+        // This is the original FULLSCREEN uGUI hierarchy being captured, not
+        // a synthesized mini UI or second application implementation.
+        public RectTransform ExactMirrorSource => mirrorSourceScreen;
         public bool MessagesOpen { get { return section == 6 && !IsClosing && !Booting; } }
         public string ActiveMessageContactId { get { return MessagesOpen ? messages.ActiveContactId : string.Empty; } }
 
@@ -91,6 +96,8 @@ namespace Rokas.Presentation
             Booting = false;
             closed = null;
             frame = null;
+            mirrorSourceScreen = null;
+            bootPrivacyShield = null;
             content = null;
             windowGroup = null;
             contentGroup = null;
@@ -140,10 +147,14 @@ namespace Rokas.Presentation
             }
             bootConsumedThisHomeVisit = true;
             Booting = true;
-            // Prewarm the actual interactive YOMI desktop underneath the video.
-            // The video is added last, above it. No empty frame/black 0.5s hold
-            // is permitted when VideoPlayer fires its completion callback.
+            // Prepare real YOMI behind a BLACK privacy shield. The boot video
+            // stays above the shield. Even a one-frame late VideoPlayer prepare
+            // cannot expose the already loaded desktop before boot starts.
             BuildReadyFrame();
+            bootPrivacyShield = ui.Rect(frame, "LaptopBootPrivacyShield", 0, 0, 1792, 1008);
+            var shield = bootPrivacyShield.gameObject.AddComponent<Image>();
+            shield.color = Color.black;
+            shield.raycastTarget = false;
             windowGroup.interactable = false;
             video.PlayInHost(frame, "LaptopBoot.mp4", "LaptopBootSurface", 1792, 1008, videoVolume(), FinishBoot);
         }
@@ -154,8 +165,13 @@ namespace Rokas.Presentation
             // Completed VideoPlayer callback is the sole source of truth for
             // first boot success; a cancelled playback must not power the laptop.
             LaptopPowerSession.CompleteFirstBoot();
-            // The video surface is removed synchronously; the completed,
-            // already-built desktop is revealed in that same frame.
+            // Remove privacy shield ONLY once original boot actually finished.
+            // Desktop was never exposed while the video prepared or played.
+            if (bootPrivacyShield)
+            {
+                UnityEngine.Object.Destroy(bootPrivacyShield.gameObject);
+                bootPrivacyShield = null;
+            }
             Booting = false;
             windowGroup.interactable = true;
         }
@@ -165,6 +181,7 @@ namespace Rokas.Presentation
             Surface(frame, "Camera", 892, 12, 8, 8, 4, new Color(.08f, .10f, .11f));
             ui.Box(frame, "ScreenEdge", 22, 30, 1748, 940, new Color(.12f, .16f, .18f));
             var screen = ui.Rect(frame, "LaptopScreen", 24, 32, 1744, 936);
+            mirrorSourceScreen = screen;
             var wallpaper = ui.Art(screen, "LaptopWallpaper", assets.laptopWallpaper, 0, 0, 1744, 936);
             // Cover without stretching the original Japanese landscape.
             float sourceAspect = (float)assets.laptopWallpaper.width / assets.laptopWallpaper.height;
