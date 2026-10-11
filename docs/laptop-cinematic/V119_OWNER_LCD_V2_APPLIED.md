@@ -1,7 +1,7 @@
 # ROKAS Laptop Cinematic V11.9 — owner-calibrated LCD V2 in runtime
 
 Date: 2026-10-11
-Current source: refined attachment `ROKAS_Laptop_LCD_Calibration(1).json` (supersedes `ROKAS_Laptop_LCD_Calibration.json`) (formatVersion 2; source image 1672×941; source-image pixels, origin top-left).
+Current source: latest attachment `ROKAS_Laptop_LCD_Calibration(2).json` (supersedes calibration (1) and the original) (formatVersion 2; source image 1672×941; source-image pixels, origin top-left).
 
 ## Applied precisely as delivered (refined owner calibration, 2026-10-11)
 
@@ -9,7 +9,7 @@ Current source: refined attachment `ROKAS_Laptop_LCD_Calibration(1).json` (super
 |---|---:|---:|
 | TL | 608.948974609375 | 412.8598937988281 |
 | TR | 1059.767578125 | 412.5315246582031 |
-| BR | 1073.55810546875 | 677.5065307617188 |
+| BR | 1075.6923828125 | 680.4259033203125 |
 | BL | 594.830078125 | 680.13330078125 |
 
 Per-corner rounded radii: TL 18; TR 18; BR 6; BL 6 (original-image pixels). Power anchor: 1014, 703. `debugPowerAnchor=false`.
@@ -19,7 +19,7 @@ Per-corner rounded radii: TL 18; TR 18; BR 6; BL 6 (original-image pixels). Powe
 - **Critical:** the final four owner points are DIRECT final inner-LCD points. Do not apply older `32/38/5` safe insets a second time. The old additive insets remain only for legacy/no-V2 fallback.
 - `LaptopPerspectiveQuad` has a true 52-edge rounded UV mesh with 18/18/6/6; it matches the UV arc and bilinear mapping algorithm used by the Workshop. `Mask` receives the same rounded mesh (real stencil), so children YOMI and chibi are clipped to a curved inner screen rather than just seeing a fake rounded decoration.
 - `LaptopWakeQuad` inherits the SAME mesh generator. Wake glow, physical wallpaper, live desktop clock, both standby/powered mask stencils, and exact original fullscreen-YOMI screenshot share the same calibrated source corners and rounded radii. The original bitmap, physical YOMI snapshot and UI assets are unchanged.
-- Latest revision changes ONLY the V2 JSON corner coordinates and the corresponding test constants; rounded radii, Power anchor and runtime renderer are unchanged. The previous V2 calibration is superseded.
+- Latest revision (calibration (2)) changes ONLY the V2 bottom-right corner and corresponding test constants; rounded radii, Power anchor and runtime renderer remain unchanged. Calibration (1) is superseded. Optional workshop V3 edge pins do not change runtime until separately approved.
 - Existing POV/seat/stand animations, approved golden controls R/E/ESC (including lower placement, icon art, hover, sound), Combat, VN and room background are not modified.
 
 ## Tests
