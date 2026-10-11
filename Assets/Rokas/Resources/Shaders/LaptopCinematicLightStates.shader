@@ -7,6 +7,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
         _Color ("Tint", Color) = (1,1,1,1)
         _RoomLightOn ("Main room light", Range(0,1)) = 0
         _HallwayLightOn ("Hallway light", Range(0,1)) = 0
+        _ScreenGlow ("Physical laptop screen emission", Range(0,1)) = 0
         [HideInInspector] _OffPhotoReady ("OFF reference installed", Float) = 0
         _MaskDebug ("Show zone mask (diagnostic only)", Range(0,1)) = 0
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -43,6 +44,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             fixed4 _Color;
             float _RoomLightOn;
             float _HallwayLightOn;
+            float _ScreenGlow;
             float _OffPhotoReady;
             float _MaskDebug;
 
@@ -67,70 +69,98 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 return o;
             }
 
-            // TOP-LEFT coordinates of the unmodified 1672x941 approved POV.
-            // The six-sided polygon covers the visible left corridor, black
-            // curtain and sloped threshold; room surfaces remain outside it.
-            float Cross2(float2 a, float2 b) { return a.x*b.y - a.y*b.x; }
-            float InsideEdge(float2 a,float2 b,float2 p)
+            // Top-left pixel coordinates for both registered 1672x941 photos.
+            // Hallway mask excludes furniture in front of the left opening,
+            // follows the timber right jamb, and ends ON the raised sill.
+            // The earlier (323,511)-(385,508) bottom leaked into room floor.
+            float Cross2(float2 a, float2 b) { return a.x*b.y-a.y*b.x; }
+            float SignedEdge(float2 a,float2 b,float2 p)
             {
                 float2 edge=b-a;
                 return Cross2(edge,p-a)/max(length(edge),.0001);
             }
-            float CorridorDoorMask(float2 p)
+            float DoorwayPolygon(float2 p)
             {
-                float2 a=float2(294,-5);
-                float2 b=float2(382,-5);
-                float2 c=float2(388,467);
-                float2 d=float2(385,508);
-                float2 e=float2(323,511);
-                float2 f=float2(298,484);
-                float signedDistance=min(
-                    min(min(InsideEdge(a,b,p),InsideEdge(b,c,p)),
-                        min(InsideEdge(c,d,p),InsideEdge(d,e,p))),
-                    min(InsideEdge(e,f,p),InsideEdge(f,a,p)));
-                return smoothstep(-3.5,3.5,signedDistance);
+                // Clockwise around the actual visible opening (image origin at top-left).
+                const float2 a=float2(293,-6);
+                const float2 b=float2(383,-6);
+                const float2 c=float2(389,180);
+                const float2 d=float2(396,405);
+                const float2 e=float2(400,469); // right inner sill corner
+                const float2 f=float2(329,489); // left sloped sill; no room floor
+                const float2 g=float2(328,425);
+                const float2 h=float2(325,297);
+                const float2 j=float2(293,296); // cabinet occludes left corridor
+                float edgeDist = min(
+                   min(min(SignedEdge(a,b,p),SignedEdge(b,c,p)),
+                       min(SignedEdge(c,d,p),SignedEdge(d,e,p))),
+                   min(min(SignedEdge(e,f,p),SignedEdge(f,g,p)),
+                       min(min(SignedEdge(g,h,p),SignedEdge(h,j,p)),
+                           SignedEdge(j,a,p))));
+                return smoothstep(-2.25,2.25,edgeDist);
             }
             float SoftEllipse(float2 p,float2 center,float2 reach)
             {
                 float2 q=(p-center)/reach;
                 return 1.0-smoothstep(.10,1.0,dot(q,q));
             }
+            float ThresholdSpill(float2 p,float door)
+            {
+                // Small photographic spill on the jamb and FIRST interior floorboards,
+                // not a second oversized flashlight covering the room floor.
+                float jamb=.34*SoftEllipse(p,float2(399,426),float2(49,86));
+                float sill=.22*SoftEllipse(p,float2(401,476),float2(93,36));
+                return saturate((jamb+sill)*(1.0-door));
+            }
+            float LaptopDeskGlow(float2 p)
+            {
+                // The LCD never receives this extra tint. Projected emission
+                // reaches the keyboard/tabletop below the laptop screen only.
+                float belowScreen=smoothstep(682.0,725.0,p.y);
+                float keyboard=.38*SoftEllipse(p,float2(838,751),float2(296,88));
+                float nearbyWood=.67*SoftEllipse(p,float2(841,861),float2(414,167));
+                float leftDesk=.26*SoftEllipse(p,float2(563,791),float2(214,103));
+                float rightDesk=.26*SoftEllipse(p,float2(1105,794),float2(211,105));
+                return saturate((keyboard+nearbyWood+leftDesk+rightDesk)*belowScreen);
+            }
 
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed4 onPhoto=tex2D(_MainTex,i.uv);
-                float2 p=float2(i.uv.x*1672.0,(1.0-i.uv.y)*941.0);
-                float doorway=CorridorDoorMask(p);
-                float spillZone=(1.0-doorway)*
-                    saturate(.47*SoftEllipse(p,float2(384,456),float2(190,155))+
-                             .25*SoftEllipse(p,float2(400,535),float2(250,122)));
-
-                if (_MaskDebug > .5)
-                    return fixed4(lerp(float3(.07,.17,.72),
-                         float3(.12,.85,.22),doorway)+float3(spillZone,.0,.0),1)*i.color;
-
-                // OFF is always the exact supplied photographic asset.
-                // Material is never bound without the asset; in particular,
-                // do not try to suppress baked lamp highlights with grading.
                 fixed4 offPhoto=tex2D(_OffTex,i.uv);
+                float2 p=float2(i.uv.x*1672.0,(1.0-i.uv.y)*941.0);
+                float hallwayMask=DoorwayPolygon(p);
+                float roomMask=1.0-hallwayMask;
+                float corridorSpill=ThresholdSpill(p,hallwayMask);
+                float screenSpill=LaptopDeskGlow(p);
 
+                if (_MaskDebug>.5)
+                {
+                    // Blue room, green corridor, red practical spill, cyan desk glow.
+                    float3 zone=lerp(float3(.08,.15,.58),float3(.12,.83,.18),hallwayMask);
+                    zone+=float3(corridorSpill,.0,.0)+float3(0,.22,.36)*screenSpill;
+                    return fixed4(saturate(zone),1)*i.color;
+                }
+
+                // The source photo PAIR is mandatory. No brightness/grading
+                // substitute for the photographed OFF room.
                 float roomOn=saturate(_RoomLightOn);
-                float hallOn=saturate(_HallwayLightOn);
-                float roomMask=1.0-doorway;
-                float hallwayMask=doorway;
-                float lightMix=roomMask*roomOn+hallwayMask*hallOn;
-                float3 composed=lerp(offPhoto.rgb,onPhoto.rgb,saturate(lightMix));
+                float hallwayOn=saturate(_HallwayLightOn);
+                float mixOn=saturate(roomOn*roomMask+hallwayOn*hallwayMask);
+                float3 resultColor=lerp(offPhoto.rgb,onPhoto.rgb,mixOn);
 
-                // The real corridor ON photo contributes its own captured
-                // illumination to the jamb and nearby floor, but ONLY when
-                // the main room is OFF and the corridor switch is ON.
-                float spill=hallOn*(1.0-roomOn)*spillZone;
-                composed+=max(onPhoto.rgb-offPhoto.rgb,0)*spill;
+                // Only corridor ON + room OFF produces a localized warm spill.
+                float practicalSpill=hallwayOn*(1.0-roomOn)*corridorSpill;
+                resultColor+=max(onPhoto.rgb-offPhoto.rgb,0)*practicalSpill;
 
-                // Both OFF is the exact OFF reference. Both ON is the exact
-                // original approved ON photo. No geometry, laptop LCD or
-                // UI overlays are modified by this shader.
-                return fixed4(saturate(composed),onPhoto.a)*i.color;
+                // Real laptop power independent from both room light switches.
+                // Nighttime cyan/blue illumination is intentionally subtle;
+                // stronger with room practicals OFF, and limited to the desk.
+                float power=saturate(_ScreenGlow);
+                float darkness=lerp(1.0,.24,roomOn);
+                resultColor+=float3(.072,.15,.255)*(.40*power*darkness*screenSpill);
+
+                return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }
             ENDCG
         }

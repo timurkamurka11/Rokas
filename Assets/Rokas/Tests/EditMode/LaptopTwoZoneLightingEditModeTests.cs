@@ -12,7 +12,19 @@ namespace Rokas.Tests
             var root = new GameObject("OriginalLaptopPOV",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
             image = root.GetComponent<RawImage>();
+            // Bind guards require the same dimensions as the approved POV.
+            image.texture = new Texture2D(
+                LaptopCinematicLightPresentation.ReferenceWidth,
+                LaptopCinematicLightPresentation.ReferenceHeight,
+                TextureFormat.RGBA32, false);
             return root;
+        }
+
+        private static void DestroyBackground(GameObject root)
+        {
+            var image = root.GetComponent<RawImage>();
+            if (image && image.texture) Object.DestroyImmediate(image.texture);
+            Object.DestroyImmediate(root);
         }
 
         [Test]
@@ -27,6 +39,7 @@ namespace Rokas.Tests
             {
                 Assert.That(material.HasProperty("_RoomLightOn"), Is.True);
                 Assert.That(material.HasProperty("_HallwayLightOn"), Is.True);
+                Assert.That(material.HasProperty("_ScreenGlow"), Is.True);
                 Assert.That(material.HasProperty("_OffTex"), Is.True);
                 Assert.That(material.HasProperty("_OffPhotoReady"), Is.True);
                 Assert.That(material.HasProperty("_MaskDebug"), Is.True);
@@ -40,8 +53,7 @@ namespace Rokas.Tests
             bool roomOn = false;
             bool hallwayOn = false;
             GameObject root = CreateBackground(out RawImage image);
-            Texture2D approvedPhoto = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            image.texture = approvedPhoto;
+            Texture2D approvedPhoto = (Texture2D)image.texture;
             var presentation = new LaptopCinematicLightPresentation(
                 () => roomOn, () => hallwayOn);
             try
@@ -68,8 +80,7 @@ namespace Rokas.Tests
             finally
             {
                 presentation.Dispose();
-                Object.DestroyImmediate(root);
-                Object.DestroyImmediate(approvedPhoto);
+                DestroyBackground(root);
             }
         }
 
@@ -107,7 +118,7 @@ namespace Rokas.Tests
             finally
             {
                 presenter.Dispose();
-                Object.DestroyImmediate(root);
+                DestroyBackground(root);
             }
         }
 
@@ -128,7 +139,7 @@ namespace Rokas.Tests
         {
             bool room=false,hall=false;
             GameObject root=CreateBackground(out RawImage image);
-            image.texture=new Texture2D(2,2,TextureFormat.RGBA32,false);
+            // Full-sized approved ON reference is supplied by CreateBackground().
             var presenter=new LaptopCinematicLightPresentation(()=>room,()=>hall);
             try
             {
@@ -153,8 +164,42 @@ namespace Rokas.Tests
             finally
             {
                 presenter.Dispose();
-                Object.DestroyImmediate(image.texture);
-                Object.DestroyImmediate(root);
+                DestroyBackground(root);
+            }
+        }
+
+
+        [Test]
+        public void LaptopScreenEmissionUsesIndependentSavedPowerState()
+        {
+            bool room=false, hall=false, powered=false;
+            GameObject root=CreateBackground(out RawImage image);
+            var presenter=new LaptopCinematicLightPresentation(
+                () => room, () => hall, () => powered);
+            try
+            {
+                presenter.Bind(image);
+                Assert.That(presenter.ScreenValue,Is.EqualTo(0f));
+                Assert.That(presenter.Material.GetFloat("_ScreenGlow"),Is.EqualTo(0f));
+                powered=true;
+                presenter.Tick(3f);
+                Assert.That(presenter.ScreenValue,Is.EqualTo(1f).Within(.001f));
+                Assert.That(presenter.Material.GetFloat("_ScreenGlow"),Is.EqualTo(1f).Within(.001f));
+                Assert.That(presenter.RoomValue,Is.EqualTo(0f));
+                Assert.That(presenter.HallwayValue,Is.EqualTo(0f));
+                room=true;
+                presenter.Snap();
+                Assert.That(presenter.ScreenValue,Is.EqualTo(1f));
+                Assert.That(presenter.RoomValue,Is.EqualTo(1f));
+                powered=false;
+                presenter.Snap();
+                Assert.That(presenter.ScreenValue,Is.EqualTo(0f));
+                Assert.That(presenter.RoomValue,Is.EqualTo(1f));
+            }
+            finally
+            {
+                presenter.Dispose();
+                DestroyBackground(root);
             }
         }
 
@@ -176,7 +221,7 @@ namespace Rokas.Tests
             finally
             {
                 presenter.Dispose();
-                Object.DestroyImmediate(root);
+                DestroyBackground(root);
             }
         }
     }

@@ -19,25 +19,31 @@ namespace Rokas.Presentation
         private static readonly int OffReadyProperty = Shader.PropertyToID("_OffPhotoReady");
         private static readonly int RoomProperty = Shader.PropertyToID("_RoomLightOn");
         private static readonly int HallProperty = Shader.PropertyToID("_HallwayLightOn");
+        private static readonly int ScreenProperty = Shader.PropertyToID("_ScreenGlow");
 
         private readonly Func<bool> roomLight;
         private readonly Func<bool> hallwayLight;
+        private readonly Func<bool> laptopScreenPowered;
         private Material material;
         private RawImage background;
         private Texture2D offPhoto;
         private float roomValue;
         private float hallValue;
+        private float screenValue;
 
         public Material Material => material;
         public bool HasOffPhoto => offPhoto != null;
         public float RoomValue => roomValue;
         public float HallwayValue => hallValue;
+        public float ScreenValue => screenValue;
 
         public LaptopCinematicLightPresentation(
-            Func<bool> roomLight, Func<bool> hallwayLight)
+            Func<bool> roomLight, Func<bool> hallwayLight,
+            Func<bool> laptopScreenPowered = null)
         {
             this.roomLight = roomLight;
             this.hallwayLight = hallwayLight;
+            this.laptopScreenPowered = laptopScreenPowered;
         }
 
         /// <summary>Initializes the photo to the ALREADY SAVED light state
@@ -93,6 +99,7 @@ namespace Rokas.Presentation
         {
             roomValue = roomLight != null && roomLight() ? 1f : 0f;
             hallValue = hallwayLight != null && hallwayLight() ? 1f : 0f;
+            screenValue = laptopScreenPowered != null && laptopScreenPowered() ? 1f : 0f;
             WriteMaterial();
         }
 
@@ -101,14 +108,17 @@ namespace Rokas.Presentation
             if (!material) return;
             float roomTarget = roomLight != null && roomLight() ? 1f : 0f;
             float hallTarget = hallwayLight != null && hallwayLight() ? 1f : 0f;
+            float screenTarget = laptopScreenPowered != null && laptopScreenPowered() ? 1f : 0f;
 
             // Smooth only real changes while the POV is present; Bind/Snap
             // applies an initial or resumed session state without delay.
             float t = 1f - Mathf.Exp(-Mathf.Max(0f, deltaTime) / .18f);
             roomValue = Mathf.Lerp(roomValue, roomTarget, t);
             hallValue = Mathf.Lerp(hallValue, hallTarget, t);
+            screenValue = Mathf.Lerp(screenValue, screenTarget, t);
             if (Mathf.Abs(roomValue - roomTarget) <= .001f) roomValue = roomTarget;
             if (Mathf.Abs(hallValue - hallTarget) <= .001f) hallValue = hallTarget;
+            if (Mathf.Abs(screenValue - screenTarget) <= .001f) screenValue = screenTarget;
             WriteMaterial();
         }
 
@@ -117,6 +127,7 @@ namespace Rokas.Presentation
             if (!material) return;
             material.SetFloat(RoomProperty, roomValue);
             material.SetFloat(HallProperty, hallValue);
+            material.SetFloat(ScreenProperty, screenValue);
         }
 
         public void Dispose()

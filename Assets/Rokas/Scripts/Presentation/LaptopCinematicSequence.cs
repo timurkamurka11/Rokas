@@ -355,7 +355,10 @@ namespace Rokas.Presentation
             this.updateRoomCamera = updateRoomCamera;
             this.yomiWallpaper = yomiWallpaper;
             this.bounceSound = bounceSound;
-            lighting = new LaptopCinematicLightPresentation(roomLightOn, hallwayLightOn);
+            // Power is already latched at the calibrated physical key contact.
+            // No new switch/state; screen spill tracks the real laptop power.
+            lighting = new LaptopCinematicLightPresentation(
+                roomLightOn, hallwayLightOn, () => LaptopPowerSession.PoweredOn);
         }
 
         // False means the caller MUST invoke the existing OpenPanel("laptop") immediately.
