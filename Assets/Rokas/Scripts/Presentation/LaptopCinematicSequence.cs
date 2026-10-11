@@ -132,7 +132,10 @@ namespace Rokas.Presentation
             RectTransform canvasRect = physicalMiniYomiImage.rectTransform;
             float w = physicalMiniYomiViewport.rect.width;
             float h = physicalMiniYomiViewport.rect.height;
-            float scale = Mathf.Min(w / exact.width, h / exact.height);
+            // Preserve the exact YOMI aspect while filling all four LCD
+            // corners; the polygon stencil clips only the tiny overscan.
+            // Contain-fit left an unpainted strip at the bottom-right bezel.
+            float scale = Mathf.Max(w / exact.width, h / exact.height);
             float targetW = exact.width * scale;
             float targetH = exact.height * scale;
             canvasRect.sizeDelta = new Vector2(targetW, targetH);
