@@ -85,21 +85,26 @@ namespace Rokas.Tests
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
             var originalPower = Find<RawImage>("PowerChoiceHint");
             var originalBack = Find<RawImage>("BackChoiceHint");
-            // Compare *visible* PNG artwork rather than its unequal transparent
-            // texture padding. Approved R lower edge never moves. Power/open
-            // use +19 optical adjustment, ESC +13, from the owner's screenshots.
+            // Compare *visible* PNG artwork rather than unequal alpha padding.
+            // V11.7 user-approved +50 stage-pixel translation applies to
+            // ALL gold prompts; existing E(+19)/ESC(+13) optical offsets remain.
             var standReference = Find<RawImage>("PoweredStandOriginalPNG");
             Assert.That(standReference, Is.Not.Null);
             float standBottom = -standReference.rectTransform.anchoredPosition.y
                 + standReference.rectTransform.rect.height;
-            Assert.That(standBottom, Is.EqualTo(1045f).Within(.1f),
-                "Approved R position must remain identical to V11.5");
+            Assert.That(standBottom, Is.EqualTo(1045f + 50f).Within(.1f),
+                "R — ВСТАТЬ must be 50px lower than its V11.6 baseline");
             Assert.That(-originalPower.rectTransform.anchoredPosition.y + originalPower.rectTransform.rect.height,
                 Is.EqualTo(standBottom + 19f).Within(.1f), "Power prompt should appear level with R");
             Assert.That(-originalBack.rectTransform.anchoredPosition.y + originalBack.rectTransform.rect.height,
                 Is.EqualTo(standBottom + 13f).Within(.1f), "ESC Back should appear level with R");
             Assert.That(originalPower, Is.Not.Null);
             Assert.That(originalBack, Is.Not.Null);
+            var backArrow = Find<RawImage>("LaptopBackChoice");
+            Assert.That(backArrow, Is.Not.Null);
+            Assert.That(-backArrow.rectTransform.anchoredPosition.y,
+                Is.EqualTo(942f + 50f).Within(.1f),
+                "OFF-state original gold back arrow must move down with all prompts");
             Assert.That(originalPower.GetComponentInChildren<RawImage>().color.a, Is.EqualTo(1f));
             Assert.That(originalPower.transform.Find("OriginalGoldLuminance"), Is.Not.Null,
                 "Original user PNG keeps full alpha plus luminance layer");
@@ -164,7 +169,7 @@ namespace Rokas.Tests
             Assert.That(reopen.gameObject.activeInHierarchy,Is.True);
             var standArt = Find<RawImage>("PoweredStandOriginalPNG");
             Assert.That(standArt, Is.Not.Null,
-                "Use exact user-provided E — ВСТАТЬ button rather than old arrow");
+                "Use exact user-provided R — ВСТАТЬ button rather than old arrow");
             Assert.That(standArt.texture, Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand_r")),
                 "Only exact owner-supplied R — ВСТАТЬ PNG is accepted");
             Assert.That(-standArt.rectTransform.anchoredPosition.y + standArt.rectTransform.rect.height,
