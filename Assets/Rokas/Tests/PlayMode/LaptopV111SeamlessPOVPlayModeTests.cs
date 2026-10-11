@@ -29,7 +29,7 @@ namespace Rokas.Tests
                 Assert.Ignore("Requires explicitly staged art and test-only POV");
             // An art-integrated Unity test must never accept fallback text in place of the original assets.
             foreach (string name in new[] { "rokas_no_signal_chibi", "prompt_open",
-                "prompt_back", "prompt_power", "back_arrow", "prompt_stand" })
+                "prompt_back", "prompt_power", "back_arrow", "prompt_stand_r" })
                 Assert.That(Resources.Load<Texture2D>("LaptopCinematic/UI/" + name),
                     Is.Not.Null, "Original approved PNG missing from Unity Resources: " + name);
             Assert.That(Resources.Load<AudioClip>("LaptopCinematic/chibi_bounce"), Is.Not.Null,
@@ -85,8 +85,11 @@ namespace Rokas.Tests
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
             var originalPower = Find<RawImage>("PowerChoiceHint");
             var originalBack = Find<RawImage>("BackChoiceHint");
-            Assert.That(originalPower.rectTransform.anchoredPosition.y, Is.EqualTo(-903f).Within(.1f));
-            Assert.That(originalBack.rectTransform.anchoredPosition.y, Is.EqualTo(-920f).Within(.1f));
+            const float bottomLine = 1045f;
+            Assert.That(-originalPower.rectTransform.anchoredPosition.y + originalPower.rectTransform.rect.height,
+                Is.EqualTo(bottomLine).Within(.1f), "E Power aligned on gold-button baseline");
+            Assert.That(-originalBack.rectTransform.anchoredPosition.y + originalBack.rectTransform.rect.height,
+                Is.EqualTo(bottomLine).Within(.1f), "ESC Back aligned on gold-button baseline");
             Assert.That(originalPower, Is.Not.Null);
             Assert.That(originalBack, Is.Not.Null);
             Assert.That(originalPower.GetComponentInChildren<RawImage>().color.a, Is.EqualTo(1f));
@@ -154,7 +157,10 @@ namespace Rokas.Tests
             var standArt = Find<RawImage>("PoweredStandOriginalPNG");
             Assert.That(standArt, Is.Not.Null,
                 "Use exact user-provided E — ВСТАТЬ button rather than old arrow");
-            Assert.That(standArt.texture, Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand")));
+            Assert.That(standArt.texture, Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand_r")),
+                "Only exact owner-supplied R — ВСТАТЬ PNG is accepted");
+            Assert.That(-standArt.rectTransform.anchoredPosition.y + standArt.rectTransform.rect.height,
+                Is.EqualTo(bottomLine).Within(.1f));
             Assert.That(standArt.gameObject.activeInHierarchy, Is.True);
             Assert.That(standArt.color, Is.EqualTo(Color.white),
                 "Do not dim/retint original golden PNG");
@@ -163,8 +169,16 @@ namespace Rokas.Tests
             Assert.That(Find<RawImage>("LaptopBackChoice").gameObject.activeInHierarchy, Is.False,
                 "Old standalone arrow must disappear only after laptop is powered");
             Assert.That(Find<Button>("PoweredStandOriginalPNG"), Is.Not.Null);
-            Assert.That(Find<RawImage>("ExactGoldenOpenPrompt").texture,
+            var open = Find<RawImage>("ExactGoldenOpenPrompt");
+            Assert.That(open.texture,
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open")));
+            Assert.That(-open.transform.parent.GetComponent<RectTransform>().anchoredPosition.y +
+                open.rectTransform.rect.height, Is.EqualTo(bottomLine).Within(.1f),
+                "R Stand, E Open and ESC Back must all share one lower line");
+            var fourCorner = Find<LaptopPerspectiveQuad>("PhysicalExactYomiPerspective");
+            Assert.That(fourCorner, Is.Not.Null,
+                "YOMI must map all four texture edges directly onto the LCD quad rather than cover-cropping a RawImage");
+            Assert.That(fourCorner.GetComponent<CanvasRenderer>(), Is.Not.Null);
             Assert.That(Find<LaptopChoiceHover>("ExactGoldenOpenPrompt"),Is.Not.Null,
                 "Original gold powered-YOMI PNG must have hover on its own Graphic");
             Find<Button>("PhysicalDesktopClickTarget").onClick.Invoke();
@@ -182,9 +196,18 @@ namespace Rokas.Tests
             Assert.That(stand,Is.Not.Null);
             Assert.That(stand.gameObject.activeInHierarchy,Is.True);
             stand.onClick.Invoke();
+            yield return null;
+            Assert.That(Find<RectTransform>("PhysicalMiniYomiViewport").gameObject.activeInHierarchy,
+                Is.True, "Powered LCD must remain alive during standing transition; no black flash");
             yield return new WaitForSecondsRealtime(1.0f);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"),Is.Null,
                 "Stand control must run the real return-to-room animation and exit seated POV");
+            var hotSpot = Find<Button>("LaptopHotspot");
+            Assert.That(hotSpot, Is.Not.Null);
+            hotSpot.onClick.Invoke();
+            yield return null;
+            Assert.That(Find<RectTransform>("PhysicalMiniYomiViewport").gameObject.activeInHierarchy,
+                Is.True, "Powered LCD must be visible from the first frame of reseating");
         }
 
         [UnityTest]
