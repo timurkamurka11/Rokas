@@ -1,0 +1,22 @@
+{
+    "formatVersion": 2,
+    "coordinateSpace": "source_image_pixels_top_left",
+    "sourceWidth": 1672,
+    "sourceHeight": 941,
+    "topLeftX": 609.4470825195313,
+    "topLeftY": 410.09429931640627,
+    "topRightX": 1060.830078125,
+    "topRightY": 411.24285888671877,
+    "bottomRightX": 1075.18701171875,
+    "bottomRightY": 680.5795288085938,
+    "bottomLeftX": 595.090087890625,
+    "bottomLeftY": 680.0052490234375,
+    "powerX": 1014.0,
+    "powerY": 703.0,
+    "debugPowerAnchor": false,
+    "enableRoundedMask": true,
+    "topLeftRadius": 18.0,
+    "topRightRadius": 18.0,
+    "bottomRightRadius": 6.0,
+    "bottomLeftRadius": 6.0
+}
