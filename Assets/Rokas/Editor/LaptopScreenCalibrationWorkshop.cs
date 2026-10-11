@@ -40,10 +40,31 @@ namespace Rokas.Editor
             public float rightMidX, rightMidY;
             public float bottomMidX, bottomMidY;
             public float leftMidX, leftMidY;
+            // Experimental V4: local tangent helpers close to each rounded
+            // corner; exports never modify the production V2 LCD mesh.
+            public bool enableCornerHelpers;
+            public float tlHx, tlHy, tlVx, tlVy;
+            public float trHx, trHy, trVx, trVy;
+            public float brHx, brHy, brVx, brVy;
+            public float blHx, blHy, blVx, blVy;
         }
 
         private enum ViewMode { YomiPreview, BlackScreen, Mask, Outline }
-        private static readonly string[] PointLabels = { "TL", "TR", "BR", "BL", "TM", "RM", "BM", "LM" };
+        private static readonly string[] PointLabels =
+        {
+            "TL", "TR", "BR", "BL", "TM", "RM", "BM", "LM",
+            "TL-H", "TL-V", "TR-H", "TR-V",
+            "BR-H", "BR-V", "BL-H", "BL-V"
+        };
+        // UV locations on physical glass: one tangent helper 18% from
+        // each corner along each of the two incident LCD edges.
+        private static readonly Vector2[] CornerHelperUV =
+        {
+            new Vector2(.18f, 0f), new Vector2(0f, .18f),
+            new Vector2(.82f, 0f), new Vector2(1f, .18f),
+            new Vector2(.82f, 1f), new Vector2(1f, .82f),
+            new Vector2(.18f, 1f), new Vector2(0f, .82f)
+        };
         private static readonly Color[] PointColors =
         {
             new Color(.35f, .95f, 1f), new Color(1f, .78f, .31f),
@@ -61,8 +82,25 @@ namespace Rokas.Editor
         // moves, the corresponding extra contact points follow naturally.
         [SerializeField] private Vector2[] edgeOffsets;
         [SerializeField] private bool enableEdgeControlPoints;
+        // V4 tangent handles store LOCAL displacements relative to the V3
+        // mapping. The four corners and four edge midpoints are unmodified.
+        [SerializeField] private bool enableCornerHelpers;
+        [SerializeField] private Vector2[] cornerHelperOffsets;
         [SerializeField] private bool showEdgeGuides = true;
         [SerializeField] private bool showContactTickMarks = true;
+        [SerializeField] private bool showSafeBorder = true;
+        [SerializeField] private float safeBorderPixels = 3f;
+        [SerializeField] private bool showErrorHeatmap;
+        [SerializeField] private float errorTolerancePixels = 1.5f;
+        [SerializeField] private bool showMagnifier = true;
+        [SerializeField] private int magnifierZoom = 8;
+        [SerializeField] private bool traceReference;
+        [SerializeField] private bool referenceDefined;
+        [SerializeField] private Vector2[] referenceCorners;
+        [SerializeField] private Vector2[] referenceEdgeOffsets;
+        [SerializeField] private Vector2[] referenceHelperOffsets;
+        [SerializeField] private bool referenceHasEdges;
+        [SerializeField] private bool referenceHasHelpers;
         [SerializeField] private Vector2 lastCanvasSize;
         [SerializeField] private float zoom = 1f;
         [SerializeField] private Vector2 pan;
@@ -103,6 +141,8 @@ namespace Rokas.Editor
             if (corners == null || corners.Length != 4) ResetToCurrent();
             if (edgeOffsets == null || edgeOffsets.Length != 4)
                 edgeOffsets = new Vector2[4];
+            if (cornerHelperOffsets == null || cornerHelperOffsets.Length != 8)
+                cornerHelperOffsets = new Vector2[8];
             if (!guide) guide = MakeGuide();
             wantsMouseMove = true;
         }
@@ -164,7 +204,10 @@ namespace Rokas.Editor
                         originalPowerX = saved.powerX;
                         originalPowerY = saved.powerY;
                         edgeOffsets = new Vector2[4];
+                        cornerHelperOffsets = new Vector2[8];
                         enableEdgeControlPoints = false;
+                        enableCornerHelpers = false;
+                        traceReference = referenceDefined = false;
                         selected = -1;
                         pan = Vector2.zero;
                         Repaint();
@@ -209,7 +252,10 @@ namespace Rokas.Editor
             topLeftRadius = topRightRadius = 18f;
             bottomRightRadius = bottomLeftRadius = 6f;
             edgeOffsets = new Vector2[4];
+            cornerHelperOffsets = new Vector2[8];
             enableEdgeControlPoints = false;
+            enableCornerHelpers = false;
+            traceReference = referenceDefined = false;
             selected = -1;
             pan = Vector2.zero;
             Repaint();
@@ -444,15 +490,41 @@ namespace Rokas.Editor
             edgeOffsets[index] = value - EdgeBase(index);
         }
 
-        private Vector2 GetHandle(int index)
+        private Vector2 GetCornerHelper(int index)
         {
-            return index < 4 ? corners[index] : GetEdgePoint(index - 4);
+            return MapBaseUV(CornerHelperUV[index]) +
+                (cornerHelperOffsets != null && cornerHelperOffsets.Length == 8 ?
+                    cornerHelperOffsets[index] : Vector2.zero);
         }
 
-        private void SetHandle(int index, Vector2 newPoint)
+        private void SetCornerHelper(int index, Vector2 point)
         {
-            if (index < 4) corners[index] = newPoint;
-            else SetEdgePoint(index - 4, newPoint);
+            if (cornerHelperOffsets == null || cornerHelperOffsets.Length != 8)
+                cornerHelperOffsets = new Vector2[8];
+            cornerHelperOffsets[index] = point - MapBaseUV(CornerHelperUV[index]);
+        }
+
+        private int HandleCount => enableCornerHelpers ? 16 :
+            enableEdgeControlPoints ? 8 : 4;
+
+        private Vector2 GetHandle(int index)
+        {
+            if (traceReference && referenceDefined)
+                return GetReferenceHandle(index);
+            return index < 4 ? corners[index] :
+                index < 8 ? GetEdgePoint(index - 4) : GetCornerHelper(index - 8);
+        }
+
+        private void SetHandle(int index, Vector2 point)
+        {
+            if (traceReference && referenceDefined)
+            {
+                SetReferenceHandle(index, point);
+                return;
+            }
+            if (index < 4) corners[index] = point;
+            else if (index < 8) SetEdgePoint(index - 4, point);
+            else SetCornerHelper(index - 8, point);
         }
 
         private void ZoomToSelected(float magnification)
@@ -721,21 +793,60 @@ namespace Rokas.Editor
             Emit(pixel, uv.x, 1f - uv.y);
         }
 
-        // V2: bilinear quad. Optional V3: four edge midpoint offsets bend
-        // the physical boundaries while preserving ALL original corners.
-        // 4u(1-u) = 1 at the top/bottom midpoint; zero at corners.
+        // V2 bilinear, V3 midpoint, V4 corner-local tangent deformation.
+        // All modes share one UV->photo-pixel mapping so mask, YOMI and
+        // colored outlines never drift apart.
         private Vector2 MapCornerUV(Vector2 uv)
         {
-            Vector2 top = Vector2.Lerp(corners[0], corners[1], uv.x);
-            Vector2 bottom = Vector2.Lerp(corners[3], corners[2], uv.x);
+            return MapUV(uv, corners, edgeOffsets, cornerHelperOffsets,
+                enableEdgeControlPoints, enableCornerHelpers);
+        }
+
+        private Vector2 MapBaseUV(Vector2 uv)
+        {
+            return MapUV(uv, corners, edgeOffsets, null,
+                enableEdgeControlPoints, false);
+        }
+
+        private static float NearStart(float t)
+        {
+            const float k = .18f;
+            if (t <= 0f || t >= .5f) return 0f;
+            return t <= k ? Mathf.SmoothStep(0f, 1f, t / k) :
+                Mathf.SmoothStep(1f, 0f, (t - k) / (.5f - k));
+        }
+
+        private static Vector2 MapUV(Vector2 uv, Vector2[] bounds,
+            Vector2[] edgeDeltas, Vector2[] helperDeltas, bool useEdges,
+            bool useHelpers)
+        {
+            Vector2 top = Vector2.Lerp(bounds[0], bounds[1], uv.x);
+            Vector2 bottom = Vector2.Lerp(bounds[3], bounds[2], uv.x);
             Vector2 result = Vector2.Lerp(top, bottom, uv.y);
-            if (enableEdgeControlPoints && edgeOffsets != null &&
-                edgeOffsets.Length == 4)
+            if (useEdges && edgeDeltas != null && edgeDeltas.Length == 4)
             {
                 float h = 4f * uv.x * (1f - uv.x);
                 float v = 4f * uv.y * (1f - uv.y);
-                result += h * Vector2.Lerp(edgeOffsets[0], edgeOffsets[2], uv.y);
-                result += v * Vector2.Lerp(edgeOffsets[3], edgeOffsets[1], uv.x);
+                result += h * Vector2.Lerp(edgeDeltas[0], edgeDeltas[2], uv.y);
+                result += v * Vector2.Lerp(edgeDeltas[3], edgeDeltas[1], uv.x);
+            }
+            if (useHelpers && helperDeltas != null && helperDeltas.Length == 8)
+            {
+                float u = uv.x, v = uv.y;
+                float l = NearStart(u), r = NearStart(1f - u);
+                float t = NearStart(v), b = NearStart(1f - v);
+                float topFalloff = (1f - v) * (1f - v);
+                float bottomFalloff = v * v;
+                float leftFalloff = (1f - u) * (1f - u);
+                float rightFalloff = u * u;
+                result += helperDeltas[0] * (l * topFalloff);
+                result += helperDeltas[1] * (t * leftFalloff);
+                result += helperDeltas[2] * (r * topFalloff);
+                result += helperDeltas[3] * (t * rightFalloff);
+                result += helperDeltas[4] * (r * bottomFalloff);
+                result += helperDeltas[5] * (b * rightFalloff);
+                result += helperDeltas[6] * (l * bottomFalloff);
+                result += helperDeltas[7] * (b * leftFalloff);
             }
             return result;
         }
