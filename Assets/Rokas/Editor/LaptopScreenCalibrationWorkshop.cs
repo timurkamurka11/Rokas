@@ -269,15 +269,19 @@ namespace Rokas.Editor
             EditorGUILayout.LabelField("LIVE VIEW", EditorStyles.boldLabel);
             mode = (ViewMode)EditorGUILayout.EnumPopup("Preview", mode);
             overlayAlpha = EditorGUILayout.Slider("Overlay opacity", overlayAlpha, 0f, 1f);
-            zoom = EditorGUILayout.Slider("Zoom", zoom, 1f, 8f);
+            zoom = EditorGUILayout.Slider("Zoom", zoom, 1f, 12f);
             showGrid = EditorGUILayout.Toggle("UV / perspective grid", showGrid);
             showOutline = EditorGUILayout.Toggle("Show outer polygon", showOutline);
             showRoundedOutline = EditorGUILayout.Toggle("Show rounded LCD", showRoundedOutline);
             showHandles = EditorGUILayout.Toggle("Show corner handles", showHandles);
-            if (GUILayout.Button("Center / fit view"))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                zoom = 1f;
-                pan = Vector2.zero;
+                if (GUILayout.Button("Fit full photo"))
+                {
+                    zoom = 1f; pan = Vector2.zero;
+                }
+                if (GUILayout.Button("Zoom selected (5x)"))
+                    ZoomToSelected(5f);
             }
 
             yomiProjectTexture = (Texture2D)EditorGUILayout.ObjectField(
@@ -308,6 +312,56 @@ namespace Rokas.Editor
                 EditorStyles.miniLabel);
 
             GUILayout.Space(7);
+            EditorGUILayout.LabelField("EDGE CONTACT POINTS (optional V3)",
+                EditorStyles.boldLabel);
+            enableEdgeControlPoints = EditorGUILayout.Toggle(
+                "Enable 4 edge pins", enableEdgeControlPoints);
+            showEdgeGuides = EditorGUILayout.Toggle(
+                "Show curved edge lines", showEdgeGuides);
+            showContactTickMarks = EditorGUILayout.Toggle(
+                "25 / 50 / 75% markers", showContactTickMarks);
+            if (enableEdgeControlPoints)
+            {
+                EditorGUILayout.HelpBox(
+                    "Drag TM / RM / BM / LM to match any slightly curved glass edge. " +
+                    "They deform the UV preview AND the rounded boundary. V3 exports " +
+                    "these four contacts; the game continues using approved V2 until reviewed.",
+                    MessageType.Info);
+                if (edgeOffsets == null || edgeOffsets.Length != 4)
+                    edgeOffsets = new Vector2[4];
+                for (int i = 0; i < 4; ++i)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        int handleId = i + 4;
+                        if (GUILayout.Toggle(selected == handleId,
+                            PointLabels[handleId], "Button", GUILayout.Width(38)))
+                            selected = handleId;
+                        EditorGUI.BeginChangeCheck();
+                        Vector2 edited = EditorGUILayout.Vector2Field("",
+                            GetEdgePoint(i));
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            SetEdgePoint(i, edited);
+                            Repaint();
+                        }
+                    }
+                }
+                if (GUILayout.Button("Straighten all four edges"))
+                {
+                    edgeOffsets = new Vector2[4];
+                    Repaint();
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField(
+                    "Off = exact V2 4-corner mask; no extra deformation.",
+                    EditorStyles.miniLabel);
+                if (selected >= 4) selected = -1;
+            }
+
+            GUILayout.Space(7);
             EditorGUILayout.LabelField("FOUR CORNERS (source pixels)",
                 EditorStyles.boldLabel);
             if (corners != null && corners.Length == 4)
@@ -332,8 +386,11 @@ namespace Rokas.Editor
 
             bool valid = ValidateCorners(out string error);
             if (!valid) EditorGUILayout.HelpBox(error, MessageType.Error);
-            else EditorGUILayout.HelpBox("Valid convex LCD polygon — safe to export.",
-                    MessageType.Info);
+            else EditorGUILayout.HelpBox(
+                enableEdgeControlPoints
+                    ? "Valid 8-point curve — export V3 for review. NOT applied to the game."
+                    : "Valid 4-corner LCD polygon — export V2 for the game.",
+                MessageType.Info);
 
             GUILayout.FlexibleSpace();
             using (new EditorGUILayout.HorizontalScope())
@@ -343,18 +400,75 @@ namespace Rokas.Editor
             }
             using (new EditorGUI.DisabledScope(!valid))
             {
-                if (GUILayout.Button("COPY CORNERS JSON", GUILayout.Height(27)))
+                if (GUILayout.Button(enableEdgeControlPoints
+                    ? "COPY 8-POINT V3 JSON" : "COPY 4-CORNER V2 JSON",
+                    GUILayout.Height(27)))
                 {
                     GUIUtility.systemCopyBuffer = JsonUtility.ToJson(MakePreset(), true);
                     ShowNotification(new GUIContent("Calibration JSON copied"));
                 }
-                if (GUILayout.Button("SAVE / EXPORT JSON...", GUILayout.Height(30)))
+                if (GUILayout.Button(enableEdgeControlPoints
+                    ? "SAVE / EXPORT V3 JSON..." : "SAVE / EXPORT V2 JSON...",
+                    GUILayout.Height(30)))
                     ExportJson();
             }
             EditorGUILayout.HelpBox(
-                "Export only. Does not replace screen_calibration.json or apply " +
-                "the old runtime insets a second time. Send the saved JSON for integration.",
+                "Save never overwrites the live game. V3 edge pins are experimental " +
+                "until their exact geometry is approved and separately integrated.",
                 MessageType.None);
+        }
+
+        private Vector2 EdgeBase(int index)
+        {
+            if (corners == null || corners.Length != 4) return Vector2.zero;
+            switch (index)
+            {
+                case 0: return (corners[0] + corners[1]) * .5f; // top
+                case 1: return (corners[1] + corners[2]) * .5f; // right
+                case 2: return (corners[2] + corners[3]) * .5f; // bottom
+                default: return (corners[3] + corners[0]) * .5f; // left
+            }
+        }
+
+        private Vector2 GetEdgePoint(int index)
+        {
+            return EdgeBase(index) +
+                (edgeOffsets != null && edgeOffsets.Length == 4
+                    ? edgeOffsets[index] : Vector2.zero);
+        }
+
+        private void SetEdgePoint(int index, Vector2 value)
+        {
+            if (edgeOffsets == null || edgeOffsets.Length != 4)
+                edgeOffsets = new Vector2[4];
+            edgeOffsets[index] = value - EdgeBase(index);
+        }
+
+        private Vector2 GetHandle(int index)
+        {
+            return index < 4 ? corners[index] : GetEdgePoint(index - 4);
+        }
+
+        private void SetHandle(int index, Vector2 newPoint)
+        {
+            if (index < 4) corners[index] = newPoint;
+            else SetEdgePoint(index - 4, newPoint);
+        }
+
+        private void ZoomToSelected(float magnification)
+        {
+            if (!source || corners == null || selected < 0 ||
+                selected >= (enableEdgeControlPoints ? 8 : 4)) return;
+            zoom = Mathf.Clamp(magnification, 1f, 12f);
+            Vector2 focus = new Vector2(.5f, .56f);
+            float w = Mathf.Max(50f, lastCanvasSize.x - 16f);
+            float h = Mathf.Max(50f, lastCanvasSize.y - 16f);
+            float scale = Mathf.Min(w / source.width,
+                h / source.height) * zoom;
+            Vector2 wanted = GetHandle(selected);
+            pan = new Vector2(focus.x * source.width - wanted.x,
+                focus.y * source.height - wanted.y) * scale;
+            Repaint();
         }
 
         private void DrawCanvas(Rect area)
@@ -366,6 +480,7 @@ namespace Rokas.Editor
                     EditorStyles.centeredGreyMiniLabel);
                 return;
             }
+            lastCanvasSize = area.size;
             var inner = new Rect(area.x + 8, area.y + 8,
                 Mathf.Max(50, area.width - 16), Mathf.Max(50, area.height - 16));
             float scale = Mathf.Min(inner.width / source.width,
