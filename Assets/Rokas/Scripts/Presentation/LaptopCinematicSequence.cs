@@ -37,11 +37,20 @@ namespace Rokas.Presentation
             public float topRightRadius;
             public float bottomRightRadius;
             public float bottomLeftRadius;
+            public bool enableEdgeControlPoints;
+            public float topMidX, topMidY, rightMidX, rightMidY;
+            public float bottomMidX, bottomMidY, leftMidX, leftMidY;
+            public bool enableCornerHelpers;
+            public float tlHx, tlHy, tlVx, tlVy, trHx, trHy, trVx, trVy;
+            public float brHx, brHy, brVx, brVy, blHx, blHy, blVx, blVy;
+            // The optional V4 bezelReference contains traced diagnostic data
+            // for the editor only. The physical screen uses fitted controls.
         }
 
-        private static bool IsValidV2(ScreenCalibration c, Texture2D reference)
+        private static bool IsValidV2(ScreenCalibration c, Texture2D reference,
+            int expectedVersion = 2)
         {
-            if (c == null || !reference || c.formatVersion != 2 ||
+            if (c == null || !reference || c.formatVersion != expectedVersion ||
                 c.coordinateSpace != "source_image_pixels_top_left" ||
                 c.sourceWidth != reference.width ||
                 c.sourceHeight != reference.height) return false;
@@ -78,6 +87,120 @@ namespace Rokas.Presentation
                     r < 0f || r > cap + .01f) return false;
             return !float.IsNaN(c.powerX) && !float.IsInfinity(c.powerX) &&
                    !float.IsNaN(c.powerY) && !float.IsInfinity(c.powerY);
+        }
+
+        private static bool TryBuildV4Warp(ScreenCalibration c, Texture2D reference,
+            out Vector2[] corners, out Vector2[] edgeDeltas,
+            out Vector2[] helperDeltas)
+        {
+            corners = edgeDeltas = helperDeltas = null;
+            if (c == null || !c.enableEdgeControlPoints ||
+                !c.enableCornerHelpers || !IsValidV2(c, reference, 4))
+                return false;
+
+            Vector2[] bounds =
+            {
+                new Vector2(c.topLeftX, c.topLeftY),
+                new Vector2(c.topRightX, c.topRightY),
+                new Vector2(c.bottomRightX, c.bottomRightY),
+                new Vector2(c.bottomLeftX, c.bottomLeftY)
+            };
+            Vector2[] midpoints =
+            {
+                new Vector2(c.topMidX, c.topMidY),
+                new Vector2(c.rightMidX, c.rightMidY),
+                new Vector2(c.bottomMidX, c.bottomMidY),
+                new Vector2(c.leftMidX, c.leftMidY)
+            };
+            Vector2[] extra =
+            {
+                new Vector2(c.tlHx, c.tlHy), new Vector2(c.tlVx, c.tlVy),
+                new Vector2(c.trHx, c.trHy), new Vector2(c.trVx, c.trVy),
+                new Vector2(c.brHx, c.brHy), new Vector2(c.brVx, c.brVy),
+                new Vector2(c.blHx, c.blHy), new Vector2(c.blVx, c.blVy)
+            };
+            Vector2[] tangentUV =
+            {
+                new Vector2(.18f, 0f), new Vector2(0f, .18f),
+                new Vector2(.82f, 0f), new Vector2(1f, .18f),
+                new Vector2(.82f, 1f), new Vector2(1f, .82f),
+                new Vector2(.18f, 1f), new Vector2(0f, .82f)
+            };
+            Vector2[] edges = new Vector2[4];
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 midpoint = (bounds[i] + bounds[(i + 1) % 4]) * .5f;
+                edges[i] = midpoints[i] - midpoint;
+                if (!IsInsidePhoto(midpoints[i], reference) ||
+                    edges[i].magnitude > 100f) return false;
+            }
+            Vector2[] helpers = new Vector2[8];
+            for (int i = 0; i < 8; i++)
+            {
+                helpers[i] = extra[i] - LaptopPerspectiveQuad.MapUV(
+                    tangentUV[i], bounds, edges, new Vector2[8], true);
+                if (!IsInsidePhoto(extra[i], reference) ||
+                    helpers[i].magnitude > 65f) return false;
+            }
+            // Refuse a folded or invalid mesh. The same UV mapping is used
+            // by every runtime layer and the user's calibration workshop.
+            const int steps = 24;
+            for (int y = 0; y < steps; y++)
+                for (int x = 0; x < steps; x++)
+                {
+                    float u = x / (float)steps, v = y / (float)steps;
+                    float increment = 1f / steps;
+                    Vector2 p = LaptopPerspectiveQuad.MapUV(new Vector2(u, v),
+                        bounds, edges, helpers, true);
+                    Vector2 right = LaptopPerspectiveQuad.MapUV(
+                        new Vector2(u + increment, v), bounds, edges, helpers, true);
+                    Vector2 below = LaptopPerspectiveQuad.MapUV(
+                        new Vector2(u, v + increment), bounds, edges, helpers, true);
+                    float cross = (right.x - p.x) * (below.y - p.y) -
+                                  (right.y - p.y) * (below.x - p.x);
+                    if (float.IsNaN(cross) || float.IsInfinity(cross) ||
+                        cross <= .0001f) return false;
+                }
+            corners = bounds;
+            edgeDeltas = edges;
+            helperDeltas = helpers;
+            return true;
+        }
+
+        private static bool IsInsidePhoto(Vector2 value, Texture2D photo)
+        {
+            return !float.IsNaN(value.x) && !float.IsNaN(value.y) &&
+                !float.IsInfinity(value.x) && !float.IsInfinity(value.y) &&
+                value.x >= 0f && value.y >= 0f &&
+                value.x < photo.width && value.y < photo.height;
+        }
+
+        private static void ComputeLCDBounds(Vector2[] corners,
+            Vector2[] edges, Vector2[] helpers, out float minX,
+            out float minY, out float maxX, out float maxY)
+        {
+            minX = Mathf.Min(corners[0].x, corners[3].x);
+            minY = Mathf.Min(corners[0].y, corners[1].y);
+            maxX = Mathf.Max(corners[1].x, corners[2].x);
+            maxY = Mathf.Max(corners[2].y, corners[3].y);
+            if (edges == null || helpers == null) return; // V2 unchanged
+            // Edges can extend beyond the four corners. RectMask2D must NOT
+            // clip even 1-3px of a user's fitted tangent near rounded glass.
+            const int samples = 64;
+            for (int iy = 0; iy <= samples; iy++)
+                for (int ix = 0; ix <= samples; ix++)
+                {
+                    Vector2 p = LaptopPerspectiveQuad.MapUV(
+                        new Vector2(ix / (float)samples, iy / (float)samples),
+                        corners, edges, helpers, true);
+                    minX = Mathf.Min(minX, p.x);
+                    minY = Mathf.Min(minY, p.y);
+                    maxX = Mathf.Max(maxX, p.x);
+                    maxY = Mathf.Max(maxY, p.y);
+                }
+            // Tiny conservative overscan is invisible behind the actual
+            // curved stencil; it prevents reintroduced border cropping.
+            minX -= 2f; minY -= 2f; maxX += 2f; maxY += 2f;
         }
 
         [Serializable]
