@@ -346,13 +346,13 @@ namespace Rokas.Editor
                     { hideFlags = HideFlags.HideAndDontSave };
             }
             previewMaterial.mainTexture = image;
-            previewMaterial.color = Color.white;
+            previewMaterial.color = new Color(1f, 1f, 1f, overlayAlpha);
             GL.PushMatrix();
             GL.LoadPixelMatrix(0f, area.width, area.height, 0f);
             if (previewMaterial.SetPass(0))
             {
                 GL.Begin(GL.TRIANGLES);
-                GL.Color(new Color(1f, 1f, 1f, overlayAlpha));
+                GL.Color(Color.white); // material tint controls opacity for Unlit/Transparent
                 Emit(p[0], 0f, 1f); Emit(p[1], 1f, 1f); Emit(p[2], 1f, 0f);
                 Emit(p[0], 0f, 1f); Emit(p[2], 1f, 0f); Emit(p[3], 0f, 0f);
                 GL.End();
@@ -369,7 +369,8 @@ namespace Rokas.Editor
         private void ProcessInput(Rect area, Rect imageRect, float scale)
         {
             Event e = Event.current;
-            if (!area.Contains(e.mousePosition) && !draggingPoint && !panning)
+            if (!area.Contains(e.mousePosition) && !draggingPoint && !panning &&
+                e.type != EventType.KeyDown)
                 return;
             if (e.type == EventType.ScrollWheel)
             {
