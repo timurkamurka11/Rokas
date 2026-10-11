@@ -555,9 +555,14 @@ namespace Rokas.Presentation
             }
             if (panel == "laptop")
             {
-                // The modal must remain above the approved POV while fading.
-                panels.SetAsLastSibling();
+                // The first boot modal remains BEHIND approved chibi/POV
+                // until the VideoPlayer has presented an actual loading frame.
+                // Never expose the prewarmed fully loaded YOMI first.
                 laptop.Build(panels);
+                if (cinematicLaptopHandoff && laptop.Booting)
+                    panels.SetSiblingIndex(panelsOriginalSiblingIndex);
+                else
+                    panels.SetAsLastSibling();
                 return;
             }
             contracts.Build(panels, panel);
@@ -741,7 +746,12 @@ namespace Rokas.Presentation
                     laptopModalLayer.alpha = laptop.WindowOpacity;
                 if (panel == "laptop" && laptopCinematic.HasPendingVisualHandoff &&
                     laptop.IsVisualReady)
+                {
+                    // Atomic handoff to the first REAL boot video frame:
+                    // show modal and remove the standby chibi in one Tick.
+                    panels.SetAsLastSibling();
                     laptopCinematic.CompleteVisualHandoff();
+                }
             }
             messageNotifications.SetSuppressed(phase == RunPhase.Portal ||
                 (session.CombatMode == CombatMode.ReactiveTurns &&
