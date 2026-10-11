@@ -93,6 +93,7 @@ namespace Rokas.Presentation
         private Text noSignalText;
         private RectTransform noSignalScreen;
         private RawImage physicalMiniYomiImage;
+        private LaptopPerspectiveQuad physicalExactYomiQuad;
         private RectTransform physicalMiniYomiViewport;
         private LaptopNoSignalBounce noSignalBounce;
         private LaptopPowerTimeline powerTimeline;
@@ -129,18 +130,15 @@ namespace Rokas.Presentation
             if (!physicalMiniYomiImage || !physicalMiniYomiViewport) return;
             Texture2D exact = LaptopYomiMirror.Current;
             if (!exact) return;
-            physicalMiniYomiImage.texture = exact;
-            RectTransform canvasRect = physicalMiniYomiImage.rectTransform;
-            float w = physicalMiniYomiViewport.rect.width;
-            float h = physicalMiniYomiViewport.rect.height;
-            // Preserve the exact YOMI aspect while filling all four LCD
-            // corners; the polygon stencil clips only the tiny overscan.
-            // Contain-fit left an unpainted strip at the bottom-right bezel.
-            float scale = Mathf.Max(w / exact.width, h / exact.height);
-            float targetW = exact.width * scale;
-            float targetH = exact.height * scale;
-            canvasRect.sizeDelta = new Vector2(targetW, targetH);
-            canvasRect.anchoredPosition = new Vector2((w - targetW) * .5f, -(h - targetH) * .5f);
+            // UV-map the ENTIRE original YOMI screenshot directly onto the
+            // calibrated LCD trapezoid; no rectangular cover/crop on its edges.
+            physicalMiniYomiImage.texture = exact; // inspection source
+            physicalMiniYomiImage.gameObject.SetActive(false);
+            if (physicalExactYomiQuad)
+            {
+                physicalExactYomiQuad.SetImage(exact);
+                physicalExactYomiQuad.gameObject.SetActive(true);
+            }
             // Remove ALL synthetic 640x360 glyph overlays once the original
             // screenshot source is ready; they must never contaminate 1:1 UI.
             foreach (var glyph in physicalMiniYomiViewport.GetComponentsInChildren<LaptopIcon>(true))
@@ -185,6 +183,7 @@ namespace Rokas.Presentation
                 standbyHeldForFirstBoot = false;
                 if (povGroup) povGroup.alpha = 1f;
                 CurrentPhase = Phase.PreBootChoice;
+                KeepPoweredLCDReady();
                 running = owner.StartCoroutine(Play());
                 return true;
             }
@@ -248,6 +247,7 @@ namespace Rokas.Presentation
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
+                KeepPoweredLCDReady(); // powered LCD visible from the first seating frame
                 running = owner.StartCoroutine(Play());
                 return true;
             }
@@ -450,6 +450,14 @@ namespace Rokas.Presentation
                 0f, 0f, lcdW, lcdH);
             physicalMiniYomiImage.color = Color.white;
             physicalMiniYomiImage.raycastTarget = false;
+            RectTransform exactQuadRect = ui.Rect(physicalMiniYomiViewport,
+                "PhysicalExactYomiPerspective", 0f, 0f, lcdW, lcdH);
+            exactQuadRect.gameObject.AddComponent<CanvasRenderer>();
+            physicalExactYomiQuad = exactQuadRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
+            physicalExactYomiQuad.SetCorners(localCorners, imageScale);
+            physicalExactYomiQuad.color = Color.white;
+            physicalExactYomiQuad.raycastTarget = false;
+            physicalExactYomiQuad.gameObject.SetActive(false);
             // Exact same nine vector glyphs as fullscreen LaptopView, drawn
             // directly on the mini LCD. Not generic placeholder symbols.
             float miniScaleX = lcdW / 640f;
@@ -476,7 +484,8 @@ namespace Rokas.Presentation
             Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
             Texture2D exitArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back");
             Texture2D arrowArt = Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow");
-            Texture2D standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand");
+            Texture2D standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand_r");
+            if (!standArt) standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand");
             if (onArt)
             {
                 float w = 535f;
@@ -580,7 +589,26 @@ namespace Rokas.Presentation
                     "E — ОТКРЫТЬ YOMI", 18f, 25f, 520f, 72f, 26,
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
+            // A shared lower baseline stops R/OPEN/BACK from floating on
+            // different heights. Preserve the original PNG dimensions/glow.
+            const float bottomLine = 1045f;
+            if (powerHintArt) PlaceGoldPromptOnBaseline(powerHintArt.rectTransform, bottomLine);
+            if (backHintArt) PlaceGoldPromptOnBaseline(backHintArt.rectTransform, bottomLine);
+            if (poweredStandButton) PlaceGoldPromptOnBaseline(
+                poweredStandButton.GetComponent<RectTransform>(), bottomLine);
+            if (poweredOpenRoot) PlaceGoldPromptOnBaseline(poweredOpenRoot, bottomLine,
+                poweredOpenRoot.GetComponentInChildren<RawImage>(true));
             SetPromptVisibility(false);
+        }
+
+        private static void PlaceGoldPromptOnBaseline(RectTransform root,
+            float bottomLine, RawImage measuredImage = null)
+        {
+            if (!root) return;
+            RectTransform source = measuredImage ? measuredImage.rectTransform : root;
+            float height = source.rect.height;
+            root.anchoredPosition = new Vector2(root.anchoredPosition.x,
+                -(bottomLine - height));
         }
 
         private static void AddLcdStencil(RectTransform viewport, Vector2[] localCorners,
@@ -684,6 +712,16 @@ namespace Rokas.Presentation
             if (active) Finish(true);
         }
 
+        private void KeepPoweredLCDReady()
+        {
+            if (!LaptopPowerSession.PoweredOn || !physicalMiniYomiViewport) return;
+            physicalMiniYomiViewport.gameObject.SetActive(true);
+            if (LaptopYomiMirror.Current) RefreshExactYomiMirror();
+            bool fallback = !LaptopYomiMirror.Current;
+            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(fallback);
+            if (desktopClock) desktopClock.gameObject.SetActive(fallback);
+        }
+
         private void SetPromptVisibility(bool show)
         {
             bool powered = LaptopPowerSession.PoweredOn;
@@ -698,10 +736,15 @@ namespace Rokas.Presentation
             if (noSignalScreen) noSignalScreen.gameObject.SetActive(show && !powered);
             if (noSignalText && noSignalScreen && noSignalScreen.gameObject.activeSelf)
                 noSignalText.gameObject.SetActive(noSignalBounce == null);
-            if (physicalMiniYomiViewport) physicalMiniYomiViewport.gameObject.SetActive(show && powered);
+            if (physicalMiniYomiViewport)
+                physicalMiniYomiViewport.gameObject.SetActive(powered &&
+                    (show || returnRequested || returningFromLaptop ||
+                     (!powerConfirmed && (CurrentPhase == Phase.Approach ||
+                                           CurrentPhase == Phase.POVTransition))));
             if (show && powered && LaptopYomiMirror.Current) RefreshExactYomiMirror();
-            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(show && powered && !LaptopYomiMirror.Current);
-            if (desktopClock) desktopClock.gameObject.SetActive(show && powered && !LaptopYomiMirror.Current);
+            bool lcdVisible = physicalMiniYomiViewport && physicalMiniYomiViewport.gameObject.activeSelf;
+            if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(lcdVisible && !LaptopYomiMirror.Current);
+            if (desktopClock) desktopClock.gameObject.SetActive(lcdVisible && !LaptopYomiMirror.Current);
             if (poweredDesktopClick) poweredDesktopClick.gameObject.SetActive(show && powered);
             if (poweredOpenRoot) poweredOpenRoot.gameObject.SetActive(show && powered);
             if (povGroup)
@@ -909,6 +952,7 @@ namespace Rokas.Presentation
             noSignalScreen = null;
             noSignalBounce = null;
             physicalMiniYomiImage = null;
+            physicalExactYomiQuad = null;
             physicalMiniYomiViewport = null;
             powerTimeline = null;
         }
