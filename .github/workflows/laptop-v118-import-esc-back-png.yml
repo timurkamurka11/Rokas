@@ -1,0 +1,70 @@
+name: ROKAS V11.8 Import Original ESC Back PNG
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths: ['.github/workflows/laptop-v118-import-esc-back-png.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-original-back:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fidelity3-resume-5779190
+          fetch-depth: 1
+      - name: Verify exact uploaded PNG then replace only existing back art
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install chromium --with-deps
+          python3 - <<'PY'
+          import hashlib, struct
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          dst = Path('Assets/Rokas/Resources/LaptopCinematic/UI/prompt_back.png')
+          expected = 'bd28f48fdcd757c5a5b6078ffb37181104910068df4f321cda78dfb4a99ca712'
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True)
+              page=browser.new_page(accept_downloads=True,locale='en-US')
+              page.goto('https://firestorage.ai/en/f/H_rclgl8FiLk',
+                  wait_until='domcontentloaded',timeout=60000)
+              page.get_by_text('image(20261011-130447).png',exact=False).first.wait_for(timeout=45000)
+              buttons=page.get_by_role('button',name='Download',exact=True)
+              if buttons.count()!=1:
+                  raise RuntimeError('Expected one original PNG Download button; got '+str(buttons.count()))
+              with page.expect_download(timeout=60000) as xfer:
+                  buttons.first.click()
+              saved=Path('/tmp/ROKAS_ESC_BACK_ORIGINAL.png')
+              xfer.value.save_as(str(saved))
+              browser.close()
+          data=saved.read_bytes()
+          assert len(data)==668761,'Original ESC source byte length changed'
+          assert hashlib.sha256(data).hexdigest()==expected,'Refusing altered ESC artwork'
+          assert data[:8]==bytes.fromhex('89504e470d0a1a0a'),'Not PNG'
+          assert struct.unpack('>II',data[16:24])==(2048,682),'Wrong resolution'
+          assert data[25]==6,'Source RGBA required'
+          meta=dst.with_suffix('.png.meta')
+          assert dst.exists() and meta.exists(),'Do not replace original meta/import GUID'
+          assert '\nTextureImporter:\n' in meta.read_text(encoding='utf-8')
+          dst.write_bytes(data)
+          print('EXACT_USER_ESC_BACK_VERIFIED',expected,len(data))
+          PY
+      - name: Commit original replacement on existing branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Assets/Rokas/Resources/LaptopCinematic/UI/prompt_back.png
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Exact ESC artwork already committed"; exit 0
+          fi
+          git commit -m "assets(laptop-v11.8): replace gold ESC Back with original owner PNG"
+          git fetch origin codex/fidelity3-resume-5779190
+          git rebase origin/codex/fidelity3-resume-5779190
+          git push origin HEAD:codex/fidelity3-resume-5779190
