@@ -32,6 +32,8 @@ namespace Rokas.Tests
                 "prompt_back", "prompt_power", "back_arrow" })
                 Assert.That(Resources.Load<Texture2D>("LaptopCinematic/UI/" + name),
                     Is.Not.Null, "Original approved PNG missing from Unity Resources: " + name);
+            Assert.That(Resources.Load<AudioClip>("LaptopCinematic/chibi_bounce"), Is.Not.Null,
+                "User MP3 must be imported as actual Unity AudioClip, not a synthesized replacement");
             dir=Path.Combine(Path.GetTempPath(),"rokas-v111-pov-"+Guid.NewGuid().ToString("N"));
             root=new GameObject("V111POVTest");
             var boot=root.AddComponent<RokasBootstrap>();
@@ -68,7 +70,21 @@ namespace Rokas.Tests
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back")));
             Assert.That(Find<RawImage>("LaptopBackChoice").texture,
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
+            var originalPower = Find<RawImage>("PowerChoiceHint");
+            var originalBack = Find<RawImage>("BackChoiceHint");
+            Assert.That(originalPower, Is.Not.Null);
+            Assert.That(originalBack, Is.Not.Null);
+            Assert.That(originalPower.GetComponentInChildren<RawImage>().color.a, Is.EqualTo(1f));
+            Assert.That(originalPower.transform.Find("OriginalGoldLuminance"), Is.Not.Null,
+                "Original user PNG keeps full alpha plus luminance layer");
             Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            yield return null;
+            Assert.That(chibi.gameObject.activeInHierarchy, Is.True,
+                "Chibi must NOT disappear on input, only at boot video handoff");
+            Assert.That(originalPower.gameObject.activeInHierarchy, Is.True,
+                "Power prompt must remain visible during hand reach");
+            Assert.That(originalBack.gameObject.activeInHierarchy, Is.True,
+                "Back prompt must remain visible during hand reach");
             yield return new WaitForSecondsRealtime(2.35f);
             Assert.That(LaptopPowerSession.PoweredOn,Is.True,
                 "Power state must latch at the finger-contact timeline");
@@ -118,6 +134,24 @@ namespace Rokas.Tests
             Assert.That(boot.View.LaptopOpen,Is.True);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"),Is.Not.Null);
             Assert.That(LaptopPowerSession.CompletedBoots,Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ChibiCollisionCallbackFiresOnRealBoundaryBounce()
+        {
+            var area = new GameObject("BounceArea", typeof(RectTransform)).GetComponent<RectTransform>();
+            area.sizeDelta = new Vector2(70f, 70f);
+            var sticker = new GameObject("Sticker", typeof(RectTransform)).GetComponent<RectTransform>();
+            sticker.SetParent(area, false);
+            sticker.sizeDelta = new Vector2(20f, 20f);
+            int sounds = 0;
+            var mover = area.gameObject.AddComponent<LaptopNoSignalBounce>();
+            mover.Initialize(area, sticker, () => sounds++);
+            yield return new WaitForSecondsRealtime(1.70f);
+            Assert.That(sounds, Is.GreaterThan(0), "Wall collision must trigger user SFX callback");
+            Assert.That(mover.CollisionCount, Is.EqualTo(sounds),
+                "Exactly one bounce SFX event per collision/update, including corners");
+            UnityEngine.Object.Destroy(area.gameObject);
         }
 
         [UnityTearDown]
