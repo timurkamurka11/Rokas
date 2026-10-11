@@ -845,14 +845,15 @@ namespace Rokas.Presentation
             // rectangles, the supplied transparent PNGs have unequal alpha
             // padding, so matching RectTransform bottoms was visibly wrong.
             // Align other prompts to the R button's optical lower edge, preserving
-            // V11.6 optical corrections of +19 (E) / +13 (ESC).
+            // Keep E at +19; lift only ESC 8 stage pixels (from +13 to +5)
+            // to match the R and E optical baseline in the latest Game View.
             RectTransform standRect = poweredStandButton
                 ? poweredStandButton.GetComponent<RectTransform>() : null;
             float referenceBottom = standRect
                 ? -standRect.anchoredPosition.y + standRect.rect.height
                 : PreviouslyApprovedStandBottom + GoldPromptDrop; // same 50px shift in fallback
             const float openOpticalDown = 19f; // measured in approved Game View
-            const float backOpticalDown = 13f;
+            const float backOpticalDown = 5f;
             if (powerHintArt) PlaceGoldPromptOnBaseline(powerHintArt.rectTransform,
                 referenceBottom + openOpticalDown);
             if (backHintArt) PlaceGoldPromptOnBaseline(backHintArt.rectTransform,
