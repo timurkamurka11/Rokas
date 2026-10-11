@@ -190,6 +190,10 @@ namespace Rokas.Presentation
                 standbyHeldForFirstBoot = false;
                 if (povGroup) povGroup.alpha = 1f;
                 CurrentPhase = Phase.PreBootChoice;
+                // Existing POV is already drawn during the YOMI close fade.
+                // Show its original hints before the first resumed frame,
+                // while keyboard/mouse interaction remains locked.
+                SetPromptVisibility(true, false);
                 KeepPoweredLCDReady();
                 running = owner.StartCoroutine(Play());
                 return true;
@@ -254,7 +258,11 @@ namespace Rokas.Presentation
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
-                KeepPoweredLCDReady(); // powered LCD visible from the first seating frame
+                // The whole POV (and its GOLD UI) fades in together during
+                // seating; never delay the hints until HandsStart ~1.8 s.
+                // Inputs are still disabled until the camera is seated.
+                SetPromptVisibility(true, false);
+                KeepPoweredLCDReady(); // powered LCD visible from first seating frame
                 running = owner.StartCoroutine(Play());
                 return true;
             }
@@ -310,29 +318,32 @@ namespace Rokas.Presentation
                     Debug.LogWarning("ROKAS laptop calibration ignored: " + error.Message);
                 }
             }
+            // Use one calibrated inner LCD polygon for EVERY display layer.
+            // Previous builds mixed the raw outer corners (fallback desktop,
+            // clock, wake) with a different inner mask (exact YOMI), which
+            // exposed blue strips past the real laptop's left bezel.
+            const float leftTopInset = 32f;
+            const float leftBottomInset = 38f;
+            const float rightInset = 5f;
+            const float verticalInset = 5f;
+            Vector2[] safeCorners =
+            {
+                new Vector2(calibration.topLeftX + leftTopInset, calibration.topLeftY + verticalInset),
+                new Vector2(calibration.topRightX - rightInset, calibration.topRightY + verticalInset),
+                new Vector2(calibration.bottomRightX - rightInset, calibration.bottomRightY - verticalInset),
+                new Vector2(calibration.bottomLeftX + leftBottomInset, calibration.bottomLeftY - verticalInset)
+            };
             RectTransform screenRect = ui.Rect(povRoot, "LaptopWakePolygon",
                 imageX, imageY, imageWidth, imageHeight);
             wake = screenRect.gameObject.AddComponent<LaptopWakeQuad>();
             wake.raycastTarget = false;
-            wake.SetCorners(new[]
-            {
-                new Vector2(calibration.topLeftX, calibration.topLeftY),
-                new Vector2(calibration.topRightX, calibration.topRightY),
-                new Vector2(calibration.bottomRightX, calibration.bottomRightY),
-                new Vector2(calibration.bottomLeftX, calibration.bottomLeftY)
-            }, imageScale);
+            wake.SetCorners(safeCorners, imageScale);
             wake.color = new Color(.16f, .34f, .48f, 0f);
 
             // Physical LCD is fully live (YOMI's real app catalog + unread
             // session state + real OS clock). No screenshot of a desktop is used.
             // The approved OFF-state POV and screen corners stay unchanged.
-            Vector2[] lcdCorners =
-            {
-                new Vector2(calibration.topLeftX, calibration.topLeftY),
-                new Vector2(calibration.topRightX, calibration.topRightY),
-                new Vector2(calibration.bottomRightX, calibration.bottomRightY),
-                new Vector2(calibration.bottomLeftX, calibration.bottomLeftY)
-            };
+            Vector2[] lcdCorners = (Vector2[])safeCorners.Clone();
             RectTransform desktopRect = ui.Rect(povRoot, "LaptopPhysicalDesktop",
                 imageX, imageY, imageWidth, imageHeight);
             poweredWallpaper = desktopRect.gameObject.AddComponent<LaptopPerspectiveQuad>();
@@ -347,10 +358,12 @@ namespace Rokas.Presentation
             desktopClock.raycastTarget = false;
             desktopClock.Initialize(unreadMessages, yomiWallpaper);
             RectTransform lcdHit = ui.Rect(povRoot, "PhysicalDesktopClickTarget",
-                imageX + calibration.topLeftX * imageScale,
-                imageY + calibration.topLeftY * imageScale,
-                (calibration.topRightX - calibration.topLeftX) * imageScale,
-                (calibration.bottomLeftY - calibration.topLeftY) * imageScale);
+                imageX + Mathf.Min(safeCorners[0].x, safeCorners[3].x) * imageScale,
+                imageY + Mathf.Min(safeCorners[0].y, safeCorners[1].y) * imageScale,
+                (Mathf.Max(safeCorners[1].x, safeCorners[2].x)
+                    - Mathf.Min(safeCorners[0].x, safeCorners[3].x)) * imageScale,
+                (Mathf.Max(safeCorners[2].y, safeCorners[3].y)
+                    - Mathf.Min(safeCorners[0].y, safeCorners[1].y)) * imageScale);
             var lcdTouch = lcdHit.gameObject.AddComponent<Image>();
             lcdTouch.color = new Color(0f, 0f, 0f, .002f);
             poweredDesktopClick = lcdHit.gameObject.AddComponent<Button>();
@@ -394,26 +407,10 @@ namespace Rokas.Presentation
                 + calibration.bottomLeftX + calibration.bottomRightX) * .25f;
             float centerY = (calibration.topLeftY + calibration.topRightY
                 + calibration.bottomLeftY + calibration.bottomRightY) * .25f;
-            // The actual LCD is a trapezoid, NOT a rectangle. A rectangular
-            // raw-image viewport leaked out of its top-left edge and failed
-            // to reach the lower-right corner in the user's 2026-10-11 frame.
-            // Clip both OFF and ON content by the SAME four-corner stencil,
-            // with a small inset measured *inside* the original bezel.
-            // The real bezel is asymmetrical in the approved POV photo:
-            // after V11.5 the right edge fits, but the upper/lower LEFT
-            // stencil pixels extend onto the lid. Trim only the left edge.
-            // These values are original-source pixels (scaled by imageScale).
-            const float leftTopInset = 22f;
-            const float leftBottomInset = 26f;
-            const float rightInset = 5f;
-            const float verticalInset = 5f;
-            Vector2[] safeCorners =
-            {
-                new Vector2(calibration.topLeftX + leftTopInset, calibration.topLeftY + verticalInset),
-                new Vector2(calibration.topRightX - rightInset, calibration.topRightY + verticalInset),
-                new Vector2(calibration.bottomRightX - rightInset, calibration.bottomRightY - verticalInset),
-                new Vector2(calibration.bottomLeftX + leftBottomInset, calibration.bottomLeftY - verticalInset)
-            };
+            // Both standby chibi and the original full-UV YOMI screenshot
+            // use the SAME polygon as all fallback desktop/backlight layers.
+            // Right edge is unchanged; only the photographed left edge is
+            // moved further inside (previous top/bottom: 22/26).
             float minLcdX = Mathf.Min(safeCorners[0].x, safeCorners[3].x);
             float maxLcdX = Mathf.Max(safeCorners[1].x, safeCorners[2].x);
             float minLcdY = Mathf.Min(safeCorners[0].y, safeCorners[1].y);
@@ -760,7 +757,7 @@ namespace Rokas.Presentation
             if (desktopClock) desktopClock.gameObject.SetActive(fallback);
         }
 
-        private void SetPromptVisibility(bool show)
+        private void SetPromptVisibility(bool show, bool allowInput = true)
         {
             bool powered = LaptopPowerSession.PoweredOn;
             if (powerHint) powerHint.gameObject.SetActive(show && !powered);
@@ -787,8 +784,8 @@ namespace Rokas.Presentation
             if (poweredOpenRoot) poweredOpenRoot.gameObject.SetActive(show && powered);
             if (povGroup)
             {
-                povGroup.blocksRaycasts = show;
-                povGroup.interactable = show;
+                povGroup.blocksRaycasts = show && allowInput;
+                povGroup.interactable = show && allowInput;
             }
         }
 
