@@ -453,6 +453,72 @@ namespace Rokas.Editor
                 }
             }
             GUILayout.Space(7);
+            EditorGUILayout.LabelField("BEZEL REFERENCE / ERROR FIT",
+                EditorStyles.boldLabel);
+            if (!referenceDefined)
+            {
+                EditorGUILayout.HelpBox(
+                    "NO measured bezel reference yet. First capture current " +
+                    "shape, then TRACE the real glass border with the handles. " +
+                    "Colors compare to THAT traced line, not computer vision.",
+                    MessageType.Warning);
+                if (GUILayout.Button("Start tracing bezel reference"))
+                    BeginReferenceTracing();
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    traceReference
+                        ? "TRACING REFERENCE: handles edit GOLD bezel line. " +
+                          "The BLUE screen mask is unchanged."
+                        : "FITTING MASK: handles edit screen mask; GOLD " +
+                          "reference remains fixed.",
+                    MessageType.Info);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button(traceReference
+                        ? "Back to FIT MASK" : "EDIT REFERENCE"))
+                    {
+                        traceReference = !traceReference; selected = -1; Repaint();
+                    }
+                    if (GUILayout.Button("Re-capture reference"))
+                    {
+                        if (EditorUtility.DisplayDialog("Replace reference?",
+                            "Replace the old manually traced bezel reference " +
+                            "with the CURRENT screen mask? The old reference " +
+                            "cannot be recovered.", "Replace", "Cancel"))
+                            BeginReferenceTracing();
+                    }
+                }
+                showErrorHeatmap = EditorGUILayout.Toggle(
+                    "Difference / heatmap", showErrorHeatmap);
+                errorTolerancePixels = EditorGUILayout.Slider(
+                    "Green tolerance (px)", errorTolerancePixels, .25f, 8f);
+            }
+            showSafeBorder = EditorGUILayout.Toggle(
+                "Inner safe contour", showSafeBorder);
+            safeBorderPixels = EditorGUILayout.Slider(
+                "Safe inset (px)", safeBorderPixels, 0f, 12f);
+            EditorGUILayout.LabelField("Red: outside | Cyan: gap | Green: within tolerance",
+                EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Gold: traced reference | White: fitted mask",
+                EditorStyles.miniLabel);
+
+            GUILayout.Space(7);
+            EditorGUILayout.LabelField("CORNER MAGNIFIER",
+                EditorStyles.boldLabel);
+            showMagnifier = EditorGUILayout.Toggle(
+                "Show selected detail", showMagnifier);
+            if (showMagnifier)
+            {
+                magnifierZoom = EditorGUILayout.IntPopup(
+                    "Magnification", magnifierZoom,
+                    new[] { "4x", "8x", "12x", "20x" },
+                    new[] { 4, 8, 12, 20 });
+                DrawMagnifier();
+            }
+
+            GUILayout.Space(7);
             EditorGUILayout.LabelField("FOUR CORNERS (source pixels)",
                 EditorStyles.boldLabel);
             if (corners != null && corners.Length == 4)
@@ -738,8 +804,9 @@ namespace Rokas.Editor
             if (showOutline)
             {
                 Handles.color = new Color(1f, .86f, .18f, 1f);
-                Handles.DrawAAPolyLine(2.5f, p[0], p[1], p[2], p[3], p[0]);
+                Handles.DrawAAPolyLine(1.5f, p[0], p[1], p[2], p[3], p[0]);
             }
+            DrawReferenceAndMargins(localImage);
             if (showRoundedOutline && enableRoundedMask)
             {
                 List<Vector2> boundary = BuildRoundedBoundaryUV();
@@ -757,20 +824,22 @@ namespace Rokas.Editor
             }
             if (showHandles)
             {
-                int count = enableEdgeControlPoints ? 8 : 4;
+                int count = HandleCount;
                 for (int i = 0; i < count; i++)
                 {
-                    Vector2 position = i < 4 ? p[i] :
-                        DrawPosition(localImage, GetHandle(i));
+                    Vector2 position = DrawPosition(localImage, GetHandle(i));
                     Handles.color = i < 4 ? PointColors[i] :
-                        new Color(.97f, .31f, .93f, 1f);
-                    float radius = i == selected ? 10f : i < 4 ? 7f : 8f;
+                        i < 8 ? new Color(.97f, .31f, .93f, 1f) :
+                        new Color(.99f, .94f, .35f);
+                    float radius = i == selected ? 10f :
+                        i < 4 ? 7f : i < 8 ? 8f : 6f;
                     // High-contrast ring keeps pins visible on the bright
                     // lantern, YOMI, or dim photographic bezel.
                     Handles.color = Color.black;
                     Handles.DrawSolidDisc(position, Vector3.forward, radius + 2f);
                     Handles.color = i < 4 ? PointColors[i] :
-                        new Color(.97f, .31f, .93f, 1f);
+                        i < 8 ? new Color(.97f, .31f, .93f, 1f) :
+                        new Color(.99f, .94f, .35f);
                     Handles.DrawSolidDisc(position, Vector3.forward, radius);
                     Rect label = new Rect(position.x + 10, position.y - 14, 36, 18);
                     GUI.Label(label, PointLabels[i], EditorStyles.whiteBoldLabel);
@@ -1053,7 +1122,7 @@ namespace Rokas.Editor
                 {
                     int nearest = -1;
                     float distance = 17f;
-                    int count = enableEdgeControlPoints ? 8 : 4;
+                    int count = HandleCount;
                     for (int i = 0; i < count; ++i)
                     {
                         Vector2 handle = imageRect.position + GetHandle(i) * scale;
@@ -1087,7 +1156,7 @@ namespace Rokas.Editor
                 draggingPoint = panning = false; e.Use(); Repaint(); return;
             }
             if (e.type == EventType.KeyDown && selected >= 0 &&
-                selected < (enableEdgeControlPoints ? 8 : 4))
+                selected < HandleCount)
             {
                 float delta = e.shift ? 10f : 1f;
                 Vector2 move = Vector2.zero;
