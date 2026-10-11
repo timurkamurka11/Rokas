@@ -19,6 +19,80 @@ namespace Rokas.Presentation
         private bool roundedCorners;
         // TL, TR, BR, BL radii in *source-photo pixels*, not UI stage pixels.
         private Vector4 radii;
+        private Vector2[] edgeOffsets;
+        private Vector2[] helperOffsets;
+        private bool useV4Warp;
+
+        public bool UsingV4Warp => useV4Warp;
+
+        /// <summary>Returns physical LCD source-photo pixels (top-left origin).
+        /// The same transform is shared by texture, wake and stencil meshes.</summary>
+        public Vector2 EvaluateLCDPixel(Vector2 uv)
+        {
+            if (corners == null || corners.Length != 4)
+                return Vector2.zero;
+            return MapUV(uv, corners, edgeOffsets, helperOffsets, useV4Warp);
+        }
+
+        /// <summary>V4 delta vectors are in original photo pixels. Pass null
+        /// for the unchanged V2/legacy fallback; this never adds old insets.</summary>
+        public void SetWarpOffsets(Vector2[] edgeDeltas, Vector2[] helperDeltas)
+        {
+            if (edgeDeltas == null && helperDeltas == null)
+            {
+                edgeOffsets = null;
+                helperOffsets = null;
+                useV4Warp = false;
+            }
+            else
+            {
+                if (edgeDeltas == null || edgeDeltas.Length != 4 ||
+                    helperDeltas == null || helperDeltas.Length != 8)
+                    throw new ArgumentException("V4 requires 4 edge and 8 corner-helper offsets.");
+                edgeOffsets = (Vector2[])edgeDeltas.Clone();
+                helperOffsets = (Vector2[])helperDeltas.Clone();
+                useV4Warp = true;
+            }
+            SetVerticesDirty();
+        }
+
+        public static Vector2 MapUV(Vector2 uv, Vector2[] bounds,
+            Vector2[] edges, Vector2[] helpers, bool warped)
+        {
+            Vector2 top = Vector2.Lerp(bounds[0], bounds[1], uv.x);
+            Vector2 bottom = Vector2.Lerp(bounds[3], bounds[2], uv.x);
+            Vector2 point = Vector2.Lerp(top, bottom, uv.y);
+            if (!warped) return point;
+            float u = uv.x, v = uv.y;
+            float horizontal = 4f * u * (1f - u);
+            float vertical = 4f * v * (1f - v);
+            point += horizontal * Vector2.Lerp(edges[0], edges[2], v);
+            point += vertical * Vector2.Lerp(edges[3], edges[1], u);
+            float l = NearStart(u), r = NearStart(1f - u);
+            float t = NearStart(v), b = NearStart(1f - v);
+            float topFalloff = (1f - v) * (1f - v);
+            float bottomFalloff = v * v;
+            float leftFalloff = (1f - u) * (1f - u);
+            float rightFalloff = u * u;
+            point += helpers[0] * (l * topFalloff);
+            point += helpers[1] * (t * leftFalloff);
+            point += helpers[2] * (r * topFalloff);
+            point += helpers[3] * (t * rightFalloff);
+            point += helpers[4] * (r * bottomFalloff);
+            point += helpers[5] * (b * rightFalloff);
+            point += helpers[6] * (l * bottomFalloff);
+            point += helpers[7] * (b * leftFalloff);
+            return point;
+        }
+
+        private static float NearStart(float value)
+        {
+            const float k = .18f;
+            if (value <= 0f || value >= .5f) return 0f;
+            return value <= k
+                ? Mathf.SmoothStep(0f, 1f, value / k)
+                : Mathf.SmoothStep(1f, 0f, (value - k) / (.5f - k));
+        }
 
         public override Texture mainTexture => image ? image : Texture2D.whiteTexture;
         public bool RoundedCornersEnabled => roundedCorners;
@@ -52,6 +126,43 @@ namespace Rokas.Presentation
         {
             vh.Clear();
             if (corners == null || corners.Length != 4) return;
+            if (useV4Warp)
+            {
+                // Match Workshop V4: rounded UV boundary + ten concentric
+                // triangle-fan rings. This is the ACTUAL stencil geometry
+                // and the texture's UV geometry, not a four-point approximation.
+                List<Vector2> border = roundedCorners
+                    ? RoundedBoundaryUV(corners, radii)
+                    : new List<Vector2>
+                    {
+                        Vector2.zero, Vector2.right, Vector2.one, Vector2.up
+                    };
+                AddUVVertex(vh, new Vector2(.5f, .5f));
+                const int rings = 10;
+                int count = border.Count;
+                for (int ring = 1; ring <= rings; ++ring)
+                {
+                    float progress = ring / (float)rings;
+                    for (int i = 0; i < count; ++i)
+                        AddUVVertex(vh, Vector2.Lerp(new Vector2(.5f, .5f),
+                            border[i], progress));
+                }
+                // Ring 1 attaches to the center; successive rings are
+                // quads split into two triangles with the same winding.
+                for (int i = 0; i < count; ++i)
+                    vh.AddTriangle(0, i + 1, ((i + 1) % count) + 1);
+                for (int ring = 2; ring <= rings; ++ring)
+                    for (int i = 0; i < count; ++i)
+                    {
+                        int prior = 1 + (ring - 2) * count + i;
+                        int priorNext = 1 + (ring - 2) * count + ((i + 1) % count);
+                        int outer = 1 + (ring - 1) * count + i;
+                        int outerNext = 1 + (ring - 1) * count + ((i + 1) % count);
+                        vh.AddTriangle(prior, outer, outerNext);
+                        vh.AddTriangle(prior, outerNext, priorNext);
+                    }
+                return;
+            }
             if (!roundedCorners)
             {
                 // Retain the exact historical 4-vertex fallback when no
@@ -85,9 +196,7 @@ namespace Rokas.Presentation
 
         private void AddUVVertex(VertexHelper vh, Vector2 uv)
         {
-            Vector2 upper = Vector2.Lerp(corners[0], corners[1], uv.x);
-            Vector2 lower = Vector2.Lerp(corners[3], corners[2], uv.x);
-            Vector2 point = Vector2.Lerp(upper, lower, uv.y);
+            Vector2 point = EvaluateLCDPixel(uv);
             UIVertex vertex = UIVertex.simpleVert;
             vertex.position = new Vector3(point.x * factor, -point.y * factor, 0f);
             vertex.uv0 = new Vector2(uv.x, 1f - uv.y);
