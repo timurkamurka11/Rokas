@@ -17,7 +17,8 @@ After Codex has stopped writing to the canonical Windows project, sync safely, l
    - **Green** means the edge deviation is within the adjustable **Green tolerance** (default 1.5 source-image px).
    - Short connecting tick marks make differences more visible.
    - **Inner safe contour** is an additional inward offset of the current fitted boundary.
-7. Once satisfactory, click **SAVE / EXPORT V4 JSON...** and send that file to ChatGPT. Both your 16-point calibrated screen shape and, when present, the independent manually traced reference are serialized for review.
+7. Optional **Snap selected pin to traced reference** is a manual, per-point action available only in **FIT MASK** mode after tracing. It displays the source-pixel distance to the corresponding gold reference pin, then moves only the selected fit point when clicked. If the distance is above 20px, it requires explicit confirmation. It never auto-moves all 16 points or writes to the game.
+8. Once satisfactory, click **SAVE / EXPORT V4 JSON...** and send that file to ChatGPT. Both your 16-point calibrated screen shape and, when present, the independent manually traced reference are serialized for review.
 
 ## CRITICAL ACCURACY LIMITATION
 The editor **does not automatically know the real glass/bezel boundary** and does not claim image-based edge detection. Without a manually traced gold reference, red/cyan error colors cannot truthfully indicate physical bezel fit. Creating a reference simply copies the current fit as a STARTING POINT. YOU must align the gold reference to visible photographic LCD glass in trace mode before trusting a green result. The green result means agreement with YOUR traced boundary, not independent proof of perfection.
