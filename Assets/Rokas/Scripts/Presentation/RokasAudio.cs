@@ -12,10 +12,13 @@ namespace Rokas.Presentation
         private readonly AudioSource music;
         private readonly AudioSource[] effects = new AudioSource[4];
         private readonly AudioSource hubVoice;
+        private readonly AudioSource chibiBounceSource;
         private readonly AudioClip messageArrive;
         private readonly AudioClip laptopPowerClick;
         private readonly AudioClip laptopPowerClickUser;
         private readonly AudioClip laptopStandUp;
+        private readonly AudioClip laptopChibiBounce;
+        private float lastChibiBounceAt = float.NegativeInfinity;
         private readonly AudioClip reactionCue;
         private AudioClip[] thunderBank;
         private float homeWeatherMix = 1f;
@@ -54,10 +57,12 @@ namespace Rokas.Presentation
             music = MakeSource(audioRoot, true);
             for (int i = 0; i < effects.Length; i++) effects[i] = MakeSource(audioRoot, false);
             hubVoice = MakeSource(audioRoot, true);
+            chibiBounceSource = MakeSource(audioRoot, false);
             messageArrive = Resources.Load<AudioClip>("Messages/Audio/MessageArrive");
             laptopPowerClick = Resources.Load<AudioClip>("LaptopCinematic/power_click");
             laptopPowerClickUser = Resources.Load<AudioClip>("LaptopCinematic/power_click_user");
             laptopStandUp = Resources.Load<AudioClip>("LaptopCinematic/stand_up");
+            laptopChibiBounce = Resources.Load<AudioClip>("LaptopCinematic/chibi_bounce");
             reactionCue = Resources.Load<AudioClip>("Messages/Audio/Reaction");
         }
 
@@ -111,6 +116,7 @@ namespace Rokas.Presentation
             music.volume = 0f;
             for (int i = 0; i < effects.Length; i++) effects[i].volume = 0f;
             if (hubVoice) hubVoice.volume = 0f;
+            if (chibiBounceSource) chibiBounceSource.Stop();
         }
 
         public void Tick(float dt, bool focused)
@@ -125,6 +131,8 @@ namespace Rokas.Presentation
                 hubVoice.volume = vnMuted
                     ? 0f
                     : master * settings.sfxVolume * hubVoiceScale;
+            if (chibiBounceSource && chibiBounceSource.isPlaying)
+                chibiBounceSource.volume = master * settings.sfxVolume * .52f;
 
             if (bootstrap && bootstrap.Session != null)
             {
@@ -171,6 +179,20 @@ namespace Rokas.Presentation
             // the existing master SFX bus / mute settings.
             if (laptopStandUp) PlayScaled(laptopStandUp, 1.00f); // louder, one approved clip; master SFX/mute retained
             else Debug.LogWarning("ROKAS-LAPTOP-CINEMATIC: stand_up WAV not installed.");
+        }
+
+        public void PlayChibiBounce()
+        {
+            // One original 1.28s user sound per actual wall collision.
+            // Dedicated source avoids cutting off the Power/Sit SFX.
+            if (!laptopChibiBounce || vnMuted) return;
+            float now = Time.unscaledTime;
+            if (now - lastChibiBounceAt < .065f) return;
+            lastChibiBounceAt = now;
+            chibiBounceSource.Stop(); // no additive overlap/audio stack
+            chibiBounceSource.clip = laptopChibiBounce;
+            chibiBounceSource.volume = Mathf.Clamp01(settings.masterVolume * settings.sfxVolume * .52f);
+            if (chibiBounceSource.volume > 0f) chibiBounceSource.Play();
         }
 
         public void PlayLaptopStandUp()
