@@ -383,21 +383,36 @@ namespace Rokas.Presentation
                 + calibration.bottomLeftX + calibration.bottomRightX) * .25f;
             float centerY = (calibration.topLeftY + calibration.topRightY
                 + calibration.bottomLeftY + calibration.bottomRightY) * .25f;
-            // The underlying custom four-corner LCD mesh is retained, but
-            // uGUI RawImage + RectMask2D supplies a dependable *visible* screen
-            // compositor even on graphics configurations where Mesh UI vanished.
-            // Inset from the calibrated polygon so no edge leaks onto the bezel.
-            float lcdX = imageX + (calibration.topLeftX + 10f) * imageScale;
-            float lcdY = imageY + (calibration.topLeftY + 10f) * imageScale;
-            float lcdW = (calibration.topRightX - calibration.topLeftX - 20f) * imageScale;
-            float lcdH = (calibration.bottomLeftY - calibration.topLeftY - 20f) * imageScale;
-            lcdW = Mathf.Max(80f, lcdW);
-            lcdH = Mathf.Max(48f, lcdH);
+            // The actual LCD is a trapezoid, NOT a rectangle. A rectangular
+            // raw-image viewport leaked out of its top-left edge and failed
+            // to reach the lower-right corner in the user's 2026-10-11 frame.
+            // Clip both OFF and ON content by the SAME four-corner stencil,
+            // with a small inset measured *inside* the original bezel.
+            const float horizontalInset = 5f;
+            const float verticalInset = 5f;
+            Vector2[] safeCorners =
+            {
+                new Vector2(calibration.topLeftX + horizontalInset, calibration.topLeftY + verticalInset),
+                new Vector2(calibration.topRightX - horizontalInset, calibration.topRightY + verticalInset),
+                new Vector2(calibration.bottomRightX - horizontalInset, calibration.bottomRightY - verticalInset),
+                new Vector2(calibration.bottomLeftX + horizontalInset, calibration.bottomLeftY - verticalInset)
+            };
+            float minLcdX = Mathf.Min(safeCorners[0].x, safeCorners[3].x);
+            float maxLcdX = Mathf.Max(safeCorners[1].x, safeCorners[2].x);
+            float minLcdY = Mathf.Min(safeCorners[0].y, safeCorners[1].y);
+            float maxLcdY = Mathf.Max(safeCorners[2].y, safeCorners[3].y);
+            float lcdX = imageX + minLcdX * imageScale;
+            float lcdY = imageY + minLcdY * imageScale;
+            float lcdW = Mathf.Max(80f, (maxLcdX - minLcdX) * imageScale);
+            float lcdH = Mathf.Max(48f, (maxLcdY - minLcdY) * imageScale);
+            Vector2[] localCorners = new Vector2[4];
+            for (int i = 0; i < localCorners.Length; i++)
+                localCorners[i] = new Vector2(
+                    safeCorners[i].x - minLcdX, safeCorners[i].y - minLcdY);
+
             noSignalScreen = ui.Rect(povRoot, "ROKASNoSignalScreen", lcdX, lcdY, lcdW, lcdH);
-            var unpoweredPanel = noSignalScreen.gameObject.AddComponent<Image>();
-            unpoweredPanel.color = new Color(.003f, .007f, .015f, 1f);
-            unpoweredPanel.raycastTarget = false;
-            noSignalScreen.gameObject.AddComponent<RectMask2D>();
+            AddLcdStencil(noSignalScreen, localCorners, imageScale,
+                new Color(.003f, .007f, .015f, 1f));
             Texture2D chibi = Resources.Load<Texture2D>("LaptopCinematic/UI/rokas_no_signal_chibi");
             if (chibi)
             {
@@ -424,10 +439,8 @@ namespace Rokas.Presentation
             // opens fullscreen YOMI without an explicit E/click action.
             physicalMiniYomiViewport = ui.Rect(povRoot, "PhysicalMiniYomiViewport",
                 lcdX, lcdY, lcdW, lcdH);
-            var miniMaskBackground = physicalMiniYomiViewport.gameObject.AddComponent<Image>();
-            miniMaskBackground.color = new Color(.01f, .025f, .05f, 1f);
-            miniMaskBackground.raycastTarget = false;
-            physicalMiniYomiViewport.gameObject.AddComponent<RectMask2D>();
+            AddLcdStencil(physicalMiniYomiViewport, localCorners, imageScale,
+                new Color(.01f, .025f, .05f, 1f));
             physicalMiniYomiImage = ui.Art(physicalMiniYomiViewport,
                 "PhysicalMiniYomiVisible", desktopClock.mainTexture,
                 0f, 0f, lcdW, lcdH);
@@ -462,7 +475,7 @@ namespace Rokas.Presentation
             if (onArt)
             {
                 float w = 535f;
-                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 870f,
+                powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt, 514f, 903f,
                     w, w * (float)onArt.height / onArt.width);
                 powerHintArt.color = Color.white; // original RGB/alpha, no tint
                 AddGoldEmissionBoost(powerHintArt, onArt);
@@ -478,7 +491,7 @@ namespace Rokas.Presentation
             if (exitArt)
             {
                 float w = 460f;
-                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 887f,
+                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 920f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
                 AddGoldEmissionBoost(backHintArt, exitArt);
@@ -495,7 +508,7 @@ namespace Rokas.Presentation
             {
                 float iconSize = 82f;
                 RawImage arrow = ui.Art(povRoot, "LaptopBackChoice", arrowArt,
-                    80f, 916f, iconSize, iconSize * (float)arrowArt.height / arrowArt.width);
+                    80f, 942f, iconSize, iconSize * (float)arrowArt.height / arrowArt.width);
                 arrow.color = Color.white;
                 AddGoldEmissionBoost(arrow, arrowArt);
                 arrow.raycastTarget = true;
@@ -514,7 +527,7 @@ namespace Rokas.Presentation
             Texture2D openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open_yomi");
             if (!openArt)
                 openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open");
-            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 868f, 560f, 190f);
+            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 900f, 560f, 190f);
             if (openArt)
             {
                 var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
@@ -544,6 +557,21 @@ namespace Rokas.Presentation
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
             SetPromptVisibility(false);
+        }
+
+        private static void AddLcdStencil(RectTransform viewport, Vector2[] localCorners,
+            float scale, Color screenBackground)
+        {
+            // A visible Graphic supplies the stencil shape to Unity UI Mask.
+            // RectMask2D is retained as a second, conservative bounding clip.
+            // Both the bouncing chibi and the real YOMI photo use this shape.
+            var quad = viewport.gameObject.AddComponent<LaptopPerspectiveQuad>();
+            quad.SetCorners(localCorners, scale);
+            quad.color = screenBackground;
+            quad.raycastTarget = false;
+            var polygonMask = viewport.gameObject.AddComponent<Mask>();
+            polygonMask.showMaskGraphic = true;
+            viewport.gameObject.AddComponent<RectMask2D>();
         }
 
         private void AddGoldEmissionBoost(RawImage original, Texture2D approved)
@@ -697,6 +725,13 @@ namespace Rokas.Presentation
                     -StageHeight * .47f + sitDrop);
             povGroup.alpha = Mathf.SmoothStep(0f, 1f,
                 Mathf.InverseLerp(POVStart, POVEnd, t));
+            // Chibi is already present in the final ~0.1s of seating,
+            // instead of popping in only after the camera finishes settling.
+            // This does not change the original POV art or the hand timeline.
+            if (noSignalScreen && !powerConfirmed && !returnRequested &&
+                !LaptopPowerSession.PoweredOn && t >= HandsStart - .12f &&
+                t < HandsStart)
+                noSignalScreen.gameObject.SetActive(true);
 
             if (t < POVStart) CurrentPhase = Phase.Approach;
             else if (t < POVEnd) CurrentPhase = Phase.POVTransition;
