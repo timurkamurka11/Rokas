@@ -52,6 +52,7 @@ namespace Rokas.Editor
         [SerializeField] private Vector2[] corners;
         [SerializeField] private float zoom = 1f;
         [SerializeField] private Vector2 pan;
+        [SerializeField] private Vector2 toolsScroll;
         [SerializeField] private int selected = -1;
         [SerializeField] private bool showGrid = true;
         [SerializeField] private bool showOutline = true; // outer four-sided polygon
@@ -177,9 +178,12 @@ namespace Rokas.Editor
                     DrawCanvas(area);
                 }
 
-                using (new EditorGUILayout.VerticalScope(GUILayout.Width(275)))
+                using (new EditorGUILayout.VerticalScope(GUILayout.Width(305)))
                 {
+                    toolsScroll = EditorGUILayout.BeginScrollView(toolsScroll,
+                        GUILayout.ExpandHeight(true));
                     DrawTools();
+                    EditorGUILayout.EndScrollView();
                 }
             }
             GUILayout.Space(4);
@@ -729,12 +733,10 @@ namespace Rokas.Editor
                     new Vector2(data.bottomLeftX, data.bottomLeftY)
                 };
                 Vector2[] previous = corners;
+                bool oldEnabled = enableRoundedMask;
+                float oldTL = topLeftRadius, oldTR = topRightRadius;
+                float oldBR = bottomRightRadius, oldBL = bottomLeftRadius;
                 corners = proposed;
-                if (!ValidateCorners(out string reason))
-                {
-                    corners = previous;
-                    throw new InvalidDataException(reason);
-                }
                 // Older V1 presets had no rounded parameters. Honor their
                 // rectangle until explicitly switched to rounded preview.
                 bool legacy = data.formatVersion < 2;
@@ -745,7 +747,14 @@ namespace Rokas.Editor
                 bottomLeftRadius = legacy ? 0f : data.bottomLeftRadius;
                 if (!ValidateCorners(out string radiusError))
                 {
+                    // Loading invalid JSON must never destroy a good
+                    // in-progress manual calibration (corners AND radii).
                     corners = previous;
+                    enableRoundedMask = oldEnabled;
+                    topLeftRadius = oldTL;
+                    topRightRadius = oldTR;
+                    bottomRightRadius = oldBR;
+                    bottomLeftRadius = oldBL;
                     throw new InvalidDataException(radiusError);
                 }
                 originalPowerX = data.powerX;
