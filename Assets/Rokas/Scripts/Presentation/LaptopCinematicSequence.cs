@@ -81,6 +81,8 @@ namespace Rokas.Presentation
         private bool returnRequested;
         private bool returningFromLaptop;
         private bool pendingVisualHandoff;
+        private bool startingFirstBoot;
+        private bool standbyHeldForFirstBoot;
         private Text powerHint;
         private Text backHint;
         private RawImage powerHintArt;
@@ -109,6 +111,12 @@ namespace Rokas.Presentation
             // V11.1: preserve the actual seated photo UNDER the YOMI window
             // for its entire lifetime (including exterior margins).
             if (pendingVisualHandoff && povGroup) povGroup.alpha = 1f;
+            if (pendingVisualHandoff && standbyHeldForFirstBoot)
+            {
+                standbyHeldForFirstBoot = false;
+                // Switch standby -> visible original boot frame in SAME update.
+                SetPromptVisibility(false);
+            }
         }
         public bool IsAwaitingPowerChoice => active && CurrentPhase == Phase.PreBootChoice;
 
@@ -169,6 +177,8 @@ namespace Rokas.Presentation
                 powerConfirmed = false;
                 returnRequested = false;
                 returningFromLaptop = true;
+                startingFirstBoot = false;
+                standbyHeldForFirstBoot = false;
                 if (povGroup) povGroup.alpha = 1f;
                 CurrentPhase = Phase.PreBootChoice;
                 running = owner.StartCoroutine(Play());
@@ -229,6 +239,8 @@ namespace Rokas.Presentation
                 powerConfirmed = false;
                 returnRequested = false;
                 returningFromLaptop = resumeFromLaptop;
+                startingFirstBoot = !LaptopPowerSession.PoweredOn;
+                standbyHeldForFirstBoot = false;
                 BuildOverlay();
                 active = true;
                 CurrentPhase = Phase.Approach;
@@ -759,7 +771,16 @@ namespace Rokas.Presentation
             {
                 // Atomic handoff: standby prompts disappear only as we create
                 // the real boot/YOMI surface, never at the E/Power input.
-                SetPromptVisibility(false);
+                // Hold the ORIGINAL chibi/prompt artwork until VideoPlayer has
+                // a real first boot frame and its modal is raised to front.
+                // Hiding now caused the blank gap visible in user recording.
+                standbyHeldForFirstBoot = startingFirstBoot;
+                if (!standbyHeldForFirstBoot) SetPromptVisibility(false);
+                if (povGroup)
+                {
+                    povGroup.blocksRaycasts = false;
+                    povGroup.interactable = false;
+                }
                 // Keep the original approved POV covering Home until YOMI
                 // reports its first visible video/desktop frame.
                 SetPromptVisibility(false);
@@ -791,6 +812,7 @@ namespace Rokas.Presentation
         {
             updateRoomCamera?.Invoke(0f);
             pendingVisualHandoff = false;
+            standbyHeldForFirstBoot = false;
             if (root)
             {
                 root.gameObject.SetActive(false);
