@@ -33,7 +33,7 @@ jobs:
               with sync_playwright() as p:
                   browser=p.chromium.launch(headless=True)
                   page=browser.new_page(accept_downloads=True,locale='en-US')
-                  page.goto('https://firestorage.ai/ja/f/1PatX3l4FS-R',wait_until='domcontentloaded',timeout=60000)
+                  page.goto('https://firestorage.ai/en/f/1PatX3l4FS-R',wait_until='domcontentloaded',timeout=60000)
                   page.get_by_text('free-sound-1674855877.mp3',exact=False).first.wait_for(timeout=45000)
                   downloads=page.get_by_role('button',name='Download',exact=True)
                   if downloads.count()!=1:
