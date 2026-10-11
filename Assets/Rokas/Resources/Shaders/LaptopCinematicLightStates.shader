@@ -63,9 +63,10 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
 
             // Coordinates are locked to the ORIGINAL unmodified 1672x941
             // LaptopPOV_screen_off_APPROVED_CINEMATIC_DOF photograph.
-            // This polygon follows the blue corridor seen through the LEFT
-            // doorway. Narrow feathering protects wood jambs, unlike a
-            // rectangular mask spilling onto the nearby shelves.
+            // Polygon follows the blue corridor visible behind the left
+            // jamb, BLACK CURTAIN and sloping bottom threshold. The opening
+            // reaches the photo's top edge: an older y=75 cutoff would leave
+            // a strip with the WRONG room illumination over its lintel.
             float Cross2(float2 a, float2 b) { return a.x*b.y - a.y*b.x; }
             float InsideEdge(float2 a,float2 b,float2 p)
             {
@@ -74,15 +75,16 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             }
             float CorridorDoorMask(float2 p)
             {
-                float2 a=float2(296,75);
-                float2 b=float2(374,70);
-                float2 c=float2(383,465);
-                float2 d=float2(330,508);
-                float2 e=float2(303,483);
-                float signedDistance = min(
-                    min(InsideEdge(a,b,p),InsideEdge(b,c,p)),
-                    min(min(InsideEdge(c,d,p),InsideEdge(d,e,p)),
-                        InsideEdge(e,a,p)));
+                float2 a=float2(294,-5);
+                float2 b=float2(382,-5);
+                float2 c=float2(388,467);
+                float2 d=float2(385,508);
+                float2 e=float2(323,511);
+                float2 f=float2(298,484);
+                float signedDistance=min(
+                    min(min(InsideEdge(a,b,p),InsideEdge(b,c,p)),
+                        min(InsideEdge(c,d,p),InsideEdge(d,e,p))),
+                    min(InsideEdge(e,f,p),InsideEdge(f,a,p)));
                 return smoothstep(-2.5,2.5,signedDistance);
             }
 
