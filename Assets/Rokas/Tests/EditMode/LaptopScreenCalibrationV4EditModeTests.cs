@@ -112,6 +112,31 @@ namespace Rokas.Tests
             Assert.That(p.bottomLeftRadius, Is.EqualTo(0f));
             Assert.That(p.powerX, Is.EqualTo(1014f));
             Assert.That(p.powerY, Is.EqualTo(703f));
+            Vector2[] actualMidpoints = Middle(p);
+            Vector2[] expectedMidpoints =
+            {
+                new Vector2(835.48046875f, 412.8120728f),
+                new Vector2(1067.8530273f, 546.5565796f),
+                new Vector2(831.5167236f, 679.7022095f),
+                new Vector2(601.0888062f, 544.4634399f)
+            };
+            for (int i = 0; i < 4; i++)
+                Near(actualMidpoints[i], expectedMidpoints[i], .0002f);
+
+            Vector2[] exactTangentPoints =
+            {
+                new Vector2(692.2182007f, 411.7046204f),
+                new Vector2(606.3240967f, 460.2456360f),
+                new Vector2(979.3407593f, 409.6516113f),
+                new Vector2(1063.0616455f, 461.0199890f),
+                new Vector2(986.6564941f, 679.9099121f),
+                new Vector2(1072.6445313f, 632.0932007f),
+                new Vector2(677.2249146f, 680.1013794f),
+                new Vector2(598.7528076f, 630.0874023f)
+            };
+            Vector2[] actualTangents = Tangents(p);
+            for (int i = 0; i < 8; i++)
+                Near(actualTangents[i], exactTangentPoints[i], .0002f);
         }
 
         [Test]
