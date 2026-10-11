@@ -85,11 +85,19 @@ namespace Rokas.Tests
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow")));
             var originalPower = Find<RawImage>("PowerChoiceHint");
             var originalBack = Find<RawImage>("BackChoiceHint");
-            const float bottomLine = 1045f;
+            // Compare *visible* PNG artwork rather than its unequal transparent
+            // texture padding. Approved R lower edge never moves. Power/open
+            // use +19 optical adjustment, ESC +13, from the owner's screenshots.
+            var standReference = Find<RawImage>("PoweredStandOriginalPNG");
+            Assert.That(standReference, Is.Not.Null);
+            float standBottom = -standReference.rectTransform.anchoredPosition.y
+                + standReference.rectTransform.rect.height;
+            Assert.That(standBottom, Is.EqualTo(1045f).Within(.1f),
+                "Approved R position must remain identical to V11.5");
             Assert.That(-originalPower.rectTransform.anchoredPosition.y + originalPower.rectTransform.rect.height,
-                Is.EqualTo(bottomLine).Within(.1f), "E Power aligned on gold-button baseline");
+                Is.EqualTo(standBottom + 19f).Within(.1f), "Power prompt should appear level with R");
             Assert.That(-originalBack.rectTransform.anchoredPosition.y + originalBack.rectTransform.rect.height,
-                Is.EqualTo(bottomLine).Within(.1f), "ESC Back aligned on gold-button baseline");
+                Is.EqualTo(standBottom + 13f).Within(.1f), "ESC Back should appear level with R");
             Assert.That(originalPower, Is.Not.Null);
             Assert.That(originalBack, Is.Not.Null);
             Assert.That(originalPower.GetComponentInChildren<RawImage>().color.a, Is.EqualTo(1f));
@@ -160,7 +168,7 @@ namespace Rokas.Tests
             Assert.That(standArt.texture, Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand_r")),
                 "Only exact owner-supplied R — ВСТАТЬ PNG is accepted");
             Assert.That(-standArt.rectTransform.anchoredPosition.y + standArt.rectTransform.rect.height,
-                Is.EqualTo(bottomLine).Within(.1f));
+                Is.EqualTo(standBottom).Within(.1f));
             Assert.That(standArt.gameObject.activeInHierarchy, Is.True);
             Assert.That(standArt.color, Is.EqualTo(Color.white),
                 "Do not dim/retint original golden PNG");
@@ -173,8 +181,8 @@ namespace Rokas.Tests
             Assert.That(open.texture,
                 Is.SameAs(Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open")));
             Assert.That(-open.transform.parent.GetComponent<RectTransform>().anchoredPosition.y +
-                open.rectTransform.rect.height, Is.EqualTo(bottomLine).Within(.1f),
-                "R Stand, E Open and ESC Back must all share one lower line");
+                open.rectTransform.rect.height, Is.EqualTo(standBottom + 19f).Within(.1f),
+                "R / E / ESC should optically align without moving approved R art");
             var fourCorner = Find<LaptopPerspectiveQuad>("PhysicalExactYomiPerspective");
             Assert.That(fourCorner, Is.Not.Null,
                 "YOMI must map all four texture edges directly onto the LCD quad rather than cover-cropping a RawImage");
@@ -197,9 +205,19 @@ namespace Rokas.Tests
             Assert.That(stand.gameObject.activeInHierarchy,Is.True);
             stand.onClick.Invoke();
             yield return null;
+            var duringStandLcd = Find<RectTransform>("PhysicalMiniYomiViewport");
+            Assert.That(duringStandLcd.gameObject.activeInHierarchy,
+                Is.True, "Powered LCD must remain visible while standing");
+            var duringStandPov = Find<RectTransform>("ApprovedPOV").GetComponent<CanvasGroup>();
+            Assert.That(duringStandPov, Is.Not.Null);
+            Assert.That(duringStandPov.alpha, Is.GreaterThan(.95f),
+                "Return starts without a one-frame hard-cut to black");
+            yield return new WaitForSecondsRealtime(.38f);
             Assert.That(Find<RectTransform>("PhysicalMiniYomiViewport").gameObject.activeInHierarchy,
-                Is.True, "Powered LCD must remain alive during standing transition; no black flash");
-            yield return new WaitForSecondsRealtime(1.0f);
+                Is.True, "Powered LCD stays rendered until POV crossfade finishes");
+            Assert.That(duringStandPov.alpha, Is.GreaterThan(0f).And.LessThan(1f),
+                "Seated POV must smoothly fade during return");
+            yield return new WaitForSecondsRealtime(.75f);
             Assert.That(Find<RectTransform>("LaptopCinematicOverlay"),Is.Null,
                 "Stand control must run the real return-to-room animation and exit seated POV");
             var hotSpot = Find<Button>("LaptopHotspot");
