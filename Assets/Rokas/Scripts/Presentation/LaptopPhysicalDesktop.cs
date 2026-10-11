@@ -309,17 +309,70 @@ namespace Rokas.Presentation
     /// A scaled, transparent user chibi sticker moves inside the masked physical
     /// laptop LCD like an old DVD screensaver. This changes no photos or frames.
     /// </summary>
+    // A pixel crop of the ACTUAL fullscreen YOMI uGUI, not a separately
+    // drawn copy of its icons, wallpaper or typography. Captured at end of
+    // frame while the desktop is on screen and before its close fade begins.
+    public static class LaptopYomiMirror
+    {
+        public static Texture2D Current { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void NewProcess() { Current = null; }
+
+        public static bool Capture(RectTransform originalScreen)
+        {
+            if (!originalScreen || Screen.width < 1 || Screen.height < 1) return false;
+            Texture2D screenshot = null;
+            try
+            {
+                var corners = new Vector3[4];
+                originalScreen.GetWorldCorners(corners);
+                Vector2 bottomLeft = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+                Vector2 topRight = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+                int left = Mathf.Clamp(Mathf.RoundToInt(bottomLeft.x), 0, Screen.width - 1);
+                int bottom = Mathf.Clamp(Mathf.RoundToInt(bottomLeft.y), 0, Screen.height - 1);
+                int right = Mathf.Clamp(Mathf.RoundToInt(topRight.x), left + 1, Screen.width);
+                int top = Mathf.Clamp(Mathf.RoundToInt(topRight.y), bottom + 1, Screen.height);
+                if (right - left < 16 || top - bottom < 16) return false;
+                screenshot = ScreenCapture.CaptureScreenshotAsTexture();
+                if (!screenshot) return false;
+                var exact = new Texture2D(right - left, top - bottom, TextureFormat.RGBA32, false);
+                exact.name = "ROKAS_Exact_Fullscreen_YOMI_Capture";
+                exact.wrapMode = TextureWrapMode.Clamp;
+                exact.filterMode = FilterMode.Bilinear;
+                exact.SetPixels(screenshot.GetPixels(left, bottom, exact.width, exact.height));
+                exact.Apply(false, false);
+                if (Current) UnityEngine.Object.Destroy(Current);
+                Current = exact;
+                return true;
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning("ROKAS exact YOMI screen capture postponed: " + error.Message);
+                return false;
+            }
+            finally
+            {
+                if (screenshot) UnityEngine.Object.Destroy(screenshot);
+            }
+        }
+    }
+
     public sealed class LaptopNoSignalBounce : MonoBehaviour
     {
         private RectTransform viewport;
         private RectTransform sticker;
         private Vector2 point = new Vector2(8f, 14f);
         private Vector2 velocity = new Vector2(42f, 29f);
+        private Action onWallContact;
+        public int CollisionCount { get; private set; }
 
-        public void Initialize(RectTransform area, RectTransform target)
+        public void Initialize(RectTransform area, RectTransform target, Action bounceSound = null)
         {
             viewport = area;
             sticker = target;
+            onWallContact = bounceSound;
+            CollisionCount = 0;
             point = new Vector2(8f, 14f);
             Apply();
         }
@@ -344,8 +397,14 @@ namespace Rokas.Presentation
                 5f, viewport.rect.width - sticker.rect.width - 5f);
             point.y = Bounce(ref vy, point.y + vy * dt,
                 5f, viewport.rect.height - sticker.rect.height - 5f);
+            bool hit = vx != velocity.x || vy != velocity.y;
             velocity = new Vector2(vx, vy);
             Apply();
+            if (hit)
+            {
+                CollisionCount++;
+                onWallContact?.Invoke(); // one SFX per real wall contact, never per frame
+            }
         }
 
         private void Apply()
