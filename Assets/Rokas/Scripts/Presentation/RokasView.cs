@@ -186,7 +186,8 @@ namespace Rokas.Presentation
                 () => audio.PlayLaptopStandUp(),
                 () => session.Messages.TotalUnread,
                 UpdateHomeCameraBlend,
-                assets.laptopWallpaper);
+                assets.laptopWallpaper,
+                () => audio.PlayChibiBounce());
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -563,7 +564,39 @@ namespace Rokas.Presentation
             FocusFirst(panels);
         }
 
+        private bool capturingLaptopMirror;
+
         private void ClosePanel()
+        {
+            if (panel == "laptop" && !laptop.IsClosing && !capturingLaptopMirror &&
+                laptopOpenedFromSeatedCinematic && !storageBlocked &&
+                IsHomeLocation(phase) && homeSubLocation == HomeLocation.MainRoom)
+            {
+                capturingLaptopMirror = true;
+                owner.StartCoroutine(CaptureOriginalYomiBeforeClose());
+                return;
+            }
+            if (!capturingLaptopMirror) ClosePanelCore();
+        }
+
+        private IEnumerator CaptureOriginalYomiBeforeClose()
+        {
+            // We photograph the already-rendered ORIGINAL YOMI UI. The image
+            // is taken before any close fade/modal alpha change, not from a
+            // hand-authored copy of its 9 icons or wallpaper.
+            bool returnedToDesktop = laptop.BackToDesktop();
+            if (returnedToDesktop) yield return new WaitForSecondsRealtime(.20f);
+            yield return new WaitForEndOfFrame();
+            if (panel == "laptop" && !laptop.IsClosing)
+            {
+                LaptopYomiMirror.Capture(laptop.ExactMirrorSource);
+                laptopCinematic.RefreshExactYomiMirror();
+            }
+            capturingLaptopMirror = false;
+            if (panel == "laptop") ClosePanelCore();
+        }
+
+        private void ClosePanelCore()
         {
             if (panel == "laptop")
             {
