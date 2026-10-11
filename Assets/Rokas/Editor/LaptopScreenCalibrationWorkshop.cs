@@ -510,6 +510,31 @@ namespace Rokas.Editor
                     "Difference / heatmap", showErrorHeatmap);
                 errorTolerancePixels = EditorGUILayout.Slider(
                     "Green tolerance (px)", errorTolerancePixels, .25f, 8f);
+                int referenceCount = referenceHasHelpers ? 16 :
+                    referenceHasEdges ? 8 : 4;
+                if (!traceReference && selected >= 0 &&
+                    selected < HandleCount && selected < referenceCount)
+                {
+                    Vector2 goal = GetReferenceHandle(selected);
+                    float deviation = Vector2.Distance(GetHandle(selected), goal);
+                    EditorGUILayout.LabelField(
+                        PointLabels[selected] + " from gold reference: " +
+                        deviation.ToString("F2") + " px",
+                        EditorStyles.miniLabel);
+                    if (GUILayout.Button("Snap selected pin to traced reference"))
+                    {
+                        if (deviation <= 20f ||
+                            EditorUtility.DisplayDialog("Large pin correction",
+                                "This pin is " + deviation.ToString("F1") +
+                                " source pixels away from the traced bezel. " +
+                                "Apply this explicit correction?",
+                                "Snap", "Cancel"))
+                        {
+                            SetHandle(selected, goal);
+                            Repaint();
+                        }
+                    }
+                }
             }
             showSafeBorder = EditorGUILayout.Toggle(
                 "Inner safe contour", showSafeBorder);
