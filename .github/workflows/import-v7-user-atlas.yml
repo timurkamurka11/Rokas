@@ -1,0 +1,55 @@
+name: One-time ROKAS V7 approved artwork import
+on:
+  push:
+    paths:
+      - '.github/workflows/import-v7-user-atlas.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-approved-user-png:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fidelity3-resume-5779190
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install web browser for one-time user artwork transfer
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+      - name: Download and verify exact user artwork
+        run: |
+          cat > /tmp/fetch_user_atlas.py <<'PY'
+          import hashlib, pathlib
+          from playwright.sync_api import sync_playwright
+          target=pathlib.Path('Assets/Rokas/Resources/LaptopCinematic/UI/power_control_atlas.png')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch(headless=True,args=['--no-sandbox'])
+              page=browser.new_page(accept_downloads=True,locale='ja-JP')
+              page.goto('https://firestorage.ai/ja/f/oVEWe6HefWd6',wait_until='domcontentloaded',timeout=45000)
+              btn=page.locator('button[class*="downloadButton"]').first
+              btn.wait_for(state='visible',timeout=30000)
+              with page.expect_download(timeout=45000) as record:
+                  btn.click()
+              record.value.save_as(str(target))
+              browser.close()
+          data=target.read_bytes()
+          assert data[:8]==b'\x89PNG\r\n\x1a\n', 'download is not PNG'
+          assert hashlib.sha256(data).hexdigest()=='eb2647f2b835b0b890d3ab981c566ef502c9dc231782201d87e4bae231a8ab19', 'PNG checksum mismatch'
+          print('Verified approved Q/green/blue atlas:',len(data),'bytes')
+          PY
+          python /tmp/fetch_user_atlas.py
+      - name: Commit verified PNG directly to ROKAS branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Assets/Rokas/Resources/LaptopCinematic/UI/power_control_atlas.png
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix(laptop): install checksum-verified supplied Q and LED PNG atlas'
+          git push origin HEAD:codex/fidelity3-resume-5779190
