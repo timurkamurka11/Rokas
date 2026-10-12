@@ -654,10 +654,12 @@ namespace Rokas.Presentation
             // Exact supplied transparent blue/green status LEDs. They are
             // separated Resources sprites on the SAME calibrated power key.
             // Procedural lights are diagnostic fallbacks only.
-            Texture2D blueLed = Resources.Load<Texture2D>(
-                "LaptopCinematic/UI/laptop_power_blue");
-            Texture2D greenLed = Resources.Load<Texture2D>(
-                "LaptopCinematic/UI/laptop_power_green");
+            Texture2D powerAtlas = Resources.Load<Texture2D>(
+                "LaptopCinematic/UI/power_control_atlas");
+            Texture2D blueLed = powerAtlas ? powerAtlas :
+                Resources.Load<Texture2D>("LaptopCinematic/UI/laptop_power_blue");
+            Texture2D greenLed = powerAtlas ? powerAtlas :
+                Resources.Load<Texture2D>("LaptopCinematic/UI/laptop_power_green");
             powerGlowRoot = ui.Rect(povRoot, "PowerKeyBlueStandby",
                 keyX - 18f, keyY - 18f, 36f, 36f);
             greenPowerGlowRoot = ui.Rect(povRoot, "PowerKeyGreenActive",
@@ -667,6 +669,8 @@ namespace Rokas.Presentation
                 var icon = ui.Art(powerGlowRoot, "SuppliedBluePowerLED",
                     blueLed, 0f, 0f, 36f, 36f);
                 icon.color = Color.white;
+                if (powerAtlas) icon.uvRect = new Rect(
+                    72f / 470f, 2f / 224f, 64f / 470f, 64f / 224f);
                 icon.raycastTarget = false;
             }
             else
@@ -681,6 +685,8 @@ namespace Rokas.Presentation
                 var icon = ui.Art(greenPowerGlowRoot, "SuppliedGreenPowerLED",
                     greenLed, 0f, 0f, 36f, 36f);
                 icon.color = Color.white;
+                if (powerAtlas) icon.uvRect = new Rect(
+                    0f, 2f / 224f, 64f / 470f, 64f / 224f);
                 icon.raycastTarget = false;
             }
             else
@@ -895,8 +901,8 @@ namespace Rokas.Presentation
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
 
-            Texture2D shutdownArt = Resources.Load<Texture2D>(
-                "LaptopCinematic/UI/prompt_shutdown");
+            Texture2D shutdownArt = powerAtlas ? powerAtlas :
+                Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_shutdown");
             if (!shutdownArt)
                 Debug.LogWarning("ROKAS V7.1: supplied Q shutdown artwork missing; using gold fallback.");
             shutdownRoot = ui.Rect(povRoot, "PoweredShutdownHint",
@@ -905,7 +911,10 @@ namespace Rokas.Presentation
             {
                 RawImage art = ui.Art(shutdownRoot, "GoldShutdownArtwork",
                     shutdownArt, 0f, 0f, 470f,
-                    470f * shutdownArt.height / shutdownArt.width);
+                    powerAtlas ? 152f :
+                        470f * shutdownArt.height / shutdownArt.width);
+                if (powerAtlas)
+                    art.uvRect = new Rect(0f, 72f / 224f, 1f, 152f / 224f);
                 art.raycastTarget = true;
                 AddGoldEmissionBoost(art, shutdownArt);
                 shutdownButton = art.gameObject.AddComponent<Button>();
@@ -1027,6 +1036,7 @@ namespace Rokas.Presentation
             var glow = ui.Art(rect, "OriginalGoldLuminance", approved,
                 0f, 0f, rect.rect.width, rect.rect.height);
             glow.color = new Color(1f, 1f, 1f, .8f);
+            glow.uvRect = original.uvRect;
             glow.raycastTarget = false;
         }
 
