@@ -14,6 +14,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
         [NoScaleOffset] _BloomMasksTex ("V6 RGBA: local halo/specular/rim/breakup", 2D) = "black" {}
         _ScreenBloomAmount ("YOMI highlight bloom strength", Range(0,1)) = 0
         _ScreenSpecAmount ("YOMI highlight specular strength", Range(0,1)) = 0
+        _ScreenBounceSide ("Actual YOMI left/right luminance bias", Range(-.3,.3)) = 0
         _BloomThreshold ("YOMI bloom threshold (CPU)", Range(0,1)) = .58
         _BloomSoftKnee ("YOMI bloom soft knee (CPU)", Range(0,1)) = .22
         _BloomGain ("Localized bloom gain", Range(0,2)) = 1
@@ -61,6 +62,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             sampler2D _BloomMasksTex;
             float _ScreenBloomAmount;
             float _ScreenSpecAmount;
+            float _ScreenBounceSide;
             float _BloomGain;
             float _SpecularGain;
             float _OffPhotoReady;
@@ -189,7 +191,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     .72*dot(resultColor,float3(.2126,.7152,.0722)));
                 // V6 diffuse: restrained, wide reflected LCD emission.
                 // Wood grain remains photographic, never globally graded.
-                float diffusePass=woodMask*1.50+lipMask*.45;
+                // Actual YOMI left/right bright regions steer the specular
+                // reflection across the tabletop, never the laptop housing.
+                float lateral=saturate((p.x-490.0)/690.0);
+                float sideWeight=1.0+_ScreenBounceSide*(lateral*2.0-1.0);
+                float diffusePass=(woodMask*1.66+lipMask*.48)*sideWeight;
                 float keyboardPass=keyMask*.10;
                 float3 diffuseLight=_ScreenBounceTint.rgb*
                     (diffusePass*grainResponse+keyboardPass)*strength;
@@ -202,13 +208,13 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float specPower=saturate(_ScreenSpecAmount)*_SpecularGain;
                 float halo=bloomMasks.r*noiseBreakup*bloomPower;
                 float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
-                    noiseBreakup*specPower;
+                    noiseBreakup*specPower*sideWeight;
                 float3 opticalLight=_ScreenBounceTint.rgb*night*
-                    saturate(_ScreenGlow)*(halo*1.30+spec*1.34);
+                    saturate(_ScreenGlow)*(halo*1.47+spec*1.55);
                 // Brighter scene-aware screen reflection, with a filmic
                 // shoulder and exact room/laptop-off safety gates.
                 float3 bounced=diffuseLight+opticalLight;
-                bounced=.30*(1.0-exp(-bounced/.30));
+                bounced=.345*(1.0-exp(-bounced/.345));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

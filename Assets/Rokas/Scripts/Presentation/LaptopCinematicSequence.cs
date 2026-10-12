@@ -306,7 +306,7 @@ namespace Rokas.Presentation
                 ? (Texture)LaptopYomiMirror.Current : yomiWallpaper;
             screenBounce.Tick(source, LaptopPowerSession.PoweredOn, deltaTime);
             lighting?.SetScreenBounce(screenBounce.Tint, screenBounce.Intensity,
-                screenBounce.Bloom, screenBounce.Specular);
+                screenBounce.Bloom, screenBounce.Specular, screenBounce.SideBias);
             lighting?.Tick(deltaTime);
         }
         public bool HasPendingVisualHandoff => pendingVisualHandoff;
@@ -651,21 +651,45 @@ namespace Rokas.Presentation
             // keyboard readable without coloring the bezel or entire desk.
             float keyX = imageX + calibration.powerX * imageScale;
             float keyY = imageY + calibration.powerY * imageScale;
-            powerGlowRoot = ui.Rect(povRoot, "PowerKeyBlueStandby", keyX - 18f, keyY - 18f, 36f, 36f);
-            ui.Box(powerGlowRoot, "KeyOuterHalo", 0f, 0f, 36f, 36f,
-                new Color(.02f, .22f, .82f, .055f));
-            ui.Box(powerGlowRoot, "KeyInnerHalo", 12f, 12f, 12f, 12f,
-                new Color(.13f, .58f, 1f, .24f));
-            ui.Box(powerGlowRoot, "KeyLED", 15f, 15f, 6f, 6f,
-                new Color(.24f, .72f, 1f, .85f));
+            // Exact supplied transparent blue/green status LEDs. They are
+            // separated Resources sprites on the SAME calibrated power key.
+            // Procedural lights are diagnostic fallbacks only.
+            Texture2D blueLed = Resources.Load<Texture2D>(
+                "LaptopCinematic/UI/laptop_power_blue");
+            Texture2D greenLed = Resources.Load<Texture2D>(
+                "LaptopCinematic/UI/laptop_power_green");
+            powerGlowRoot = ui.Rect(povRoot, "PowerKeyBlueStandby",
+                keyX - 18f, keyY - 18f, 36f, 36f);
             greenPowerGlowRoot = ui.Rect(povRoot, "PowerKeyGreenActive",
                 keyX - 18f, keyY - 18f, 36f, 36f);
-            ui.Box(greenPowerGlowRoot, "GreenHalo", 0f, 0f, 36f, 36f,
-                new Color(.05f, .62f, .20f, .06f));
-            ui.Box(greenPowerGlowRoot, "GreenInner", 11f, 11f, 14f, 14f,
-                new Color(.14f, .86f, .30f, .22f));
-            ui.Box(greenPowerGlowRoot, "GreenLED", 15f, 15f, 6f, 6f,
-                new Color(.36f, 1f, .53f, .98f));
+            if (blueLed)
+            {
+                var icon = ui.Art(powerGlowRoot, "SuppliedBluePowerLED",
+                    blueLed, 0f, 0f, 36f, 36f);
+                icon.color = Color.white;
+                icon.raycastTarget = false;
+            }
+            else
+            {
+                ui.Box(powerGlowRoot, "FallbackBlueHalo", 0f, 0f, 36f, 36f,
+                    new Color(.02f,.22f,.82f,.055f));
+                ui.Box(powerGlowRoot, "FallbackBlueLED", 15f, 15f, 6f, 6f,
+                    new Color(.24f,.72f,1f,.85f));
+            }
+            if (greenLed)
+            {
+                var icon = ui.Art(greenPowerGlowRoot, "SuppliedGreenPowerLED",
+                    greenLed, 0f, 0f, 36f, 36f);
+                icon.color = Color.white;
+                icon.raycastTarget = false;
+            }
+            else
+            {
+                ui.Box(greenPowerGlowRoot, "FallbackGreenHalo", 0f, 0f, 36f, 36f,
+                    new Color(.05f,.62f,.20f,.06f));
+                ui.Box(greenPowerGlowRoot, "FallbackGreenLED", 15f, 15f, 6f, 6f,
+                    new Color(.36f,1f,.53f,.98f));
+            }
 
             // UI hit target over the calibrated physical Power key, not a fake
             // full-screen confirmation button. E remains the primary shortcut.
@@ -772,7 +796,6 @@ namespace Rokas.Presentation
             // If V3.2 art was not installed, preserve readable V3.1 text fallbacks.
             Texture2D onArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_power");
             Texture2D exitArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_back");
-            Texture2D arrowArt = Resources.Load<Texture2D>("LaptopCinematic/UI/back_arrow");
             Texture2D standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand_r");
             if (!standArt) standArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_stand");
             if (onArt)
@@ -809,25 +832,9 @@ namespace Rokas.Presentation
                 backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
                     1007f, 955f + GoldPromptDrop, 320f, 44f, 20,
                     new Color(.8f, .85f, .9f, .88f));
-            if (arrowArt)
-            {
-                float iconSize = 82f;
-                RawImage arrow = ui.Art(povRoot, "LaptopBackChoice", arrowArt,
-                    80f, 942f + GoldPromptDrop, iconSize,
-                    iconSize * (float)arrowArt.height / arrowArt.width);
-                arrow.color = Color.white;
-                AddGoldEmissionBoost(arrow, arrowArt);
-                arrow.raycastTarget = true;
-                onScreenBack = arrow.gameObject.AddComponent<Button>();
-                onScreenBack.targetGraphic = arrow;
-                onScreenBack.transition = Selectable.Transition.None;
-                onScreenBack.onClick.AddListener(() => BackToRoom());
-                arrow.gameObject.AddComponent<LaptopChoiceHover>();
-            }
-            else
-                onScreenBack = ui.Button(povRoot, "LaptopBackChoice", "←",
-                    92f, 915f + GoldPromptDrop, 72f, 58f,
-                    () => BackToRoom(), playClickSound: false);
+            // The small standalone left arrow is deliberately removed:
+            // ESC Back and powered R Stand are the only navigation controls.
+            onScreenBack = null;
             // When the LCD is already powered, replace ONLY the little arrow
             // with the user's exact E — ВСТАТЬ gold PNG. Mouse click calls the
             // existing stand-up/back-to-room animation; keyboard E continues
@@ -890,6 +897,8 @@ namespace Rokas.Presentation
 
             Texture2D shutdownArt = Resources.Load<Texture2D>(
                 "LaptopCinematic/UI/prompt_shutdown");
+            if (!shutdownArt)
+                Debug.LogWarning("ROKAS V7.1: supplied Q shutdown artwork missing; using gold fallback.");
             shutdownRoot = ui.Rect(povRoot, "PoweredShutdownHint",
                 1420f, 895f, 470f, 185f);
             if (shutdownArt)

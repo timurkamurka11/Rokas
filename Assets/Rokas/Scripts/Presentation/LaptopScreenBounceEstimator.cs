@@ -12,9 +12,9 @@ namespace Rokas.Presentation
     /// </summary>
     public sealed class LaptopScreenBounceEstimator : IDisposable
     {
-        private const int SampleWidth = 32;
-        private const int SampleHeight = 18;
-        private const float SampleInterval = .25f;
+        private const int SampleWidth = 48;
+        private const int SampleHeight = 27;
+        private const float SampleInterval = .14f;
         public const float BloomThreshold = .58f;
         public const float BloomSoftKnee = .22f;
         private RenderTexture sampleTarget;
@@ -24,16 +24,19 @@ namespace Rokas.Presentation
         private float targetAmount = .34f;
         private float targetBloom = .12f;
         private float targetSpecular = .16f;
+        private float targetSideBias;
         private Color targetTint = new Color(.18f, .21f, .24f, 1f);
         private float intensity;
         private float bloom;
         private float specular;
+        private float sideBias;
         private Color tint = new Color(.18f, .21f, .24f, 1f);
         private bool disposed;
 
         public float Intensity => intensity;
         public float Bloom => bloom;
         public float Specular => specular;
+        public float SideBias => sideBias;
         public Color Tint => tint;
 
         // Exposed as a pure mapping for focused EditMode tests.
@@ -79,6 +82,17 @@ namespace Rokas.Presentation
             specAmount = Mathf.Clamp01(energy * 2.8f + luminance * .40f);
         }
 
+
+        /// <summary>Screen left/right lighting contrast, limited to 30%.
+        /// A moving bright YOMI panel now moves the desk reflection.</summary>
+        public static float EvaluateSideBias(float leftEnergy, float rightEnergy)
+        {
+            float total = Mathf.Max(.00001f,
+                Mathf.Max(0f,leftEnergy) + Mathf.Max(0f,rightEnergy));
+            return Mathf.Clamp((rightEnergy-leftEnergy)/total*1.2f,
+                -.30f, .30f);
+        }
+
         public void Tick(Texture source, bool powered, float deltaTime)
         {
             if (disposed) return;
@@ -94,6 +108,7 @@ namespace Rokas.Presentation
                         float r = 0f, g = 0f, b = 0f;
                         float lumaSum = 0f;
                         float highlightSum = 0f;
+                        float leftLight = 0f, rightLight = 0f;
                         for (int i = 0; i < pixels.Length; i++)
                         {
                             r += pixels[i].r;
@@ -106,6 +121,9 @@ namespace Rokas.Presentation
                                 .7152f * linearG + .0722f * linearB;
                             lumaSum += luma;
                             highlightSum += BrightPass(luma);
+                            if ((i % SampleWidth) < SampleWidth / 2)
+                                leftLight += luma;
+                            else rightLight += luma;
                         }
                         float inv = 1f / (255f * pixels.Length);
                         EvaluateMeanScreenColor(
@@ -115,6 +133,7 @@ namespace Rokas.Presentation
                             lumaSum / pixels.Length,
                             highlightSum / pixels.Length,
                             out targetBloom, out targetSpecular);
+                        targetSideBias = EvaluateSideBias(leftLight, rightLight);
                     }
                 }
             }
@@ -141,11 +160,12 @@ namespace Rokas.Presentation
                 sinceSample = 0f;
             }
 
-            float ease = 1f - Mathf.Exp(-dt / .28f);
+            float ease = 1f - Mathf.Exp(-dt / .20f);
             float required = powered ? targetAmount : 0f;
             intensity = Mathf.Lerp(intensity, required, ease);
             bloom = Mathf.Lerp(bloom, powered ? targetBloom : 0f, ease);
             specular = Mathf.Lerp(specular, powered ? targetSpecular : 0f, ease);
+            sideBias = Mathf.Lerp(sideBias, powered ? targetSideBias : 0f, ease);
             tint = Color.Lerp(tint, targetTint, ease);
             if (Mathf.Abs(intensity - required) < .0005f) intensity = required;
         }
@@ -171,6 +191,7 @@ namespace Rokas.Presentation
             intensity = 0f;
             bloom = 0f;
             specular = 0f;
+            sideBias = 0f;
         }
     }
 }

@@ -26,6 +26,7 @@ namespace Rokas.Presentation
         private static readonly int BloomMaskProperty = Shader.PropertyToID("_BloomMasksTex");
         private static readonly int BloomAmountProperty = Shader.PropertyToID("_ScreenBloomAmount");
         private static readonly int SpecAmountProperty = Shader.PropertyToID("_ScreenSpecAmount");
+        private static readonly int SideBiasProperty = Shader.PropertyToID("_ScreenBounceSide");
         private static readonly int BloomThresholdProperty = Shader.PropertyToID("_BloomThreshold");
         private static readonly int BloomKneeProperty = Shader.PropertyToID("_BloomSoftKnee");
         public const string MaskResource = "LaptopCinematic/LightMasks/HybridScreenBounceMasks";
@@ -41,6 +42,7 @@ namespace Rokas.Presentation
         private Texture2D cinematicBloomMasks;
         private float bloomAmount;
         private float specAmount;
+        private float bounceSide;
         private Color bounceTint = new Color(.20f, .22f, .25f, 1f);
         private float bounceAmount;
         private float roomValue;
@@ -130,13 +132,14 @@ namespace Rokas.Presentation
         /// <summary>Color and strength estimated from the real powered LCD.
         /// Kept separate from both physical lamp switches.</summary>
         public void SetScreenBounce(Color color, float intensity,
-            float bloom = 0f, float specular = 0f)
+            float bloom = 0f, float specular = 0f, float sideBias = 0f)
         {
             bounceTint = new Color(Mathf.Clamp01(color.r), Mathf.Clamp01(color.g),
                 Mathf.Clamp01(color.b), 1f);
             bounceAmount = Mathf.Clamp01(intensity);
             bloomAmount = Mathf.Clamp01(bloom);
             specAmount = Mathf.Clamp01(specular);
+            bounceSide = Mathf.Clamp(sideBias, -.3f, .3f);
             WriteMaterial();
         }
 
@@ -181,6 +184,8 @@ namespace Rokas.Presentation
                 masksReady ? bloomAmount : 0f);
             material.SetFloat(SpecAmountProperty,
                 masksReady ? specAmount : 0f);
+            material.SetFloat(SideBiasProperty,
+                masksReady ? bounceSide : 0f);
         }
 
         public void Dispose()
@@ -203,6 +208,7 @@ namespace Rokas.Presentation
             bounceAmount = 0f;
             bloomAmount = 0f;
             specAmount = 0f;
+            bounceSide = 0f;
         }
     }
 }

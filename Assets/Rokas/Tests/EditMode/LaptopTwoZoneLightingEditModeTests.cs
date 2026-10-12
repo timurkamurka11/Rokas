@@ -46,6 +46,7 @@ namespace Rokas.Tests
                 Assert.That(material.HasProperty("_BloomMasksTex"), Is.True);
                 Assert.That(material.HasProperty("_ScreenBloomAmount"), Is.True);
                 Assert.That(material.HasProperty("_ScreenSpecAmount"), Is.True);
+                Assert.That(material.HasProperty("_ScreenBounceSide"), Is.True);
                 Assert.That(material.HasProperty("_BloomThreshold"), Is.True);
                 Assert.That(material.HasProperty("_BloomSoftKnee"), Is.True);
                 Assert.That(material.HasProperty("_OffTex"), Is.True);
@@ -231,13 +232,15 @@ namespace Rokas.Tests
                 Assert.That(presenter.Material.GetTexture("_BounceMasksTex"),
                     Is.SameAs(masks));
                 Color expected=new Color(.22f,.30f,.37f,1f);
-                presenter.SetScreenBounce(expected,.65f,.55f,.40f);
+                presenter.SetScreenBounce(expected,.65f,.55f,.40f,.20f);
                 Assert.That(presenter.Material.GetFloat("_ScreenBounceAmount"),
                     Is.EqualTo(.65f).Within(.0001f));
                 Assert.That(presenter.Material.GetFloat("_ScreenBloomAmount"),
                     Is.EqualTo(.55f).Within(.0001f));
                 Assert.That(presenter.Material.GetFloat("_ScreenSpecAmount"),
                     Is.EqualTo(.40f).Within(.0001f));
+                Assert.That(presenter.Material.GetFloat("_ScreenBounceSide"),
+                    Is.EqualTo(.20f).Within(.0001f));
                 Texture2D opticalMasks=Resources.Load<Texture2D>(
                     LaptopCinematicLightPresentation.BloomMaskResource);
                 Assert.That(opticalMasks,Is.Not.Null);
@@ -290,6 +293,19 @@ namespace Rokas.Tests
             Assert.That(lightBloom,Is.GreaterThan(darkBloom));
             Assert.That(lightSpec,Is.GreaterThan(darkSpec));
             Assert.That(lightBloom,Is.InRange(0f,1f));
+        }
+
+        [Test]
+        public void ScreenLuminanceSideBiasTracksDynamicYomiPanels()
+        {
+            Assert.That(LaptopScreenBounceEstimator.EvaluateSideBias(1f,1f),
+                Is.EqualTo(0f).Within(.0001f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateSideBias(10f,100f),
+                Is.GreaterThan(0f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateSideBias(100f,10f),
+                Is.LessThan(0f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateSideBias(0f,100f),
+                Is.LessThanOrEqualTo(.30f));
         }
 
         [Test]
