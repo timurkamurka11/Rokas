@@ -84,24 +84,24 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 // The cabinet interrupts the left jamb at y≈296. A single
                 // convex half-plane test was wrong for this CONCAVE outline;
                 // represent it as a union of TWO convex aligned masks instead.
-                const float2 upperA=float2(290,-6);
+                const float2 upperA=float2(287,-6);
                 const float2 upperB=float2(383,-6);
                 const float2 upperC=float2(393,296);
-                const float2 upperD=float2(290,296);
+                const float2 upperD=float2(287,296);
                 float upper=min(
                     min(SignedEdge(upperA,upperB,p),SignedEdge(upperB,upperC,p)),
                     min(SignedEdge(upperC,upperD,p),SignedEdge(upperD,upperA,p)));
 
-                const float2 lowerA=float2(321,296);
+                const float2 lowerA=float2(317,296);
                 const float2 lowerB=float2(393,296);
                 const float2 lowerC=float2(400,469);
-                const float2 lowerD=float2(324,489);
+                const float2 lowerD=float2(320,489);
                 float lower=min(
                     min(SignedEdge(lowerA,lowerB,p),SignedEdge(lowerB,lowerC,p)),
                     min(SignedEdge(lowerC,lowerD,p),SignedEdge(lowerD,lowerA,p)));
 
-                return max(smoothstep(-2.25,2.25,upper),
-                           smoothstep(-2.25,2.25,lower));
+                return max(smoothstep(-2.6,2.6,upper),
+                           smoothstep(-2.6,2.6,lower));
             }
             float SoftEllipse(float2 p,float2 center,float2 reach)
             {
@@ -120,11 +120,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             {
                 // The LCD never receives this extra tint. Projected emission
                 // reaches the keyboard/tabletop below the laptop screen only.
-                float belowScreen=smoothstep(682.0,725.0,p.y);
-                float keyboard=.38*SoftEllipse(p,float2(838,751),float2(296,88));
-                float nearbyWood=.67*SoftEllipse(p,float2(841,861),float2(414,167));
-                float leftDesk=.26*SoftEllipse(p,float2(563,791),float2(214,103));
-                float rightDesk=.26*SoftEllipse(p,float2(1105,794),float2(211,105));
+                float belowScreen=smoothstep(675.0,720.0,p.y);
+                float keyboard=.52*SoftEllipse(p,float2(838,748),float2(330,96));
+                float nearbyWood=.95*SoftEllipse(p,float2(842,870),float2(500,205));
+                float leftDesk=.34*SoftEllipse(p,float2(560,805),float2(235,118));
+                float rightDesk=.34*SoftEllipse(p,float2(1110,805),float2(235,118));
                 return saturate((keyboard+nearbyWood+leftDesk+rightDesk)*belowScreen);
             }
 
@@ -161,8 +161,8 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 // Nighttime cyan/blue illumination is intentionally subtle;
                 // stronger with room practicals OFF, and limited to the desk.
                 float power=saturate(_ScreenGlow);
-                float darkness=lerp(1.0,.24,roomOn);
-                resultColor+=float3(.072,.15,.255)*(.52*power*darkness*screenSpill);
+                float darkness=lerp(1.18,.35,roomOn);
+                resultColor+=float3(.09,.18,.31)*(.88*power*darkness*screenSpill);
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }
