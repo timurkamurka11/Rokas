@@ -23,7 +23,13 @@ namespace Rokas.Presentation
         private static readonly int BounceTintProperty = Shader.PropertyToID("_ScreenBounceTint");
         private static readonly int BounceAmountProperty = Shader.PropertyToID("_ScreenBounceAmount");
         private static readonly int PackedMaskProperty = Shader.PropertyToID("_BounceMasksTex");
+        private static readonly int BloomMaskProperty = Shader.PropertyToID("_BloomMasksTex");
+        private static readonly int BloomAmountProperty = Shader.PropertyToID("_ScreenBloomAmount");
+        private static readonly int SpecAmountProperty = Shader.PropertyToID("_ScreenSpecAmount");
+        private static readonly int BloomThresholdProperty = Shader.PropertyToID("_BloomThreshold");
+        private static readonly int BloomKneeProperty = Shader.PropertyToID("_BloomSoftKnee");
         public const string MaskResource = "LaptopCinematic/LightMasks/HybridScreenBounceMasks";
+        public const string BloomMaskResource = "LaptopCinematic/LightMasks/HybridCinematicBloomMasks";
 
         private readonly Func<bool> roomLight;
         private readonly Func<bool> hallwayLight;
@@ -32,6 +38,9 @@ namespace Rokas.Presentation
         private RawImage background;
         private Texture2D offPhoto;
         private Texture2D packedMasks;
+        private Texture2D cinematicBloomMasks;
+        private float bloomAmount;
+        private float specAmount;
         private Color bounceTint = new Color(.20f, .22f, .25f, 1f);
         private float bounceAmount;
         private float roomValue;
@@ -40,6 +49,7 @@ namespace Rokas.Presentation
 
         public Material Material => material;
         public bool HasOffPhoto => offPhoto != null;
+        public bool HasCinematicMasks => packedMasks && cinematicBloomMasks;
         public float RoomValue => roomValue;
         public float HallwayValue => hallValue;
         public float ScreenValue => screenValue;
@@ -97,12 +107,20 @@ namespace Rokas.Presentation
             material.SetTexture(OffTexProperty, offPhoto);
             material.SetFloat(OffReadyProperty, 1f);
             packedMasks = Resources.Load<Texture2D>(MaskResource);
-            if (packedMasks)
-                material.SetTexture(PackedMaskProperty, packedMasks);
-            else
-                Debug.LogError("ROKAS hybrid laptop lighting: missing packed photo-aligned " +
-                    "RGBA masks at Resources/" + MaskResource +
-                    ". Room/corridor lighting remains active; screen bounce disabled.");
+            cinematicBloomMasks = Resources.Load<Texture2D>(BloomMaskResource);
+            if (packedMasks) material.SetTexture(PackedMaskProperty, packedMasks);
+            if (cinematicBloomMasks)
+                material.SetTexture(BloomMaskProperty, cinematicBloomMasks);
+            if (!packedMasks || !cinematicBloomMasks)
+                Debug.LogError("ROKAS V6: photo-aligned screen masks missing: " +
+                    MaskResource + " / " + BloomMaskResource +
+                    ". Room/corridor remain active; all screen bounce disabled.");
+            // These inspector properties mirror the *actual* CPU highlight
+            // extraction settings. They do not trigger a second bloom on UI.
+            material.SetFloat(BloomThresholdProperty,
+                LaptopScreenBounceEstimator.BloomThreshold);
+            material.SetFloat(BloomKneeProperty,
+                LaptopScreenBounceEstimator.BloomSoftKnee);
             background = source;
             Snap();
             background.material = material;
@@ -111,11 +129,14 @@ namespace Rokas.Presentation
 
         /// <summary>Color and strength estimated from the real powered LCD.
         /// Kept separate from both physical lamp switches.</summary>
-        public void SetScreenBounce(Color color, float intensity)
+        public void SetScreenBounce(Color color, float intensity,
+            float bloom = 0f, float specular = 0f)
         {
             bounceTint = new Color(Mathf.Clamp01(color.r), Mathf.Clamp01(color.g),
                 Mathf.Clamp01(color.b), 1f);
             bounceAmount = Mathf.Clamp01(intensity);
+            bloomAmount = Mathf.Clamp01(bloom);
+            specAmount = Mathf.Clamp01(specular);
             WriteMaterial();
         }
 
@@ -153,8 +174,13 @@ namespace Rokas.Presentation
             material.SetFloat(HallProperty, hallValue);
             material.SetFloat(ScreenProperty, screenValue);
             material.SetColor(BounceTintProperty, bounceTint);
+            bool masksReady = packedMasks && cinematicBloomMasks;
             material.SetFloat(BounceAmountProperty,
-                packedMasks ? bounceAmount : 0f);
+                masksReady ? bounceAmount : 0f);
+            material.SetFloat(BloomAmountProperty,
+                masksReady ? bloomAmount : 0f);
+            material.SetFloat(SpecAmountProperty,
+                masksReady ? specAmount : 0f);
         }
 
         public void Dispose()
@@ -173,7 +199,10 @@ namespace Rokas.Presentation
             background = null;
             offPhoto = null;
             packedMasks = null;
+            cinematicBloomMasks = null;
             bounceAmount = 0f;
+            bloomAmount = 0f;
+            specAmount = 0f;
         }
     }
 }

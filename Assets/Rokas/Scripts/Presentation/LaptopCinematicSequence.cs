@@ -300,7 +300,8 @@ namespace Rokas.Presentation
             Texture source = LaptopYomiMirror.Current
                 ? (Texture)LaptopYomiMirror.Current : yomiWallpaper;
             screenBounce.Tick(source, LaptopPowerSession.PoweredOn, deltaTime);
-            lighting?.SetScreenBounce(screenBounce.Tint, screenBounce.Intensity);
+            lighting?.SetScreenBounce(screenBounce.Tint, screenBounce.Intensity,
+                screenBounce.Bloom, screenBounce.Specular);
             lighting?.Tick(deltaTime);
         }
         public bool HasPendingVisualHandoff => pendingVisualHandoff;

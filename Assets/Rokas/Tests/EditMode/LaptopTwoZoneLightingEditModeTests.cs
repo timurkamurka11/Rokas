@@ -43,6 +43,11 @@ namespace Rokas.Tests
                 Assert.That(material.HasProperty("_ScreenBounceTint"), Is.True);
                 Assert.That(material.HasProperty("_ScreenBounceAmount"), Is.True);
                 Assert.That(material.HasProperty("_BounceMasksTex"), Is.True);
+                Assert.That(material.HasProperty("_BloomMasksTex"), Is.True);
+                Assert.That(material.HasProperty("_ScreenBloomAmount"), Is.True);
+                Assert.That(material.HasProperty("_ScreenSpecAmount"), Is.True);
+                Assert.That(material.HasProperty("_BloomThreshold"), Is.True);
+                Assert.That(material.HasProperty("_BloomSoftKnee"), Is.True);
                 Assert.That(material.HasProperty("_OffTex"), Is.True);
                 Assert.That(material.HasProperty("_OffPhotoReady"), Is.True);
                 Assert.That(material.HasProperty("_MaskDebug"), Is.True);
@@ -226,9 +231,20 @@ namespace Rokas.Tests
                 Assert.That(presenter.Material.GetTexture("_BounceMasksTex"),
                     Is.SameAs(masks));
                 Color expected=new Color(.22f,.30f,.37f,1f);
-                presenter.SetScreenBounce(expected,.65f);
+                presenter.SetScreenBounce(expected,.65f,.55f,.40f);
                 Assert.That(presenter.Material.GetFloat("_ScreenBounceAmount"),
                     Is.EqualTo(.65f).Within(.0001f));
+                Assert.That(presenter.Material.GetFloat("_ScreenBloomAmount"),
+                    Is.EqualTo(.55f).Within(.0001f));
+                Assert.That(presenter.Material.GetFloat("_ScreenSpecAmount"),
+                    Is.EqualTo(.40f).Within(.0001f));
+                Texture2D opticalMasks=Resources.Load<Texture2D>(
+                    LaptopCinematicLightPresentation.BloomMaskResource);
+                Assert.That(opticalMasks,Is.Not.Null);
+                Assert.That(opticalMasks.width,Is.EqualTo(256));
+                Assert.That(opticalMasks.height,Is.EqualTo(144));
+                Assert.That(presenter.Material.GetTexture("_BloomMasksTex"),
+                    Is.SameAs(opticalMasks));
                 Color actual=presenter.Material.GetColor("_ScreenBounceTint");
                 Assert.That(actual.r,Is.EqualTo(expected.r).Within(.0001f));
                 Assert.That(actual.g,Is.EqualTo(expected.g).Within(.0001f));
@@ -256,6 +272,24 @@ namespace Rokas.Tests
             Assert.That(darkTint.r,Is.GreaterThan(.07f),
                 "Reflection tint is desaturated/neutralized, not raw UI RGB.");
             Assert.That(brightTint.b,Is.GreaterThan(darkTint.b));
+        }
+
+        [Test]
+        public void BrightPassAndHighlightResponseAreContentDriven()
+        {
+            float dark = LaptopScreenBounceEstimator.BrightPass(.08f);
+            float mid = LaptopScreenBounceEstimator.BrightPass(.58f);
+            float white = LaptopScreenBounceEstimator.BrightPass(.99f);
+            Assert.That(dark,Is.EqualTo(0f));
+            Assert.That(mid,Is.GreaterThan(dark));
+            Assert.That(white,Is.GreaterThan(mid));
+            LaptopScreenBounceEstimator.EvaluateHighlightResponse(
+                .10f, .01f, out float darkBloom, out float darkSpec);
+            LaptopScreenBounceEstimator.EvaluateHighlightResponse(
+                .78f, .26f, out float lightBloom, out float lightSpec);
+            Assert.That(lightBloom,Is.GreaterThan(darkBloom));
+            Assert.That(lightSpec,Is.GreaterThan(darkSpec));
+            Assert.That(lightBloom,Is.InRange(0f,1f));
         }
 
         [Test]

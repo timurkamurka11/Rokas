@@ -11,8 +11,15 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
         [NoScaleOffset] _BounceMasksTex ("V5 RGBA: wood, keys, lip, metal", 2D) = "black" {}
         _ScreenBounceTint ("Actual YOMI bounce tint", Color) = (.2,.21,.22,1)
         _ScreenBounceAmount ("Actual YOMI bounce intensity", Range(0,1)) = 0
+        [NoScaleOffset] _BloomMasksTex ("V6 RGBA: local halo/specular/rim/breakup", 2D) = "black" {}
+        _ScreenBloomAmount ("YOMI highlight bloom strength", Range(0,1)) = 0
+        _ScreenSpecAmount ("YOMI highlight specular strength", Range(0,1)) = 0
+        _BloomThreshold ("YOMI bloom threshold (CPU)", Range(0,1)) = .58
+        _BloomSoftKnee ("YOMI bloom soft knee (CPU)", Range(0,1)) = .22
+        _BloomGain ("Localized bloom gain", Range(0,2)) = 1
+        _SpecularGain ("Wood specular gain", Range(0,2)) = 1
         [HideInInspector] _OffPhotoReady ("OFF reference installed", Float) = 0
-        _MaskDebug ("Show zone mask (diagnostic only)", Range(0,1)) = 0
+        _MaskDebug ("Mask debug: 0 off, 1 zones, 2 optical", Range(0,2)) = 0
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
         _StencilOp ("Stencil Operation", Float) = 0
@@ -51,6 +58,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             sampler2D _BounceMasksTex;
             float4 _ScreenBounceTint;
             float _ScreenBounceAmount;
+            sampler2D _BloomMasksTex;
+            float _ScreenBloomAmount;
+            float _ScreenSpecAmount;
+            float _BloomGain;
+            float _SpecularGain;
             float _OffPhotoReady;
             float _MaskDebug;
 
@@ -136,10 +148,17 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float woodMask=mask.r*(1.0-mask.a);
                 float keyMask=mask.g;
                 float lipMask=mask.b*(1.0-mask.a);
+                float4 bloomMasks=tex2D(_BloomMasksTex,i.uv);
+                float noiseBreakup=lerp(.75,1.12,bloomMasks.a);
 
+                if (_MaskDebug>1.5)
+                {
+                    // V6 optical layers: RED halo, GREEN specular, BLUE rim.
+                    return fixed4(bloomMasks.rgb,1)*i.color;
+                }
                 if (_MaskDebug>.5)
                 {
-                    // Blue room, green corridor, red practical spill, cyan desk glow.
+                    // Original photographic zone diagnostics are preserved.
                     float3 zone=lerp(float3(.08,.15,.58),float3(.12,.83,.18),hallwayMask);
                     zone+=float3(corridorSpill,.0,.0)+
                         float3(0,.22,.36)*saturate(woodMask+lipMask+keyMask);
@@ -168,18 +187,27 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     saturate(_ScreenBounceAmount)*night;
                 float grainResponse=saturate(.52+
                     .72*dot(resultColor,float3(.2126,.7152,.0722)));
-                // The previous pass multiplied several tiny gains
-                // (~0.2 tint * 0.3 power * 0.37 diffuse * 0.6 grain),
-                // leaving only a few 8-bit values: invisible in Game View.
-                // Increase the physical wood response but compress highlights
-                // to prevent the previous overbright blue rectangle.
-                float diffusePass=woodMask*1.48+lipMask*.48;
-                float keyboardPass=keyMask*.11;
-                float3 reflected=_ScreenBounceTint.rgb*
+                // V6 diffuse: restrained, wide reflected LCD emission.
+                // Wood grain remains photographic, never globally graded.
+                float diffusePass=woodMask*1.13+lipMask*.32;
+                float keyboardPass=keyMask*.075;
+                float3 diffuseLight=_ScreenBounceTint.rgb*
                     (diffusePass*grainResponse+keyboardPass)*strength;
-                // Soft photographic shoulder: preserves hue and changes with
-                // actual YOMI luminance, while no RGB channel exceeds 0.145.
-                float3 bounced=.145*(1.0-exp(-reflected/.145));
+
+                // A second, narrower response reacts ONLY to actual bright
+                // YOMI pixels. The premade radial blur already acts as a
+                // localized bloom kernel (no camera post-processing or UI
+                // blur of the original photograph).
+                float bloomPower=saturate(_ScreenBloomAmount)*_BloomGain;
+                float specPower=saturate(_ScreenSpecAmount)*_SpecularGain;
+                float halo=bloomMasks.r*noiseBreakup*bloomPower;
+                float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
+                    noiseBreakup*specPower;
+                float3 opticalLight=_ScreenBounceTint.rgb*night*
+                    saturate(_ScreenGlow)*(halo*.95+spec*1.04);
+                // Filmic photographic shoulder, no clipped cyan panel.
+                float3 bounced=diffuseLight+opticalLight;
+                bounced=.235*(1.0-exp(-bounced/.235));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

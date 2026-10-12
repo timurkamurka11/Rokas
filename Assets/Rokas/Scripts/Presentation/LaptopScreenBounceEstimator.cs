@@ -12,19 +12,28 @@ namespace Rokas.Presentation
     /// </summary>
     public sealed class LaptopScreenBounceEstimator : IDisposable
     {
-        private const int SampleSize = 16;
+        private const int SampleWidth = 32;
+        private const int SampleHeight = 18;
         private const float SampleInterval = .25f;
+        public const float BloomThreshold = .58f;
+        public const float BloomSoftKnee = .22f;
         private RenderTexture sampleTarget;
         private AsyncGPUReadbackRequest pendingRead;
         private bool readPending;
         private float sinceSample = SampleInterval;
         private float targetAmount = .34f;
+        private float targetBloom = .12f;
+        private float targetSpecular = .16f;
         private Color targetTint = new Color(.18f, .21f, .24f, 1f);
         private float intensity;
+        private float bloom;
+        private float specular;
         private Color tint = new Color(.18f, .21f, .24f, 1f);
         private bool disposed;
 
         public float Intensity => intensity;
+        public float Bloom => bloom;
+        public float Specular => specular;
         public Color Tint => tint;
 
         // Exposed as a pure mapping for focused EditMode tests.
@@ -43,6 +52,33 @@ namespace Rokas.Presentation
             amount = Mathf.Clamp(.26f + luma * 1.35f, .26f, .90f);
         }
 
+
+        /// <summary>
+        /// A soft-knee bright-pass using luminance of sampled YOMI pixels.
+        /// Dark content yields zero bloom; sharp white UI highlights are
+        /// compressed so the desktop does not flare like a flashlight.
+        /// </summary>
+        public static float BrightPass(float luma)
+        {
+            luma = Mathf.Clamp01(luma);
+            float lo = BloomThreshold - BloomSoftKnee * .5f;
+            float hi = BloomThreshold + BloomSoftKnee * .5f;
+            float t = Mathf.Clamp01((luma - lo) / (hi - lo));
+            float soft = t * t * (3f - 2f * t);
+            float hard = Mathf.Max(0f,
+                (luma - BloomThreshold) / (1f - BloomThreshold));
+            return Mathf.Clamp01(soft * .45f + hard * .55f);
+        }
+
+        public static void EvaluateHighlightResponse(float averageBrightness,
+            float highlightEnergy, out float bloomAmount, out float specAmount)
+        {
+            float energy = Mathf.Clamp01(highlightEnergy);
+            float luminance = Mathf.Clamp01(averageBrightness);
+            bloomAmount = Mathf.Clamp01(energy * 3.2f);
+            specAmount = Mathf.Clamp01(energy * 2.0f + luminance * .32f);
+        }
+
         public void Tick(Texture source, bool powered, float deltaTime)
         {
             if (disposed) return;
@@ -56,16 +92,29 @@ namespace Rokas.Presentation
                     if (pixels.Length > 0)
                     {
                         float r = 0f, g = 0f, b = 0f;
+                        float lumaSum = 0f;
+                        float highlightSum = 0f;
                         for (int i = 0; i < pixels.Length; i++)
                         {
                             r += pixels[i].r;
                             g += pixels[i].g;
                             b += pixels[i].b;
+                            float linearR = pixels[i].r / 255f;
+                            float linearG = pixels[i].g / 255f;
+                            float linearB = pixels[i].b / 255f;
+                            float luma = .2126f * linearR +
+                                .7152f * linearG + .0722f * linearB;
+                            lumaSum += luma;
+                            highlightSum += BrightPass(luma);
                         }
                         float inv = 1f / (255f * pixels.Length);
                         EvaluateMeanScreenColor(
                             new Color(r * inv, g * inv, b * inv, 1f),
                             out targetTint, out targetAmount);
+                        EvaluateHighlightResponse(
+                            lumaSum / pixels.Length,
+                            highlightSum / pixels.Length,
+                            out targetBloom, out targetSpecular);
                     }
                 }
             }
@@ -76,10 +125,10 @@ namespace Rokas.Presentation
             {
                 if (!sampleTarget)
                 {
-                    sampleTarget = new RenderTexture(SampleSize, SampleSize, 0,
+                    sampleTarget = new RenderTexture(SampleWidth, SampleHeight, 0,
                         RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
                     {
-                        name = "ROKAS YOMI Screen Bounce 16x16",
+                        name = "ROKAS YOMI Screen Bloom 32x18",
                         filterMode = FilterMode.Bilinear,
                         wrapMode = TextureWrapMode.Clamp
                     };
@@ -95,6 +144,8 @@ namespace Rokas.Presentation
             float ease = 1f - Mathf.Exp(-dt / .28f);
             float required = powered ? targetAmount : 0f;
             intensity = Mathf.Lerp(intensity, required, ease);
+            bloom = Mathf.Lerp(bloom, powered ? targetBloom : 0f, ease);
+            specular = Mathf.Lerp(specular, powered ? targetSpecular : 0f, ease);
             tint = Color.Lerp(tint, targetTint, ease);
             if (Mathf.Abs(intensity - required) < .0005f) intensity = required;
         }
@@ -118,6 +169,8 @@ namespace Rokas.Presentation
                 sampleTarget = null;
             }
             intensity = 0f;
+            bloom = 0f;
+            specular = 0f;
         }
     }
 }
