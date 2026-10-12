@@ -118,14 +118,26 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             }
             float LaptopDeskGlow(float2 p)
             {
-                // The LCD never receives this extra tint. Projected emission
-                // reaches the keyboard/tabletop below the laptop screen only.
-                float belowScreen=smoothstep(675.0,720.0,p.y);
-                float keyboard=.52*SoftEllipse(p,float2(838,748),float2(330,96));
-                float nearbyWood=.95*SoftEllipse(p,float2(842,870),float2(500,205));
-                float leftDesk=.34*SoftEllipse(p,float2(560,805),float2(235,118));
-                float rightDesk=.34*SoftEllipse(p,float2(1110,805),float2(235,118));
-                return saturate((keyboard+nearbyWood+leftDesk+rightDesk)*belowScreen);
+                // Light from the powered LCD lands on the REAL wood in front
+                // of the laptop, not on the aluminum palm rest or LCD glass.
+                // The front lip follows the photographed trapezoid: lower
+                // (closer to camera) near the centre than at either corner.
+                float horizontal=saturate(1.0-abs(p.x-837.0)/345.0);
+                float frontLipY=811.0+22.0*horizontal;
+                float laptopX=smoothstep(510.0,541.0,p.x)*
+                    (1.0-smoothstep(1120.0,1152.0,p.x));
+                float woodOnly=1.0-laptopX*
+                    (1.0-smoothstep(frontLipY-1.0,frontLipY+12.0,p.y));
+
+                // Two imperfect, overlapping reflections, confined to the
+                // polished tabletop. No uniform cyan spotlight or blue laptop.
+                float diffuse=.82*SoftEllipse(
+                    p,float2(832.0,851.0),float2(410.0,154.0));
+                float contact=.25*SoftEllipse(
+                    p,float2(825.0,833.0),float2(310.0,53.0));
+                float aroundLaptop=smoothstep(520.0,590.0,p.x)*
+                    (1.0-smoothstep(1100.0,1210.0,p.x));
+                return saturate((diffuse+contact)*woodOnly*aroundLaptop);
             }
 
             fixed4 frag(v2f i) : SV_Target
@@ -157,12 +169,19 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float practicalSpill=hallwayOn*(1.0-roomOn)*corridorSpill;
                 resultColor+=max(onPhoto.rgb-offPhoto.rgb,0)*practicalSpill;
 
-                // Real laptop power independent from both room light switches.
-                // Nighttime cyan/blue illumination is intentionally subtle;
-                // stronger with room practicals OFF, and limited to the desk.
-                float power=saturate(_ScreenGlow);
-                float darkness=lerp(1.18,.35,roomOn);
-                resultColor+=float3(.09,.18,.31)*(.88*power*darkness*screenSpill);
+                // Extra reflection only when the physical screen is ON and
+                // room practicals are OFF. Room ON or laptop OFF yields zero
+                // tint, exactly (no residual daytime blue). As room lights
+                // fade on, the bounce fades quickly rather than lingering.
+                float nightFactor=saturate(1.0-roomOn);
+                nightFactor=nightFactor*nightFactor*nightFactor;
+                float bounce=saturate(_ScreenGlow)*nightFactor*screenSpill;
+
+                // Preserve the warm wood texture. Use desaturated slate-blue
+                // reflected light, stronger on existing natural highlights.
+                float baseLuma=dot(resultColor,float3(.2126,.7152,.0722));
+                float surfaceResponse=saturate(.70+.35*baseLuma);
+                resultColor+=float3(.070,.090,.125)*(bounce*surfaceResponse);
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }
