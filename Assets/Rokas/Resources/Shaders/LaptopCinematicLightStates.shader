@@ -187,17 +187,22 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 night=night*night*night;
                 float strength=saturate(_ScreenGlow)*
                     saturate(_ScreenBounceAmount)*night;
-                float grainResponse=saturate(.52+
-                    .72*dot(resultColor,float3(.2126,.7152,.0722)));
+                float grainResponse=saturate(.68+
+                    .58*dot(resultColor,float3(.2126,.7152,.0722)));
                 // V6 diffuse: restrained, wide reflected LCD emission.
                 // Wood grain remains photographic, never globally graded.
                 // Actual YOMI left/right bright regions steer the specular
                 // reflection across the tabletop, never the laptop housing.
                 float lateral=saturate((p.x-490.0)/690.0);
                 float sideWeight=1.0+_ScreenBounceSide*(lateral*2.0-1.0);
-                float diffusePass=(woodMask*1.76+lipMask*.54)*sideWeight;
-                float keyboardPass=keyMask*.10;
-                float3 diffuseLight=_ScreenBounceTint.rgb*
+                float diffusePass=(woodMask*2.22+lipMask*.83)*sideWeight;
+                float keyboardPass=keyMask*.12;
+                // Richer cool illumination, sourced from the real sampled
+                // LCD frame. Keep wood grain and surface-level masking;
+                // no flat translucent blue rectangle on top of the photo.
+                float3 screenHue=saturate(_ScreenBounceTint.rgb*
+                    float3(.91,1.12,1.29));
+                float3 diffuseLight=screenHue*
                     (diffusePass*grainResponse+keyboardPass)*strength;
 
                 // A second, narrower response reacts ONLY to actual bright
@@ -209,12 +214,12 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float halo=bloomMasks.r*noiseBreakup*bloomPower;
                 float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
                     noiseBreakup*specPower*sideWeight;
-                float3 opticalLight=_ScreenBounceTint.rgb*night*
-                    saturate(_ScreenGlow)*(halo*1.68+spec*1.76);
-                // Brighter scene-aware screen reflection, with a filmic
-                // shoulder and exact room/laptop-off safety gates.
+                float3 opticalLight=screenHue*night*
+                    saturate(_ScreenGlow)*(halo*2.18+spec*2.52);
+                // V8 cyan/blue desk response: dynamic YOMI, masked surfaces,
+                // filmic shoulder and hard power/room-light safety gates.
                 float3 bounced=diffuseLight+opticalLight;
-                bounced=.375*(1.0-exp(-bounced/.375));
+                bounced=.56*(1.0-exp(-bounced/.56));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

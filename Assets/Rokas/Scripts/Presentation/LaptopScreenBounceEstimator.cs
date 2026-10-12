@@ -47,12 +47,15 @@ namespace Rokas.Presentation
             float g = Mathf.Clamp01(mean.g);
             float b = Mathf.Clamp01(mean.b);
             float luma = .2126f * r + .7152f * g + .0722f * b;
-            // Secondary bounce: colors are neutralized rather than copied
-            // onto the wood as an emissive screen-shaped neon rectangle.
-            reflected = Color.Lerp(new Color(.20f, .21f, .22f, 1f),
-                new Color(r, g, b, 1f), .36f);
-            reflected.a = 1f;
-            amount = Mathf.Clamp(.31f + luma * 1.55f, .31f, .96f);
+            // Cinematic but LCD-driven: retain the pixel-average YOMI
+            // chromatic response, while lifting underexposed cold blue light
+            // that was almost invisible in the photographed night scene.
+            // The panel must still drive hue, strength and left/right movement.
+            reflected = new Color(
+                Mathf.Clamp01(.07f + .28f * r),
+                Mathf.Clamp01(.27f + .80f * g),
+                Mathf.Clamp01(.62f + .71f * b), 1f);
+            amount = Mathf.Clamp(.43f + luma * 1.75f, .43f, .96f);
         }
 
 
@@ -78,8 +81,8 @@ namespace Rokas.Presentation
         {
             float energy = Mathf.Clamp01(highlightEnergy);
             float luminance = Mathf.Clamp01(averageBrightness);
-            bloomAmount = Mathf.Clamp01(energy * 4.1f + luminance * .10f);
-            specAmount = Mathf.Clamp01(energy * 2.8f + luminance * .40f);
+            bloomAmount = Mathf.Clamp01(energy * 5.0f + luminance * .16f);
+            specAmount = Mathf.Clamp01(energy * 3.8f + luminance * .48f);
         }
 
 
