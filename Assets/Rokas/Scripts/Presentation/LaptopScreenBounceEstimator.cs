@@ -49,7 +49,7 @@ namespace Rokas.Presentation
             reflected = Color.Lerp(new Color(.20f, .21f, .22f, 1f),
                 new Color(r, g, b, 1f), .36f);
             reflected.a = 1f;
-            amount = Mathf.Clamp(.26f + luma * 1.35f, .26f, .90f);
+            amount = Mathf.Clamp(.31f + luma * 1.55f, .31f, .96f);
         }
 
 
@@ -75,8 +75,8 @@ namespace Rokas.Presentation
         {
             float energy = Mathf.Clamp01(highlightEnergy);
             float luminance = Mathf.Clamp01(averageBrightness);
-            bloomAmount = Mathf.Clamp01(energy * 3.2f);
-            specAmount = Mathf.Clamp01(energy * 2.0f + luminance * .32f);
+            bloomAmount = Mathf.Clamp01(energy * 4.1f + luminance * .10f);
+            specAmount = Mathf.Clamp01(energy * 2.8f + luminance * .40f);
         }
 
         public void Tick(Texture source, bool powered, float deltaTime)

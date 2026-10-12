@@ -23,6 +23,15 @@ namespace Rokas.Presentation
             CompletedBoots++;
         }
 
+        /// <summary>Switch OFF the physical laptop for this running session.
+        /// Completed boot count is preserved; next press boots normally.</summary>
+        public static bool Shutdown()
+        {
+            if (!PoweredOn) return false;
+            PoweredOn = false;
+            return true;
+        }
+
         public static void ResetForTests()
         {
             PoweredOn = false;

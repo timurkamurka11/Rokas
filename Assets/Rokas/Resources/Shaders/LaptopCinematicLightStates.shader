@@ -189,8 +189,8 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     .72*dot(resultColor,float3(.2126,.7152,.0722)));
                 // V6 diffuse: restrained, wide reflected LCD emission.
                 // Wood grain remains photographic, never globally graded.
-                float diffusePass=woodMask*1.13+lipMask*.32;
-                float keyboardPass=keyMask*.075;
+                float diffusePass=woodMask*1.50+lipMask*.45;
+                float keyboardPass=keyMask*.10;
                 float3 diffuseLight=_ScreenBounceTint.rgb*
                     (diffusePass*grainResponse+keyboardPass)*strength;
 
@@ -204,10 +204,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
                     noiseBreakup*specPower;
                 float3 opticalLight=_ScreenBounceTint.rgb*night*
-                    saturate(_ScreenGlow)*(halo*.95+spec*1.04);
-                // Filmic photographic shoulder, no clipped cyan panel.
+                    saturate(_ScreenGlow)*(halo*1.30+spec*1.34);
+                // Brighter scene-aware screen reflection, with a filmic
+                // shoulder and exact room/laptop-off safety gates.
                 float3 bounced=diffuseLight+opticalLight;
-                bounced=.235*(1.0-exp(-bounced/.235));
+                bounced=.30*(1.0-exp(-bounced/.30));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

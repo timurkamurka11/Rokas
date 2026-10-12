@@ -267,8 +267,8 @@ namespace Rokas.Tests
                 new Color(.75f,.82f,.89f,1f),
                 out Color brightTint,out float brightAmount);
             Assert.That(brightAmount,Is.GreaterThan(darkAmount));
-            Assert.That(brightAmount,Is.LessThanOrEqualTo(.90f));
-            Assert.That(darkAmount,Is.GreaterThanOrEqualTo(.26f));
+            Assert.That(brightAmount,Is.LessThanOrEqualTo(.96f));
+            Assert.That(darkAmount,Is.GreaterThanOrEqualTo(.31f));
             Assert.That(darkTint.r,Is.GreaterThan(.07f),
                 "Reflection tint is desaturated/neutralized, not raw UI RGB.");
             Assert.That(brightTint.b,Is.GreaterThan(darkTint.b));

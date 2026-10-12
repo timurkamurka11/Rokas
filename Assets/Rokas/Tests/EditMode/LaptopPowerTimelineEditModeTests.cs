@@ -39,6 +39,27 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void ShutdownIsIdempotentAndPreservesBootHistory()
+        {
+            LaptopPowerSession.ResetForTests();
+            try
+            {
+                Assert.That(LaptopPowerSession.Shutdown(), Is.False);
+                LaptopPowerSession.CompleteFirstBoot();
+                Assert.That(LaptopPowerSession.PoweredOn, Is.True);
+                int prior = LaptopPowerSession.CompletedBoots;
+                Assert.That(LaptopPowerSession.Shutdown(), Is.True);
+                Assert.That(LaptopPowerSession.Shutdown(), Is.False);
+                Assert.That(LaptopPowerSession.PoweredOn, Is.False);
+                Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(prior));
+                LaptopPowerSession.CompleteFirstBoot();
+                Assert.That(LaptopPowerSession.PoweredOn, Is.True);
+                Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(prior + 1));
+            }
+            finally { LaptopPowerSession.ResetForTests(); }
+        }
+
+        [Test]
         public void WakeStagesNeverRunBeforePhysicalContact()
         {
             Assert.That(LaptopPowerTimeline.StageAt(3.09f),

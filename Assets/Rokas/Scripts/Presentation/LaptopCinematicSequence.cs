@@ -223,6 +223,7 @@ namespace Rokas.Presentation
         private const float HandsEnd = 3.84f;
         private const float FinishTime = 3.92f;
         private const float ReturnDuration = .84f;
+        private const float ShutdownHandReturn = .58f;
 
         // Move every gold UI action 50 stage pixels down from V11.6:
         // OFF E / ESC / arrow and ON R / E / ESC share this single offset.
@@ -261,6 +262,7 @@ namespace Rokas.Presentation
         private int shownFrame = -1;
         private bool active;
         private bool powerConfirmed;
+        private bool shutdownRequested;
         private bool returnRequested;
         private bool returningFromLaptop;
         private bool pendingVisualHandoff;
@@ -272,7 +274,10 @@ namespace Rokas.Presentation
         private RawImage backHintArt;
         private Button onScreenBack;
         private Button poweredStandButton;
+        private Button shutdownButton;
+        private RectTransform shutdownRoot;
         private RectTransform powerGlowRoot;
+        private RectTransform greenPowerGlowRoot;
         private Text noSignalText;
         private RectTransform noSignalScreen;
         private RawImage physicalMiniYomiImage;
@@ -381,6 +386,7 @@ namespace Rokas.Presentation
                 pendingVisualHandoff = false;
                 active = true;
                 powerConfirmed = false;
+                shutdownRequested = false;
                 returnRequested = false;
                 returningFromLaptop = true;
                 startingFirstBoot = false;
@@ -448,6 +454,7 @@ namespace Rokas.Presentation
             {
                 powerTimeline = new LaptopPowerTimeline();
                 powerConfirmed = false;
+                shutdownRequested = false;
                 returnRequested = false;
                 returningFromLaptop = resumeFromLaptop;
                 startingFirstBoot = !LaptopPowerSession.PoweredOn;
@@ -651,6 +658,14 @@ namespace Rokas.Presentation
                 new Color(.13f, .58f, 1f, .24f));
             ui.Box(powerGlowRoot, "KeyLED", 15f, 15f, 6f, 6f,
                 new Color(.24f, .72f, 1f, .85f));
+            greenPowerGlowRoot = ui.Rect(povRoot, "PowerKeyGreenActive",
+                keyX - 18f, keyY - 18f, 36f, 36f);
+            ui.Box(greenPowerGlowRoot, "GreenHalo", 0f, 0f, 36f, 36f,
+                new Color(.05f, .62f, .20f, .06f));
+            ui.Box(greenPowerGlowRoot, "GreenInner", 11f, 11f, 14f, 14f,
+                new Color(.14f, .86f, .30f, .22f));
+            ui.Box(greenPowerGlowRoot, "GreenLED", 15f, 15f, 6f, 6f,
+                new Color(.36f, 1f, .53f, .98f));
 
             // UI hit target over the calibrated physical Power key, not a fake
             // full-screen confirmation button. E remains the primary shortcut.
@@ -659,7 +674,11 @@ namespace Rokas.Presentation
             target.color = new Color(0f, 0f, 0f, .002f);
             var button = hit.gameObject.AddComponent<Button>();
             button.transition = Selectable.Transition.None;
-            button.onClick.AddListener(() => TryPressPower());
+            button.onClick.AddListener(() =>
+            {
+                if (LaptopPowerSession.PoweredOn) TryShutdownLaptop();
+                else TryPressPower();
+            });
 
             float centerX = (calibration.topLeftX + calibration.topRightX
                 + calibration.bottomLeftX + calibration.bottomRightX) * .25f;
@@ -776,7 +795,7 @@ namespace Rokas.Presentation
             if (exitArt)
             {
                 float w = 460f;
-                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1110f, 920f,
+                backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1007f, 920f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
                 AddGoldEmissionBoost(backHintArt, exitArt);
@@ -788,7 +807,7 @@ namespace Rokas.Presentation
             }
             else
                 backHint = ui.Label(povRoot, "BackChoiceHint", "ESC  —  НАЗАД",
-                    1080f, 955f + GoldPromptDrop, 320f, 44f, 20,
+                    1007f, 955f + GoldPromptDrop, 320f, 44f, 20,
                     new Color(.8f, .85f, .9f, .88f));
             if (arrowArt)
             {
@@ -815,14 +834,14 @@ namespace Rokas.Presentation
             // to open YOMI as agreed (ESC also stands up).
             if (standArt)
             {
-                const float standWidth = 438f;
+                const float standWidth = 402f;
                 // The prior approved V11.6 R lower edge was 1045.
                 // User explicitly requested ALL gold controls 50px lower,
                 // so R moves by the SAME amount as E and ESC.
                 float standHeight = standWidth * (float)standArt.height / standArt.width;
                 float approvedStandLowerEdge = PreviouslyApprovedStandBottom + GoldPromptDrop;
                 var standImage = ui.Art(povRoot, "PoweredStandOriginalPNG",
-                    standArt, 92f, approvedStandLowerEdge - standHeight,
+                    standArt, 82f, approvedStandLowerEdge - standHeight,
                     standWidth, standHeight);
                 standImage.color = Color.white;
                 AddGoldEmissionBoost(standImage, standArt);
@@ -839,11 +858,11 @@ namespace Rokas.Presentation
             Texture2D openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open_yomi");
             if (!openArt)
                 openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open");
-            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 540f, 900f, 560f, 190f);
+            poweredOpenRoot = ui.Rect(povRoot, "PoweredLaptopOpenHint", 482f, 900f, 515f, 190f);
             if (openArt)
             {
                 var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
-                    openArt, 0f, 0f, 560f, 560f * openArt.height / openArt.width);
+                    openArt, 0f, 0f, 515f, 515f * openArt.height / openArt.width);
                 openImage.color = Color.white;
                 AddGoldEmissionBoost(openImage, openArt);
                 openImage.raycastTarget = true;
@@ -865,9 +884,58 @@ namespace Rokas.Presentation
                 openButton.onClick.AddListener(() => TryPressPower());
                 poweredOpenRoot.gameObject.AddComponent<LaptopChoiceHover>();
                 poweredOpenHint = ui.Label(poweredOpenRoot, "OpenYomiGoldText",
-                    "E — ОТКРЫТЬ YOMI", 18f, 25f, 520f, 72f, 26,
+                    "E — ОТКРЫТЬ YOMI", 18f, 25f, 480f, 72f, 26,
                     new Color(1f, .91f, .70f, 1f), false, TextAnchor.MiddleCenter);
             }
+
+            Texture2D shutdownArt = Resources.Load<Texture2D>(
+                "LaptopCinematic/UI/prompt_shutdown");
+            shutdownRoot = ui.Rect(povRoot, "PoweredShutdownHint",
+                1420f, 895f, 470f, 185f);
+            if (shutdownArt)
+            {
+                RawImage art = ui.Art(shutdownRoot, "GoldShutdownArtwork",
+                    shutdownArt, 0f, 0f, 470f,
+                    470f * shutdownArt.height / shutdownArt.width);
+                art.raycastTarget = true;
+                AddGoldEmissionBoost(art, shutdownArt);
+                shutdownButton = art.gameObject.AddComponent<Button>();
+                shutdownButton.targetGraphic = art;
+            }
+            else
+            {
+                RectTransform halo = ui.Rect(shutdownRoot, "GoldShutdownHalo",
+                    5f, 51f, 460f, 84f);
+                var gold = halo.gameObject.AddComponent<LaptopSurface>();
+                gold.Radius = 29f;
+                gold.color = new Color(1f, .50f, .09f, .25f);
+                gold.raycastTarget = false;
+                RectTransform border = ui.Rect(shutdownRoot, "GoldShutdownRim",
+                    12f, 57f, 446f, 73f);
+                var rim = border.gameObject.AddComponent<LaptopSurface>();
+                rim.Radius = 27f;
+                rim.color = new Color(1f, .69f, .18f, .96f);
+                rim.raycastTarget = false;
+                RectTransform inner = ui.Rect(shutdownRoot, "GoldShutdownInset",
+                    16f, 61f, 438f, 65f);
+                var fill = inner.gameObject.AddComponent<LaptopSurface>();
+                fill.Radius = 24f;
+                fill.color = new Color(.12f, .055f, .015f, .98f);
+                fill.raycastTarget = false;
+                Text label = ui.Label(shutdownRoot, "GoldShutdownText",
+                    "Q — ВЫКЛЮЧИТЬ НОУТБУК", 20f, 70f, 430f, 48f, 24,
+                    new Color(1f, .90f, .67f, 1f), false,
+                    TextAnchor.MiddleCenter);
+                label.raycastTarget = false;
+                var hit = shutdownRoot.gameObject.AddComponent<LaptopSurface>();
+                hit.Radius = 27f;
+                hit.color = new Color(.9f, .5f, .1f, .002f);
+                shutdownButton = shutdownRoot.gameObject.AddComponent<Button>();
+                shutdownButton.targetGraphic = hit;
+            }
+            shutdownButton.transition = Selectable.Transition.None;
+            shutdownButton.onClick.AddListener(() => TryShutdownLaptop());
+            shutdownRoot.gameObject.AddComponent<LaptopChoiceHover>();
             // R — ВСТАТЬ defines the alignment after the shared 50px
             // drop. Unlike uniform graphic
             // rectangles, the supplied transparent PNGs have unequal alpha
@@ -889,6 +957,9 @@ namespace Rokas.Presentation
             if (poweredOpenRoot) PlaceGoldPromptOnBaseline(poweredOpenRoot,
                 referenceBottom + openOpticalDown,
                 poweredOpenRoot.GetComponentInChildren<RawImage>(true));
+            if (shutdownRoot) PlaceGoldPromptOnBaseline(shutdownRoot,
+                referenceBottom + backOpticalDown,
+                shutdownRoot.GetComponentInChildren<RawImage>(true));
             // Keep the existing R position unchanged; do NOT re-baseline it.
             SetPromptVisibility(false);
         }
@@ -974,53 +1045,120 @@ namespace Rokas.Presentation
                 }
             }
             if (!active) yield break;
-            RenderAt(HandsStart);
-            CurrentPhase = Phase.PreBootChoice;
-            SetPromptVisibility(true);
-            while (active && !powerConfirmed && !returnRequested)
+            // Remain seated through shutdown; do not invoke fullscreen YOMI.
+            while (active)
             {
                 RenderAt(HandsStart);
-                if (LaptopPowerSession.PoweredOn && desktopClock)
-                    desktopClock.UpdateClockIfNecessary();
-                yield return null;
-            }
-            if (!active) yield break;
-            if (returnRequested)
-            {
-                // Keep the original buttons and powered screen rendered during
-                // the return animation; they inherit the easing POV fade,
-                // instead of abruptly disappearing on the R/Esc input.
-                CurrentPhase = Phase.CancelBack;
-                float exitElapsed = 0f;
-                while (active && exitElapsed < ReturnDuration)
+                CurrentPhase = Phase.PreBootChoice;
+                SetPromptVisibility(true);
+                while (active && !powerConfirmed && !returnRequested &&
+                    !shutdownRequested)
                 {
-                    // Gently reverse the camera blend; never start LaptopBoot.
-                    float progress = Mathf.Clamp01(exitElapsed / ReturnDuration);
-                    float smooth = progress * progress * progress *
-                        (progress * (progress * 6f - 15f) + 10f);
-                    RenderAt(Mathf.Lerp(HandsStart, 0f, smooth));
-                    CurrentPhase = Phase.CancelBack;
+                    RenderAt(HandsStart);
+                    if (LaptopPowerSession.PoweredOn && desktopClock)
+                        desktopClock.UpdateClockIfNecessary();
                     yield return null;
-                    exitElapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+                }
+                if (!active) yield break;
+                if (shutdownRequested)
+                {
+                    yield return PlayShutdownHand();
+                    if (!active) yield break;
+                    shutdownRequested = false;
+                    powerConfirmed = false;
+                    CurrentPhase = Phase.PreBootChoice;
+                    SetPromptVisibility(true);
+                    continue;
+                }
+                if (returnRequested)
+                {
+                    CurrentPhase = Phase.CancelBack;
+                    float exitElapsed = 0f;
+                    while (active && exitElapsed < ReturnDuration)
+                    {
+                        float progress = Mathf.Clamp01(exitElapsed / ReturnDuration);
+                        float smooth = progress * progress * progress *
+                            (progress * (progress * 6f - 15f) + 10f);
+                        RenderAt(Mathf.Lerp(HandsStart, 0f, smooth));
+                        CurrentPhase = Phase.CancelBack;
+                        yield return null;
+                        exitElapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
+                    }
+                    running = null;
+                    if (active) Finish(false);
+                    yield break;
+                }
+                elapsed = HandsStart;
+                while (active && elapsed < FinishTime)
+                {
+                    RenderAt(elapsed);
+                    if (powerTimeline != null && powerTimeline.Advance(elapsed))
+                        powerClick?.Invoke();
+                    yield return null;
+                    elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
                 }
                 running = null;
-                if (active) Finish(false);
+                if (active) Finish(true);
                 yield break;
             }
+        }
 
-            // User confirmed E/Power. Timeline keeps contact and one click
-            // frame-rate-independent; press animation begins only now.
-            elapsed = HandsStart;
-            while (active && elapsed < FinishTime)
+        private IEnumerator PlayShutdownHand()
+        {
+            if (!LaptopPowerSession.PoweredOn) yield break;
+            CurrentPhase = Phase.HandsInteraction;
+            SetPromptVisibility(false, false);
+            float elapsed = HandsStart;
+            while (active && elapsed < LaptopPowerTimeline.ContactTime)
             {
-                RenderAt(elapsed);
-                if (powerTimeline != null && powerTimeline.Advance(elapsed))
-                    powerClick?.Invoke();
+                RenderHandFrame(elapsed, true);
                 yield return null;
                 elapsed += Mathf.Min(Time.unscaledDeltaTime, .06f);
             }
-            running = null;
-            if (active) Finish(true);
+            if (!active) yield break;
+            RenderHandFrame(LaptopPowerTimeline.ContactTime, true);
+            powerClick?.Invoke();  // existing calibrated one-click SFX
+            LaptopPowerSession.Shutdown();
+            powerTimeline = new LaptopPowerTimeline();
+            startingFirstBoot = true;
+            if (wake)
+            {
+                Color tint = wake.color;
+                tint.a = .042f;
+                wake.color = tint;
+            }
+            SetPromptVisibility(true, false); // existing jumping chibi returns
+            float retreat = 0f;
+            while (active && retreat < ShutdownHandReturn)
+            {
+                float eased = Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(retreat / ShutdownHandReturn));
+                RenderHandFrame(Mathf.Lerp(LaptopPowerTimeline.ContactTime,
+                    HandsStart, eased), true);
+                yield return null;
+                retreat += Mathf.Min(Time.unscaledDeltaTime, .06f);
+            }
+            RenderHandFrame(HandsStart, false);
+            shownFrame = -1;
+        }
+
+        private void RenderHandFrame(float t, bool visible)
+        {
+            if (!handsImage) return;
+            handsImage.gameObject.SetActive(visible);
+            if (!visible || frames == null || frames.Length == 0 ||
+                manifest == null) return;
+            int index = Mathf.Clamp(
+                Mathf.FloorToInt((t - HandsStart) * manifest.fps), 0, frames.Length - 1);
+            if (index == shownFrame) return;
+            HandFrame frame = manifest.frames[index];
+            handsImage.texture = frames[index];
+            RectTransform r = handsImage.rectTransform;
+            r.anchoredPosition = new Vector2(
+                imageX + frame.x * imageScale,
+                -(imageY + frame.y * imageScale));
+            r.sizeDelta = new Vector2(frame.w * imageScale, frame.h * imageScale);
+            shownFrame = index;
         }
 
         private void KeepPoweredLCDReady()
@@ -1044,6 +1182,10 @@ namespace Rokas.Presentation
             if (poweredStandButton) poweredStandButton.gameObject.SetActive(show && powered);
             if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(!powered && !returnRequested &&
                 (show || (powerConfirmed && CurrentPhase != Phase.PowerOn && CurrentPhase != Phase.UIOpen)));
+            if (greenPowerGlowRoot) greenPowerGlowRoot.gameObject.SetActive(powered &&
+                (show || shutdownRequested || CurrentPhase == Phase.Approach ||
+                 CurrentPhase == Phase.POVTransition));
+            if (shutdownRoot) shutdownRoot.gameObject.SetActive(show && powered);
             if (noSignalScreen) noSignalScreen.gameObject.SetActive(show && !powered);
             if (noSignalText && noSignalScreen && noSignalScreen.gameObject.activeSelf)
                 noSignalText.gameObject.SetActive(noSignalBounce == null);
@@ -1051,7 +1193,7 @@ namespace Rokas.Presentation
                 physicalMiniYomiViewport.gameObject.SetActive(powered &&
                     (show || returnRequested || returningFromLaptop ||
                      (!powerConfirmed && (CurrentPhase == Phase.Approach ||
-                                           CurrentPhase == Phase.POVTransition))));
+                                           CurrentPhase == Phase.POVTransition)) || shutdownRequested));
             if (show && powered && LaptopYomiMirror.Current) RefreshExactYomiMirror();
             bool lcdVisible = physicalMiniYomiViewport && physicalMiniYomiViewport.gameObject.activeSelf;
             if (poweredWallpaper) poweredWallpaper.gameObject.SetActive(lcdVisible && !LaptopYomiMirror.Current);
@@ -1077,6 +1219,14 @@ namespace Rokas.Presentation
                 SetPromptVisibility(false);
                 Finish(true);
             }
+            return true;
+        }
+
+        public bool TryShutdownLaptop()
+        {
+            if (!IsAwaitingPowerChoice || !LaptopPowerSession.PoweredOn ||
+                powerConfirmed || returnRequested || shutdownRequested) return false;
+            shutdownRequested = true;
             return true;
         }
 
@@ -1140,23 +1290,7 @@ namespace Rokas.Presentation
                      (powerConfirmed && t < LaptopPowerTimeline.ContactTime)));
 
             bool showHands = powerConfirmed && t >= HandsStart && t <= HandsEnd;
-            handsImage.gameObject.SetActive(showHands);
-            if (showHands)
-            {
-                int index = Mathf.Clamp(
-                    Mathf.FloorToInt((t - HandsStart) * manifest.fps),
-                    0, frames.Length - 1);
-                if (index != shownFrame)
-                {
-                    HandFrame frame = manifest.frames[index];
-                    handsImage.texture = frames[index];
-                    RectTransform r = handsImage.rectTransform;
-                    r.anchoredPosition = new Vector2(
-                        imageX + frame.x * imageScale, -(imageY + frame.y * imageScale));
-                    r.sizeDelta = new Vector2(frame.w * imageScale, frame.h * imageScale);
-                    shownFrame = index;
-                }
-            }
+            RenderHandFrame(t, showHands);
             if (wake)
             {
                 Color tint = wake.color;
@@ -1263,6 +1397,10 @@ namespace Rokas.Presentation
             returningFromLaptop = false;
             powerHint = null;
             backHint = null;
+            shutdownRequested = false;
+            shutdownButton = null;
+            shutdownRoot = null;
+            greenPowerGlowRoot = null;
             poweredWallpaper = null;
             desktopClock = null;
             poweredDesktopClick = null;

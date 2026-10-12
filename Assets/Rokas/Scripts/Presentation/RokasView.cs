@@ -735,6 +735,8 @@ namespace Rokas.Presentation
                 // Never let R reach unrelated scene input while seated.
                 if (LaptopPowerSession.PoweredOn && Input.GetKeyDown(KeyCode.R))
                     laptopCinematic.BackToRoom();
+                else if (LaptopPowerSession.PoweredOn && Input.GetKeyDown(KeyCode.Q))
+                    laptopCinematic.TryShutdownLaptop();
                 else if (Input.GetKeyDown(KeyCode.E))
                     laptopCinematic.TryPressPower();
             }
