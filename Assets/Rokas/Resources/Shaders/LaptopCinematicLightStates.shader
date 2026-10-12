@@ -8,6 +8,9 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
         _RoomLightOn ("Main room light", Range(0,1)) = 0
         _HallwayLightOn ("Hallway light", Range(0,1)) = 0
         _ScreenGlow ("Physical laptop screen emission", Range(0,1)) = 0
+        [NoScaleOffset] _BounceMasksTex ("V5 RGBA: wood, keys, lip, metal", 2D) = "black" {}
+        _ScreenBounceTint ("Actual YOMI bounce tint", Color) = (.2,.21,.22,1)
+        _ScreenBounceAmount ("Actual YOMI bounce intensity", Range(0,1)) = 0
         [HideInInspector] _OffPhotoReady ("OFF reference installed", Float) = 0
         _MaskDebug ("Show zone mask (diagnostic only)", Range(0,1)) = 0
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -45,6 +48,9 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
             float _RoomLightOn;
             float _HallwayLightOn;
             float _ScreenGlow;
+            sampler2D _BounceMasksTex;
+            float4 _ScreenBounceTint;
+            float _ScreenBounceAmount;
             float _OffPhotoReady;
             float _MaskDebug;
 
@@ -116,30 +122,6 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float sill=.22*SoftEllipse(p,float2(401,476),float2(93,36));
                 return saturate((jamb+sill)*(1.0-door));
             }
-            float LaptopDeskGlow(float2 p)
-            {
-                // Light from the powered LCD lands on the REAL wood in front
-                // of the laptop, not on the aluminum palm rest or LCD glass.
-                // The front lip follows the photographed trapezoid: lower
-                // (closer to camera) near the centre than at either corner.
-                float horizontal=saturate(1.0-abs(p.x-837.0)/345.0);
-                float frontLipY=811.0+22.0*horizontal;
-                float laptopX=smoothstep(510.0,541.0,p.x)*
-                    (1.0-smoothstep(1120.0,1152.0,p.x));
-                float woodOnly=1.0-laptopX*
-                    (1.0-smoothstep(frontLipY-1.0,frontLipY+12.0,p.y));
-
-                // Two imperfect, overlapping reflections, confined to the
-                // polished tabletop. No uniform cyan spotlight or blue laptop.
-                float diffuse=.82*SoftEllipse(
-                    p,float2(832.0,851.0),float2(410.0,154.0));
-                float contact=.25*SoftEllipse(
-                    p,float2(825.0,833.0),float2(310.0,53.0));
-                float aroundLaptop=smoothstep(520.0,590.0,p.x)*
-                    (1.0-smoothstep(1100.0,1210.0,p.x));
-                return saturate((diffuse+contact)*woodOnly*aroundLaptop);
-            }
-
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed4 onPhoto=tex2D(_MainTex,i.uv);
@@ -148,13 +130,19 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float hallwayMask=DoorwayPolygon(p);
                 float roomMask=1.0-hallwayMask;
                 float corridorSpill=ThresholdSpill(p,hallwayMask);
-                float screenSpill=LaptopDeskGlow(p);
+                // Packed material-specific light passes are generated from
+                // the exact 1672x941 POV geometry (no generic radial glow).
+                float4 mask=tex2D(_BounceMasksTex,i.uv);
+                float woodMask=mask.r*(1.0-mask.a);
+                float keyMask=mask.g;
+                float lipMask=mask.b*(1.0-mask.a);
 
                 if (_MaskDebug>.5)
                 {
                     // Blue room, green corridor, red practical spill, cyan desk glow.
                     float3 zone=lerp(float3(.08,.15,.58),float3(.12,.83,.18),hallwayMask);
-                    zone+=float3(corridorSpill,.0,.0)+float3(0,.22,.36)*screenSpill;
+                    zone+=float3(corridorSpill,.0,.0)+
+                        float3(0,.22,.36)*saturate(woodMask+lipMask+keyMask);
                     return fixed4(saturate(zone),1)*i.color;
                 }
 
@@ -169,19 +157,22 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float practicalSpill=hallwayOn*(1.0-roomOn)*corridorSpill;
                 resultColor+=max(onPhoto.rgb-offPhoto.rgb,0)*practicalSpill;
 
-                // Extra reflection only when the physical screen is ON and
-                // room practicals are OFF. Room ON or laptop OFF yields zero
-                // tint, exactly (no residual daytime blue). As room lights
-                // fade on, the bounce fades quickly rather than lingering.
-                float nightFactor=saturate(1.0-roomOn);
-                nightFactor=nightFactor*nightFactor*nightFactor;
-                float bounce=saturate(_ScreenGlow)*nightFactor*screenSpill;
-
-                // Preserve the warm wood texture. Use desaturated slate-blue
-                // reflected light, stronger on existing natural highlights.
-                float baseLuma=dot(resultColor,float3(.2126,.7152,.0722));
-                float surfaceResponse=saturate(.70+.35*baseLuma);
-                resultColor+=float3(.070,.090,.125)*(bounce*surfaceResponse);
+                // V5 Hybrid Cinematic Lighting: measured YOMI screen color
+                // modulates distinct light passes painted for the wood,
+                // thin tabletop lip and a *tiny* keyboard response.
+                // This is reflected illumination, not an emissive UI overlay.
+                // Zero bounce when the room light is fully ON or LCD is OFF.
+                float night=saturate(1.0-roomOn);
+                night=night*night*night;
+                float strength=saturate(_ScreenGlow)*
+                    saturate(_ScreenBounceAmount)*night;
+                float grainResponse=saturate(.52+
+                    .72*dot(resultColor,float3(.2126,.7152,.0722)));
+                float diffusePass=woodMask*.37+lipMask*.19;
+                float keyboardPass=keyMask*.07;
+                float3 bounced=_ScreenBounceTint.rgb*
+                    (diffusePass*grainResponse+keyboardPass);
+                resultColor+=bounced*strength;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }

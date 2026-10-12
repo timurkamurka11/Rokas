@@ -20,6 +20,10 @@ namespace Rokas.Presentation
         private static readonly int RoomProperty = Shader.PropertyToID("_RoomLightOn");
         private static readonly int HallProperty = Shader.PropertyToID("_HallwayLightOn");
         private static readonly int ScreenProperty = Shader.PropertyToID("_ScreenGlow");
+        private static readonly int BounceTintProperty = Shader.PropertyToID("_ScreenBounceTint");
+        private static readonly int BounceAmountProperty = Shader.PropertyToID("_ScreenBounceAmount");
+        private static readonly int PackedMaskProperty = Shader.PropertyToID("_BounceMasksTex");
+        public const string MaskResource = "LaptopCinematic/LightMasks/HybridScreenBounceMasks";
 
         private readonly Func<bool> roomLight;
         private readonly Func<bool> hallwayLight;
@@ -27,6 +31,9 @@ namespace Rokas.Presentation
         private Material material;
         private RawImage background;
         private Texture2D offPhoto;
+        private Texture2D packedMasks;
+        private Color bounceTint = new Color(.20f, .22f, .25f, 1f);
+        private float bounceAmount;
         private float roomValue;
         private float hallValue;
         private float screenValue;
@@ -89,10 +96,27 @@ namespace Rokas.Presentation
             };
             material.SetTexture(OffTexProperty, offPhoto);
             material.SetFloat(OffReadyProperty, 1f);
+            packedMasks = Resources.Load<Texture2D>(MaskResource);
+            if (packedMasks)
+                material.SetTexture(PackedMaskProperty, packedMasks);
+            else
+                Debug.LogError("ROKAS hybrid laptop lighting: missing packed photo-aligned " +
+                    "RGBA masks at Resources/" + MaskResource +
+                    ". Room/corridor lighting remains active; screen bounce disabled.");
             background = source;
             Snap();
             background.material = material;
             background.SetMaterialDirty();
+        }
+
+        /// <summary>Color and strength estimated from the real powered LCD.
+        /// Kept separate from both physical lamp switches.</summary>
+        public void SetScreenBounce(Color color, float intensity)
+        {
+            bounceTint = new Color(Mathf.Clamp01(color.r), Mathf.Clamp01(color.g),
+                Mathf.Clamp01(color.b), 1f);
+            bounceAmount = Mathf.Clamp01(intensity);
+            WriteMaterial();
         }
 
         public void Snap()
@@ -128,6 +152,9 @@ namespace Rokas.Presentation
             material.SetFloat(RoomProperty, roomValue);
             material.SetFloat(HallProperty, hallValue);
             material.SetFloat(ScreenProperty, screenValue);
+            material.SetColor(BounceTintProperty, bounceTint);
+            material.SetFloat(BounceAmountProperty,
+                packedMasks ? bounceAmount : 0f);
         }
 
         public void Dispose()
@@ -145,6 +172,8 @@ namespace Rokas.Presentation
             material = null;
             background = null;
             offPhoto = null;
+            packedMasks = null;
+            bounceAmount = 0f;
         }
     }
 }

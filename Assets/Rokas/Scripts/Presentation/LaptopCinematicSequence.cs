@@ -243,6 +243,8 @@ namespace Rokas.Presentation
         private readonly Texture yomiWallpaper;
         private readonly Action bounceSound;
         private readonly LaptopCinematicLightPresentation lighting;
+        private readonly LaptopScreenBounceEstimator screenBounce =
+            new LaptopScreenBounceEstimator();
 
         private HandManifest manifest;
         private Texture2D[] frames;
@@ -292,7 +294,14 @@ namespace Rokas.Presentation
         /// Updates the same photograph instead of creating a second scene.</summary>
         public void UpdateLighting(float deltaTime)
         {
-            if (root) lighting?.Tick(deltaTime);
+            if (!root) return;
+            // This is the same YOMI screenshot used by the physical LCD,
+            // not a second generated imitation of the desktop.
+            Texture source = LaptopYomiMirror.Current
+                ? (Texture)LaptopYomiMirror.Current : yomiWallpaper;
+            screenBounce.Tick(source, LaptopPowerSession.PoweredOn, deltaTime);
+            lighting?.SetScreenBounce(screenBounce.Tint, screenBounce.Intensity);
+            lighting?.Tick(deltaTime);
         }
         public bool HasPendingVisualHandoff => pendingVisualHandoff;
         // The previous approved POV stays drawn until the first REAL YOMI
@@ -1227,6 +1236,7 @@ namespace Rokas.Presentation
         private void Cleanup()
         {
             lighting?.Dispose();
+            screenBounce.Dispose();
             updateRoomCamera?.Invoke(0f);
             pendingVisualHandoff = false;
             standbyHeldForFirstBoot = false;

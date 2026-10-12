@@ -40,6 +40,9 @@ namespace Rokas.Tests
                 Assert.That(material.HasProperty("_RoomLightOn"), Is.True);
                 Assert.That(material.HasProperty("_HallwayLightOn"), Is.True);
                 Assert.That(material.HasProperty("_ScreenGlow"), Is.True);
+                Assert.That(material.HasProperty("_ScreenBounceTint"), Is.True);
+                Assert.That(material.HasProperty("_ScreenBounceAmount"), Is.True);
+                Assert.That(material.HasProperty("_BounceMasksTex"), Is.True);
                 Assert.That(material.HasProperty("_OffTex"), Is.True);
                 Assert.That(material.HasProperty("_OffPhotoReady"), Is.True);
                 Assert.That(material.HasProperty("_MaskDebug"), Is.True);
@@ -201,6 +204,57 @@ namespace Rokas.Tests
                 presenter.Dispose();
                 DestroyBackground(root);
             }
+        }
+
+
+        [Test]
+        public void HybridMaterialLoadsPackedSurfaceMasksAndReceivesScreenColor()
+        {
+            GameObject root=CreateBackground(out RawImage image);
+            var presenter=new LaptopCinematicLightPresentation(
+                () => false, () => false, () => true);
+            try
+            {
+                Texture2D masks=Resources.Load<Texture2D>(
+                    LaptopCinematicLightPresentation.MaskResource);
+                Assert.That(masks,Is.Not.Null,
+                    "V5 RGBA mask texture must be committed in the Resources folder.");
+                Assert.That(masks.width,Is.EqualTo(256));
+                Assert.That(masks.height,Is.EqualTo(144));
+                presenter.Bind(image);
+                Assert.That(presenter.Material,Is.Not.Null);
+                Assert.That(presenter.Material.GetTexture("_BounceMasksTex"),
+                    Is.SameAs(masks));
+                Color expected=new Color(.22f,.30f,.37f,1f);
+                presenter.SetScreenBounce(expected,.65f);
+                Assert.That(presenter.Material.GetFloat("_ScreenBounceAmount"),
+                    Is.EqualTo(.65f).Within(.0001f));
+                Color actual=presenter.Material.GetColor("_ScreenBounceTint");
+                Assert.That(actual.r,Is.EqualTo(expected.r).Within(.0001f));
+                Assert.That(actual.g,Is.EqualTo(expected.g).Within(.0001f));
+                Assert.That(actual.b,Is.EqualTo(expected.b).Within(.0001f));
+            }
+            finally
+            {
+                presenter.Dispose();
+                DestroyBackground(root);
+            }
+        }
+
+        [Test]
+        public void DynamicBounceTracksBrightnessWithoutNeonColorCopy()
+        {
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.07f,.12f,.18f,1f),
+                out Color darkTint,out float darkAmount);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.75f,.82f,.89f,1f),
+                out Color brightTint,out float brightAmount);
+            Assert.That(brightAmount,Is.GreaterThan(darkAmount));
+            Assert.That(brightAmount,Is.LessThanOrEqualTo(.88f));
+            Assert.That(darkTint.r,Is.GreaterThan(.07f),
+                "Reflection tint is desaturated/neutralized, not raw UI RGB.");
+            Assert.That(brightTint.b,Is.GreaterThan(darkTint.b));
         }
 
         [Test]
