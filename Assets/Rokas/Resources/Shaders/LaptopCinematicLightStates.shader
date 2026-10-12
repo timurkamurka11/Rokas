@@ -84,18 +84,18 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 // The cabinet interrupts the left jamb at y≈296. A single
                 // convex half-plane test was wrong for this CONCAVE outline;
                 // represent it as a union of TWO convex aligned masks instead.
-                const float2 upperA=float2(293,-6);
+                const float2 upperA=float2(290,-6);
                 const float2 upperB=float2(383,-6);
                 const float2 upperC=float2(393,296);
-                const float2 upperD=float2(293,296);
+                const float2 upperD=float2(290,296);
                 float upper=min(
                     min(SignedEdge(upperA,upperB,p),SignedEdge(upperB,upperC,p)),
                     min(SignedEdge(upperC,upperD,p),SignedEdge(upperD,upperA,p)));
 
-                const float2 lowerA=float2(325,296);
+                const float2 lowerA=float2(321,296);
                 const float2 lowerB=float2(393,296);
                 const float2 lowerC=float2(400,469);
-                const float2 lowerD=float2(329,489);
+                const float2 lowerD=float2(324,489);
                 float lower=min(
                     min(SignedEdge(lowerA,lowerB,p),SignedEdge(lowerB,lowerC,p)),
                     min(SignedEdge(lowerC,lowerD,p),SignedEdge(lowerD,lowerA,p)));
@@ -162,7 +162,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 // stronger with room practicals OFF, and limited to the desk.
                 float power=saturate(_ScreenGlow);
                 float darkness=lerp(1.0,.24,roomOn);
-                resultColor+=float3(.072,.15,.255)*(.40*power*darkness*screenSpill);
+                resultColor+=float3(.072,.15,.255)*(.52*power*darkness*screenSpill);
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }
