@@ -927,11 +927,11 @@ namespace Rokas.Presentation
                     new Color(1f, .90f, .67f, 1f), false,
                     TextAnchor.MiddleCenter);
                 label.raycastTarget = false;
-                var hit = shutdownRoot.gameObject.AddComponent<LaptopSurface>();
-                hit.Radius = 27f;
-                hit.color = new Color(.9f, .5f, .1f, .002f);
+                var shutdownHitSurface = shutdownRoot.gameObject.AddComponent<LaptopSurface>();
+                shutdownHitSurface.Radius = 27f;
+                shutdownHitSurface.color = new Color(.9f, .5f, .1f, .002f);
                 shutdownButton = shutdownRoot.gameObject.AddComponent<Button>();
-                shutdownButton.targetGraphic = hit;
+                shutdownButton.targetGraphic = shutdownHitSurface;
             }
             shutdownButton.transition = Selectable.Transition.None;
             shutdownButton.onClick.AddListener(() => TryShutdownLaptop());
