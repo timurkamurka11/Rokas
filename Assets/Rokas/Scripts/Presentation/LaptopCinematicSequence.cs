@@ -243,7 +243,7 @@ namespace Rokas.Presentation
         private readonly Texture yomiWallpaper;
         private readonly Action bounceSound;
         private readonly LaptopCinematicLightPresentation lighting;
-        private readonly LaptopScreenBounceEstimator screenBounce =
+        private LaptopScreenBounceEstimator screenBounce =
             new LaptopScreenBounceEstimator();
 
         private HandManifest manifest;
@@ -1237,6 +1237,9 @@ namespace Rokas.Presentation
         {
             lighting?.Dispose();
             screenBounce.Dispose();
+            // This sequence object survives standing up and sitting back down.
+            // A fresh estimator is required after disposing its GPU readback RT.
+            screenBounce = new LaptopScreenBounceEstimator();
             updateRoomCamera?.Invoke(0f);
             pendingVisualHandoff = false;
             standbyHeldForFirstBoot = false;
