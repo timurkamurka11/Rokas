@@ -195,7 +195,7 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 // reflection across the tabletop, never the laptop housing.
                 float lateral=saturate((p.x-490.0)/690.0);
                 float sideWeight=1.0+_ScreenBounceSide*(lateral*2.0-1.0);
-                float diffusePass=(woodMask*1.66+lipMask*.48)*sideWeight;
+                float diffusePass=(woodMask*1.76+lipMask*.54)*sideWeight;
                 float keyboardPass=keyMask*.10;
                 float3 diffuseLight=_ScreenBounceTint.rgb*
                     (diffusePass*grainResponse+keyboardPass)*strength;
@@ -210,11 +210,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
                     noiseBreakup*specPower*sideWeight;
                 float3 opticalLight=_ScreenBounceTint.rgb*night*
-                    saturate(_ScreenGlow)*(halo*1.47+spec*1.55);
+                    saturate(_ScreenGlow)*(halo*1.68+spec*1.76);
                 // Brighter scene-aware screen reflection, with a filmic
                 // shoulder and exact room/laptop-off safety gates.
                 float3 bounced=diffuseLight+opticalLight;
-                bounced=.345*(1.0-exp(-bounced/.345));
+                bounced=.375*(1.0-exp(-bounced/.375));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

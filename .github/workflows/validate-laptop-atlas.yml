@@ -1,0 +1,32 @@
+name: Validate ROKAS user artwork atlas
+on:
+  push:
+    paths:
+      - 'Assets/Rokas/Resources/LaptopCinematic/UI/power_control_atlas.png'
+      - '.github/workflows/validate-laptop-atlas.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PNG signatures and CRC
+        shell: python
+        run: |
+          import pathlib,struct,zlib
+          p=pathlib.Path('Assets/Rokas/Resources/LaptopCinematic/UI/power_control_atlas.png').read_bytes()
+          assert p[:8]==b'\x89PNG\r\n\x1a\n'
+          off=8
+          chunks=[]
+          while off<len(p):
+              n=struct.unpack('>I',p[off:off+4])[0]
+              name=p[off+4:off+8]
+              raw=p[off+8:off+8+n]
+              crc=struct.unpack('>I',p[off+8+n:off+12+n])[0]
+              assert zlib.crc32(name+raw)==crc,(name,off,'bad CRC')
+              chunks.append((name,raw))
+              off+=n+12
+          assert off==len(p), 'trailing data'
+          w,h=struct.unpack('>II',chunks[0][1][:8])
+          assert (w,h)==(470,224)
+          zlib.decompress(b''.join(data for name,data in chunks if name==b'IDAT'))
+          print('PNG OK',w,h,len(p))

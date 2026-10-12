@@ -823,7 +823,7 @@ namespace Rokas.Presentation
                     new Color(.8f, .85f, .9f, .88f));
             if (exitArt)
             {
-                float w = 460f;
+                float w = 410f;
                 backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt, 1007f, 920f,
                     w, w * (float)exitArt.height / exitArt.width);
                 backHintArt.color = Color.white;
@@ -905,14 +905,16 @@ namespace Rokas.Presentation
                 Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_shutdown");
             if (!shutdownArt)
                 Debug.LogWarning("ROKAS V7.1: supplied Q shutdown artwork missing; using gold fallback.");
+            // No overlap: R 82..484, E 482..997, ESC 1007..1417,
+            // Q 1430..1880. Match all optical baselines.
             shutdownRoot = ui.Rect(povRoot, "PoweredShutdownHint",
-                1420f, 895f, 470f, 185f);
+                1430f, 895f, 450f, 185f);
             if (shutdownArt)
             {
                 RawImage art = ui.Art(shutdownRoot, "GoldShutdownArtwork",
-                    shutdownArt, 0f, 0f, 470f,
-                    powerAtlas ? 152f :
-                        470f * shutdownArt.height / shutdownArt.width);
+                    shutdownArt, 0f, 0f, 450f,
+                    powerAtlas ? 450f * 152f / 470f :
+                        450f * shutdownArt.height / shutdownArt.width);
                 if (powerAtlas)
                     art.uvRect = new Rect(0f, 72f / 224f, 1f, 152f / 224f);
                 art.raycastTarget = true;

@@ -14,7 +14,7 @@ namespace Rokas.Presentation
     {
         private const int SampleWidth = 48;
         private const int SampleHeight = 27;
-        private const float SampleInterval = .14f;
+        private const float SampleInterval = .12f;
         public const float BloomThreshold = .58f;
         public const float BloomSoftKnee = .22f;
         private RenderTexture sampleTarget;
@@ -160,7 +160,7 @@ namespace Rokas.Presentation
                 sinceSample = 0f;
             }
 
-            float ease = 1f - Mathf.Exp(-dt / .20f);
+            float ease = 1f - Mathf.Exp(-dt / .16f);
             float required = powered ? targetAmount : 0f;
             intensity = Mathf.Lerp(intensity, required, ease);
             bloom = Mathf.Lerp(bloom, powered ? targetBloom : 0f, ease);
