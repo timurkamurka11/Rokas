@@ -18,7 +18,7 @@ namespace Rokas.Presentation
         private AsyncGPUReadbackRequest pendingRead;
         private bool readPending;
         private float sinceSample = SampleInterval;
-        private float targetAmount = .27f;
+        private float targetAmount = .34f;
         private Color targetTint = new Color(.18f, .21f, .24f, 1f);
         private float intensity;
         private Color tint = new Color(.18f, .21f, .24f, 1f);
@@ -40,7 +40,7 @@ namespace Rokas.Presentation
             reflected = Color.Lerp(new Color(.20f, .21f, .22f, 1f),
                 new Color(r, g, b, 1f), .36f);
             reflected.a = 1f;
-            amount = Mathf.Clamp(.15f + luma * 1.20f, .16f, .88f);
+            amount = Mathf.Clamp(.26f + luma * 1.35f, .26f, .90f);
         }
 
         public void Tick(Texture source, bool powered, float deltaTime)

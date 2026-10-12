@@ -29,3 +29,7 @@ The previous GitHub Unity workflow failed on separate `ReactiveCombatArena.cs`
 references to `CombatShotBounds` and `CombatShotBoundsProjection`. Those
 combat files have intentionally not been modified by this light pass.
 A passing visual Unity Game View inspection is still required before calling this final.
+
+## V5.1 visible-reflection correction
+
+Screenshot after initial V5 showed no visually perceptible change even after the successful BAT merge. Root causes identified from actual source: extremely low compounded shader coefficients (below visible 8-bit contrast) and a photo importer that forced the packed data texture to sRGB. V5.1 uses a linear texture import for LightMasks, stronger wood-only reflection and a photographic shoulder capped at 0.145 per RGB channel. OFF laptop / lit room still gives exact zero. Existing OFF/ON room and hallway photo blending is untouched. In Unity, if the packed mask was previously imported as sRGB, right-click HybridScreenBounceMasks.png and Reimport after updating the Editor script.

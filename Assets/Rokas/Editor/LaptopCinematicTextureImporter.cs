@@ -20,7 +20,13 @@ namespace Rokas.Editor
             importer.mipmapEnabled = false;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.crunchedCompression = false;
-            importer.sRGBTexture = true;
+            // Packed lighting masks encode four linear *data* channels,
+            // not photographic RGB. Importing them as sRGB destroys the
+            // calibrated response and makes the weak bounce even weaker.
+            bool isLightMask = assetPath.IndexOf("/LightMasks/",
+                StringComparison.OrdinalIgnoreCase) >= 0;
+            importer.sRGBTexture = !isLightMask;
+            if (isLightMask) importer.alphaIsTransparency = false;
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.filterMode = FilterMode.Bilinear;
             if (assetPath.IndexOf("/HandsRight/", StringComparison.OrdinalIgnoreCase) >= 0 ||

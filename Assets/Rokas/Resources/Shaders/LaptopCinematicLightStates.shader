@@ -168,11 +168,19 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                     saturate(_ScreenBounceAmount)*night;
                 float grainResponse=saturate(.52+
                     .72*dot(resultColor,float3(.2126,.7152,.0722)));
-                float diffusePass=woodMask*.37+lipMask*.19;
-                float keyboardPass=keyMask*.07;
-                float3 bounced=_ScreenBounceTint.rgb*
-                    (diffusePass*grainResponse+keyboardPass);
-                resultColor+=bounced*strength;
+                // The previous pass multiplied several tiny gains
+                // (~0.2 tint * 0.3 power * 0.37 diffuse * 0.6 grain),
+                // leaving only a few 8-bit values: invisible in Game View.
+                // Increase the physical wood response but compress highlights
+                // to prevent the previous overbright blue rectangle.
+                float diffusePass=woodMask*1.48+lipMask*.48;
+                float keyboardPass=keyMask*.11;
+                float3 reflected=_ScreenBounceTint.rgb*
+                    (diffusePass*grainResponse+keyboardPass)*strength;
+                // Soft photographic shoulder: preserves hue and changes with
+                // actual YOMI luminance, while no RGB channel exceeds 0.145.
+                float3 bounced=.145*(1.0-exp(-reflected/.145));
+                resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }
