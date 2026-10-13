@@ -59,7 +59,7 @@ jobs:
           assert 'float ShapeAlpha(float shape, float2 uv)' in shader
           assert shader.count('shape <') == 7
           assert 'smoothstep(.78,.98,r)' in shader
-          assert '4x2 atlas generator' in shader
+          assert '4x2 dust' in shader
           tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           assert 'V3StudioVisibilityControlsRemainBounded' in tests
           assert 'Assert.AreEqual(432, dust.ParticleBudget)' in tests
