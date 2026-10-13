@@ -272,6 +272,10 @@ namespace Rokas.Presentation
         private Text backHint;
         private RawImage powerHintArt;
         private RawImage backHintArt;
+        private RawImage poweredBackHintArt;
+        private Text poweredBackHint;
+        private RectTransform rightGoldRailPowered;
+        private RectTransform rightGoldRailStandby;
         private Button onScreenBack;
         private Button poweredStandButton;
         private Button shutdownButton;
@@ -823,11 +827,10 @@ namespace Rokas.Presentation
             noSignalScreen.gameObject.SetActive(false);
             physicalMiniYomiViewport.gameObject.SetActive(false);
             RefreshExactYomiMirror();
-            // V8: five supplied golden PNGs, preserving their actual
-            // photograph/alpha, not procedural substitute text or reskins.
-            // Layout follows the approved OFF/ON reference: ESC top-right,
-            // E bottom center (OFF), R/E/Q one bottom row (ON).
-            const float bottomOpticalLine = 1044f;
+            // V8.1: both visual power states match the user's TWO
+            // 1672x941 screenshot references, mapped to 1920x1080 stage.
+            // OFF: E, ESC stacked on the right. ON: R, E, Q, ESC there.
+            // A narrow gold ornamental rail is next to (not over) buttons.
             Texture2D onArt = Resources.Load<Texture2D>(
                 "LaptopCinematic/UI/prompt_power_v8");
             if (!onArt)
@@ -845,9 +848,9 @@ namespace Rokas.Presentation
 
             if (onArt)
             {
-                const float width = 430f;
+                const float width = 396f;
                 powerHintArt = ui.Art(povRoot, "PowerChoiceHint", onArt,
-                    745f, 900f, width, width * (float)onArt.height / onArt.width);
+                    1446f, 254f, width, width * (float)onArt.height / onArt.width);
                 powerHintArt.color = Color.white;
                 AddGoldEmissionBoost(powerHintArt, onArt);
                 powerHintArt.raycastTarget = true;
@@ -856,21 +859,20 @@ namespace Rokas.Presentation
                 startButton.transition = Selectable.Transition.None;
                 startButton.onClick.AddListener(() => TryPressPower());
                 powerHintArt.gameObject.AddComponent<LaptopChoiceHover>();
-                PlaceGoldPromptOnBaseline(powerHintArt.rectTransform,
-                    bottomOpticalLine);
             }
             else
                 powerHint = ui.Label(povRoot, "PowerChoiceHint",
-                    "E — ВКЛЮЧИТЬ НОУТБУК", 755f, 984f, 410f, 50f,
+                    "E — ВКЛЮЧИТЬ НОУТБУК", 1450f, 272f, 384f, 58f,
                     23, new Color(1f, .83f, .53f, 1f));
 
             if (exitArt)
             {
-                const float width = 268f;
-                // ESC stays in the top-right, in BOTH computer states.
+                // Separate ESC rects avoid a positional jump on hover when
+                // changing power state. Both retain the same BackToRoom path.
+                const float width = 350f;
+                float height = width * (float)exitArt.height / exitArt.width;
                 backHintArt = ui.Art(povRoot, "BackChoiceHint", exitArt,
-                    1624f, 19f, width,
-                    width * (float)exitArt.height / exitArt.width);
+                    1490f, 385f, width, height);
                 backHintArt.color = Color.white;
                 AddGoldEmissionBoost(backHintArt, exitArt);
                 backHintArt.raycastTarget = true;
@@ -879,21 +881,37 @@ namespace Rokas.Presentation
                 leaveButton.transition = Selectable.Transition.None;
                 leaveButton.onClick.AddListener(() => BackToRoom());
                 backHintArt.gameObject.AddComponent<LaptopChoiceHover>();
+
+                poweredBackHintArt = ui.Art(povRoot, "PoweredBackChoiceHint",
+                    exitArt, 1490f, 531f, width, height);
+                poweredBackHintArt.color = Color.white;
+                AddGoldEmissionBoost(poweredBackHintArt, exitArt);
+                poweredBackHintArt.raycastTarget = true;
+                var leavePowered = poweredBackHintArt.gameObject.AddComponent<Button>();
+                leavePowered.targetGraphic = poweredBackHintArt;
+                leavePowered.transition = Selectable.Transition.None;
+                leavePowered.onClick.AddListener(() => BackToRoom());
+                poweredBackHintArt.gameObject.AddComponent<LaptopChoiceHover>();
             }
             else
+            {
                 backHint = ui.Label(povRoot, "BackChoiceHint",
-                    "ESC — НАЗАД", 1600f, 24f, 270f, 60f,
+                    "ESC — НАЗАД", 1500f, 402f, 320f, 54f,
                     22, new Color(1f, .83f, .53f, 1f));
+                poweredBackHint = ui.Label(povRoot, "PoweredBackChoiceHint",
+                    "ESC — НАЗАД", 1500f, 547f, 320f, 54f,
+                    22, new Color(1f, .83f, .53f, 1f));
+            }
 
             // Never reintroduce the obsolete standalone left-arrow.
             onScreenBack = null;
 
             if (standArt)
             {
-                const float width = 292f;
+                const float width = 355f;
                 float height = width * (float)standArt.height / standArt.width;
                 var standImage = ui.Art(povRoot, "PoweredStandOriginalPNG",
-                    standArt, 82f, bottomOpticalLine - height, width, height);
+                    standArt, 1480f, 181f, width, height);
                 standImage.color = Color.white;
                 AddGoldEmissionBoost(standImage, standArt);
                 standImage.raycastTarget = true;
@@ -911,12 +929,12 @@ namespace Rokas.Presentation
             if (!openArt)
                 openArt = Resources.Load<Texture2D>("LaptopCinematic/UI/prompt_open");
             poweredOpenRoot = ui.Rect(povRoot,
-                "PoweredLaptopOpenHint", 740f, 900f, 440f, 160f);
+                "PoweredLaptopOpenHint", 1452f, 287f, 390f, 118f);
             if (openArt)
             {
                 var openImage = ui.Art(poweredOpenRoot, "ExactGoldenOpenPrompt",
-                    openArt, 0f, 0f, 440f,
-                    440f * (float)openArt.height / openArt.width);
+                    openArt, 0f, 0f, 390f,
+                    390f * (float)openArt.height / openArt.width);
                 openImage.color = Color.white;
                 AddGoldEmissionBoost(openImage, openArt);
                 openImage.raycastTarget = true;
@@ -925,7 +943,6 @@ namespace Rokas.Presentation
                 openButton.transition = Selectable.Transition.None;
                 openButton.onClick.AddListener(() => TryPressPower());
                 openImage.gameObject.AddComponent<LaptopChoiceHover>();
-                PlaceGoldPromptOnBaseline(poweredOpenRoot, bottomOpticalLine, openImage);
             }
             else
             {
@@ -938,10 +955,10 @@ namespace Rokas.Presentation
                 openButton.onClick.AddListener(() => TryPressPower());
                 poweredOpenRoot.gameObject.AddComponent<LaptopChoiceHover>();
                 poweredOpenHint = ui.Label(poweredOpenRoot, "OpenYomiGoldText",
-                    "E — ОТКРЫТЬ НОУТБУК", 6f, 18f, 425f, 64f,
+                    "E — ОТКРЫТЬ НОУТБУК", 6f, 18f, 377f, 64f,
                     23, new Color(1f, .91f, .70f, 1f),
                     false, TextAnchor.MiddleCenter);
-                PlaceGoldPromptOnBaseline(poweredOpenRoot, bottomOpticalLine);
+                // The fallback uses the same right-hand vertical layout.
             }
 
             Texture2D shutdownArt = Resources.Load<Texture2D>(
@@ -956,13 +973,13 @@ namespace Rokas.Presentation
                 shutdownArt = Resources.Load<Texture2D>(
                     "LaptopCinematic/UI/prompt_shutdown");
             shutdownRoot = ui.Rect(povRoot,
-                "PoweredShutdownHint", 1446f, 900f, 402f, 156f);
+                "PoweredShutdownHint", 1490f, 419f, 353f, 105f);
             if (shutdownArt)
             {
                 RawImage art = ui.Art(shutdownRoot, "GoldShutdownArtwork",
-                    shutdownArt, 0f, 0f, 402f,
-                    shutdownUsesAtlas ? 402f * 152f / 470f :
-                        402f * (float)shutdownArt.height / shutdownArt.width);
+                    shutdownArt, 0f, 0f, 353f,
+                    shutdownUsesAtlas ? 353f * 152f / 470f :
+                        353f * (float)shutdownArt.height / shutdownArt.width);
                 if (shutdownUsesAtlas)
                     art.uvRect = new Rect(0f, 72f / 224f, 1f, 152f / 224f);
                 art.color = Color.white;
@@ -970,7 +987,7 @@ namespace Rokas.Presentation
                 AddGoldEmissionBoost(art, shutdownArt);
                 shutdownButton = art.gameObject.AddComponent<Button>();
                 shutdownButton.targetGraphic = art;
-                PlaceGoldPromptOnBaseline(shutdownRoot, bottomOpticalLine, art);
+                // Vertical stack; no horizontal-baseline reflow.
             }
             else
             {
@@ -981,25 +998,56 @@ namespace Rokas.Presentation
                 shutdownButton = shutdownRoot.gameObject.AddComponent<Button>();
                 shutdownButton.targetGraphic = hitSurface;
                 ui.Label(shutdownRoot, "GoldShutdownText",
-                    "Q — ВЫКЛЮЧИТЬ НОУТБУК", 12f, 28f, 378f, 66f,
+                    "Q — ВЫКЛЮЧИТЬ НОУТБУК", 12f, 16f, 331f, 62f,
                     22, new Color(1f, .90f, .67f, 1f),
                     false, TextAnchor.MiddleCenter);
-                PlaceGoldPromptOnBaseline(shutdownRoot, bottomOpticalLine);
+                // Match the approved right-side reference even without PNG.
             }
             shutdownButton.transition = Selectable.Transition.None;
             shutdownButton.onClick.AddListener(() => TryShutdownLaptop());
             shutdownRoot.gameObject.AddComponent<LaptopChoiceHover>();
+
+            // Same gold ornaments as the supplied screenshots: a delicate
+            // vertical gold/copper rule with two small hollow diamonds.
+            // Rail has no raycast and remains independent of key hover scale.
+            rightGoldRailPowered = AddGoldChoiceRail(povRoot,
+                "PoweredGoldChoiceRail", 1847f, 122f, 555f);
+            rightGoldRailStandby = AddGoldChoiceRail(povRoot,
+                "StandbyGoldChoiceRail", 1847f, 207f, 279f);
             SetPromptVisibility(false);
         }
 
-        private static void PlaceGoldPromptOnBaseline(RectTransform root,
-            float bottomLine, RawImage measuredImage = null)
+        private RectTransform AddGoldChoiceRail(Transform parent,
+            string name, float centerX, float top, float length)
         {
-            if (!root) return;
-            RectTransform source = measuredImage ? measuredImage.rectTransform : root;
-            float height = source.rect.height;
-            root.anchoredPosition = new Vector2(root.anchoredPosition.x,
-                -(bottomLine - height));
+            // Unity UI pixels, top-left authored; not a raycast target.
+            RectTransform rail = ui.Rect(parent, name,
+                centerX - 9f, top, 18f, length);
+            ui.Box(rail, "AmberAtmosphere", 5f, 5f, 8f,
+                length - 10f, new Color(1f, .45f, .025f, .055f));
+            ui.Box(rail, "CopperFilament", 8f, 5f, 2f,
+                length - 10f, new Color(.95f, .49f, .06f, .66f));
+            ui.Box(rail, "GoldEdge", 9f, 6f, 1f,
+                length - 12f, new Color(1f, .80f, .26f, .83f));
+            AddGoldRailDiamond(rail, "TopGoldDiamond", 4f);
+            AddGoldRailDiamond(rail, "BottomGoldDiamond", length - 4f);
+            return rail;
+        }
+
+        private void AddGoldRailDiamond(RectTransform rail,
+            string name, float centerY)
+        {
+            RectTransform diamond = ui.Rect(rail, name,
+                4f, centerY - 5f, 10f, 10f);
+            // Diamond centers are aligned to the slim filament x = 9.
+            diamond.pivot = new Vector2(.5f, .5f);
+            diamond.anchoredPosition = new Vector2(9f, -centerY);
+            diamond.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Image border = diamond.gameObject.AddComponent<Image>();
+            border.color = new Color(1f, .60f, .08f, .96f);
+            border.raycastTarget = false;
+            ui.Box(diamond, "HollowDiamond", 2f, 2f, 6f, 6f,
+                new Color(.17f, .085f, .022f, .93f));
         }
 
         private static void ConfigureRoundedLCD(LaptopPerspectiveQuad quad,
@@ -1204,9 +1252,13 @@ namespace Rokas.Presentation
         {
             bool powered = LaptopPowerSession.PoweredOn;
             if (powerHint) powerHint.gameObject.SetActive(show && !powered);
-            if (backHint) backHint.gameObject.SetActive(show);
+            if (backHint) backHint.gameObject.SetActive(show && !powered);
+            if (poweredBackHint) poweredBackHint.gameObject.SetActive(show && powered);
             if (powerHintArt) powerHintArt.gameObject.SetActive(show && !powered);
-            if (backHintArt) backHintArt.gameObject.SetActive(show);
+            if (backHintArt) backHintArt.gameObject.SetActive(show && !powered);
+            if (poweredBackHintArt) poweredBackHintArt.gameObject.SetActive(show && powered);
+            if (rightGoldRailStandby) rightGoldRailStandby.gameObject.SetActive(show && !powered);
+            if (rightGoldRailPowered) rightGoldRailPowered.gameObject.SetActive(show && powered);
             if (onScreenBack) onScreenBack.gameObject.SetActive(show && (!powered || !poweredStandButton));
             if (poweredStandButton) poweredStandButton.gameObject.SetActive(show && powered);
             if (powerGlowRoot) powerGlowRoot.gameObject.SetActive(!powered && !returnRequested &&
@@ -1426,6 +1478,10 @@ namespace Rokas.Presentation
             returningFromLaptop = false;
             powerHint = null;
             backHint = null;
+            poweredBackHint = null;
+            poweredBackHintArt = null;
+            rightGoldRailPowered = null;
+            rightGoldRailStandby = null;
             shutdownRequested = false;
             shutdownButton = null;
             shutdownRoot = null;

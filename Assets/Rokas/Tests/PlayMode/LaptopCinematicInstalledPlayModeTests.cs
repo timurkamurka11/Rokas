@@ -151,6 +151,66 @@ namespace Rokas.Tests
             Assert.That(LaptopPowerSession.CompletedBoots, Is.EqualTo(1));
         }
 
+        [UnityTest]
+        public IEnumerator V81VerticalGoldActionsAndDecorativeRailMatchBothPowerStates()
+        {
+            RokasBootstrap boot = Initialize("rokas-laptop-right-rail-v81-");
+            yield return null;
+            PressLaptop();
+            yield return new WaitForSecondsRealtime(2.05f);
+
+            var standbyE = Find<RawImage>("PowerChoiceHint");
+            var standbyEsc = Find<RawImage>("BackChoiceHint");
+            var standbyRail = Find<RectTransform>("StandbyGoldChoiceRail");
+            var poweredRail = Find<RectTransform>("PoweredGoldChoiceRail");
+            Assert.That(standbyE, Is.Not.Null);
+            Assert.That(standbyEsc, Is.Not.Null);
+            Assert.That(standbyRail, Is.Not.Null);
+            Assert.That(poweredRail, Is.Not.Null);
+            Assert.That(standbyE.gameObject.activeInHierarchy, Is.True);
+            Assert.That(standbyEsc.gameObject.activeInHierarchy, Is.True);
+            Assert.That(standbyRail.gameObject.activeInHierarchy, Is.True);
+            Assert.That(poweredRail.gameObject.activeInHierarchy, Is.False);
+            Assert.That(standbyE.rectTransform.anchoredPosition.x,
+                Is.GreaterThan(1400f));
+            Assert.That(standbyE.rectTransform.anchoredPosition.y,
+                Is.GreaterThan(standbyEsc.rectTransform.anchoredPosition.y),
+                "OFF: E must be above ESC in the right-hand menu.");
+            Assert.That(standbyRail.rect.width, Is.LessThan(24f));
+
+            Find<Button>("PowerKeyClickTarget").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.55f);
+            Assert.That(boot.View.LaptopOpen, Is.True);
+            LaptopPowerSession.CompleteFirstBoot();
+            boot.View.Escape();
+            yield return new WaitForSecondsRealtime(.9f);
+
+            var stand = Find<RectTransform>("PoweredStandOriginalPNG");
+            var open = Find<RectTransform>("PoweredLaptopOpenHint");
+            var shutdown = Find<RectTransform>("PoweredShutdownHint");
+            var poweredEsc = Find<RawImage>("PoweredBackChoiceHint");
+            Assert.That(stand, Is.Not.Null);
+            Assert.That(open, Is.Not.Null);
+            Assert.That(shutdown, Is.Not.Null);
+            Assert.That(poweredEsc, Is.Not.Null);
+            Assert.That(stand.gameObject.activeInHierarchy, Is.True);
+            Assert.That(open.gameObject.activeInHierarchy, Is.True);
+            Assert.That(shutdown.gameObject.activeInHierarchy, Is.True);
+            Assert.That(poweredEsc.gameObject.activeInHierarchy, Is.True);
+            Assert.That(poweredRail.gameObject.activeInHierarchy, Is.True);
+            Assert.That(standbyRail.gameObject.activeInHierarchy, Is.False);
+            Assert.That(standbyE.gameObject.activeInHierarchy, Is.False);
+            Assert.That(stand.anchoredPosition.x, Is.GreaterThan(1400f));
+            Assert.That(stand.anchoredPosition.y,
+                Is.GreaterThan(open.anchoredPosition.y));
+            Assert.That(open.anchoredPosition.y,
+                Is.GreaterThan(shutdown.anchoredPosition.y));
+            Assert.That(shutdown.anchoredPosition.y,
+                Is.GreaterThan(poweredEsc.rectTransform.anchoredPosition.y));
+            Assert.That(Find<RectTransform>("TopGoldDiamond"), Is.Not.Null);
+            Assert.That(Find<RectTransform>("BottomGoldDiamond"), Is.Not.Null);
+        }
+
         [UnityTearDown]
         public IEnumerator Cleanup()
         {
