@@ -58,7 +58,7 @@ jobs:
           assert 'visibilityGain = 1.70f' in graphic
           assert 'particleScale = 1.34f' in graphic
           assert 'float ShapeAlpha(float shape, float2 uv)' in shader
-          assert shader.count('shape <') == 7
+          assert shader.count('shape <') == 8
           assert 'smoothstep(.78,.98,r)' in shader
           assert 'pow(saturate(a*edge),.72)' in shader
           assert '4x2 dust' in shader
