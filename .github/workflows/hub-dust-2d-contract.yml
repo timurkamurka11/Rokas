@@ -37,7 +37,7 @@ jobs:
                         'public const int BokehCount = 4;','int order = (i * 73) % ParticleCount;',
                         '.08f, .92f','.12f, .88f','Mathf.Sqrt((float)rng.NextDouble())',
                         'flowSpeed = Mathf.Lerp(3f, 8f','Mathf.Min(flowSpeed * .85f',
-                        'visibilityMode == HubDustVisibilityMode.HighContrastBoost ? 2.5f',
+                        'HubDustVisibilityMode.HighContrastBoost ? 2.5f',
                         'V6_SUBTLE_WARM_ATMOSPHERE','meanAlpha=','maxAlpha=',
                         'DiagnosticTestPattern','WarmCore = new Color(1f, .82f, .52f)',
                         'WarmAmbient = new Color(.95f, .74f, .45f)',
