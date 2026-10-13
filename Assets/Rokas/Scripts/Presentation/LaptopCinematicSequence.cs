@@ -307,7 +307,9 @@ namespace Rokas.Presentation
             // This is the same YOMI screenshot used by the physical LCD,
             // not a second generated imitation of the desktop.
             Texture source = LaptopYomiMirror.Current
-                ? (Texture)LaptopYomiMirror.Current : yomiWallpaper;
+                ? (Texture)LaptopYomiMirror.Current
+                : (desktopClock && desktopClock.mainTexture
+                    ? desktopClock.mainTexture : yomiWallpaper);
             screenBounce.Tick(source, LaptopPowerSession.PoweredOn, deltaTime);
             lighting?.SetScreenBounce(screenBounce.Tint, screenBounce.Intensity,
                 screenBounce.Bloom, screenBounce.Specular, screenBounce.SideBias);
@@ -1196,6 +1198,9 @@ namespace Rokas.Presentation
             RenderHandFrame(LaptopPowerTimeline.ContactTime, true);
             powerClick?.Invoke();  // existing calibrated one-click SFX
             LaptopPowerSession.Shutdown();
+            screenBounce.Tick(null, false, 0f);
+            lighting?.SetScreenBounce(screenBounce.Tint, 0f, 0f, 0f, 0f);
+            lighting?.Snap();
             powerTimeline = new LaptopPowerTimeline();
             startingFirstBoot = true;
             if (wake)

@@ -310,6 +310,65 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void NeutralAndWarmScreenContentDoNotProduceArtificialBlueBias()
+        {
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.42f, .42f, .42f, 1f),
+                out Color neutralTint, out _);
+            Assert.That(neutralTint.b, Is.EqualTo(neutralTint.r).Within(.0001f),
+                "Neutral grey screen pixels must not be shifted into cyan/blue.");
+            Assert.That(neutralTint.g, Is.EqualTo(neutralTint.r).Within(.0001f));
+
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.72f, .48f, .22f, 1f),
+                out Color warmTint, out _);
+            Assert.That(warmTint.r, Is.GreaterThan(warmTint.g));
+            Assert.That(warmTint.g, Is.GreaterThan(warmTint.b));
+        }
+
+        [Test]
+        public void SurfaceAttenuationDecaysSmoothlyAndProtectsFrontTableEdge()
+        {
+            float nearLaptop = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 725f));
+            float midDesk = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 795f));
+            float frontEdge = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 910f));
+
+            Assert.That(nearLaptop, Is.GreaterThan(.90f));
+            Assert.That(midDesk, Is.LessThan(nearLaptop).And.GreaterThan(.35f));
+            Assert.That(frontEdge, Is.LessThan(.05f),
+                "Front desk edge must fade out instead of forming a bright blue band.");
+        }
+
+        [Test]
+        public void EstimatorTickRestoresActiveRenderTextureAndReleasesCleanly()
+        {
+            var externalActive = new RenderTexture(16, 16, 0);
+            externalActive.Create();
+            var sourceTex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            RenderTexture.active = externalActive;
+            var estimator = new LaptopScreenBounceEstimator();
+            try
+            {
+                estimator.Tick(sourceTex, true, .25f);
+                Assert.That(RenderTexture.active, Is.SameAs(externalActive),
+                    "Graphics.Blit inside Estimator.Tick must never leave sampleTarget as RenderTexture.active.");
+                estimator.Dispose();
+                Assert.That(RenderTexture.active, Is.SameAs(externalActive));
+            }
+            finally
+            {
+                RenderTexture.active = null;
+                estimator.Dispose();
+                Object.DestroyImmediate(sourceTex);
+                externalActive.Release();
+                Object.DestroyImmediate(externalActive);
+            }
+        }
+
+        [Test]
         public void DisposalClearsOnlyTheOwnedMaterial()
         {
             GameObject root = CreateBackground(out RawImage image);

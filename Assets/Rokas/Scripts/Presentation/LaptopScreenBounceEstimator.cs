@@ -46,13 +46,18 @@ namespace Rokas.Presentation
             float g = Mathf.Clamp01(mean.g);
             float b = Mathf.Clamp01(mean.b);
             float luma = .2126f * r + .7152f * g + .0722f * b;
-            // Neutral content must stay neutral; YOMI blue remains cool
-            // without a constant blue floor or excessive brightness.
+            // Preserve neutral balance and screen chroma without forcing an
+            // artificial blue floor onto dark screens or washing out wood.
+            const float desaturate = .22f;
+            float cr = Mathf.Lerp(r, luma, desaturate);
+            float cg = Mathf.Lerp(g, luma, desaturate);
+            float cb = Mathf.Lerp(b, luma, desaturate);
             reflected = new Color(
-                Mathf.Clamp01(.15f + .66f * r),
-                Mathf.Clamp01(.16f + .64f * g),
-                Mathf.Clamp01(.17f + .63f * b), 1f);
-            amount = Mathf.Clamp(.10f + luma, .10f, .70f);
+                Mathf.Clamp01(.06f + .82f * cr),
+                Mathf.Clamp01(.06f + .82f * cg),
+                Mathf.Clamp01(.06f + .82f * cb), 1f);
+            float curvedLuma = Mathf.Pow(Mathf.Clamp01(luma), 1.18f);
+            amount = Mathf.Clamp(.10f + curvedLuma * .74f, .10f, .82f);
         }
 
 
@@ -78,8 +83,9 @@ namespace Rokas.Presentation
         {
             float energy = Mathf.Clamp01(highlightEnergy);
             float luminance = Mathf.Clamp01(averageBrightness);
-            bloomAmount = Mathf.Clamp01(energy * 2.30f + luminance * .09f);
-            specAmount = Mathf.Clamp01(energy * 1.85f + luminance * .22f);
+            float compressedEnergy = 1f - Mathf.Exp(-energy * 2.4f);
+            bloomAmount = Mathf.Clamp01(compressedEnergy * .82f + luminance * luminance * .12f);
+            specAmount = Mathf.Clamp01(compressedEnergy * .88f + luminance * .16f);
         }
 
 
@@ -97,13 +103,14 @@ namespace Rokas.Presentation
         /// Center is just in front of the laptop, not at the table edge.</summary>
         public static float EvaluateSurfaceAttenuation(Vector2 p)
         {
-            float x = (p.x - 830f) / 505f;
-            float y = (p.y - 746f) / 216f;
+            float x = (p.x - 824f) / 460f;
+            float y = (p.y - 718f) / 175f;
             float d = x * x + y * y;
-            float t = Mathf.Clamp01((d - .10f) / 1.13f);
-            float radial = 1f - t * t * (3f - 2f * t);
-            float v = Mathf.Clamp01((p.y - 793f) / 142f);
-            float front = 1f - .73f * v * v * (3f - 2f * v);
+            float invSq = 1f / (1f + 2.35f * d);
+            float t = Mathf.Clamp01((d - .06f) / .99f);
+            float radial = invSq * (1f - t * t * (3f - 2f * t));
+            float v = Mathf.Clamp01((p.y - 745f) / 165f);
+            float front = 1f - .94f * v * v * (3f - 2f * v);
             return Mathf.Clamp01(radial * front);
         }
 
@@ -114,42 +121,67 @@ namespace Rokas.Presentation
             if (readPending && pendingRead.done)
             {
                 readPending = false;
-                if (!pendingRead.hasError)
+                if (!pendingRead.hasError && powered)
                 {
                     var pixels = pendingRead.GetData<Color32>();
                     if (pixels.Length > 0)
                     {
                         float r = 0f, g = 0f, b = 0f;
+                        float chromaWeightSum = 0f;
                         float lumaSum = 0f;
                         float highlightSum = 0f;
+                        float formFactorSum = 0f;
                         float leftLight = 0f, rightLight = 0f;
                         for (int i = 0; i < pixels.Length; i++)
                         {
-                            r += pixels[i].r;
-                            g += pixels[i].g;
-                            b += pixels[i].b;
+                            int px = i % SampleWidth;
+                            int py = i / SampleWidth;
+                            float u = (px + .5f) / SampleWidth;
+                            float v = (py + .5f) / SampleHeight;
+                            // Lower LCD scanlines sit physically closer to the
+                            // keyboard and wooden tabletop than the top bezel.
+                            float verticalWeight = Mathf.Lerp(.72f, 1.28f, v);
                             float linearR = pixels[i].r / 255f;
                             float linearG = pixels[i].g / 255f;
                             float linearB = pixels[i].b / 255f;
                             float luma = .2126f * linearR +
                                 .7152f * linearG + .0722f * linearB;
-                            lumaSum += luma;
-                            highlightSum += BrightPass(luma);
-                            if ((i % SampleWidth) < SampleWidth / 2)
-                                leftLight += luma;
-                            else rightLight += luma;
+                            float hi = BrightPass(luma);
+                            float chromaWeight = (.18f + luma * 1.45f + hi * 1.85f) *
+                                verticalWeight;
+                            r += linearR * chromaWeight;
+                            g += linearG * chromaWeight;
+                            b += linearB * chromaWeight;
+                            chromaWeightSum += chromaWeight;
+                            lumaSum += luma * verticalWeight;
+                            highlightSum += hi * verticalWeight;
+                            formFactorSum += verticalWeight;
+                            float lateralEnergy = (luma + hi * 1.6f) * verticalWeight *
+                                (.5f + Mathf.Abs(u - .5f));
+                            if (px < SampleWidth / 2)
+                                leftLight += lateralEnergy;
+                            else rightLight += lateralEnergy;
                         }
-                        float inv = 1f / (255f * pixels.Length);
+                        float invChroma = 1f / Mathf.Max(.0001f, chromaWeightSum);
+                        float invForm = 1f / Mathf.Max(.0001f, formFactorSum);
                         EvaluateMeanScreenColor(
-                            new Color(r * inv, g * inv, b * inv, 1f),
+                            new Color(r * invChroma, g * invChroma, b * invChroma, 1f),
                             out targetTint, out targetAmount);
                         EvaluateHighlightResponse(
-                            lumaSum / pixels.Length,
-                            highlightSum / pixels.Length,
+                            lumaSum * invForm,
+                            highlightSum * invForm,
                             out targetBloom, out targetSpecular);
                         targetSideBias = EvaluateSideBias(leftLight, rightLight);
                     }
                 }
+            }
+
+            if (!powered)
+            {
+                targetAmount = 0f;
+                targetBloom = 0f;
+                targetSpecular = 0f;
+                targetSideBias = 0f;
             }
 
             sinceSample += dt;
@@ -162,19 +194,32 @@ namespace Rokas.Presentation
                         RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
                     {
                         name = "ROKAS YOMI Screen Readback 48x27",
+                        hideFlags = HideFlags.DontSave,
                         filterMode = FilterMode.Bilinear,
                         wrapMode = TextureWrapMode.Clamp
                     };
                     sampleTarget.Create();
                 }
-                Graphics.Blit(source, sampleTarget);
+                // Graphics.Blit assigns RenderTexture.active = sampleTarget.
+                // Always restore the prior active target immediately so
+                // sampleTarget is never left bound when released or disposed.
+                RenderTexture previousActive = RenderTexture.active;
+                try
+                {
+                    Graphics.Blit(source, sampleTarget);
+                }
+                finally
+                {
+                    RenderTexture.active =
+                        previousActive == sampleTarget ? null : previousActive;
+                }
                 pendingRead = AsyncGPUReadback.Request(
                     sampleTarget, 0, TextureFormat.RGBA32);
                 readPending = true;
                 sinceSample = 0f;
             }
 
-            float ease = 1f - Mathf.Exp(-dt / .23f);
+            float ease = 1f - Mathf.Exp(-dt / (powered ? .16f : .08f));
             float required = powered ? targetAmount : 0f;
             intensity = Mathf.Lerp(intensity, required, ease);
             bloom = Mathf.Lerp(bloom, powered ? targetBloom : 0f, ease);
@@ -182,6 +227,12 @@ namespace Rokas.Presentation
             sideBias = Mathf.Lerp(sideBias, powered ? targetSideBias : 0f, ease);
             tint = Color.Lerp(tint, targetTint, ease);
             if (Mathf.Abs(intensity - required) < .0005f) intensity = required;
+            if (!powered)
+            {
+                if (bloom < .0005f) bloom = 0f;
+                if (specular < .0005f) specular = 0f;
+                if (Mathf.Abs(sideBias) < .0005f) sideBias = 0f;
+            }
         }
 
         public void Dispose()
