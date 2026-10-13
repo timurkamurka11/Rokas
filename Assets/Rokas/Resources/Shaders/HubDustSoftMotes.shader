@@ -103,7 +103,10 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                 // The supplied texture cells have transparent pixel guards
                 // to prevent hard alpha squares. Apply the same here.
                 float edge = 1.0 - smoothstep(.78,.98,r);
-                return saturate(a*edge);
+                // Lift dim fibers and translucent bokeh against detailed
+                // dark photographic art. Preserve strictly zero alpha at
+                // shape edges; this is NOT a white square/additive bloom.
+                return pow(saturate(a*edge),.72);
             }
             fixed4 frag(v2f i) : SV_Target
             {

@@ -1,4 +1,4 @@
-name: ROKAS Hub Dust V3 photographic light and atlas contract
+name: ROKAS Hub Dust V4 visible GPU submit contract
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
@@ -54,15 +54,21 @@ jobs:
           assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           assert 'shape = rng.Next(0,8)' in graphic
           assert 'Triangular(System.Random rng)' in graphic
-          assert 'visibilityGain = 1.38f' in graphic
-          assert 'particleScale = 1.12f' in graphic
+          assert 'visibilityGain = 1.62f' in graphic
+          assert 'particleScale = 1.28f' in graphic
           assert 'float ShapeAlpha(float shape, float2 uv)' in shader
           assert shader.count('shape <') == 7
           assert 'smoothstep(.78,.98,r)' in shader
+          assert 'pow(saturate(a*edge),.72)' in shader
           assert '4x2 dust' in shader
           tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           assert 'V3StudioVisibilityControlsRemainBounded' in tests
           assert 'Assert.AreEqual(432, dust.ParticleBudget)' in tests
           assert 'BothLightsFollowExistingHubSwitchesAtRealPositions' in tests
-          print('PASS HubDust V3: seeded photo-lit 432 motes, 8 organic atlas forms, 30 FPS, noninteractive, correct lamp/hall/window geometry')
+          assert 'V4FirstRoomFrameMustNotSuppressDustToTwentyEightPercent' in tests
+          assert 'V4HasDeterministicOpacityTelemetryForGpuDiagnosis' in tests
+          assert 'if (showRoom && !hasEverShown)' in graphic
+          assert 'LastMeanVertexAlpha' in graphic
+          assert 'meanVertexAlpha=' in graphic
+          print('PASS HubDust V4: immediate first-frame visibility, higher lit-pixel coverage, shader shape lift, inspector gains, opacity telemetry')
           PY

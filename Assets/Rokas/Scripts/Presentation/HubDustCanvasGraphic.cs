@@ -16,8 +16,8 @@ namespace Rokas.Presentation
     {
         private const int ParticleCount = 432;
         private const float MeshStep = 1f / 30f;
-        [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.38f;
-        [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.12f;
+        [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.62f;
+        [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.28f;
         public float VisibilityGain { get => visibilityGain; set => visibilityGain = Mathf.Clamp(value,.5f,2.0f); }
         public float ParticleScale { get => particleScale; set => particleScale = Mathf.Clamp(value,.5f,1.6f); }
         private struct Mote
@@ -27,11 +27,16 @@ namespace Rokas.Presentation
         }
         private readonly Mote[] motes = new Mote[ParticleCount];
         private float age, accum, visualStrength;
+        private bool hasEverShown;
+        private float visibleAlphaSum;
+        private float visibleAlphaMax;
         private bool roomOn, hallwayOn, showRoom;
         private Material ownedMaterial;
         public int ParticleBudget => ParticleCount;
         public float Visibility => visualStrength;
         public int LastVisibleMotes { get; private set; }
+        public float LastMeanVertexAlpha { get; private set; }
+        public float LastMaxVertexAlpha { get; private set; }
         private bool reportedFirstRender;
 
         protected override void Awake()
@@ -100,7 +105,19 @@ namespace Rokas.Presentation
             hallwayOn = corridorLampOn;
             showRoom = visible;
             float target = showRoom ? 1f : 0f;
-            visualStrength = Mathf.MoveTowards(visualStrength, target, Mathf.Max(0f, dt) * 2.8f);
+            // The V3 first-frame log showed strength=0.28. The CPU had
+            // submitted all 418 motes but they were barely visible after
+            // the GPU's shape-alpha multiplication. The room is static
+            // when PlayMode starts: show its pre-existing dust immediately.
+            // Subsequent re-entries still use the authored soft fade.
+            if (showRoom && !hasEverShown)
+            {
+                visualStrength = 1f;
+                hasEverShown = true;
+            }
+            else
+                visualStrength = Mathf.MoveTowards(visualStrength,
+                    target, Mathf.Max(0f, dt) * 2.8f);
             bool display = visualStrength > .0001f;
             if (gameObject.activeSelf != display)
                 gameObject.SetActive(display);
@@ -120,10 +137,15 @@ namespace Rokas.Presentation
         {
             vh.Clear();
             LastVisibleMotes = 0;
+            LastMeanVertexAlpha = 0f;
+            LastMaxVertexAlpha = 0f;
             if (!showRoom || visualStrength < .0001f) return;
             var rc = rectTransform.rect;
             float toX = rc.width / 1920f;
             float toY = rc.height / 1080f;
+            if (toX <= 0f || toY <= 0f) return;
+            visibleAlphaSum = 0f;
+            visibleAlphaMax = 0f;
             for (int i = 0; i < motes.Length; i++)
             {
                 Mote m = motes[i];
@@ -149,12 +171,15 @@ namespace Rokas.Presentation
                 // V1 emitted nearly invisible 1px dots at 0.5%-1% alpha.
                 // V2 bounds the opacity while making actual lamplit dust
                 // clearly visible even at 0.7x Game View scale.
-                float alpha = EvaluateDustAlpha(m.kind, m.alpha, x, y,
-                    roomOn, hallwayOn, visualStrength) * visibilityGain *
-                    edgeFade * breath;
-                if (alpha < .006f) continue;
-                // Rare larger, defocused motes near the camera, not all equal.
-                float size = (m.kind == 0 ? 4.2f : m.kind == 1 ? 10.8f : 25f)
+                float alpha = Mathf.Min(.68f,
+                    EvaluateDustAlpha(m.kind, m.alpha, x, y,
+                        roomOn, hallwayOn, visualStrength) *
+                    visibilityGain * edgeFade * breath);
+                if (alpha < .009f) continue;
+                // 0.7x GameView turns a 4px micro-mote into a subpixel
+                // glint. Widen the receiver footprint without using
+                // opaque circles or white additive fullscreen passes.
+                float size = (m.kind == 0 ? 6.5f : m.kind == 1 ? 14.0f : 31.0f)
                     * m.scale * particleScale *
                     (m.kind == 2 ? 1f+.27f*m.z : 1f);
                 // Cool city/window and corridor scatter; warm practicals.
@@ -171,14 +196,29 @@ namespace Rokas.Presentation
                 float cy = rc.yMax - y * toY;
                 AddQuad(vh, new Vector2(cx, cy), sx, sy, cs, sn, tint, m.shape);
                 LastVisibleMotes++;
+                visibleAlphaSum += alpha;
+                visibleAlphaMax = Mathf.Max(visibleAlphaMax, alpha);
             }
-            if (!reportedFirstRender && Application.isPlaying && LastVisibleMotes > 0)
+            LastMeanVertexAlpha = LastVisibleMotes > 0
+                ? visibleAlphaSum / LastVisibleMotes : 0f;
+            LastMaxVertexAlpha = visibleAlphaMax;
+            // Do not claim render success from a first-frame count only.
+            // This reports the final submitted vertex alpha AFTER fade,
+            // before the shader's per-pixel organic alpha. Shader output
+            // still requires a true screenshot to verify on target GPU.
+            if (!reportedFirstRender && Application.isPlaying &&
+                visualStrength > .95f && LastVisibleMotes > 0)
             {
                 reportedFirstRender = true;
-                Debug.Log("[ROKAS HubDust V3] rendering " +
-                    LastVisibleMotes + " motes; room=" + roomOn +
-                    " hallway=" + hallwayOn + " strength=" +
-                    visualStrength.ToString("F2"));
+                Debug.Log("[ROKAS HubDust V4] submitted=" +
+                    LastVisibleMotes + "/" + ParticleCount +
+                    " meanVertexAlpha=" + LastMeanVertexAlpha.ToString("F3") +
+                    " maxVertexAlpha=" + LastMaxVertexAlpha.ToString("F3") +
+                    " strength=" + visualStrength.ToString("F2") +
+                    " rect=" + rc.width.ToString("F0") + "x" +
+                    rc.height.ToString("F0") + " shader=" +
+                    (material != null && material.shader != null
+                        ? material.shader.name : "MISSING"));
             }
         }
 

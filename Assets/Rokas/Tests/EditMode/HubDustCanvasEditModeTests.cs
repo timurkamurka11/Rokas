@@ -99,6 +99,45 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void V4FirstRoomFrameMustNotSuppressDustToTwentyEightPercent()
+        {
+            var root=new GameObject("V4 Dust First Frame",
+                typeof(RectTransform),typeof(CanvasRenderer));
+            try
+            {
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                dust.Tick(.1f,true,true,true);
+                // V3's first-frame count logged 418 particles at .28
+                // opacity. A static home scene should start fully settled.
+                Assert.That(dust.Visibility,Is.EqualTo(1f).Within(.0001f));
+                Assert.AreEqual(432,dust.ParticleBudget);
+                Assert.IsFalse(dust.raycastTarget);
+                dust.Tick(.1f,false,false,false);
+                Assert.That(dust.Visibility,Is.LessThan(1f));
+                Assert.That(dust.Visibility,Is.GreaterThan(0f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void V4HasDeterministicOpacityTelemetryForGpuDiagnosis()
+        {
+            var root=new GameObject("V4 Dust Telemetry",
+                typeof(RectTransform),typeof(CanvasRenderer));
+            try
+            {
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                Assert.IsTrue(dust.LastMeanVertexAlpha>=0f);
+                Assert.IsTrue(dust.LastMaxVertexAlpha>=0f);
+                Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
+                    0,1f,138f,458f,true,false),Is.GreaterThan(.2f));
+                Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
+                    0,1f,1300f,1020f,false,false),Is.LessThan(.03f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
         public void DustLayerAllocatesBoundedNonInteractiveGraphics()
         {
             var root = new GameObject("TestDust", typeof(RectTransform), typeof(CanvasRenderer));
