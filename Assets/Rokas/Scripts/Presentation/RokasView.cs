@@ -129,8 +129,14 @@ namespace Rokas.Presentation
             // BEFORE hit areas/buttons. A world-space particle prefab would
             // be hidden behind this project's ScreenSpaceOverlay Canvas.
             var hubDustRoot = new GameObject("HubDust_ThreeLayerAtmosphere",
-                typeof(RectTransform), typeof(CanvasRenderer));
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(CanvasGroup));
             hubDustRoot.transform.SetParent(roomCameraRig, false);
+            // Draw ABOVE authored photographic art, BELOW interactions.
+            // ScreenSpaceOverlay child sorting is hierarchy-based.
+            hubDustRoot.transform.SetAsLastSibling();
+            var dustGroup = hubDustRoot.GetComponent<CanvasGroup>();
+            dustGroup.interactable = false;
+            dustGroup.blocksRaycasts = false;
             var dustRect = hubDustRoot.GetComponent<RectTransform>();
             dustRect.anchorMin = Vector2.zero;
             dustRect.anchorMax = Vector2.one;
@@ -138,6 +144,7 @@ namespace Rokas.Presentation
             dustRect.offsetMax = Vector2.zero;
             hubDust = hubDustRoot.AddComponent<HubDustCanvasGraphic>();
             hubDust.raycastTarget = false;
+            hubDust.maskable = false; // no parent Mask/RectMask can hide dust
             scene = ui.Rect(roomCameraRig, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 

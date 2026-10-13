@@ -77,8 +77,8 @@ namespace Rokas.Tests
                 2,1f,138f,458f,true,false);
             Assert.That(micro,Is.GreaterThan(ambient));
             Assert.That(ambient,Is.GreaterThan(bokeh));
-            Assert.That(micro,Is.LessThanOrEqualTo(.37f));
-            Assert.That(bokeh,Is.LessThanOrEqualTo(.34f));
+            Assert.That(micro,Is.LessThanOrEqualTo(.85f));
+            Assert.That(bokeh,Is.LessThanOrEqualTo(.45f));
             Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
                 0,1f,138f,458f,true,false,0f),Is.EqualTo(0f));
         }
@@ -163,6 +163,77 @@ namespace Rokas.Tests
                 Assert.AreEqual(432,dust.ParticleBudget);
             }
             finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void V5TrueEightBitHighResolutionAtlasIsGeneratedOnlyOnce()
+        {
+            var texture=HubDustAtlasFactory.Create();
+            try
+            {
+                Assert.AreEqual(1024,texture.width);
+                Assert.AreEqual(512,texture.height);
+                Assert.AreEqual(TextureFormat.RGBA32,texture.format);
+                Assert.AreEqual(TextureWrapMode.Clamp,texture.wrapMode);
+                Assert.AreEqual(FilterMode.Bilinear,texture.filterMode);
+                Assert.AreEqual(0f,
+                    HubDustAtlasFactory.EvaluateAtlasAlpha(0,.89f,0f));
+                Assert.That(HubDustAtlasFactory.EvaluateAtlasAlpha(0,0f,0f),
+                    Is.GreaterThan(.97f));
+                int unique=0;
+                var seen=new bool[256];
+                for (int j=0;j<=240;++j)
+                {
+                    float u=-.87f+j*1.74f/240f;
+                    int quant=Mathf.RoundToInt(
+                        255f*HubDustAtlasFactory.EvaluateAtlasAlpha(0,u,0f));
+                    if (!seen[quant]) { seen[quant]=true; unique++; }
+                }
+                Assert.That(unique,Is.GreaterThan(32),
+                    "V5 must retain more than the old 32 alpha levels.");
+            }
+            finally { Object.DestroyImmediate(texture); }
+        }
+
+        [Test]
+        public void V5RealCanvasModesAndScreenIntensityDoNotBreakGameplay()
+        {
+            var root=new GameObject("Dust V5",
+                typeof(RectTransform),typeof(CanvasRenderer));
+            try
+            {
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                dust.VisibilityMode=HubDustVisibilityMode.DiagnosticTestPattern;
+                Assert.IsTrue(dust.DebugVisibility);
+                dust.VisibilityMode=HubDustVisibilityMode.HighContrastBoost;
+                Assert.IsFalse(dust.DebugVisibility);
+                dust.VisibilityMode=HubDustVisibilityMode.Normal;
+                dust.ShaftStrength=2f;
+                Assert.That(dust.ShaftStrength,Is.EqualTo(1.5f));
+                Assert.AreEqual(432,dust.ParticleBudget);
+                Assert.IsFalse(dust.raycastTarget);
+                Assert.AreEqual(1024,dust.mainTexture.width);
+                Assert.AreEqual(512,dust.mainTexture.height);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void V5SingleLightingAttenuationPreservesLitDustAndDarkShadow()
+        {
+            float light=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,138f,458f,true,true);
+            float shade=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,1300f,1020f,false,false);
+            float mid=HubDustCanvasGraphic.EvaluateDustAlpha(
+                1,1f,138f,458f,true,true);
+            float bokeh=HubDustCanvasGraphic.EvaluateDustAlpha(
+                2,1f,138f,458f,true,true);
+            Assert.That(light,Is.InRange(.55f,.85f));
+            Assert.That(mid,Is.InRange(.30f,.45f));
+            Assert.That(bokeh,Is.InRange(.30f,.45f));
+            Assert.That(shade,Is.LessThan(.02f));
+            Assert.That(light,Is.GreaterThan(shade*15f));
         }
 
         [Test]

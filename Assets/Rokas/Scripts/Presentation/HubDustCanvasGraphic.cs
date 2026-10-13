@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 namespace Rokas.Presentation
 {
+    public enum HubDustVisibilityMode { Normal, HighContrastBoost, DiagnosticTestPattern }
+
     /// <summary>
     /// Atmospheric dust for the actual ROKAS ScreenSpaceOverlay 2.5D hub.
     /// A world-space Shuriken particle system cannot render between the
@@ -19,13 +21,23 @@ namespace Rokas.Presentation
         [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.70f;
         [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.34f;
         [SerializeField, Range(0f, 1.5f)] private float shaftStrength = .9f;
-        [SerializeField] private bool debugVisibility;
+        [SerializeField] private HubDustVisibilityMode visibilityMode = HubDustVisibilityMode.Normal;
+        private Texture2D ownedAtlas;
+        public HubDustVisibilityMode VisibilityMode
+        {
+            get => visibilityMode;
+            set { visibilityMode=value; SetVerticesDirty(); UpdateMaterial(); }
+        }
         public float VisibilityGain { get => visibilityGain; set => visibilityGain = Mathf.Clamp(value,.5f,2.0f); }
         public float ParticleScale { get => particleScale; set => particleScale = Mathf.Clamp(value,.5f,1.6f); }
         public float ShaftStrength { get => shaftStrength; set => shaftStrength = Mathf.Clamp(value,0f,1.5f); }
-        // Inspector debug mode deliberately draws obvious magenta fragments.
-        // If those cannot be seen, alpha tuning is not the problem.
-        public bool DebugVisibility { get => debugVisibility; set => debugVisibility = value; }
+        // DiagnosticTestPattern is an unmistakable UI sorting/material test.
+        public bool DebugVisibility
+        {
+            get => visibilityMode == HubDustVisibilityMode.DiagnosticTestPattern;
+            set { VisibilityMode = value ?
+                HubDustVisibilityMode.DiagnosticTestPattern : HubDustVisibilityMode.Normal; }
+        }
         private struct Mote
         {
             public float x, y, z, phase, drift, alpha, rotation, scale;
@@ -38,8 +50,6 @@ namespace Rokas.Presentation
         private float visibleAlphaMax;
         private bool roomOn, hallwayOn, showRoom;
         private Material ownedMaterial;
-        private Texture2D dustAtlas;
-        public bool UsingSourceAtlas => dustAtlas != null;
         public int ParticleBudget => ParticleCount;
         public float Visibility => visualStrength;
         public int LastVisibleMotes { get; private set; }
@@ -103,16 +113,16 @@ namespace Rokas.Presentation
                 enabled = false;
                 return;
             }
-            ownedMaterial = new Material(shader) { name = "ROKAS Hub Dust UI (Runtime)" };
-            // Genuine alpha cells from supplied ZIP, optimized for Canvas.
-            dustAtlas=Resources.Load<Texture2D>("HubDust/T_RokasDustAtlas_4x2_Alpha");
-            ownedMaterial.SetFloat("_UseAtlas",dustAtlas!=null?1f:0f);
-            ownedMaterial.SetFloat("_DustDebug", debugVisibility ? 1f : 0f);
+            ownedAtlas = HubDustAtlasFactory.Create();
+            ownedMaterial = new Material(shader) { name = "ROKAS Hub Dust V5 Premultiplied UI" };
+            ownedMaterial.SetTexture("_DustAtlasTex", ownedAtlas);
+            ownedMaterial.SetFloat("_UseAtlas", 1f);
+            ownedMaterial.SetFloat("_DustMode", (int)visibilityMode);
+            // MaskableGraphic owns the material. Override UpdateMaterial
+            // to bind the atlas into BOTH the stencil-ready CanvasRenderer
+            // and our distinct _DustAtlasTex slot.
             material = ownedMaterial;
-            if (Application.isPlaying)
-                Debug.Log("[ROKAS HubDust V5] sourceAtlas=" +
-                    (dustAtlas!=null?dustAtlas.width+"x"+dustAtlas.height:"MISSING") +
-                    " uiShader="+shader.name);
+            SetMaterialDirty();
         }
 
         /// <summary>No new lighting state: references GameSession's own switches.</summary>
@@ -140,7 +150,7 @@ namespace Rokas.Presentation
                 gameObject.SetActive(display);
             if (!display) return;
             if (ownedMaterial != null)
-                ownedMaterial.SetFloat("_DustDebug", debugVisibility ? 1f : 0f);
+                ownedMaterial.SetFloat("_DustMode", (int)visibilityMode);
             age += Mathf.Max(0f, dt);
             accum += Mathf.Max(0f, dt);
             if (accum >= MeshStep)
@@ -150,9 +160,22 @@ namespace Rokas.Presentation
             }
         }
 
-        // Graphic.UpdateMaterial binds this texture to CanvasRenderer.
-        // WhiteTexture here would silently replace the original source atlas.
-        public override Texture mainTexture => dustAtlas!=null ? dustAtlas : Texture2D.whiteTexture;
+        public override Texture mainTexture =>
+            ownedAtlas != null ? ownedAtlas : Texture2D.whiteTexture;
+
+        protected override void UpdateMaterial()
+        {
+            if (!IsActive()) return;
+            base.UpdateMaterial();
+            if (ownedAtlas != null && ownedMaterial != null)
+            {
+                ownedMaterial.SetTexture("_DustAtlasTex", ownedAtlas);
+                // UI Graphics set _MainTex themselves; never depend on a
+                // MaterialPropertyBlock (unsupported by CanvasRenderer).
+                canvasRenderer.SetTexture(ownedAtlas);
+                canvasRenderer.SetMaterial(materialForRendering, 0);
+            }
+        }
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
@@ -168,7 +191,7 @@ namespace Rokas.Presentation
             if (toX <= 0f || toY <= 0f) return;
             visibleAlphaSum = 0f;
             visibleAlphaMax = 0f;
-            // Render atmospheric light BEHIND individual floating motes.
+            // Volumetric ribbons under the dust so hot cores remain sharp.
             AddLightShafts(vh,rc,toX,toY);
             for (int i = 0; i < motes.Length; i++)
             {
@@ -195,11 +218,14 @@ namespace Rokas.Presentation
                 // V1 emitted nearly invisible 1px dots at 0.5%-1% alpha.
                 // V2 bounds the opacity while making actual lamplit dust
                 // clearly visible even at 0.7x Game View scale.
-                float alpha = Mathf.Min(.68f,
+                float boost = visibilityMode ==
+                    HubDustVisibilityMode.HighContrastBoost ? 2.5f : 1f;
+                float alpha = Mathf.Clamp01(
                     EvaluateDustAlpha(m.kind, m.alpha, x, y,
                         roomOn, hallwayOn, visualStrength) *
-                    visibilityGain * edgeFade * breath);
-                if (alpha < .009f) continue;
+                    visibilityGain * boost * edgeFade * breath);
+                if (alpha < .012f && visibilityMode !=
+                    HubDustVisibilityMode.DiagnosticTestPattern) continue;
                 // 0.7x GameView turns a 4px micro-mote into a subpixel
                 // glint. Widen the receiver footprint without using
                 // opaque circles or white additive fullscreen passes.
@@ -223,10 +249,6 @@ namespace Rokas.Presentation
                 visibleAlphaSum += alpha;
                 visibleAlphaMax = Mathf.Max(visibleAlphaMax, alpha);
             }
-            // Actual photographed HOME highlights drive delicate airborne
-            // scattering. It is NOT a full-frame blue filter: each local
-            // ribbon is independently clamped to its source and switched
-            // by the same saved room/corridor lights.
             LastMeanVertexAlpha = LastVisibleMotes > 0
                 ? visibleAlphaSum / LastVisibleMotes : 0f;
             LastMaxVertexAlpha = visibleAlphaMax;
@@ -243,13 +265,14 @@ namespace Rokas.Presentation
                     " meanVertexAlpha=" + LastMeanVertexAlpha.ToString("F3") +
                     " maxVertexAlpha=" + LastMaxVertexAlpha.ToString("F3") +
                     " shafts=" + LastShaftCount +
+                    " atlas=" + (ownedAtlas != null
+                        ? ownedAtlas.width + "x" + ownedAtlas.height : "MISSING") +
+                    " mode=" + visibilityMode +
                     " strength=" + visualStrength.ToString("F2") +
                     " rect=" + rc.width.ToString("F0") + "x" +
                     rc.height.ToString("F0") + " shader=" +
                     (material != null && material.shader != null
-                        ? material.shader.name : "MISSING") +
-                    " atlas=" + (dustAtlas!=null?"ORIGINAL_4x2":"FALLBACK") +
-                    " debug=" + debugVisibility);
+                        ? material.shader.name : "MISSING"));
             }
         }
 
@@ -343,11 +366,15 @@ namespace Rokas.Presentation
             float warm=RoomLampContribution(x,y,roomOn);
             float corridor=HallwayContribution(x,y,hallwayOn);
             float window=WindowContribution(x,y);
-            float light=.042f+warm+corridor+window;
-            float baseAlpha=kind==0 ? .35f : kind==1 ? .29f : .185f;
-            // Photo-registered shafts are bright, shade falls nearly to zero.
-            // The 4x2 atlas soft profile further attenuates these values.
-            return Mathf.Clamp(intrinsic*baseAlpha*light*visibility,0f,.37f);
+            float energy=Mathf.Clamp01(warm+corridor+window);
+            float t=Mathf.SmoothStep(0f,1f,Mathf.Clamp01(energy/.83f));
+            // One light response only: alpha describes visibility and
+            // shading uses stable RGB (never light attenuation twice).
+            // At lit pockets: micro 0.55-0.80; mid 0.30-0.45;
+            // near bokeh 0.30-0.40. Dark pockets almost disappear.
+            float lit=kind==0 ? .69f : kind==1 ? .41f : .36f;
+            float low=kind==0 ? .012f : .008f;
+            return Mathf.Clamp01(Mathf.Lerp(low,lit,t)*intrinsic*visibility);
         }
 
         private static void AddQuad(VertexHelper vh, Vector2 c, float rx,
@@ -372,6 +399,12 @@ namespace Rokas.Presentation
         protected override void OnDestroy()
         {
             material = null;
+            if (ownedAtlas != null)
+            {
+                if (Application.isPlaying) Destroy(ownedAtlas);
+                else DestroyImmediate(ownedAtlas);
+                ownedAtlas = null;
+            }
             if (ownedMaterial != null)
             {
                 if (Application.isPlaying) Destroy(ownedMaterial);

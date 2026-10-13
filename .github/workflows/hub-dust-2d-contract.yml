@@ -1,91 +1,71 @@
-name: ROKAS Hub Dust V5 original-atlas optical contract
+name: ROKAS Hub Dust V5 final integration gate
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
     paths:
       - 'Assets/Rokas/Scripts/Presentation/HubDustCanvasGraphic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/HubDustAtlasFactory.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Resources/Shaders/HubDustSoftMotes.shader'
-      - 'Assets/Rokas/Resources/HubDust/T_RokasDustAtlas_4x2_Alpha.png'
       - 'Assets/Rokas/Tests/EditMode/HubDustCanvasEditModeTests.cs'
       - '.github/workflows/hub-dust-2d-contract.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  contracts:
+  static-acceptance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify the actual Unity Built-in 2.5D hub receives dust
+      - name: Validate 1024px atlas generation, premultiplied GPU pipeline, UI ordering
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           root=Path('Assets/Rokas')
-          graphics=Path('ProjectSettings/GraphicsSettings.asset').read_text()
-          assert 'm_CustomRenderPipeline: {fileID: 0}' in graphics
           view=(root/'Scripts/Presentation/RokasView.cs').read_text()
-          graphic=(root/'Scripts/Presentation/HubDustCanvasGraphic.cs').read_text()
+          gfx=(root/'Scripts/Presentation/HubDustCanvasGraphic.cs').read_text()
+          factory=(root/'Scripts/Presentation/HubDustAtlasFactory.cs').read_text()
           shader=(root/'Resources/Shaders/HubDustSoftMotes.shader').read_text()
-          assert 'HubDust_ThreeLayerAtmosphere' in view
-          assert view.index('background = ui.Art') < view.index('HubDust_ThreeLayerAtmosphere') < view.index('scene = ui.Rect')
-          assert 'session.State.lampOn, session.HallwayLightOn' in view
-          assert 'homeSubLocation == HomeLocation.MainRoom' in view
-          assert 'hubDust.raycastTarget = false' in view
-          assert 'ParticleCount = 432' in graphic
-          assert 'i < 281 ? 0 : i < 389 ? 1 : 2' in graphic
-          assert 'RoomLampContribution' in graphic and 'HallwayContribution' in graphic and 'WindowContribution' in graphic
-          assert 'Resources.Load<Shader>("Shaders/HubDustSoftMotes")' in graphic
-          assert 'Shader "ROKAS/UI/HubDustSoftMotes"' in shader
-          assert 'Blend SrcAlpha OneMinusSrcAlpha' in shader
-          assert 'Fallback Off' in shader
-          assert (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').is_file()
-          for f in [
-            root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
-            root/'Resources/Shaders/HubDustSoftMotes.shader',
-            root/'Tests/EditMode/HubDustCanvasEditModeTests.cs']:
-            assert f.with_name(f.name+'.meta').is_file(),str(f)
-            content=f.read_text()
-            assert content.count('{')==content.count('}'),str(f)
-          assert 'EvaluateDustAlpha' in graphic
-          assert '1748f,345f' in graphic and '138f,458f' in graphic
-          assert 'HubDust V5' in graphic and 'LastVisibleMotes' in graphic
-          assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
-          assert 'shape = rng.Next(0,8)' in graphic
-          assert 'Triangular(System.Random rng)' in graphic
-          assert 'visibilityGain = 1.70f' in graphic
-          assert 'particleScale = 1.34f' in graphic
-          assert 'float ShapeAlpha(float shape, float2 uv)' in shader
-          assert shader.count('shape <') == 9
-          assert 'smoothstep(.78,.98,r)' in shader
-          assert 'pow(saturate(a*edge),.72)' in shader
-          assert '4x2 dust' in shader
           tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
-          assert 'V3StudioVisibilityControlsRemainBounded' in tests
-          assert 'Assert.AreEqual(432, dust.ParticleBudget)' in tests
-          assert 'BothLightsFollowExistingHubSwitchesAtRealPositions' in tests
-          assert 'V4FirstRoomFrameMustNotSuppressDustToTwentyEightPercent' in tests
-          assert 'V4HasDeterministicOpacityTelemetryForGpuDiagnosis' in tests
-          assert 'if (showRoom && !hasEverShown)' in graphic
-          assert 'LastMeanVertexAlpha' in graphic
-          assert 'meanVertexAlpha=' in graphic
-          from struct import unpack
-          p=root/'Resources/HubDust/T_RokasDustAtlas_4x2_Alpha.png'
-          texture=p.read_bytes()
-          assert texture[:8]==bytes.fromhex('89504e470d0a1a0a')
-          width,height,depth,color=unpack('>IIBB',texture[16:26])
-          assert (width,height,depth,color)==(128,64,8,0)
-          assert p.with_name(p.name+'.meta').exists()
-          assert 'Resources.Load<Texture2D>("HubDust/T_RokasDustAtlas_4x2_Alpha")' in graphic
-          assert 'mainTexture => dustAtlas!=null ? dustAtlas : Texture2D.whiteTexture' in graphic
-          assert 'ownedMaterial.SetFloat("_UseAtlas",dustAtlas!=null?1f:0f)' in graphic
-          assert 'AddLightShafts(vh,rc,toX,toY)' in graphic
-          assert 'DebugVisibility' in graphic and '"_DustDebug"' in graphic
-          assert 'sampler2D _MainTex' in shader and 'tex2D(_MainTex,atlasUv).r' in shader
-          assert 'if (_UseAtlas>.5 && shape<7.5)' in shader
-          assert 'if (_DustDebug>.5)' in shader
-          assert 'V5UsesRealSourceAtlasAndHasExplicitVisibilityDiagnostic' in tests
-          print('PASS HubDust V5: validated binary original 4x2 alpha atlas, UI canvas texture binding, 6 localized shafts, GPU visibility diagnostics')
+          assert 'm_CustomRenderPipeline: {fileID: 0}' in Path('ProjectSettings/GraphicsSettings.asset').read_text()
+          assert view.index('background = ui.Art') < view.index('HubDust_ThreeLayerAtmosphere') < view.index('scene = ui.Rect')
+          assert 'hubDust.maskable = false' in view
+          assert 'dustGroup.blocksRaycasts = false' in view
+          assert 'hubDust.raycastTarget = false' in view
+          assert 'session.State.lampOn, session.HallwayLightOn' in view
+          assert 'HubDustAtlasFactory.Create()' in gfx
+          assert 'public const int Width = 1024;' in factory
+          assert 'public const int Height = 512;' in factory
+          assert 'public const int CellSize = 256;' in factory
+          for tok in ('TextureFormat.RGBA32','TextureWrapMode.Clamp','FilterMode.Bilinear',
+                      'new Color32(255,255,255','if (r>=.88f) return 0f','EvaluateCellShape'):
+              assert tok in factory,tok
+          assert 'Texture2D.whiteTexture' in gfx
+          assert 'base.UpdateMaterial()' in gfx
+          assert 'canvasRenderer.SetTexture(ownedAtlas)' in gfx
+          assert 'canvasRenderer.SetMaterial(materialForRendering, 0)' in gfx
+          assert 'ownedMaterial.SetTexture("_DustAtlasTex", ownedAtlas)' in gfx
+          assert 'Blend One OneMinusSrcAlpha' in shader
+          assert 'tex2D(_DustAtlasTex,atlasUv).a' in shader
+          assert 'hotCore=exp(-radius*radius*18.0)*1.6' in shader
+          assert 'outAlpha=saturate(vertexAlpha*visibleProfile)' in shader
+          assert 'float3 rgb;' in shader
+          assert 'SoftShaft' in shader and 'AddLightShafts(vh,rc,toX,toY)' in gfx
+          assert 'HighContrastBoost' in gfx and 'DiagnosticTestPattern' in gfx
+          assert 'DebugVisibility' in gfx and 'enum HubDustVisibilityMode' in gfx
+          for p in [root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
+                    root/'Scripts/Presentation/HubDustAtlasFactory.cs',
+                    root/'Resources/Shaders/HubDustSoftMotes.shader',
+                    root/'Tests/EditMode/HubDustCanvasEditModeTests.cs']:
+              assert p.with_name(p.name+'.meta').is_file(),p
+              source=p.read_text()
+              assert source.count('{')==source.count('}'),p
+          for method in ['V5TrueEightBitHighResolutionAtlasIsGeneratedOnlyOnce',
+                         'V5RealCanvasModesAndScreenIntensityDoNotBreakGameplay',
+                         'V5SingleLightingAttenuationPreservesLitDustAndDarkShadow',
+                         'V4FirstRoomFrameMustNotSuppressDustToTwentyEightPercent']:
+              assert method in tests,method
+          assert not (root/'Resources/HubDust/T_RokasDustAtlas_4x2_Alpha.png').exists()
+          print('PASS: V5 full-RGBA32 1024x512 atlas, UI texture/material, premul, lit-core halo, local shafts, 3 debug modes, source/UI tests')
           PY
