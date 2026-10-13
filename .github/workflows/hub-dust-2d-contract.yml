@@ -1,4 +1,4 @@
-name: ROKAS Hub Dust V4 visible GPU submit contract
+name: ROKAS Hub Dust V5 original-atlas optical contract
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
@@ -6,6 +6,7 @@ on:
       - 'Assets/Rokas/Scripts/Presentation/HubDustCanvasGraphic.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Resources/Shaders/HubDustSoftMotes.shader'
+      - 'Assets/Rokas/Resources/HubDust/T_RokasDustAtlas_4x2_Alpha.png'
       - 'Assets/Rokas/Tests/EditMode/HubDustCanvasEditModeTests.cs'
       - '.github/workflows/hub-dust-2d-contract.yml'
   workflow_dispatch:
@@ -50,12 +51,12 @@ jobs:
             assert content.count('{')==content.count('}'),str(f)
           assert 'EvaluateDustAlpha' in graphic
           assert '1748f,345f' in graphic and '138f,458f' in graphic
-          assert 'HubDust V4' in graphic and 'LastVisibleMotes' in graphic
+          assert 'HubDust V5' in graphic and 'LastVisibleMotes' in graphic
           assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           assert 'shape = rng.Next(0,8)' in graphic
           assert 'Triangular(System.Random rng)' in graphic
-          assert 'visibilityGain = 1.62f' in graphic
-          assert 'particleScale = 1.28f' in graphic
+          assert 'visibilityGain = 1.70f' in graphic
+          assert 'particleScale = 1.34f' in graphic
           assert 'float ShapeAlpha(float shape, float2 uv)' in shader
           assert shader.count('shape <') == 7
           assert 'smoothstep(.78,.98,r)' in shader
@@ -70,5 +71,21 @@ jobs:
           assert 'if (showRoom && !hasEverShown)' in graphic
           assert 'LastMeanVertexAlpha' in graphic
           assert 'meanVertexAlpha=' in graphic
-          print('PASS HubDust V4: immediate first-frame visibility, higher lit-pixel coverage, shader shape lift, inspector gains, opacity telemetry')
+          from struct import unpack
+          p=root/'Resources/HubDust/T_RokasDustAtlas_4x2_Alpha.png'
+          texture=p.read_bytes()
+          assert texture[:8]==bytes.fromhex('89504e470d0a1a0a')
+          width,height,depth,color=unpack('>IIBB',texture[16:26])
+          assert (width,height,depth,color)==(128,64,8,0)
+          assert p.with_name(p.name+'.meta').exists()
+          assert 'Resources.Load<Texture2D>("HubDust/T_RokasDustAtlas_4x2_Alpha")' in graphic
+          assert 'mainTexture => dustAtlas!=null ? dustAtlas : Texture2D.whiteTexture' in graphic
+          assert 'ownedMaterial.SetFloat("_UseAtlas",dustAtlas!=null?1f:0f)' in graphic
+          assert 'AddLightShafts(vh,rc,toX,toY)' in graphic
+          assert 'DebugVisibility' in graphic and '"_DustDebug"' in graphic
+          assert 'sampler2D _MainTex' in shader and 'tex2D(_MainTex,atlasUv).r' in shader
+          assert 'if (_UseAtlas>.5 && shape<7.5)' in shader
+          assert 'if (_DustDebug>.5)' in shader
+          assert 'V5UsesRealSourceAtlasAndHasExplicitVisibilityDiagnostic' in tests
+          print('PASS HubDust V5: validated binary original 4x2 alpha atlas, UI canvas texture binding, 6 localized shafts, GPU visibility diagnostics')
           PY

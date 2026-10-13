@@ -13,6 +13,11 @@ namespace Rokas.Tests
             var shader = Resources.Load<Shader>("Shaders/HubDustSoftMotes");
             Assert.IsNotNull(shader, "2D dust must ship with the Built-in Unity build.");
             Assert.IsTrue(shader.isSupported);
+            var atlas=Resources.Load<Texture2D>(
+                "HubDust/T_RokasDustAtlas_4x2_Alpha");
+            Assert.IsNotNull(atlas,"Actual source ZIP atlas is required.");
+            Assert.AreEqual(128,atlas.width);
+            Assert.AreEqual(64,atlas.height);
         }
 
         [Test]
@@ -133,6 +138,29 @@ namespace Rokas.Tests
                     0,1f,138f,458f,true,false),Is.GreaterThan(.2f));
                 Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
                     0,1f,1300f,1020f,false,false),Is.LessThan(.03f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void V5UsesRealSourceAtlasAndHasExplicitVisibilityDiagnostic()
+        {
+            var root=new GameObject("Dust V5 Atlas",typeof(RectTransform),
+                typeof(CanvasRenderer));
+            try
+            {
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                Assert.IsTrue(dust.UsingSourceAtlas);
+                Assert.IsFalse(dust.DebugVisibility);
+                Assert.That(dust.ShaftStrength,Is.EqualTo(.9f).Within(.0001f));
+                dust.DebugVisibility=true;
+                Assert.IsTrue(dust.DebugVisibility);
+                dust.DebugVisibility=false;
+                dust.ShaftStrength=20f;
+                Assert.That(dust.ShaftStrength,Is.EqualTo(1.5f));
+                dust.ShaftStrength=-2f;
+                Assert.That(dust.ShaftStrength,Is.EqualTo(0f));
+                Assert.AreEqual(432,dust.ParticleBudget);
             }
             finally { Object.DestroyImmediate(root); }
         }

@@ -2,7 +2,9 @@ Shader "ROKAS/UI/HubDustSoftMotes"
 {
     Properties
     {
-        _MainTex ("UI Texture", 2D) = "white" {}
+        _MainTex ("Original ROKAS 4x2 Dust Atlas Alpha", 2D) = "white" {}
+        _UseAtlas ("Use Original Dust Atlas", Float) = 0
+        _DustDebug ("Show Diagnostic Geometry", Float) = 0
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
         _StencilOp ("Stencil Operation", Float) = 0
@@ -31,6 +33,9 @@ Shader "ROKAS/UI/HubDustSoftMotes"
             #pragma fragment frag
             #include "UnityCG.cginc"
 
+            sampler2D _MainTex;
+            float _UseAtlas;
+            float _DustDebug;
             struct appdata { float4 vertex : POSITION; fixed4 color : COLOR; float2 uv : TEXCOORD0; };
             struct v2f { float4 vertex : SV_POSITION; fixed4 color : COLOR; float2 uv : TEXCOORD0; };
             v2f vert(appdata v)
@@ -96,9 +101,21 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                         exp(-3.0*pow(q.x+.15,2.0));
                     a=exp(-7.0*drop*drop)*.80+tail*.18;
                 }
-                else
+                else if (shape < 7.5)
                 {
                     a = .78*exp(-7.4*r*r)+.21*exp(-2.4*r*r);
+                }
+                else if (shape < 8.5)
+                {
+                    // Localized anisotropic volumetric ribbon; not a
+                    // fullscreen tint or uniform blue overlay.
+                    float core = exp(-2.6*p.x*p.x-1.7*p.y*p.y);
+                    a = core*(.80+.20*cos(2.8*p.y+1.9*p.x));
+                }
+                else
+                {
+                    // Broad, very soft photographic penumbra.
+                    a = exp(-1.9*p.x*p.x-2.1*p.y*p.y)*.88;
                 }
                 // The supplied texture cells have transparent pixel guards
                 // to prevent hard alpha squares. Apply the same here.
@@ -113,6 +130,30 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                 float shape = floor(i.uv.x*.5 + .001);
                 float2 localUv = float2(i.uv.x-shape*2.0,i.uv.y);
                 float alpha = ShapeAlpha(shape,localUv);
+                // All eight original ZIP atlas cells packed in the same
+                // order as the source 4x2 RGBA texture. Data texture holds
+                // the SOURCE alpha channel as single-channel grayscale.
+                if (_UseAtlas>.5 && shape<7.5)
+                {
+                    float row=floor(shape*.25);
+                    float col=shape-row*4.0;
+                    float2 guardedUv=clamp(localUv,.035,.965);
+                    float2 atlasUv=float2(
+                        (col+guardedUv.x)*.25,
+                        ((1.0-row)+guardedUv.y)*.5);
+                    float sourceAlpha=tex2D(_MainTex,atlasUv).r;
+                    alpha=pow(saturate(sourceAlpha),.76);
+                }
+                if (_DustDebug>.5)
+                {
+                    // Inspector test: obvious pixels prove real shader/
+                    // Canvas compositing. Never active by default.
+                    float rr=length(localUv*2.0-1.0);
+                    float diagnostic=(1.0-smoothstep(.65,.97,rr));
+                    return shape<7.5
+                        ? fixed4(1.0,.025,.85,diagnostic*.91)
+                        : fixed4(.08,1.0,.22,diagnostic*.40);
+                }
                 // Mild luminous core, avoids an overbright additive snowstorm.
                 float core = exp(-7.0*dot(localUv*2-1,localUv*2-1));
                 float3 tinted = saturate(i.color.rgb*(.85+.15*core));

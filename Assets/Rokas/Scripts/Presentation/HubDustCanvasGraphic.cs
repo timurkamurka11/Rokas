@@ -16,10 +16,16 @@ namespace Rokas.Presentation
     {
         private const int ParticleCount = 432;
         private const float MeshStep = 1f / 30f;
-        [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.62f;
-        [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.28f;
+        [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.70f;
+        [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.34f;
+        [SerializeField, Range(0f, 1.5f)] private float shaftStrength = .9f;
+        [SerializeField] private bool debugVisibility;
         public float VisibilityGain { get => visibilityGain; set => visibilityGain = Mathf.Clamp(value,.5f,2.0f); }
         public float ParticleScale { get => particleScale; set => particleScale = Mathf.Clamp(value,.5f,1.6f); }
+        public float ShaftStrength { get => shaftStrength; set => shaftStrength = Mathf.Clamp(value,0f,1.5f); }
+        // Inspector debug mode deliberately draws obvious magenta fragments.
+        // If those cannot be seen, alpha tuning is not the problem.
+        public bool DebugVisibility { get => debugVisibility; set => debugVisibility = value; }
         private struct Mote
         {
             public float x, y, z, phase, drift, alpha, rotation, scale;
@@ -32,11 +38,14 @@ namespace Rokas.Presentation
         private float visibleAlphaMax;
         private bool roomOn, hallwayOn, showRoom;
         private Material ownedMaterial;
+        private Texture2D dustAtlas;
+        public bool UsingSourceAtlas => dustAtlas != null;
         public int ParticleBudget => ParticleCount;
         public float Visibility => visualStrength;
         public int LastVisibleMotes { get; private set; }
         public float LastMeanVertexAlpha { get; private set; }
         public float LastMaxVertexAlpha { get; private set; }
+        public int LastShaftCount { get; private set; }
         private bool reportedFirstRender;
 
         protected override void Awake()
@@ -95,7 +104,15 @@ namespace Rokas.Presentation
                 return;
             }
             ownedMaterial = new Material(shader) { name = "ROKAS Hub Dust UI (Runtime)" };
+            // Genuine alpha cells from supplied ZIP, optimized for Canvas.
+            dustAtlas=Resources.Load<Texture2D>("HubDust/T_RokasDustAtlas_4x2_Alpha");
+            ownedMaterial.SetFloat("_UseAtlas",dustAtlas!=null?1f:0f);
+            ownedMaterial.SetFloat("_DustDebug", debugVisibility ? 1f : 0f);
             material = ownedMaterial;
+            if (Application.isPlaying)
+                Debug.Log("[ROKAS HubDust V5] sourceAtlas=" +
+                    (dustAtlas!=null?dustAtlas.width+"x"+dustAtlas.height:"MISSING") +
+                    " uiShader="+shader.name);
         }
 
         /// <summary>No new lighting state: references GameSession's own switches.</summary>
@@ -122,6 +139,8 @@ namespace Rokas.Presentation
             if (gameObject.activeSelf != display)
                 gameObject.SetActive(display);
             if (!display) return;
+            if (ownedMaterial != null)
+                ownedMaterial.SetFloat("_DustDebug", debugVisibility ? 1f : 0f);
             age += Mathf.Max(0f, dt);
             accum += Mathf.Max(0f, dt);
             if (accum >= MeshStep)
@@ -131,7 +150,9 @@ namespace Rokas.Presentation
             }
         }
 
-        public override Texture mainTexture => Texture2D.whiteTexture;
+        // Graphic.UpdateMaterial binds this texture to CanvasRenderer.
+        // WhiteTexture here would silently replace the original source atlas.
+        public override Texture mainTexture => dustAtlas!=null ? dustAtlas : Texture2D.whiteTexture;
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
@@ -139,6 +160,7 @@ namespace Rokas.Presentation
             LastVisibleMotes = 0;
             LastMeanVertexAlpha = 0f;
             LastMaxVertexAlpha = 0f;
+            LastShaftCount = 0;
             if (!showRoom || visualStrength < .0001f) return;
             var rc = rectTransform.rect;
             float toX = rc.width / 1920f;
@@ -146,6 +168,8 @@ namespace Rokas.Presentation
             if (toX <= 0f || toY <= 0f) return;
             visibleAlphaSum = 0f;
             visibleAlphaMax = 0f;
+            // Render atmospheric light BEHIND individual floating motes.
+            AddLightShafts(vh,rc,toX,toY);
             for (int i = 0; i < motes.Length; i++)
             {
                 Mote m = motes[i];
@@ -179,14 +203,14 @@ namespace Rokas.Presentation
                 // 0.7x GameView turns a 4px micro-mote into a subpixel
                 // glint. Widen the receiver footprint without using
                 // opaque circles or white additive fullscreen passes.
-                float size = (m.kind == 0 ? 6.5f : m.kind == 1 ? 14.0f : 31.0f)
+                float size = (m.kind == 0 ? 8.2f : m.kind == 1 ? 17.4f : 39.0f)
                     * m.scale * particleScale *
                     (m.kind == 2 ? 1f+.27f*m.z : 1f);
                 // Cool city/window and corridor scatter; warm practicals.
                 float cool = doorway + window;
                 float blend = cool / Mathf.Max(.001f, cool + warm);
-                var tint = Color.Lerp(new Color(1f, .86f, .69f), 
-                    new Color(.64f, .78f, .99f), blend);
+                var tint = Color.Lerp(new Color(1f, .88f, .74f),
+                    new Color(.72f, .84f, 1f), blend);
                 tint.a = alpha;
                 float cs = Mathf.Cos(m.rotation + age * .025f);
                 float sn = Mathf.Sin(m.rotation + age * .025f);
@@ -199,6 +223,10 @@ namespace Rokas.Presentation
                 visibleAlphaSum += alpha;
                 visibleAlphaMax = Mathf.Max(visibleAlphaMax, alpha);
             }
+            // Actual photographed HOME highlights drive delicate airborne
+            // scattering. It is NOT a full-frame blue filter: each local
+            // ribbon is independently clamped to its source and switched
+            // by the same saved room/corridor lights.
             LastMeanVertexAlpha = LastVisibleMotes > 0
                 ? visibleAlphaSum / LastVisibleMotes : 0f;
             LastMaxVertexAlpha = visibleAlphaMax;
@@ -210,16 +238,65 @@ namespace Rokas.Presentation
                 visualStrength > .95f && LastVisibleMotes > 0)
             {
                 reportedFirstRender = true;
-                Debug.Log("[ROKAS HubDust V4] submitted=" +
+                Debug.Log("[ROKAS HubDust V5] submitted=" +
                     LastVisibleMotes + "/" + ParticleCount +
                     " meanVertexAlpha=" + LastMeanVertexAlpha.ToString("F3") +
                     " maxVertexAlpha=" + LastMaxVertexAlpha.ToString("F3") +
+                    " shafts=" + LastShaftCount +
                     " strength=" + visualStrength.ToString("F2") +
                     " rect=" + rc.width.ToString("F0") + "x" +
                     rc.height.ToString("F0") + " shader=" +
                     (material != null && material.shader != null
-                        ? material.shader.name : "MISSING"));
+                        ? material.shader.name : "MISSING") +
+                    " atlas=" + (dustAtlas!=null?"ORIGINAL_4x2":"FALLBACK") +
+                    " debug=" + debugVisibility);
             }
+        }
+
+
+        private void AddLightShafts(VertexHelper vh, Rect rc,
+            float toX, float toY)
+        {
+            if (shaftStrength <= .0001f) return;
+            // Ambient window light is always present; it is unrelated
+            // to the lamp switches and anchored to the actual HOME photo.
+            float slow=age*.20f;
+            AddSoftShaft(vh,rc,toX,toY,8,700f+4f*Mathf.Sin(slow),
+                367f,260f,265f,-.13f,.105f,
+                new Color(.62f,.79f,1f));
+            AddSoftShaft(vh,rc,toX,toY,9,518f,440f+4f*Mathf.Cos(slow*.8f),
+                190f,270f,-.33f,.065f,new Color(.57f,.77f,1f));
+            if (roomOn)
+            {
+                AddSoftShaft(vh,rc,toX,toY,8,210f,480f,
+                    151f,285f,.17f,.175f,
+                    new Color(1f,.78f,.47f));
+                AddSoftShaft(vh,rc,toX,toY,9,1050f+5f*Mathf.Sin(slow*.7f),
+                    348f,189f,232f,-.24f,.14f,
+                    new Color(1f,.83f,.59f));
+                AddSoftShaft(vh,rc,toX,toY,8,1165f,395f,
+                    123f,187f,.18f,.11f,new Color(1f,.84f,.57f));
+            }
+            if (hallwayOn)
+            {
+                AddSoftShaft(vh,rc,toX,toY,8,1690f,417f,
+                    146f,310f,.17f,.125f,
+                    new Color(1f,.81f,.53f));
+            }
+        }
+
+        private void AddSoftShaft(VertexHelper vh,Rect rc,
+            float toX,float toY,int shape,float x,float y,
+            float halfWidth,float halfHeight,float angle,float opacity,
+            Color tint)
+        {
+            float alpha=Mathf.Clamp01(opacity*shaftStrength*visualStrength);
+            if (alpha<.002f) return;
+            tint.a=alpha;
+            AddQuad(vh,new Vector2(rc.xMin+x*toX,rc.yMax-y*toY),
+                halfWidth*toX,halfHeight*toY,
+                Mathf.Cos(angle),Mathf.Sin(angle),tint,shape);
+            LastShaftCount++;
         }
 
         private static float Triangular(System.Random rng)
