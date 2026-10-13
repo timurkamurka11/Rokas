@@ -150,8 +150,11 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float woodMask=mask.r*(1.0-mask.a);
                 float keyMask=mask.g;
                 float lipMask=mask.b*(1.0-mask.a);
+                // V11: the alpha channel is the photographed aluminium
+                // palm-rest and laptop chassis, previously unlit.
+                float metalMask=mask.a*(1.0-hallwayMask);
                 float4 bloomMasks=tex2D(_BloomMasksTex,i.uv);
-                float noiseBreakup=lerp(.75,1.12,bloomMasks.a);
+                float noiseBreakup=lerp(.72,1.18,bloomMasks.a);
 
                 if (_MaskDebug>1.5)
                 {
@@ -178,90 +181,118 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 float practicalSpill=hallwayOn*(1.0-roomOn)*corridorSpill;
                 resultColor+=max(onPhoto.rgb-offPhoto.rgb,0)*practicalSpill;
 
-                // V5 Hybrid Cinematic Lighting: measured YOMI screen color
-                // modulates distinct light passes painted for the wood,
-                // thin tabletop lip and a *tiny* keyboard response.
-                // This is reflected illumination, not an emissive UI overlay.
-                // Zero bounce when the room light is fully ON or LCD is OFF.
+                // V11 - photographic light from the REAL YOMI screen.
+                // The existing room/corridor and reference-image blend above
+                // remains the single authoritative background.
                 float night=saturate(1.0-roomOn);
                 night=night*night*night;
                 float screenGlow=saturate(_ScreenGlow);
                 float bounceAmount=saturate(_ScreenBounceAmount);
-                // V10: remove the dead-zone created by multiplying a weak
-                // CPU luma amount with dim painted masks and distance fade.
-                // No emission from a black screen (CPU baseline=.10).
-                float actualLcdEnergy=saturate((bounceAmount-.10)*3.25);
-                float strength=screenGlow*actualLcdEnergy*night;
-                // The reflection tint follows the ACTUAL LCD pixels.
-                // Do not force every screen into a saturated cyan floodlight.
-                float3 sampledHue=saturate(_ScreenBounceTint.rgb);
-                // Reconstruct rough painted wood response from OFF/ON photos.
-                // The V5 red channel is intentionally nonzero on actual wood
-                // only at photo Y 842..910 (sampled in GitHub mask probe).
-                // Previous V9 falloff centered Y718 vanished BEFORE reaching
-                // those red-mask pixels, hence no visible screen reflection.
+                // A completely black LCD has CPU exposure .10 and emits no
+                // bounce. Screen highlights are weighted by the estimator.
+                float lcdEnergy=saturate((bounceAmount-.10)*3.25);
+                float strength=night*screenGlow*lcdEnergy;
+
+                // Preserve true YOMI chromaticity, with controlled exposure.
+                // A desaturated warm frame does NOT become electric cyan.
+                float3 rawTint=saturate(_ScreenBounceTint.rgb);
+                float tintLuma=max(dot(rawTint,float3(.2126,.7152,.0722)),.001);
+                float3 screenChroma=lerp(float3(1,1,1),
+                    rawTint/tintLuma,.68);
+                float3 sampledHue=saturate(lerp(rawTint,
+                    screenChroma*sqrt(tintLuma),.42));
+
+                // Full-resolution registered photographs encode the wood
+                // fibres, dark crevices and glossy surface reflectance. Do
+                // not replace them with a flat colour or procedural grain.
                 float offLuma=dot(offPhoto.rgb,float3(.2126,.7152,.0722));
                 float onLuma=dot(onPhoto.rgb,float3(.2126,.7152,.0722));
-                float3 normalizedOn=onPhoto.rgb/max(onLuma,.12);
-                float3 woodAlbedo=saturate(
-                    lerp(float3(.95,.95,.95),normalizedOn,.43));
-                float grainDetail=saturate(offLuma*1.15+onLuma*.45);
-                // Wood absorbs some LCD light but never blocks it completely
-                // just because a board is dark in the input photograph.
-                float grainResponse=saturate(.53+.52*grainDetail);
+                float3 photoDelta=max(onPhoto.rgb-offPhoto.rgb,0.0);
+                float3 onChroma=onPhoto.rgb/max(onLuma,.07);
+                float3 woodAlbedo=clamp(
+                    lerp(float3(1,1,1),onChroma,.48),
+                    float3(.56,.49,.42),float3(1.23,1.16,1.05));
+                // Floor of .38 keeps dark varnished boards visible, while
+                // the photographic delta and grain modulate local contrast.
+                float grainRelief=saturate(.38+.83*sqrt(saturate(onLuma*1.3))
+                    +.24*offLuma);
+                float shadowDetail=smoothstep(.006,.085,onLuma);
+                float grainResponse=grainRelief*(.40+.60*shadowDetail);
 
-                // Separate physical receivers: illuminated tabletop ahead
-                // of the bezel vs a much weaker keyboard/laptop base.
-                // The actual approved photo is 1672x941. Red wood masks
-                // peak near Y875, not Y718; keep these lobe coordinates
-                // registered to those SAME textures.
-                float2 woodDelta=(p-float2(824.0,855.0))/
-                    float2(520.0,210.0);
-                float d2=dot(woodDelta,woodDelta);
-                float woodCone=(1.0/(1.0+.88*d2))*
-                    (1.0-smoothstep(.80,2.10,d2));
-                // Fall off at the actual bottom edge (Y935..941), not
-                // midway through the real V5 tabletop red channel.
+                // Anisotropic emitter: x-span of the wide LCD expands
+                // naturally across the desk. IMPORTANT: the falloff must
+                // remain centred near photo y855 where the V5 WOOD mask is
+                // nonzero (y842-910), not y738 on the keyboard.
+                float forwardT=saturate((p.y-668.0)/273.0);
+                float emitterHalfWidth=lerp(188.0,266.0,forwardT);
+                float receiverX=max(abs(p.x-824.0)-emitterHalfWidth,0.0)
+                    /335.0;
+                float receiverY=(p.y-855.0)/210.0;
+                float receiverDist=receiverX*receiverX+
+                    receiverY*receiverY;
+                float woodCone=(1.0/(1.0+.88*receiverDist))*
+                    (1.0-smoothstep(.80,2.10,receiverDist));
+                // A real falloff at y875-941 avoids the neon front-edge bar.
                 float frontFade=1.0-.96*smoothstep(875.0,941.0,p.y);
-                float localFalloff=saturate(woodCone*frontFade);
+                float woodFalloff=saturate(woodCone*frontFade);
+
+                // Separate, subtler lobe for physical keyboard and chassis.
                 float2 keyDelta=(p-float2(824.0,745.0))/
                     float2(440.0,205.0);
-                float keyboardLobe=saturate(1.0-
-                    smoothstep(.45,1.60,dot(keyDelta,keyDelta)));
+                float keyboardLobe=1.0-smoothstep(.42,1.65,
+                    dot(keyDelta,keyDelta));
+                float chassisWindow=smoothstep(665.0,689.0,p.y)*
+                    (1.0-.60*smoothstep(793.0,889.0,p.y))*
+                    (1.0-smoothstep(268.0,386.0,abs(p.x-824.0)));
 
-                // A small amount of sideways movement follows the genuine
-                // YOMI bright-pixel centroid; never leave mask boundaries.
                 float lateral=saturate((p.x-490.0)/690.0);
                 float sideWeight=saturate(1.0+
                     _ScreenBounceSide*(lateral*2.0-1.0));
-                float woodSurface=woodMask*.94+lipMask*.15;
-                float diffusePass=woodSurface*grainResponse*
-                    sideWeight*localFalloff;
-                float keyPass=keyMask*.20*keyboardLobe;
-                float3 diffuseTint=lerp(sampledHue,
-                    sampledHue*woodAlbedo,
-                    saturate(woodSurface/(woodSurface+keyPass+.0001)));
-                float3 diffuseLight=diffuseTint*
-                    (diffusePass*1.28+keyPass*.44)*strength;
+                float lipFade=1.0-smoothstep(783.0,899.0,p.y);
+                float woodZone=max(woodMask*1.12,lipMask*.13*lipFade);
+                float3 learnedWood=photoDelta*screenChroma*1.32;
+                float3 woodBounceTint=lerp(
+                    sampledHue*woodAlbedo*grainResponse,
+                    learnedWood,.26);
+                float3 woodDiffuse=woodBounceTint*woodZone*
+                    woodFalloff*sideWeight*1.46;
 
-                // Photographic glints on wood, not a solid blue rectangle.
-                // V6 specular Green channel peaks on wood at Y875; use it
-                // precisely where it was painted and nowhere else.
+                // Light on mask.a makes the physical laptop body read as
+                // adjacent to its powered LCD, without bleaching stickers.
+                float chassisDetail=saturate(.30+.78*offLuma+.33*onLuma);
+                float metalPass=metalMask*chassisDetail*
+                    chassisWindow*keyboardLobe*.38;
+                float keyRowFalloff=lerp(1.33,.50,
+                    saturate((p.y-698.0)/119.0));
+                float keyDetail=saturate(.34+1.03*offLuma+.44*onLuma);
+                float keyPass=keyMask*keyDetail*
+                    keyboardLobe*keyRowFalloff*.24;
+                float3 diffuseLight=(woodDiffuse+
+                    sampledHue*(metalPass+keyPass)*sideWeight)*strength;
+
+                // Specular masks trace actual gloss on the photographed
+                // wood. Energy is driven by bright YOMI icons/lantern.
                 float bloomPower=saturate(_ScreenBloomAmount)*_BloomGain;
                 float specPower=saturate(_ScreenSpecAmount)*_SpecularGain;
-                float woodReceiver=saturate(woodMask+.18*lipMask);
+                float microGlint=smoothstep(.028,.22,onLuma)*
+                    (.34+.66*smoothstep(.010,.075,offLuma));
+                float surfaceReceiver=saturate(
+                    woodMask+.50*metalMask+.33*keyMask+.12*lipMask*lipFade);
                 float halo=bloomMasks.r*noiseBreakup*bloomPower*
-                    woodReceiver*localFalloff;
-                float spec=bloomMasks.g*noiseBreakup*specPower*
-                    woodReceiver*localFalloff*sideWeight;
+                    surfaceReceiver*(.38+.62*grainRelief);
+                float spec=(bloomMasks.g*.84+bloomMasks.b*.14*lipFade)*
+                    noiseBreakup*specPower*sideWeight*
+                    surfaceReceiver*microGlint;
                 float3 specTint=sampledHue*
-                    lerp(woodAlbedo,float3(1.0,1.0,1.0),.70);
-                float3 opticalLight=specTint*strength*
-                    (halo*.55+spec*.91);
+                    lerp(woodAlbedo,float3(1,1,1),.72);
+                float localFalloff=max(woodFalloff,
+                    keyboardLobe*.55*chassisWindow);
+                float3 opticalLight=specTint*strength*localFalloff*
+                    (halo*.57+spec*1.20);
                 float3 bounced=diffuseLight+opticalLight;
-                // Compress peaks but leave dark wood detail intact.
-                bounced=bounced/(1.0+bounced*2.10);
-                resultColor+=bounced*(1.0-.35*resultColor);
+                // Filmic high-end compression retains grain and texture.
+                bounced=.45*(1.0-exp(-bounced/.45));
+                resultColor+=bounced*(1.0-.24*resultColor);
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;
             }

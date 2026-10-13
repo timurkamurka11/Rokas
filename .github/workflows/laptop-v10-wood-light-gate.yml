@@ -1,4 +1,4 @@
-name: ROKAS Laptop V10 real-wood light gate
+name: ROKAS Laptop V11 photographic light gate
 on:
   push:
     paths:
@@ -36,7 +36,11 @@ jobs:
               t=max(0.,min(1.,t))
               return t*t*(3-2*t)
           def falloff(x,y):
-              d=((x-824)/520)**2+((y-855)/210)**2
+              t=max(0.,min(1.,(y-668)/273))
+              half=188+(266-188)*t
+              dx=max(abs(x-824)-half,0)/335
+              dy=(y-855)/210
+              d=dx*dx+dy*dy
               cone=(1/(1+.88*d))*(1-smooth((d-.8)/1.30))
               front=1-.96*smooth((y-875)/66)
               return cone*front
@@ -57,12 +61,16 @@ jobs:
           assert samples["rightBackground"][1]<.05
           text=shader.read_text()
           cpu=source.read_text()
-          assert "float2(824.0,855.0)" in text
-          assert "float2(520.0,210.0)" in text
-          assert "875.0,941.0" in text
+          assert "p.y-855.0" in text and "abs(p.x-824.0)" in text
+          assert "188.0,266.0" in text and "875.0,941.0" in text
           assert "mask.r*(1.0-mask.a)" in text
+          assert "metalMask=mask.a" in text
+          assert "woodBounceTint" in text and "photoDelta=" in text
           assert "bounceAmount-.10" in text
-          assert "p.x - 824f" in cpu and "p.y - 855f" in cpu
+          assert "p.x-824f" in cpu and "p.y-855f" in cpu
           assert "EvaluateVisibleEnergy" in cpu
-          print("PASS: actual wood receives real content-dependent LCD reflection")
+          assert "EvaluateEmissiveWeight" in cpu
+          assert falloff(520,770)>.65
+          assert falloff(824,855)>.95
+          print("PASS: photographic V11 LCD reflection stays on wood, metal and localized keyboard")
           PY

@@ -45,21 +45,33 @@ namespace Rokas.Presentation
             float r = Mathf.Clamp01(mean.r);
             float g = Mathf.Clamp01(mean.g);
             float b = Mathf.Clamp01(mean.b);
-            float luma = .2126f * r + .7152f * g + .0722f * b;
-            // Preserve neutral balance and screen chroma without forcing an
-            // artificial blue floor onto dark screens or washing out wood.
-            const float desaturate = .22f;
-            float cr = Mathf.Lerp(r, luma, desaturate);
-            float cg = Mathf.Lerp(g, luma, desaturate);
-            float cb = Mathf.Lerp(b, luma, desaturate);
+            float luma = .2126f*r + .7152f*g + .0722f*b;
+            // Chromatic adaptation: bright YOMI icons survive a dark
+            // wallpaper without any constant blue-tinted light.
+            const float desaturate = .30f;
+            float cr = Mathf.Lerp(r,luma,desaturate);
+            float cg = Mathf.Lerp(g,luma,desaturate);
+            float cb = Mathf.Lerp(b,luma,desaturate);
+            float peak = Mathf.Max(Mathf.Max(cr,cg),Mathf.Max(cb,.001f));
+            float carrier = Mathf.Lerp(.24f,.88f,Mathf.Sqrt(luma));
             reflected = new Color(
-                Mathf.Clamp01(.06f + .82f * cr),
-                Mathf.Clamp01(.06f + .82f * cg),
-                Mathf.Clamp01(.06f + .82f * cb), 1f);
-            float curvedLuma = Mathf.Pow(Mathf.Clamp01(luma), 1.18f);
-            amount = Mathf.Clamp(.10f + curvedLuma * .74f, .10f, .82f);
+                Mathf.Clamp01(Mathf.Lerp(cr/peak*carrier,
+                    .06f+.82f*cr,.43f)),
+                Mathf.Clamp01(Mathf.Lerp(cg/peak*carrier,
+                    .06f+.82f*cg,.43f)),
+                Mathf.Clamp01(Mathf.Lerp(cb/peak*carrier,
+                    .06f+.82f*cb,.43f)),1f);
+            // The shader expects a black-LCD baseline of exactly .10.
+            amount = Mathf.Clamp(.10f+Mathf.Pow(luma,.82f)*.76f,
+                .10f,.86f);
         }
 
+        /// <summary>Emissive weight for each downsampled YOMI pixel.</summary>
+        public static float EvaluateEmissiveWeight(float luma)
+        {
+            float y=Mathf.Clamp01(luma);
+            return .14f+y*1.65f+BrightPass(y)*2.25f;
+        }
 
         /// <summary>
         /// A soft-knee bright-pass using luminance of sampled YOMI pixels.
@@ -103,17 +115,19 @@ namespace Rokas.Presentation
         /// Center is just in front of the laptop, not at the table edge.</summary>
         public static float EvaluateSurfaceAttenuation(Vector2 p)
         {
-            // This corresponds exactly to the shader's *wood* lobe,
-            // and deliberately targets actual photographic wood at Y842-910.
-            float x = (p.x - 824f) / 520f;
-            float y = (p.y - 855f) / 210f;
-            float d = x * x + y * y;
-            float invSq = 1f / (1f + .88f * d);
-            float t = Mathf.Clamp01((d - .80f) / 1.30f);
-            float radial = invSq * (1f - t * t * (3f - 2f * t));
-            float v = Mathf.Clamp01((p.y - 875f) / 66f);
-            float edge = 1f - .96f * v * v * (3f - 2f * v);
-            return Mathf.Clamp01(radial * edge);
+            // Wood-only footprint, mirrored exactly in the V11 shader.
+            // Preserve the established V10 y855 alignment to real wood.
+            float forwardT=Mathf.Clamp01((p.y-668f)/273f);
+            float halfWidth=Mathf.Lerp(188f,266f,forwardT);
+            float x=Mathf.Max(Mathf.Abs(p.x-824f)-halfWidth,0f)/335f;
+            float y=(p.y-855f)/210f;
+            float d=x*x+y*y;
+            float invSq=1f/(1f+.88f*d);
+            float t=Mathf.Clamp01((d-.80f)/1.30f);
+            float radial=invSq*(1f-t*t*(3f-2f*t));
+            float f=Mathf.Clamp01((p.y-875f)/66f);
+            float front=1f-.96f*f*f*(3f-2f*f);
+            return Mathf.Clamp01(radial*front);
         }
 
         /// <summary>Perceptual LCD exposure, zero for a black screen.
@@ -138,6 +152,7 @@ namespace Rokas.Presentation
                         float r = 0f, g = 0f, b = 0f;
                         float chromaWeightSum = 0f;
                         float lumaSum = 0f;
+                        float emissionSum = 0f;
                         float highlightSum = 0f;
                         float formFactorSum = 0f;
                         float leftLight = 0f, rightLight = 0f;
@@ -156,13 +171,14 @@ namespace Rokas.Presentation
                             float luma = .2126f * linearR +
                                 .7152f * linearG + .0722f * linearB;
                             float hi = BrightPass(luma);
-                            float chromaWeight = (.18f + luma * 1.45f + hi * 1.85f) *
-                                verticalWeight;
+                            float chromaWeight =
+                                EvaluateEmissiveWeight(luma)*verticalWeight;
                             r += linearR * chromaWeight;
                             g += linearG * chromaWeight;
                             b += linearB * chromaWeight;
                             chromaWeightSum += chromaWeight;
                             lumaSum += luma * verticalWeight;
+                            emissionSum += luma*chromaWeight;
                             highlightSum += hi * verticalWeight;
                             formFactorSum += verticalWeight;
                             float lateralEnergy = (luma + hi * 1.6f) * verticalWeight *
@@ -173,13 +189,25 @@ namespace Rokas.Presentation
                         }
                         float invChroma = 1f / Mathf.Max(.0001f, chromaWeightSum);
                         float invForm = 1f / Mathf.Max(.0001f, formFactorSum);
+                        float averageLuma=lumaSum*invForm;
+                        float effectiveLuma=Mathf.Lerp(averageLuma,
+                            emissionSum*invChroma,.57f);
+                        float weightedR=r*invChroma;
+                        float weightedG=g*invChroma;
+                        float weightedB=b*invChroma;
+                        float weightedLuma=Mathf.Max(.0001f,
+                            .2126f*weightedR+.7152f*weightedG+
+                            .0722f*weightedB);
+                        float scale=effectiveLuma/weightedLuma;
                         EvaluateMeanScreenColor(
-                            new Color(r * invChroma, g * invChroma, b * invChroma, 1f),
-                            out targetTint, out targetAmount);
+                            new Color(weightedR*scale,weightedG*scale,
+                                weightedB*scale,1f),
+                            out targetTint,out targetAmount);
                         EvaluateHighlightResponse(
-                            lumaSum * invForm,
-                            highlightSum * invForm,
-                            out targetBloom, out targetSpecular);
+                            effectiveLuma,
+                            Mathf.Max(highlightSum*invForm,
+                                effectiveLuma*.23f),
+                            out targetBloom,out targetSpecular);
                         targetSideBias = EvaluateSideBias(leftLight, rightLight);
                     }
                 }

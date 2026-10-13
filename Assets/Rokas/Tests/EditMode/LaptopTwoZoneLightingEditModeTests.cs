@@ -361,6 +361,57 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void V11EmissiveLcdContentDrivesBounceWithoutBlueBias()
+        {
+            // Brilliant YOMI icons and paper lantern should contribute
+            // much more than the almost-black wallpaper around them.
+            float wallpaper = LaptopScreenBounceEstimator.EvaluateEmissiveWeight(.04f);
+            float icon = LaptopScreenBounceEstimator.EvaluateEmissiveWeight(.92f);
+            Assert.That(icon, Is.GreaterThan(wallpaper * 5f));
+
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                Color.black, out Color black, out float blackEnergy);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.18f,.30f,.63f), out Color cool, out float coolEnergy);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.70f,.48f,.18f), out Color warm, out float warmEnergy);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.48f,.48f,.48f), out Color neutral, out _);
+            Assert.That(blackEnergy,Is.EqualTo(.10f).Within(.00001f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateVisibleEnergy(blackEnergy),
+                Is.EqualTo(0f).Within(.00001f));
+            Assert.That(coolEnergy, Is.GreaterThan(blackEnergy));
+            Assert.That(warmEnergy, Is.GreaterThan(blackEnergy));
+            Assert.That(cool.b, Is.GreaterThan(cool.r));
+            Assert.That(warm.r, Is.GreaterThan(warm.b));
+            Assert.That(neutral.r, Is.EqualTo(neutral.g).Within(.0001f));
+            Assert.That(neutral.g, Is.EqualTo(neutral.b).Within(.0001f));
+            Assert.That(black.b, Is.LessThan(.03f));
+        }
+
+        [Test]
+        public void V11WideScreenLobeIlluminatesPhotographedWoodFlanks()
+        {
+            // Unlike Argon's original y738 lobe, the center must remain
+            // aligned with the measured y842..910 wood mask from V10.
+            float woodCenter=LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f,855f));
+            float woodLeft=LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(520f,770f));
+            float woodForward=LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f,910f));
+            float bottomEdge=LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f,940f));
+            float outside=LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(1570f,875f));
+            Assert.That(woodCenter,Is.GreaterThan(.95f));
+            Assert.That(woodLeft,Is.GreaterThan(.65f));
+            Assert.That(woodForward,Is.GreaterThan(.35f));
+            Assert.That(bottomEdge,Is.LessThan(.06f));
+            Assert.That(outside,Is.LessThan(.01f));
+        }
+
+        [Test]
         public void EstimatorTickRestoresActiveRenderTextureAndReleasesCleanly()
         {
             var externalActive = new RenderTexture(16, 16, 0);
