@@ -143,14 +143,19 @@ namespace Rokas.Tests
         }
 
         [Test]
-        public void V5UsesRealSourceAtlasAndHasExplicitVisibilityDiagnostic()
+        public void V5UsesGeneratedAtlasAndHasExplicitVisibilityDiagnostic()
         {
             var root=new GameObject("Dust V5 Atlas",typeof(RectTransform),
                 typeof(CanvasRenderer));
             try
             {
                 var dust=root.AddComponent<HubDustCanvasGraphic>();
-                Assert.IsTrue(dust.UsingSourceAtlas);
+                // V5 builds its own RGBA32 atlas. The removed
+                // UsingSourceAtlas flag belonged to the old pipeline.
+                // Assert the actual Canvas texture instead of a stale API.
+                Assert.IsInstanceOf<Texture2D>(dust.mainTexture);
+                Assert.AreEqual(HubDustAtlasFactory.Width, dust.mainTexture.width);
+                Assert.AreEqual(HubDustAtlasFactory.Height, dust.mainTexture.height);
                 Assert.IsFalse(dust.DebugVisibility);
                 Assert.That(dust.ShaftStrength,Is.EqualTo(.9f).Within(.0001f));
                 dust.DebugVisibility=true;
