@@ -1,0 +1,38 @@
+name: ROKAS laptop one-time mask probe
+on:
+  push:
+    paths: ['.github/workflows/laptop-mask-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect photographic mask values at laptop/table positions
+        run: |
+          python3 -m pip -q install pillow numpy
+          python3 - <<'PY'
+          from PIL import Image
+          import numpy as np
+          from pathlib import Path
+          p=Path("Assets/Rokas/Resources/LaptopCinematic/LightMasks")
+          masks=[
+            ("V5 packed wood/key/lip/exclude",p/"HybridScreenBounceMasks.png"),
+            ("V6 halo/specular/rim/grain",p/"HybridCinematicBloomMasks.png")
+          ]
+          positions=[(824,718),(824,760),(824,800),(824,842),(824,875),(824,910),
+                     (650,770),(1050,770),(400,850),(1250,850)]
+          for label,fp in masks:
+            a=np.asarray(Image.open(fp).convert("RGBA"),dtype=float)/255
+            print("MASK",label,"actual W,H",a.shape[1],a.shape[0])
+            for c,name in enumerate("RGBA"):
+              q=a[:,:,c]
+              print("CHANNEL",name,"min",round(q.min(),4),"mean",round(q.mean(),4),"max",round(q.max(),4),
+                    "pctAbove05",round(float((q>.05).mean()),4),"pctAbove25",round(float((q>.25).mean()),4))
+            for x,y in positions:
+              px=min(a.shape[1]-1,max(0,round(x*a.shape[1]/1672)))
+              py=min(a.shape[0]-1,max(0,round(y*a.shape[0]/941)))
+              print("POINT",x,y,"RGBA",*[round(v,3) for v in a[py,px]])
+          PY
