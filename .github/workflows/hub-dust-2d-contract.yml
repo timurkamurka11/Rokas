@@ -33,9 +33,9 @@ jobs:
           assert 'session.State.lampOn, session.HallwayLightOn' in view
           assert 'homeSubLocation == HomeLocation.MainRoom' in view
           assert 'hubDust.raycastTarget = false' in view
-          assert 'ParticleCount = 192' in graphic
-          assert 'i < 125 ? 0 : i < 173 ? 1 : 2' in graphic
-          assert 'RoomLampContribution' in graphic and 'HallwayContribution' in graphic
+          assert 'ParticleCount = 320' in graphic
+          assert 'i < 208 ? 0 : i < 288 ? 1 : 2' in graphic
+          assert 'RoomLampContribution' in graphic and 'HallwayContribution' in graphic and 'WindowContribution' in graphic
           assert 'Resources.Load<Shader>("Shaders/HubDustSoftMotes")' in graphic
           assert 'Shader "ROKAS/UI/HubDustSoftMotes"' in shader
           assert 'Blend SrcAlpha OneMinusSrcAlpha' in shader
@@ -48,5 +48,9 @@ jobs:
             assert f.with_name(f.name+'.meta').is_file(),str(f)
             content=f.read_text()
             assert content.count('{')==content.count('}'),str(f)
-          print('PASS Built-in 2.5D HubDust 192 particles, 3 layers, two saved lighting switches, UI ordering and shader')
+          assert 'EvaluateDustAlpha' in graphic
+          assert '1748f,345f' in graphic and '138f,458f' in graphic
+          assert 'HubDust V2' in graphic and 'LastVisibleMotes' in graphic
+          assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
+          print('PASS Built-in 2.5D HubDust V2: 320 particles, real lamp/window/corridor coordinates, saved switches, UI ordering and shader')
           PY

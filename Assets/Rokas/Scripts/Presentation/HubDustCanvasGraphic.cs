@@ -14,7 +14,7 @@ namespace Rokas.Presentation
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HubDustCanvasGraphic : MaskableGraphic
     {
-        private const int ParticleCount = 192;
+        private const int ParticleCount = 320;
         private const float MeshStep = 1f / 24f;
         private struct Mote
         {
@@ -27,6 +27,8 @@ namespace Rokas.Presentation
         private Material ownedMaterial;
         public int ParticleBudget => ParticleCount;
         public float Visibility => visualStrength;
+        public int LastVisibleMotes { get; private set; }
+        private bool reportedFirstRender;
 
         protected override void Awake()
         {
@@ -42,10 +44,10 @@ namespace Rokas.Presentation
                     z = (float)rng.NextDouble(),
                     phase = (float)rng.NextDouble() * 6.28318f,
                     drift = .32f + (float)rng.NextDouble() * 1.10f,
-                    alpha = .55f + (float)rng.NextDouble() * .45f,
+                    alpha = .72f + (float)rng.NextDouble() * .28f,
                     rotation = (float)rng.NextDouble() * 6.28318f,
                     scale = .65f + (float)rng.NextDouble() * .75f,
-                    kind = i < 125 ? 0 : i < 173 ? 1 : 2 // 65/25/10
+                    kind = i < 208 ? 0 : i < 288 ? 1 : 2 // 65/25/10
                 };
             }
             var shader = Resources.Load<Shader>("Shaders/HubDustSoftMotes");
@@ -86,6 +88,7 @@ namespace Rokas.Presentation
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
+            LastVisibleMotes = 0;
             if (!showRoom || visualStrength < .0001f) return;
             var rc = rectTransform.rect;
             float toX = rc.width / 1920f;
@@ -100,16 +103,18 @@ namespace Rokas.Presentation
                     Mathf.Sin(age * .23f + m.phase * 1.7f) * 8.0f, 1080f);
                 float warm = RoomLampContribution(x, y, roomOn);
                 float doorway = HallwayContribution(x, y, hallwayOn);
-                // In dark areas particles nearly vanish instead of snowing.
-                float light = .035f + warm + doorway;
-                float alpha = Mathf.Min(.25f,
-                    m.alpha * (m.kind == 0 ? .090f : m.kind == 1 ? .058f : .047f) *
-                    light * visualStrength);
-                if (alpha < .0013f) continue;
-                float size = (m.kind == 0 ? 1.6f : m.kind == 1 ? 4.4f : 13.5f) *
-                    m.scale * (m.kind == 2 ? 1f + .25f * m.z : 1f);
-                // Bright warm lamp and cool doorway produce different motes.
-                float blend = doorway / Mathf.Max(.001f, doorway + warm);
+                float window = WindowContribution(x,y);
+                // V1 emitted nearly invisible 1px dots at 0.5%-1% alpha.
+                // V2 bounds the opacity while making actual lamplit dust
+                // clearly visible even at 0.7x Game View scale.
+                float alpha = EvaluateDustAlpha(m.kind, m.alpha, x, y,
+                    roomOn, hallwayOn, visualStrength);
+                if (alpha < .004f) continue;
+                float size = (m.kind == 0 ? 3.5f : m.kind == 1 ? 8.2f : 18.0f) *
+                    m.scale * (m.kind == 2 ? 1f + .23f * m.z : 1f);
+                // Cool city/window and corridor scatter; warm practicals.
+                float cool = doorway + window;
+                float blend = cool / Mathf.Max(.001f, cool + warm);
                 var tint = Color.Lerp(new Color(1f, .86f, .69f), 
                     new Color(.64f, .78f, .99f), blend);
                 tint.a = alpha;
@@ -120,6 +125,15 @@ namespace Rokas.Presentation
                 float cx = rc.xMin + x * toX;
                 float cy = rc.yMax - y * toY;
                 AddQuad(vh, new Vector2(cx, cy), sx, sy, cs, sn, tint, m.kind);
+                LastVisibleMotes++;
+            }
+            if (!reportedFirstRender && Application.isPlaying && LastVisibleMotes > 0)
+            {
+                reportedFirstRender = true;
+                Debug.Log("[ROKAS HubDust V2] rendering " +
+                    LastVisibleMotes + " motes; room=" + roomOn +
+                    " hallway=" + hallwayOn + " strength=" +
+                    visualStrength.ToString("F2"));
             }
         }
 
@@ -134,17 +148,38 @@ namespace Rokas.Presentation
         public static float RoomLampContribution(float x, float y, bool on)
         {
             if (!on) return 0f;
-            // Hand-authored to the existing 1920x1080 HOME photograph;
-            // never reads/repaints the laptop's approved V11 photo.
-            return .75f * Gaussian(x,y,1225f,480f,330f,450f) +
-                .46f * Gaussian(x,y,595f,430f,260f,380f);
+            // Verified against the real 1920x1080 HomeView hotspots:
+            // floor lamp (138,400), desk lamp (1151,195).
+            return 1.08f*Gaussian(x,y,138f,458f,250f,390f) +
+                .78f*Gaussian(x,y,1151f,310f,340f,340f) +
+                .30f*Gaussian(x,y,1020f,740f,410f,320f);
         }
 
         public static float HallwayContribution(float x, float y, bool on)
         {
-            // The doorway is on the LEFT of the approved room art.
-            return (on ? .58f : .105f) *
-                Gaussian(x,y,355f,365f,185f,390f);
+            // The actual corridor door is on the RIGHT at X1748,
+            // unlike the incorrect V1 X355 left-wall light.
+            return (on ? .98f : .065f)*
+                Gaussian(x,y,1748f,345f,265f,470f);
+        }
+
+        public static float WindowContribution(float x, float y)
+        {
+            // City reflections exist with BOTH room lamp states;
+            // they are cold and noticeably weaker than a practical.
+            return .43f*Gaussian(x,y,697f,345f,460f,430f);
+        }
+
+        public static float EvaluateDustAlpha(int kind, float intrinsic,
+            float x,float y,bool roomOn,bool hallwayOn,float visibility=1f)
+        {
+            float warm=RoomLampContribution(x,y,roomOn);
+            float corridor=HallwayContribution(x,y,hallwayOn);
+            float window=WindowContribution(x,y);
+            float light=.025f+warm+corridor+window;
+            float baseAlpha=kind==0 ? .32f : kind==1 ? .255f : .175f;
+            // Soft and lit, never an opaque overlay/snowfall.
+            return Mathf.Clamp(intrinsic*baseAlpha*light*visibility,0f,.34f);
         }
 
         private static void AddQuad(VertexHelper vh, Vector2 c, float rx,

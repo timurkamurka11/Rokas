@@ -31,13 +31,55 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void V2DustIsVisibleNearActualHubLightSources()
+        {
+            // These 1920x1080 hotspot coordinates are from HomeView.Build().
+            float floor=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,138f,458f,true,false);
+            float desk=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,1151f,310f,true,false);
+            float window=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,697f,345f,false,false);
+            float corridor=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,1748f,345f,false,true);
+            float darkCorner=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,1300f,1020f,false,false);
+            Assert.That(floor,Is.GreaterThan(.20f));
+            Assert.That(desk,Is.GreaterThan(.17f));
+            Assert.That(window,Is.GreaterThan(.11f));
+            Assert.That(corridor,Is.GreaterThan(.25f));
+            Assert.That(darkCorner,Is.LessThan(.02f));
+            Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,1748f,345f,false,true),
+                Is.GreaterThan(HubDustCanvasGraphic.EvaluateDustAlpha(
+                    0,1f,1748f,345f,false,false)*5f));
+        }
+
+        [Test]
+        public void V2DustPreservesParticleLayerHierarchyAndSubtleBokeh()
+        {
+            float micro=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,138f,458f,true,false);
+            float ambient=HubDustCanvasGraphic.EvaluateDustAlpha(
+                1,1f,138f,458f,true,false);
+            float bokeh=HubDustCanvasGraphic.EvaluateDustAlpha(
+                2,1f,138f,458f,true,false);
+            Assert.That(micro,Is.GreaterThan(ambient));
+            Assert.That(ambient,Is.GreaterThan(bokeh));
+            Assert.That(micro,Is.LessThanOrEqualTo(.34f));
+            Assert.That(bokeh,Is.LessThanOrEqualTo(.34f));
+            Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,138f,458f,true,false,0f),Is.EqualTo(0f));
+        }
+
+        [Test]
         public void DustLayerAllocatesBoundedNonInteractiveGraphics()
         {
             var root = new GameObject("TestDust", typeof(RectTransform), typeof(CanvasRenderer));
             try
             {
                 var dust = root.AddComponent<HubDustCanvasGraphic>();
-                Assert.AreEqual(192, dust.ParticleBudget);
+                Assert.AreEqual(320, dust.ParticleBudget);
                 Assert.IsFalse(dust.raycastTarget);
                 dust.Tick(.50f, true, true, false);
                 Assert.IsTrue(root.activeSelf);
