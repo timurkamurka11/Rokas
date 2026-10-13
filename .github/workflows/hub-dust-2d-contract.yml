@@ -54,6 +54,10 @@ jobs:
           assert 'SoftShaft' in shader and 'AddLightShafts(vh,rc,toX,toY)' in gfx
           assert 'HighContrastBoost' in gfx and 'DiagnosticTestPattern' in gfx
           assert 'DebugVisibility' in gfx and 'enum HubDustVisibilityMode' in gfx
+          # Guard the previous V5 compile regression: tests referenced a removed field.
+          assert 'dust.UsingSourceAtlas' not in tests
+          assert 'Assert.AreEqual(HubDustAtlasFactory.Width, dust.mainTexture.width)' in tests
+          assert 'Assert.AreEqual(HubDustAtlasFactory.Height, dust.mainTexture.height)' in tests
           for p in [root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
                     root/'Scripts/Presentation/HubDustAtlasFactory.cs',
                     root/'Resources/Shaders/HubDustSoftMotes.shader',
