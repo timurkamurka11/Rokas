@@ -1,0 +1,52 @@
+name: ROKAS Hub Dust Built-in 2D contract
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths:
+      - 'Assets/Rokas/Scripts/Presentation/HubDustCanvasGraphic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Resources/Shaders/HubDustSoftMotes.shader'
+      - 'Assets/Rokas/Tests/EditMode/HubDustCanvasEditModeTests.cs'
+      - '.github/workflows/hub-dust-2d-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the actual Unity Built-in 2.5D hub receives dust
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('Assets/Rokas')
+          graphics=Path('ProjectSettings/GraphicsSettings.asset').read_text()
+          assert 'm_CustomRenderPipeline: {fileID: 0}' in graphics
+          view=(root/'Scripts/Presentation/RokasView.cs').read_text()
+          graphic=(root/'Scripts/Presentation/HubDustCanvasGraphic.cs').read_text()
+          shader=(root/'Resources/Shaders/HubDustSoftMotes.shader').read_text()
+          assert 'HubDust_ThreeLayerAtmosphere' in view
+          assert view.index('background = ui.Art') < view.index('HubDust_ThreeLayerAtmosphere') < view.index('scene = ui.Rect')
+          assert 'session.State.lampOn, session.HallwayLightOn' in view
+          assert 'homeSubLocation == HomeLocation.MainRoom' in view
+          assert 'hubDust.raycastTarget = false' in view
+          assert 'ParticleCount = 192' in graphic
+          assert 'i < 125 ? 0 : i < 173 ? 1 : 2' in graphic
+          assert 'RoomLampContribution' in graphic and 'HallwayContribution' in graphic
+          assert 'Resources.Load<Shader>("Shaders/HubDustSoftMotes")' in graphic
+          assert 'Shader "ROKAS/UI/HubDustSoftMotes"' in shader
+          assert 'Blend SrcAlpha OneMinusSrcAlpha' in shader
+          assert 'Fallback Off' in shader
+          assert (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').is_file()
+          for f in [
+            root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
+            root/'Resources/Shaders/HubDustSoftMotes.shader',
+            root/'Tests/EditMode/HubDustCanvasEditModeTests.cs']:
+            assert f.with_name(f.name+'.meta').is_file(),str(f)
+            content=f.read_text()
+            assert content.count('{')==content.count('}'),str(f)
+          print('PASS Built-in 2.5D HubDust 192 particles, 3 layers, two saved lighting switches, UI ordering and shader')
+          PY

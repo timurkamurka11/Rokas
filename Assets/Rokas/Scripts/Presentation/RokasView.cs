@@ -39,6 +39,7 @@ namespace Rokas.Presentation
         private readonly Text toast;
         private readonly RawImage background;
         private readonly WorldEffects effects;
+        private readonly HubDustCanvasGraphic hubDust;
         private readonly HomeView home;
         private readonly HallwayView hallway;
         private readonly MissionView mission;
@@ -124,6 +125,19 @@ namespace Rokas.Presentation
             roomCameraRig.anchoredPosition = new Vector2(1920f * .57f, -1080f * .53f);
             background = ui.Art(roomCameraRig, "WorldIllustration", assets.home, 0, 0, 1920, 1080);
             effects = new WorldEffects(ui, roomCameraRig, background.rectTransform, session.State.settings, audio, owner.transform);
+            // UI-based hub: render dust AFTER photographic world art and
+            // BEFORE hit areas/buttons. A world-space particle prefab would
+            // be hidden behind this project's ScreenSpaceOverlay Canvas.
+            var hubDustRoot = new GameObject("HubDust_ThreeLayerAtmosphere",
+                typeof(RectTransform), typeof(CanvasRenderer));
+            hubDustRoot.transform.SetParent(roomCameraRig, false);
+            var dustRect = hubDustRoot.GetComponent<RectTransform>();
+            dustRect.anchorMin = Vector2.zero;
+            dustRect.anchorMax = Vector2.one;
+            dustRect.offsetMin = Vector2.zero;
+            dustRect.offsetMax = Vector2.zero;
+            hubDust = hubDustRoot.AddComponent<HubDustCanvasGraphic>();
+            hubDust.raycastTarget = false;
             scene = ui.Rect(roomCameraRig, "SceneInteractions", 0, 0, 1920, 1080);
             sceneInput = scene.gameObject.AddComponent<CanvasGroup>();
 
@@ -743,6 +757,14 @@ namespace Rokas.Presentation
             float scale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
             stage.localScale = new Vector3(scale, scale, 1);
             effects.Tick(dt, session.State.lampOn);
+            // No extra lamp state: dust follows exactly the room/hall
+            // switches used by HomeView and LaptopCinematic V11.
+            hubDust.Tick(dt,
+                IsHomeLocation(phase) &&
+                homeSubLocation == HomeLocation.MainRoom &&
+                !storageBlocked && string.IsNullOrEmpty(panel) &&
+                (laptopCinematic == null || !laptopCinematic.IsPlaying),
+                session.State.lampOn, session.HallwayLightOn);
             // Poll the SAME saved switches used by HomeView and HallwayView;
             // no parallel laptop lighting flags or delayed scene rebuilds.
             laptopCinematic?.UpdateLighting(dt);
