@@ -28,8 +28,8 @@ jobs:
           a=Image.open(photo).convert("RGBA")
           assert a.size==(256,144),a.size
           def wood(x,y):
-              px=round(x*a.width/1672)
-              py=round(y*a.height/941)
+              px=max(0,min(a.width-1,round(x*a.width/1672)))
+              py=max(0,min(a.height-1,round(y*a.height/941)))
               red,green,blue,alpha=a.getpixel((px,py))
               return (red/255)*(1-alpha/255)
           def smooth(t):
