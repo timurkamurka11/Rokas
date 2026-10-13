@@ -187,60 +187,80 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 night=night*night*night;
                 float screenGlow=saturate(_ScreenGlow);
                 float bounceAmount=saturate(_ScreenBounceAmount);
-                float strength=screenGlow*bounceAmount*night;
+                // V10: remove the dead-zone created by multiplying a weak
+                // CPU luma amount with dim painted masks and distance fade.
+                // No emission from a black screen (CPU baseline=.10).
+                float actualLcdEnergy=saturate((bounceAmount-.10)*3.25);
+                float strength=screenGlow*actualLcdEnergy*night;
                 // The reflection tint follows the ACTUAL LCD pixels.
                 // Do not force every screen into a saturated cyan floodlight.
                 float3 sampledHue=saturate(_ScreenBounceTint.rgb);
-                // Reconstruct natural wood albedo and grain detail from the
-                // registered ON/OFF photo pair so screen bounce multiplies with
-                // warm timber reflectance instead of adding flat blue fog.
+                // Reconstruct rough painted wood response from OFF/ON photos.
+                // The V5 red channel is intentionally nonzero on actual wood
+                // only at photo Y 842..910 (sampled in GitHub mask probe).
+                // Previous V9 falloff centered Y718 vanished BEFORE reaching
+                // those red-mask pixels, hence no visible screen reflection.
                 float offLuma=dot(offPhoto.rgb,float3(.2126,.7152,.0722));
                 float onLuma=dot(onPhoto.rgb,float3(.2126,.7152,.0722));
-                float3 normalizedOn=onPhoto.rgb/max(onLuma,.08);
-                float3 woodAlbedo=saturate(lerp(float3(1.0,1.0,1.0),normalizedOn,.62));
+                float3 normalizedOn=onPhoto.rgb/max(onLuma,.12);
+                float3 woodAlbedo=saturate(
+                    lerp(float3(.95,.95,.95),normalizedOn,.43));
                 float grainDetail=saturate(offLuma*1.15+onLuma*.45);
-                float grainResponse=smoothstep(.02,.68,grainDetail)*
-                    (.22+.78*grainDetail);
+                // Wood absorbs some LCD light but never blocks it completely
+                // just because a board is dark in the input photograph.
+                float grainResponse=saturate(.53+.52*grainDetail);
 
-                // Spatial attenuation from the LCD footprint, in pixels of
-                // the original 1672x941 POV. The frontmost desk edge fades:
-                // it must never be one uniform band of blue light.
-                float2 spread=(p-float2(824.0,718.0))/
-                    float2(460.0,175.0);
-                float squaredDist=dot(spread,spread);
-                float invSq=1.0/(1.0+2.35*squaredDist);
-                float nearField=invSq*(1.0-smoothstep(.06,1.05,squaredDist));
-                float frontFade=1.0-.94*smoothstep(745.0,910.0,p.y);
-                float localFalloff=saturate(nearField*frontFade);
+                // Separate physical receivers: illuminated tabletop ahead
+                // of the bezel vs a much weaker keyboard/laptop base.
+                // The actual approved photo is 1672x941. Red wood masks
+                // peak near Y875, not Y718; keep these lobe coordinates
+                // registered to those SAME textures.
+                float2 woodDelta=(p-float2(824.0,855.0))/
+                    float2(520.0,210.0);
+                float d2=dot(woodDelta,woodDelta);
+                float woodCone=(1.0/(1.0+.88*d2))*
+                    (1.0-smoothstep(.80,2.10,d2));
+                // Fall off at the actual bottom edge (Y935..941), not
+                // midway through the real V5 tabletop red channel.
+                float frontFade=1.0-.96*smoothstep(875.0,941.0,p.y);
+                float localFalloff=saturate(woodCone*frontFade);
+                float2 keyDelta=(p-float2(824.0,745.0))/
+                    float2(440.0,205.0);
+                float keyboardLobe=saturate(1.0-
+                    smoothstep(.45,1.60,dot(keyDelta,keyDelta)));
 
+                // A small amount of sideways movement follows the genuine
+                // YOMI bright-pixel centroid; never leave mask boundaries.
                 float lateral=saturate((p.x-490.0)/690.0);
-                float sideWeight=saturate(1.0+_ScreenBounceSide*(lateral*2.0-1.0));
-                float lipFade=1.0-smoothstep(755.0,865.0,p.y);
-                float woodSurface=max(woodMask*.82,lipMask*.22*lipFade);
-                float diffusePass=woodSurface*grainResponse*sideWeight;
-                float keyPass=keyMask*.09*(.35+.65*sideWeight);
-                float3 diffuseTint=lerp(sampledHue,sampledHue*woodAlbedo,
+                float sideWeight=saturate(1.0+
+                    _ScreenBounceSide*(lateral*2.0-1.0));
+                float woodSurface=woodMask*.94+lipMask*.15;
+                float diffusePass=woodSurface*grainResponse*
+                    sideWeight*localFalloff;
+                float keyPass=keyMask*.20*keyboardLobe;
+                float3 diffuseTint=lerp(sampledHue,
+                    sampledHue*woodAlbedo,
                     saturate(woodSurface/(woodSurface+keyPass+.0001)));
                 float3 diffuseLight=diffuseTint*
-                    (diffusePass+keyPass)*strength*localFalloff*.72;
+                    (diffusePass*1.28+keyPass*.44)*strength;
 
-                // The existing registered photographic bloom/specular masks
-                // preserve wood grain and highlighted tabletop edges.
-                // Bright YOMI icons drive subtle highlights, not neon wash.
+                // Photographic glints on wood, not a solid blue rectangle.
+                // V6 specular Green channel peaks on wood at Y875; use it
+                // precisely where it was painted and nowhere else.
                 float bloomPower=saturate(_ScreenBloomAmount)*_BloomGain;
                 float specPower=saturate(_ScreenSpecAmount)*_SpecularGain;
-                float surfaceReceiver=saturate(woodMask+.65*keyMask+.25*lipMask*lipFade);
-                float specCone=saturate(1.0-smoothstep(.04,.72,squaredDist))*frontFade;
+                float woodReceiver=saturate(woodMask+.18*lipMask);
                 float halo=bloomMasks.r*noiseBreakup*bloomPower*
-                    saturate(surfaceReceiver+.20*keyMask);
-                float spec=(bloomMasks.g*.68+bloomMasks.b*.18*lipFade)*
-                    noiseBreakup*specPower*sideWeight*surfaceReceiver*specCone;
-                float3 specTint=sampledHue*lerp(woodAlbedo,float3(1.0,1.0,1.0),.70);
+                    woodReceiver*localFalloff;
+                float spec=bloomMasks.g*noiseBreakup*specPower*
+                    woodReceiver*localFalloff*sideWeight;
+                float3 specTint=sampledHue*
+                    lerp(woodAlbedo,float3(1.0,1.0,1.0),.70);
                 float3 opticalLight=specTint*strength*
-                    (halo*localFalloff*.48+spec*.85);
+                    (halo*.55+spec*.91);
                 float3 bounced=diffuseLight+opticalLight;
                 // Compress peaks but leave dark wood detail intact.
-                bounced=bounced/(1.0+bounced*3.2);
+                bounced=bounced/(1.0+bounced*2.10);
                 resultColor+=bounced*(1.0-.35*resultColor);
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

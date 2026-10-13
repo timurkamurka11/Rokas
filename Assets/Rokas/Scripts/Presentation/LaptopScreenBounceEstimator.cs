@@ -103,15 +103,24 @@ namespace Rokas.Presentation
         /// Center is just in front of the laptop, not at the table edge.</summary>
         public static float EvaluateSurfaceAttenuation(Vector2 p)
         {
-            float x = (p.x - 824f) / 460f;
-            float y = (p.y - 718f) / 175f;
+            // This corresponds exactly to the shader's *wood* lobe,
+            // and deliberately targets actual photographic wood at Y842-910.
+            float x = (p.x - 824f) / 520f;
+            float y = (p.y - 855f) / 210f;
             float d = x * x + y * y;
-            float invSq = 1f / (1f + 2.35f * d);
-            float t = Mathf.Clamp01((d - .06f) / .99f);
+            float invSq = 1f / (1f + .88f * d);
+            float t = Mathf.Clamp01((d - .80f) / 1.30f);
             float radial = invSq * (1f - t * t * (3f - 2f * t));
-            float v = Mathf.Clamp01((p.y - 745f) / 165f);
-            float front = 1f - .94f * v * v * (3f - 2f * v);
-            return Mathf.Clamp01(radial * front);
+            float v = Mathf.Clamp01((p.y - 875f) / 66f);
+            float edge = 1f - .96f * v * v * (3f - 2f * v);
+            return Mathf.Clamp01(radial * edge);
+        }
+
+        /// <summary>Perceptual LCD exposure, zero for a black screen.
+        /// Must match _ScreenBounceAmount transformation in the shader.</summary>
+        public static float EvaluateVisibleEnergy(float screenAmount)
+        {
+            return Mathf.Clamp01((screenAmount - .10f) * 3.25f);
         }
 
         public void Tick(Texture source, bool powered, float deltaTime)

@@ -1,0 +1,68 @@
+name: ROKAS Laptop V10 real-wood light gate
+on:
+  push:
+    paths:
+      - '.github/workflows/laptop-v10-wood-light-gate.yml'
+      - 'Assets/Rokas/Resources/Shaders/LaptopCinematicLightStates.shader'
+      - 'Assets/Rokas/Scripts/Presentation/LaptopScreenBounceEstimator.cs'
+      - 'Assets/Rokas/Resources/LaptopCinematic/LightMasks/HybridScreenBounceMasks.png'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-real-photo-alignment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert laptop screen illumination intersects real wooden surfaces
+        run: |
+          python3 -m pip -q install pillow
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          import math
+          root=Path("Assets/Rokas")
+          photo=root/"Resources/LaptopCinematic/LightMasks/HybridScreenBounceMasks.png"
+          source=root/"Scripts/Presentation/LaptopScreenBounceEstimator.cs"
+          shader=root/"Resources/Shaders/LaptopCinematicLightStates.shader"
+          a=Image.open(photo).convert("RGBA")
+          assert a.size==(256,144),a.size
+          def wood(x,y):
+              px=round(x*a.width/1672)
+              py=round(y*a.height/941)
+              red,green,blue,alpha=a.getpixel((px,py))
+              return (red/255)*(1-alpha/255)
+          def smooth(t):
+              t=max(0.,min(1.,t))
+              return t*t*(3-2*t)
+          def falloff(x,y):
+              d=((x-824)/520)**2+((y-855)/210)**2
+              cone=(1/(1+.88*d))*(1-smooth((d-.8)/1.30))
+              front=1-.96*smooth((y-875)/66)
+              return cone*front
+          samples={}
+          for name,x,y in [("keyboard",824,725),("woodRear",824,842),
+              ("woodCenter",824,875),("woodForward",824,910),
+              ("bottomEdge",824,940),("rightBackground",1570,875)]:
+              samples[name]=(wood(x,y),falloff(x,y),wood(x,y)*falloff(x,y))
+              print(name,"wood",round(samples[name][0],3),
+                    "falloff",round(samples[name][1],3),
+                    "jointResponse",round(samples[name][2],3))
+          assert samples["keyboard"][0]<.01
+          assert samples["woodCenter"][0]>.55
+          assert samples["woodCenter"][2]>.55
+          assert samples["woodRear"][2]>.55
+          assert samples["woodForward"][2]>.20
+          assert samples["bottomEdge"][1]<.06
+          assert samples["rightBackground"][1]<.05
+          text=shader.read_text()
+          cpu=source.read_text()
+          assert "float2(824.0,855.0)" in text
+          assert "float2(520.0,210.0)" in text
+          assert "875.0,941.0" in text
+          assert "mask.r*(1.0-mask.a)" in text
+          assert "bounceAmount-.10" in text
+          assert "p.x - 824f" in cpu and "p.y - 855f" in cpu
+          assert "EvaluateVisibleEnergy" in cpu
+          print("PASS: actual wood receives real content-dependent LCD reflection")
+          PY

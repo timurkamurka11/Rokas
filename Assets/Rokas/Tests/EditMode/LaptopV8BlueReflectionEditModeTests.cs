@@ -41,13 +41,13 @@ namespace Rokas.Tests.EditMode
             Assert.That(greyAmount, Is.GreaterThan(blueAmount));
 
             float near = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
-                new Vector2(830f, 750f));
+                new Vector2(824f, 865f));
             float frontEdge = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
-                new Vector2(830f, 925f));
+                new Vector2(824f, 940f));
             float distant = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
-                new Vector2(1540f, 925f));
-            Assert.That(near, Is.GreaterThan(.80f));
-            Assert.That(frontEdge, Is.LessThan(near * .30f));
+                new Vector2(1570f, 940f));
+            Assert.That(near, Is.GreaterThan(.93f));
+            Assert.That(frontEdge, Is.LessThan(near * .06f));
             Assert.That(distant, Is.EqualTo(0f).Within(.001f));
         }
 

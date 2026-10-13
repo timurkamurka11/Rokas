@@ -327,19 +327,37 @@ namespace Rokas.Tests
         }
 
         [Test]
-        public void SurfaceAttenuationDecaysSmoothlyAndProtectsFrontTableEdge()
+        public void SurfaceAttenuationMatchesRealPhotographicWoodMask()
         {
-            float nearLaptop = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+            // Recorded from real V5 R channel on GitHub (256x144):
+            // 824,718: R=0 (keyboard) / 824,842 R=.745 /
+            // 824,875 R=.784 / 824,910 R=.627.
+            // Exposure MUST remain on wood, not peak inside the laptop.
+            float keyboard = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
                 new Vector2(824f, 725f));
-            float midDesk = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
-                new Vector2(824f, 795f));
-            float frontEdge = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+            float rearWood = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 842f));
+            float litWood = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 875f));
+            float forwardWood = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
                 new Vector2(824f, 910f));
+            float frontEdge = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(824f, 940f));
+            float outerFurniture = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(1570f, 875f));
 
-            Assert.That(nearLaptop, Is.GreaterThan(.90f));
-            Assert.That(midDesk, Is.LessThan(nearLaptop).And.GreaterThan(.35f));
-            Assert.That(frontEdge, Is.LessThan(.05f),
-                "Front desk edge must fade out instead of forming a bright blue band.");
+            Assert.That(litWood, Is.GreaterThan(.92f));
+            Assert.That(rearWood, Is.GreaterThan(.92f));
+            Assert.That(forwardWood, Is.GreaterThan(.25f));
+            Assert.That(keyboard, Is.LessThan(litWood));
+            Assert.That(frontEdge, Is.LessThan(.06f));
+            Assert.That(outerFurniture, Is.LessThan(.05f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateVisibleEnergy(.10f),
+                Is.EqualTo(0f).Within(.00001f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateVisibleEnergy(.27f),
+                Is.GreaterThan(.5f));
+            Assert.That(LaptopScreenBounceEstimator.EvaluateVisibleEnergy(.8f),
+                Is.EqualTo(1f).Within(.00001f));
         }
 
         [Test]
