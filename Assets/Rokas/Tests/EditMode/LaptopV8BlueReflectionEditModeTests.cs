@@ -23,6 +23,35 @@ namespace Rokas.Tests.EditMode
         }
 
         [Test]
+        public void V9DiffuseBounceMatchesScreenHueAndFallsOffBeforeDeskEdge()
+        {
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                Color.black, out Color blackTint, out float blackAmount);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.07f, .14f, .28f), out Color blueTint, out float blueAmount);
+            LaptopScreenBounceEstimator.EvaluateMeanScreenColor(
+                new Color(.70f, .70f, .70f), out Color greyTint, out float greyAmount);
+            Assert.That(blackTint.b, Is.LessThan(.24f),
+                "A black LCD must not generate a constant blue floodlight.");
+            Assert.That(blackAmount, Is.LessThan(.15f));
+            Assert.That(blueTint.b, Is.GreaterThan(blackTint.b));
+            Assert.That(blueAmount, Is.GreaterThan(blackAmount));
+            Assert.That(Mathf.Abs(greyTint.b - greyTint.r), Is.LessThan(.06f),
+                "A neutral LCD must not make the desk cyan.");
+            Assert.That(greyAmount, Is.GreaterThan(blueAmount));
+
+            float near = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(830f, 750f));
+            float frontEdge = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(830f, 925f));
+            float distant = LaptopScreenBounceEstimator.EvaluateSurfaceAttenuation(
+                new Vector2(1540f, 925f));
+            Assert.That(near, Is.GreaterThan(.80f));
+            Assert.That(frontEdge, Is.LessThan(near * .30f));
+            Assert.That(distant, Is.EqualTo(0f).Within(.001f));
+        }
+
+        [Test]
         public void HighlightResponseIsContentDrivenNotRandomFlicker()
         {
             LaptopScreenBounceEstimator.EvaluateHighlightResponse(

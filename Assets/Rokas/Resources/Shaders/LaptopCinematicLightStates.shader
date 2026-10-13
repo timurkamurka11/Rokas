@@ -187,39 +187,45 @@ Shader "ROKAS/UI/LaptopCinematicLightStates"
                 night=night*night*night;
                 float strength=saturate(_ScreenGlow)*
                     saturate(_ScreenBounceAmount)*night;
-                float grainResponse=saturate(.68+
-                    .58*dot(resultColor,float3(.2126,.7152,.0722)));
-                // V6 diffuse: restrained, wide reflected LCD emission.
-                // Wood grain remains photographic, never globally graded.
-                // Actual YOMI left/right bright regions steer the specular
-                // reflection across the tabletop, never the laptop housing.
+                // The reflection tint follows the ACTUAL LCD pixels.
+                // Do not force every screen into a saturated cyan floodlight.
+                float3 sampledHue=saturate(_ScreenBounceTint.rgb*
+                    float3(.98,1.01,1.06));
+                float photoLuma=dot(offPhoto.rgb,float3(.2126,.7152,.0722));
+                float grainResponse=saturate(.46+.74*photoLuma);
+
+                // Spatial attenuation from the LCD footprint, in pixels of
+                // the original 1672x941 POV. The frontmost desk edge fades:
+                // it must never be one uniform band of blue light.
+                float2 spread=(p-float2(830.0,746.0))/
+                    float2(505.0,216.0);
+                float squaredDist=dot(spread,spread);
+                float nearField=1.0-smoothstep(.10,1.23,squaredDist);
+                float frontFade=1.0-.73*smoothstep(793.0,935.0,p.y);
+                float localFalloff=saturate(nearField*frontFade);
+
                 float lateral=saturate((p.x-490.0)/690.0);
                 float sideWeight=1.0+_ScreenBounceSide*(lateral*2.0-1.0);
-                float diffusePass=(woodMask*2.22+lipMask*.83)*sideWeight;
-                float keyboardPass=keyMask*.12;
-                // Richer cool illumination, sourced from the real sampled
-                // LCD frame. Keep wood grain and surface-level masking;
-                // no flat translucent blue rectangle on top of the photo.
-                float3 screenHue=saturate(_ScreenBounceTint.rgb*
-                    float3(.91,1.12,1.29));
-                float3 diffuseLight=screenHue*
-                    (diffusePass*grainResponse+keyboardPass)*strength;
+                float diffusePass=(woodMask*1.08+lipMask*.40)*
+                    grainResponse*sideWeight;
+                float keyPass=keyMask*.10;
+                float3 diffuseLight=sampledHue*
+                    (diffusePass+keyPass)*strength*localFalloff*.88;
 
-                // A second, narrower response reacts ONLY to actual bright
-                // YOMI pixels. The premade radial blur already acts as a
-                // localized bloom kernel (no camera post-processing or UI
-                // blur of the original photograph).
+                // The existing registered photographic bloom/specular masks
+                // preserve wood grain and highlighted tabletop edges.
+                // Bright YOMI icons drive subtle highlights, not neon wash.
                 float bloomPower=saturate(_ScreenBloomAmount)*_BloomGain;
                 float specPower=saturate(_ScreenSpecAmount)*_SpecularGain;
                 float halo=bloomMasks.r*noiseBreakup*bloomPower;
-                float spec=(bloomMasks.g*.92+bloomMasks.b*.46)*
+                float spec=(bloomMasks.g*.72+bloomMasks.b*.26)*
                     noiseBreakup*specPower*sideWeight;
-                float3 opticalLight=screenHue*night*
-                    saturate(_ScreenGlow)*(halo*2.18+spec*2.52);
-                // V8 cyan/blue desk response: dynamic YOMI, masked surfaces,
-                // filmic shoulder and hard power/room-light safety gates.
+                float3 opticalLight=sampledHue*night*
+                    saturate(_ScreenGlow)*localFalloff*
+                    (halo*.82+spec*1.10);
                 float3 bounced=diffuseLight+opticalLight;
-                bounced=.56*(1.0-exp(-bounced/.56));
+                // Compress peaks but leave dark wood detail intact.
+                bounced=.33*(1.0-exp(-bounced/.33));
                 resultColor+=bounced;
 
                 return fixed4(saturate(resultColor),onPhoto.a)*i.color;

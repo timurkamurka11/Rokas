@@ -5,10 +5,9 @@ using UnityEngine.Rendering;
 namespace Rokas.Presentation
 {
     /// <summary>
-    /// Samples a 16x16 GPU-downscaled copy of the REAL YOMI LCD image.
-    /// No blocking ReadPixels and no per-frame CPU texture copies.
-    /// Every 0.25 s its mean color determines the reflected light tint,
-    /// then a 0.28 s transition removes flicker from UI changes.
+    /// Samples 48x27 GPU-downscaled pixels of the REAL YOMI LCD image.
+    /// No blocking ReadPixels or repeated CPU image copies. Colour, intensity
+    /// and highlight energy are derived from displayed pixels.
     /// </summary>
     public sealed class LaptopScreenBounceEstimator : IDisposable
     {
@@ -21,9 +20,9 @@ namespace Rokas.Presentation
         private AsyncGPUReadbackRequest pendingRead;
         private bool readPending;
         private float sinceSample = SampleInterval;
-        private float targetAmount = .34f;
-        private float targetBloom = .12f;
-        private float targetSpecular = .16f;
+        private float targetAmount;
+        private float targetBloom;
+        private float targetSpecular;
         private float targetSideBias;
         private Color targetTint = new Color(.18f, .21f, .24f, 1f);
         private float intensity;
@@ -47,15 +46,13 @@ namespace Rokas.Presentation
             float g = Mathf.Clamp01(mean.g);
             float b = Mathf.Clamp01(mean.b);
             float luma = .2126f * r + .7152f * g + .0722f * b;
-            // Cinematic but LCD-driven: retain the pixel-average YOMI
-            // chromatic response, while lifting underexposed cold blue light
-            // that was almost invisible in the photographed night scene.
-            // The panel must still drive hue, strength and left/right movement.
+            // Neutral content must stay neutral; YOMI blue remains cool
+            // without a constant blue floor or excessive brightness.
             reflected = new Color(
-                Mathf.Clamp01(.07f + .28f * r),
-                Mathf.Clamp01(.27f + .80f * g),
-                Mathf.Clamp01(.62f + .71f * b), 1f);
-            amount = Mathf.Clamp(.43f + luma * 1.75f, .43f, .96f);
+                Mathf.Clamp01(.15f + .66f * r),
+                Mathf.Clamp01(.16f + .64f * g),
+                Mathf.Clamp01(.17f + .63f * b), 1f);
+            amount = Mathf.Clamp(.10f + luma, .10f, .70f);
         }
 
 
@@ -81,8 +78,8 @@ namespace Rokas.Presentation
         {
             float energy = Mathf.Clamp01(highlightEnergy);
             float luminance = Mathf.Clamp01(averageBrightness);
-            bloomAmount = Mathf.Clamp01(energy * 5.0f + luminance * .16f);
-            specAmount = Mathf.Clamp01(energy * 3.8f + luminance * .48f);
+            bloomAmount = Mathf.Clamp01(energy * 2.30f + luminance * .09f);
+            specAmount = Mathf.Clamp01(energy * 1.85f + luminance * .22f);
         }
 
 
@@ -94,6 +91,20 @@ namespace Rokas.Presentation
                 Mathf.Max(0f,leftEnergy) + Mathf.Max(0f,rightEnergy));
             return Mathf.Clamp((rightEnergy-leftEnergy)/total*1.2f,
                 -.30f, .30f);
+        }
+
+        /// <summary>Photo-space falloff mirrored by the room material.
+        /// Center is just in front of the laptop, not at the table edge.</summary>
+        public static float EvaluateSurfaceAttenuation(Vector2 p)
+        {
+            float x = (p.x - 830f) / 505f;
+            float y = (p.y - 746f) / 216f;
+            float d = x * x + y * y;
+            float t = Mathf.Clamp01((d - .10f) / 1.13f);
+            float radial = 1f - t * t * (3f - 2f * t);
+            float v = Mathf.Clamp01((p.y - 793f) / 142f);
+            float front = 1f - .73f * v * v * (3f - 2f * v);
+            return Mathf.Clamp01(radial * front);
         }
 
         public void Tick(Texture source, bool powered, float deltaTime)
@@ -150,7 +161,7 @@ namespace Rokas.Presentation
                     sampleTarget = new RenderTexture(SampleWidth, SampleHeight, 0,
                         RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
                     {
-                        name = "ROKAS YOMI Screen Bloom 32x18",
+                        name = "ROKAS YOMI Screen Readback 48x27",
                         filterMode = FilterMode.Bilinear,
                         wrapMode = TextureWrapMode.Clamp
                     };
@@ -163,7 +174,7 @@ namespace Rokas.Presentation
                 sinceSample = 0f;
             }
 
-            float ease = 1f - Mathf.Exp(-dt / .16f);
+            float ease = 1f - Mathf.Exp(-dt / .23f);
             float required = powered ? targetAmount : 0f;
             intensity = Mathf.Lerp(intensity, required, ease);
             bloom = Mathf.Lerp(bloom, powered ? targetBloom : 0f, ease);
@@ -184,7 +195,12 @@ namespace Rokas.Presentation
             }
             if (sampleTarget)
             {
-                sampleTarget.Release();
+                // Detach this owned target before releasing GPU backing.
+                // Releasing RenderTexture.active triggers a Unity warning.
+                if (RenderTexture.active == sampleTarget)
+                    RenderTexture.active = null;
+                if (sampleTarget.IsCreated())
+                    sampleTarget.Release();
                 if (Application.isPlaying)
                     UnityEngine.Object.Destroy(sampleTarget);
                 else
