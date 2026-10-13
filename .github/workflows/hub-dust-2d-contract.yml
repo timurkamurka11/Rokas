@@ -50,7 +50,7 @@ jobs:
             assert content.count('{')==content.count('}'),str(f)
           assert 'EvaluateDustAlpha' in graphic
           assert '1748f,345f' in graphic and '138f,458f' in graphic
-          assert 'HubDust V3' in graphic and 'LastVisibleMotes' in graphic
+          assert 'HubDust V4' in graphic and 'LastVisibleMotes' in graphic
           assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           assert 'shape = rng.Next(0,8)' in graphic
           assert 'Triangular(System.Random rng)' in graphic
