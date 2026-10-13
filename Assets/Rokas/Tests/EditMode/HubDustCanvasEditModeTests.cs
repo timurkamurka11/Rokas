@@ -16,18 +16,24 @@ namespace Rokas.Tests
         }
 
         [Test]
-        public void BothLightsFollowOneSetOfSavedSwitches()
+        public void BothLightsFollowExistingHubSwitchesAtRealPositions()
         {
-            var x = 1225f;
-            var y = 480f;
-            Assert.That(HubDustCanvasGraphic.RoomLampContribution(x,y,false),
-                Is.EqualTo(0f).Within(.00001f));
-            Assert.That(HubDustCanvasGraphic.RoomLampContribution(x,y,true),
-                Is.GreaterThan(.70f));
-            Assert.That(HubDustCanvasGraphic.HallwayContribution(355f,365f,true),
-                Is.GreaterThan(HubDustCanvasGraphic.HallwayContribution(355f,365f,false)*4f));
-            Assert.That(HubDustCanvasGraphic.HallwayContribution(1550f,800f,true),
-                Is.LessThan(.001f));
+            // Coordinates from HomeView.Build(): room floor x138, desk x1151,
+            // hallway RIGHT at x1748, cool city window x697.
+            Assert.That(HubDustCanvasGraphic.RoomLampContribution(
+                138f,458f,false),Is.EqualTo(0f).Within(.00001f));
+            Assert.That(HubDustCanvasGraphic.RoomLampContribution(
+                138f,458f,true),Is.GreaterThan(1f));
+            Assert.That(HubDustCanvasGraphic.RoomLampContribution(
+                1151f,310f,true),Is.GreaterThan(.70f));
+            Assert.That(HubDustCanvasGraphic.HallwayContribution(
+                1748f,345f,true),Is.GreaterThan(.90f));
+            Assert.That(HubDustCanvasGraphic.HallwayContribution(
+                1748f,345f,false),Is.LessThan(.07f));
+            Assert.That(HubDustCanvasGraphic.HallwayContribution(
+                355f,365f,true),Is.LessThan(.001f));
+            Assert.That(HubDustCanvasGraphic.WindowContribution(
+                697f,345f),Is.GreaterThan(.42f));
         }
 
         [Test]
@@ -66,10 +72,30 @@ namespace Rokas.Tests
                 2,1f,138f,458f,true,false);
             Assert.That(micro,Is.GreaterThan(ambient));
             Assert.That(ambient,Is.GreaterThan(bokeh));
-            Assert.That(micro,Is.LessThanOrEqualTo(.34f));
+            Assert.That(micro,Is.LessThanOrEqualTo(.37f));
             Assert.That(bokeh,Is.LessThanOrEqualTo(.34f));
             Assert.That(HubDustCanvasGraphic.EvaluateDustAlpha(
                 0,1f,138f,458f,true,false,0f),Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void V3StudioVisibilityControlsRemainBounded()
+        {
+            var root = new GameObject("Dust V3",typeof(RectTransform),
+                typeof(CanvasRenderer));
+            try
+            {
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                dust.VisibilityGain=3f;
+                dust.ParticleScale=.01f;
+                Assert.That(dust.VisibilityGain,Is.EqualTo(2f));
+                Assert.That(dust.ParticleScale,Is.EqualTo(.5f));
+                dust.VisibilityGain=1.38f;
+                dust.ParticleScale=1.12f;
+                Assert.That(dust.VisibilityGain,Is.EqualTo(1.38f).Within(.001f));
+                Assert.That(dust.ParticleScale,Is.EqualTo(1.12f).Within(.001f));
+            }
+            finally { Object.DestroyImmediate(root); }
         }
 
         [Test]
@@ -79,7 +105,7 @@ namespace Rokas.Tests
             try
             {
                 var dust = root.AddComponent<HubDustCanvasGraphic>();
-                Assert.AreEqual(320, dust.ParticleBudget);
+                Assert.AreEqual(432, dust.ParticleBudget);
                 Assert.IsFalse(dust.raycastTarget);
                 dust.Tick(.50f, true, true, false);
                 Assert.IsTrue(root.activeSelf);

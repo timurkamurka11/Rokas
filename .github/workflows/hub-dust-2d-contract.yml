@@ -1,4 +1,4 @@
-name: ROKAS Hub Dust Built-in 2D contract
+name: ROKAS Hub Dust V3 photographic light and atlas contract
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
@@ -33,8 +33,8 @@ jobs:
           assert 'session.State.lampOn, session.HallwayLightOn' in view
           assert 'homeSubLocation == HomeLocation.MainRoom' in view
           assert 'hubDust.raycastTarget = false' in view
-          assert 'ParticleCount = 320' in graphic
-          assert 'i < 208 ? 0 : i < 288 ? 1 : 2' in graphic
+          assert 'ParticleCount = 432' in graphic
+          assert 'i < 281 ? 0 : i < 389 ? 1 : 2' in graphic
           assert 'RoomLampContribution' in graphic and 'HallwayContribution' in graphic and 'WindowContribution' in graphic
           assert 'Resources.Load<Shader>("Shaders/HubDustSoftMotes")' in graphic
           assert 'Shader "ROKAS/UI/HubDustSoftMotes"' in shader
@@ -50,7 +50,19 @@ jobs:
             assert content.count('{')==content.count('}'),str(f)
           assert 'EvaluateDustAlpha' in graphic
           assert '1748f,345f' in graphic and '138f,458f' in graphic
-          assert 'HubDust V2' in graphic and 'LastVisibleMotes' in graphic
+          assert 'HubDust V3' in graphic and 'LastVisibleMotes' in graphic
           assert 'V2DustIsVisibleNearActualHubLightSources' in (root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
-          print('PASS Built-in 2.5D HubDust V2: 320 particles, real lamp/window/corridor coordinates, saved switches, UI ordering and shader')
+          assert 'shape = rng.Next(0,8)' in graphic
+          assert 'Triangular(System.Random rng)' in graphic
+          assert 'visibilityGain = 1.38f' in graphic
+          assert 'particleScale = 1.12f' in graphic
+          assert 'float ShapeAlpha(float shape, float2 uv)' in shader
+          assert shader.count('shape <') == 7
+          assert 'smoothstep(.78,.98,r)' in shader
+          assert '4x2 atlas generator' in shader
+          tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
+          assert 'V3StudioVisibilityControlsRemainBounded' in tests
+          assert 'Assert.AreEqual(432, dust.ParticleBudget)' in tests
+          assert 'BothLightsFollowExistingHubSwitchesAtRealPositions' in tests
+          print('PASS HubDust V3: seeded photo-lit 432 motes, 8 organic atlas forms, 30 FPS, noninteractive, correct lamp/hall/window geometry')
           PY

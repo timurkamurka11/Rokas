@@ -14,12 +14,16 @@ namespace Rokas.Presentation
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HubDustCanvasGraphic : MaskableGraphic
     {
-        private const int ParticleCount = 320;
-        private const float MeshStep = 1f / 24f;
+        private const int ParticleCount = 432;
+        private const float MeshStep = 1f / 30f;
+        [SerializeField, Range(.5f, 2.0f)] private float visibilityGain = 1.38f;
+        [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1.12f;
+        public float VisibilityGain { get => visibilityGain; set => visibilityGain = Mathf.Clamp(value,.5f,2.0f); }
+        public float ParticleScale { get => particleScale; set => particleScale = Mathf.Clamp(value,.5f,1.6f); }
         private struct Mote
         {
             public float x, y, z, phase, drift, alpha, rotation, scale;
-            public int kind;
+            public int kind, shape;
         }
         private readonly Mote[] motes = new Mote[ParticleCount];
         private float age, accum, visualStrength;
@@ -37,17 +41,44 @@ namespace Rokas.Presentation
             var rng = new System.Random(0x524F4B41);
             for (int i = 0; i < motes.Length; i++)
             {
+                // Photo-registered light pockets in the actual 1920x1080 hub.
+                // 76% of motes are deliberately seeded where they have a
+                // believable chance to scatter window / lamp / doorway light.
+                float x = (float)rng.NextDouble() * 1920f;
+                float y = (float)rng.NextDouble() * 1080f;
+                float selector = (float)rng.NextDouble();
+                if (selector < .27f)
+                {
+                    x = 670f + Triangular(rng)*520f;
+                    y = 350f + Triangular(rng)*410f;
+                }
+                else if (selector < .48f)
+                {
+                    x = 180f + Triangular(rng)*310f;
+                    y = 480f + Triangular(rng)*400f;
+                }
+                else if (selector < .69f)
+                {
+                    x = 1140f + Triangular(rng)*365f;
+                    y = 390f + Triangular(rng)*380f;
+                }
+                else if (selector < .83f)
+                {
+                    x = 1710f + Triangular(rng)*260f;
+                    y = 400f + Triangular(rng)*455f;
+                }
                 motes[i] = new Mote
                 {
-                    x = (float)rng.NextDouble() * 1920f,
-                    y = (float)rng.NextDouble() * 1080f,
+                    x = Mathf.Clamp(x, 8f, 1912f),
+                    y = Mathf.Clamp(y, 8f, 1072f),
                     z = (float)rng.NextDouble(),
                     phase = (float)rng.NextDouble() * 6.28318f,
-                    drift = .32f + (float)rng.NextDouble() * 1.10f,
-                    alpha = .72f + (float)rng.NextDouble() * .28f,
+                    drift = .4f + (float)rng.NextDouble() * .8f,
+                    alpha = .71f + (float)rng.NextDouble() * .29f,
                     rotation = (float)rng.NextDouble() * 6.28318f,
-                    scale = .65f + (float)rng.NextDouble() * .75f,
-                    kind = i < 208 ? 0 : i < 288 ? 1 : 2 // 65/25/10
+                    scale = .68f + (float)rng.NextDouble() * .76f,
+                    kind = i < 281 ? 0 : i < 389 ? 1 : 2, // 65/25/10
+                    shape = rng.Next(0,8) // all 8 shapes of Argon's 4x2 atlas
                 };
             }
             var shader = Resources.Load<Shader>("Shaders/HubDustSoftMotes");
@@ -96,11 +127,22 @@ namespace Rokas.Presentation
             for (int i = 0; i < motes.Length; i++)
             {
                 Mote m = motes[i];
-                float speed = m.drift * (m.kind == 2 ? .58f : .40f);
-                float x = Mathf.Repeat(m.x + age * speed * 9.0f +
-                    Mathf.Sin(age * .32f + m.phase) * 7.5f, 1920f);
-                float y = Mathf.Repeat(m.y - age * speed * 4.5f +
-                    Mathf.Sin(age * .23f + m.phase * 1.7f) * 8.0f, 1080f);
+                // Slowly rising thermal drift + 3 octave-like smooth waves;
+                // no high frequency twitching, flickering or snowfall.
+                float speed = m.drift * (m.kind == 2 ? .67f : .48f);
+                float t = age * speed;
+                float flutterX = Mathf.Sin(t*.47f+m.phase)*7.5f
+                    + Mathf.Sin(t*.21f+m.phase*2.2f)*5.4f
+                    + Mathf.Sin(t*.09f+m.phase*4.1f)*3f;
+                float flutterY = Mathf.Cos(t*.31f+m.phase*1.7f)*6.2f
+                    + Mathf.Sin(t*.16f+m.phase*.8f)*3.6f;
+                float x = Mathf.Repeat(m.x + t*7.8f + flutterX, 1920f);
+                float y = Mathf.Repeat(m.y - t*4.6f + flutterY, 1080f);
+                // Avoid a popping particle as it wraps around a frame edge.
+                float edgeFade = Mathf.SmoothStep(0f,1f,
+                    Mathf.Clamp01(Mathf.Min(Mathf.Min(x,1920f-x),
+                        Mathf.Min(y,1080f-y))/45f));
+                float breath = .82f + .18f*Mathf.Sin(age*.42f+m.phase);
                 float warm = RoomLampContribution(x, y, roomOn);
                 float doorway = HallwayContribution(x, y, hallwayOn);
                 float window = WindowContribution(x,y);
@@ -108,10 +150,13 @@ namespace Rokas.Presentation
                 // V2 bounds the opacity while making actual lamplit dust
                 // clearly visible even at 0.7x Game View scale.
                 float alpha = EvaluateDustAlpha(m.kind, m.alpha, x, y,
-                    roomOn, hallwayOn, visualStrength);
-                if (alpha < .004f) continue;
-                float size = (m.kind == 0 ? 3.5f : m.kind == 1 ? 8.2f : 18.0f) *
-                    m.scale * (m.kind == 2 ? 1f + .23f * m.z : 1f);
+                    roomOn, hallwayOn, visualStrength) * visibilityGain *
+                    edgeFade * breath;
+                if (alpha < .006f) continue;
+                // Rare larger, defocused motes near the camera, not all equal.
+                float size = (m.kind == 0 ? 4.2f : m.kind == 1 ? 10.8f : 25f)
+                    * m.scale * particleScale *
+                    (m.kind == 2 ? 1f+.27f*m.z : 1f);
                 // Cool city/window and corridor scatter; warm practicals.
                 float cool = doorway + window;
                 float blend = cool / Mathf.Max(.001f, cool + warm);
@@ -121,20 +166,25 @@ namespace Rokas.Presentation
                 float cs = Mathf.Cos(m.rotation + age * .025f);
                 float sn = Mathf.Sin(m.rotation + age * .025f);
                 float sx = size * toX;
-                float sy = size * toY * (m.kind == 1 ? .65f : 1f);
+                float sy = size * toY * (m.kind == 1 ? .76f : 1f);
                 float cx = rc.xMin + x * toX;
                 float cy = rc.yMax - y * toY;
-                AddQuad(vh, new Vector2(cx, cy), sx, sy, cs, sn, tint, m.kind);
+                AddQuad(vh, new Vector2(cx, cy), sx, sy, cs, sn, tint, m.shape);
                 LastVisibleMotes++;
             }
             if (!reportedFirstRender && Application.isPlaying && LastVisibleMotes > 0)
             {
                 reportedFirstRender = true;
-                Debug.Log("[ROKAS HubDust V2] rendering " +
+                Debug.Log("[ROKAS HubDust V3] rendering " +
                     LastVisibleMotes + " motes; room=" + roomOn +
                     " hallway=" + hallwayOn + " strength=" +
                     visualStrength.ToString("F2"));
             }
+        }
+
+        private static float Triangular(System.Random rng)
+        {
+            return (float)(rng.NextDouble()+rng.NextDouble()-1.0);
         }
 
         private static float Gaussian(float x, float y, float cx, float cy,
@@ -176,14 +226,15 @@ namespace Rokas.Presentation
             float warm=RoomLampContribution(x,y,roomOn);
             float corridor=HallwayContribution(x,y,hallwayOn);
             float window=WindowContribution(x,y);
-            float light=.025f+warm+corridor+window;
-            float baseAlpha=kind==0 ? .32f : kind==1 ? .255f : .175f;
-            // Soft and lit, never an opaque overlay/snowfall.
-            return Mathf.Clamp(intrinsic*baseAlpha*light*visibility,0f,.34f);
+            float light=.042f+warm+corridor+window;
+            float baseAlpha=kind==0 ? .35f : kind==1 ? .29f : .185f;
+            // Photo-registered shafts are bright, shade falls nearly to zero.
+            // The 4x2 atlas soft profile further attenuates these values.
+            return Mathf.Clamp(intrinsic*baseAlpha*light*visibility,0f,.37f);
         }
 
         private static void AddQuad(VertexHelper vh, Vector2 c, float rx,
-            float ry, float cs, float sn, Color tint, int kind)
+            float ry, float cs, float sn, Color tint, int shape)
         {
             int offset = vh.currentVertCount;
             for (int j = 0; j < 4; j++)
@@ -194,7 +245,7 @@ namespace Rokas.Presentation
                 v.position = new Vector3(c.x + (xx * cs - yy * sn) * rx,
                     c.y + (xx * sn + yy * cs) * ry, 0f);
                 v.color = tint;
-                v.uv0 = new Vector2(kind * 2f + (xx + 1f) * .5f, (yy + 1f) * .5f);
+                v.uv0 = new Vector2(shape * 2f + (xx + 1f) * .5f, (yy + 1f) * .5f);
                 vh.AddVert(v);
             }
             vh.AddTriangle(offset, offset + 1, offset + 2);
