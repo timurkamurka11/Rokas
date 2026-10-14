@@ -771,7 +771,8 @@ namespace Rokas.Presentation
                 homeSubLocation == HomeLocation.MainRoom &&
                 !storageBlocked && string.IsNullOrEmpty(panel) &&
                 (laptopCinematic == null || !laptopCinematic.IsPlaying),
-                session.State.lampOn, session.HallwayLightOn);
+                session.State.lampOn, session.HallwayLightOn,
+                LaptopPowerSession.PoweredOn);
             // Poll the SAME saved switches used by HomeView and HallwayView;
             // no parallel laptop lighting flags or delayed scene rebuilds.
             laptopCinematic?.UpdateLighting(dt);
