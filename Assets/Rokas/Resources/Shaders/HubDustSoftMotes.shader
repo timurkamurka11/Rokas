@@ -100,18 +100,22 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                     (1.0-smoothstep(.66,.88,r));
                 float warmHalo=lerp(fallback,srcAlpha,_UseAtlas);
 
-                // V8: tiny honey-gold core and a soft amber perimeter.
-                // No bright cream or large optical bokeh discs.
-                float coreMask=exp(-r*r*12.0)*
+                // V9: fuller 5-8px quad profile without hard-edged
+                // squares or any large bokeh geometry.
+                // 1-smoothstep(.18,.92,r) is the monotonic, portable
+                // equivalent of reverse smoothstep(.92,.18,r).
+                float softBody=1.0-smoothstep(.18,.92,r);
+                float coreMask=exp(-r*r*9.5)*
                     (kind>.5 ? .42 : 1.0);
-                float profile=saturate(max(warmHalo*.91,coreMask*.64));
+                float profile=saturate(max(warmHalo*.91,
+                    max(softBody*.43,coreMask*.70)));
                 float finalAlpha=saturate(i.color.a*profile);
                 // CPU vertex alpha already includes light-zone proximity,
                 // so the core's additive strength follows that field.
                 float lightZoneFactor=saturate((i.color.a-.08)/.32);
 
-                half3 creamCore=half3(.98,.80,.46);
-                half3 amberHalo=half3(.92,.68,.35);
+                half3 creamCore=half3(1.00,.89,.62);
+                half3 amberHalo=half3(.96,.74,.38);
                 // At room-light OFF, vertex tint identifies moon/city air.
                 float coolShare=saturate((i.color.b-i.color.r)*4.0);
                 creamCore=lerp(creamCore,half3(.60,.78,.88),coolShare);
@@ -120,9 +124,9 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                 // Mild respect for the vertex tint from photographic zones.
                 litRGB=lerp(litRGB,i.color.rgb,.18);
                 half3 premulRGB = litRGB * finalAlpha *
-                    (1.0 + coreMask * lightZoneFactor * .35);
+                    (1.0 + coreMask * lightZoneFactor * .70);
                 half outAlpha = finalAlpha *
-                    (1.0 - coreMask * lightZoneFactor * .13);
+                    (1.0 - coreMask * lightZoneFactor * .16);
                 // Blend One OneMinusSrcAlpha: additive color does not
                 // darken the photographic room beneath the dust.
                 return half4(premulRGB,outAlpha);
