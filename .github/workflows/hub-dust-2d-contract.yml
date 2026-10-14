@@ -50,6 +50,15 @@ jobs:
                         'canvasRenderer.SetTexture(ownedAtlas)',
                         'canvasRenderer.SetMaterial(materialForRendering, 0)'):
               assert token in gfx,token
+          for token in ('public static float LaptopContribution', '.52f, .42f, .14f, .12f',
+                        'public static float NormalAlphaCap', 'NormalAlphaCap(m.kind)',
+                        'public static float NormalPixelDiameter',
+                        'NormalPixelDiameter(m.kind, m.size, particleScale)'):
+              assert token in gfx,token
+          for method in ('V6LaptopReflectionIsGentleAndSpreadsAcrossCenter',
+                         'V6NormalModeHardCapsSurviveInspectorGains',
+                         'V6NormalModeNeverProducesOversizedBokeh'):
+              assert method in tests,method
           assert gfx.count('AddRadialGlow(vh, rc, sx, sy,') == 2
           assert 'AddLightShafts(' not in gfx
           assert 'SoftShaft(' not in shader
