@@ -7,9 +7,9 @@ namespace Rokas.Presentation
     public enum HubDustVisibilityMode { Normal, HighContrastBoost, DiagnosticTestPattern }
 
     /// <summary>
-    /// V9_SWEET_SPOT_MICRO_GOLD. 145 pinpoint particles with NO large bokeh,
-    /// 85 room motes / 60 gentle lamplight motes, hard 10.5 px quad limit.
-    /// Existing HOME image, UI stacking, light switches remain untouched.
+    /// V10_NOCTURNE_WINDOW_AND_GLINT. Preserve V9's warm/ON camera
+    /// composition, 145-mote layout and <=10.5px dust size. Add window/CRT
+    /// nocturne light, asynchronous seed glints and 0.40s light crossfade.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HubDustCanvasGraphic : MaskableGraphic
@@ -25,8 +25,15 @@ namespace Rokas.Presentation
         private const float FullWidth = 1920f, FullHeight = 1080f;
         private static readonly Color WarmCore = new Color(1f, .89f, .62f);
         private static readonly Color WarmAmbient = new Color(.96f, .74f, .38f);
-        private static readonly Color NightAir = new Color(.60f, .78f, .88f);
-        private static readonly Color NightShadow = new Color(.37f, .48f, .55f);
+        private static readonly Color NocturneCore = new Color(.62f, .92f, 1f);
+        private static readonly Color NocturneHalo = new Color(.28f, .68f, .96f);
+        private static readonly Color WindowSilver = new Color(.75f, .92f, 1f);
+        private static readonly Color CtvBlue = new Color(.40f, .77f, 1f);
+        private static readonly Color HallAmber = new Color(.98f, .74f, .39f);
+        private const float LightTransitionSeconds = .40f;
+        private const float NightVisibilityThreshold = .135f;
+        private const float LitGlintAmplitude = .12f;
+        private const float NightGlintAmplitude = .06f;
 
         [SerializeField, Range(.5f, 2f)] private float visibilityGain = 1f;
         [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1f;
@@ -67,11 +74,13 @@ namespace Rokas.Presentation
         private struct Mote
         {
             public float x, y, vx, vy, phase, life, timeOffset, alpha, size, angle;
-            public int kind, shape;
+            public int kind, shape, glintSeed;
         }
         private readonly Mote[] motes = new Mote[ParticleCount];
         private float age, accumulated, visibility;
         private bool wasShown, showRoom, roomOn, hallwayOn, laptopOn, didLog;
+        private bool lightBlendInitialized;
+        private float lightBlendFactor;
         private float vertexAlphaTotal;
         private float vertexAlphaPeak;
         public int ParticleBudget => ParticleCount;
@@ -81,6 +90,7 @@ namespace Rokas.Presentation
         public float LastMaxVertexAlpha { get; private set; }
         public int LastShaftCount { get; private set; }
         public float LastMaxParticleQuadSize { get; private set; }
+        public float LightBlendFactor => lightBlendFactor;
 
         protected override void Awake()
         {
@@ -160,7 +170,10 @@ namespace Rokas.Presentation
                     alpha = Mathf.Lerp(.91f, 1f, (float)rng.NextDouble()),
                     angle = (float)rng.NextDouble() * 6.2831853f,
                     kind = kind,
-                    shape = rng.Next(0, 8)
+                    shape = rng.Next(0, 8),
+                    // Stable seed without extra RNG calls: positions, sizes
+                    // and motion remain IDENTICAL to the V9 warm scene.
+                    glintSeed = (i * 89 + 31) % 251
                 };
             }
 
@@ -168,13 +181,13 @@ namespace Rokas.Presentation
             if (shader == null) shader = Shader.Find("ROKAS/UI/HubDustSoftMotes");
             if (shader == null || !shader.isSupported)
             {
-                Debug.LogWarning("[ROKAS HubDust V9] UI shader unavailable.");
+                Debug.LogWarning("[ROKAS HubDust V10] UI shader unavailable.");
                 enabled = false;
                 return;
             }
             ownedAtlas = HubDustAtlasFactory.Create();
             ownedMaterial = new Material(shader)
-                { name = "ROKAS V9 Sweet Spot Micro Gold UI" };
+                { name = "ROKAS V10 Nocturne Window and Glint UI" };
             ownedMaterial.SetTexture("_DustAtlasTex", ownedAtlas);
             ownedMaterial.SetFloat("_UseAtlas", 1f);
             ownedMaterial.SetFloat("_DustMode", (int)visibilityMode);
@@ -203,6 +216,21 @@ namespace Rokas.Presentation
             roomOn = roomLampOn;
             hallwayOn = corridorLampOn;
             laptopOn = laptopPowered;
+            if (!lightBlendInitialized)
+            {
+                // Cold-start directly in the correct lighting state;
+                // subsequent switch events crossfade over 0.40 seconds.
+                lightBlendInitialized = true;
+                lightBlendFactor = roomLampOn ? 1f : 0f;
+            }
+            else
+            {
+                float unscaledDt = Application.isPlaying
+                    ? Time.unscaledDeltaTime : Mathf.Max(0f, dt);
+                lightBlendFactor = Mathf.MoveTowards(lightBlendFactor,
+                    roomLampOn ? 1f : 0f,
+                    unscaledDt / LightTransitionSeconds);
+            }
             showRoom = visible;
             if (visible && !wasShown)
             {
@@ -219,7 +247,10 @@ namespace Rokas.Presentation
                 gameObject.SetActive(display);
             if (!display) return;
             if (ownedMaterial != null)
+            {
                 ownedMaterial.SetFloat("_DustMode", (int)visibilityMode);
+                ownedMaterial.SetFloat("_DustAge", age);
+            }
             age += Mathf.Max(0f, dt);
             accumulated += Mathf.Max(0f, dt);
             if (switched || accumulated >= MeshStep)
@@ -265,6 +296,50 @@ namespace Rokas.Presentation
                 .52f, .43f, .15f, .13f);
         }
 
+        public static float WindowGlassContribution(float x, float y)
+        {
+            return Ellipse(x / FullWidth, y / FullHeight,
+                .38f, .64f, .24f, .28f);
+        }
+
+        public static float WindowSpillContribution(float x, float y)
+        {
+            return Ellipse(x / FullWidth, y / FullHeight,
+                .40f, .36f, .28f, .22f);
+        }
+
+        public static float CrtContribution(float x, float y)
+        {
+            return Ellipse(x / FullWidth, y / FullHeight,
+                .94f, .35f, .10f, .14f);
+        }
+
+        // Smooth night illumination encompasses both glass and room
+        // depth, rather than dimming all motes outside the old small V9
+        // window ellipse.
+        public static float NocturneField(float x, float y)
+        {
+            return Mathf.Max(WindowGlassContribution(x, y),
+                WindowSpillContribution(x, y) * .95f);
+        }
+
+        // Crossfade from V9 warm color to window silver only where the
+        // wet glass is exposed; never recolor dust near active lamps.
+        public static float WindowTealMix(float x, float y)
+        {
+            float nx = x / FullWidth, ny = y / FullHeight;
+            float wetGlass = Ellipse(nx, ny, .385f, .66f, .13f, .17f);
+            float warm = RoomLampContribution(x, y, true);
+            float awayFromLamp = 1f - Mathf.SmoothStep(.62f, .95f, warm);
+            return .42f * wetGlass * awayFromLamp;
+        }
+
+        public static float SpecularGlint(float seconds, int seed)
+        {
+            return Mathf.Pow(Mathf.Clamp01(Mathf.Sin(
+                seconds * 1.8f + seed * 43.7f)), 14f);
+        }
+
         public static float NormalAlphaCap(int kind)
         {
             return kind == 0 ? .54f : .24f;
@@ -300,20 +375,27 @@ namespace Rokas.Presentation
             }
             else
             {
-                // Night: only drifting dust at the city window is legible.
-                // The dark bedroom stays near 0.019 (not a blue blizzard).
+                // V10 nocturne uses the window and its wide floor spill.
+                // Independent hall/CRT light remains active as needed.
+                float glass = WindowGlassContribution(x, y);
+                float field = NocturneField(x, y);
+                float crt = CrtContribution(x, y);
+                float nightHall = hallwayLampOn ? Ellipse(
+                    x / FullWidth, y / FullHeight,
+                    .85f, .50f, .15f, .28f) : 0f;
                 if (kind == 0)
-                    alpha = .019f + .270f * Mathf.Pow(window, 1.5f) +
-                        .012f * hall;
+                    alpha = .070f + .250f * field +
+                        .210f * Mathf.Pow(glass, 6f) +
+                        .045f * crt + .060f * nightHall;
                 else
-                    alpha = .015f + .115f * Mathf.Pow(window, 1.5f) +
-                        .004f * hall;
+                    alpha = .067f + .180f * field +
+                        .020f * crt + .035f * nightHall;
             }
             // Laptop reflection stays independent, but never attracts
             // particles or creates a new spawn pool at the central desk.
             return Mathf.Clamp(alpha * intrinsic * strength, 0f,
                 roomLampOn ? NormalAlphaCap(kind) :
-                    (kind == 0 ? .30f : .16f));
+                    (kind == 0 ? .52f : .24f));
         }
 
         protected override void OnPopulateMesh(VertexHelper vh)
@@ -352,30 +434,56 @@ namespace Rokas.Presentation
                     Mathf.Min(Mathf.Min(x, FullWidth - x),
                         Mathf.Min(y, FullHeight - y)) / 14f));
                 float shimmer = .95f + .05f * Mathf.Sin(age * .27f + m.phase);
-                float alpha = EvaluateDustAlpha(m.kind, m.alpha,
-                    x, y, roomOn, hallwayOn, visibility, laptopOn) *
+                float warmAlpha = EvaluateDustAlpha(m.kind, m.alpha,
+                    x, y, true, hallwayOn, visibility, laptopOn);
+                float nightAlpha = EvaluateDustAlpha(m.kind, m.alpha,
+                    x, y, false, hallwayOn, visibility, laptopOn);
+                float shimmerAndFade =
                     lifetimeFade * edge * shimmer * visibilityGain;
+                // V9 warm baseline survives unchanged before glint.
+                float baseAlpha = Mathf.Lerp(nightAlpha, warmAlpha,
+                    lightBlendFactor) * shimmerAndFade;
                 float boost = visibilityMode ==
                     HubDustVisibilityMode.HighContrastBoost ? 2.5f : 1f;
-                alpha = Mathf.Min(alpha * boost,
+                // Per-seed specular glints occupy only a short fraction
+                // of the cycle; CPU alpha telemetry includes their peak.
+                float glint = SpecularGlint(age, m.glintSeed);
+                float glintAmplitude = Mathf.Lerp(NightGlintAmplitude,
+                    LitGlintAmplitude, lightBlendFactor);
+                float alpha = baseAlpha * boost +
+                    glint * glintAmplitude * lifetimeFade * edge;
+                float cap = Mathf.Lerp(
+                    m.kind == 0 ? .52f : .24f,
+                    m.kind == 0 ? .62f : .36f, lightBlendFactor);
+                alpha = Mathf.Min(alpha,
                     visibilityMode == HubDustVisibilityMode.Normal
-                        ? (roomOn ? NormalAlphaCap(m.kind) :
-                            (m.kind == 0 ? .22f : .10f)) : .90f);
-                // Night: ignore dim motes in dark corners; preserve
-                // only a small scattering around the city window.
-                if (alpha < (roomOn ? .008f : .050f) &&
+                        ? cap : .90f);
+                // Night stays populated in the window/spill/CRT light
+                // while truly dark corners remain background.
+                float threshold = Mathf.Lerp(
+                    NightVisibilityThreshold, .008f, lightBlendFactor);
+                if (alpha < threshold &&
                     visibilityMode != HubDustVisibilityMode.DiagnosticTestPattern)
                     continue;
 
-                float window = WindowContribution(x, y);
-                // Amber pinpoints near lamps; never pure white.
-                // Night interior is almost colorless; only particles
-                // crossing the photographic city window become cool blue.
-                Color tint = roomOn
-                    ? Color.Lerp(WarmAmbient, WarmCore, Mathf.Clamp01(
-                        RoomLampContribution(x, y, true) * .85f))
-                    : Color.Lerp(NightShadow, NightAir,
-                        Mathf.Clamp01(window * 1.5f));
+                float window = WindowGlassContribution(x, y);
+                float hall = HallwayContribution(x, y, hallwayOn);
+                Color warmTint = Color.Lerp(WarmAmbient, WarmCore,
+                    Mathf.Clamp01(RoomLampContribution(x, y, true) * .85f));
+                warmTint = Color.Lerp(warmTint, WindowSilver,
+                    WindowTealMix(x, y));
+                warmTint = Color.Lerp(warmTint, CtvBlue,
+                    CrtContribution(x, y) * .15f);
+                // Cyan core over the glass and in its deep room spill;
+                // only the lit corridor remains amber on room-light OFF.
+                Color nocturneTint = Color.Lerp(NocturneHalo, NocturneCore,
+                    Mathf.Clamp01(.42f + NocturneField(x, y) * .55f));
+                nocturneTint = Color.Lerp(nocturneTint, CtvBlue,
+                    CrtContribution(x, y) * .20f);
+                nocturneTint = Color.Lerp(nocturneTint, HallAmber,
+                    Mathf.Clamp01(hall * .90f));
+                Color tint = Color.Lerp(nocturneTint, warmTint,
+                    lightBlendFactor);
 
                 // Authored pixel diameter, not oversized radius.
                 float diameter = visibilityMode == HubDustVisibilityMode.Normal
@@ -391,7 +499,7 @@ namespace Rokas.Presentation
                 AddQuad(vh, new Vector2(rc.xMin + x * sx,
                         rc.yMin + y * sy), radius * sx, ry * sy,
                     Mathf.Cos(rotation), Mathf.Sin(rotation), tint,
-                    m.shape + m.kind * 10);
+                    m.shape + m.kind * 10, m.glintSeed);
                 LastVisibleMotes++;
                 LastMaxParticleQuadSize = Mathf.Max(
                     LastMaxParticleQuadSize, diameter);
@@ -404,10 +512,10 @@ namespace Rokas.Presentation
             if (Application.isPlaying && !didLog && visibility >= .99f)
             {
                 didLog = true;
-                Debug.Log("[UIHubFxField] V9_SWEET_SPOT_MICRO_GOLD" +
+                Debug.Log("[UIHubFxField] V10_NOCTURNE_WINDOW_AND_GLINT" +
                     " active=" + LastVisibleMotes + "/" + ParticleCount +
                     " quads=" + (LastVisibleMotes + LastShaftCount) +
-                    "/" + (ParticleCount + 4) +
+                    "/" + (ParticleCount + 6) +
                     " (dust=" + LastVisibleMotes +
                     " beams=" + LastShaftCount + ")" +
                     " meanAlpha=" + LastMeanVertexAlpha.ToString("F3") +
@@ -416,6 +524,7 @@ namespace Rokas.Presentation
                         LastMaxParticleQuadSize.ToString("F2") +
                     " mode=" + visibilityMode +
                     " strength=" + visibility.ToString("F2") +
+                    " lightBlendFactor=" + lightBlendFactor.ToString("F2") +
                     " rect=" + rc.width.ToString("F0") + "x" +
                     rc.height.ToString("F0") +
                     " shader=" + (material != null && material.shader != null
@@ -426,29 +535,37 @@ namespace Rokas.Presentation
         private void AddSoftWarmGlows(VertexHelper vh, Rect rc, float sx,
             float sy)
         {
-            // Exactly four geometry volumes, even when some light sources
-            // are off. Inactive sources have alpha=0, not fake grey fog.
+            // Existing V9 lamps are unchanged when lightBlendFactor=1.
+            // Glow vertices have zero alpha when their source is OFF.
             AddRadialGlow(vh, rc, sx, sy,
                 .13f, .34f, .22f, .28f, .100f,
-                new Color(1f, .78f, .43f), roomOn);
+                new Color(1f, .78f, .43f), lightBlendFactor);
             AddRadialGlow(vh, rc, sx, sy,
                 .63f, .58f, .24f, .26f, .105f,
-                new Color(1f, .82f, .47f), roomOn);
+                new Color(1f, .82f, .47f), lightBlendFactor);
             AddRadialGlow(vh, rc, sx, sy,
                 .85f, .50f, .16f, .30f, .045f,
-                new Color(.98f, .74f, .39f), hallwayOn);
+                HallAmber, hallwayOn ? 1f : 0f);
             AddRadialGlow(vh, rc, sx, sy,
                 .52f, .43f, .15f, .13f, .045f,
-                new Color(1f, .84f, .52f), laptopOn);
+                new Color(1f, .84f, .52f), laptopOn ? 1f : 0f);
+            // Broad nocturne spill from the glass toward bed/desk,
+            // never an opaque polygonal white shaft.
+            AddRadialGlow(vh, rc, sx, sy,
+                .40f, .49f, .32f, .36f, .085f,
+                new Color(.25f, .65f, .95f), 1f-lightBlendFactor);
+            // Very subtle CRT bounce that does not generate extra motes.
+            AddRadialGlow(vh, rc, sx, sy,
+                .94f, .35f, .10f, .14f, .030f,
+                CtvBlue, 1f);
         }
 
         private void AddRadialGlow(VertexHelper vh, Rect rc, float sx,
             float sy, float cx, float cy, float radiusX, float radiusY,
-            float peakAlpha, Color tint, bool lightIsOn)
+            float peakAlpha, Color tint, float sourceIntensity)
         {
-            tint.a = lightIsOn
-                ? Mathf.Clamp(peakAlpha * shaftStrength * visibility, 0f, .110f)
-                : 0f;
+            tint.a = Mathf.Clamp(peakAlpha * shaftStrength * visibility *
+                Mathf.Clamp01(sourceIntensity), 0f, .110f);
             AddQuad(vh, new Vector2(rc.xMin + cx * FullWidth * sx,
                     rc.yMin + cy * FullHeight * sy),
                 radiusX * FullWidth * sx, radiusY * FullHeight * sy,
@@ -457,7 +574,8 @@ namespace Rokas.Presentation
         }
 
         private static void AddQuad(VertexHelper vh, Vector2 center,
-            float rx, float ry, float cs, float sn, Color tint, int shape)
+            float rx, float ry, float cs, float sn, Color tint, int shape,
+            int glintSeed = 0)
         {
             int offset = vh.currentVertCount;
             for (int j = 0; j < 4; ++j)
@@ -469,8 +587,10 @@ namespace Rokas.Presentation
                     center.x + (xx * cs - yy * sn) * rx,
                     center.y + (xx * sn + yy * cs) * ry, 0f);
                 v.color = tint;
+                // Encode a constant per-particle glint seed in UV0.y,
+                // preserving local 0..1 sampling of the existing atlas.
                 v.uv0 = new Vector2(shape * 2f + (xx + 1f) * .5f,
-                    (yy + 1f) * .5f);
+                    glintSeed * 2f + (yy + 1f) * .5f);
                 vh.AddVert(v);
             }
             vh.AddTriangle(offset, offset + 1, offset + 2);
