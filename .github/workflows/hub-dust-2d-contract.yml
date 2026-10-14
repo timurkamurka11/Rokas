@@ -1,4 +1,4 @@
-name: ROKAS Hub Dust V8 pinpoint micro dust
+name: ROKAS Hub Dust V9 sweet spot micro gold
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify V8 exact 85 budget, zero bokeh, 9px cap, warm/night light limits
+      - name: Verify V9 145 motes, hard 10.5px ceiling, champagne gold and night telemetry
         shell: bash
         run: |
           python3 - <<'PY'
@@ -26,74 +26,69 @@ jobs:
           tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           atlas=(root/'Scripts/Presentation/HubDustAtlasFactory.cs').read_text()
           view=(root/'Scripts/Presentation/RokasView.cs').read_text()
+
           assert 'm_CustomRenderPipeline: {fileID: 0}' in Path('ProjectSettings/GraphicsSettings.asset').read_text()
           assert view.index('background = ui.Art') < view.index('HubDust_ThreeLayerAtmosphere') < view.index('scene = ui.Rect')
-          for marker in ('hubDust.maskable = false','dustGroup.blocksRaycasts = false',
-                         'hubDust.raycastTarget = false',
-                         'session.State.lampOn, session.HallwayLightOn,',
-                         'LaptopPowerSession.PoweredOn'):
-              assert marker in view,marker
+          for token in ('hubDust.maskable = false','dustGroup.blocksRaycasts = false',
+                        'hubDust.raycastTarget = false',
+                        'session.State.lampOn, session.HallwayLightOn,',
+                        'LaptopPowerSession.PoweredOn'):
+              assert token in view,token
 
-          for marker in ('public const int ParticleCount = 85;',
-                         'public const int GeneralAirCount = 60;',
-                         'public const int MicroCount = 75;',
-                         'public const int SmallCount = 10;',
-                         'public const int BokehCount = 0;',
-                         'public const float MaximumQuadSize = 9f;',
-                         'int order = (i * 73) % ParticleCount;',
-                         'localIndex < 11','localIndex < 20',
-                         '.06f, .94f','.10f, .88f',
-                         'cx = .13f; cy = .33f; rx = .22f; ry = .28f',
-                         'cx = .63f; cy = .58f; rx = .24f; ry = .26f',
-                         'cx = .85f; cy = .50f; rx = .16f; ry = .30f',
-                         'Mathf.Lerp(3.2f, 6.2f',
-                         'Mathf.Lerp(6.5f, 9f',
-                         'NormalPixelDiameter(m.kind, m.size, particleScale)',
-                         'LastMaxParticleQuadSize',
-                         'Mathf.Min(diameter, MaximumQuadSize)',
-                         'float rotation = 0f;',
-                         'if (alpha < (roomOn ? .008f : .025f)',
-                         'NightAir = new Color(.60f, .78f, .88f)',
-                         'NormalAlphaCap(m.kind)',
-                         'V8_CRISP_MICRO_DUST',
-                         'maxParticleQuadSize=',
-                         'meanAlpha=','maxAlpha=','quads=',
-                         'DebugVisibility',
-                         'canvasRenderer.SetTexture(ownedAtlas)',
-                         'canvasRenderer.SetMaterial(materialForRendering, 0)'):
-              assert marker in gfx,marker
+          for token in ('public const int ParticleCount = 145;',
+                        'public const int GeneralAirCount = 85;',
+                        'public const int MicroCount = 120;',
+                        'public const int SmallCount = 25;',
+                        'public const int BokehCount = 0;',
+                        'public const float MaximumQuadSize = 10.5f;',
+                        'localIndex < 24','localIndex < 48',
+                        'cx = .13f; cy = .34f; rx = .22f; ry = .28f',
+                        'cx = .63f; cy = .58f; rx = .24f; ry = .26f',
+                        'cx = .85f; cy = .50f; rx = .16f; ry = .30f',
+                        'Mathf.Lerp(4.8f, 8f',
+                        'Mathf.Lerp(8f, 10.5f',
+                        'NormalPixelDiameter(m.kind, m.size, particleScale)',
+                        'Mathf.Min(diameter, MaximumQuadSize)',
+                        'float rotation = 0f;',
+                        'if (alpha < (roomOn ? .008f : .050f)',
+                        'V9_SWEET_SPOT_MICRO_GOLD','maxParticleQuadSize=',
+                        'meanAlpha=','maxAlpha=','quads=',
+                        'LastMaxParticleQuadSize',
+                        'WarmCore = new Color(1f, .89f, .62f)',
+                        'WarmAmbient = new Color(.96f, .74f, .38f)',
+                        '.13f, .34f, .22f, .28f, .100f',
+                        '.63f, .58f, .24f, .26f, .105f',
+                        '.52f, .43f, .15f, .13f, .045f',
+                        'canvasRenderer.SetTexture(ownedAtlas)',
+                        'canvasRenderer.SetMaterial(materialForRendering, 0)'):
+              assert token in gfx,token
           assert gfx.count('AddRadialGlow(vh, rc, sx, sy,')==4
-          for marker in ('.22f, .28f, .065f',
-                         '.24f, .26f, .070f',
-                         '.16f, .30f, .045f',
-                         '.15f, .13f, .025f'):
-              assert marker in gfx,marker
           assert 'AddLightShafts(' not in gfx
           assert 'Mathf.Lerp(28f, 48f' not in gfx
+          assert 'Mathf.Lerp(14f, 24f' not in gfx
 
-          for marker in ('Blend One OneMinusSrcAlpha',
-                         'half3 creamCore=half3(.98,.80,.46)',
-                         'half3 amberHalo=half3(.92,.68,.35)',
-                         'coreMask * lightZoneFactor * .35',
-                         'coreMask * lightZoneFactor * .13',
-                         'half3 premulRGB = litRGB * finalAlpha',
-                         'return fixed4(i.color.rgb*glow,0.0)',
-                         'tex2D(_DustAtlasTex,atlasUv).a',
-                         'if (_DustMode>1.5)'):
-              assert marker in shader,marker
-          assert 'half3(1.00,.95,.82)' not in shader
-          assert '1.35);' not in shader
+          for token in ('Blend One OneMinusSrcAlpha',
+                        'float softBody=1.0-smoothstep(.18,.92,r)',
+                        'float coreMask=exp(-r*r*9.5)',
+                        'half3 creamCore=half3(1.00,.89,.62)',
+                        'half3 amberHalo=half3(.96,.74,.38)',
+                        'coreMask * lightZoneFactor * .70',
+                        'tex2D(_DustAtlasTex,atlasUv).a',
+                        'if (_DustMode>1.5)',
+                        'return fixed4(i.color.rgb*glow,0.0)'):
+              assert token in shader,token
+          assert 'coreMask * lightZoneFactor * 1.35' not in shader
           assert 'public const int Width = 1024;' in atlas
           assert 'public const int Height = 512;' in atlas
           assert 'TextureFormat.RGBA32' in atlas
 
-          for case in ('V8HasExactly85ParticlesAndZeroLargeBokeh',
-                       'V8NoQuadEverExceeds9PxEvenAtMaxInspectorScale',
-                       'V8WarmMicroAlphaPeaksButSmallMotesRemainQuiet',
-                       'V8NoLaptopEmitterAndIndependentRoomCorridorSwitches',
-                       'V8NightIsDarkExceptSoftBlueCityWindow',
-                       'V8RealUnityMeshTelemetryFitsGoldenQuietTargets',
-                       'V8NormalModeOnlyUsesDiagnosticsWhenExplicitlyChosen'):
+          for case in ('V9Exactly145MotesAndNoLargeBokeh',
+                       'V9NoQuadEverExceeds10Point5Pixels',
+                       'V9WarmMicroSparklesAndSoftMoteCeilings',
+                       'V9RoomAirShadowFloorAndWindowRemainReadable',
+                       'V9NightBlueWindowBrighterButDarkRoomStaysQuiet',
+                       'V9RealUnityMeshTelemetryMeetsLitAndNightTargets',
+                       'V9OnlyShowsDiagnosticWhenExplicitlySelected'):
               assert case in tests,case
           for p in (root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
                     root/'Scripts/Presentation/HubDustAtlasFactory.cs',
@@ -101,5 +96,5 @@ jobs:
                     root/'Tests/EditMode/HubDustCanvasEditModeTests.cs'):
               assert p.with_name(p.name+'.meta').is_file(),p
               assert p.read_text().count('{') == p.read_text().count('}'),p
-          print('PASS V8: 85 particles, 75 micro/10 small/0 bokeh, max 9px, 4 muted glows, dim night, honey gold shader, Unity mesh assertions present')
+          print('PASS V9: 145 particles 85 broad/60 local, 120 micro/25 small, no bokeh, hard 10.5px, 0.70 sparkle, night mesh contracts')
           PY
