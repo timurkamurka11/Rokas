@@ -113,6 +113,51 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void V6LaptopReflectionIsGentleAndSpreadsAcrossCenter()
+        {
+            float cx=.52f*1920f,cy=.42f*1080f;
+            Assert.That(HubDustCanvasGraphic.LaptopContribution(cx,cy),
+                Is.EqualTo(1f).Within(.001f));
+            Assert.That(HubDustCanvasGraphic.LaptopContribution(
+                .10f*1920f,.85f*1080f),Is.LessThan(.001f));
+            float center=HubDustCanvasGraphic.EvaluateDustAlpha(
+                0,1f,cx,cy,false,false);
+            Assert.That(center,Is.InRange(.02f,.07f));
+            Assert.That(center,Is.LessThan(.08f));
+        }
+
+        [Test]
+        public void V6NormalModeHardCapsSurviveInspectorGains()
+        {
+            Assert.AreEqual(.32f,HubDustCanvasGraphic.NormalAlphaCap(0));
+            Assert.AreEqual(.12f,HubDustCanvasGraphic.NormalAlphaCap(1));
+            Assert.AreEqual(.06f,HubDustCanvasGraphic.NormalAlphaCap(2));
+            for(int kind=0;kind<3;++kind)
+            {
+                float value=HubDustCanvasGraphic.EvaluateDustAlpha(
+                    kind,1f,.63f*1920f,.58f*1080f,true,true);
+                float gain=2f;
+                float finalAlpha=Mathf.Min(value*gain,
+                    HubDustCanvasGraphic.NormalAlphaCap(kind));
+                Assert.That(finalAlpha,Is.LessThanOrEqualTo(
+                    HubDustCanvasGraphic.NormalAlphaCap(kind)));
+            }
+        }
+
+        [Test]
+        public void V6NormalModeNeverProducesOversizedBokeh()
+        {
+            Assert.That(HubDustCanvasGraphic.NormalPixelDiameter(
+                0,4.2f,1.6f),Is.EqualTo(4.2f));
+            Assert.That(HubDustCanvasGraphic.NormalPixelDiameter(
+                1,8f,1.6f),Is.EqualTo(8f));
+            Assert.That(HubDustCanvasGraphic.NormalPixelDiameter(
+                2,22f,1.6f),Is.EqualTo(22f));
+            Assert.That(HubDustCanvasGraphic.NormalPixelDiameter(
+                0,1.8f,.5f),Is.EqualTo(1.8f));
+        }
+
+        [Test]
         public void V6DiagnosticIsExplicitAndNoDustGraphicBlocksClicks()
         {
             var root = new GameObject("V6 Hub Dust",
