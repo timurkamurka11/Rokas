@@ -366,7 +366,7 @@ namespace Rokas.Presentation
                             (m.kind == 0 ? .22f : .10f)) : .90f);
                 // Night: ignore dim motes in dark corners; preserve
                 // only a small scattering around the city window.
-                if (alpha < (roomOn ? .008f : .030f) &&
+                if (alpha < (roomOn ? .008f : .025f) &&
                     visibilityMode != HubDustVisibilityMode.DiagnosticTestPattern)
                     continue;
 
