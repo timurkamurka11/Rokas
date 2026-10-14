@@ -82,6 +82,7 @@ jobs:
                        'V7NightCorridorAndLaptopSourcesStayIndependent',
                        'V7AlphaCapsPerClassAreHigherButBounded',
                        'V7NightCityWindowRemainsVisibleWithoutRoomLamps',
+                       'V7ActualMeshTelemetryAt1920x1080MeetsTargets',
                        'V7NormalDiagnosticAndCanvasInputRemainSeparated'):
               assert test in tests,test
           for p in [root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
