@@ -7,26 +7,26 @@ namespace Rokas.Presentation
     public enum HubDustVisibilityMode { Normal, HighContrastBoost, DiagnosticTestPattern }
 
     /// <summary>
-    /// V7_CINEMATIC_GOLD_BALANCE. One non-interactive ScreenSpaceOverlay
-    /// graphic: 60% broad-air dust, 40% elliptical localized dust, and
-    /// four switch-controlled additive light volumes on the HOME photograph.
+    /// V8_CRISP_MICRO_DUST. 85 tiny particles, no large bokeh, 70% broad
+    /// air and 30% gentle lamp-light dust. Four independently controlled
+    /// soft additive light volumes preserve the original HOME photograph.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class HubDustCanvasGraphic : MaskableGraphic
     {
-        public const int ParticleCount = 200;
-        public const int GeneralAirCount = 120;       // 60%
-        public const int LocalAirCount = ParticleCount - GeneralAirCount;
-        public const int MicroCount = 140;            // 70%
-        public const int SmallCount = 46;             // 23%
-        public const int BokehCount = 14;             // 7%
+        public const int ParticleCount = 85;
+        public const int GeneralAirCount = 60;         // 70.6%
+        public const int LocalAirCount = ParticleCount - GeneralAirCount; // 25
+        public const int MicroCount = 75;              // 88.2%
+        public const int SmallCount = 10;              // 11.8%
+        public const int BokehCount = 0;               // zero large flakes
+        public const float MaximumQuadSize = 9f;
         private const float MeshStep = 1f / 30f;
         private const float FullWidth = 1920f, FullHeight = 1080f;
-        private static readonly Color WarmCore = new Color(1f, .95f, .82f);
-        private static readonly Color WarmAmbient = new Color(1f, .78f, .42f);
-        private static readonly Color WarmWindow = new Color(1f, .88f, .68f);
-        private static readonly Color CoolWindow = new Color(.82f, .94f, 1f);
-        private static readonly Color NightAir = new Color(.72f, .90f, 1f);
+        private static readonly Color WarmCore = new Color(.98f, .80f, .46f);
+        private static readonly Color WarmAmbient = new Color(.92f, .68f, .35f);
+        private static readonly Color NightAir = new Color(.60f, .78f, .88f);
+        private static readonly Color NightShadow = new Color(.37f, .48f, .55f);
 
         [SerializeField, Range(.5f, 2f)] private float visibilityGain = 1f;
         [SerializeField, Range(.5f, 1.6f)] private float particleScale = 1f;
@@ -80,6 +80,7 @@ namespace Rokas.Presentation
         public float LastMeanVertexAlpha { get; private set; }
         public float LastMaxVertexAlpha { get; private set; }
         public int LastShaftCount { get; private set; }
+        public float LastMaxParticleQuadSize { get; private set; }
 
         protected override void Awake()
         {
@@ -95,7 +96,7 @@ namespace Rokas.Presentation
                     // Evenly spread through the main photographic room;
                     // no curtain/doorway emitter columns.
                     nx = Mathf.Lerp(.06f, .94f, (float)rng.NextDouble());
-                    ny = Mathf.Lerp(.10f, .90f, (float)rng.NextDouble());
+                    ny = Mathf.Lerp(.10f, .88f, (float)rng.NextDouble());
                 }
                 else
                 {
@@ -103,39 +104,34 @@ namespace Rokas.Presentation
                     // pockets, not clustering at the centre of a rectangle.
                     int localIndex = i - GeneralAirCount;
                     float cx, cy, rx, ry;
-                    if (localIndex < 28)
+                    // 25 localized motes: 11 floor, 9 desk, 5 corridor.
+                    // NO independent laptop emitter above the main table.
+                    if (localIndex < 11)
                     {
-                        cx = .13f; cy = .33f; rx = .20f; ry = .28f;
+                        cx = .13f; cy = .33f; rx = .22f; ry = .28f;
                     }
-                    else if (localIndex < 52)
+                    else if (localIndex < 20)
                     {
-                        cx = .63f; cy = .57f; rx = .22f; ry = .26f;
-                    }
-                    else if (localIndex < 68)
-                    {
-                        cx = .85f; cy = .48f; rx = .18f; ry = .34f;
+                        cx = .63f; cy = .58f; rx = .24f; ry = .26f;
                     }
                     else
                     {
-                        cx = .52f; cy = .43f; rx = .15f; ry = .13f;
+                        cx = .85f; cy = .50f; rx = .16f; ry = .30f;
                     }
                     float r = Mathf.Sqrt((float)rng.NextDouble());
                     float phi = 6.2831853f * (float)rng.NextDouble();
                     nx = Mathf.Clamp(cx + rx * r * Mathf.Cos(phi), .06f, .94f);
-                    ny = Mathf.Clamp(cy + ry * r * Mathf.Sin(phi), .10f, .90f);
-                    if (localIndex < 28) ny = Mathf.Min(ny, .61f);
+                    ny = Mathf.Clamp(cy + ry * r * Mathf.Sin(phi), .10f, .88f);
+                    if (localIndex < 11) ny = Mathf.Min(ny, .61f);
                 }
 
-                // Coprime permutation mixes all three sizes across
-                // both spatial pools rather than leaving bokeh at one lamp.
+                // Coprime permutation evenly mixes the two small classes.
                 int order = (i * 73) % ParticleCount;
                 int kind = order < MicroCount ? 0 :
                     (order < MicroCount + SmallCount ? 1 : 2);
                 float size = kind == 0
-                    ? Mathf.Lerp(6.5f, 13.5f, (float)rng.NextDouble())
-                    : kind == 1
-                        ? Mathf.Lerp(14f, 24f, (float)rng.NextDouble())
-                        : Mathf.Lerp(28f, 48f, (float)rng.NextDouble());
+                    ? Mathf.Lerp(3.2f, 6.2f, (float)rng.NextDouble())
+                    : Mathf.Lerp(6.5f, 9f, (float)rng.NextDouble());
                 // Effective displacement 3-8 authored pixels per second,
                 // with 2-6 px/s thermal rise close to the warm lamps.
                 float flowSpeed = Mathf.Lerp(3f, 8f,
@@ -144,7 +140,7 @@ namespace Rokas.Presentation
                     (float)rng.NextDouble();
                 float vx = flowSpeed * Mathf.Cos(direction);
                 float vy = flowSpeed * Mathf.Sin(direction);
-                if (local && i < GeneralAirCount + 52)
+                if (local && i < GeneralAirCount + 20)
                 {
                     // Exact thermal rise 2-6 px/s while full drift
                     // magnitude remains 3-8 px/s.
@@ -164,9 +160,7 @@ namespace Rokas.Presentation
                     alpha = Mathf.Lerp(.91f, 1f, (float)rng.NextDouble()),
                     angle = (float)rng.NextDouble() * 6.2831853f,
                     kind = kind,
-                    // Bokeh uses the ring/disc cells in the source 4x2 atlas.
-                    shape = kind == 2 ? (rng.Next(0, 2) == 0 ? 1 : 5)
-                        : rng.Next(0, 8)
+                    shape = rng.Next(0, 8)
                 };
             }
 
@@ -174,13 +168,13 @@ namespace Rokas.Presentation
             if (shader == null) shader = Shader.Find("ROKAS/UI/HubDustSoftMotes");
             if (shader == null || !shader.isSupported)
             {
-                Debug.LogWarning("[ROKAS HubDust V7] UI shader unavailable.");
+                Debug.LogWarning("[ROKAS HubDust V8] UI shader unavailable.");
                 enabled = false;
                 return;
             }
             ownedAtlas = HubDustAtlasFactory.Create();
             ownedMaterial = new Material(shader)
-                { name = "ROKAS V7 Cinematic Gold Balance UI" };
+                { name = "ROKAS V8 Crisp Micro Dust UI" };
             ownedMaterial.SetTexture("_DustAtlasTex", ownedAtlas);
             ownedMaterial.SetFloat("_UseAtlas", 1f);
             ownedMaterial.SetFloat("_DustMode", (int)visibilityMode);
@@ -273,21 +267,20 @@ namespace Rokas.Presentation
 
         public static float NormalAlphaCap(int kind)
         {
-            return kind == 0 ? .68f : kind == 1 ? .42f : .22f;
+            return kind == 0 ? .42f : .14f;
         }
 
         public static float NormalPixelDiameter(int kind, float diameter,
             float scale)
         {
             return kind == 0
-                ? Mathf.Clamp(diameter * scale, 6.5f, 13.5f)
-                : kind == 1
-                    ? Mathf.Clamp(diameter * scale, 14f, 24f)
-                    : Mathf.Clamp(diameter * scale, 28f, 48f);
+                ? Mathf.Clamp(diameter * scale, 3.2f, 6.2f)
+                : Mathf.Clamp(diameter * scale, 6.5f, MaximumQuadSize);
         }
 
-        // Alpha is per-vertex and intentionally higher than V6.
-        // The atlas/shader still reduce per-fragment opacity at the edges.
+        // Stable, smooth Gaussian-response alpha; this represents
+        // VERTEX alpha, not the final atlas/fragment contribution.
+        // In darkness, only the city window appreciably illuminates dust.
         public static float EvaluateDustAlpha(int kind, float intrinsic,
             float x, float y, bool roomLampOn, bool hallwayLampOn,
             float strength = 1f, bool laptopPowered = false)
@@ -295,26 +288,35 @@ namespace Rokas.Presentation
             float warm = RoomLampContribution(x, y, roomLampOn);
             float hall = HallwayContribution(x, y, hallwayLampOn);
             float window = WindowContribution(x, y);
-            float laptop = laptopPowered ? LaptopContribution(x, y) : 0f;
-            float alpha;
-            if (kind == 0)
-                alpha = (roomLampOn ? .225f : .225f)
-                    + .260f * warm + .095f * hall
-                    + .095f * laptop + (roomLampOn ? .075f : .205f) * window
-                    // Narrow optical light-zone peak: high-alpha cores
-                    // right by the lamp without raising whole-room haze.
-                    + .14f * Mathf.Pow(warm, 5f);
-            else if (kind == 1)
-                alpha = (roomLampOn ? .195f : .175f)
-                    + .165f * warm + .058f * hall
-                    + .040f * laptop + (roomLampOn ? .035f : .100f) * window;
-            else
-                alpha = (roomLampOn ? .132f : .115f)
-                    + .082f * warm + .030f * hall
-                    + .022f * laptop + .024f * window;
 
+            float alpha;
+            if (roomLampOn)
+            {
+                if (kind == 0)
+                    alpha = .072f + .175f * warm +
+                        .024f * hall + .017f * window +
+                        .165f * Mathf.Pow(warm, 7f);
+                else
+                    alpha = .060f + .070f * warm + .010f * hall;
+            }
+            else
+            {
+                // Window peak ~.20, dark interior <.03. Do not keep
+                // the previous bright blue full-room nighttime field.
+                if (kind == 0)
+                    alpha = .012f + .180f * Mathf.Pow(window, 1.5f) +
+                        .010f * hall;
+                else
+                    alpha = .009f + .080f * Mathf.Pow(window, 1.5f) +
+                        .004f * hall;
+            }
+
+            // Laptop's optional soft additive reflection is controlled by
+            // LaptopPowerSession in RokasView, never a new dust spawn pool.
+            // The laptop does not brighten night particle alphas.
             return Mathf.Clamp(alpha * intrinsic * strength, 0f,
-                NormalAlphaCap(kind));
+                roomLampOn ? NormalAlphaCap(kind) :
+                    (kind == 0 ? .22f : .10f));
         }
 
         protected override void OnPopulateMesh(VertexHelper vh)
@@ -324,6 +326,7 @@ namespace Rokas.Presentation
             LastMeanVertexAlpha = 0f;
             LastMaxVertexAlpha = 0f;
             LastShaftCount = 0;
+            LastMaxParticleQuadSize = 0f;
             vertexAlphaTotal = 0f;
             vertexAlphaPeak = 0f;
             if (!showRoom || visibility < .0001f) return;
@@ -344,8 +347,8 @@ namespace Rokas.Presentation
                 // Very slow, smooth convection without frantic tremors.
                 float waveX = 4f * Mathf.Sin(t * .10f + m.phase);
                 float waveY = 2.4f * Mathf.Sin(t * .075f + m.phase * 1.3f);
-                // Seamless edge wrapping, with a narrow fade to prevent
-                // teleportation while keeping 185-200 visible particles.
+                // Slow seamless drift with a narrow edge fade, maintaining
+                // calm distribution without sudden popping or swarms.
                 float x = Mathf.Repeat(m.x + m.vx * t + waveX, FullWidth);
                 float y = Mathf.Repeat(m.y + m.vy * t + waveY, FullHeight);
                 float edge = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(
@@ -359,46 +362,42 @@ namespace Rokas.Presentation
                     HubDustVisibilityMode.HighContrastBoost ? 2.5f : 1f;
                 alpha = Mathf.Min(alpha * boost,
                     visibilityMode == HubDustVisibilityMode.Normal
-                        ? NormalAlphaCap(m.kind) : .90f);
-                if (alpha < .001f && visibilityMode !=
-                    HubDustVisibilityMode.DiagnosticTestPattern) continue;
+                        ? (roomOn ? NormalAlphaCap(m.kind) :
+                            (m.kind == 0 ? .22f : .10f)) : .90f);
+                // Night: ignore dim motes in dark corners; preserve
+                // only a small scattering around the city window.
+                if (alpha < (roomOn ? .008f : .030f) &&
+                    visibilityMode != HubDustVisibilityMode.DiagnosticTestPattern)
+                    continue;
 
                 float window = WindowContribution(x, y);
-                // On: cream-to-amber with warm pearl at the window.
-                // Off: subdued blue night air, intensified only at the
-                // city window; corridor/laptop keep their own glow state.
-                Color tint = roomOn ? Color.Lerp(WarmAmbient, WarmCore,
-                    Mathf.Clamp01(RoomLampContribution(x, y, true) * .38f))
-                    : NightAir;
-                if (roomOn)
-                    tint = Color.Lerp(tint, WarmWindow,
-                        Mathf.Clamp01(window * .75f));
-                else
-                    tint = Color.Lerp(tint, CoolWindow,
-                        Mathf.Clamp01(window * .85f));
-                // Powered laptop / lit corridor lend a warm accent even
-                // in the night scene without switching room lamps on.
-                if (!roomOn)
-                {
-                    float reflectedWarm = Mathf.Max(
-                        HallwayContribution(x, y, hallwayOn) * .55f,
-                        laptopOn ? LaptopContribution(x, y) * .45f : 0f);
-                    tint = Color.Lerp(tint, WarmWindow, reflectedWarm);
-                }
+                // Amber pinpoints near lamps; never pure white.
+                // Night interior is almost colorless; only particles
+                // crossing the photographic city window become cool blue.
+                Color tint = roomOn
+                    ? Color.Lerp(WarmAmbient, WarmCore, Mathf.Clamp01(
+                        RoomLampContribution(x, y, true) * .85f))
+                    : Color.Lerp(NightShadow, NightAir,
+                        Mathf.Clamp01(window * 1.5f));
 
                 // Authored pixel diameter, not oversized radius.
                 float diameter = visibilityMode == HubDustVisibilityMode.Normal
                     ? NormalPixelDiameter(m.kind, m.size, particleScale)
                     : m.size * particleScale;
+                // No rotating large AABB: both mesh axes stay below
+                // 9 authored pixels, including at the Inspector max.
+                diameter = Mathf.Min(diameter, MaximumQuadSize);
                 float radius = diameter * .5f;
                 float ry = radius * (m.kind == 1 ? .77f : 1f);
                 tint.a = alpha;
-                float rotation = m.angle + age * .008f;
+                float rotation = 0f;
                 AddQuad(vh, new Vector2(rc.xMin + x * sx,
                         rc.yMin + y * sy), radius * sx, ry * sy,
                     Mathf.Cos(rotation), Mathf.Sin(rotation), tint,
                     m.shape + m.kind * 10);
                 LastVisibleMotes++;
+                LastMaxParticleQuadSize = Mathf.Max(
+                    LastMaxParticleQuadSize, diameter);
                 vertexAlphaTotal += alpha;
                 vertexAlphaPeak = Mathf.Max(vertexAlphaPeak, alpha);
             }
@@ -408,7 +407,7 @@ namespace Rokas.Presentation
             if (Application.isPlaying && !didLog && visibility >= .99f)
             {
                 didLog = true;
-                Debug.Log("[UIHubFxField] V7_CINEMATIC_GOLD_BALANCE" +
+                Debug.Log("[UIHubFxField] V8_CRISP_MICRO_DUST" +
                     " active=" + LastVisibleMotes + "/" + ParticleCount +
                     " quads=" + (LastVisibleMotes + LastShaftCount) +
                     "/" + (ParticleCount + 4) +
@@ -416,6 +415,8 @@ namespace Rokas.Presentation
                     " beams=" + LastShaftCount + ")" +
                     " meanAlpha=" + LastMeanVertexAlpha.ToString("F3") +
                     " maxAlpha=" + LastMaxVertexAlpha.ToString("F3") +
+                    " maxParticleQuadSize=" +
+                        LastMaxParticleQuadSize.ToString("F2") +
                     " mode=" + visibilityMode +
                     " strength=" + visibility.ToString("F2") +
                     " rect=" + rc.width.ToString("F0") + "x" +
@@ -431,17 +432,17 @@ namespace Rokas.Presentation
             // Exactly four geometry volumes, even when some light sources
             // are off. Inactive sources have alpha=0, not fake grey fog.
             AddRadialGlow(vh, rc, sx, sy,
-                .13f, .33f, .20f, .28f, .15f,
-                new Color(1f, .76f, .38f), roomOn);
+                .13f, .33f, .22f, .28f, .065f,
+                new Color(.98f, .77f, .41f), roomOn);
             AddRadialGlow(vh, rc, sx, sy,
-                .63f, .57f, .22f, .26f, .16f,
-                new Color(1f, .80f, .44f), roomOn);
+                .63f, .58f, .24f, .26f, .070f,
+                new Color(.98f, .80f, .45f), roomOn);
             AddRadialGlow(vh, rc, sx, sy,
-                .85f, .48f, .18f, .34f, .12f,
-                new Color(1f, .74f, .36f), hallwayOn);
+                .85f, .50f, .16f, .30f, .045f,
+                new Color(.98f, .74f, .39f), hallwayOn);
             AddRadialGlow(vh, rc, sx, sy,
-                .52f, .43f, .15f, .13f, .10f,
-                new Color(1f, .84f, .50f), laptopOn);
+                .52f, .43f, .15f, .13f, .025f,
+                new Color(.98f, .80f, .49f), laptopOn);
         }
 
         private void AddRadialGlow(VertexHelper vh, Rect rc, float sx,
@@ -449,7 +450,7 @@ namespace Rokas.Presentation
             float peakAlpha, Color tint, bool lightIsOn)
         {
             tint.a = lightIsOn
-                ? Mathf.Clamp(peakAlpha * shaftStrength * visibility, 0f, .18f)
+                ? Mathf.Clamp(peakAlpha * shaftStrength * visibility, 0f, .075f)
                 : 0f;
             AddQuad(vh, new Vector2(rc.xMin + cx * FullWidth * sx,
                     rc.yMin + cy * FullHeight * sy),
