@@ -298,8 +298,8 @@ namespace Rokas.Presentation
             float laptop = laptopPowered ? LaptopContribution(x, y) : 0f;
             float alpha;
             if (kind == 0)
-                alpha = (roomLampOn ? .235f : .225f)
-                    + .285f * warm + .095f * hall
+                alpha = (roomLampOn ? .225f : .225f)
+                    + .260f * warm + .095f * hall
                     + .095f * laptop + (roomLampOn ? .075f : .205f) * window
                     // Narrow optical light-zone peak: high-alpha cores
                     // right by the lamp without raising whole-room haze.
