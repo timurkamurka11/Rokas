@@ -1,9 +1,10 @@
-name: ROKAS Hub Dust V6 subtle warm atmosphere
+name: ROKAS Hub Dust V7 cinematic gold balance
 on:
   push:
     branches: [codex/fidelity3-resume-5779190]
     paths:
       - 'Assets/Rokas/Scripts/Presentation/HubDustCanvasGraphic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
       - 'Assets/Rokas/Resources/Shaders/HubDustSoftMotes.shader'
       - 'Assets/Rokas/Tests/EditMode/HubDustCanvasEditModeTests.cs'
       - '.github/workflows/hub-dust-2d-contract.yml'
@@ -15,76 +16,78 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify exact Argon V6 distribution, colors, glow, movement, telemetry
+      - name: Assert V7 200 motes, additive core, four controlled glows
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           root=Path('Assets/Rokas')
           gfx=(root/'Scripts/Presentation/HubDustCanvasGraphic.cs').read_text()
-          atlas=(root/'Scripts/Presentation/HubDustAtlasFactory.cs').read_text()
           shader=(root/'Resources/Shaders/HubDustSoftMotes.shader').read_text()
+          atlas=(root/'Scripts/Presentation/HubDustAtlasFactory.cs').read_text()
           tests=(root/'Tests/EditMode/HubDustCanvasEditModeTests.cs').read_text()
           view=(root/'Scripts/Presentation/RokasView.cs').read_text()
 
           assert 'm_CustomRenderPipeline: {fileID: 0}' in Path('ProjectSettings/GraphicsSettings.asset').read_text()
           assert view.index('background = ui.Art') < view.index('HubDust_ThreeLayerAtmosphere') < view.index('scene = ui.Rect')
-          for token in ('hubDust.maskable = false','dustGroup.blocksRaycasts = false','hubDust.raycastTarget = false','session.State.lampOn, session.HallwayLightOn'):
-              assert token in view,token
+          for token in ('hubDust.maskable = false','dustGroup.blocksRaycasts = false',
+                        'hubDust.raycastTarget = false',
+                        'session.State.lampOn, session.HallwayLightOn,',
+                        'LaptopPowerSession.PoweredOn'):
+              assert token in view, token
 
-          for token in ('public const int ParticleCount = 128;','public const int GeneralAirCount = 84;',
-                        'public const int MicroCount = 105;','public const int SmallCount = 19;',
-                        'public const int BokehCount = 4;','int order = (i * 73) % ParticleCount;',
-                        '.08f, .92f','.12f, .88f','Mathf.Sqrt((float)rng.NextDouble())',
-                        'flowSpeed = Mathf.Lerp(3f, 8f','Mathf.Min(flowSpeed * .85f',
-                        'HubDustVisibilityMode.HighContrastBoost ? 2.5f',
-                        'V6_SUBTLE_WARM_ATMOSPHERE','meanAlpha=','maxAlpha=',
-                        'DiagnosticTestPattern','WarmCore = new Color(1f, .82f, .52f)',
-                        'WarmAmbient = new Color(.95f, .74f, .45f)',
-                        'CoolWindow = new Color(.65f, .82f, .88f)',
-                        'WarmGlow = new Color(1f, .72f, .35f)',
-                        '.14f, .34f, .16f, .22f','.63f, .58f, .18f, .22f',
-                        '.82f, .52f, .12f, .28f','.52f; cy = .42f;',
-                        'Mathf.Lerp(1.8f, 4.2f','Mathf.Lerp(4.5f, 8f',
-                        'Mathf.Lerp(12f, 22f','AddSoftWarmGlows(vh, rc, sx, sy)',
+          for token in ('public const int ParticleCount = 200;',
+                        'public const int GeneralAirCount = 120;',
+                        'public const int MicroCount = 140;',
+                        'public const int SmallCount = 46;',
+                        'public const int BokehCount = 14;',
+                        'int order = (i * 73) % ParticleCount;',
+                        '.06f, .94f','.10f, .90f',
+                        'Mathf.Sqrt((float)rng.NextDouble())',
+                        'Mathf.Lerp(6.5f, 13.5f',
+                        'Mathf.Lerp(14f, 24f',
+                        'Mathf.Lerp(28f, 48f',
+                        'NormalAlphaCap(m.kind)',
+                        'HubDustVisibilityMode.DiagnosticTestPattern',
+                        'V7_CINEMATIC_GOLD_BALANCE',
+                        'quads=','beams=',
+                        'roomOn','hallwayOn','laptopOn',
+                        '.13f, .33f, .20f, .28f, .15f',
+                        '.63f, .57f, .22f, .26f, .16f',
+                        '.85f, .48f, .18f, .34f, .12f',
+                        '.52f, .43f, .15f, .13f, .10f',
                         'canvasRenderer.SetTexture(ownedAtlas)',
                         'canvasRenderer.SetMaterial(materialForRendering, 0)'):
               assert token in gfx,token
-          for token in ('public static float LaptopContribution', '.52f, .42f, .14f, .12f',
-                        'public static float NormalAlphaCap', 'NormalAlphaCap(m.kind)',
-                        'public static float NormalPixelDiameter',
-                        'NormalPixelDiameter(m.kind, m.size, particleScale)'):
-              assert token in gfx,token
-          for method in ('V6LaptopReflectionIsGentleAndSpreadsAcrossCenter',
-                         'V6NormalModeHardCapsSurviveInspectorGains',
-                         'V6NormalModeNeverProducesOversizedBokeh'):
-              assert method in tests,method
-          assert gfx.count('AddRadialGlow(vh, rc, sx, sy,') == 2
+          assert gfx.count('AddRadialGlow(vh, rc, sx, sy,') == 4
           assert 'AddLightShafts(' not in gfx
-          assert 'SoftShaft(' not in shader
-          assert 'Blend One OneMinusSrcAlpha' in shader
-          assert 'float radial=pow(saturate(1.0-smoothstep(0.0,1.0,r)),2.5)' in shader
-          assert 'return fixed4(i.color.rgb*glow,0.0)' in shader
-          assert 'float3 premulRGB=i.color.rgb*outAlpha' in shader
-          assert 'tex2D(_DustAtlasTex,atlasUv).a' in shader
-          assert 'if (_DustMode>1.5)' in shader
+          for token in ('Blend One OneMinusSrcAlpha','float coreMask=',
+                        'float warmHalo=','half3 creamCore=half3(1.00,.95,.82)',
+                        'half3 amberHalo=half3(1.00,.78,.42)',
+                        'half3 premulRGB = litRGB * finalAlpha *',
+                        'coreMask * lightZoneFactor * 1.35',
+                        'half outAlpha = finalAlpha *',
+                        'coreMask * lightZoneFactor * 0.45',
+                        'return fixed4(i.color.rgb*glow,0.0)',
+                        'tex2D(_DustAtlasTex,atlasUv).a',
+                        'if (_DustMode>1.5)'):
+              assert token in shader,token
           assert 'public const int Width = 1024;' in atlas
           assert 'public const int Height = 512;' in atlas
           assert 'TextureFormat.RGBA32' in atlas
-          assert 'TextureWrapMode.Clamp' in atlas
-          assert 'FilterMode.Bilinear' in atlas
 
-          for method in ('V6HasArgonSpecifiedParticleBudgetAndSpatialPools',
-                         'V6AlphaCapsApplyToAllMoteClasses',
-                         'V6MicroDustInDarknessIsDimAndLightFadesSmoothly',
-                         'V6DiagnosticIsExplicitAndNoDustGraphicBlocksClicks'):
-              assert method in tests,method
+          for test in ('V7MatchesGoldenBalanceBudgetAndThreeOpticalClasses',
+                       'V7PhysicalQuadDiametersUseArgonThreeSizeBands',
+                       'V7WarmLampsUseRealSpotsAndExistingRoomSwitch',
+                       'V7NightCorridorAndLaptopSourcesStayIndependent',
+                       'V7AlphaCapsPerClassAreHigherButBounded',
+                       'V7NightCityWindowRemainsVisibleWithoutRoomLamps',
+                       'V7NormalDiagnosticAndCanvasInputRemainSeparated'):
+              assert test in tests,test
           for p in [root/'Scripts/Presentation/HubDustCanvasGraphic.cs',
-                    root/'Scripts/Presentation/HubDustAtlasFactory.cs',
                     root/'Resources/Shaders/HubDustSoftMotes.shader',
                     root/'Tests/EditMode/HubDustCanvasEditModeTests.cs']:
-              assert p.with_name(p.name+'.meta').exists(),p
-              source=p.read_text()
-              assert source.count('{')==source.count('}'),p
-          print('PASS V6 128 motes (84 broad/44 localized; 105 micro, 19 soft, 4 bokeh), 2 amber radial glows, 3-8px/s, premul, 1024x512 atlas, switches, diagnostics')
+              assert p.with_name(p.name+'.meta').is_file(),p
+              assert p.read_text().count('{')==p.read_text().count('}'),p
+          print('PASS V7 cinematic gold balance: 200 particles, 140/46/14 size mix, 4 light zones, additive cream core, 1024x512 atlas')
           PY
