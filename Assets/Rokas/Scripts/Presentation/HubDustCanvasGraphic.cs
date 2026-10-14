@@ -259,6 +259,32 @@ namespace Rokas.Presentation
                 .385f, .65f, .135f, .20f);
         }
 
+        // A very faint ambient reflection above the central laptop.
+        // This is a photographic light-field hint, NOT a second emitter
+        // or an independent laptop power state.
+        public static float LaptopContribution(float x, float y)
+        {
+            return Ellipse(x / FullWidth, y / FullHeight,
+                .52f, .42f, .14f, .12f);
+        }
+
+        // Preserve the authored 1.8-22px pixel-diameter bands even if
+        // Inspector gain/scale is adjusted in Normal mode.
+        public static float NormalAlphaCap(int kind)
+        {
+            return kind == 0 ? .32f : kind == 1 ? .12f : .06f;
+        }
+
+        public static float NormalPixelDiameter(int kind, float diameter,
+            float scale)
+        {
+            return kind == 0
+                ? Mathf.Clamp(diameter * scale, 1.8f, 4.2f)
+                : kind == 1
+                    ? Mathf.Clamp(diameter * scale, 4.5f, 8f)
+                    : Mathf.Clamp(diameter * scale, 12f, 22f);
+        }
+
         public static float EvaluateDustAlpha(int kind, float intrinsic,
             float x, float y, bool roomLampOn, bool hallwayLampOn,
             float strength = 1f)
@@ -266,6 +292,7 @@ namespace Rokas.Presentation
             float warm = RoomLampContribution(x, y, roomLampOn);
             float hall = HallwayContribution(x, y, hallwayLampOn);
             float window = WindowContribution(x, y);
+            float laptop = LaptopContribution(x, y);
             float low, litWarm, litHall, cool;
             if (kind == 0)
             {
@@ -291,12 +318,16 @@ namespace Rokas.Presentation
             // The Gaussian profile itself provides smooth arrival/departure
             // through light fields: no hard emitter rectangle boundaries.
             float alpha = low + litWarm * warm + litHall * hall + cool * window;
+            // Delicate laptop-area reflection: 0.0165 maximum extra
+            // alpha for micro dust, never a bright fourth dust cluster.
+            alpha += laptop * (kind == 0 ? .0165f :
+                kind == 1 ? .009f : .003f);
             if (!roomLampOn && !hallwayLampOn)
                 alpha = Mathf.Min(alpha, kind == 0 ? .07f : .06f);
             if (window > .45f && !roomLampOn)
                 alpha = Mathf.Min(alpha, .08f);
             return Mathf.Clamp(alpha * intrinsic * strength, 0f,
-                kind == 0 ? .32f : kind == 1 ? .12f : .06f);
+                NormalAlphaCap(kind));
         }
 
         protected override void OnPopulateMesh(VertexHelper vh)
@@ -338,7 +369,8 @@ namespace Rokas.Presentation
                 float boost = visibilityMode ==
                     HubDustVisibilityMode.HighContrastBoost ? 2.5f : 1f;
                 alpha = Mathf.Min(alpha * boost,
-                    visibilityMode == HubDustVisibilityMode.Normal ? .32f : .68f);
+                    visibilityMode == HubDustVisibilityMode.Normal
+                        ? NormalAlphaCap(m.kind) : .68f);
                 if (alpha < .001f && visibilityMode !=
                     HubDustVisibilityMode.DiagnosticTestPattern) continue;
 
@@ -357,7 +389,10 @@ namespace Rokas.Presentation
                     alpha = Mathf.Min(alpha, .08f);
 
                 // Authored pixel diameter, not oversized radius.
-                float radius = m.size * particleScale * .5f;
+                float diameter = visibilityMode == HubDustVisibilityMode.Normal
+                    ? NormalPixelDiameter(m.kind, m.size, particleScale)
+                    : m.size * particleScale;
+                float radius = diameter * .5f;
                 float ry = radius * (m.kind == 1 ? .77f : 1f);
                 tint.a = alpha;
                 float rotation = m.angle + age * .008f;
