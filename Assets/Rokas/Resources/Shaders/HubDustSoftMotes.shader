@@ -33,6 +33,7 @@ Shader "ROKAS/UI/HubDustSoftMotes"
             sampler2D _DustAtlasTex;
             float _UseAtlas;
             float _DustMode;
+            float _DustAge;
 
             struct appdata
             {
@@ -61,7 +62,11 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                 float packedShape=floor(i.uv.x*.5+.001);
                 float kind=floor(packedShape*.1);
                 float shape=packedShape-kind*10.0;
-                float2 uv=float2(i.uv.x-packedShape*2.0,i.uv.y);
+                // The integer part of UV0.y carries a stable unique
+                // mote seed, avoiding extra Canvas shader channels.
+                float glintSeed=floor(i.uv.y*.5+.001);
+                float2 uv=float2(i.uv.x-packedShape*2.0,
+                    i.uv.y-glintSeed*2.0);
                 float2 p=uv*2.0-1.0;
                 float r=length(p);
 
@@ -116,15 +121,23 @@ Shader "ROKAS/UI/HubDustSoftMotes"
 
                 half3 creamCore=half3(1.00,.89,.62);
                 half3 amberHalo=half3(.96,.74,.38);
-                // At room-light OFF, vertex tint identifies moon/city air.
-                float coolShare=saturate((i.color.b-i.color.r)*4.0);
-                creamCore=lerp(creamCore,half3(.60,.78,.88),coolShare);
-                amberHalo=lerp(amberHalo,half3(.50,.66,.76),coolShare);
+                // Vertex colors encode the V10 warm/teal crossfade.
+                // The ratio test leaves the original golden V9 lamps
+                // unchanged while blue-tinting both city and CRT light.
+                float coolShare=saturate(
+                    (i.color.b-i.color.r*.65)*5.0);
+                creamCore=lerp(creamCore,half3(.62,.92,1.00),coolShare);
+                amberHalo=lerp(amberHalo,half3(.28,.68,.96),coolShare);
                 half3 litRGB=lerp(amberHalo,creamCore,saturate(coreMask));
                 // Mild respect for the vertex tint from photographic zones.
                 litRGB=lerp(litRGB,i.color.rgb,.18);
+                // Different seed for every dust quad: glints rise and
+                // fade asynchronously without changing sprite size.
+                float glintWave=pow(saturate(sin(
+                    _DustAge*1.8+glintSeed*43.7)),14.0);
                 half3 premulRGB = litRGB * finalAlpha *
-                    (1.0 + coreMask * lightZoneFactor * .70);
+                    (1.0 + coreMask * lightZoneFactor *
+                        (.70 + .30 * glintWave));
                 half outAlpha = finalAlpha *
                     (1.0 - coreMask * lightZoneFactor * .16);
                 // Blend One OneMinusSrcAlpha: additive color does not
