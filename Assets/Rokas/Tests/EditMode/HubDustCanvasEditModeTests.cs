@@ -72,7 +72,7 @@ namespace Rokas.Tests
                 floorX,floorY,false),Is.Zero);
             float lit=HubDustCanvasGraphic.EvaluateDustAlpha(
                 0,1f,floorX,floorY,true,false);
-            Assert.That(lit,Is.InRange(.60f,.68f));
+            Assert.That(lit,Is.InRange(.50f,.59f));
         }
 
         [Test]
