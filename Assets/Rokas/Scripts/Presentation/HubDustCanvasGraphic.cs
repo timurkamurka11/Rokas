@@ -300,7 +300,10 @@ namespace Rokas.Presentation
             if (kind == 0)
                 alpha = (roomLampOn ? .235f : .225f)
                     + .285f * warm + .095f * hall
-                    + .095f * laptop + (roomLampOn ? .075f : .205f) * window;
+                    + .095f * laptop + (roomLampOn ? .075f : .205f) * window
+                    // Narrow optical light-zone peak: high-alpha cores
+                    // right by the lamp without raising whole-room haze.
+                    + .14f * Mathf.Pow(warm, 5f);
             else if (kind == 1)
                 alpha = (roomLampOn ? .195f : .175f)
                     + .165f * warm + .058f * hall
