@@ -56,9 +56,8 @@ Shader "ROKAS/UI/HubDustSoftMotes"
             }
             fixed4 frag(v2f i) : SV_Target
             {
-                // Pack particle class into the atlas shape id without
-                // extra UI Canvas shader channels:
-                // 0..7 micro, 10..17 medium, 20..27 bokeh, 30 glow.
+                // Pack shape and class into UV0; 0..7 pinpoint motes,
+                // 10..17 small soft motes, 30 faint warm light volumes.
                 float packedShape=floor(i.uv.x*.5+.001);
                 float kind=floor(packedShape*.1);
                 float shape=packedShape-kind*10.0;
@@ -81,7 +80,7 @@ Shader "ROKAS/UI/HubDustSoftMotes"
 
                 if (kind>2.5)
                 {
-                    // Four broad photographic lamp volumes, no strip quads.
+                    // Four soft source-controlled glows, never opaque strips.
                     // Non-occluding additive RGB, ZERO output alpha.
                     float radial=pow(saturate(1.0-smoothstep(0.0,1.0,r)),2.5);
                     float subtleAir=.98+.02*sin(4.1*p.x+5.3*p.y+_Time.y*.12);
@@ -101,29 +100,29 @@ Shader "ROKAS/UI/HubDustSoftMotes"
                     (1.0-smoothstep(.66,.88,r));
                 float warmHalo=lerp(fallback,srcAlpha,_UseAtlas);
 
-                // Visible cream micro-core inside a transparent amber halo.
-                // Optical bokeh must retain its hollow/ring atlas silhouette.
-                float coreMask=kind>1.5 ? 0.0 : exp(-r*r*24.0)*
-                    (kind>.5 ? .68 : 1.0);
+                // V8: tiny honey-gold core and a soft amber perimeter.
+                // No bright cream or large optical bokeh discs.
+                float coreMask=exp(-r*r*12.0)*
+                    (kind>.5 ? .42 : 1.0);
                 float profile=saturate(max(warmHalo*.91,coreMask*.64));
                 float finalAlpha=saturate(i.color.a*profile);
                 // CPU vertex alpha already includes light-zone proximity,
                 // so the core's additive strength follows that field.
-                float lightZoneFactor=saturate((i.color.a-.18)/.43);
+                float lightZoneFactor=saturate((i.color.a-.08)/.32);
 
-                half3 creamCore=half3(1.00,.95,.82);
-                half3 amberHalo=half3(1.00,.78,.42);
+                half3 creamCore=half3(.98,.80,.46);
+                half3 amberHalo=half3(.92,.68,.35);
                 // At room-light OFF, vertex tint identifies moon/city air.
                 float coolShare=saturate((i.color.b-i.color.r)*4.0);
-                creamCore=lerp(creamCore,half3(.82,.94,1.00),coolShare);
-                amberHalo=lerp(amberHalo,half3(.72,.90,1.00),coolShare);
+                creamCore=lerp(creamCore,half3(.60,.78,.88),coolShare);
+                amberHalo=lerp(amberHalo,half3(.50,.66,.76),coolShare);
                 half3 litRGB=lerp(amberHalo,creamCore,saturate(coreMask));
                 // Mild respect for the vertex tint from photographic zones.
                 litRGB=lerp(litRGB,i.color.rgb,.18);
                 half3 premulRGB = litRGB * finalAlpha *
-                    (1.0 + coreMask * lightZoneFactor * 1.35);
+                    (1.0 + coreMask * lightZoneFactor * .35);
                 half outAlpha = finalAlpha *
-                    (1.0 - coreMask * lightZoneFactor * 0.45);
+                    (1.0 - coreMask * lightZoneFactor * .13);
                 // Blend One OneMinusSrcAlpha: additive color does not
                 // darken the photographic room beneath the dust.
                 return half4(premulRGB,outAlpha);
