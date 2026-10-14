@@ -141,6 +141,42 @@ namespace Rokas.Tests
         }
 
         [Test]
+        public void V7ActualMeshTelemetryAt1920x1080MeetsTargets()
+        {
+            var root=new GameObject("V7 Telemetry",
+                typeof(RectTransform),typeof(CanvasRenderer));
+            try
+            {
+                var rect=root.GetComponent<RectTransform>();
+                rect.anchorMin=rect.anchorMax=new Vector2(.5f,.5f);
+                rect.sizeDelta=new Vector2(1920f,1080f);
+                var dust=root.AddComponent<HubDustCanvasGraphic>();
+                var populate=typeof(HubDustCanvasGraphic).GetMethod(
+                    "OnPopulateMesh",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.IsNotNull(populate);
+                dust.Tick(.1f,true,true,true,true);
+                using (var vh=new VertexHelper())
+                    populate.Invoke(dust,new object[] { vh });
+                Assert.That(dust.LastVisibleMotes,Is.InRange(185,200));
+                Assert.That(dust.LastMeanVertexAlpha,Is.InRange(.26f,.38f));
+                Assert.That(dust.LastMaxVertexAlpha,Is.InRange(.58f,.75f));
+                Assert.AreEqual(4,dust.LastShaftCount);
+
+                // Night keeps the moon/city air but shuts off both
+                // room lamps and their warm glows.
+                dust.Tick(.1f,true,false,false,false);
+                using (var vh=new VertexHelper())
+                    populate.Invoke(dust,new object[] { vh });
+                Assert.That(dust.LastVisibleMotes,Is.InRange(185,200));
+                Assert.That(dust.LastMeanVertexAlpha,Is.InRange(.18f,.27f));
+                Assert.AreEqual(4,dust.LastShaftCount);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
         public void V7NormalDiagnosticAndCanvasInputRemainSeparated()
         {
             var root=new GameObject("V7 Dust",
