@@ -298,12 +298,12 @@ namespace Rokas.Presentation
             float laptop = laptopPowered ? LaptopContribution(x, y) : 0f;
             float alpha;
             if (kind == 0)
-                alpha = (roomLampOn ? .260f : .225f)
-                    + .385f * warm + .095f * hall
+                alpha = (roomLampOn ? .235f : .225f)
+                    + .285f * warm + .095f * hall
                     + .095f * laptop + (roomLampOn ? .075f : .205f) * window;
             else if (kind == 1)
-                alpha = (roomLampOn ? .205f : .175f)
-                    + .180f * warm + .058f * hall
+                alpha = (roomLampOn ? .195f : .175f)
+                    + .165f * warm + .058f * hall
                     + .040f * laptop + (roomLampOn ? .035f : .100f) * window;
             else
                 alpha = (roomLampOn ? .132f : .115f)
