@@ -125,7 +125,7 @@ namespace Rokas.Presentation
                     container, cam, rt, script, oled, arm, watch, phaseType);
                 result.ChangeState("LyingViewActive");
                 result.SetLight(lampOn);
-                result.SetDuration(7f);
+                result.ConfigureClock(currentClockHours);
                 result.Sample(0f);
                 return result;
             }
