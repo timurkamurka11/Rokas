@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
-using System.Reflection;
 using Rokas.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -10,18 +10,20 @@ using UnityEngine.InputSystem;
 
 namespace Rokas.Presentation
 {
-    // Main-room bridge: ROKAS is a 1920x1080 ScreenSpaceOverlay game,
-    // not a first-person walkable scene with a Camera.main/bed collider.
-    // Render a separately lit three-dimensional watch + arm into a
-    // transparent RenderTexture while the existing room remains a UI plane.
-    // The detailed supplied SleepInteraction package may replace the watch
-    // mesh at runtime if it has been imported into Unity.
+    /// <summary>
+    /// ROKAS main-room (ScreenSpaceOverlay) sleep presentation.
+    /// Uses two high-resolution authored 2D/2.5D POV shots, NOT a FPS
+    /// camera, world-space bed, or procedural 3D hand/cube watch.
+    /// Required Resources/BedSleep/BedCeilingPOV and BedWatchArmPOV are
+    /// installed separately from the supplied visual reference package.
+    /// </summary>
     public sealed class RokasBedSleepCinematic : IDisposable
     {
         public enum State
         {
-            Idle, LieDown, RaiseArm, ChooseDuration, LowerArm,
-            FallingAsleep, DeepSleep, WakeUp
+            Idle, BedHotspotPressed, TransitionIn, LyingViewActive,
+            AlarmButtonVisible, WatchRaise, TimeSelection,
+            ConfirmSelection, HandLower, EyesClose, SleepCommitted
         }
 
         public const float MinimumHours = 1f;
@@ -30,51 +32,51 @@ namespace Rokas.Presentation
 
         private readonly MonoBehaviour runner;
         private readonly UiKit ui;
-        private readonly Transform canvasLayer;
+        private readonly Transform layer;
         private readonly GameSession session;
         private readonly Action save;
         private readonly Action onFinished;
-        private readonly Texture roomIllustration;
-        private readonly Action<float> moveRoomCamera;
-        private Coroutine routine;
+        private readonly Action<float> moveHomeCamera;
+        private readonly Texture originalRoom;
         private RectTransform root;
-        private RawImage povRoom;
-        private CanvasGroup watchUi;
-        private Text durationLabel, wakeLabel, clockLabel, phaseLabel;
-        private Image upperEyelid, lowerEyelid;
-        private RenderTexture renderTarget;
-        private GameObject rigRoot;
-        private GameObject armRoot;
-        private Transform crown;
-        private Camera renderCamera;
-        private float armRaise, eyelid, selectedHours = 7f, startHours;
-        private int startDay;
-        private bool confirmed, cancelled, committed;
+        private RawImage lyingPov, armPov, blurredPov;
+        private Image curtain, topEyelid, bottomEyelid;
+        private CanvasGroup alarmControls, watchControls;
+        private Text currentClock, selectedDuration, wakeClock, alarmHint;
+        private Button alarmButton, confirmButton;
+        private AudioSource audio;
+        private AudioClip tickClip;
+        private Coroutine sequence;
         private State state = State.Idle;
+        private float selectedHours = 7f, startHours;
+        private int startDay;
+        private bool committed, cancelRequested, armWatchAvailable;
+        private float elapsedVisual;
+        private float handOpacity;
 
         public State CurrentState => state;
         public bool Active => state != State.Idle;
         public float SelectedHours => selectedHours;
-        public float ArmRaise01 => armRaise;
+        public float ArmRaise01 => handOpacity;
 
         public RokasBedSleepCinematic(MonoBehaviour runner, UiKit ui,
-            Transform canvasLayer, Texture roomIllustration,
+            Transform layer, Texture originalRoom,
             GameSession session, Action save, Action onFinished,
-            Action<float> moveRoomCamera)
+            Action<float> moveHomeCamera)
         {
             this.runner = runner;
             this.ui = ui;
-            this.canvasLayer = canvasLayer;
-            this.roomIllustration = roomIllustration;
+            this.layer = layer;
+            this.originalRoom = originalRoom;
             this.session = session;
             this.save = save;
             this.onFinished = onFinished;
-            this.moveRoomCamera = moveRoomCamera;
+            this.moveHomeCamera = moveHomeCamera;
         }
 
-        public static float QuantizeDuration(float value)
+        public static float QuantizeDuration(float hours)
         {
-            return Mathf.Clamp(Mathf.Round(value / StepHours) * StepHours,
+            return Mathf.Clamp(Mathf.Round(hours / StepHours) * StepHours,
                 MinimumHours, MaximumHours);
         }
 
@@ -86,29 +88,64 @@ namespace Rokas.Presentation
         public static int WakeDay(int day, float currentHour, float duration)
         {
             return Mathf.Max(1, day) +
-                Mathf.FloorToInt((currentHour +
-                    QuantizeDuration(duration)) / 24f);
+                Mathf.FloorToInt((currentHour + QuantizeDuration(duration)) / 24f);
+        }
+
+        public static string ClockText(float hours)
+        {
+            int m = Mathf.RoundToInt(Mathf.Repeat(hours, 24f) * 60f) % 1440;
+            return (m / 60).ToString("00") + ":" +
+                (m % 60).ToString("00");
         }
 
         public void Begin()
         {
             if (Active || runner == null || session == null) return;
+            state = State.BedHotspotPressed;
+            cancelRequested = committed = false;
+            selectedHours = 7f;
             startHours = session.State.hubSleepInitialized
                 ? Mathf.Repeat(session.State.hubClockHours, 24f) : 23.5f;
             startDay = session.State.hubSleepInitialized
                 ? Mathf.Max(1, session.State.hubDay) : 1;
-            selectedHours = 7f;
-            committed = confirmed = cancelled = false;
-            armRaise = eyelid = 0f;
+            elapsedVisual = handOpacity = 0f;
             BuildOverlay();
-            state = State.LieDown;
-            routine = runner.StartCoroutine(Sequence());
+            sequence = runner.StartCoroutine(Play());
         }
 
         public void Tick(float dt)
         {
             if (!Active) return;
-            if (state != State.ChooseDuration) return;
+            elapsedVisual += Mathf.Max(0f, dt);
+            // Very restrained breathing and cursor parallax in the authored
+            // photographic plate; only a small movement, never a 3D camera.
+            if (lyingPov != null)
+            {
+                float breath = Mathf.Sin(elapsedVisual * 1.42f);
+                float pointerX = 0f, pointerY = 0f;
+#if ENABLE_INPUT_SYSTEM
+                if (Mouse.current != null)
+                {
+                    Vector2 m = Mouse.current.position.ReadValue();
+                    pointerX = Mathf.Clamp((m.x / Mathf.Max(1, Screen.width) -
+                        .5f) * 2f, -1f, 1f);
+                    pointerY = Mathf.Clamp((m.y / Mathf.Max(1, Screen.height) -
+                        .5f) * 2f, -1f, 1f);
+                }
+#elif ENABLE_LEGACY_INPUT_MANAGER
+                Vector3 m = Input.mousePosition;
+                pointerX = Mathf.Clamp((m.x / Mathf.Max(1, Screen.width) -
+                    .5f) * 2f, -1f, 1f);
+                pointerY = Mathf.Clamp((m.y / Mathf.Max(1, Screen.height) -
+                    .5f) * 2f, -1f, 1f);
+#endif
+                lyingPov.rectTransform.localScale =
+                    Vector3.one * (1.003f + .002f * breath);
+                lyingPov.rectTransform.anchoredPosition =
+                    new Vector2(-4f * pointerX, 4f * pointerY);
+            }
+
+            if (state != State.TimeSelection) return;
             float scroll = 0f;
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current != null)
@@ -137,33 +174,28 @@ namespace Rokas.Presentation
 
         public void Step(int direction)
         {
-            if (state != State.ChooseDuration || direction == 0) return;
-            float before = selectedHours;
-            selectedHours = QuantizeDuration(
+            if (state != State.TimeSelection || direction == 0) return;
+            float value = QuantizeDuration(
                 selectedHours + Mathf.Sign(direction) * StepHours);
-            if (Mathf.Approximately(before, selectedHours)) return;
-            if (crown != null)
-                crown.localRotation *= Quaternion.Euler(0f, 24f *
-                    Mathf.Sign(direction), 0f);
-            if (armRoot != null)
-                armRoot.transform.localRotation = Quaternion.Euler(
-                    -3f, 0f, Mathf.Sign(direction) * 1.8f);
-            RefreshTexts();
+            if (Mathf.Approximately(value, selectedHours)) return;
+            selectedHours = value;
+            RefreshWatch();
+            PlayTick();
         }
 
         public void Confirm()
         {
-            if (state == State.ChooseDuration)
-                confirmed = true;
+            if (state == State.TimeSelection && sequence == null)
+                sequence = runner.StartCoroutine(FinishSleep());
         }
 
         public void Cancel()
         {
-            if (!Active) return;
-            // No game-time mutation occurs unless the sleep blackout is
-            // committed. Cancel during a non-cancellable fade restores UI.
-            cancelled = true;
-            if (routine != null && runner != null) runner.StopCoroutine(routine);
+            if (!Active && root == null) return;
+            cancelRequested = true;
+            if (runner != null && sequence != null)
+                runner.StopCoroutine(sequence);
+            sequence = null;
             Complete();
         }
 
@@ -171,253 +203,173 @@ namespace Rokas.Presentation
 
         private void BuildOverlay()
         {
-            root = ui.Rect(canvasLayer, "ROKAS_BedSleep_FPS_Cinematic",
+            root = ui.Rect(layer, "BedSleep_2_5D_PresentationRoot",
                 0, 0, 1920, 1080);
-            ui.Box(root, "BedSleep_InputBlocker", 0, 0, 1920, 1080,
-                new Color(.015f, .024f, .034f, .94f), true);
+            ui.Box(root, "SleepModalInputBlocker", 0, 0, 1920, 1080,
+                new Color(0f, 0f, 0f, .001f), true);
 
-            // Draw actual room photo, not a stale hardcoded mock-up.
-            povRoom = ui.Art(root, "LyingPOV_OriginalRoom",
-                roomIllustration, 0, 0, 1920, 1080);
-            povRoom.uvRect = new Rect(.08f, .38f, .84f, .62f);
-            povRoom.color = new Color(.64f, .68f, .74f, .78f);
-            ui.Box(root, "BedDarkTop", 0, 0, 1920, 120,
-                new Color(.01f, .016f, .023f, .45f));
-            ui.Box(root, "BedDarkBottom", 0, 880, 1920, 200,
-                new Color(.01f, .016f, .023f, .68f));
-            ui.Label(root, "POV_SleepCaption",
-                "КЕЙКИ  /  ЛЕЧЬ СПАТЬ", 96, 65, 850, 60, 25, UiKit.Paper);
+            var ceiling = Resources.Load<Texture2D>(
+                "BedSleep/BedCeilingPOV");
+            var arm = Resources.Load<Texture2D>(
+                "BedSleep/BedWatchArmPOV");
+            var soft = Resources.Load<Texture2D>(
+                "BedSleep/BedCeilingPOV_Soft");
+            armWatchAvailable = ceiling != null && arm != null;
+            if (!armWatchAvailable)
+                Debug.LogWarning("[ROKAS BedSleep 2.5D] Missing reference " +
+                    "Resources/BedSleep/BedCeilingPOV and/or BedWatchArmPOV. " +
+                    "Install the Bed Sleep Reference Assets ZIP.");
 
-            Create3DArm();
-            ui.Art(root, "KeikoArm3D_Render", renderTarget,
-                410, 175, 1080, 730);
-            watchUi = ui.Rect(root, "SleepWatchControls", 0, 0,
+            lyingPov = ui.Art(root, "LyingCeilingPOV_Approved",
+                ceiling != null ? ceiling : originalRoom,
+                0, 0, 1920, 1080);
+            // Begin in the untouched home view, then swap under darkness.
+            lyingPov.color = new Color(1f, 1f, 1f, 0f);
+            blurredPov = soft == null ? null :
+                ui.Art(root, "LyingCeilingPOV_SoftBlur",
+                    soft, 0, 0, 1920, 1080);
+            if (blurredPov != null)
+                blurredPov.color = new Color(1f, 1f, 1f, 0f);
+            armPov = ui.Art(root, "KeikoArmWatch_ApprovedComposite",
+                arm != null ? arm : ceiling != null ? ceiling : originalRoom,
+                0, 0, 1920, 1080);
+            armPov.color = new Color(1f, 1f, 1f, 0f);
+
+            // Controls are deliberately staged: alarm button FIRST, then
+            // arm and interactive OLED. No always-on bottom watch menu.
+            alarmControls = ui.Rect(root, "Bottom_SetAlarm", 0, 0,
                 1920, 1080).gameObject.AddComponent<CanvasGroup>();
-            watchUi.alpha = 0f;
-            watchUi.blocksRaycasts = false;
-            ui.Box(watchUi.transform, "WatchInformationPanel",
-                679, 713, 558, 202, new Color(.014f, .025f, .034f, .92f));
-            clockLabel = ui.Label(watchUi.transform, "Now",
-                "", 702, 727, 500, 32, 17, UiKit.Muted);
-            durationLabel = ui.Label(watchUi.transform, "Duration",
-                "", 699, 757, 500, 65, 44, UiKit.Paper);
-            wakeLabel = ui.Label(watchUi.transform, "WakeTime",
-                "", 702, 822, 500, 42, 22, UiKit.Jade);
-            phaseLabel = ui.Label(watchUi.transform, "Help",
-                "КОЛЕСО МЫШИ  /  СТРЕЛКИ  /  30 МИН",
-                670, 918, 740, 42, 19, UiKit.Muted);
-            ui.Button(watchUi.transform, "CrownDown", "− 30 МИН",
-                520, 755, 160, 70, () => Step(-1));
-            ui.Button(watchUi.transform, "CrownUp", "+ 30 МИН",
-                1240, 755, 160, 70, () => Step(1));
-            ui.Button(watchUi.transform, "SleepConfirm", "ЗАСНУТЬ",
-                751, 966, 420, 66, Confirm, true);
-            ui.Button(root, "SleepCancel", "ВСТАТЬ / НАЗАД",
-                1490, 71, 334, 62, Cancel);
+            alarmControls.alpha = 0f;
+            alarmControls.blocksRaycasts = false;
+            alarmControls.interactable = false;
+            alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
+                "ПОСТАВИТЬ БУДИЛЬНИК", 722, 941, 476, 75,
+                OpenAlarm, true);
 
-            upperEyelid = ui.Box(root, "UpperEyelid",
-                0, 0, 1920, 540, Color.black);
-            lowerEyelid = ui.Box(root, "LowerEyelid",
-                0, 540, 1920, 540, Color.black);
+            watchControls = ui.Rect(root, "Smartwatch_DiegeticControls",
+                0, 0, 1920, 1080).gameObject.AddComponent<CanvasGroup>();
+            watchControls.alpha = 0f;
+            watchControls.blocksRaycasts = false;
+            watchControls.interactable = false;
+
+            // Interactive dark OLED centre is aligned to the watch screen
+            // in the supplied 1672x940 reference; the photographic bezel
+            // and ring remain visible.
+            ui.Box(watchControls.transform, "LiveOledCentre",
+                804, 652, 155, 104, new Color(.025f, .035f, .073f, .96f));
+            selectedDuration = ui.Label(watchControls.transform,
+                "WatchSleepDuration", "", 811, 664, 148, 58,
+                39, UiKit.Paper, false, TextAnchor.MiddleCenter);
+            wakeClock = ui.Label(watchControls.transform, "WatchAlarmTime",
+                "", 810, 723, 150, 27, 15, UiKit.Jade,
+                false, TextAnchor.MiddleCenter);
+            var hit = ui.Box(watchControls.transform, "WatchCrownDragZone",
+                757, 578, 227, 236,
+                new Color(1f, 1f, 1f, .001f), true);
+            var pointer = hit.gameObject.AddComponent<RokasBedWatchPointer>();
+            pointer.Configure(Step);
+            // Clock face itself takes mouse wheel/drag. Small external
+            // affordances are secondary, not the primary selection UI.
+            ui.Button(watchControls.transform, "WatchMinus", "−30м",
+                675, 772, 130, 53, () => Step(-1));
+            ui.Button(watchControls.transform, "WatchPlus", "+30м",
+                1010, 772, 130, 53, () => Step(1));
+            confirmButton = ui.Button(watchControls.transform,
+                "WatchConfirm", "✓  УСТАНОВИТЬ", 806, 826, 259, 55,
+                Confirm, true);
+            currentClock = ui.Label(watchControls.transform,
+                "CurrentGameTime", "", 739, 908, 460, 39,
+                18, UiKit.Muted, false, TextAnchor.MiddleCenter);
+            alarmHint = ui.Label(watchControls.transform,
+                "WatchControlsHint",
+                "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
+                630, 958, 700, 33, 17, UiKit.Muted,
+                false, TextAnchor.MiddleCenter);
+
+            ui.Button(root, "ReturnFromBed", "ВСТАТЬ / ESC",
+                1549, 65, 274, 59, Cancel);
+
+            topEyelid = ui.Box(root, "BedSleepUpperEyelid",
+                0, 0, 1920, 0, Color.black);
+            bottomEyelid = ui.Box(root, "BedSleepLowerEyelid",
+                0, 1080, 1920, 0, Color.black);
+            curtain = ui.Box(root, "BedSleepLaptopStyleDarkCurtain",
+                0, 0, 1920, 1080,
+                new Color(.008f, .013f, .021f, 0f), false);
+            // Transparent end-of-frame curtain never blocks the watch.
+            curtain.raycastTarget = false;
             SetEyelids(0f);
-            RefreshTexts();
+
+            audio = root.gameObject.AddComponent<AudioSource>();
+            audio.playOnAwake = false;
+            audio.spatialBlend = 0f;
+            audio.volume = .30f;
+            tickClip = BuildTick();
+            RefreshWatch();
         }
 
-        private void Create3DArm()
+        private IEnumerator Play()
         {
-            const int visualLayer = 30; // isolated from existing UI/Combat
-            rigRoot = new GameObject("ROKAS_Sleep_3D_FPSArm_Rig");
-            GameObject cameraGo = new GameObject("SleepArm_RenderCamera");
-            cameraGo.transform.SetParent(rigRoot.transform, false);
-            cameraGo.transform.localPosition = new Vector3(0f, 0f, -3.4f);
-            renderCamera = cameraGo.AddComponent<Camera>();
-            renderCamera.clearFlags = CameraClearFlags.SolidColor;
-            renderCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            renderCamera.cullingMask = 1 << visualLayer;
-            renderCamera.orthographic = true;
-            renderCamera.orthographicSize = 1.1f;
-            renderCamera.nearClipPlane = .03f;
-            renderCamera.farClipPlane = 20f;
-            renderCamera.allowHDR = false;
-            renderCamera.allowMSAA = true;
-            renderTarget = new RenderTexture(1024, 768, 16,
-                RenderTextureFormat.ARGB32);
-            renderTarget.name = "ROKAS_Sleep_Transparent3DHand";
-            renderTarget.Create();
-            renderCamera.targetTexture = renderTarget;
+            state = State.TransitionIn;
+            // Same dark-curtain handoff grammar as the laptop; no FPS
+            // transform or Camera.main. Midpoint hides the art change.
+            yield return FadeCurtain(0f, 1f, .60f);
+            if (cancelRequested) yield break;
+            lyingPov.color = Color.white;
+            yield return FadeCurtain(1f, 0f, .65f);
 
-            GameObject lightGo = new GameObject("WatchWarmSoftLight");
-            lightGo.transform.SetParent(rigRoot.transform, false);
-            lightGo.transform.localPosition = new Vector3(-.9f, 1.3f, -1.4f);
-            Light lamp = lightGo.AddComponent<Light>();
-            lamp.type = LightType.Point;
-            lamp.color = new Color(1f, .82f, .60f);
-            lamp.range = 10f;
-            lamp.intensity = 2f;
-            lamp.cullingMask = 1 << visualLayer;
-
-            armRoot = new GameObject("KeikoLeftArm_Animated");
-            armRoot.transform.SetParent(rigRoot.transform, false);
-            armRoot.transform.localPosition = new Vector3(-.1f, -1.7f, .65f);
-            Color skin = new Color(.82f, .64f, .53f);
-            Color cloth = new Color(.11f, .12f, .16f);
-            Color titanium = new Color(.31f, .36f, .40f);
-            Color black = new Color(.025f, .038f, .05f);
-            CreatePart("LooseHomeSleeve", PrimitiveType.Capsule, cloth,
-                new Vector3(0f, -.48f, .12f), new Vector3(.31f, .52f, .28f),
-                armRoot.transform, visualLayer);
-            CreatePart("Forearm", PrimitiveType.Capsule, skin,
-                new Vector3(0f, -.17f, .03f), new Vector3(.22f, .30f, .20f),
-                armRoot.transform, visualLayer);
-            CreatePart("Palm", PrimitiveType.Capsule, skin,
-                new Vector3(.025f, .16f, .02f), new Vector3(.25f, .22f, .17f),
-                armRoot.transform, visualLayer);
-            for (int i = 0; i < 4; i++)
-                CreatePart("Finger" + i, PrimitiveType.Capsule, skin,
-                    new Vector3(-.083f + .067f * i, .305f, -.013f),
-                    new Vector3(.051f, .125f, .058f),
-                    armRoot.transform, visualLayer);
-
-            GameObject watch = CreatePart("ROKAS_Smartwatch_Housing",
-                PrimitiveType.Cube, titanium,
-                new Vector3(0f, -.035f, -.165f),
-                new Vector3(.40f, .48f, .115f),
-                armRoot.transform, visualLayer);
-            CreatePart("TitaniumBezel", PrimitiveType.Cube,
-                new Color(.54f, .55f, .55f), new Vector3(0f, -.035f, -.230f),
-                new Vector3(.355f, .421f, .034f), watch.transform,
-                visualLayer, true);
-            CreatePart("OLEDScreen", PrimitiveType.Cube, black,
-                new Vector3(0f, -.035f, -.257f),
-                new Vector3(.327f, .398f, .014f), armRoot.transform,
-                visualLayer);
-            crown = CreatePart("Watch_DigitalCrown_Rotary",
-                PrimitiveType.Cylinder, titanium,
-                new Vector3(.235f, .07f, -.175f),
-                new Vector3(.06f, .050f, .06f),
-                armRoot.transform, visualLayer).transform;
-
-            // If the supplied engineering archive is imported, use its
-            // production procedural smartwatch mesh instead of this
-            // zero-dependency preview. No hard assembly dependency.
-            TryUseImportedHighDetailWatch();
+            state = State.LyingViewActive;
+            yield return Wait(.35f);
+            state = State.AlarmButtonVisible;
+            yield return FadeControls(alarmControls, 0f, 1f, .38f);
+            alarmControls.blocksRaycasts = true;
+            alarmControls.interactable = true;
+            sequence = null;
         }
 
-        private GameObject CreatePart(string name, PrimitiveType primitive,
-            Color color, Vector3 position, Vector3 size, Transform parent,
-            int layer, bool localToParent = false)
+        private void OpenAlarm()
         {
-            GameObject go = GameObject.CreatePrimitive(primitive);
-            go.name = name;
-            go.layer = layer;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = position;
-            go.transform.localScale = size;
-            var col = go.GetComponent<Collider>();
-            if (col != null) UnityEngine.Object.Destroy(col);
-            var renderer = go.GetComponent<Renderer>();
-            Shader shader = Shader.Find("Standard");
-            if (!shader) shader = Shader.Find("Unlit/Color");
-            if (shader)
-            {
-                var material = new Material(shader);
-                material.color = color;
-                if (material.HasProperty("_Glossiness"))
-                    material.SetFloat("_Glossiness", .64f);
-                renderer.material = material;
-            }
-            return go;
+            if (state != State.AlarmButtonVisible || !armWatchAvailable ||
+                sequence != null) return;
+            alarmControls.blocksRaycasts = false;
+            alarmControls.interactable = false;
+            sequence = runner.StartCoroutine(RaiseWatch());
         }
 
-        private void TryUseImportedHighDetailWatch()
+        private IEnumerator RaiseWatch()
         {
-            // Runtime component is optional until the supplied package
-            // has been installed locally in Assets.
-            Type builder = Type.GetType(
-                "ROKAS.Hub.SleepInteraction.ProceduralSmartwatchMeshBuilder, Assembly-CSharp");
-            if (builder == null) return;
-            try
-            {
-                var host = new GameObject("ImportedHighDetailSmartwatch");
-                host.layer = 30;
-                host.transform.SetParent(armRoot.transform, false);
-                host.transform.localPosition = new Vector3(0f, -.02f, -.19f);
-                host.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                host.transform.localScale = Vector3.one * 8f;
-                Component instance = host.AddComponent(builder);
-                MethodInfo method = builder.GetMethod(
-                    "EnsureSmartwatchHierarchyBuilt");
-                if (method == null) throw new MissingMethodException(
-                    builder.FullName, "EnsureSmartwatchHierarchyBuilt");
-                object[] args = { null, null, null };
-                method.Invoke(instance, args);
-                foreach (Transform t in host.GetComponentsInChildren<Transform>(true))
-                    t.gameObject.layer = 30;
-                // Hide only the default watch geometry, never the arm.
-                foreach (Renderer r in armRoot.GetComponentsInChildren<Renderer>())
-                    if (r.transform != host.transform &&
-                        !r.transform.IsChildOf(host.transform) &&
-                        (r.name.StartsWith("ROKAS_Smartwatch_") ||
-                         r.name.StartsWith("TitaniumBezel") ||
-                         r.name.StartsWith("OLEDScreen") ||
-                         r.name.StartsWith("Watch_DigitalCrown")))
-                        r.enabled = false;
-                if (args[0] is Transform generatedCrown)
-                    crown = generatedCrown;
-            }
-            catch (Exception error)
-            {
-                Debug.LogWarning("ROKAS sleep: optional 3D smartwatch mesh " +
-                    "not available; keep procedural preview. " + error.Message);
-            }
+            state = State.WatchRaise;
+            yield return FadeControls(alarmControls, alarmControls.alpha, 0f,
+                .25f);
+            yield return FadeArm(0f, 1f, .82f);
+            state = State.TimeSelection;
+            watchControls.alpha = 1f;
+            watchControls.blocksRaycasts = true;
+            watchControls.interactable = true;
+            sequence = null;
         }
 
-        private IEnumerator Sequence()
+        private IEnumerator FinishSleep()
         {
-            state = State.LieDown;
-            yield return Animate(1.85f, t =>
-            {
-                float smooth = Mathf.SmoothStep(0f, 1f, t);
-                moveRoomCamera?.Invoke(smooth * .50f);
-                if (povRoom) povRoom.uvRect = new Rect(
-                    .0f + .08f * smooth, .0f + .38f * smooth,
-                    1f - .16f * smooth, 1f - .38f * smooth);
-                SetEyelids(Mathf.Sin(t * Mathf.PI) * .09f);
-            });
-            state = State.RaiseArm;
-            yield return Animate(.95f, t =>
-            {
-                armRaise = Mathf.SmoothStep(0f, 1f, t);
-                PoseArm();
-                if (watchUi) watchUi.alpha = Mathf.Clamp01(
-                    (armRaise - .70f) / .30f);
-            });
-            armRaise = 1f;
-            PoseArm();
-            state = State.ChooseDuration;
-            watchUi.alpha = 1f;
-            watchUi.blocksRaycasts = true;
-            while (!confirmed && !cancelled)
-                yield return null;
-            if (cancelled) yield break;
-            watchUi.blocksRaycasts = false;
-            watchUi.alpha = 0f;
-            state = State.LowerArm;
-            yield return Animate(.85f, t =>
-            {
-                armRaise = 1f - Mathf.SmoothStep(0f, 1f, t);
-                PoseArm();
-            });
-            state = State.FallingAsleep;
-            yield return Animate(1.9f, t =>
-            {
-                float blink = Mathf.Sin(Mathf.Clamp01(t * 1.5f) *
-                    Mathf.PI) * .13f;
-                SetEyelids(Mathf.Max(t * t, blink));
-            });
-            SetEyelids(1f);
-            state = State.DeepSleep;
-            if (!committed)
+            state = State.ConfirmSelection;
+            watchControls.interactable = false;
+            watchControls.blocksRaycasts = false;
+            if (alarmHint) alarmHint.text =
+                "БУДИЛЬНИК УСТАНОВЛЕН НА " +
+                ClockText(WakeHour(startHours, selectedHours));
+            yield return Wait(.36f);
+            state = State.HandLower;
+            watchControls.alpha = 0f;
+            yield return FadeArm(1f, 0f, .76f);
+            yield return Wait(.30f);
+            state = State.EyesClose;
+            // An intentionally heavy partial blink precedes the last close.
+            yield return FadeEyelids(0f, .45f, .46f);
+            yield return Wait(.16f);
+            yield return FadeEyelids(.45f, .20f, .38f);
+            yield return FadeEyelids(.20f, 1f, 1.12f);
+            state = State.SleepCommitted;
+            if (!committed && !cancelRequested)
             {
                 committed = true;
                 session.State.hubDay = WakeDay(startDay, startHours,
@@ -425,127 +377,187 @@ namespace Rokas.Presentation
                 session.State.hubClockHours = WakeHour(startHours,
                     selectedHours);
                 session.State.hubFatigue = Mathf.Clamp01(
-                    (session.State.hubSleepInitialized
-                        ? session.State.hubFatigue : .65f) -
-                        selectedHours / 8f);
+                    (session.State.hubSleepInitialized ?
+                     session.State.hubFatigue : .65f) -
+                     selectedHours / 8f);
                 session.State.hubSleepCount++;
                 session.State.hubSleepInitialized = true;
                 save?.Invoke();
             }
-            yield return WaitRealtime(.85f);
-            state = State.WakeUp;
-            yield return Animate(1.65f, t =>
-            {
-                SetEyelids(1f - Mathf.SmoothStep(0f, 1f, t));
-                moveRoomCamera?.Invoke(.50f * (1f-t));
-            });
+            yield return Wait(.70f);
+            yield return FadeEyelids(1f, 0f, 1.0f);
             Complete();
         }
 
-        private IEnumerator Animate(float seconds, Action<float> evaluate)
+        private IEnumerator FadeArm(float from, float to, float duration)
         {
-            float elapsed = 0f;
-            while (elapsed < seconds)
+            for (float t = 0; t < duration; t += Mathf.Max(
+                Time.unscaledDeltaTime, .002f))
             {
-                elapsed += Mathf.Min(Time.unscaledDeltaTime, .05f);
-                evaluate?.Invoke(Mathf.Clamp01(elapsed / seconds));
+                float u = Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(t / duration));
+                handOpacity = Mathf.Lerp(from, to, u);
+                armPov.color = new Color(1f, 1f, 1f, handOpacity);
+                if (blurredPov != null)
+                    blurredPov.color = new Color(1f, 1f, 1f,
+                        .12f * handOpacity);
                 yield return null;
             }
-            evaluate?.Invoke(1f);
+            handOpacity = to;
+            armPov.color = new Color(1f, 1f, 1f, to);
+            if (blurredPov != null)
+                blurredPov.color = new Color(1f, 1f, 1f, .12f * to);
         }
 
-        private IEnumerator WaitRealtime(float duration)
+        private IEnumerator FadeControls(CanvasGroup group, float from,
+            float to, float duration)
         {
-            float timer = 0f;
-            while (timer < duration)
+            for (float t = 0; t < duration; t += Mathf.Max(
+                Time.unscaledDeltaTime, .002f))
             {
-                timer += Mathf.Min(Time.unscaledDeltaTime, .05f);
+                group.alpha = Mathf.Lerp(from, to,
+                    Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp01(t / duration)));
                 yield return null;
             }
+            group.alpha = to;
         }
 
-        private void PoseArm()
+        private IEnumerator FadeCurtain(float from, float to, float duration)
         {
-            if (!armRoot) return;
-            float smooth = Mathf.SmoothStep(0f, 1f, armRaise);
-            armRoot.transform.localPosition = Vector3.Lerp(
-                new Vector3(-.1f, -1.7f, .65f),
-                new Vector3(0f, -.12f, .65f), smooth);
-            armRoot.transform.localRotation = Quaternion.Euler(
-                5f * smooth, 0f, 0f);
-        }
-
-        private void SetEyelids(float value)
-        {
-            eyelid = Mathf.Clamp01(value);
-            if (upperEyelid)
+            for (float t = 0; t < duration; t += Mathf.Max(
+                Time.unscaledDeltaTime, .002f))
             {
-                upperEyelid.rectTransform.sizeDelta =
-                    new Vector2(1920, 540f * eyelid);
-                upperEyelid.color = Color.black;
+                curtain.color = new Color(.008f, .013f, .021f,
+                    Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp01(t / duration))));
+                yield return null;
             }
-            if (lowerEyelid)
+            curtain.color = new Color(.008f, .013f, .021f, to);
+        }
+
+        private IEnumerator FadeEyelids(float from, float to, float duration)
+        {
+            for (float t = 0; t < duration; t += Mathf.Max(
+                Time.unscaledDeltaTime, .002f))
             {
-                lowerEyelid.rectTransform.sizeDelta =
-                    new Vector2(1920, 540f * eyelid);
-                lowerEyelid.rectTransform.anchoredPosition =
-                    new Vector2(0, -(1080 - 540f * eyelid));
-                lowerEyelid.color = Color.black;
+                SetEyelids(Mathf.Lerp(from, to,
+                    Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp01(t / duration))));
+                yield return null;
+            }
+            SetEyelids(to);
+        }
+
+        private void SetEyelids(float closure)
+        {
+            float height = 540f * Mathf.Clamp01(closure);
+            if (topEyelid != null)
+                topEyelid.rectTransform.sizeDelta = new Vector2(1920, height);
+            if (bottomEyelid != null)
+            {
+                bottomEyelid.rectTransform.sizeDelta =
+                    new Vector2(1920, height);
+                bottomEyelid.rectTransform.anchoredPosition =
+                    new Vector2(0f, -1080f + height);
             }
         }
 
-        private void RefreshTexts()
+        private void RefreshWatch()
         {
-            if (durationLabel)
-                durationLabel.text = selectedHours.ToString("00.0") + " ЧАСА";
-            if (clockLabel)
-                clockLabel.text = "СЕЙЧАС  " +
-                    ClockText(startHours) + "  /  ДЕНЬ " + startDay;
-            if (wakeLabel)
-                wakeLabel.text = "ПРОБУЖДЕНИЕ  " +
-                    ClockText(WakeHour(startHours, selectedHours)) +
-                    "  /  ДЕНЬ " +
-                    WakeDay(startDay, startHours, selectedHours);
+            if (selectedDuration != null)
+                selectedDuration.text = selectedHours.ToString("0.#") + "ч";
+            if (wakeClock != null)
+                wakeClock.text = ClockText(WakeHour(startHours,
+                    selectedHours));
+            if (currentClock != null)
+                currentClock.text = "СЕЙЧАС  " + ClockText(startHours) +
+                    "   •   ПОДЪЁМ  " +
+                    ClockText(WakeHour(startHours, selectedHours));
         }
 
-        public static string ClockText(float hours)
+        private void PlayTick()
         {
-            int minutes = Mathf.RoundToInt(Mathf.Repeat(hours,24f) * 60f)
-                % 1440;
-            return (minutes / 60).ToString("00") + ":" +
-                (minutes % 60).ToString("00");
+            if (audio == null || tickClip == null) return;
+            audio.pitch = UnityEngine.Random.Range(.96f, 1.07f);
+            audio.PlayOneShot(tickClip, .23f);
+        }
+
+        private static AudioClip BuildTick()
+        {
+            const int count = 600;
+            const int sampleRate = 24000;
+            var samples = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)sampleRate;
+                samples[i] = Mathf.Sin(2f * Mathf.PI * 1400f * t) *
+                    Mathf.Exp(-t * 220f) * .22f;
+            }
+            var clip = AudioClip.Create("ROKAS_WatchCrown_TactileTick",
+                count, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        private static IEnumerator Wait(float seconds)
+        {
+            for (float t = 0; t < seconds; t += Mathf.Max(
+                Time.unscaledDeltaTime, .002f))
+                yield return null;
         }
 
         private void Complete()
         {
-            if (!Active && root == null && rigRoot == null) return;
+            if (state == State.Idle && root == null) return;
             state = State.Idle;
-            routine = null;
-            moveRoomCamera?.Invoke(0f);
+            sequence = null;
+            moveHomeCamera?.Invoke(0f);
             if (root != null)
             {
                 root.gameObject.SetActive(false);
                 UnityEngine.Object.Destroy(root.gameObject);
                 root = null;
             }
-            if (rigRoot != null)
-            {
-                foreach (Renderer renderer in
-                    rigRoot.GetComponentsInChildren<Renderer>())
-                    if (renderer.sharedMaterial != null)
-                        UnityEngine.Object.Destroy(renderer.sharedMaterial);
-                renderCamera = null;
-                UnityEngine.Object.Destroy(rigRoot);
-                rigRoot = null;
-                armRoot = null;
-            }
-            if (renderTarget != null)
-            {
-                renderTarget.Release();
-                UnityEngine.Object.Destroy(renderTarget);
-                renderTarget = null;
-            }
+            if (tickClip != null)
+                UnityEngine.Object.Destroy(tickClip);
+            tickClip = null;
+            alarmControls = watchControls = null;
+            alarmButton = confirmButton = null;
+            armPov = lyingPov = blurredPov = null;
             onFinished?.Invoke();
+        }
+    }
+
+    /// <summary>Receives native UI scroll and vertical drag on the watch.</summary>
+    public sealed class RokasBedWatchPointer : MonoBehaviour,
+        IScrollHandler, IDragHandler, IBeginDragHandler
+    {
+        private Action<int> step;
+        private float accumulator;
+
+        public void Configure(Action<int> callback) { step = callback; }
+
+        public void OnScroll(PointerEventData eventData)
+        {
+            if (Mathf.Abs(eventData.scrollDelta.y) > .01f)
+                step?.Invoke(eventData.scrollDelta.y > 0f ? 1 : -1);
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            accumulator = 0f;
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            accumulator += eventData.delta.y;
+            while (Mathf.Abs(accumulator) >= 22f)
+            {
+                int dir = accumulator > 0f ? 1 : -1;
+                step?.Invoke(dir);
+                accumulator -= dir * 22f;
+            }
         }
     }
 }
