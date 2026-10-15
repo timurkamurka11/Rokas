@@ -687,15 +687,19 @@ namespace Rokas.Presentation
             float width = Mathf.Max(rt.rect.width, .001f);
             float height = Mathf.Max(rt.rect.height, .001f);
             // Tap the bottom confirm area, just like the V3 OLED footer.
-            if (local.y <= -height*.27f)
+            if (local.y <= -height*.76f)
             {
                 confirm?.Invoke();
                 return;
             }
 
+            // UiKit RectTransform is top-left pivot, so centre local
+            // coordinates before computing the circular dial angle.
+            float centeredX = local.x - width*.5f;
+            float centeredY = local.y + height*.5f;
             // An interactive 270-degree ring is mapped to the 1-12h
             // duration range. The number changes on the REAL watch.
-            float degrees = Mathf.Atan2(local.y,local.x)*Mathf.Rad2Deg;
+            float degrees = Mathf.Atan2(centeredY,centeredX)*Mathf.Rad2Deg;
             float fraction = Mathf.Clamp01(
                 Mathf.Repeat(225f-degrees, 360f) / 270f);
             setDurationByDial?.Invoke(fraction);
