@@ -73,6 +73,9 @@ namespace Rokas.Presentation
                     skinned.bones == null || skinned.bones.Length != 25)
                     throw new InvalidOperationException("V3 SkinnedMeshRenderer/25-bone rig missing");
 
+                // Apply real V3 PBR textures from Resources, not the
+                // camera-projected full screenshot (which has no arm UVs).
+                BindProductionMaterials(container, skinned);
                 foreach (Transform t in container.GetComponentsInChildren<Transform>(true))
                     t.gameObject.layer = RigLayer;
 
@@ -205,6 +208,45 @@ namespace Rokas.Presentation
                 UnityEngine.Object.Destroy(target);
             }
             if (root != null) UnityEngine.Object.Destroy(root);
+        }
+
+        private static void BindProductionMaterials(
+            GameObject container, SkinnedMeshRenderer skinned)
+        {
+            Material[] materials = skinned.sharedMaterials;
+            if (materials != null && materials.Length > 0 &&
+                materials[0] != null)
+            {
+                Material skin = materials[0];
+                TrySetTexture(skin, "_MainTex", "BedSleep/V3/SkinAlbedo");
+                TrySetTexture(skin, "_BumpMap", "BedSleep/V3/SkinNormal");
+                TrySetTexture(skin, "_RoughnessMap",
+                    "BedSleep/V3/SkinRoughness");
+                TrySetTexture(skin, "_SubsurfaceMap",
+                    "BedSleep/V3/SkinSubsurface");
+            }
+            if (materials != null && materials.Length > 1 &&
+                materials[1] != null)
+                TrySetTexture(materials[1], "_MainTex",
+                    "BedSleep/V3/SleeveAlbedo");
+            foreach (MeshRenderer renderer in
+                container.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (renderer.name.Contains("Strap") &&
+                    renderer.sharedMaterial != null)
+                    TrySetTexture(renderer.sharedMaterial, "_MainTex",
+                        "BedSleep/V3/StrapAlbedo");
+            }
+        }
+
+        private static void TrySetTexture(
+            Material mat, string property, string resourcePath)
+        {
+            if (mat == null || !mat.HasProperty(property)) return;
+            Texture2D texture = Resources.Load<Texture2D>(resourcePath);
+            if (texture != null) mat.SetTexture(property, texture);
+            else Debug.LogWarning("[ROKAS BedSleep V3] Missing PBR texture: "
+                + resourcePath);
         }
 
         private static Type FindType(string fullName)
