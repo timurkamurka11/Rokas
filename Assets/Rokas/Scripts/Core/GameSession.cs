@@ -554,6 +554,11 @@ namespace Rokas.Core
             State.clickTimer = source.clickTimer;
             State.combatTime = source.combatTime;
             State.weakPointClaimed = source.weakPointClaimed;
+            State.hubSleepInitialized = source.hubSleepInitialized;
+            State.hubDay = source.hubDay;
+            State.hubClockHours = source.hubClockHours;
+            State.hubFatigue = source.hubFatigue;
+            State.hubSleepCount = source.hubSleepCount;
             State.lampOn = source.lampOn;
             State.mameInteractions = source.mameInteractions;
             if (State.messages == null) State.messages = new MessageSaveData();
