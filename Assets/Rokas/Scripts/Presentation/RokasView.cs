@@ -49,6 +49,7 @@ namespace Rokas.Presentation
         private readonly MessagesNotificationView messageNotifications;
         private readonly HubDialogueController hubDialogue;
         private readonly LaptopCinematicSequence laptopCinematic;
+        private readonly RokasBedSleepCinematic bedSleep;
         private RunPhase phase;
         private string panel;
         private bool transition;
@@ -178,7 +179,8 @@ namespace Rokas.Presentation
             home = new HomeView(
                 ui, assets, session, audio,
                 OpenFromHomeLaptopHotspot, Act, Travel, ToastShort, OpenHubDialogue,
-                () => MoveHomeLocation(HomeLocation.Hallway));
+                () => MoveHomeLocation(HomeLocation.Hallway),
+                StartBedSleep);
             hallway = new HallwayView(
                 ui, assets, session, audio, Act,
                 () => MoveHomeLocation(HomeLocation.MainRoom),
@@ -211,6 +213,9 @@ namespace Rokas.Presentation
                 () => audio.PlayChibiBounce(),
                 () => session.State.lampOn,
                 () => session.HallwayLightOn);
+            bedSleep = new RokasBedSleepCinematic(
+                owner, ui, transitions, assets.home, session, save,
+                OnBedSleepFinished, UpdateHomeCameraBlend);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -453,6 +458,7 @@ namespace Rokas.Presentation
 
         private void RebuildScene()
         {
+            if (bedSleep != null && bedSleep.Active) bedSleep.Cancel();
             laptopOpenedFromSeatedCinematic = false;
             if (laptopCinematic != null &&
                 (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
@@ -513,6 +519,33 @@ namespace Rokas.Presentation
             float eased = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
             if (roomCameraRig) roomCameraRig.localScale =
                 Vector3.one * (1f + .20f * eased);
+        }
+
+        private void StartBedSleep()
+        {
+            // Never race the laptop power handoff, a dialogue, another
+            // room transition, or a protected/corrupt profile.
+            if (bedSleep == null || bedSleep.Active ||
+                transition || storageBlocked || session.SaveBlocked ||
+                !string.IsNullOrEmpty(panel) ||
+                (hubDialogue != null && hubDialogue.IsOpen) ||
+                (laptopCinematic != null &&
+                    (laptopCinematic.IsPlaying ||
+                     laptopCinematic.HasPendingVisualHandoff)) ||
+                !IsHomeLocation(phase) ||
+                homeSubLocation != HomeLocation.MainRoom)
+                return;
+            transition = true;
+            SetSceneInteractionsEnabled(false);
+            bedSleep.Begin();
+        }
+
+        private void OnBedSleepFinished()
+        {
+            transition = false;
+            UpdateHomeCameraBlend(0f);
+            SetSceneInteractionsEnabled(true);
+            if (!storageBlocked) Refresh();
         }
 
         private void OpenFromHomeLaptopHotspot(string value)
@@ -709,6 +742,11 @@ namespace Rokas.Presentation
 
         public void Escape()
         {
+            if (bedSleep != null && bedSleep.Active)
+            {
+                bedSleep.Cancel();
+                return;
+            }
             if (laptopCinematic != null && laptopCinematic.IsPlaying)
             {
                 if (!laptopCinematic.BackToRoom())
@@ -750,6 +788,7 @@ namespace Rokas.Presentation
 
         public void Tick(float dt, bool focused = true)
         {
+            if (focused) bedSleep?.Tick(dt);
             if (focused && laptopCinematic != null && laptopCinematic.IsAwaitingPowerChoice)
             {
                 // R = stand up from powered seated POV, E = open the YOMI.
@@ -770,7 +809,8 @@ namespace Rokas.Presentation
                 IsHomeLocation(phase) &&
                 homeSubLocation == HomeLocation.MainRoom &&
                 !storageBlocked && string.IsNullOrEmpty(panel) &&
-                (laptopCinematic == null || !laptopCinematic.IsPlaying),
+                (laptopCinematic == null || !laptopCinematic.IsPlaying) &&
+                (bedSleep == null || !bedSleep.Active),
                 session.State.lampOn, session.HallwayLightOn,
                 LaptopPowerSession.PoweredOn);
             // Poll the SAME saved switches used by HomeView and HallwayView;
@@ -872,6 +912,7 @@ namespace Rokas.Presentation
 
         public void Dispose()
         {
+            bedSleep?.Dispose();
             if (laptopCinematic != null &&
                 (laptopCinematic.IsPlaying || laptopCinematic.HasPendingVisualHandoff))
                 laptopCinematic.Cancel();
