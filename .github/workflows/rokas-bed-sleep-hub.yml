@@ -35,7 +35,7 @@ jobs:
           for label, file, required in [
               ("home", home, ["BedInteractable_Hotspot", "enterBedSleep", "ЛЕЧЬ СПАТЬ"]),
               ("view", view, ["StartBedSleep()", "bedSleep.Begin()", "bedSleep?.Tick(dt)", "bedSleep?.Dispose()", "OnBedSleepFinished()", "laptopCinematic.TryStart()"]),
-              ("sleep", sleep, ["public const float MinimumHours = 1f", "public const float MaximumHours = 12f", "public const float StepHours = .5f", "RenderTexture(1024, 768", "State.ChooseDuration", "WakeDay(", "WakeHour(", "save?.Invoke()", "TryUseImportedHighDetailWatch"]),
+              ("sleep", sleep, ["public const float MinimumHours = 1f", "public const float MaximumHours = 12f", "public const float StepHours = .5f", "State.AlarmButtonVisible", "State.WatchRaise", "State.TimeSelection", "State.EyesClose", "WakeDay(", "WakeHour(", "save?.Invoke()", "BedSleep/BedCeilingPOV", "BedSleep/BedWatchArmPOV", "RokasBedWatchPointer", "BedSleepLaptopStyleDarkCurtain", "PlayTick()"]),
               ("state", state, ["hubSleepInitialized", "hubDay", "hubClockHours", "hubFatigue", "hubSleepCount"]),
               ("session", session, ["State.hubSleepCount = source.hubSleepCount"]),
               ("tests", tests, ["SleepAcrossMidnightAdvancesDayAndClock", "SaveDataRetainsBackwardCompatibleSleepFields"])]:
@@ -44,10 +44,14 @@ jobs:
           assert "using ROKAS.Hub.SleepInteraction;" not in sleep, "Bridge must compile even before optional ZIP import"
           assert "public const int CurrentVersion = 2;" in state
           assert "hubSleepInitialized" in state
+          assert "GameObject.CreatePrimitive" not in sleep
+          assert "Camera.main" not in sleep.replace("// camera", "")
+          assert "RenderTexture(" not in sleep
+          assert "BedInteractionControllerHasEleven2_5DPresentationPhases" in tests
           assert sleep.count("{")==sleep.count("}")
           for name in ("RokasBedSleepCinematic.cs", "RokasBedSleepCinematic.cs.meta"):
               assert (root/"Scripts/Presentation"/name).exists(), name
-          print("PASS: bed hotspot, native 3D watch/crown, UI state isolation, 8-phase sleep, save persistence, input cancellation")
+          print("PASS: bed hotspot, native 2.5D POV + watch photo, 11-state sleep, save persistence, no FPS primitives")
           PY
   unity-editmode:
     name: Unity 6 Bed Sleep EditMode
