@@ -1,0 +1,79 @@
+name: ROKAS Bed Sleep In-Hub Integration
+on:
+  push:
+    branches: [codex/fidelity3-resume-5779190]
+    paths:
+      - 'Assets/Rokas/Scripts/Presentation/HomeView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasView.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
+      - 'Assets/Rokas/Scripts/Core/State.cs'
+      - 'Assets/Rokas/Scripts/Core/GameSession.cs'
+      - 'Assets/Rokas/Tests/EditMode/RokasBedSleepEditModeTests.cs'
+      - '.github/workflows/rokas-bed-sleep-hub.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  structural-contract:
+    name: Main-room bridge and safety invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure real ROKAS bed route and independent laptop route
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("Assets/Rokas")
+          home=(root/"Scripts/Presentation/HomeView.cs").read_text()
+          view=(root/"Scripts/Presentation/RokasView.cs").read_text()
+          sleep=(root/"Scripts/Presentation/RokasBedSleepCinematic.cs").read_text()
+          state=(root/"Scripts/Core/State.cs").read_text()
+          session=(root/"Scripts/Core/GameSession.cs").read_text()
+          tests=(root/"Tests/EditMode/RokasBedSleepEditModeTests.cs").read_text()
+          for label, file, required in [
+              ("home", home, ["BedInteractable_Hotspot", "enterBedSleep", "ЛЕЧЬ СПАТЬ"]),
+              ("view", view, ["StartBedSleep()", "bedSleep.Begin()", "bedSleep?.Tick(dt)", "bedSleep?.Dispose()", "OnBedSleepFinished()", "laptopCinematic.TryStart()"]),
+              ("sleep", sleep, ["public const float MinimumHours = 1f", "public const float MaximumHours = 12f", "public const float StepHours = .5f", "RenderTexture(1024, 768", "State.ChooseDuration", "WakeDay(", "WakeHour(", "save?.Invoke()", "TryUseImportedHighDetailWatch"]),
+              ("state", state, ["hubSleepInitialized", "hubDay", "hubClockHours", "hubFatigue", "hubSleepCount"]),
+              ("session", session, ["State.hubSleepCount = source.hubSleepCount"]),
+              ("tests", tests, ["SleepAcrossMidnightAdvancesDayAndClock", "SaveDataRetainsBackwardCompatibleSleepFields"])]:
+              for needle in required:
+                  assert needle in file, f"{label}: missing {needle}"
+          assert "using ROKAS.Hub.SleepInteraction;" not in sleep, "Bridge must compile even before optional ZIP import"
+          assert "public const int CurrentVersion = 2;" in state
+          assert "hubSleepInitialized" in state
+          assert sleep.count("{")==sleep.count("}")
+          for name in ("RokasBedSleepCinematic.cs", "RokasBedSleepCinematic.cs.meta"):
+              assert (root/"Scripts/Presentation"/name).exists(), name
+          print("PASS: bed hotspot, native 3D watch/crown, UI state isolation, 8-phase sleep, save persistence, input cancellation")
+          PY
+  unity-editmode:
+    name: Unity 6 Bed Sleep EditMode
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Bed Sleep EditMode tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          cliVersion: v0.1.60
+          customParameters: -testFilter Rokas.Tests.RokasBedSleepEditModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Bed Sleep EditMode
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rokas-bed-sleep-editmode
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          if-no-files-found: warn
