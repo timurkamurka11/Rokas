@@ -32,3 +32,16 @@ GitHub's bridge and native control flow compile independently of the optional Ar
 Required visual checks: real mesh present (SkinnedMeshRenderer 25 joints), correct front-facing OLED, hand truly rises/lowers rather than fading, interactive watch UI only on 3D screen, skin/strap textures, lighting ON/OFF, ceiling transition and Escape. Capture video and compare to the supplied 4-second V3 reference. Do not claim exact visual parity until such a capture has passed.
 
 No genuine Blender .blend or true FBX master exists in the provided archive; modeling/retargeting may still be required to get high-end realism instead of the existing mathematical anatomical mesh.
+
+
+## Follow-up input, art, and asset installer corrections
+
+- The isolated camera exposes the **actual projected OLED position** to ROKAS so the transparent UI event hit rectangle follows the live watch rather than the photographed placeholder position.
+- 270-degree circle clicks set 1–12 hours in 30-minute steps; drag or scroll steps by 30 minutes; clicking the lower section confirms. The fallback external +/- buttons are hidden only when the live 3D watch exists.
+- `RokasBedSleepProductionRigBridge.TickIdle()` updates the skeletal arm, crown and OLED continuously during the selection phase. The genuine V3 InputMapper remains inactive while native ROKAS owns input, avoiding doubled ticks.
+- A corrected ZIP named `ROKAS_BedSleep_V3_Corrected_Source_And_3D_Assets.zip` accompanies this revision. It contains the actual user-supplied 3D GLB, 8 Unity AnimationClips, watch mesh, six correctly placed PBR Resources maps, UI fixes, true Blender-export helper and source/visual validation files. The installer demands verified backups and two explicit confirmations before replacing previously installed *different* V3 files.
+- The ZIP is a **conversation attachment**, not an asset that GitHub currently contains; the GitHub-only Unity CI compiles the optional bridge, not the binary V3 runtime mesh. Verify the full combined package after local installation.
+
+### No unverified claims
+
+The Blender FBX export helper is included but has not run in this environment. The original Argon preview may be precomposed rather than an in-engine live 3D demonstration. Final photorealistic visual parity, actual imported 3D wrist pose, full mesh skinning in Unity and real sound synchronization remain unconfirmed until a fresh local screen recording.
