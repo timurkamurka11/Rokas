@@ -39,7 +39,8 @@ namespace Rokas.Presentation
         private readonly Action<float> moveHomeCamera;
         private readonly Texture originalRoom;
         private RectTransform root;
-        private RawImage lyingPov, armPov, blurredPov;
+        private RawImage lyingPov, armPov, blurredPov, real3DArmPov;
+        private RokasBedSleepProductionRigBridge productionRig;
         private Image curtain, topEyelid, bottomEyelid;
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
@@ -180,6 +181,11 @@ namespace Rokas.Presentation
             if (Mathf.Approximately(value, selectedHours)) return;
             selectedHours = value;
             RefreshWatch();
+            if (productionRig != null && productionRig.Ready)
+            {
+                productionRig.SetDuration(selectedHours);
+                productionRig.CrownStep(direction);
+            }
             PlayTick();
         }
 
@@ -234,6 +240,23 @@ namespace Rokas.Presentation
                 arm != null ? arm : ceiling != null ? ceiling : originalRoom,
                 0, 0, 1920, 1080);
             armPov.color = new Color(1f, 1f, 1f, 0f);
+
+            // If the corrected V3 production asset package is installed,
+            // place the REAL skinned 3D hand/watch above the ceiling plate.
+            // Without it the previous photo presentation remains available.
+            productionRig = RokasBedSleepProductionRigBridge.TryCreate(
+                startHours, session.State.lampOn);
+            if (productionRig != null && productionRig.Ready)
+            {
+                real3DArmPov = ui.Art(root,
+                    "Keiko_ProductionV3_SkinnedArm_RenderTexture",
+                    productionRig.Texture, 0, 0, 1920, 1080);
+                real3DArmPov.color = new Color(1f, 1f, 1f, 0f);
+                real3DArmPov.raycastTarget = false;
+                armWatchAvailable = ceiling != null;
+                Debug.Log("[ROKAS BedSleep V3] REAL 25-bone 3D arm and " +
+                    "OLED watch composite active");
+            }
 
             // Controls are deliberately staged: alarm button FIRST, then
             // arm and interactive OLED. No always-on bottom watch menu.
@@ -347,10 +370,12 @@ namespace Rokas.Presentation
         private IEnumerator RaiseWatch()
         {
             state = State.WatchRaise;
+            productionRig?.ChangeState("WatchRaise");
             yield return FadeControls(alarmControls, alarmControls.alpha, 0f,
                 .25f);
             yield return FadeArm(0f, 1f, .82f);
             state = State.TimeSelection;
+            productionRig?.ChangeState("TimeSelection");
             watchControls.alpha = 1f;
             watchControls.blocksRaycasts = true;
             watchControls.interactable = true;
@@ -360,6 +385,8 @@ namespace Rokas.Presentation
         private IEnumerator FinishSleep()
         {
             state = State.ConfirmSelection;
+            productionRig?.Confirm();
+            productionRig?.ChangeState("ConfirmSelection");
             watchControls.interactable = false;
             watchControls.blocksRaycasts = false;
             if (alarmHint) alarmHint.text =
@@ -367,6 +394,7 @@ namespace Rokas.Presentation
                 ClockText(WakeHour(startHours, selectedHours));
             yield return Wait(.36f);
             state = State.HandLower;
+            productionRig?.ChangeState("HandLower");
             watchControls.alpha = 0f;
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
@@ -377,6 +405,8 @@ namespace Rokas.Presentation
             yield return FadeEyelids(.45f, .20f, .38f);
             yield return FadeEyelids(.20f, 1f, 1.12f);
             state = State.SleepCommitted;
+            // ROKAS remains the ONLY owner of the durable save.
+            // V3's optional event must not create a parallel save path.
             if (!committed && !cancelRequested)
             {
                 committed = true;
@@ -405,14 +435,32 @@ namespace Rokas.Presentation
                 float u = Mathf.SmoothStep(0f, 1f,
                     Mathf.Clamp01(t / duration));
                 handOpacity = Mathf.Lerp(from, to, u);
-                armPov.color = new Color(1f, 1f, 1f, handOpacity);
+                if (productionRig != null && productionRig.Ready)
+                {
+                    productionRig.Sample(handOpacity);
+                    if (real3DArmPov != null)
+                        real3DArmPov.color = new Color(1f, 1f, 1f,
+                            Mathf.Clamp01(handOpacity * 4f));
+                    armPov.color = new Color(1f, 1f, 1f, 0f);
+                }
+                else
+                    armPov.color = new Color(1f, 1f, 1f, handOpacity);
                 if (blurredPov != null)
                     blurredPov.color = new Color(1f, 1f, 1f,
                         .12f * handOpacity);
                 yield return null;
             }
             handOpacity = to;
-            armPov.color = new Color(1f, 1f, 1f, to);
+            if (productionRig != null && productionRig.Ready)
+            {
+                productionRig.Sample(to);
+                if (real3DArmPov != null)
+                    real3DArmPov.color = new Color(1f, 1f, 1f,
+                        Mathf.Clamp01(to * 4f));
+                armPov.color = new Color(1f, 1f, 1f, 0f);
+            }
+            else
+                armPov.color = new Color(1f, 1f, 1f, to);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, .12f * to);
         }
@@ -520,6 +568,9 @@ namespace Rokas.Presentation
             if (state == State.Idle && root == null) return;
             state = State.Idle;
             sequence = null;
+            productionRig?.Dispose();
+            productionRig = null;
+            real3DArmPov = null;
             moveHomeCamera?.Invoke(0f);
             if (root != null)
             {
