@@ -198,6 +198,26 @@ namespace Rokas.Presentation
             Call(oled, "TickOLEDAnimation", dt);
         }
 
+        public Rect GetProjectedWatchInputRect()
+        {
+            if (!Ready) return new Rect(757f, 578f, 227f, 236f);
+            var renderer = GetProperty(watch, "OledDisplayRenderer") as Renderer;
+            if (renderer == null) return new Rect(757f, 578f, 227f, 236f);
+            Vector3 viewport = camera.WorldToViewportPoint(renderer.bounds.center);
+            if (viewport.z <= 0f || viewport.x < -.2f ||
+                viewport.x > 1.2f || viewport.y < -.2f ||
+                viewport.y > 1.2f)
+                return new Rect(757f, 578f, 227f, 236f);
+            // UiKit is top-left authored at 1920x1080. Use the actual
+            // projected WATCH position, not hard-coded photo coordinates.
+            const float width = 240f, height = 255f;
+            return new Rect(
+                Mathf.Clamp(viewport.x * 1920f - width*.5f, 0f, 1920f-width),
+                Mathf.Clamp((1f-viewport.y)*1080f-height*.48f,
+                    0f, 1080f-height),
+                width, height);
+        }
+
         public void SetStateInputDisabled()
         {
             if (!Ready) return;
