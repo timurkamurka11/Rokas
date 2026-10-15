@@ -23,6 +23,7 @@ namespace Rokas.Presentation
         private readonly Action<string> toast;
         private readonly Func<HubDialogueDefinition, bool> openHubDialogue;
         private readonly Action enterHallway;
+        private readonly Action enterBedSleep;
         private HomeHallwayDoorwayPresentation neighborLight;
         private RawImage mame;
         private Image weaponWard;
@@ -36,11 +37,13 @@ namespace Rokas.Presentation
 
         public HomeView(UiKit ui, RokasAssets assets, GameSession session, RokasAudio audio, Action<string> open,
             Action<Func<bool>, string> act, Action<Func<bool>, string> travel, Action<string> toast,
-            Func<HubDialogueDefinition, bool> openHubDialogue, Action enterHallway)
+            Func<HubDialogueDefinition, bool> openHubDialogue, Action enterHallway,
+            Action enterBedSleep = null)
         {
             this.ui = ui; this.assets = assets; this.session = session; this.audio = audio;
             this.open = open; this.act = act; this.travel = travel; this.toast = toast;
             this.openHubDialogue = openHubDialogue; this.enterHallway = enterHallway;
+            this.enterBedSleep = enterBedSleep;
         }
 
         public void Build(RectTransform parent)
@@ -108,6 +111,25 @@ namespace Rokas.Presentation
                 1748f, 132.9f, 58f, () => enterHallway?.Invoke());
 
             HomeFinalUiPresenter.Build(parent);
+            // The HOME is a 2D-authored illustration, not a 3D
+            // collision scene. Attach an accessible hotspot directly
+            // to the bed region, above decoration but away from laptop.
+            var bedHit = ui.Box(parent, "BedInteractable_Hotspot",
+                470f, 657f, 365f, 190f,
+                new Color(1f, 1f, 1f, .001f), true);
+            var bedButton = bedHit.gameObject.AddComponent<Button>();
+            bedButton.targetGraphic = bedHit;
+            bedButton.transition = Selectable.Transition.None;
+            bedButton.navigation = new Navigation {
+                mode = Navigation.Mode.Automatic };
+            bedButton.onClick.AddListener(() =>
+            {
+                audio.Click();
+                enterBedSleep?.Invoke();
+            });
+            ui.Label(parent, "BedSleep_InteractionHint",
+                "ЛЕЧЬ СПАТЬ", 494f, 634f, 270f, 38f,
+                22, UiKit.Gold);
             Refresh();
         }
 
