@@ -45,6 +45,7 @@ namespace Rokas.Presentation
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
         private Button alarmButton, confirmButton;
+        private RectTransform watchHitRect;
         private AudioSource audio;
         private AudioClip tickClip;
         private Coroutine sequence;
@@ -192,6 +193,23 @@ namespace Rokas.Presentation
             PlayTick();
         }
 
+        private void SetDurationFromDial(float normalizedAngle)
+        {
+            if (state != State.TimeSelection) return;
+            float next = QuantizeDuration(Mathf.Lerp(
+                MinimumHours, MaximumHours, Mathf.Clamp01(normalizedAngle)));
+            int steps = Mathf.RoundToInt((next-selectedHours)/StepHours);
+            if (steps == 0) return;
+            selectedHours = next;
+            RefreshWatch();
+            if (productionRig != null && productionRig.Ready)
+            {
+                productionRig.SetDuration(selectedHours);
+                productionRig.CrownStep(steps);
+            }
+            PlayTick();
+        }
+
         public void Confirm()
         {
             if (state == State.TimeSelection && sequence == null)
@@ -307,8 +325,9 @@ namespace Rokas.Presentation
             var hit = ui.Box(watchControls.transform, "WatchCrownDragZone",
                 757, 578, 227, 236,
                 new Color(1f, 1f, 1f, .001f), true);
+            watchHitRect = hit.rectTransform;
             var pointer = hit.gameObject.AddComponent<RokasBedWatchPointer>();
-            pointer.Configure(Step);
+            pointer.Configure(Step, Confirm, SetDurationFromDial);
             // Clock face itself takes mouse wheel/drag. Small external
             // affordances are secondary, not the primary selection UI.
             ui.Button(watchControls.transform, "WatchMinus", "−30м",
@@ -398,6 +417,15 @@ namespace Rokas.Presentation
             yield return FadeArm(0f, 1f, .82f);
             state = State.TimeSelection;
             productionRig?.ChangeState("TimeSelection");
+            if (productionRig != null && productionRig.Ready &&
+                watchHitRect != null)
+            {
+                Rect projected = productionRig.GetProjectedWatchInputRect();
+                watchHitRect.anchoredPosition =
+                    new Vector2(projected.x, -projected.y);
+                watchHitRect.sizeDelta =
+                    new Vector2(projected.width, projected.height);
+            }
             watchControls.alpha = 1f;
             watchControls.blocksRaycasts = true;
             watchControls.interactable = true;
@@ -610,14 +638,25 @@ namespace Rokas.Presentation
         }
     }
 
-    /// <summary>Receives native UI scroll and vertical drag on the watch.</summary>
+    /// <summary>
+    /// Native ROKAS watch-space drag and click handler. The transparent
+    /// hit area is anchored to the projected 3D OLED, not to the old PNG.
+    /// </summary>
     public sealed class RokasBedWatchPointer : MonoBehaviour,
-        IDragHandler, IBeginDragHandler
+        IDragHandler, IBeginDragHandler, IPointerClickHandler
     {
         private Action<int> step;
+        private Action confirm;
+        private Action<float> setDurationByDial;
         private float accumulator;
 
-        public void Configure(Action<int> callback) { step = callback; }
+        public void Configure(Action<int> stepAction,
+            Action confirmAction, Action<float> dialAction)
+        {
+            step = stepAction;
+            confirm = confirmAction;
+            setDurationByDial = dialAction;
+        }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
@@ -633,6 +672,33 @@ namespace Rokas.Presentation
                 step?.Invoke(dir);
                 accumulator -= dir * 22f;
             }
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left) return;
+            var rt = transform as RectTransform;
+            if (rt == null) return;
+            Vector2 local;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rt, eventData.position, eventData.pressEventCamera, out local))
+                return;
+
+            float width = Mathf.Max(rt.rect.width, .001f);
+            float height = Mathf.Max(rt.rect.height, .001f);
+            // Tap the bottom confirm area, just like the V3 OLED footer.
+            if (local.y <= -height*.27f)
+            {
+                confirm?.Invoke();
+                return;
+            }
+
+            // An interactive 270-degree ring is mapped to the 1-12h
+            // duration range. The number changes on the REAL watch.
+            float degrees = Mathf.Atan2(local.y,local.x)*Mathf.Rad2Deg;
+            float fraction = Mathf.Clamp01(
+                Mathf.Repeat(225f-degrees, 360f) / 270f);
+            setDurationByDial?.Invoke(fraction);
         }
     }
 }
