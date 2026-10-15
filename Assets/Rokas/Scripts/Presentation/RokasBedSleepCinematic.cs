@@ -245,6 +245,14 @@ namespace Rokas.Presentation
             alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
                 "ПОСТАВИТЬ БУДИЛЬНИК", 722, 941, 476, 75,
                 OpenAlarm, true);
+            if (!armWatchAvailable)
+            {
+                alarmButton.interactable = false;
+                ui.Label(alarmControls.transform, "ReferenceAssetsRequired",
+                    "НЕ НАЙДЕНЫ POV-АССЕТЫ: установите архив BedSleep",
+                    585, 880, 820, 46, 19, UiKit.Red,
+                    false, TextAnchor.MiddleCenter);
+            }
 
             watchControls = ui.Rect(root, "Smartwatch_DiegeticControls",
                 0, 0, 1920, 1080).gameObject.AddComponent<CanvasGroup>();
@@ -531,18 +539,12 @@ namespace Rokas.Presentation
 
     /// <summary>Receives native UI scroll and vertical drag on the watch.</summary>
     public sealed class RokasBedWatchPointer : MonoBehaviour,
-        IScrollHandler, IDragHandler, IBeginDragHandler
+        IDragHandler, IBeginDragHandler
     {
         private Action<int> step;
         private float accumulator;
 
         public void Configure(Action<int> callback) { step = callback; }
-
-        public void OnScroll(PointerEventData eventData)
-        {
-            if (Mathf.Abs(eventData.scrollDelta.y) > .01f)
-                step?.Invoke(eventData.scrollDelta.y > 0f ? 1 : -1);
-        }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
