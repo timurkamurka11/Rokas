@@ -63,6 +63,13 @@ namespace Rokas.Core
         public float clickTimer;
         public float combatTime;
         public bool weakPointClaimed;
+        // ROKAS hub bed sleep state. Additive v2 save fields: older
+        // profiles remain readable without increasing SaveData version.
+        public bool hubSleepInitialized;
+        public int hubDay = 1;
+        public float hubClockHours = 23.5f;
+        public float hubFatigue = .65f;
+        public int hubSleepCount;
         public bool lampOn = true;
         // 0 = legacy/missing field (treated as ON), 1 = ON, 2 = OFF.
         // Using a tri-state integer keeps v1/v2 saves backward compatible without changing their required JSON shape.
