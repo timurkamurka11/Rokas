@@ -147,6 +147,9 @@ namespace Rokas.Presentation
             }
 
             if (state != State.TimeSelection) return;
+            // Unlike the 2D photographic fallback, the production hand
+            // has a living idle and a physically animated crown.
+            productionRig?.TickIdle(dt);
             float scroll = 0f;
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current != null)
@@ -315,6 +318,18 @@ namespace Rokas.Presentation
             confirmButton = ui.Button(watchControls.transform,
                 "WatchConfirm", "✓  УСТАНОВИТЬ", 806, 826, 259, 55,
                 Confirm, true);
+            if (productionRig != null && productionRig.Ready)
+            {
+                // The UI is genuinely on the three-dimensional display.
+                // Old overlay controls are hidden; mouse wheel, drag and
+                // Enter remain available with a transparent hit zone.
+                var minus = watchControls.transform.Find("WatchMinus");
+                var plus = watchControls.transform.Find("WatchPlus");
+                var confirm = watchControls.transform.Find("WatchConfirm");
+                if (minus != null) minus.gameObject.SetActive(false);
+                if (plus != null) plus.gameObject.SetActive(false);
+                if (confirm != null) confirm.gameObject.SetActive(false);
+            }
             currentClock = ui.Label(watchControls.transform,
                 "CurrentGameTime", "", 739, 908, 460, 39,
                 18, UiKit.Muted, false, TextAnchor.MiddleCenter);
@@ -447,7 +462,7 @@ namespace Rokas.Presentation
                     productionRig.Sample(handOpacity);
                     if (real3DArmPov != null)
                         real3DArmPov.color = new Color(1f, 1f, 1f,
-                            Mathf.Clamp01(handOpacity * 4f));
+                            handOpacity <= .001f ? 0f : 1f);
                     armPov.color = new Color(1f, 1f, 1f, 0f);
                 }
                 else
@@ -463,7 +478,7 @@ namespace Rokas.Presentation
                 productionRig.Sample(to);
                 if (real3DArmPov != null)
                     real3DArmPov.color = new Color(1f, 1f, 1f,
-                        Mathf.Clamp01(to * 4f));
+                        to <= .001f ? 0f : 1f);
                 armPov.color = new Color(1f, 1f, 1f, 0f);
             }
             else
