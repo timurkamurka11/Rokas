@@ -92,9 +92,13 @@ namespace Rokas.Presentation
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
                 cam.orthographic = true;
-                cam.orthographicSize = .38f;
-                cam.transform.position = new Vector3(-.04f, -.14f, -1.10f);
-                cam.transform.rotation = Quaternion.identity;
+                // V3 watch's live OLED faces local +Y, while the arm
+                // stretches in X and is thick in Z. Looking along +Z
+                // shows only the watch's EDGE. Face the dial from +Y.
+                cam.orthographicSize = .31f;
+                cam.transform.position = new Vector3(-.04f, .90f, .41f);
+                cam.transform.rotation = Quaternion.LookRotation(
+                    Vector3.down, Vector3.forward);
                 cam.nearClipPlane = .02f;
                 cam.farClipPlane = 5f;
                 cam.cullingMask = 1 << RigLayer;
@@ -146,6 +150,7 @@ namespace Rokas.Presentation
             if (!Ready) return;
             object value = Enum.Parse(stateType, name);
             Call(controller, "TransitionToState", value);
+            if (name == "TimeSelection") SetStateInputDisabled();
         }
 
         public void Sample(float normalized)
@@ -184,11 +189,30 @@ namespace Rokas.Presentation
             Call(armAnimation, "TriggerCrownTickImpulse", direction);
         }
 
-        public void Confirm()
+        public void TickIdle(float deltaTime)
         {
             if (!Ready) return;
-            Call(watch, "TriggerSideButtonPress");
-            Call(armAnimation, "TriggerConfirmRelaxImpulse");
+            float dt = Mathf.Max(0f, deltaTime);
+            Call(armAnimation, "EvaluateSkeletalPose", 1f, 1f, dt);
+            Call(watch, "TickWatch3DMotion", dt);
+            Call(oled, "TickOLEDAnimation", dt);
+        }
+
+        public void SetStateInputDisabled()
+        {
+            if (!Ready) return;
+            // ROKAS already consumes mouse/keyboard in the native
+            // TimeSelection state. Two active input systems would
+            // double-register steps and audio clicks.
+            object mapper = GetProperty(controller, "InputMapper");
+            if (mapper != null) Call(mapper, "SetInputEnabled", false);
+        }
+
+        public void Confirm()
+        {
+            // TransitionToState(ConfirmSelection) already presses the
+            // crown/button and triggers wrist relaxation exactly once.
+            if (!Ready) return;
         }
 
         public void SetLight(bool on)
