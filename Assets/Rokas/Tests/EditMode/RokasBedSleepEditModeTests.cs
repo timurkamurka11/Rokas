@@ -55,12 +55,18 @@ namespace Rokas.Tests
         }
 
         [Test]
-        public void BedInteractionControllerHasEightRequiredPhases()
+        public void BedInteractionControllerHasEleven2_5DPresentationPhases()
         {
-            Assert.AreEqual(8, System.Enum.GetValues(
+            Assert.AreEqual(11, System.Enum.GetValues(
                 typeof(RokasBedSleepCinematic.State)).Length);
-            Assert.AreEqual("ChooseDuration",
-                RokasBedSleepCinematic.State.ChooseDuration.ToString());
+            Assert.AreEqual("AlarmButtonVisible",
+                RokasBedSleepCinematic.State.AlarmButtonVisible.ToString());
+            Assert.AreEqual("WatchRaise",
+                RokasBedSleepCinematic.State.WatchRaise.ToString());
+            Assert.AreEqual("TimeSelection",
+                RokasBedSleepCinematic.State.TimeSelection.ToString());
+            Assert.AreEqual("EyesClose",
+                RokasBedSleepCinematic.State.EyesClose.ToString());
         }
     }
 }
