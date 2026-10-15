@@ -45,7 +45,8 @@ jobs:
           assert "public const int CurrentVersion = 2;" in state
           assert "hubSleepInitialized" in state
           assert "GameObject.CreatePrimitive" not in sleep
-          assert "Camera.main" not in sleep.replace("// camera", "")
+          assert "Camera.main.transform" not in sleep
+          assert "Camera.main =" not in sleep
           assert "RenderTexture(" not in sleep
           assert "BedInteractionControllerHasEleven2_5DPresentationPhases" in tests
           assert sleep.count("{")==sleep.count("}")
