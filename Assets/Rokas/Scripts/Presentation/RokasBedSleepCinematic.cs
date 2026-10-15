@@ -286,14 +286,21 @@ namespace Rokas.Presentation
             // Interactive dark OLED centre is aligned to the watch screen
             // in the supplied 1672x940 reference; the photographic bezel
             // and ring remain visible.
-            ui.Box(watchControls.transform, "LiveOledCentre",
-                804, 652, 155, 104, new Color(.025f, .035f, .073f, .96f));
-            selectedDuration = ui.Label(watchControls.transform,
-                "WatchSleepDuration", "", 811, 664, 148, 58,
-                39, UiKit.Paper, false, TextAnchor.MiddleCenter);
-            wakeClock = ui.Label(watchControls.transform, "WatchAlarmTime",
-                "", 810, 723, 150, 27, 15, UiKit.Jade,
-                false, TextAnchor.MiddleCenter);
+            // The authored photo needs a 2D replacement OLED;
+            // the real V3 3D watch already renders its own WorldSpace OLED.
+            // Never overlay a fake UI rectangle onto the real 3D glass.
+            if (productionRig == null || !productionRig.Ready)
+            {
+                ui.Box(watchControls.transform, "LiveOledCentre",
+                    804, 652, 155, 104,
+                    new Color(.025f, .035f, .073f, .96f));
+                selectedDuration = ui.Label(watchControls.transform,
+                    "WatchSleepDuration", "", 811, 664, 148, 58,
+                    39, UiKit.Paper, false, TextAnchor.MiddleCenter);
+                wakeClock = ui.Label(watchControls.transform, "WatchAlarmTime",
+                    "", 810, 723, 150, 27, 15, UiKit.Jade,
+                    false, TextAnchor.MiddleCenter);
+            }
             var hit = ui.Box(watchControls.transform, "WatchCrownDragZone",
                 757, 578, 227, 236,
                 new Color(1f, 1f, 1f, .001f), true);
