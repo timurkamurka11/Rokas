@@ -186,16 +186,27 @@ namespace Rokas.Tests
             Texture2D pixels = new Texture2D(320, 180, TextureFormat.RGBA32, false);
             RenderTexture previous = RenderTexture.active;
             int visible = 0;
+            int minX = 320, minY = 180, maxX = -1, maxY = -1;
             try
             {
                 Graphics.Blit(rt, scaled);
                 RenderTexture.active = scaled;
                 pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
                 pixels.Apply();
-                foreach (var p in pixels.GetPixels32())
+                var framePixels = pixels.GetPixels32();
+                for (int index = 0; index < framePixels.Length; index++)
                 {
+                    var p = framePixels[index];
                     if (p.a > 24 && (p.r > 14 || p.g > 14 || p.b > 14))
+                    {
                         visible++;
+                        int x = index % 320;
+                        int y = index / 320;
+                        minX = Mathf.Min(minX, x);
+                        minY = Mathf.Min(minY, y);
+                        maxX = Mathf.Max(maxX, x);
+                        maxY = Mathf.Max(maxY, y);
+                    }
                 }
 
                 // Preserve actual visual evidence for Actions even if the
@@ -213,12 +224,19 @@ namespace Rokas.Tests
                 UnityEngine.Object.Destroy(pixels);
             }
 
+            int renderedWidth = Mathf.Max(0, maxX - minX + 1);
+            int renderedHeight = Mathf.Max(0, maxY - minY + 1);
             Debug.Log("ROKAS_V10_VISIBILITY: opaque-colored pixels=" + visible +
-                "/57600 skin=" + arm.bounds + " oled=" + oled.bounds +
+                "/57600 silhouette=" + renderedWidth + "x" + renderedHeight +
+                " skin=" + arm.bounds + " oled=" + oled.bounds +
                 " camera=" + camera.transform.position +
                 " alpha=" + raw.color.a);
             Assert.That(visible, Is.GreaterThan(100),
                 "Bed Sleep returned a blank 3D image even though the arm/watch prefabs exist.");
+            Assert.That(renderedHeight, Is.GreaterThan(65),
+                "Real arm must be prominent from the lower POV, not a miniature horizontal strip.");
+            Assert.That(renderedHeight, Is.GreaterThan(renderedWidth * 0.65f),
+                "FPS forearm must rise toward the watch instead of lying horizontally across the screen.");
         }
 
         [TearDown]
