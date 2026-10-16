@@ -270,15 +270,34 @@ namespace Rokas.BedSleep.Argon.Editor
                 material.EnableKeyword("_NORMALMAP");
             }
             if (!string.IsNullOrEmpty(ao)) SetTexture(material, "_OcclusionMap", ao);
+            // The supplied titanium map already packs metallic and smoothness.
+            // Assign its real PBR texture rather than a flat grey metallic value.
+            if (name == "Mat_Watch_TitaniumCase" || name == "Mat_Watch_DigitalCrown")
+            {
+                SetTexture(material, "_MetallicGlossMap",
+                    "Textures/Watch/Watch_Titanium_MetallicSmoothness.png");
+                material.EnableKeyword("_METALLICGLOSSMAP");
+            }
             AssetDatabase.CreateAsset(material, path);
             return material;
         }
 
         private static void SetTexture(Material material, string property, string path)
         {
-            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(Source + path);
+            string assetPath = Source + path;
+            if (property == "_BumpMap")
+            {
+                var normalImporter = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+                if (normalImporter != null &&
+                    normalImporter.textureType != TextureImporterType.NormalMap)
+                {
+                    normalImporter.textureType = TextureImporterType.NormalMap;
+                    normalImporter.SaveAndReimport();
+                }
+            }
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
             if (texture == null)
-                throw new InvalidOperationException("Missing real Argon texture: " + Source + path);
+                throw new InvalidOperationException("Missing real Argon texture: " + assetPath);
             material.SetTexture(property, texture);
         }
 
