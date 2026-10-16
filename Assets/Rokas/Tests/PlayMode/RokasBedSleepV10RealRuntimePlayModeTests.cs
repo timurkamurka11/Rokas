@@ -236,6 +236,52 @@ namespace Rokas.Tests
                 Directory.CreateDirectory(output);
                 File.WriteAllBytes(Path.Combine(output, "watch-3d-visible-rt.png"),
                     pixels.EncodeToPNG());
+
+                // Diagnostic-only comparison: the official surface/glass
+                // meshes remain unchanged in production. Isolate whether
+                // sapphire covers the digits or the display UV/material is
+                // itself incorrect. Restore the glass before leaving this test.
+                var glass = allWatches.FirstOrDefault(x =>
+                    x.name.Contains("Watch_SapphireGlass"));
+                Debug.Log("ROKAS_V10_OLED_DIAGNOSTIC: screenShader=" +
+                    oled.sharedMaterial.shader.name + " screenTex=" +
+                    oled.sharedMaterial.mainTexture.name + " glass=" +
+                    (glass == null ? "missing" : glass.name + "/" +
+                     glass.sharedMaterial.shader.name));
+                if (glass != null)
+                {
+                    bool glassEnabled = glass.enabled;
+                    try
+                    {
+                        glass.enabled = false;
+                        camera.Render();
+                        Graphics.Blit(rt, scaled);
+                        RenderTexture.active = scaled;
+                        pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                        pixels.Apply();
+                        File.WriteAllBytes(Path.Combine(output,
+                            "watch-3d-without-glass-diagnostic.png"),
+                            pixels.EncodeToPNG());
+                    }
+                    finally
+                    {
+                        glass.enabled = glassEnabled;
+                    }
+                }
+
+                object oledPresenter = type.GetProperty("Oled")?.GetValue(composite);
+                var oledTexture = oledPresenter?.GetType().GetProperty("OledRenderTexture")
+                    ?.GetValue(oledPresenter) as RenderTexture;
+                if (oledTexture != null)
+                {
+                    Graphics.Blit(oledTexture, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-oled-source-texture-diagnostic.png"),
+                        pixels.EncodeToPNG());
+                }
             }
             finally
             {
