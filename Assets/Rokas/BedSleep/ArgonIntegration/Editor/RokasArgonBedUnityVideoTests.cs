@@ -193,9 +193,25 @@ namespace Rokas.BedSleep.Argon.Editor
                         // The real composited pixel buffer was already captured.
                         // Avoid reading the GPU TWO extra times per inspect frame.
                         var pixels = capture.GetPixels32();
-                        inspectPixelCount = pixels.Count(x =>
-                            x.b > 90 && x.g > 80 &&
-                            x.b > x.r * 1.35f && x.g > x.r * 1.25f);
+                        // Must count pixels IN the real watch-face rectangle,
+                        // not blue light from the window in the bed background.
+                        var watchPixel = heroPose.WatchScreen();
+                        int cx = Mathf.RoundToInt(watchPixel.x * Width);
+                        int cy = Mathf.RoundToInt(watchPixel.y * Height);
+                        int lit = 0;
+                        for (int y = Mathf.Max(0, cy - 52);
+                            y <= Mathf.Min(Height - 1, cy + 52); ++y)
+                            for (int x = Mathf.Max(0, cx - 58);
+                                x <= Mathf.Min(Width - 1, cx + 58); ++x)
+                            {
+                                var px = pixels[y * Width + x];
+                                if (px.b > 90 && px.g > 80 &&
+                                    px.b > px.r * 1.35f && px.g > px.r * 1.25f)
+                                    ++lit;
+                            }
+                        inspectPixelCount = lit;
+                        Debug.Log("[ROKAS ARGON REAL OLED DEPTH QA] genuine watch ROI cyan=" +
+                            lit + " watchViewport=" + watchPixel);
                     }
                     ++frameNumber;
                 }
