@@ -265,7 +265,7 @@ namespace Rokas.BedSleep.V10Release
             if (upward.sqrMagnitude < 1e-6f)
                 upward = Vector3.ProjectOnPlane(Vector3.up, normal);
             upward.Normalize();
-            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center, 0.74f);
+            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center, 0.83f);
             Quaternion viewRotation = Quaternion.LookRotation(-normal, upward);
             Quaternion inverseView = Quaternion.Inverse(viewRotation);
 
@@ -286,9 +286,12 @@ namespace Rokas.BedSleep.V10Release
             float fovRadians = Mathf.Max(10f, cameraFov) * Mathf.Deg2Rad;
             float tanHalf = Mathf.Tan(fovRadians * 0.5f);
             float aspect = (float)Mathf.Max(1, renderWidth) / Mathf.Max(1, renderHeight);
-            float distance = Mathf.Max(0.45f,
+            // Tight wrist-first POV: the proximal sleeve may continue beneath
+            // the bottom edge, as it should for a raised first-person hand.
+            // Full imported-arm bounds framing makes a 40mm dial illegible.
+            float distance = Mathf.Clamp(
                 Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 0.72f
-                + depth + 0.08f);
+                + depth + 0.08f, 0.42f, 0.72f);
 
             _presentationCamera.transform.SetPositionAndRotation(
                 aim + normal * distance, viewRotation);
