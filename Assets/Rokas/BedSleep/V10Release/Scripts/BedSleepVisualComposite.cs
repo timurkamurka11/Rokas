@@ -265,7 +265,12 @@ namespace Rokas.BedSleep.V10Release
             if (upward.sqrMagnitude < 1e-6f)
                 upward = Vector3.ProjectOnPlane(Vector3.up, normal);
             upward.Normalize();
-            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center, 0.83f);
+            // During TimeSelection the player is reading/adjusting a 40mm
+            // OLED: move from the full raised-arm view to a close watch view.
+            bool inspect = ArmRig.CurrentState ==
+                KeikoFPSArmRigController.ArmClipState.InspectIdle;
+            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center,
+                inspect ? 0.98f : 0.83f);
             Quaternion viewRotation = Quaternion.LookRotation(-normal, upward);
             Quaternion inverseView = Quaternion.Inverse(viewRotation);
 
@@ -289,12 +294,22 @@ namespace Rokas.BedSleep.V10Release
             // Tight wrist-first POV: the proximal sleeve may continue beneath
             // the bottom edge, as it should for a raised first-person hand.
             // Full imported-arm bounds framing makes a 40mm dial illegible.
-            float distance = Mathf.Clamp(
+            float fullArmDistance = Mathf.Clamp(
                 Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 0.72f
                 + depth + 0.08f, 0.42f, 0.72f);
-
-            _presentationCamera.transform.SetPositionAndRotation(
-                aim + normal * distance, viewRotation);
+            float distance = inspect ? Mathf.Clamp(fullArmDistance * 0.52f, 0.32f, 0.42f)
+                : fullArmDistance;
+            Vector3 desiredPosition = aim + normal * distance;
+            if (inspect && _hasReportedCameraFraming && Application.isPlaying)
+            {
+                float blend = 1f - Mathf.Exp(-Mathf.Max(Time.unscaledDeltaTime, 0.016f) * 8f);
+                _presentationCamera.transform.SetPositionAndRotation(
+                    Vector3.Lerp(_presentationCamera.transform.position, desiredPosition, blend),
+                    Quaternion.Slerp(_presentationCamera.transform.rotation, viewRotation, blend));
+            }
+            else
+                _presentationCamera.transform.SetPositionAndRotation(
+                    desiredPosition, viewRotation);
             _presentationCamera.fieldOfView = cameraFov;
             _presentationCamera.nearClipPlane = 0.02f;
             _presentationCamera.farClipPlane = Mathf.Max(8f, distance + depth * 2f + 2f);
