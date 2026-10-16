@@ -55,6 +55,20 @@ jobs:
           test -s "$p/PF_ROKAS_Smartwatch_V10_Candidate.prefab"
           test -s "$p/PF_BedSleep_3DComposite_V10_Candidate.prefab"
           test -s Assets/Rokas/BedSleep/V10Release/Materials/M_Keiko_Skin.mat
+          # Unity runs inside a root-owned Docker container. The files it
+          # serializes can be root-owned even when the host checkout is not.
+          # Change ownership ONLY for the generated V10 candidate artifacts.
+          for path in \
+            "$p" "$p.meta" \
+            'Assets/Rokas/BedSleep/V10Release/Materials' \
+            'Assets/Rokas/BedSleep/V10Release/Materials.meta' \
+            'Assets/Rokas/BedSleep/V10Release/Models' \
+            'Assets/Rokas/BedSleep/V10Release/Textures'; do
+            if test -e "$path"; then
+              sudo chown -R "$(id -u):$(id -g)" "$path"
+              sudo chmod -R u+rwX "$path"
+            fi
+          done
           for path in \
             "$p" "$p.meta" \
             'Assets/Rokas/BedSleep/V10Release/Materials' \
