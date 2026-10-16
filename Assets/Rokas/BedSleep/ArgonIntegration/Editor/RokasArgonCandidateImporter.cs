@@ -179,6 +179,23 @@ namespace Rokas.BedSleep.Argon.Editor
                 watch.transform.SetParent(socket, true);
                 var displayObject = watch.GetComponentsInChildren<Transform>(true)
                     .Single(t => t.name == "Watch_OLED_Display");
+
+                // The authentic GLB places the OLED ~6-8mm BELOW the actual
+                // dorsal hand surface in the imported rest pose. Real Unity
+                // camera screenshots showed the wrist occluding the screen,
+                // even though all 7 authored watch meshes and UVs were valid.
+                // Seat the WHOLE original watch assembly outside the actual
+                // skinned hand bounds: no replacement mesh, no fake strap.
+                var skinSurface = visualSkin.Single(x => x.name ==
+                    "Keiko_Hand_Skin_Mesh").bounds;
+                var oledSurface = displayObject.GetComponent<MeshRenderer>().bounds;
+                float seating = Mathf.Clamp(
+                    skinSurface.max.y - oledSurface.max.y + .0025f,
+                    0f, .012f);
+                watch.transform.position += Vector3.up * seating;
+                Debug.Log("[ROKAS ARGON] Physical authored watch seating " +
+                    seating.ToString("F5") + "m; original mesh/UV/strap unchanged.");
+
                 var collider = displayObject.GetComponent<MeshCollider>();
                 if (collider == null) collider = displayObject.gameObject.AddComponent<MeshCollider>();
                 collider.sharedMesh = displayObject.GetComponent<MeshFilter>().sharedMesh;
