@@ -46,14 +46,38 @@ namespace Rokas.BedSleep.V10Release.Editor
             // Never switch to the old .anim files lacking finger articulation.
             var realClips = new Dictionary<string,AnimationClip>();
             string armFbxPath = ModelDir + "Keiko_FPS_Arm_Rigged.fbx";
-            var allImported = AssetDatabase.LoadAllAssetsAtPath(armFbxPath).OfType<AnimationClip>().ToArray();
+            // Real exported glTF Actions must be imported as Unity Generic FBX
+            // clips. A GUID-only .meta can omit the ModelImporter animation
+            // defaults, so set the actual importer explicitly before preflight.
+            var modelImporter = AssetImporter.GetAtPath(armFbxPath) as ModelImporter;
+            if (modelImporter == null)
+                errors.Add("Actual arm FBX is not a ModelImporter");
+            else
+            {
+                bool needsImport = !modelImporter.importAnimation ||
+                    modelImporter.animationType != ModelImporterAnimationType.Generic;
+                if (needsImport)
+                {
+                    modelImporter.importAnimation = true;
+                    modelImporter.animationType = ModelImporterAnimationType.Generic;
+                    modelImporter.SaveAndReimport();
+                }
+            }
+            var allImported = AssetDatabase.LoadAllAssetsAtPath(armFbxPath)
+                .OfType<AnimationClip>().ToArray();
+            var realClipNames = string.Join(", ", allImported.Select(c => c.name));
+            Debug.Log("[ROKAS V10] Actual imported Blender FBX animation clips (" +
+                allImported.Length + "): " + realClipNames);
+            if (modelImporter != null)
+                Debug.Log("[ROKAS V10] FBX importer defaultClipAnimations: " +
+                    string.Join(", ", modelImporter.defaultClipAnimations.Select(c => c.name)));
             foreach (var name in ClipNames)
             {
                 var matches = allImported.Where(c => c.name == name || c.name.EndsWith("|"+name,
                     StringComparison.Ordinal) || c.name.EndsWith("/"+name, StringComparison.Ordinal)).ToArray();
                 if (matches.Length == 1) realClips.Add(name, matches[0]);
                 else errors.Add("Real FBX must contain exactly one animation Action " + name +
-                    " (found " + matches.Length + ")");
+                    " (found " + matches.Length + ") of real imported clips: " + realClipNames);
             }
             if (srcArm == null) errors.Add("Import the authentic Blender FBX arm first: " + ModelDir);
             if (srcWatch == null) errors.Add("Import the seven-part Blender FBX watch first: " + ModelDir);
