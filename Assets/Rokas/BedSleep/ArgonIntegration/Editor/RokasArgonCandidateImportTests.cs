@@ -120,6 +120,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 readback.Apply();
                 File.WriteAllBytes(Path.Combine(outDir,
                     "argon-real-oled-viewer-side-closeup.png"), readback.EncodeToPNG());
+                int cyanScreenPixels = readback.GetPixels32().Count(p =>
+                    p.b > 90 && p.g > 80 && p.b > p.r * 1.35f &&
+                    p.g > p.r * 1.25f);
+                Debug.Log("[ROKAS ARGON] Physical OLED-facing camera bright cyan pixels: " +
+                    cyanScreenPixels + "/230400");
+                Assert.That(cyanScreenPixels, Is.GreaterThan(16),
+                    "Original watch face is obscured on the actual Unity FBX. " +
+                    "Physical seating/UV/material must be corrected, never replaced by a fake screen.");
 
                 // Sample the genuine FBX skeletal clips for mid-raise,
                 // watch-inspect, and mid-lower screenshots. No procedural
