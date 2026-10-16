@@ -9,3 +9,5 @@ Native conversion requested: original master GLB to Blender FBX for actual Unity
 Retry: install numpy, remove bad FBX, require newly native-exported Blender FBX files before Unity import.
 
 Retry: native 3 skinned meshes imported; match only 8 authentic 25Bone_GenericRig animation tracks.
+
+Render-quality QA: OLED viewer-side 24cm frame + genuine Raise/InspectIdle/Lower FBX clip samples.
