@@ -110,6 +110,16 @@ namespace Rokas.BedSleep.V10Release
             InputRouter.ConfigureRouter(_presentationCamera, Watch.OledMeshCollider, targetUiRect);
         }
 
+        private void LateUpdate()
+        {
+            // Animator and bone attachments settle before LateUpdate, so the
+            // camera frames the actual animated wrist. This does not depend
+            // on ROKAS View.Tick being called in a focused frame.
+            if (Application.isPlaying && ArmRig != null && Watch != null &&
+                ArmRig.CurrentState == KeikoFPSArmRigController.ArmClipState.InspectIdle)
+                FrameImportedArmAndWatch();
+        }
+
         private static void AssignIsolatedLayer(Transform root)
         {
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
@@ -150,11 +160,9 @@ namespace Rokas.BedSleep.V10Release
         public void TickComposite(float dt)
         {
             ArmRig?.TickAnimation(dt);
-            // Animator-backed V10 FBX clips continue moving the wrist after the
-            // 2D fade has finished. Follow its actual render bounds during watch
-            // inspection so the wrist and OLED cannot disappear off-camera.
-            if (ArmRig != null && ArmRig.CurrentState == KeikoFPSArmRigController.ArmClipState.InspectIdle)
-                FrameImportedArmAndWatch();
+            // Camera tracking happens in LateUpdate independently of the 2D
+            // hub Tick/focus gate. A headless or unfocused hub must not leave
+            // the visible watch stranded at the original 0.72m-wide shot.
             Watch?.TickWatch(dt);
             Sfx?.TickQueuedCrownClicks(dt);
             InputRouter?.TickRouter();
