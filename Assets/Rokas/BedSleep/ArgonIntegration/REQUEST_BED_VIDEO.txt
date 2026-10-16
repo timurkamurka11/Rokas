@@ -7,3 +7,5 @@ Record authentic skinned Argon FBX + actual OLED at 24fps with original ROKAS Be
 RETRY_CAPTURE=longer-inspect-6sec-video-24fps-final
 
 FINAL_MP4_RETRY=Unity_149Frames_PASS_ChecksPermissionRestored
+
+RETRY_SHARE=wait-until-original-download-button-visible
