@@ -176,10 +176,27 @@ namespace Rokas.BedSleep.Argon.Editor
                 Vector3 projectedShoulder = Vector3.ProjectOnPlane(shoulderVector, faceNormal);
                 if (projectedShoulder.sqrMagnitude < 1e-5f)
                     projectedShoulder = Vector3.ProjectOnPlane(Vector3.forward, faceNormal);
-                // The cuff belongs at the BOTTOM, never emerging from ceiling.
+                // The cuff belongs below and LEFT of the watch. Rotate the
+                // virtual camera around the real OLED face, not the FBX bone.
+                // Pick the framing which puts the sleeve left of the display.
+                Vector3 targetUp = -projectedShoulder.normalized;
                 Quaternion bedPovRotation = Quaternion.LookRotation(
-                    -faceNormal, -projectedShoulder.normalized);
+                    -faceNormal, targetUp);
+                float largestLeftwardOffset = float.NegativeInfinity;
                 Vector3 inspectCenter = oled.bounds.center;
+                foreach (float roll in new[] { -35f, 35f })
+                {
+                    Quaternion candidate = Quaternion.LookRotation(
+                        -faceNormal, Quaternion.AngleAxis(roll, faceNormal) * targetUp);
+                    Vector3 localSleeve = Quaternion.Inverse(candidate) *
+                        (physicalArm.bounds.center - inspectCenter);
+                    float leftward = -localSleeve.x;
+                    if (leftward > largestLeftwardOffset)
+                    {
+                        largestLeftwardOffset = leftward;
+                        bedPovRotation = candidate;
+                    }
+                }
                 Vector3 bedPovCamera = inspectCenter + faceNormal * .55f;
                 cam.fieldOfView = 42f;
                 cam.transform.SetPositionAndRotation(bedPovCamera, bedPovRotation);
@@ -217,14 +234,29 @@ namespace Rokas.BedSleep.Argon.Editor
                         " armViewport=" + cuffViewport);
                     if (stage.state == "SleepArm_InspectIdle")
                     {
+                        int litOled = readback.GetPixels32().Count(p =>
+                            p.b > 90 && p.g > 80 &&
+                            p.b > p.r * 1.35f && p.g > p.r * 1.25f);
+                        Debug.Log("[ROKAS ARGON POV] inspect OLED lit pixels=" + litOled);
                         Assert.That(watchViewport.z, Is.GreaterThan(0f));
                         Assert.That(watchViewport.x, Is.InRange(.30f, .70f));
                         Assert.That(watchViewport.y, Is.InRange(.27f, .73f));
                         Assert.That(cuffViewport.y, Is.LessThan(watchViewport.y),
                             "Cuff must rise FROM bottom-left, never descend from the ceiling.");
+                        Assert.That(cuffViewport.x, Is.LessThan(watchViewport.x - .04f),
+                            "The sleeve must enter from LEFT of the watch.");
+                        Assert.That(litOled, Is.GreaterThan(12),
+                            "The real OLED face is edge-on/unreadable in the actual inspect POV.");
                     }
                 }
+                // Exit frame is intentionally empty! Check visible pixels in
+                // the true inspection pose, never AFTER the Lower 90% frame.
                 root.transform.position = startingPosition;
+                inspectClip.SampleAnimation(animator.gameObject, inspectClip.length * .5f);
+                cam.Render();
+                RenderTexture.active = rt;
+                readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                readback.Apply();
 
                 int changed = 0;
                 foreach (var pixel in readback.GetPixels32())
