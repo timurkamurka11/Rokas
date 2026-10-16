@@ -75,7 +75,24 @@ namespace Rokas.BedSleep.V10Release.Editor
         {
             string path = Root + "Textures/" + rel;
             Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (tex == null) throw new InvalidOperationException("V10 required texture missing: " + path);
+            if (tex == null)
+            {
+                // A freshly staged Blender/source import can leave the .meta with
+                // a GUID before Unity serializes the complete TextureImporter.
+                // Reimport only this genuine PNG; never synthesize a flat texture.
+                AssetDatabase.ImportAsset(path,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+            if (tex == null)
+            {
+                var importer = AssetImporter.GetAtPath(path);
+                var main = AssetDatabase.LoadMainAssetAtPath(path);
+                throw new InvalidOperationException("V10 real texture failed Unity AssetDatabase import: " +
+                    path + " guid=" + AssetDatabase.AssetPathToGUID(path) +
+                    " importer=" + (importer == null ? "null" : importer.GetType().FullName) +
+                    " mainAsset=" + (main == null ? "null" : main.GetType().FullName));
+            }
             return tex;
         }
 
