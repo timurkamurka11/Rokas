@@ -123,8 +123,9 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'feat(bedsleep): save Blender-imported 25-bone arm, seven watch parts and PBR Unity prefabs'
-            git fetch origin codex/bedsleep-v10-release-stage
-            git rebase origin/codex/bedsleep-v10-release-stage
+            # Unity may leave unrelated unstaged importer state. Do NOT reset,
+            # clean, stash or rebase that worktree. Push this commit only;
+            # the remote rejects a non-fast-forward update automatically.
             git push origin HEAD:codex/bedsleep-v10-release-stage
           fi
       - name: Save actual Unity test logs
