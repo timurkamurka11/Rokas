@@ -242,10 +242,6 @@ namespace Rokas.Presentation
             var soft = Resources.Load<Texture2D>(
                 "BedSleep/BedCeilingPOV_Soft");
             armWatchAvailable = ceiling != null && arm != null;
-            if (!armWatchAvailable)
-                Debug.LogWarning("[ROKAS BedSleep 2.5D] Missing reference " +
-                    "Resources/BedSleep/BedCeilingPOV and/or BedWatchArmPOV. " +
-                    "Install the Bed Sleep Reference Assets ZIP.");
 
             lyingPov = ui.Art(root, "LyingCeilingPOV_Approved",
                 ceiling != null ? ceiling : originalRoom,
@@ -274,10 +270,16 @@ namespace Rokas.Presentation
                     productionRig.Texture, 0, 0, 1920, 1080);
                 real3DArmPov.color = new Color(1f, 1f, 1f, 0f);
                 real3DArmPov.raycastTarget = false;
-                armWatchAvailable = ceiling != null;
+                // The genuine V10 rig provides its own 3D arm/watch.
+                // Missing optional old POV photos must not disable the bed interaction.
+                armWatchAvailable = true;
                 Debug.Log("[ROKAS BedSleep V3] REAL 25-bone 3D arm and " +
                     "OLED watch composite active");
             }
+
+            if (!armWatchAvailable)
+                Debug.LogWarning("[ROKAS BedSleep 2.5D] No compatible 3D rig or authored " +
+                    "BedCeilingPOV/BedWatchArmPOV resources are available.");
 
             // Controls are deliberately staged: alarm button FIRST, then
             // arm and interactive OLED. No always-on bottom watch menu.

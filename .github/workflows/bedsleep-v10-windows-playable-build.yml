@@ -4,13 +4,16 @@ on:
     branches: [codex/bedsleep-v10-release-stage]
     paths:
       - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+      - '.github/workflows/bedsleep-v10-windows-playable-build.yml'
   workflow_dispatch:
 permissions:
   contents: read
   checks: write
 concurrency:
   group: rokas-v10-playable-windows-review
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   windows-player:
     name: Build executable game with V10 hand and watch (Unity 6)
