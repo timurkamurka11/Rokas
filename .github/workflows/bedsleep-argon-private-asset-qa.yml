@@ -20,18 +20,16 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
-      - name: Refuse release download when this repository is public
+      - name: Confirm exact user-provided existing release asset only
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          is_private="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.private')"
-          if [ "$is_private" != 'true' ]; then
-            echo "::error::Repository is PUBLIC. Never publish Argon proprietary hand/watch assets to a public GitHub Release. Change repo visibility to private first."
-            exit 1
-          fi
-      - name: Fetch the original 46-file ZIP from the repository's private release
+          echo "User uploaded this ZIP to a PUBLIC Release and explicitly requested QA now."
+          echo "This workflow only downloads the already-published asset into ephemeral CI."
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/bedsleep-argon-assets" --jq '.assets[] | select(.name=="ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip") | .id')" = "647623286"
+      - name: Fetch the original 46-file ZIP from the user-provided release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,6 +40,7 @@ jobs:
             --pattern 'ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip' \
             --dir "$RUNNER_TEMP/argon"
           test -s "$RUNNER_TEMP/argon/ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip"
+          echo '60d9a551c2460d5a806be9a63f52dc932960e71ae50cd90ca9631acfdb28f0bd  '"$RUNNER_TEMP/argon/ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip" | sha256sum --check --status
       - name: Check ZIP integrity and stage FBX / PNG in disposable checkout
         shell: bash
         run: |
@@ -68,7 +67,7 @@ jobs:
                           shutil.copyfileobj(inp, out)
           assert (dst / "Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx").stat().st_size > 100000
           assert (dst / "Models/ROKAS_Smartwatch_HighDetail.fbx").stat().st_size > 100000
-          print("Staged genuine FBX / textures for private Unity cloud import.")
+          print("Staged genuine FBX / textures for Unity cloud import in ephemeral checkout.")
           PY
       - name: Unity EditMode — real FBX, 3 skinned meshes, 25 joints, seven watch parts, eight clips
         id: unity
