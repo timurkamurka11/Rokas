@@ -74,7 +74,9 @@ namespace Rokas.BedSleep.Argon.Editor
             if (armAxis.sqrMagnitude < .9f || normal.sqrMagnitude < .9f)
                 throw new InvalidOperationException("Argon sleeve->finger axis or OLED normal invalid");
             // Screen +X = authored sleeve -> fingertip; +Y = upright.
-            var cameraUp = Vector3.Cross(normal, armAxis).normalized;
+            // Unity camera basis: cameraRight = Cross(cameraUp, cameraForward).
+            // Cross(armAxis, normal) makes right point FROM cuff TO fingertips.
+            var cameraUp = Vector3.Cross(armAxis, normal).normalized;
             camera.fieldOfView = 38f;
             camera.transform.rotation = Quaternion.LookRotation(-normal, cameraUp);
             right = camera.transform.right;
