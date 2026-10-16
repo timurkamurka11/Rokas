@@ -100,6 +100,7 @@ namespace Rokas.BedSleep.V10Release
                     throw new MissingReferenceException("ROKAS BedSleep V7: smartwatch Prefab is missing its controller.");
             }
             Watch.InitializeWatch(ArmRig.WatchSocket, Oled.OledRenderTexture);
+            NormalizeImportedPhysicalScale();
             FrameImportedArmAndWatch();
 
             Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
@@ -159,6 +160,50 @@ namespace Rokas.BedSleep.V10Release
             InputRouter?.TickRouter();
         }
 
+
+        /// <summary>
+        /// Native Unity imports of the supplied source FBXs currently have
+        /// incompatible author units: cloud PlayMode measured 41.85 units for
+        /// an arm and 434 units for the OLED face. The original fixed view
+        /// at 0.55 units consequently saw an empty frame. Convert once at the
+        /// prefab-instance roots (never mutate the source FBX/importer).
+        /// Only apply when bounds are implausibly large for a first-person arm
+        /// or a wristwatch, keeping already metric imports unchanged.
+        /// </summary>
+        private void NormalizeImportedPhysicalScale()
+        {
+            var skin = ArmRig == null ? null : ArmRig.SkinnedRenderer;
+            if (skin == null || Watch == null || Watch.OledRenderer == null)
+                return;
+
+            float armLongest = LongestAxis(skin.bounds.size);
+            if (armLongest > 2f && armLongest < 1000000f)
+            {
+                float factor = 0.42f / armLongest;
+                ArmRig.transform.localScale *= factor;
+                Debug.Log("[ROKAS BedSleep V10] Normalized authored arm units: " +
+                    armLongest.ToString("F3") + " -> " +
+                    LongestAxis(skin.bounds.size).ToString("F3") +
+                    "m (factor " + factor.ToString("G5") + ")");
+            }
+
+            // Wristwatch is parented under arm's imported bone socket, so
+            // remeasure *after* arm scaling instead of assuming the original
+            // watch mesh uses meters. Target 40mm OLED diagonal axis.
+            float oledLongest = LongestAxis(Watch.OledRenderer.bounds.size);
+            if (oledLongest > 0.15f && oledLongest < 1000000f)
+            {
+                float factor = 0.04f / oledLongest;
+                Watch.transform.localScale *= factor;
+                Debug.Log("[ROKAS BedSleep V10] Normalized authored OLED units: " +
+                    oledLongest.ToString("F3") + " -> " +
+                    LongestAxis(Watch.OledRenderer.bounds.size).ToString("F3") +
+                    "m (factor " + factor.ToString("G5") + ")");
+            }
+        }
+
+        private static float LongestAxis(Vector3 size) =>
+            Mathf.Max(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
 
         /// <summary>
         /// Keeps imported skin, sleeve, nails and physical seven-mesh watch in
