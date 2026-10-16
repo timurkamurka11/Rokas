@@ -3,3 +3,5 @@ Release asset ID: 647623286
 Asset: ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip
 SHA-256: 60d9a551c2460d5a806be9a63f52dc932960e71ae50cd90ca9631acfdb28f0bd
 This marker triggers isolated candidate Unity EditMode import in GitHub Actions. The existing active ROKAS Bed Sleep V10 and original game files remain unchanged.
+
+Native conversion requested: original master GLB to Blender FBX for actual Unity skinned-mesh reimport. Production V10 is unchanged.
