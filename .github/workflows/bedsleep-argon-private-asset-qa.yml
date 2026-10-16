@@ -76,6 +76,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if ! command -v blender >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends blender
+          fi
           blender --background --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/reexport_argon_master_glb.py -- "$RUNNER_TEMP/argon/original-master.glb" "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models"
       - name: Unity EditMode — real FBX, 3 skinned meshes, 25 joints, seven watch parts, eight clips
         id: unity
