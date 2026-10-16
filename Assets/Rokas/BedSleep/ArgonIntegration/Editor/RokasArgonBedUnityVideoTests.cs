@@ -120,31 +120,16 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(inspect.length, Is.GreaterThan(0));
                 configureTime.Invoke(oledPresenter, new object[] { 19, 30, 14 });
                 setConfirmed.Invoke(oledPresenter, new object[] { false });
+                // Snapshot untouched imported GLB/FBX finger bind rotations
+                // BEFORE sampling the animation. Its base-only MCP curls are
+                // why the previous video showed bent / broken fingers.
+                var heroPose = new RokasArgonHorizontalHeroPose(root);
                 inspect.SampleAnimation(animator.gameObject, inspect.length * .5f);
-
-                // Cloud Unity calibrated the ACTUAL imported OLED's viewer
-                // normal to world -Y after FBX conversion (measured, not guessed).
-                Vector3 watchCenter = oled.bounds.center;
-                Vector3 viewerNormal = Vector3.down;
-                Vector3 sleeveDirection = Vector3.ProjectOnPlane(
-                    arm.bounds.center - watchCenter, viewerNormal);
-                Assert.That(sleeveDirection.magnitude, Is.GreaterThan(.001f));
-                Quaternion bestRotation = Quaternion.identity;
-                float bestLeft = float.NegativeInfinity;
-                foreach (var roll in new[] { -35f, 35f })
-                {
-                    Quaternion q = Quaternion.LookRotation(-viewerNormal,
-                        Quaternion.AngleAxis(roll, viewerNormal) * -sleeveDirection.normalized);
-                    Vector3 cuff = Quaternion.Inverse(q) * sleeveDirection;
-                    if (-cuff.x > bestLeft)
-                    {
-                        bestLeft = -cuff.x;
-                        bestRotation = q;
-                    }
-                }
-                cam.transform.SetPositionAndRotation(
-                    watchCenter + viewerNormal * .48f, bestRotation);
-                var originalRootPos = root.transform.position;
+                heroPose.CaptureHeroPose();
+                heroPose.RestoreNaturalAnatomy();
+                // 2D reference geometry: sleeve LEFT, wrist near center, all
+                // fingers RIGHT. Face the actual imported OLED, not palm-down.
+                heroPose.ConfigureCamera(cam, Vector3.down, .57f);
 
                 string outDir = Path.Combine(Directory.GetCurrentDirectory(),
                     "Artifacts", "ArgonBedVideo");
@@ -158,14 +143,31 @@ namespace Rokas.BedSleep.Argon.Editor
                 {
                     configureTime.Invoke(oledPresenter, new object[] { 19, 30, durationStep });
                     setConfirmed.Invoke(oledPresenter, new object[] { confirmed });
-                    root.transform.position = originalRootPos;
                     clip.SampleAnimation(animator.gameObject, clip.length *
                         Mathf.Clamp01(normalizedTime));
-                    // This is a CAMERA-RELATIVE presentation track for the
-                    // original skinned FBX, not a generated or substituted hand.
-                    root.transform.position = originalRootPos +
-                        (cam.transform.right + cam.transform.up) * exitDistance;
+                    // Keep the REAL 25-bone source and FBX clip, but eliminate
+                    // base-only finger curling and excessive wrist twisting.
+                    heroPose.RestoreNaturalAnatomy();
+                    // Rigid cinematic slide from OFF-SCREEN LEFT to horizontal
+                    // hero pose; no longer rise diagonally from bottom edge.
+                    heroPose.SetPresentation(exitDistance);
                     cam.Render();
+                    if (clip == inspect && frameNumber % 8 == 0)
+                    {
+                        var sleeveV = heroPose.SleeveScreen();
+                        var watchV = heroPose.WatchScreen();
+                        var fingerV = heroPose.FingertipScreen();
+                        Assert.That(sleeveV.x, Is.LessThan(watchV.x - .09f),
+                            "Sleeve must be LEFT of the genuine watch");
+                        Assert.That(watchV.x, Is.InRange(.24f, .58f),
+                            "Watch must stay near center-left");
+                        Assert.That(fingerV.x, Is.GreaterThan(watchV.x + .09f),
+                            "Fingertips must extend RIGHT of wrist");
+                        Assert.That(Mathf.Abs(fingerV.y-watchV.y), Is.LessThan(.18f),
+                            "Hand must be horizontally aligned, not vertical");
+                        Debug.Log("[ROKAS ARGON HORIZONTAL QA] cuff=" + sleeveV +
+                            " watch=" + watchV + " fingertip=" + fingerV);
+                    }
                     Graphics.Blit(trueBed, finalRT, compositeMat);
                     RenderTexture.active = finalRT;
                     capture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
@@ -214,22 +216,23 @@ namespace Rokas.BedSleep.Argon.Editor
                     }
                 }
 
-                // Real ceiling before hand appears.
-                Segment(FindClip("SleepArm_HiddenIdle"), .65f, t => -.24f,
+                // Reference: sleeve enters from off-screen LEFT. The whole
+                // skinned hand translates rigidly toward watch-center at the
+                // exact horizontal viewing angle, never swings up to ceiling.
+                Segment(FindClip("SleepArm_HiddenIdle"), .65f,
+                    t => 0f, t => 14, false);
+                Segment(raise, raise.length, t => t * .86f,
                     t => 14, false);
-                // Raise from bottom left; never emerge from the top.
-                Segment(raise, raise.length, t => Mathf.Lerp(-.24f, -.06f,
-                    Mathf.SmoothStep(0f, 1f, t)), t => 14, false);
-                Segment(wrist, wrist.length, t => Mathf.Lerp(-.06f, 0f, t),
+                Segment(wrist, wrist.length, t => .86f + t * .14f,
                     t => 14, false);
-                Segment(inspect, 1.65f, t => 0f, t => 14, false);
-                Segment(crown, crown.length, t => 0f,
+                Segment(inspect, 1.65f, t => 1f, t => 14, false);
+                Segment(crown, crown.length, t => 1f,
                     t => 14 + Mathf.FloorToInt(t * 4f), false);
-                Segment(confirm, confirm.length, t => 0f, t => 18, true);
-                Segment(lower, lower.length, t => Mathf.Lerp(0f, -.24f,
-                    Mathf.SmoothStep(0f, 1f, t)), t => 18, true);
+                Segment(confirm, confirm.length, t => 1f, t => 18, true);
+                Segment(lower, lower.length, t => 1f - t * .92f,
+                    t => 18, true);
                 Segment(FindClip("SleepArm_ReturnIdle"), .55f,
-                    t => -.24f, t => 18, true);
+                    t => .08f * (1f-t), t => 18, true);
 
                 Assert.That(frameNumber, Is.GreaterThan(105),
                     "Need a genuine continuous 24fps clip, not static animation snapshots.");
@@ -244,7 +247,9 @@ namespace Rokas.BedSleep.Argon.Editor
                     "  \"frame_count\": " + frameNumber + ",\n" +
                     "  \"resolution\": \"1280x720\",\n" +
                     "  \"original_game_oled\": true,\n" +
-                    "  \"original_fbx_clips\": true\n" +
+                    "  \"original_fbx_clips\": true,\n" +
+                    "  \"hero_pose\": \"sleeve-left-watch-center-fingers-right\",\n" +
+                    "  \"finger_correction\": \"rest-relative-MCP-clamp-11deg\"\n" +
                     "}";
                 File.WriteAllText(Path.Combine(outDir, "capture_manifest.json"), report);
                 Debug.Log("[ROKAS ARGON BED VIDEO] PASS recorded " + frameNumber +
