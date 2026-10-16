@@ -86,7 +86,9 @@ namespace Rokas.BedSleep.Argon.Editor
                 keyObj = new GameObject("ROKAS_ARGON_TEST_LIGHT");
                 var light = keyObj.AddComponent<Light>();
                 light.type = LightType.Directional;
-                light.intensity = 1.8f;
+                // A soft neutral QA key avoids washing out real skin
+                // albedo/normal maps. No texture or geometry substitution.
+                light.intensity = 0.75f;
                 keyObj.transform.rotation = Quaternion.Euler(35f, -20f, 30f);
 
                 rt = new RenderTexture(640, 360, 24, RenderTextureFormat.ARGB32);
@@ -103,6 +105,45 @@ namespace Rokas.BedSleep.Argon.Editor
                 Directory.CreateDirectory(outDir);
                 File.WriteAllBytes(Path.Combine(outDir,
                     "argon-genuine-fbx-editor-preview.png"), readback.EncodeToPNG());
+
+                // Authored OLED normal is local +Y; look from the real
+                // viewer-facing side, with the forearm naturally extending
+                // from the bottom edge rather than from the top of the image.
+                Vector3 eyeDirection = (Vector3.up * 0.94f
+                    + Vector3.back * 0.25f + Vector3.left * 0.12f).normalized;
+                cam.fieldOfView = 38f;
+                cam.transform.position = oled.bounds.center + eyeDirection * .24f;
+                cam.transform.rotation = Quaternion.LookRotation(-eyeDirection, Vector3.right);
+                cam.Render();
+                RenderTexture.active = rt;
+                readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                readback.Apply();
+                File.WriteAllBytes(Path.Combine(outDir,
+                    "argon-real-oled-viewer-side-closeup.png"), readback.EncodeToPNG());
+
+                // Sample the genuine FBX skeletal clips for mid-raise,
+                // watch-inspect, and mid-lower screenshots. No procedural
+                // stand-in is used for animation, camera or hand geometry.
+                var animator = root.GetComponentInChildren<Animator>(true);
+                Assert.That(animator?.runtimeAnimatorController, Is.Not.Null);
+                foreach (string state in new[]{
+                    "SleepArm_Raise", "SleepArm_InspectIdle", "SleepArm_Lower"})
+                {
+                    var clip = animator.runtimeAnimatorController.animationClips
+                        .Single(x => x.name == state);
+                    float t = state == "SleepArm_InspectIdle" ?
+                        clip.length * .5f : clip.length * .55f;
+                    clip.SampleAnimation(animator.gameObject, t);
+                    cam.Render();
+                    RenderTexture.active = rt;
+                    readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                    readback.Apply();
+                    File.WriteAllBytes(Path.Combine(outDir,
+                        "argon-genuine-" + state + "-55pct.png"), readback.EncodeToPNG());
+                    Debug.Log("[ROKAS ARGON] Genuine FBX clip " + state +
+                        " sampled at " + t.ToString("F2") +
+                        " seconds. Wrist=" + oled.bounds.center);
+                }
 
                 int changed = 0;
                 foreach (var pixel in readback.GetPixels32())
