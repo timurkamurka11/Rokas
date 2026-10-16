@@ -15,3 +15,5 @@ MP4_ENCODE_FIX_RETRY=render-original-149-frames-encode-in-runner-temp-20261016
 HORIZONTAL_HERO_QA=1 sleeve-left OLED-center fingers-right natural-MCP-limits preserve-source-FBX
 
 HORIZONTAL_BASIS_HANDEDNESS_RETRY=fix-cross-armAxis-normal
+
+PHYSICAL_WATCH_DORSAL_TEST=front-+Y-depth-tested-true-OLED-camera-0.41m-600s-timeout
