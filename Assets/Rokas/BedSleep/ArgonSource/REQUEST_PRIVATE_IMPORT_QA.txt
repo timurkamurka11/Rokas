@@ -11,3 +11,5 @@ Retry: install numpy, remove bad FBX, require newly native-exported Blender FBX 
 Retry: native 3 skinned meshes imported; match only 8 authentic 25Bone_GenericRig animation tracks.
 
 Render-quality QA: OLED viewer-side 24cm frame + genuine Raise/InspectIdle/Lower FBX clip samples.
+
+Wrist seating fix, real OLED cyan pixel gate, and Raise/InspectIdle/Lower authentic animation snapshot QA.
