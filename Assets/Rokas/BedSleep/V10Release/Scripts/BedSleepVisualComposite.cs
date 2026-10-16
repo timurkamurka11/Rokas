@@ -102,6 +102,12 @@ namespace Rokas.BedSleep.V10Release
             Watch.InitializeWatch(ArmRig.WatchSocket, Oled.OledRenderTexture);
             NormalizeImportedPhysicalScale();
             FrameImportedArmAndWatch();
+            // Imported OLED is physically recessed under the titanium case:
+            // source pixels and UVs are correct but the watch shell occludes
+            // the entire screen. Seat the ACTUAL mesh outside the face and
+            // re-frame its new physical position; no substitute UI or watch.
+            Watch.SeatOledAboveBezel(_presentationCamera);
+            FrameImportedArmAndWatch();
 
             Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
