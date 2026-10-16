@@ -255,7 +255,11 @@ namespace Rokas.BedSleep.Argon.Editor
                     " sleeve-left=" + largestLeftwardOffset);
                 Assert.That(bestCyan, Is.GreaterThan(12),
                     "None of the genuine imported OLED mesh viewing directions expose a readable screen.");
-                Vector3 bedPovCamera = inspectCenter + faceNormal * .34f;
+                // Use the calibrated real OLED face orientation, but pull
+                // the gameplay camera back to include the original fingers,
+                // skin and sleeve instead of cropping the hand at the top.
+                cam.fieldOfView = 40f;
+                Vector3 bedPovCamera = inspectCenter + faceNormal * .48f;
                 cam.transform.SetPositionAndRotation(bedPovCamera, bedPovRotation);
                 cam.Render();
                 RenderTexture.active = rt;
