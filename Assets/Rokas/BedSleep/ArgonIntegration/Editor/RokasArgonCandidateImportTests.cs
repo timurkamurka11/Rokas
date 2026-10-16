@@ -171,42 +171,93 @@ namespace Rokas.BedSleep.Argon.Editor
                         System.StringComparison.Ordinal));
                 inspectClip.SampleAnimation(animator.gameObject, inspectClip.length * .5f);
 
-                Vector3 faceNormal = oled.transform.TransformDirection(Vector3.up).normalized;
-                Vector3 shoulderVector = shoulder.position - oled.bounds.center;
-                Vector3 projectedShoulder = Vector3.ProjectOnPlane(shoulderVector, faceNormal);
-                if (projectedShoulder.sqrMagnitude < 1e-5f)
-                    projectedShoulder = Vector3.ProjectOnPlane(Vector3.forward, faceNormal);
-                // The cuff belongs below and LEFT of the watch. Rotate the
-                // virtual camera around the real OLED face, not the FBX bone.
-                // Pick the framing which puts the sleeve left of the display.
-                Vector3 targetUp = -projectedShoulder.normalized;
-                Quaternion bedPovRotation = Quaternion.LookRotation(
-                    -faceNormal, targetUp);
-                float largestLeftwardOffset = float.NegativeInfinity;
+                // The Argon GLB+Blender FBX has imported mesh/object axis
+                // conversions. Transform.up may NOT point along the physical
+                // OLED's world-space FRONT after a skinned wrist-turn clip.
+                // Calibrate ONLY the render camera from actual cyan pixels
+                // produced by the original OLED mesh/UVs and author preview
+                // texture; never modify/watch-swap source geometry.
                 Vector3 inspectCenter = oled.bounds.center;
-                foreach (float roll in new[] { -35f, 35f })
+                Vector3 wristToSleeve = physicalArm.bounds.center - inspectCenter;
+                Vector3[] candidateDirections = {
+                    oled.transform.up, -oled.transform.up,
+                    oled.transform.right, -oled.transform.right,
+                    oled.transform.forward, -oled.transform.forward,
+                    Vector3.up, Vector3.down, Vector3.left, Vector3.right,
+                    Vector3.forward, Vector3.back,
+                    (Vector3.up + Vector3.forward).normalized,
+                    (Vector3.up + Vector3.back).normalized,
+                    (Vector3.up + Vector3.left).normalized,
+                    (Vector3.up + Vector3.right).normalized,
+                    (Vector3.down + Vector3.forward).normalized,
+                    (Vector3.down + Vector3.back).normalized,
+                    (Vector3.down + Vector3.left).normalized,
+                    (Vector3.down + Vector3.right).normalized
+                };
+                Vector3 faceNormal = oled.transform.up;
+                Quaternion bedPovRotation = Quaternion.identity;
+                int bestCyan = -1;
+                float largestLeftwardOffset = 0f;
+                cam.fieldOfView = 36f;
+                cam.backgroundColor = new Color(.06f, .055f, .065f, 0f);
+                foreach (var directionCandidate in candidateDirections)
                 {
-                    Quaternion candidate = Quaternion.LookRotation(
-                        -faceNormal, Quaternion.AngleAxis(roll, faceNormal) * targetUp);
-                    Vector3 localSleeve = Quaternion.Inverse(candidate) *
-                        (physicalArm.bounds.center - inspectCenter);
-                    float leftward = -localSleeve.x;
-                    if (leftward > largestLeftwardOffset)
+                    Vector3 direction = directionCandidate.normalized;
+                    Vector3 sleeveProjection = Vector3.ProjectOnPlane(
+                        wristToSleeve, direction);
+                    if (sleeveProjection.sqrMagnitude < 1e-5f)
+                        sleeveProjection = Vector3.ProjectOnPlane(
+                            Vector3.forward, direction);
+                    if (sleeveProjection.sqrMagnitude < 1e-5f)
+                        sleeveProjection = Vector3.ProjectOnPlane(
+                            Vector3.right, direction);
+                    if (sleeveProjection.sqrMagnitude < 1e-5f) continue;
+                    Vector3 up = -sleeveProjection.normalized;
+                    foreach (float roll in new[] { -35f, 35f })
                     {
-                        largestLeftwardOffset = leftward;
-                        bedPovRotation = candidate;
+                        Quaternion candidate = Quaternion.LookRotation(
+                            -direction, Quaternion.AngleAxis(roll, direction) * up);
+                        cam.transform.SetPositionAndRotation(
+                            inspectCenter + direction * .34f, candidate);
+                        cam.Render();
+                        RenderTexture.active = rt;
+                        readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                        readback.Apply();
+                        int lit = readback.GetPixels32().Count(p =>
+                            p.b > 90 && p.g > 80 &&
+                            p.b > p.r * 1.35f && p.g > p.r * 1.25f);
+                        Vector3 localSleeve = Quaternion.Inverse(candidate) *
+                            (physicalArm.bounds.center - inspectCenter);
+                        float leftward = -localSleeve.x;
+                        if (lit > bestCyan ||
+                            (lit == bestCyan && leftward > largestLeftwardOffset))
+                        {
+                            bestCyan = lit;
+                            faceNormal = direction;
+                            bedPovRotation = candidate;
+                            largestLeftwardOffset = leftward;
+                        }
                     }
                 }
-                Vector3 bedPovCamera = inspectCenter + faceNormal * .55f;
-                cam.fieldOfView = 42f;
+                Debug.Log("[ROKAS ARGON POV] calibrated real OLED front: " +
+                    "direction=" + faceNormal + " cyan=" + bestCyan +
+                    " sleeve-left=" + largestLeftwardOffset);
+                Assert.That(bestCyan, Is.GreaterThan(12),
+                    "None of the genuine imported OLED mesh viewing directions expose a readable screen.");
+                Vector3 bedPovCamera = inspectCenter + faceNormal * .34f;
                 cam.transform.SetPositionAndRotation(bedPovCamera, bedPovRotation);
-                cam.backgroundColor = new Color(.06f, .055f, .065f, 0f);
+                cam.Render();
+                RenderTexture.active = rt;
+                readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                readback.Apply();
+                File.WriteAllBytes(Path.Combine(outDir,
+                    "argon-real-OLED-calibrated-inspect.png"), readback.EncodeToPNG());
                 var povStages = new[] {
-                    new { state="SleepArm_Raise", frac=.15f, slide=-.24f },
-                    new { state="SleepArm_Raise", frac=.55f, slide=-.10f },
+                    new { state="SleepArm_Raise", frac=.15f, slide=-.22f },
+                    new { state="SleepArm_Raise", frac=.55f, slide=-.085f },
                     new { state="SleepArm_InspectIdle", frac=.50f, slide=0f },
-                    new { state="SleepArm_Lower", frac=.55f, slide=-.10f },
-                    new { state="SleepArm_Lower", frac=.90f, slide=-.24f }
+                    new { state="SleepArm_Lower", frac=.55f, slide=-.085f },
+                    new { state="SleepArm_Lower", frac=.90f, slide=-.22f }
                 };
                 foreach (var stage in povStages)
                 {
