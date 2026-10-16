@@ -10,6 +10,10 @@ namespace Rokas.BedSleep.V10Release
     [DisallowMultipleComponent]
     public sealed class BedSleepVisualComposite : MonoBehaviour
     {
+        // Framing is computed from genuine imported mesh bounds, not the old
+        // fixed V9 camera offset, which could leave the whole watch outside FOV.
+        private bool _hasReportedCameraFraming;
+
         public int renderWidth = 1920;
         public int renderHeight = 1080;
         public float cameraFov = 28.0f;
@@ -96,12 +100,30 @@ namespace Rokas.BedSleep.V10Release
                     throw new MissingReferenceException("ROKAS BedSleep V7: smartwatch Prefab is missing its controller.");
             }
             Watch.InitializeWatch(ArmRig.WatchSocket, Oled.OledRenderTexture);
+            NormalizeImportedPhysicalScale();
+            FrameImportedArmAndWatch();
+            // Imported OLED is physically recessed under the titanium case:
+            // source pixels and UVs are correct but the watch shell occludes
+            // the entire screen. Seat the ACTUAL mesh outside the face and
+            // re-frame its new physical position; no substitute UI or watch.
+            Watch.SeatOledAboveBezel(_presentationCamera);
+            FrameImportedArmAndWatch();
 
             Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
 
             InputRouter = GetComponent<SmartwatchInputRouter>() ?? gameObject.AddComponent<SmartwatchInputRouter>();
             InputRouter.ConfigureRouter(_presentationCamera, Watch.OledMeshCollider, targetUiRect);
+        }
+
+        private void LateUpdate()
+        {
+            // Animator and bone attachments settle before LateUpdate, so the
+            // camera frames the actual animated wrist. This does not depend
+            // on ROKAS View.Tick being called in a focused frame.
+            if (Application.isPlaying && ArmRig != null && Watch != null &&
+                ArmRig.CurrentState == KeikoFPSArmRigController.ArmClipState.InspectIdle)
+                FrameImportedArmAndWatch();
         }
 
         private static void AssignIsolatedLayer(Transform root)
@@ -144,9 +166,191 @@ namespace Rokas.BedSleep.V10Release
         public void TickComposite(float dt)
         {
             ArmRig?.TickAnimation(dt);
+            // Camera tracking happens in LateUpdate independently of the 2D
+            // hub Tick/focus gate. A headless or unfocused hub must not leave
+            // the visible watch stranded at the original 0.72m-wide shot.
             Watch?.TickWatch(dt);
             Sfx?.TickQueuedCrownClicks(dt);
             InputRouter?.TickRouter();
+        }
+
+
+        /// <summary>
+        /// Native Unity imports of the supplied source FBXs currently have
+        /// incompatible author units: cloud PlayMode measured 41.85 units for
+        /// an arm and 434 units for the OLED face. The original fixed view
+        /// at 0.55 units consequently saw an empty frame. Convert once at the
+        /// prefab-instance roots (never mutate the source FBX/importer).
+        /// Only apply when bounds are implausibly large for a first-person arm
+        /// or a wristwatch, keeping already metric imports unchanged.
+        /// </summary>
+        private void NormalizeImportedPhysicalScale()
+        {
+            var skin = ArmRig == null ? null : ArmRig.SkinnedRenderer;
+            if (skin == null || Watch == null || Watch.OledRenderer == null)
+                return;
+
+            float armLongest = LongestAxis(skin.bounds.size);
+            if (armLongest > 2f && armLongest < 1000000f)
+            {
+                float factor = 0.42f / armLongest;
+                ArmRig.transform.localScale *= factor;
+                Debug.Log("[ROKAS BedSleep V10] Normalized authored arm units: " +
+                    armLongest.ToString("F3") + " -> " +
+                    LongestAxis(skin.bounds.size).ToString("F3") +
+                    "m (factor " + factor.ToString("G5") + ")");
+            }
+
+            // Wristwatch is parented under arm's imported bone socket, so
+            // remeasure *after* arm scaling instead of assuming the original
+            // watch mesh uses meters. Target 40mm OLED diagonal axis.
+            float oledLongest = LongestAxis(Watch.OledRenderer.bounds.size);
+            if (oledLongest > 0.15f && oledLongest < 1000000f)
+            {
+                float factor = 0.04f / oledLongest;
+                Watch.transform.localScale *= factor;
+                Debug.Log("[ROKAS BedSleep V10] Normalized authored OLED units: " +
+                    oledLongest.ToString("F3") + " -> " +
+                    LongestAxis(Watch.OledRenderer.bounds.size).ToString("F3") +
+                    "m (factor " + factor.ToString("G5") + ")");
+            }
+        }
+
+        private static float LongestAxis(Vector3 size) =>
+            Mathf.Max(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
+
+        /// <summary>
+        /// Keeps imported skin, sleeve, nails and physical seven-mesh watch in
+        /// frame. The saved V9 camera faced +Z with a hard-coded 0.55m offset;
+        /// its view never accounted for the FBX watch dial facing a different
+        /// direction, or for imported mesh scale / animated arm positions.
+        /// No placeholder meshes, camera.main changes or prefab changes.
+        /// </summary>
+        public void FrameImportedArmAndWatch()
+        {
+            if (_presentationCamera == null || ArmRig == null || Watch == null ||
+                ArmRig.SkinnedRenderer == null || Watch.OledRenderer == null)
+                return;
+
+            Renderer skin = ArmRig.SkinnedRenderer;
+            Renderer display = Watch.OledRenderer;
+            Bounds skinBounds = skin.bounds;
+            Bounds displayBounds = display.bounds;
+            if (!IsValidBounds(skinBounds) || !IsValidBounds(displayBounds))
+                return;
+
+            Bounds compositionBounds = skinBounds;
+            foreach (var renderer in Watch.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (renderer != null && IsValidBounds(renderer.bounds))
+                    compositionBounds.Encapsulate(renderer.bounds);
+            }
+
+            // The front of the imported OLED is defined by its actual mesh
+            // normals, not a guessed global camera axis. The mesh is planar.
+            Vector3 normal = display.transform.forward;
+            var mf = display.GetComponent<MeshFilter>();
+            if (mf != null && mf.sharedMesh != null && mf.sharedMesh.isReadable)
+            {
+                Vector3[] sourceNormals = mf.sharedMesh.normals;
+                Vector3 avg = Vector3.zero;
+                for (int i = 0; i < sourceNormals.Length; i += Mathf.Max(1, sourceNormals.Length / 64))
+                    avg += sourceNormals[i];
+                if (avg.sqrMagnitude > 1e-5f)
+                    normal = display.transform.TransformDirection(avg.normalized);
+            }
+            if (normal.sqrMagnitude < 0.01f)
+                normal = Vector3.up;
+            normal.Normalize();
+
+            // Look at the real watch face with enough forearm still visible.
+            // FPS composition: the shoulder/forearm enters from the lower
+            // edge, the wrist/watch rises toward the centre of the picture.
+            // Using world +Z as the camera's up axis made the 42cm arm appear
+            // horizontal and tiny in cloud-rendered screenshots.
+            Vector3 forearm = Vector3.zero;
+            if (ArmRig.Bones != null && ArmRig.Bones.Length > 0 && ArmRig.Bones[0] != null)
+                forearm = displayBounds.center - ArmRig.Bones[0].position;
+            if (forearm.sqrMagnitude < 1e-6f)
+                forearm = displayBounds.center - skinBounds.center;
+            Vector3 upward = Vector3.ProjectOnPlane(forearm, normal);
+            if (upward.sqrMagnitude < 1e-6f)
+                upward = Vector3.ProjectOnPlane(Vector3.forward, normal);
+            if (upward.sqrMagnitude < 1e-6f)
+                upward = Vector3.ProjectOnPlane(Vector3.up, normal);
+            upward.Normalize();
+            // During TimeSelection the player is reading/adjusting a 40mm
+            // OLED: move from the full raised-arm view to a close watch view.
+            bool inspect = ArmRig.CurrentState ==
+                KeikoFPSArmRigController.ArmClipState.InspectIdle;
+            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center,
+                inspect ? 0.98f : 0.83f);
+            Quaternion viewRotation = Quaternion.LookRotation(-normal, upward);
+            Quaternion inverseView = Quaternion.Inverse(viewRotation);
+
+            float halfWidth = 0.01f, halfHeight = 0.01f, depth = 0f;
+            Vector3 min = compositionBounds.min;
+            Vector3 max = compositionBounds.max;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 point = new Vector3((i & 1) == 0 ? min.x : max.x,
+                    (i & 2) == 0 ? min.y : max.y,
+                    (i & 4) == 0 ? min.z : max.z);
+                Vector3 local = inverseView * (point - aim);
+                halfWidth = Mathf.Max(halfWidth, Mathf.Abs(local.x));
+                halfHeight = Mathf.Max(halfHeight, Mathf.Abs(local.y));
+                depth = Mathf.Max(depth, Mathf.Abs(local.z));
+            }
+
+            float fovRadians = Mathf.Max(10f, cameraFov) * Mathf.Deg2Rad;
+            float tanHalf = Mathf.Tan(fovRadians * 0.5f);
+            float aspect = (float)Mathf.Max(1, renderWidth) / Mathf.Max(1, renderHeight);
+            // Tight wrist-first POV: the proximal sleeve may continue beneath
+            // the bottom edge, as it should for a raised first-person hand.
+            // Full imported-arm bounds framing makes a 40mm dial illegible.
+            float fullArmDistance = Mathf.Clamp(
+                Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 0.72f
+                + depth + 0.08f, 0.42f, 0.72f);
+            float distance = inspect ? Mathf.Clamp(fullArmDistance * 0.52f, 0.32f, 0.42f)
+                : fullArmDistance;
+            Vector3 desiredPosition = aim + normal * distance;
+            if (inspect && _hasReportedCameraFraming && Application.isPlaying)
+            {
+                float blend = 1f - Mathf.Exp(-Mathf.Max(Time.unscaledDeltaTime, 0.016f) * 8f);
+                _presentationCamera.transform.SetPositionAndRotation(
+                    Vector3.Lerp(_presentationCamera.transform.position, desiredPosition, blend),
+                    Quaternion.Slerp(_presentationCamera.transform.rotation, viewRotation, blend));
+            }
+            else
+                _presentationCamera.transform.SetPositionAndRotation(
+                    desiredPosition, viewRotation);
+            _presentationCamera.fieldOfView = cameraFov;
+            _presentationCamera.nearClipPlane = 0.02f;
+            _presentationCamera.farClipPlane = Mathf.Max(8f, distance + depth * 2f + 2f);
+            _presentationCamera.cullingMask = 1 << 30;
+            _presentationCamera.targetTexture = CompositeRenderTexture;
+            if (!_hasReportedCameraFraming)
+            {
+                _hasReportedCameraFraming = true;
+                Debug.Log("[ROKAS BedSleep V10] Visible FBX framing: skin=" +
+                    skinBounds.size + ", oled=" + displayBounds.size +
+                    ", distance=" + distance.ToString("F3") +
+                    ", front=" + normal + ", cullingMask=0x" +
+                    _presentationCamera.cullingMask.ToString("X8"));
+            }
+        }
+
+        private static bool IsValidBounds(Bounds bounds)
+        {
+            Vector3 size = bounds.size;
+            Vector3 center = bounds.center;
+            return size.sqrMagnitude > 1e-10f &&
+                !float.IsNaN(size.x) && !float.IsInfinity(size.x) &&
+                !float.IsNaN(size.y) && !float.IsInfinity(size.y) &&
+                !float.IsNaN(size.z) && !float.IsInfinity(size.z) &&
+                !float.IsNaN(center.x) && !float.IsInfinity(center.x) &&
+                !float.IsNaN(center.y) && !float.IsInfinity(center.y) &&
+                !float.IsNaN(center.z) && !float.IsInfinity(center.z);
         }
 
         private void OnDestroy()

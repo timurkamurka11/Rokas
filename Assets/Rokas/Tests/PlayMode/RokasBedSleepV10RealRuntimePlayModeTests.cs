@@ -106,6 +106,309 @@ namespace Rokas.Tests
                 "FBX hand + seven independent watch meshes + 3 PBR groups + live RenderTexture.");
         }
 
+        /// <summary>
+        /// Unlike the old smoke test, this actually clicks Set Alarm, enters
+        /// TimeSelection, renders the real camera, and rejects a blank transparent
+        /// RenderTexture / off-screen watch. The regression reported by the
+        /// player was invisible despite passing all earlier V10 prefab tests.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SetAlarmActuallyRendersVisibleArmAndOLEDInHome()
+        {
+            tempSaveDirectory = Path.Combine(Path.GetTempPath(),
+                "rokas-v10-visibility-" + Guid.NewGuid().ToString("N"));
+            bootstrapRoot = new GameObject("ROKAS_V10_Visibility_RealHome");
+            var boot = bootstrapRoot.AddComponent<RokasBootstrap>();
+            boot.Initialize(tempSaveDirectory);
+            yield return null;
+
+            var bed = bootstrapRoot.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(x => x.name == "BedInteractable_Hotspot");
+            Assert.That(bed, Is.Not.Null, "Missing real HOME bed hotspot");
+            bed.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.5f);
+
+            var alarm = bootstrapRoot.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(x => x.name == "SetAlarm");
+            Assert.That(alarm, Is.Not.Null, "Missing Set Alarm button");
+            Assert.That(alarm.interactable, Is.True, "Alarm button must be enabled in HOME");
+            alarm.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(3.0f);
+            // Unity batchmode never invokes WaitForEndOfFrame; Camera.Render()
+            // below performs the explicit isolated 3D frame for pixel QA.
+            yield return null;
+
+            var rig = UnityEngine.Object.FindObjectsByType<GameObject>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(x => x.name == "ROKAS_BedSleep_V10_RealFBX_Rig");
+            Assert.That(rig, Is.Not.Null, "3D rig not created");
+            var composite = rig.GetComponents<MonoBehaviour>().FirstOrDefault(x =>
+                x != null && x.GetType().FullName ==
+                    "Rokas.BedSleep.V10Release.BedSleepVisualComposite");
+            Assert.That(composite, Is.Not.Null, "3D composite not created");
+            var type = composite.GetType();
+            var rt = type.GetProperty("CompositeRenderTexture")?.GetValue(composite)
+                as RenderTexture;
+            var camera = type.GetProperty("PresentationCamera")?.GetValue(composite)
+                as Camera;
+            Assert.That(rt, Is.Not.Null, "Missing 3D RenderTexture");
+            Assert.That(camera, Is.Not.Null, "Missing 3D camera");
+            Assert.That(camera.enabled, Is.True);
+            Assert.That(camera.targetTexture, Is.SameAs(rt));
+
+            var raw = bootstrapRoot.GetComponentsInChildren<RawImage>(true)
+                .FirstOrDefault(x => x.texture == rt);
+            Assert.That(raw, Is.Not.Null, "3D RenderTexture not connected to UI");
+            Assert.That(raw.gameObject.activeInHierarchy, Is.True);
+            Assert.That(raw.color.a, Is.GreaterThan(0.99f),
+                "3D RawImage is still invisible after Set Alarm");
+
+            var arm = rig.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            Assert.That(arm, Is.Not.Null, "Missing 3D arm renderer");
+            var allWatches = rig.GetComponentsInChildren<MeshRenderer>(true);
+            var oled = allWatches.FirstOrDefault(x => x.name.Contains("Watch_OLED_Screen"));
+            Assert.That(oled, Is.Not.Null, "Missing real OLED renderer");
+            Assert.That(arm.enabled && arm.gameObject.activeInHierarchy, Is.True);
+            Assert.That(oled.enabled && oled.gameObject.activeInHierarchy, Is.True);
+            var rigController = rig.GetComponentsInChildren<MonoBehaviour>(true)
+                .FirstOrDefault(x => x != null && x.GetType().Name == "KeikoFPSArmRigController");
+            Assert.That(rigController, Is.Not.Null, "Missing animated wrist controller.");
+            var armPhase = rigController.GetType().GetProperty("CurrentState")?.GetValue(rigController);
+            Debug.Log("ROKAS_V10_INSPECT_STATE=" + armPhase);
+            Assert.That(armPhase.ToString(), Is.EqualTo("InspectIdle"),
+                "Set Alarm should reach the wrist inspection state before testing its camera.");
+            float watchDistance = Vector3.Distance(camera.transform.position, oled.bounds.center);
+            Debug.Log("ROKAS_V10_WATCH_CLOSEUP_CAMERA_DISTANCE=" + watchDistance.ToString("F4"));
+            Assert.That(watchDistance, Is.LessThan(0.52f),
+                "The watch inspection camera never moved from the full-arm shot.");
+            Assert.That(oled.sharedMaterial, Is.Not.Null);
+            Assert.That(oled.sharedMaterial.mainTexture, Is.InstanceOf<RenderTexture>(),
+                "The OLED has no live digital display bound to its real imported mesh.");
+            if (oled.sharedMaterial.HasProperty("_Color"))
+                Assert.That(oled.sharedMaterial.color.r, Is.GreaterThan(0.9f),
+                    "Dark PBR color must not multiply live OLED digits nearly to black.");
+
+            // Both actual rendered surfaces must intersect the real camera.
+            var planes = GeometryUtility.CalculateFrustumPlanes(camera);
+            Assert.That(GeometryUtility.TestPlanesAABB(planes, arm.bounds), Is.True,
+                "Real hand bounds are outside the presentation camera frustum");
+            Assert.That(GeometryUtility.TestPlanesAABB(planes, oled.bounds), Is.True,
+                "Real OLED bounds are outside the presentation camera frustum");
+
+            // Check pixels, not only C# object presence. Re-render the exact
+            // camera used by the hub into its actual 1920x1080 RenderTexture.
+            camera.Render();
+            var scaled = RenderTexture.GetTemporary(320, 180, 0,
+                RenderTextureFormat.ARGB32);
+            Texture2D pixels = new Texture2D(320, 180, TextureFormat.RGBA32, false);
+            RenderTexture previous = RenderTexture.active;
+            int visible = 0;
+            int brightOledPixels = 0;
+            int minX = 320, minY = 180, maxX = -1, maxY = -1;
+            try
+            {
+                Graphics.Blit(rt, scaled);
+                RenderTexture.active = scaled;
+                pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                pixels.Apply();
+                var framePixels = pixels.GetPixels32();
+                for (int index = 0; index < framePixels.Length; index++)
+                {
+                    var p = framePixels[index];
+                    if (p.a > 24 && (p.r > 14 || p.g > 14 || p.b > 14))
+                    {
+                        if (p.b > 115 && p.g > 92 && p.b > p.r)
+                            brightOledPixels++;
+                        visible++;
+                        int x = index % 320;
+                        int y = index / 320;
+                        minX = Mathf.Min(minX, x);
+                        minY = Mathf.Min(minY, y);
+                        maxX = Mathf.Max(maxX, x);
+                        maxY = Mathf.Max(maxY, y);
+                    }
+                }
+
+                // Observe the actual imported 3D OLED mesh UVs and normals:
+                // a flat/zero-area UV map produces a single dark pixel on
+                // the whole watch even when the source RenderTexture has text.
+                var oledFilter = oled.GetComponent<MeshFilter>();
+                Assert.That(oledFilter, Is.Not.Null);
+                var importedMesh = oledFilter.sharedMesh;
+                Assert.That(importedMesh, Is.Not.Null);
+                var importedUVs = importedMesh.uv;
+                float uMin = 99f, uMax = -99f, vMin = 99f, vMax = -99f;
+                foreach (var uv in importedUVs)
+                {
+                    uMin = Mathf.Min(uMin, uv.x);
+                    uMax = Mathf.Max(uMax, uv.x);
+                    vMin = Mathf.Min(vMin, uv.y);
+                    vMax = Mathf.Max(vMax, uv.y);
+                }
+                Debug.Log("ROKAS_V10_OLED_IMPORT_UVS verts=" + importedMesh.vertexCount +
+                    " uvCount=" + importedUVs.Length + " uvBounds=(" +
+                    uMin.ToString("F4") + "," + vMin.ToString("F4") + ")-(" +
+                    uMax.ToString("F4") + "," + vMax.ToString("F4") + ")" +
+                    " meshSize=" + importedMesh.bounds.size);
+
+                // Preserve actual visual evidence for Actions even if the
+                // regression assertion fails.
+                string output = Path.Combine(Application.dataPath, "..",
+                    "Artifacts", "BedSleepVisibility");
+                Directory.CreateDirectory(output);
+                File.WriteAllBytes(Path.Combine(output, "watch-3d-visible-rt.png"),
+                    pixels.EncodeToPNG());
+
+                // Diagnostic-only comparison: the official surface/glass
+                // meshes remain unchanged in production. Isolate whether
+                // sapphire covers the digits or the display UV/material is
+                // itself incorrect. Restore the glass before leaving this test.
+                var glass = allWatches.FirstOrDefault(x =>
+                    x.name.Contains("Watch_SapphireGlass"));
+                Debug.Log("ROKAS_V10_OLED_DIAGNOSTIC: screenShader=" +
+                    oled.sharedMaterial.shader.name + " screenTex=" +
+                    oled.sharedMaterial.mainTexture.name + " glass=" +
+                    (glass == null ? "missing" : glass.name + "/" +
+                     glass.sharedMaterial.shader.name));
+                if (glass != null)
+                {
+                    bool glassEnabled = glass.enabled;
+                    try
+                    {
+                        glass.enabled = false;
+                        camera.Render();
+                        Graphics.Blit(rt, scaled);
+                        RenderTexture.active = scaled;
+                        pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                        pixels.Apply();
+                        File.WriteAllBytes(Path.Combine(output,
+                            "watch-3d-without-glass-diagnostic.png"),
+                            pixels.EncodeToPNG());
+                    }
+                    finally
+                    {
+                        glass.enabled = glassEnabled;
+                    }
+                }
+
+                // Same real FBX, four isolated camera tests; no prefab or
+                // material mutation persists after this test. Identifies if
+                // opaque casing hides OLED or if the authored watch face is
+                // turned away from the viewer.
+                Vector3 originalCamPos = camera.transform.position;
+                Quaternion originalCamRot = camera.transform.rotation;
+                var meshRenderers = rig.GetComponentsInChildren<MeshRenderer>(true);
+                var enabledStates = new bool[meshRenderers.Length];
+                for (int i = 0; i < meshRenderers.Length; i++)
+                    enabledStates[i] = meshRenderers[i].enabled;
+                bool skinEnabled = arm.enabled;
+                var originalOledMat = oled.sharedMaterial;
+                Material diagnosticUnlit = null;
+                try
+                {
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        if (meshRenderers[i] != oled) meshRenderers[i].enabled = false;
+                    arm.enabled = false;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-oled-mesh-only-original-camera.png"), pixels.EncodeToPNG());
+
+                    Shader unlitShader = Shader.Find("Unlit/Texture");
+                    if (unlitShader != null)
+                    {
+                        diagnosticUnlit = new Material(unlitShader);
+                        diagnosticUnlit.mainTexture = originalOledMat.mainTexture;
+                        oled.sharedMaterial = diagnosticUnlit;
+                        camera.Render();
+                        Graphics.Blit(rt, scaled);
+                        RenderTexture.active = scaled;
+                        pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                        pixels.Apply();
+                        File.WriteAllBytes(Path.Combine(output,
+                            "watch-oled-mesh-only-unlit.png"), pixels.EncodeToPNG());
+                    }
+                    oled.sharedMaterial = originalOledMat;
+
+                    Vector3 direction = (originalCamPos - oled.bounds.center).normalized;
+                    if (direction.sqrMagnitude < .5f) direction = Vector3.forward;
+                    Vector3 oppositePosition = oled.bounds.center - direction * 0.39f;
+                    camera.transform.SetPositionAndRotation(oppositePosition,
+                        Quaternion.LookRotation(direction, originalCamRot * Vector3.up));
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        meshRenderers[i].enabled = enabledStates[i];
+                    arm.enabled = skinEnabled;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-opposite-side-all-meshes.png"), pixels.EncodeToPNG());
+
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        if (meshRenderers[i] != oled) meshRenderers[i].enabled = false;
+                    arm.enabled = false;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-opposite-side-oled-only.png"), pixels.EncodeToPNG());
+                }
+                finally
+                {
+                    oled.sharedMaterial = originalOledMat;
+                    if (diagnosticUnlit != null) UnityEngine.Object.Destroy(diagnosticUnlit);
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        meshRenderers[i].enabled = enabledStates[i];
+                    arm.enabled = skinEnabled;
+                    camera.transform.SetPositionAndRotation(originalCamPos, originalCamRot);
+                }
+
+                object oledPresenter = type.GetProperty("Oled")?.GetValue(composite);
+                var oledTexture = oledPresenter?.GetType().GetProperty("OledRenderTexture")
+                    ?.GetValue(oledPresenter) as RenderTexture;
+                if (oledTexture != null)
+                {
+                    Graphics.Blit(oledTexture, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-oled-source-texture-diagnostic.png"),
+                        pixels.EncodeToPNG());
+                }
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(scaled);
+                UnityEngine.Object.Destroy(pixels);
+            }
+
+            int renderedWidth = Mathf.Max(0, maxX - minX + 1);
+            int renderedHeight = Mathf.Max(0, maxY - minY + 1);
+            Debug.Log("ROKAS_V10_VISIBILITY: opaque-colored pixels=" + visible +
+                "/57600 bright-OLED-pixels=" + brightOledPixels +
+                " silhouette=" + renderedWidth + "x" + renderedHeight +
+                " skin=" + arm.bounds + " oled=" + oled.bounds +
+                " camera=" + camera.transform.position +
+                " alpha=" + raw.color.a);
+            Assert.That(visible, Is.GreaterThan(100),
+                "Bed Sleep returned a blank 3D image even though the arm/watch prefabs exist.");
+            Assert.That(brightOledPixels, Is.GreaterThan(5),
+                "OLED screen remains visually dark: live watch graphics must be luminous.");
+            Assert.That(renderedHeight, Is.GreaterThan(65),
+                "Real arm must be prominent from the lower POV, not a miniature horizontal strip.");
+            Assert.That(renderedHeight, Is.GreaterThan(renderedWidth * 0.65f),
+                "FPS forearm must rise toward the watch instead of lying horizontally across the screen.");
+        }
+
         [TearDown]
         public void Cleanup()
         {

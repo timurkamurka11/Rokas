@@ -105,8 +105,92 @@ namespace Rokas.BedSleep.V10Release
             if (oledMaterial == null || oledMaterial.shader == null)
                 throw new MissingReferenceException("V10: real 3D OLED imported material missing");
             _oledRuntimeMaterial = new Material(oledMaterial) { name = "ROKAS_V10_OLED_Runtime_Instance" };
-            if (oledRt != null) _oledRuntimeMaterial.mainTexture = oledRt;
+            if (oledRt != null)
+            {
+                // The saved Standard PBR asset has _Color near black
+                // (0.015/0.025/0.035). Its multiplication nearly erases
+                // the genuine numeric/arc pixels despite a live OLED RT.
+                // Only change the transient material owned by this watch.
+                if (_oledRuntimeMaterial.HasProperty("_Color"))
+                    _oledRuntimeMaterial.SetColor("_Color", Color.white);
+                if (_oledRuntimeMaterial.HasProperty("_BaseColor"))
+                    _oledRuntimeMaterial.SetColor("_BaseColor", Color.white);
+                _oledRuntimeMaterial.mainTexture = oledRt;
+                if (_oledRuntimeMaterial.HasProperty("_EmissionMap"))
+                {
+                    _oledRuntimeMaterial.SetTexture("_EmissionMap", oledRt);
+                    _oledRuntimeMaterial.SetColor("_EmissionColor", Color.white * 1.25f);
+                    _oledRuntimeMaterial.EnableKeyword("_EMISSION");
+                }
+            }
             _oledRenderer.sharedMaterial = _oledRuntimeMaterial;
+        }
+
+        /// <summary>
+        /// The actual imported V10 OLED has good UVs, and its live digits
+        /// render when all other watch meshes are hidden. Cloud Unity pixel
+        /// captures proved the opaque titanium shell covers this real display
+        /// (hiding sapphire alone does not fix it). Seat the EXISTING OLED
+        /// mesh 0.6mm proud of the outer bezel along the viewer-facing surface,
+        /// preserving its UVs, MeshCollider, render material, strap and rig.
+        /// Only modifies the instantiated watch once, never the source FBX.
+        /// </summary>
+        public void SeatOledAboveBezel(Camera presentationCamera)
+        {
+            if (_oledRenderer == null || presentationCamera == null)
+                return;
+            Transform caseTransform = FindImportedPart("Watch_TitaniumCase");
+            MeshRenderer caseRenderer = caseTransform != null
+                ? caseTransform.GetComponent<MeshRenderer>() : null;
+            if (caseRenderer == null)
+            {
+                Debug.LogWarning("[ROKAS BedSleep V10] OLED bezel seating skipped: authentic titanium shell missing");
+                return;
+            }
+
+            Vector3 outward = presentationCamera.transform.position -
+                _oledRenderer.bounds.center;
+            if (outward.sqrMagnitude < 1e-8f) return;
+            outward.Normalize();
+            float caseOutermost = FurthestSurfaceAlong(caseRenderer, outward);
+            float displayOutermost = FurthestSurfaceAlong(_oledRenderer, outward);
+            if (float.IsNaN(caseOutermost) || float.IsNaN(displayOutermost))
+                return;
+
+            // Both distances are in real Unity meters after FBX scale fix.
+            float needed = caseOutermost - displayOutermost + 0.0006f;
+            if (needed <= 0f) return;
+            float shift = Mathf.Min(needed, 0.015f);
+            _oledRenderer.transform.position += outward * shift;
+            Debug.Log("[ROKAS BedSleep V10] Real OLED surface seated above titanium face: " +
+                "needed=" + needed.ToString("F5") + "m applied=" +
+                shift.ToString("F5") + "m, mesh=" +
+                _oledRenderer.GetComponent<MeshFilter>().sharedMesh.name);
+            if (needed > 0.015f)
+                Debug.LogWarning("[ROKAS BedSleep V10] Titanium/OLED gap exceeds 15mm; check original FBX authoring");
+        }
+
+        private static float FurthestSurfaceAlong(MeshRenderer renderer, Vector3 direction)
+        {
+            var filter = renderer.GetComponent<MeshFilter>();
+            Mesh mesh = filter != null ? filter.sharedMesh : null;
+            if (mesh != null && mesh.isReadable)
+            {
+                Vector3[] vertices = mesh.vertices;
+                Matrix4x4 matrix = renderer.localToWorldMatrix;
+                float maximum = float.NegativeInfinity;
+                for (int i = 0; i < vertices.Length; ++i)
+                    maximum = Mathf.Max(maximum,
+                        Vector3.Dot(matrix.MultiplyPoint3x4(vertices[i]), direction));
+                if (!float.IsNegativeInfinity(maximum))
+                    return maximum;
+            }
+            // Conservative fallback when an import disables mesh readback.
+            Bounds b = renderer.bounds;
+            Vector3 extent = b.extents;
+            return Vector3.Dot(b.center, direction) +
+                Vector3.Dot(extent, new Vector3(Mathf.Abs(direction.x),
+                    Mathf.Abs(direction.y), Mathf.Abs(direction.z)));
         }
 
         private void OnDestroy()
