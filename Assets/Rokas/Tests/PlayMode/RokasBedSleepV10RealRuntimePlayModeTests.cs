@@ -170,6 +170,12 @@ namespace Rokas.Tests
             Assert.That(oled, Is.Not.Null, "Missing real OLED renderer");
             Assert.That(arm.enabled && arm.gameObject.activeInHierarchy, Is.True);
             Assert.That(oled.enabled && oled.gameObject.activeInHierarchy, Is.True);
+            Assert.That(oled.sharedMaterial, Is.Not.Null);
+            Assert.That(oled.sharedMaterial.mainTexture, Is.InstanceOf<RenderTexture>(),
+                "The OLED has no live digital display bound to its real imported mesh.");
+            if (oled.sharedMaterial.HasProperty("_Color"))
+                Assert.That(oled.sharedMaterial.color.r, Is.GreaterThan(0.9f),
+                    "Dark PBR color must not multiply live OLED digits nearly to black.");
 
             // Both actual rendered surfaces must intersect the real camera.
             var planes = GeometryUtility.CalculateFrustumPlanes(camera);
@@ -186,6 +192,7 @@ namespace Rokas.Tests
             Texture2D pixels = new Texture2D(320, 180, TextureFormat.RGBA32, false);
             RenderTexture previous = RenderTexture.active;
             int visible = 0;
+            int brightOledPixels = 0;
             int minX = 320, minY = 180, maxX = -1, maxY = -1;
             try
             {
@@ -199,6 +206,8 @@ namespace Rokas.Tests
                     var p = framePixels[index];
                     if (p.a > 24 && (p.r > 14 || p.g > 14 || p.b > 14))
                     {
+                        if (p.b > 115 && p.g > 92 && p.b > p.r)
+                            brightOledPixels++;
                         visible++;
                         int x = index % 320;
                         int y = index / 320;
@@ -227,12 +236,15 @@ namespace Rokas.Tests
             int renderedWidth = Mathf.Max(0, maxX - minX + 1);
             int renderedHeight = Mathf.Max(0, maxY - minY + 1);
             Debug.Log("ROKAS_V10_VISIBILITY: opaque-colored pixels=" + visible +
-                "/57600 silhouette=" + renderedWidth + "x" + renderedHeight +
+                "/57600 bright-OLED-pixels=" + brightOledPixels +
+                " silhouette=" + renderedWidth + "x" + renderedHeight +
                 " skin=" + arm.bounds + " oled=" + oled.bounds +
                 " camera=" + camera.transform.position +
                 " alpha=" + raw.color.a);
             Assert.That(visible, Is.GreaterThan(100),
                 "Bed Sleep returned a blank 3D image even though the arm/watch prefabs exist.");
+            Assert.That(brightOledPixels, Is.GreaterThan(5),
+                "OLED screen remains visually dark: live watch graphics must be luminous.");
             Assert.That(renderedHeight, Is.GreaterThan(65),
                 "Real arm must be prominent from the lower POV, not a miniature horizontal strip.");
             Assert.That(renderedHeight, Is.GreaterThan(renderedWidth * 0.65f),
