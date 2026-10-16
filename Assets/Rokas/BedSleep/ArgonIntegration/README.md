@@ -2,6 +2,12 @@
 
 Input: ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip from Argon.
 
+**SECURITY GATE (2026-10-16): This repository is currently PUBLIC.**
+Do NOT upload the proprietary Argon asset ZIP as a GitHub Release asset while
+the repository is public. Public repository releases are visible to everyone.
+The GitHub workflow explicitly refuses to download such assets unless the
+repository has first been changed to PRIVATE.
+
 The binary assets are not yet in this GitHub branch. This is a source-only importer and Unity QA scaffold. No game model has been replaced or validated in cloud Unity from the Argon package yet.
 
 The existing Bed Sleep V10 remains active. This importer only writes under Assets/Rokas/BedSleep/ArgonCandidate/ and never overwrites V10ReleaseCandidate, save logic, clocks, hub, combat or its preview camera.
