@@ -73,9 +73,15 @@ jobs:
               Path('Assets/Rokas/BedSleep/V10Release/Textures'),
               Path('Assets/Rokas/BedSleep/V10Release/Models')
           ]
-          for root in roots:
+          # The adjacent Unity-generated folder .meta files also contain
+          # trailing whitespace; they are outside root.rglob('*').
+          extras=[
+              Path('Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate.meta'),
+              Path('Assets/Rokas/BedSleep/V10Release/Materials.meta')
+          ]
+          for root in roots + extras:
               if not root.exists(): continue
-              for p in root.rglob('*'):
+              for p in ([root] if root.is_file() else root.rglob('*')):
                   if not p.is_file() or p.suffix not in ('.prefab','.controller','.mat','.meta'):
                       continue
                   data=p.read_bytes()
@@ -94,7 +100,7 @@ jobs:
                       print('NORMALIZED_UNITY_GENERATED_YAML',p)
           PY
           git add -u -- Assets/Rokas/BedSleep/V10Release/Textures Assets/Rokas/BedSleep/V10Release/Models
-          git add -A -- "$p" Assets/Rokas/BedSleep/V10Release/Materials
+          git add -A -- "$p" "$p.meta" Assets/Rokas/BedSleep/V10Release/Materials Assets/Rokas/BedSleep/V10Release/Materials.meta
           git diff --cached --check
           git diff --cached --stat
           if git diff --cached --quiet; then
