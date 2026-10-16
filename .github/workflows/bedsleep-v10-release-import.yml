@@ -1,0 +1,136 @@
+name: ROKAS Bed Sleep V10 — Genuine Release Asset Import
+on:
+  push:
+    branches: [codex/bedsleep-v10-release-stage]
+    paths:
+      - .github/workflows/bedsleep-v10-release-import.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: bedsleep-v10-release-import
+  cancel-in-progress: false
+jobs:
+  import-real-assets:
+    name: Verify exact Release, Blender export, commit to isolated branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/bedsleep-v10-release-stage
+          fetch-depth: 0
+      - name: Download attached V10 GitHub Release and verify exact original bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bedsleep-v10"
+          curl -fL --retry 4 --retry-delay 5 -o "$RUNNER_TEMP/bedsleep-v10/original.zip" \
+            "https://github.com/timurkamurka11/Rokas/releases/download/bedsleep-v10-assets/ROKAS_BED_SLEEP_V10_VOLUME_AND_NAIL_REFIT_CANDIDATE.zip"
+          test "$(stat -c%s "$RUNNER_TEMP/bedsleep-v10/original.zip")" = 38232441
+          echo "c525b25067875837d99ef84f39a2a1e68ca92e471e49fdb5d796a5e41da208b8  $RUNNER_TEMP/bedsleep-v10/original.zip" | sha256sum -c -
+          python3 - <<'PY'
+          import zipfile, pathlib, os, struct, json
+          z=zipfile.ZipFile(pathlib.Path(os.environ["RUNNER_TEMP"])/"bedsleep-v10/original.zip")
+          assert z.testzip() is None
+          names=z.namelist()
+          assert len(names)==49,(len(names),names)
+          for n in names:
+              p=pathlib.PurePosixPath(n)
+              assert not p.is_absolute() and '..' not in p.parts and '\\' not in n, n
+          dest=pathlib.Path(os.environ["RUNNER_TEMP"])/"bedsleep-v10/source"
+          z.extractall(dest)
+          for name,expected in [('Keiko_FPS_Arm_Rigged.glb','f2e795bd9644bc258d5d6852e20ad192a0703fc6b26ff3afb799ae24d1a56e7d'),
+                                ('ROKAS_Smartwatch_HighDetail.glb','c42a35d35da3dadec670a7796d90c5f8f218c4ea639d18082bb1c41295610c06')]:
+              f=dest/'02_MODELS'/name
+              import hashlib
+              assert hashlib.sha256(f.read_bytes()).hexdigest()==expected
+              b=f.read_bytes()
+              assert b[:4]==b'glTF' and struct.unpack_from('<I',b,8)[0]==len(b)
+          print("RELEASE_BINARY_SOURCE_VERIFIED", len(names))
+          PY
+      - name: Install native Blender on cloud runner (not on user's PC)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+          blender --version | head -n 2
+      - name: Import actual GLBs, save/reopen .blend, export/reimport real FBXs
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/bedsleep-v10/source"
+          blender --background --threads 2 --python "$src/01_BLENDER_SOURCE/Export_Scripts/V10_BUILD_REAL_BLENDER_MASTERS.py" -- --root "$src"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,json
+          src=Path(os.environ['RUNNER_TEMP'])/'bedsleep-v10/source'
+          for file in ['Keiko_FPS_Arm_Rigged.fbx','ROKAS_Smartwatch_HighDetail.fbx']:
+              p=src/'02_MODELS'/file
+              assert p.is_file() and p.stat().st_size>20000 and p.read_bytes()[:20]==b'Kaydara FBX Binary  ',p
+          for file in ['Keiko_FPS_Arm_MASTER.blend','ROKAS_Smartwatch_MASTER.blend']:
+              p=src/'01_BLENDER_SOURCE'/file
+              assert p.is_file() and p.stat().st_size>50000,p
+          q=src/'01_BLENDER_SOURCE/V10_REAL_BLENDER_VALIDATION.json'
+          assert q.is_file()
+          print(q.read_text())
+          PY
+      - name: Install new real assets and isolated V10 source, with deterministic GUIDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,shutil,uuid,re,json,hashlib
+          src=Path(os.environ['RUNNER_TEMP'])/'bedsleep-v10/source'
+          root=Path('Assets/Rokas/BedSleep/V10Release')
+          if root.exists(): raise RuntimeError('V10Release already exists; refuse to overwrite')
+          root.mkdir(parents=True)
+          files={}
+          def stage(frompath,rel):
+              p=root/rel;p.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(frompath,p)
+              files[str(p)]=hashlib.sha256(p.read_bytes()).hexdigest()
+              return p
+          for n in ('Keiko_FPS_Arm_Rigged.fbx','ROKAS_Smartwatch_HighDetail.fbx'):
+              stage(src/'02_MODELS'/n,'Models/'+n)
+          for p in sorted((src/'03_TEXTURES').rglob('*.png')):
+              stage(p,'Textures/'+p.relative_to(src/'03_TEXTURES').as_posix())
+          for p in sorted((src/'07_UNITY_SOURCE').rglob('*.cs')):
+              s=p.read_text(encoding='utf-8-sig')
+              assert re.search(r'namespace\s+Rokas\.BedSleep\.V4',s),p
+              s=s.replace('Rokas.BedSleep.V4','Rokas.BedSleep.V10Release')
+              s=s.replace('"Assets/Rokas/BedSleep/Models/"','"Assets/Rokas/BedSleep/V10Release/Models/"')
+              s=s.replace('"Assets/Rokas/BedSleep/Materials/"','"Assets/Rokas/BedSleep/V10Release/Materials/"')
+              s=s.replace('"Assets/Rokas/Resources/BedSleep/V10Candidate/"','"Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/"')
+              rel=('Editor/' if p.name.endswith('PrefabBuilder.cs') else 'Scripts/')+p.name
+              out=root/rel;out.parent.mkdir(parents=True,exist_ok=True)
+              out.write_text(s,encoding='utf-8')
+              files[str(out)]=hashlib.sha256(out.read_bytes()).hexdigest()
+          # New deterministic GUIDs, independent of existing potentially overlapping V6 assets.
+          existing=set()
+          for f in Path('Assets').rglob('*.meta'):
+              m=re.search(r'(?m)^guid:\s*([0-9a-f]{32})\s*$',f.read_text(encoding='utf-8',errors='ignore'))
+              if m:existing.add(m.group(1))
+          for p in sorted(root.rglob('*')):
+              if not p.is_file() or p.suffix=='.meta':continue
+              g=uuid.uuid5(uuid.NAMESPACE_URL,'https://github.com/timurkamurka11/Rokas/V10Release/'+p.as_posix()).hex
+              assert g not in existing,(p,g)
+              (p.parent/(p.name+'.meta')).write_text('fileFormatVersion: 2\nguid: '+g+'\n',encoding='utf-8')
+              existing.add(g)
+          manifest=Path('Docs/ROKAS_BED_SLEEP_V10_RELEASE_IMPORT_MANIFEST.json')
+          manifest.parent.mkdir(parents=True,exist_ok=True)
+          manifest.write_text(json.dumps(dict(release_tag='bedsleep-v10-assets',release_size=38232441,source_sha256='c525b25067875837d99ef84f39a2a1e68ca92e471e49fdb5d796a5e41da208b8',blender_native_export_passed=True,unity_compile_passed=False,production_bed_integrated=False,files=files),indent=2,sort_keys=True)+'\n')
+          print('REAL_V10_STAGED',len(files),'NOT_PRODUCTION_INTEGRATED')
+          PY
+      - name: Commit only to review branch, never production
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Rokas/BedSleep/V10Release Docs/ROKAS_BED_SLEEP_V10_RELEASE_IMPORT_MANIFEST.json
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "assets(bedsleep): import verified V10 Release true FBX and isolated runtime sources"
+          git push origin HEAD:codex/bedsleep-v10-release-stage
