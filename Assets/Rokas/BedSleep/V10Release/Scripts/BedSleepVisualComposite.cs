@@ -137,19 +137,27 @@ namespace Rokas.BedSleep.V10Release
             if (_presentationCamera == null || Watch == null) return new Rect(0f, 0f, 0f, 0f);
             Transform oledTr = Watch.OledRenderer != null ? Watch.OledRenderer.transform : Watch.transform;
 
-            Vector3[] localCorners = new Vector3[4]
+            // The imported OLED is in the FBX local XZ plane, not the
+            // fabricated XY rectangle assumed by the old projected overlay.
+            MeshFilter oledFilter = Watch.OledRenderer != null
+                ? Watch.OledRenderer.GetComponent<MeshFilter>() : null;
+            Bounds local = oledFilter != null && oledFilter.sharedMesh != null
+                ? oledFilter.sharedMesh.bounds
+                : new Bounds(Vector3.zero, new Vector3(0.032f, 0.001f, 0.038f));
+            Vector3[] localCorners = new Vector3[8];
+            for (int i = 0; i < localCorners.Length; i++)
             {
-                new Vector3(-0.0155f, -0.0185f, 0f),
-                new Vector3( 0.0155f, -0.0185f, 0f),
-                new Vector3( 0.0155f,  0.0185f, 0f),
-                new Vector3(-0.0155f,  0.0185f, 0f)
-            };
+                localCorners[i] = new Vector3(
+                    (i & 1) == 0 ? local.min.x : local.max.x,
+                    (i & 2) == 0 ? local.min.y : local.max.y,
+                    (i & 4) == 0 ? local.min.z : local.max.z);
+            }
 
             float minX = float.MaxValue, minY = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue;
             Rect refBounds = referenceRect != null ? referenceRect.rect : new Rect(0f, 0f, renderWidth, renderHeight);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < localCorners.Length; i++)
             {
                 Vector3 wp = oledTr.TransformPoint(localCorners[i]);
                 Vector3 vp = _presentationCamera.WorldToViewportPoint(wp);
@@ -283,8 +291,10 @@ namespace Rokas.BedSleep.V10Release
             // OLED: move from the full raised-arm view to a close watch view.
             bool inspect = ArmRig.CurrentState ==
                 KeikoFPSArmRigController.ArmClipState.InspectIdle;
+            // Aim exactly at the OLED during inspection. The former weighted
+            // forearm-centre shifted the 40mm screen toward the frame edge.
             Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center,
-                inspect ? 0.98f : 0.83f);
+                inspect ? 1f : 0.83f);
             Quaternion viewRotation = Quaternion.LookRotation(-normal, upward);
             Quaternion inverseView = Quaternion.Inverse(viewRotation);
 
@@ -311,8 +321,10 @@ namespace Rokas.BedSleep.V10Release
             float fullArmDistance = Mathf.Clamp(
                 Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 0.72f
                 + depth + 0.08f, 0.42f, 0.72f);
-            float distance = inspect ? Mathf.Clamp(fullArmDistance * 0.52f, 0.32f, 0.42f)
-                : fullArmDistance;
+            // 27cm inspection close-up: readable real 40mm OLED while the
+            // forearm naturally disappears beneath the bottom viewport edge.
+            // No replacement screen geometry or gameplay changes.
+            float distance = inspect ? 0.27f : fullArmDistance;
             Vector3 desiredPosition = aim + normal * distance;
             if (inspect && _hasReportedCameraFraming && Application.isPlaying)
             {
