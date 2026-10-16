@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/bedsleep-v10-native-unity-gate.yml'
       - 'Assets/Rokas/BedSleep/V10Release/**'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
 permissions:
   contents: read
   checks: write
