@@ -73,8 +73,16 @@ namespace Rokas.BedSleep.V10Release.Editor
                     string.Join(", ", modelImporter.defaultClipAnimations.Select(c => c.name)));
             foreach (var name in ClipNames)
             {
-                var matches = allImported.Where(c => c.name == name || c.name.EndsWith("|"+name,
-                    StringComparison.Ordinal) || c.name.EndsWith("/"+name, StringComparison.Ordinal)).ToArray();
+                // Unity imports Blender FBX actions as e.g.
+                // Armature_Skin|SleepArm_Raise_Armature_Skin plus __preview__ copies.
+                // Select the one actual Action clip, never Unity's preview asset.
+                var matches = allImported.Where(c =>
+                    !c.name.StartsWith("__preview__", StringComparison.Ordinal) &&
+                    (c.name == name ||
+                     c.name.EndsWith("|" + name, StringComparison.Ordinal) ||
+                     c.name.EndsWith("/" + name, StringComparison.Ordinal) ||
+                     c.name.EndsWith("|" + name + "_Armature_Skin",
+                         StringComparison.Ordinal))).ToArray();
                 if (matches.Length == 1) realClips.Add(name, matches[0]);
                 else errors.Add("Real FBX must contain exactly one animation Action " + name +
                     " (found " + matches.Length + ") of real imported clips: " + realClipNames);
