@@ -8,7 +8,7 @@ on:
       - 'Assets/Rokas/BedSleep/ArgonSource/REQUEST_PRIVATE_IMPORT_QA.txt'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   checks: write
 concurrency:
   group: rokas-argon-candidate-import
@@ -103,6 +103,36 @@ jobs:
           customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonCandidateImportTests
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Argon Genuine FBX Unity Candidate Import QA
+      - name: Publish verified Argon source FBX, PNG and prefab to isolated GitHub branch only
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          gate="Assets/Rokas/BedSleep/ArgonSource/REQUEST_PRIVATE_IMPORT_QA.txt"
+          if ! grep -Fxq 'PUBLISH_CANDIDATE=YES' "$gate"; then
+            echo "QA-only run; no binary files will be committed."
+            exit 0
+          fi
+          if [ "$GITHUB_REF_NAME" != 'codex/bedsleep-argon-import-candidate' ]; then
+            echo "::error::Refusing to commit candidate files outside the isolated Argon branch."
+            exit 1
+          fi
+          root='Assets/Rokas/BedSleep'
+          test -s "$root/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx"
+          test -s "$root/ArgonSource/Models/ROKAS_Smartwatch_HighDetail.fbx"
+          test -s "$root/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab"
+          git config user.name 'rokas-argon-ci[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Add actual original textures, Blender-native FBX and Unity-generated
+          # GUID metadata together so all prefab/material references survive clones.
+          git add -f "$root/ArgonSource/Models/" "$root/ArgonSource/Textures/" "$root/ArgonCandidate/"
+          if git diff --cached --quiet; then
+            echo "Validated binary candidate already committed; nothing changed."
+            exit 0
+          fi
+          git commit -m 'assets(bedsleep): exact Argon 3D hand/watch Unity QA candidate, not active'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
+
       - name: Keep Unity EditMode logs and candidate prefab for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
