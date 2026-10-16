@@ -16,9 +16,17 @@ namespace Rokas.BedSleep.V10Release
 
         public void InitializeAudio()
         {
-            if (_source == null)
+            // Unity's destroyed/missing Component wrappers can be C# non-null.
+            // Do not use ?? here: it bypasses UnityEngine.Object's overloaded
+            // null/boolean checks and can leave a fake-null AudioSource.
+            if (!_source)
             {
-                _source = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+                _source = GetComponent<AudioSource>();
+                if (!_source)
+                    _source = gameObject.AddComponent<AudioSource>();
+                if (!_source)
+                    throw new MissingComponentException(
+                        "ROKAS V10 cannot initialize its required AudioSource");
                 _source.playOnAwake = false;
                 _source.spatialBlend = 0f;
             }
