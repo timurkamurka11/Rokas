@@ -12,7 +12,10 @@ Shader "ROKAS/BedSleep/ArgonOLEDLiveSurface"
         {
             Cull Off
             ZWrite Off
-            ZTest Always
+            // Physical depth test: the OLED may only appear if its ORIGINAL
+            // surface is in front of the skinned wrist and watch casing.
+            // No through-skin HUD / painted square.
+            ZTest LEqual
             Blend One Zero
             CGPROGRAM
             #pragma vertex vert
