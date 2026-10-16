@@ -23,13 +23,14 @@ namespace Rokas.Presentation
         private readonly object watch;
         private readonly Type stateType;
         private bool released;
+        private readonly bool usesV10;
 
         public RenderTexture Texture => target;
         public bool Ready => !released && controller != null && camera != null;
 
         private RokasBedSleepProductionRigBridge(GameObject root, Camera camera,
             RenderTexture target, MonoBehaviour controller, object oled,
-            object armAnimation, object watch, Type stateType)
+            object armAnimation, object watch, Type stateType, bool usesV10 = false)
         {
             this.root = root;
             this.camera = camera;
@@ -39,11 +40,17 @@ namespace Rokas.Presentation
             this.armAnimation = armAnimation;
             this.watch = watch;
             this.stateType = stateType;
+            this.usesV10 = usesV10;
         }
 
         public static RokasBedSleepProductionRigBridge TryCreate(
             float currentClockHours, bool lampOn)
         {
+            // Prefer the ACTUAL Unity-imported V10 25-bone arm + seven-piece watch.
+            // If native CI has not generated the resource prefab, keep the
+            // pre-existing V3/2D behaviour completely intact.
+            var v10 = TryCreateV10(currentClockHours);
+            if (v10 != null) return v10;
             // A missing installer must NEVER break the existing hub.
             Type controllerType = FindType("ROKAS.BedSleep.BedSleepCinematicController");
             Type phaseType = FindType("ROKAS.BedSleep.BedSleepStateV3");
@@ -145,9 +152,78 @@ namespace Rokas.Presentation
             }
         }
 
+
+        private static RokasBedSleepProductionRigBridge TryCreateV10(float clock)
+        {
+            const string resource = "BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate";
+            GameObject prefab = Resources.Load<GameObject>(resource);
+            if (prefab == null) return null;
+            GameObject instance = null;
+            try
+            {
+                instance = UnityEngine.Object.Instantiate(prefab);
+                instance.name = "ROKAS_BedSleep_V10_RealFBX_Rig";
+                var compositeType = FindType("Rokas.BedSleep.V10Release.BedSleepVisualComposite");
+                if (compositeType == null)
+                    throw new MissingMemberException("V10 real composite MonoBehaviour was not imported");
+                MonoBehaviour composite = null;
+                foreach (var behaviour in instance.GetComponents<MonoBehaviour>())
+                    if (behaviour != null && behaviour.GetType() == compositeType)
+                        { composite = behaviour; break; }
+                if (composite == null)
+                    throw new MissingComponentException("V10 prefab lacks imported composite component");
+                Call(composite, "InitializeComposite", (object)null);
+                var rt = GetProperty(composite, "CompositeRenderTexture") as RenderTexture;
+                var cam = GetProperty(composite, "PresentationCamera") as Camera;
+                object rig = GetProperty(composite, "ArmRig");
+                object watch3d = GetProperty(composite, "Watch");
+                object display = GetProperty(composite, "Oled");
+                var skin = rig == null ? null :
+                    GetProperty(rig, "SkinnedRenderer") as SkinnedMeshRenderer;
+                if (rt == null || !rt.IsCreated() || cam == null ||
+                    skin == null || skin.sharedMesh == null ||
+                    skin.bones == null || skin.bones.Length != 25 ||
+                    skin.sharedMesh.subMeshCount != 3 ||
+                    watch3d == null || display == null)
+                    throw new InvalidOperationException("V10 genuine FBX/RenderTexture preflight failed");
+                int watchParts = 0;
+                var uniqueMeshes = new System.Collections.Generic.HashSet<Mesh>();
+                foreach (MeshFilter filter in instance.GetComponentsInChildren<MeshFilter>(true))
+                    if (filter.sharedMesh != null && uniqueMeshes.Add(filter.sharedMesh)) watchParts++;
+                if (watchParts < 7)
+                    throw new InvalidOperationException("V10 requires seven unique real watch meshes");
+                var bridge = new RokasBedSleepProductionRigBridge(
+                    instance, cam, rt, composite, display, rig, watch3d, null, true);
+                bridge.ConfigureClock(clock);
+                bridge.ChangeState("LyingViewActive");
+                return bridge;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[ROKAS BedSleep V10] Real FBX composite rejected; original 2D fallback remains: " + e);
+                if (instance != null) UnityEngine.Object.Destroy(instance);
+                return null;
+            }
+        }
+
         public void ChangeState(string name)
         {
             if (!Ready) return;
+            if (usesV10)
+            {
+                switch (name)
+                {
+                    case "LyingViewActive": Call(armAnimation, "ResetToHidden"); break;
+                    case "WatchRaise": Call(armAnimation, "PlayRaise"); break;
+                    case "TimeSelection": Call(armAnimation, "PlayInspectIdle"); break;
+                    case "ConfirmSelection":
+                        Call(armAnimation, "PlayConfirm");
+                        Call(watch, "PressConfirmButton");
+                        break;
+                    case "HandLower": Call(armAnimation, "PlayLower"); break;
+                }
+                return;
+            }
             object value = Enum.Parse(stateType, name);
             Call(controller, "TransitionToState", value);
             if (name == "TimeSelection") SetStateInputDisabled();
@@ -156,6 +232,8 @@ namespace Rokas.Presentation
         public void Sample(float normalized)
         {
             if (!Ready) return;
+            // V10 uses imported FBX animation clips, not the old procedural sampler.
+            if (usesV10) return;
             Call(controller, "SampleSkeletalRaiseProgress",
                 Mathf.Clamp01(normalized), Time.unscaledDeltaTime);
             // The parent ROKAS controller drives real sleep duration
@@ -171,6 +249,13 @@ namespace Rokas.Presentation
             // Reinitialize only upon actual steps (never per frame).
             float h = Mathf.Clamp(Mathf.Round(durationHours * 2f) * .5f,
                 1f, 12f);
+            if (usesV10)
+            {
+                int minutes = Mathf.RoundToInt(Mathf.Repeat(currentGameTimeHours, 24f) * 60f) % 1440;
+                Call(oled, "ConfigureTime", minutes / 60, minutes % 60,
+                    Mathf.Clamp(Mathf.RoundToInt(h * 2f), 2, 24));
+                return;
+            }
             Call(oled, "InitializeOLED", Mathf.RoundToInt(
                 Mathf.Repeat(currentGameTimeHours, 24f) * 60f), h);
         }
@@ -185,6 +270,12 @@ namespace Rokas.Presentation
         public void CrownStep(int direction)
         {
             if (!Ready || direction == 0) return;
+            if (usesV10)
+            {
+                Call(watch, "StepCrown", direction);
+                Call(armAnimation, "PlayCrownFeedback", direction);
+                return;
+            }
             Call(watch, "RotateCrownForStep", direction);
             Call(armAnimation, "TriggerCrownTickImpulse", direction);
         }
@@ -193,6 +284,11 @@ namespace Rokas.Presentation
         {
             if (!Ready) return;
             float dt = Mathf.Max(0f, deltaTime);
+            if (usesV10)
+            {
+                Call(controller, "TickComposite", dt);
+                return;
+            }
             Call(armAnimation, "EvaluateSkeletalPose", 1f, 1f, dt);
             Call(watch, "TickWatch3DMotion", dt);
             Call(oled, "TickOLEDAnimation", dt);
@@ -201,6 +297,14 @@ namespace Rokas.Presentation
         public Rect GetProjectedWatchInputRect()
         {
             if (!Ready) return new Rect(757f, 578f, 227f, 236f);
+            if (usesV10)
+            {
+                // Runtime hub coordinates are authored top-left at 1920x1080.
+                // V10 projection returns bottom-left coordinates.
+                var r = (Rect)Call(controller, "GetProjectedOledRect", (object)null);
+                return r.width > 0f && r.height > 0f ?
+                    new Rect(r.x, 1080f - r.yMax, r.width, r.height) : Rect.zero;
+            }
             var renderer = GetProperty(watch, "OledDisplayRenderer") as Renderer;
             if (renderer == null) return new Rect(757f, 578f, 227f, 236f);
             Vector3 viewport = camera.WorldToViewportPoint(renderer.bounds.center);
@@ -221,6 +325,18 @@ namespace Rokas.Presentation
         public void SetStateInputDisabled()
         {
             if (!Ready) return;
+            if (usesV10)
+            {
+                // The existing BedSleep pointer owns input; avoid double-clicks.
+                object input = GetProperty(controller, "InputRouter");
+                if (input != null)
+                {
+                    var property = input.GetType().GetProperty("Interactive",
+                        BindingFlags.Public | BindingFlags.Instance);
+                    if (property != null) property.SetValue(input, false, null);
+                }
+                return;
+            }
             // ROKAS already consumes mouse/keyboard in the native
             // TimeSelection state. Two active input systems would
             // double-register steps and audio clicks.
@@ -238,6 +354,7 @@ namespace Rokas.Presentation
         public void SetLight(bool on)
         {
             if (!Ready) return;
+            if (usesV10) return; // Imported composite owns its authored key and rim lights.
             Call(controller, "SyncRoomLightingState", on);
         }
 
@@ -245,6 +362,12 @@ namespace Rokas.Presentation
         {
             if (released) return;
             released = true;
+            if (usesV10)
+            {
+                // Composite.OnDestroy owns its RenderTexture lifetime.
+                if (root != null) UnityEngine.Object.Destroy(root);
+                return;
+            }
             if (camera != null) camera.targetTexture = null;
             if (target != null)
             {
