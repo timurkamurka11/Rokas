@@ -129,7 +129,12 @@ namespace Rokas.BedSleep.Argon.Editor
                 heroPose.RestoreNaturalAnatomy();
                 // 2D reference geometry: sleeve LEFT, wrist near center, all
                 // fingers RIGHT. Face the actual imported OLED, not palm-down.
-                heroPose.ConfigureCamera(cam, Vector3.down, .57f);
+                // Original GLB: titanium case Y=0.0157..0.0275,
+                // physical OLED Y=0.0259..0.0271. Front is +Y.
+                // Prior -Y view was the UNDERSIDE of the hand, with the
+                // ZTest Always shader painting a flat square through skin.
+                // +Y sees the real case, straps, raised glass and nails.
+                heroPose.ConfigureCamera(cam, Vector3.up, .41f);
 
                 string outDir = Path.Combine(Directory.GetCurrentDirectory(),
                     "Artifacts", "ArgonBedVideo");
