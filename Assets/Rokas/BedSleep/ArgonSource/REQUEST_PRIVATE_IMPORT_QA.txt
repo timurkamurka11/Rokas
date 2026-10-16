@@ -23,3 +23,6 @@ POV QA retry: inspect frame center, cuff-left roll, original OLED legibility gat
 POV real OLED calibration: 40 actual Unity camera renders around animated wrist; preserve Argon meshes/UVs, require readable inspect pose.
 
 Full-hand cinematography QA: calibrated original OLED at .48m FOV40, all original roughness maps mapped into Unity packed smoothness.
+
+PUBLISH_CANDIDATE=YES
+Publish only verified Argon original models/textures and Unity prefabs to the isolated draft branch, never production/main.
