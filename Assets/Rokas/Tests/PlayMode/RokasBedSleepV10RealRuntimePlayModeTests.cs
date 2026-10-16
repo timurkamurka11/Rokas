@@ -291,6 +291,85 @@ namespace Rokas.Tests
                     }
                 }
 
+                // Same real FBX, four isolated camera tests; no prefab or
+                // material mutation persists after this test. Identifies if
+                // opaque casing hides OLED or if the authored watch face is
+                // turned away from the viewer.
+                Vector3 originalCamPos = camera.transform.position;
+                Quaternion originalCamRot = camera.transform.rotation;
+                var meshRenderers = rig.GetComponentsInChildren<MeshRenderer>(true);
+                var enabledStates = new bool[meshRenderers.Length];
+                for (int i = 0; i < meshRenderers.Length; i++)
+                    enabledStates[i] = meshRenderers[i].enabled;
+                bool skinEnabled = arm.enabled;
+                var originalOledMat = oled.sharedMaterial;
+                Material diagnosticUnlit = null;
+                try
+                {
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        if (meshRenderers[i] != oled) meshRenderers[i].enabled = false;
+                    arm.enabled = false;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-oled-mesh-only-original-camera.png"), pixels.EncodeToPNG());
+
+                    Shader unlitShader = Shader.Find("Unlit/Texture");
+                    if (unlitShader != null)
+                    {
+                        diagnosticUnlit = new Material(unlitShader);
+                        diagnosticUnlit.mainTexture = originalOledMat.mainTexture;
+                        oled.sharedMaterial = diagnosticUnlit;
+                        camera.Render();
+                        Graphics.Blit(rt, scaled);
+                        RenderTexture.active = scaled;
+                        pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                        pixels.Apply();
+                        File.WriteAllBytes(Path.Combine(output,
+                            "watch-oled-mesh-only-unlit.png"), pixels.EncodeToPNG());
+                    }
+                    oled.sharedMaterial = originalOledMat;
+
+                    Vector3 direction = (originalCamPos - oled.bounds.center).normalized;
+                    if (direction.sqrMagnitude < .5f) direction = Vector3.forward;
+                    Vector3 oppositePosition = oled.bounds.center - direction * 0.39f;
+                    camera.transform.SetPositionAndRotation(oppositePosition,
+                        Quaternion.LookRotation(direction, originalCamRot * Vector3.up));
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        meshRenderers[i].enabled = enabledStates[i];
+                    arm.enabled = skinEnabled;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-opposite-side-all-meshes.png"), pixels.EncodeToPNG());
+
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        if (meshRenderers[i] != oled) meshRenderers[i].enabled = false;
+                    arm.enabled = false;
+                    camera.Render();
+                    Graphics.Blit(rt, scaled);
+                    RenderTexture.active = scaled;
+                    pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                    pixels.Apply();
+                    File.WriteAllBytes(Path.Combine(output,
+                        "watch-opposite-side-oled-only.png"), pixels.EncodeToPNG());
+                }
+                finally
+                {
+                    oled.sharedMaterial = originalOledMat;
+                    if (diagnosticUnlit != null) UnityEngine.Object.Destroy(diagnosticUnlit);
+                    for (int i = 0; i < meshRenderers.Length; i++)
+                        meshRenderers[i].enabled = enabledStates[i];
+                    arm.enabled = skinEnabled;
+                    camera.transform.SetPositionAndRotation(originalCamPos, originalCamRot);
+                }
+
                 object oledPresenter = type.GetProperty("Oled")?.GetValue(composite);
                 var oledTexture = oledPresenter?.GetType().GetProperty("OledRenderTexture")
                     ?.GetValue(oledPresenter) as RenderTexture;
