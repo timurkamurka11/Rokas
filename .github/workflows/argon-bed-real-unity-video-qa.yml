@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  checks: write
 jobs:
   unity-bed-first-person-video:
     runs-on: ubuntu-latest
