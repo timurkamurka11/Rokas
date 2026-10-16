@@ -11,3 +11,5 @@ FINAL_MP4_RETRY=Unity_149Frames_PASS_ChecksPermissionRestored
 RETRY_SHARE=wait-until-original-download-button-visible
 
 MP4_ENCODE_FIX_RETRY=render-original-149-frames-encode-in-runner-temp-20261016
+
+HORIZONTAL_HERO_QA=1 sleeve-left OLED-center fingers-right natural-MCP-limits preserve-source-FBX
