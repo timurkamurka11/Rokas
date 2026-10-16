@@ -1,0 +1,55 @@
+name: ROKAS Bed Sleep V10 — Real Camera Visible Pixel QA
+on:
+  push:
+    branches: [codex/bedsleep-v10-visibility-fix]
+    paths:
+      - '.github/workflows/bedsleep-v10-visible-pixels-gate.yml'
+      - 'Assets/Rokas/Tests/PlayMode/RokasBedSleepV10RealRuntimePlayModeTests.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Scripts/BedSleepVisualComposite.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: bedsleep-v10-visibility-pixel-qa
+  cancel-in-progress: true
+jobs:
+  real-visible-pixels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify authoritative Unity project and genuine asset inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate.prefab
+          test -s Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx
+          test -s Assets/Rokas/Tests/PlayMode/RokasBedSleepV10RealRuntimePlayModeTests.cs
+      - name: Run actual HOME bed and Set Alarm visibility tests in Unity 6000.3.19f1
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.RokasBedSleepV10RealRuntimePlayModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: V10 HOME Bed Runtime + RenderTexture Visible Pixel QA
+      - name: Upload true Unity logs and pixel evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-v10-visibility-pixel-evidence
+          path: |
+            ${{ steps.unity.outputs.artifactsPath }}
+            Artifacts/BedSleepVisibility/
+          if-no-files-found: warn
+          retention-days: 14
