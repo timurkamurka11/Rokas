@@ -197,6 +197,65 @@ namespace Rokas.BedSleep.Argon.Editor
                             "storyboard_" + frameNumber.ToString("D5") + ".png"),
                             capture.EncodeToPNG());
                     }
+                    // Isolated visual diagnostics: determine whether the remaining
+                    // skin moire comes from original normal map, specular response,
+                    // or the authored color/UV itself. ONE cloud run, one pose.
+                    // Never change serialized prefab, source maps or game V10.
+                    if (frameNumber == 72)
+                    {
+                        void SaveSkinVariant(string suffix)
+                        {
+                            cam.Render();
+                            Graphics.Blit(trueBed, finalRT, compositeMat);
+                            RenderTexture.active = finalRT;
+                            capture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                            capture.Apply(false);
+                            File.WriteAllBytes(Path.Combine(outDir,
+                                "skin_diagnostic_" + suffix + ".png"),
+                                capture.EncodeToPNG());
+                        }
+
+                        var originalAlbedo = skinPreviewMat.GetTexture("_MainTex");
+                        Color originalTint = skinPreviewMat.GetColor("_Color");
+                        float originalBump = skinPreviewMat.GetFloat("_BumpScale");
+                        float originalGloss = skinPreviewMat.GetFloat("_GlossMapScale");
+                        float originalSpec = skinPreviewMat.GetFloat("_SpecularHighlights");
+                        float originalReflections = skinPreviewMat.GetFloat("_GlossyReflections");
+                        try
+                        {
+                            // A: remove normal-map microdetail only.
+                            skinPreviewMat.SetFloat("_BumpScale", 0f);
+                            SaveSkinVariant("01_no_normal");
+                            // B: also remove glossy highlights: isolates aliasing.
+                            skinPreviewMat.SetFloat("_GlossMapScale", .22f);
+                            skinPreviewMat.SetFloat("_SpecularHighlights", 0f);
+                            skinPreviewMat.SetFloat("_GlossyReflections", 0f);
+                            SaveSkinVariant("02_matte_no_normal");
+                            // C: flat replacement for diagnosis ONLY: if banding
+                            // persists with no authored albedo, inspect mesh normals
+                            // / imported tangents rather than painting textures.
+                            skinPreviewMat.SetTexture("_MainTex", Texture2D.whiteTexture);
+                            skinPreviewMat.SetColor("_Color",
+                                new Color(.72f, .55f, .48f, 1f));
+                            SaveSkinVariant("03_flat_albedo");
+                        }
+                        finally
+                        {
+                            skinPreviewMat.SetTexture("_MainTex", originalAlbedo);
+                            skinPreviewMat.SetColor("_Color", originalTint);
+                            skinPreviewMat.SetFloat("_BumpScale", originalBump);
+                            skinPreviewMat.SetFloat("_GlossMapScale", originalGloss);
+                            skinPreviewMat.SetFloat("_SpecularHighlights", originalSpec);
+                            skinPreviewMat.SetFloat("_GlossyReflections", originalReflections);
+                            // Restore the actual frame buffer for OLED assertions.
+                            cam.Render();
+                            Graphics.Blit(trueBed, finalRT, compositeMat);
+                            RenderTexture.active = finalRT;
+                            capture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                            capture.Apply(false);
+                        }
+                    }
+
                     // During actual InspectIdle keep the live watch readable.
                     if (clip == inspect && frameNumber % 12 == 0)
                     {
