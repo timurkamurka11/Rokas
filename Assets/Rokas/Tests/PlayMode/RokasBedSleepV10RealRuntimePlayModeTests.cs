@@ -170,6 +170,17 @@ namespace Rokas.Tests
             Assert.That(oled, Is.Not.Null, "Missing real OLED renderer");
             Assert.That(arm.enabled && arm.gameObject.activeInHierarchy, Is.True);
             Assert.That(oled.enabled && oled.gameObject.activeInHierarchy, Is.True);
+            var rigController = rig.GetComponentsInChildren<MonoBehaviour>(true)
+                .FirstOrDefault(x => x != null && x.GetType().Name == "KeikoFPSArmRigController");
+            Assert.That(rigController, Is.Not.Null, "Missing animated wrist controller.");
+            var armPhase = rigController.GetType().GetProperty("CurrentState")?.GetValue(rigController);
+            Debug.Log("ROKAS_V10_INSPECT_STATE=" + armPhase);
+            Assert.That(armPhase.ToString(), Is.EqualTo("InspectIdle"),
+                "Set Alarm should reach the wrist inspection state before testing its camera.");
+            float watchDistance = Vector3.Distance(camera.transform.position, oled.bounds.center);
+            Debug.Log("ROKAS_V10_WATCH_CLOSEUP_CAMERA_DISTANCE=" + watchDistance.ToString("F4"));
+            Assert.That(watchDistance, Is.LessThan(0.52f),
+                "The watch inspection camera never moved from the full-arm shot.");
             Assert.That(oled.sharedMaterial, Is.Not.Null);
             Assert.That(oled.sharedMaterial.mainTexture, Is.InstanceOf<RenderTexture>(),
                 "The OLED has no live digital display bound to its real imported mesh.");
