@@ -6,6 +6,7 @@ on:
       - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
       - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Scripts/**'
       - '.github/workflows/bedsleep-v10-windows-playable-build.yml'
   workflow_dispatch:
 permissions:
