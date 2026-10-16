@@ -17,3 +17,5 @@ HORIZONTAL_HERO_QA=1 sleeve-left OLED-center fingers-right natural-MCP-limits pr
 HORIZONTAL_BASIS_HANDEDNESS_RETRY=fix-cross-armAxis-normal
 
 PHYSICAL_WATCH_DORSAL_TEST=front-+Y-depth-tested-true-OLED-camera-0.41m-600s-timeout
+
+GENTLE_SKIN_LIGHTING_QA=original-textures-untouched-0.32-warm-key-0.09-normal-preview
