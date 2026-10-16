@@ -21,3 +21,5 @@ First-person camera QA: sample real Raise/InspectIdle/Lower with cuff below OLED
 POV QA retry: inspect frame center, cuff-left roll, original OLED legibility gate, exit shot intentionally empty.
 
 POV real OLED calibration: 40 actual Unity camera renders around animated wrist; preserve Argon meshes/UVs, require readable inspect pose.
+
+Full-hand cinematography QA: calibrated original OLED at .48m FOV40, all original roughness maps mapped into Unity packed smoothness.
