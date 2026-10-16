@@ -68,6 +68,11 @@ jobs:
           from pathlib import Path
           p=Path(os.environ["RUNNER_TEMP"])/"bedsleep-v10/source/01_BLENDER_SOURCE/Export_Scripts/V10_BUILD_REAL_BLENDER_MASTERS.py"
           s=p.read_text()
+          # Authored material is M_Keiko_Fingernails_V9_PBR (lowercase 'nails').
+          # V10 Blender exporter erroneously used case-sensitive substring 'Nail'.
+          assert "'Nail' in m.name" in s and "'Nail' in name or 'Nail' in ob.name" in s
+          s=s.replace("'Nail' in m.name", "'nail' in m.name.lower()")
+          s=s.replace("'Nail' in name or 'Nail' in ob.name", "'nail' in name.lower() or 'nail' in ob.name.lower()")
           old="    bpy.ops.import_scene.gltf(filepath=str(src))\n    assert_scene(blend_mode)"
           new="    bpy.ops.import_scene.gltf(filepath=str(src))\n    print('V10_IMPORTED_MATERIAL_NAMES',[(m.name) for m in bpy.data.materials],flush=True)\n    print('V10_IMPORTED_MESH_SLOTS',[(ob.name,[m.name for m in ob.data.materials]) for ob in bpy.data.objects if ob.type=='MESH'],flush=True)\n    assert_scene(blend_mode)"
           assert old in s
