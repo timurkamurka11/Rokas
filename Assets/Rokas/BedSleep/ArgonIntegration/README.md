@@ -44,3 +44,11 @@ After successful cloud FBX import and visual QA, add a separate runtime adapter 
 The ZIP integrity passes. Its GLB has 10 meshes, 25 bones and 8 animations, but only 11 animated channels per clip; individual finger phalanges may remain static. Its GLB does not embed image textures; PNGs are delivered separately. Its eight Unity material YAML files have no texture references. Unity import has not yet been verified for these actual binaries. Never claim production-ready based only on the packaged QA JSON or web HTML demo.
 
 No whole-game archive or EXE is required.
+
+## Current cloud QA + binary staging
+
+The authentic GLB/Blender re-export has passed Unity EditMode import (run 38926185033), with a 3-skinned-mesh, 25-bone, 8-clip real FBX candidate. The original imported OLED geometry now uses an emissive live-texture shader; pixel check improved from 1 to 448 in the Unity screenshot test. This is only a **visual candidate**, not a production Bed Sleep replacement: raw camera framing shows the cuff entering from the top, and skin normal/lighting still needs checking.
+
+A separate first-person camera screenshot gate (run 38928867250) evaluates the actual original Raise/Inspect/Lower clips with camera-up oriented toward the hand and rigid root translation for a lower-left entrance. Do not use the live game merge until those frames are reviewed.
+
+After QA passes, the disposable Actions checkout may publish **genuine original FBX, PNG textures, generated .meta, materials, and preview prefab** ONLY to the isolated Argon candidate branch if the QA request marker contains an exact line `PUBLISH_CANDIDATE=YES`. With no such line, the job remains QA-only. The gate never writes to the production Bed Sleep Resources prefab or default branch. The repository is still public, so derived assets published to this branch will be public too; the user has already intentionally published the source ZIP in a public release.
