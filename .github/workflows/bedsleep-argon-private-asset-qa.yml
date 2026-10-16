@@ -1,5 +1,11 @@
 name: ROKAS Argon Candidate — Private Release Import QA
 on:
+  # Allows triggering directly on the candidate branch after the original
+  # ZIP appears in the private release, without touching production/default.
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths:
+      - 'Assets/Rokas/BedSleep/ArgonSource/REQUEST_PRIVATE_IMPORT_QA.txt'
   workflow_dispatch:
 permissions:
   contents: read
@@ -76,5 +82,6 @@ jobs:
           path: |
             ${{ steps.unity.outputs.artifactsPath }}
             Assets/Rokas/BedSleep/ArgonCandidate/
+            Artifacts/ArgonCandidate/
           if-no-files-found: warn
           retention-days: 14
