@@ -286,6 +286,13 @@ namespace Rokas.BedSleep.Argon.Editor
             if (!string.IsNullOrEmpty(normal))
             {
                 SetTexture(material, "_BumpMap", normal);
+                // The original skin normal contains high-frequency pore
+                // information which becomes severe moire at game resolution
+                // when Unity Standard treats it as a full-strength bump map.
+                // Preserve the actual original PNG, tune only its PBR amplitude.
+                material.SetFloat("_BumpScale",
+                    name == "Mat_Keiko_Skin" ? .20f :
+                    name == "Mat_Keiko_Sleeve" ? .35f : .55f);
                 material.EnableKeyword("_NORMALMAP");
             }
             if (!string.IsNullOrEmpty(ao)) SetTexture(material, "_OcclusionMap", ao);
@@ -325,8 +332,10 @@ namespace Rokas.BedSleep.Argon.Editor
             string path = Output + "Mat_Watch_OLED_LiveCandidate.mat";
             var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (existing != null) return existing;
-            var shader = Shader.Find("Unlit/Texture");
-            if (shader == null) throw new InvalidOperationException("Unlit/Texture missing");
+            var shader = Shader.Find("ROKAS/BedSleep/ArgonOLEDLiveSurface");
+            if (shader == null)
+                throw new InvalidOperationException(
+                    "Real Argon OLED viewer-facing shader is missing; refusing placeholder material.");
             var material = new Material(shader) { name = "Mat_Watch_OLED_LiveCandidate" };
             SetTexture(material, "_MainTex",
                 "Textures/Watch/Watch_OLED_NeutralGrid_Template.png");
