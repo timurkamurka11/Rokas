@@ -105,7 +105,24 @@ namespace Rokas.BedSleep.V10Release
             if (oledMaterial == null || oledMaterial.shader == null)
                 throw new MissingReferenceException("V10: real 3D OLED imported material missing");
             _oledRuntimeMaterial = new Material(oledMaterial) { name = "ROKAS_V10_OLED_Runtime_Instance" };
-            if (oledRt != null) _oledRuntimeMaterial.mainTexture = oledRt;
+            if (oledRt != null)
+            {
+                // The saved Standard PBR asset has _Color near black
+                // (0.015/0.025/0.035). Its multiplication nearly erases
+                // the genuine numeric/arc pixels despite a live OLED RT.
+                // Only change the transient material owned by this watch.
+                if (_oledRuntimeMaterial.HasProperty("_Color"))
+                    _oledRuntimeMaterial.SetColor("_Color", Color.white);
+                if (_oledRuntimeMaterial.HasProperty("_BaseColor"))
+                    _oledRuntimeMaterial.SetColor("_BaseColor", Color.white);
+                _oledRuntimeMaterial.mainTexture = oledRt;
+                if (_oledRuntimeMaterial.HasProperty("_EmissionMap"))
+                {
+                    _oledRuntimeMaterial.SetTexture("_EmissionMap", oledRt);
+                    _oledRuntimeMaterial.SetColor("_EmissionColor", Color.white * 1.25f);
+                    _oledRuntimeMaterial.EnableKeyword("_EMISSION");
+                }
+            }
             _oledRenderer.sharedMaterial = _oledRuntimeMaterial;
         }
 
