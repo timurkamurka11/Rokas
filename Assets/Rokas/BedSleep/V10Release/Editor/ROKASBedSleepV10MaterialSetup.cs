@@ -74,6 +74,26 @@ namespace Rokas.BedSleep.V10Release.Editor
         static Texture2D Need(string rel)
         {
             string path = Root + "Textures/" + rel;
+            // GUID-only .meta may import square PNG as a Cubemap.
+            // The actual V10 albedo/normal maps are 2D textures, never placeholders.
+            TextureImporter textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (textureImporter == null)
+            {
+                AssetDatabase.ImportAsset(path,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
+            }
+            if (textureImporter == null)
+                throw new InvalidOperationException("V10 PNG missing TextureImporter: " + path);
+            bool normal = rel.IndexOf("_Normal_", StringComparison.OrdinalIgnoreCase) >= 0;
+            var correctType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            if (textureImporter.textureShape != TextureImporterShape.Texture2D ||
+                textureImporter.textureType != correctType)
+            {
+                textureImporter.textureShape = TextureImporterShape.Texture2D;
+                textureImporter.textureType = correctType;
+                textureImporter.SaveAndReimport();
+            }
             Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (tex == null)
             {
