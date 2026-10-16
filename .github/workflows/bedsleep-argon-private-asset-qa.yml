@@ -1,0 +1,80 @@
+name: ROKAS Argon Candidate — Private Release Import QA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: rokas-argon-candidate-import
+  cancel-in-progress: false
+jobs:
+  import-actual-argon-fbx:
+    name: Import actual Argon hand/watch assets in Unity 6000.3.19f1
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the original 46-file ZIP from the repository's private release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/argon"
+          gh release download bedsleep-argon-assets --repo "$GITHUB_REPOSITORY" \
+            --pattern 'ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip' \
+            --dir "$RUNNER_TEMP/argon"
+          test -s "$RUNNER_TEMP/argon/ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip"
+      - name: Check ZIP integrity and stage FBX / PNG in disposable checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile, os, shutil
+          p = Path(os.environ["RUNNER_TEMP"]) / "argon" / "ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip"
+          dst = Path("Assets/Rokas/BedSleep/ArgonSource")
+          prefix = "ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY/"
+          with zipfile.ZipFile(p) as archive:
+              assert archive.testzip() is None, "Argon ZIP CRC failure"
+              names = archive.namelist()
+              assert len(names) == 46, f"Expected 46 real asset files, got {len(names)}"
+              for name in names:
+                  path = Path(name)
+                  assert not path.is_absolute() and ".." not in path.parts, "Unsafe ZIP path"
+                  assert name.startswith(prefix), "Unexpected ZIP root directory"
+                  rel = Path(name[len(prefix):])
+                  if rel.parts and rel.parts[0] in ("Models", "Animations", "Textures"):
+                      target = dst / rel
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      with archive.open(name) as inp, open(target, "wb") as out:
+                          shutil.copyfileobj(inp, out)
+          assert (dst / "Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx").stat().st_size > 100000
+          assert (dst / "Models/ROKAS_Smartwatch_HighDetail.fbx").stat().st_size > 100000
+          print("Staged genuine FBX / textures for private Unity cloud import.")
+          PY
+      - name: Unity EditMode — real FBX, 3 skinned meshes, 25 joints, seven watch parts, eight clips
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonCandidateImportTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Argon Genuine FBX Unity Candidate Import QA
+      - name: Keep Unity EditMode logs and candidate prefab for visual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Candidate-Unity-Import-Evidence
+          path: |
+            ${{ steps.unity.outputs.artifactsPath }}
+            Assets/Rokas/BedSleep/ArgonCandidate/
+          if-no-files-found: warn
+          retention-days: 14
