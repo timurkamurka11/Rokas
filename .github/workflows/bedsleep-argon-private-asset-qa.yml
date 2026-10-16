@@ -67,7 +67,10 @@ jobs:
                           shutil.copyfileobj(inp, out)
           assert (dst / "Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx").stat().st_size > 100000
           assert (dst / "Models/ROKAS_Smartwatch_HighDetail.fbx").stat().st_size > 100000
-          print("Staged genuine FBX / textures for Unity cloud import in ephemeral checkout.")
+          with zipfile.ZipFile(p) as archive:
+              master = archive.read("ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY/Source/ROKAS_Hand_Smartwatch_Original.glb")
+              (p.parent / "original-master.glb").write_bytes(master)
+          print("Staged original GLB and exact FBX / texture assets.")
           PY
       - name: Re-export real skinned FBX from source GLB with Blender
         shell: bash
