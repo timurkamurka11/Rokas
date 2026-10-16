@@ -1,0 +1,58 @@
+name: ROKAS Bed Sleep V10 — Native Unity Compile & Sleep Regression
+on:
+  push:
+    branches: [codex/bedsleep-v10-release-stage]
+    paths:
+      - '.github/workflows/bedsleep-v10-native-unity-gate.yml'
+      - 'Assets/Rokas/BedSleep/V10Release/**'
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: bedsleep-v10-unity-native-gate
+  cancel-in-progress: true
+jobs:
+  native-unity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure exact imported production FBX, textures and support code exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_Albedo_4K.png
+          test -s Assets/Rokas/BedSleep/V10Release/Scripts/BedSleepSFXController.cs
+          test -s Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10MaterialSetup.cs
+          python3 - <<'PY'
+          from pathlib import Path
+          for fn in ['Keiko_FPS_Arm_Rigged.fbx','ROKAS_Smartwatch_HighDetail.fbx']:
+              b=(Path('Assets/Rokas/BedSleep/V10Release/Models')/fn).open('rb').read(27)
+              assert b.startswith(b'Kaydara FBX Binary  '),(fn,b)
+          print('REAL_BLENDER_FBX_AND_PBR_TEXTURES_PRESENT')
+          PY
+      - name: Compile and run original ROKAS Bed Sleep EditMode regression in Unity 6000.3.19f1
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Tests.RokasBedSleepEditModeTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS V10 Genuine FBX Bed Sleep EditMode Regression
+      - name: Upload true Unity logs and test XML for diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-bedsleep-v10-native-unity-logs
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14
