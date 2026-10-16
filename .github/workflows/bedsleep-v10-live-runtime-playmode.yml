@@ -7,6 +7,7 @@ on:
       - 'Assets/Rokas/Tests/PlayMode/RokasBedSleepV10RealRuntimePlayModeTests.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
       - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Scripts/**'
       - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
 permissions:
   contents: read
