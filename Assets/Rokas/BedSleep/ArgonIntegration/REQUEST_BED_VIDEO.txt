@@ -1,1 +1,5 @@
 Find actual ceiling from the working Unity bed scene, not the apartment home overview. Generate cloud Unity frames and MP4 only from real scene pixels.
+
+CAPTURE_REQUEST=2026-10-16-original-roka-bed-ceiling-unity-gameview-video
+Source: user-provided Bandicam Unity recording, verified cropped PNG SHA256 9b8e543328054433a65df13dd1a393cb01d116112b4a297bac897a0ef88d5791.
+Record authentic skinned Argon FBX + actual OLED at 24fps with original ROKAS Bed Sleep POV visual.
