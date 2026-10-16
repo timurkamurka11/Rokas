@@ -1,0 +1,1 @@
+Find actual ceiling from the working Unity bed scene, not the apartment home overview. Generate cloud Unity frames and MP4 only from real scene pixels.
