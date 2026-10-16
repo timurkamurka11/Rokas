@@ -19,3 +19,5 @@ Double-sided live physical OLED shader, original skin normals at realistic stren
 First-person camera QA: sample real Raise/InspectIdle/Lower with cuff below OLED and left-bottom screen entry; never modify production V10.
 
 POV QA retry: inspect frame center, cuff-left roll, original OLED legibility gate, exit shot intentionally empty.
+
+POV real OLED calibration: 40 actual Unity camera renders around animated wrist; preserve Argon meshes/UVs, require readable inspect pose.
