@@ -126,6 +126,7 @@ jobs:
           path: |
             Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
             Artifacts/ArgonBedVideo/storyboard_*.png
+            Artifacts/ArgonBedVideo/skin_diagnostic_*.png
             Artifacts/ArgonBedVideo/capture_manifest.json
             ${{ steps.unity.outputs.artifactsPath }}
           if-no-files-found: warn
