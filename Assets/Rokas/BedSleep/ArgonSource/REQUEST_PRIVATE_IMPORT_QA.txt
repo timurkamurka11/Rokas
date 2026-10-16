@@ -7,3 +7,5 @@ This marker triggers isolated candidate Unity EditMode import in GitHub Actions.
 Native conversion requested: original master GLB to Blender FBX for actual Unity skinned-mesh reimport. Production V10 is unchanged.
 
 Retry: install numpy, remove bad FBX, require newly native-exported Blender FBX files before Unity import.
+
+Retry: native 3 skinned meshes imported; match only 8 authentic 25Bone_GenericRig animation tracks.
