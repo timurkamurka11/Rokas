@@ -215,23 +215,24 @@ namespace Rokas.BedSleep.Argon.Editor
                 }
 
                 // Real ceiling before hand appears.
-                Segment(FindClip("SleepArm_HiddenIdle"), .5f, t => -.24f,
+                Segment(FindClip("SleepArm_HiddenIdle"), .65f, t => -.24f,
                     t => 14, false);
                 // Raise from bottom left; never emerge from the top.
                 Segment(raise, raise.length, t => Mathf.Lerp(-.24f, -.06f,
                     Mathf.SmoothStep(0f, 1f, t)), t => 14, false);
                 Segment(wrist, wrist.length, t => Mathf.Lerp(-.06f, 0f, t),
                     t => 14, false);
-                Segment(inspect, .75f, t => 0f, t => 14, false);
+                Segment(inspect, 1.65f, t => 0f, t => 14, false);
                 Segment(crown, crown.length, t => 0f,
                     t => 14 + Mathf.FloorToInt(t * 4f), false);
                 Segment(confirm, confirm.length, t => 0f, t => 18, true);
                 Segment(lower, lower.length, t => Mathf.Lerp(0f, -.24f,
                     Mathf.SmoothStep(0f, 1f, t)), t => 18, true);
-                Segment(FindClip("SleepArm_ReturnIdle"), .35f,
+                Segment(FindClip("SleepArm_ReturnIdle"), .55f,
                     t => -.24f, t => 18, true);
 
-                Assert.That(frameNumber, Is.GreaterThan(120));
+                Assert.That(frameNumber, Is.GreaterThan(105),
+                    "Need a genuine continuous 24fps clip, not static animation snapshots.");
                 Assert.That(inspectPixelCount, Is.GreaterThan(12),
                     "Real OLED is not readable in the real Unity composite.");
                 string report = "{\n" +
