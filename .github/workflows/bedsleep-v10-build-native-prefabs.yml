@@ -82,12 +82,12 @@ jobs:
                   lines=data.splitlines(keepends=True)
                   normalized=[]
                   for line in lines:
-                      if line.endswith(b'\\r\\n'):
-                          normalized.append(line[:-2].rstrip(b' \\t')+b'\\r\\n')
-                      elif line.endswith(b'\\n'):
-                          normalized.append(line[:-1].rstrip(b' \\t')+b'\\n')
+                      if line.endswith(b'\r\n'):
+                          normalized.append(line[:-2].rstrip(b' \t')+b'\r\n')
+                      elif line.endswith(b'\n'):
+                          normalized.append(line[:-1].rstrip(b' \t')+b'\n')
                       else:
-                          normalized.append(line.rstrip(b' \\t'))
+                          normalized.append(line.rstrip(b' \t'))
                   b=b''.join(normalized)
                   if b!=data:
                       p.write_bytes(b)
