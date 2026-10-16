@@ -26,3 +26,5 @@ Full-hand cinematography QA: calibrated original OLED at .48m FOV40, all origina
 
 PUBLISH_CANDIDATE=YES
 Publish only verified Argon original models/textures and Unity prefabs to the isolated draft branch, never production/main.
+
+Post-publish check: validate committed prefab and .meta on fresh cloud Unity checkout without modifying stored assets.
