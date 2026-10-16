@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/bedsleep-v10-build-native-prefabs.yml'
       - 'Assets/Rokas/Tests/EditMode/RokasBedSleepV10ReleaseAssetTests.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10MaterialSetup.cs'
 permissions:
   contents: write
   checks: write
