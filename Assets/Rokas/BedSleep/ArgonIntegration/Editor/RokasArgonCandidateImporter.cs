@@ -53,6 +53,12 @@ namespace Rokas.BedSleep.Argon.Editor
                 throw new InvalidOperationException("Actual Argon FBX import is missing: " +
                     ArmFile + " / " + WatchFile);
 
+            ConfigureImportedFbx(ArmFile, true);
+            ConfigureImportedFbx(WatchFile, false);
+            // Read importer assets after the reimport, never retain stale
+            // FBX subasset references across SaveAndReimport().
+            armSource = AssetDatabase.LoadAssetAtPath<GameObject>(ArmFile);
+            watchSource = AssetDatabase.LoadAssetAtPath<GameObject>(WatchFile);
             VerifyModelImporter(ArmFile);
             VerifyModelImporter(WatchFile);
             var sourceRig = armSource.GetComponentsInChildren<SkinnedMeshRenderer>(true);
@@ -208,6 +214,23 @@ namespace Rokas.BedSleep.Argon.Editor
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        private static void ConfigureImportedFbx(string path, bool animated)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+                throw new InvalidOperationException("Authentic FBX ModelImporter missing: " + path);
+            bool change = false;
+            if (!importer.isReadable) { importer.isReadable = true; change = true; }
+            if (animated && !importer.importAnimation)
+                { importer.importAnimation = true; change = true; }
+            if (animated && importer.animationType != ModelImporterAnimationType.Generic)
+                { importer.animationType = ModelImporterAnimationType.Generic; change = true; }
+            // Keep file's meter scale until bounds validation proves otherwise.
+            // FBX GlobalSettings declares centimeters-per-unit; this must
+            // be verified by the importer and never guessed as an extra x100.
+            if (change) importer.SaveAndReimport();
         }
 
         private static void VerifyModelImporter(string path)
