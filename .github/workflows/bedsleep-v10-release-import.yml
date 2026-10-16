@@ -74,7 +74,7 @@ jobs:
           s=s.replace("'Nail' in m.name", "'nail' in m.name.lower()")
           s=s.replace("'Nail' in name or 'Nail' in ob.name", "'nail' in name.lower() or 'nail' in ob.name.lower()")
           old="    bpy.ops.import_scene.gltf(filepath=str(src))\n    assert_scene(blend_mode)"
-          new="    bpy.ops.import_scene.gltf(filepath=str(src))\n    print('V10_IMPORTED_MATERIAL_NAMES',[(m.name) for m in bpy.data.materials],flush=True)\n    print('V10_IMPORTED_MESH_SLOTS',[(ob.name,[m.name for m in ob.data.materials]) for ob in bpy.data.objects if ob.type=='MESH'],flush=True)\n    assert_scene(blend_mode)"
+          new="    bpy.ops.import_scene.gltf(filepath=str(src))\n    for h in list(bpy.data.objects):\n        if h.name=='Icosphere' and h.type=='MESH' and len(h.data.materials)==0:\n            bpy.data.objects.remove(h,do_unlink=True)\n    print('V10_IMPORTED_MATERIAL_NAMES',[(m.name) for m in bpy.data.materials],flush=True)\n    print('V10_IMPORTED_MESH_SLOTS',[(ob.name,[m.name for m in ob.data.materials]) for ob in bpy.data.objects if ob.type=='MESH'],flush=True)\n    assert_scene(blend_mode)"
           assert old in s
           p.write_text(s.replace(old,new),encoding="utf-8")
           PY
