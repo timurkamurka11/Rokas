@@ -130,7 +130,10 @@ namespace Rokas.BedSleep.Argon.Editor
                     "SleepArm_Raise", "SleepArm_InspectIdle", "SleepArm_Lower"})
                 {
                     var clip = animator.runtimeAnimatorController.animationClips
-                        .Single(x => x.name == state);
+                        .Single(x => x.name == state ||
+                            x.name.EndsWith("|" + state +
+                                "_ROKAS_Keiko_25Bone_GenericRig",
+                                System.StringComparison.Ordinal));
                     float t = state == "SleepArm_InspectIdle" ?
                         clip.length * .5f : clip.length * .55f;
                     clip.SampleAnimation(animator.gameObject, t);
