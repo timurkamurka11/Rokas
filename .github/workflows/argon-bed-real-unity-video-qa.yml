@@ -104,14 +104,20 @@ jobs:
           test -s Artifacts/ArgonBedVideo/frames/frame_00000.png
           count="$(find Artifacts/ArgonBedVideo/frames -name 'frame_*.png' | wc -l)"
           test "$count" -gt 120
+          # game-ci Unity container writes frames as root. Runner may read
+          # them but cannot create files in that root-owned directory.
+          # Encode in writable RUNNER_TEMP then install just the finished
+          # movie back for actions/upload-artifact, without changing source.
+          movie="$RUNNER_TEMP/ROKAS_ARGON_BED_POV_Unity_720p.mp4"
           ffmpeg -hide_banner -loglevel error -y \
             -framerate 24 -i Artifacts/ArgonBedVideo/frames/frame_%05d.png \
             -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p \
-            -movflags +faststart \
-            Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
+            -movflags +faststart "$movie"
           ffprobe -v error -show_entries format=duration,size \
-            -of default=noprint_wrappers=1 \
+            -of default=noprint_wrappers=1 "$movie"
+          sudo install -m 0644 "$movie" \
             Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
+          test -s Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
       - name: Upload actual Unity MP4 and storyboard for review
         if: always()
         uses: actions/upload-artifact@v4
