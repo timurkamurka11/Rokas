@@ -106,6 +106,119 @@ namespace Rokas.Tests
                 "FBX hand + seven independent watch meshes + 3 PBR groups + live RenderTexture.");
         }
 
+        /// <summary>
+        /// Unlike the old smoke test, this actually clicks Set Alarm, enters
+        /// TimeSelection, renders the real camera, and rejects a blank transparent
+        /// RenderTexture / off-screen watch. The regression reported by the
+        /// player was invisible despite passing all earlier V10 prefab tests.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SetAlarmActuallyRendersVisibleArmAndOLEDInHome()
+        {
+            tempSaveDirectory = Path.Combine(Path.GetTempPath(),
+                "rokas-v10-visibility-" + Guid.NewGuid().ToString("N"));
+            bootstrapRoot = new GameObject("ROKAS_V10_Visibility_RealHome");
+            var boot = bootstrapRoot.AddComponent<RokasBootstrap>();
+            boot.Initialize(tempSaveDirectory);
+            yield return null;
+
+            var bed = bootstrapRoot.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(x => x.name == "BedInteractable_Hotspot");
+            Assert.That(bed, Is.Not.Null, "Missing real HOME bed hotspot");
+            bed.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(2.5f);
+
+            var alarm = bootstrapRoot.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(x => x.name == "SetAlarm");
+            Assert.That(alarm, Is.Not.Null, "Missing Set Alarm button");
+            Assert.That(alarm.interactable, Is.True, "Alarm button must be enabled in HOME");
+            alarm.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(3.0f);
+            yield return new WaitForEndOfFrame();
+
+            var rig = UnityEngine.Object.FindObjectsByType<GameObject>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(x => x.name == "ROKAS_BedSleep_V10_RealFBX_Rig");
+            Assert.That(rig, Is.Not.Null, "3D rig not created");
+            var composite = rig.GetComponents<MonoBehaviour>().FirstOrDefault(x =>
+                x != null && x.GetType().FullName ==
+                    "Rokas.BedSleep.V10Release.BedSleepVisualComposite");
+            Assert.That(composite, Is.Not.Null, "3D composite not created");
+            var type = composite.GetType();
+            var rt = type.GetProperty("CompositeRenderTexture")?.GetValue(composite)
+                as RenderTexture;
+            var camera = type.GetProperty("PresentationCamera")?.GetValue(composite)
+                as Camera;
+            Assert.That(rt, Is.Not.Null, "Missing 3D RenderTexture");
+            Assert.That(camera, Is.Not.Null, "Missing 3D camera");
+            Assert.That(camera.enabled, Is.True);
+            Assert.That(camera.targetTexture, Is.SameAs(rt));
+
+            var raw = bootstrapRoot.GetComponentsInChildren<RawImage>(true)
+                .FirstOrDefault(x => x.texture == rt);
+            Assert.That(raw, Is.Not.Null, "3D RenderTexture not connected to UI");
+            Assert.That(raw.gameObject.activeInHierarchy, Is.True);
+            Assert.That(raw.color.a, Is.GreaterThan(0.99f),
+                "3D RawImage is still invisible after Set Alarm");
+
+            var arm = rig.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            Assert.That(arm, Is.Not.Null, "Missing 3D arm renderer");
+            var allWatches = rig.GetComponentsInChildren<MeshRenderer>(true);
+            var oled = allWatches.FirstOrDefault(x => x.name.Contains("Watch_OLED_Screen"));
+            Assert.That(oled, Is.Not.Null, "Missing real OLED renderer");
+            Assert.That(arm.enabled && arm.gameObject.activeInHierarchy, Is.True);
+            Assert.That(oled.enabled && oled.gameObject.activeInHierarchy, Is.True);
+
+            // Both actual rendered surfaces must intersect the real camera.
+            var planes = GeometryUtility.CalculateFrustumPlanes(camera);
+            Assert.That(GeometryUtility.TestPlanesAABB(planes, arm.bounds), Is.True,
+                "Real hand bounds are outside the presentation camera frustum");
+            Assert.That(GeometryUtility.TestPlanesAABB(planes, oled.bounds), Is.True,
+                "Real OLED bounds are outside the presentation camera frustum");
+
+            // Check pixels, not only C# object presence. Re-render the exact
+            // camera used by the hub into its actual 1920x1080 RenderTexture.
+            camera.Render();
+            var scaled = RenderTexture.GetTemporary(320, 180, 0,
+                RenderTextureFormat.ARGB32);
+            Texture2D pixels = new Texture2D(320, 180, TextureFormat.RGBA32, false);
+            RenderTexture previous = RenderTexture.active;
+            int visible = 0;
+            try
+            {
+                Graphics.Blit(rt, scaled);
+                RenderTexture.active = scaled;
+                pixels.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+                pixels.Apply();
+                foreach (var p in pixels.GetPixels32())
+                {
+                    if (p.a > 24 && (p.r > 14 || p.g > 14 || p.b > 14))
+                        visible++;
+                }
+
+                // Preserve actual visual evidence for Actions even if the
+                // regression assertion fails.
+                string output = Path.Combine(Application.dataPath, "..",
+                    "Artifacts", "BedSleepVisibility");
+                Directory.CreateDirectory(output);
+                File.WriteAllBytes(Path.Combine(output, "watch-3d-visible-rt.png"),
+                    pixels.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(scaled);
+                UnityEngine.Object.Destroy(pixels);
+            }
+
+            Debug.Log("ROKAS_V10_VISIBILITY: opaque-colored pixels=" + visible +
+                "/57600 skin=" + arm.bounds + " oled=" + oled.bounds +
+                " camera=" + camera.transform.position +
+                " alpha=" + raw.color.a);
+            Assert.That(visible, Is.GreaterThan(100),
+                "Bed Sleep returned a blank 3D image even though the arm/watch prefabs exist.");
+        }
+
         [TearDown]
         public void Cleanup()
         {
