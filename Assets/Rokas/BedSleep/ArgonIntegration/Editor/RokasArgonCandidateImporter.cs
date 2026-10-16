@@ -108,7 +108,9 @@ namespace Rokas.BedSleep.Argon.Editor
             {
                 var found = loadedClips.Where(c =>
                     c.name == clipName || c.name.EndsWith("|" + clipName,
-                        StringComparison.Ordinal) || c.name.Contains(clipName + "_Armature"))
+                        StringComparison.Ordinal) ||
+                    c.name.EndsWith("|" + clipName + "_ROKAS_Keiko_25Bone_GenericRig",
+                        StringComparison.Ordinal))
                     .ToArray();
                 if (found.Length != 1 || found[0].length <= 0.01f)
                     throw new InvalidOperationException("Missing unique, non-empty FBX clip: " +
