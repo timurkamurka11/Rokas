@@ -250,9 +250,22 @@ namespace Rokas.BedSleep.V10Release
             normal.Normalize();
 
             // Look at the real watch face with enough forearm still visible.
-            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center, 0.57f);
-            Vector3 upward = Mathf.Abs(Vector3.Dot(normal, Vector3.forward)) > 0.95f
-                ? Vector3.up : Vector3.forward;
+            // FPS composition: the shoulder/forearm enters from the lower
+            // edge, the wrist/watch rises toward the centre of the picture.
+            // Using world +Z as the camera's up axis made the 42cm arm appear
+            // horizontal and tiny in cloud-rendered screenshots.
+            Vector3 forearm = Vector3.zero;
+            if (ArmRig.Bones != null && ArmRig.Bones.Length > 0 && ArmRig.Bones[0] != null)
+                forearm = displayBounds.center - ArmRig.Bones[0].position;
+            if (forearm.sqrMagnitude < 1e-6f)
+                forearm = displayBounds.center - skinBounds.center;
+            Vector3 upward = Vector3.ProjectOnPlane(forearm, normal);
+            if (upward.sqrMagnitude < 1e-6f)
+                upward = Vector3.ProjectOnPlane(Vector3.forward, normal);
+            if (upward.sqrMagnitude < 1e-6f)
+                upward = Vector3.ProjectOnPlane(Vector3.up, normal);
+            upward.Normalize();
+            Vector3 aim = Vector3.Lerp(skinBounds.center, displayBounds.center, 0.74f);
             Quaternion viewRotation = Quaternion.LookRotation(-normal, upward);
             Quaternion inverseView = Quaternion.Inverse(viewRotation);
 
@@ -273,9 +286,9 @@ namespace Rokas.BedSleep.V10Release
             float fovRadians = Mathf.Max(10f, cameraFov) * Mathf.Deg2Rad;
             float tanHalf = Mathf.Tan(fovRadians * 0.5f);
             float aspect = (float)Mathf.Max(1, renderWidth) / Mathf.Max(1, renderHeight);
-            float distance = Mathf.Max(0.65f,
-                Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 1.38f
-                + depth + 0.12f);
+            float distance = Mathf.Max(0.45f,
+                Mathf.Max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect)) * 0.72f
+                + depth + 0.08f);
 
             _presentationCamera.transform.SetPositionAndRotation(
                 aim + normal * distance, viewRotation);
