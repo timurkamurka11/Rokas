@@ -1,7 +1,7 @@
 name: ROKAS Bed Sleep V10 — Real Camera Visible Pixel QA
 on:
   push:
-    branches: [codex/bedsleep-v10-visibility-fix]
+    branches: [codex/bedsleep-v10-next-pov-polish]
     paths:
       - '.github/workflows/bedsleep-v10-visible-pixels-gate.yml'
       - 'Assets/Rokas/Tests/PlayMode/RokasBedSleepV10RealRuntimePlayModeTests.cs'
