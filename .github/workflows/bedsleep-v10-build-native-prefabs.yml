@@ -1,0 +1,138 @@
+name: ROKAS V10 — Build & Verify Genuine Unity 3D Prefabs
+on:
+  push:
+    branches: [codex/bedsleep-v10-release-stage]
+    paths:
+      - '.github/workflows/bedsleep-v10-build-native-prefabs.yml'
+      - 'Assets/Rokas/Tests/EditMode/RokasBedSleepV10ReleaseAssetTests.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10MaterialSetup.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10PrefabBuilder.cs'
+permissions:
+  contents: write
+  checks: write
+concurrency:
+  group: bedsleep-v10-build-genuine-prefabs
+  cancel-in-progress: false
+jobs:
+  genuine-prefab-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/bedsleep-v10-release-stage
+          fetch-depth: 0
+      - name: Check real imported Blender asset prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10MaterialSetup.cs
+          test -s Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10PrefabBuilder.cs
+          test -s Assets/Rokas/Tests/EditMode/RokasBedSleepV10ReleaseAssetTests.cs
+      - name: Native Unity 6000.3 imports the FBX actions and assembles REAL 3D prefabs
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.Tests.RokasBedSleepV10ReleaseAssetTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS V10 Real 25-Bone Arm and Seven-Part Watch AssetDatabase QA
+      - name: Commit ONLY newly generated V10 materials, Animator and prefabs
+        shell: bash
+        run: |
+          set -euo pipefail
+          p='Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate'
+          test -s "$p/PF_Keiko_FPS_Arm_V10_Candidate.prefab"
+          test -s "$p/PF_ROKAS_Smartwatch_V10_Candidate.prefab"
+          test -s "$p/PF_BedSleep_3DComposite_V10_Candidate.prefab"
+          test -s Assets/Rokas/BedSleep/V10Release/Materials/M_Keiko_Skin.mat
+          # Unity runs inside a root-owned Docker container. The files it
+          # serializes can be root-owned even when the host checkout is not.
+          # Change ownership ONLY for the generated V10 candidate artifacts.
+          for path in \
+            "$p" "$p.meta" \
+            'Assets/Rokas/BedSleep/V10Release/Materials' \
+            'Assets/Rokas/BedSleep/V10Release/Materials.meta' \
+            'Assets/Rokas/BedSleep/V10Release/Models' \
+            'Assets/Rokas/BedSleep/V10Release/Textures'; do
+            if test -e "$path"; then
+              sudo chown -R "$(id -u):$(id -g)" "$path"
+              sudo chmod -R u+rwX "$path"
+            fi
+          done
+          for path in \
+            "$p" "$p.meta" \
+            'Assets/Rokas/BedSleep/V10Release/Materials' \
+            'Assets/Rokas/BedSleep/V10Release/Materials.meta'; do
+              if test -e "$path"; then git add -A -- "$path"; fi
+          done
+          git add -u -- Assets/Rokas/BedSleep/V10Release/Models Assets/Rokas/BedSleep/V10Release/Textures
+          # Unity 6000 serializes harmless trailing spaces in generated YAML,
+          # including empty animationImportErrors fields and importer .meta.
+          # Strip only whitespace outside line endings before strict Git checks.
+          python3 - <<'PY'
+          from pathlib import Path
+          roots=[
+              Path('Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate'),
+              Path('Assets/Rokas/BedSleep/V10Release/Materials'),
+              Path('Assets/Rokas/BedSleep/V10Release/Textures'),
+              Path('Assets/Rokas/BedSleep/V10Release/Models')
+          ]
+          # The adjacent Unity-generated folder .meta files also contain
+          # trailing whitespace; they are outside root.rglob('*').
+          extras=[
+              Path('Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate.meta'),
+              Path('Assets/Rokas/BedSleep/V10Release/Materials.meta')
+          ]
+          for root in roots + extras:
+              if not root.exists(): continue
+              for p in ([root] if root.is_file() else root.rglob('*')):
+                  if not p.is_file() or p.suffix not in ('.prefab','.controller','.mat','.meta'):
+                      continue
+                  data=p.read_bytes()
+                  lines=data.splitlines(keepends=True)
+                  normalized=[]
+                  for line in lines:
+                      if line.endswith(b'\r\n'):
+                          normalized.append(line[:-2].rstrip(b' \t')+b'\r\n')
+                      elif line.endswith(b'\n'):
+                          normalized.append(line[:-1].rstrip(b' \t')+b'\n')
+                      else:
+                          normalized.append(line.rstrip(b' \t'))
+                  b=b''.join(normalized)
+                  if b!=data:
+                      p.write_bytes(b)
+                      print('NORMALIZED_UNITY_GENERATED_YAML',p)
+          PY
+          git add -u -- Assets/Rokas/BedSleep/V10Release/Textures Assets/Rokas/BedSleep/V10Release/Models
+          git add -A -- "$p" "$p.meta" Assets/Rokas/BedSleep/V10Release/Materials Assets/Rokas/BedSleep/V10Release/Materials.meta
+          git diff --cached --check
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo 'Already staged (idempotent run); no commit necessary.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'feat(bedsleep): save Blender-imported 25-bone arm, seven watch parts and PBR Unity prefabs'
+            # Unity may leave unrelated unstaged importer state. Do NOT reset,
+            # clean, stash or rebase that worktree. Push this commit only;
+            # the remote rejects a non-fast-forward update automatically.
+            git push origin HEAD:codex/bedsleep-v10-release-stage
+          fi
+      - name: Save actual Unity test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-v10-real-prefab-unity-logs
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,52 @@
+name: ROKAS Bed Sleep V10 — REAL Bed Hotspot PlayMode
+on:
+  push:
+    branches: [codex/bedsleep-v10-release-stage]
+    paths:
+      - '.github/workflows/bedsleep-v10-live-runtime-playmode.yml'
+      - 'Assets/Rokas/Tests/PlayMode/RokasBedSleepV10RealRuntimePlayModeTests.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Scripts/**'
+      - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: rokas-bedsleep-v10-real-runtime-smoke
+  cancel-in-progress: true
+jobs:
+  live-bed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify built-player V10 prefab and real assets in repository
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate.prefab
+          test -s Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx
+      - name: Run actual Unity 6 PlayMode HOME bed-click -> live 3D render test
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: PlayMode
+          customParameters: -testFilter Rokas.Tests.RokasBedSleepV10RealRuntimePlayModeTests
+          checkName: ROKAS V10 Actual Bed -> 25-Bone 3D Runtime Smoke
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload real Unity test output for diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rokas-v10-live-bed-runtime-test-results
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

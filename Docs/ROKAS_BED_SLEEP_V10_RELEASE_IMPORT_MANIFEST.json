@@ -1,0 +1,31 @@
+{
+  "blender_native_export_passed": true,
+  "files": {
+    "Assets/Rokas/BedSleep/V10Release/Editor/ROKASBedSleepV10PrefabBuilder.cs": "4b4344a69459a29bb23e4c2f9f4df0591e112e9d9aa5e95bd926d8ed217b7594",
+    "Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx": "335b2890ffa202a0cf59754485c7fd85a80647ef3e4884baa092b9e2479972ef",
+    "Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx": "6356fe4d457ac14feb9b56e02d0dd50a516414fbf41482cc0d8383e21647c4e5",
+    "Assets/Rokas/BedSleep/V10Release/Scripts/BedSleepVisualComposite.cs": "1fb92c27da1f7926481f2801d3f192b258336de894f56a95fdb23b094219aa71",
+    "Assets/Rokas/BedSleep/V10Release/Scripts/KeikoFPSArmRigController.cs": "9f30112e09bed40d7e23fd200f3ee25c2e0f8b0f8c2c36b05f271689c58e7f85",
+    "Assets/Rokas/BedSleep/V10Release/Scripts/Smartwatch3DController.cs": "7fca5207d036d2c7257062a6ae7fb9830e90e62b8e501e854db15485e99cac9f",
+    "Assets/Rokas/BedSleep/V10Release/Scripts/SmartwatchInputRouter.cs": "034fcbfdec95aa097025801a0c517827003fb95ef484748a1459e0b4e7ec6ccf",
+    "Assets/Rokas/BedSleep/V10Release/Scripts/SmartwatchOLEDPresenter.cs": "9d8cd0409d70c2e58331d1fde6861d17594155cdad5e81826f23e41d5ab521b0",
+    "Assets/Rokas/BedSleep/V10Release/Textures/OLED/T_Watch_OLED_RingGlow_1K.png": "652c4a173db7d6b768106eb1755c3c5dbae87e286239cdb1a03c98897bd82db6",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_AO_2K.png": "6d119b12f3f7ddddc0c00eac6d36b76db1fb28b11e9db08afc6400b3877c128f",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_Albedo_4K.png": "d98494d73c4e478cde52229847e81539aad019d2f926d255212bc3b153839678",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_DetailNormal_2K.png": "92d77e47db30a8d0f8ae79585e637c1d043a6e8723bec13dbb1a9b03ab693e1e",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_Normal_4K.png": "3e19cf12bf25d8096b29226c3e442e54c87cae59c0e7ffbbf5209b17ccffe7a0",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_Roughness_2K.png": "317211089135ba0ce2fef120f8552a15c96dd5071c471fcce81dc050c0833a2e",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Skin/T_Keiko_Skin_SSS_2K.png": "55228590e98d0948bf467be9c22a1d6309113e4bfbca41e804154521ffe31f1d",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Sleeve/T_Keiko_Sleeve_Albedo_2K.png": "d5df38f7055db080046d882235415ac8a908ef15e872c9fc4e5d1751c56c0c20",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Sleeve/T_Keiko_Sleeve_Normal_2K.png": "51a683fcf018f067e7835052be67b0666374d162e893bda8ac437967a3050901",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Sleeve/T_Keiko_Sleeve_Roughness_2K.png": "5f054f195f465f5567d4e23e66267b8fe165680ec0a6383eaefe37cb2c3e90a7",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Watch/T_Watch_Strap_Albedo_2K.png": "6ff82eebac69bbbeb41e5574b162635110a4b2cfa9ae3d725589b98e5035c9fb",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Watch/T_Watch_Strap_Normal_2K.png": "51a683fcf018f067e7835052be67b0666374d162e893bda8ac437967a3050901",
+    "Assets/Rokas/BedSleep/V10Release/Textures/Watch/T_Watch_Titanium_Albedo_2K.png": "3e2353daf33fc95835718e9f612132d742c92e5ee0f455be99ba339f01508a70"
+  },
+  "production_bed_integrated": false,
+  "release_size": 38232441,
+  "release_tag": "bedsleep-v10-assets",
+  "source_sha256": "c525b25067875837d99ef84f39a2a1e68ca92e471e49fdb5d796a5e41da208b8",
+  "unity_compile_passed": false
+}

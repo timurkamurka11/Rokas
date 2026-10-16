@@ -1,0 +1,60 @@
+name: ROKAS Bed Sleep V10 — Windows Playable Review Build
+on:
+  push:
+    branches: [codex/bedsleep-v10-release-stage]
+    paths:
+      - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
+      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
+      - 'Assets/Rokas/BedSleep/V10Release/Scripts/**'
+      - '.github/workflows/bedsleep-v10-windows-playable-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: rokas-v10-playable-windows-review
+  cancel-in-progress: true
+jobs:
+  windows-player:
+    name: Build executable game with V10 hand and watch (Unity 6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stop if production scene, FBX or imported 3D prefabs are missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s ProjectSettings/EditorBuildSettings.asset
+          grep -q 'path: Assets/Rokas/Scenes/Rokas.unity' ProjectSettings/EditorBuildSettings.asset
+          test -s Assets/Rokas/BedSleep/V10Release/Models/Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/V10Release/Models/ROKAS_Smartwatch_HighDetail.fbx
+          p=Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate
+          test -s "$p/PF_Keiko_FPS_Arm_V10_Candidate.prefab"
+          test -s "$p/PF_ROKAS_Smartwatch_V10_Candidate.prefab"
+          test -s "$p/PF_BedSleep_3DComposite_V10_Candidate.prefab"
+          test -s "$p/AC_KeikoBedSleepArm_V10_Candidate.controller"
+          test -s Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs
+      - name: Compile complete ROKAS Unity 6000.3.19f1 Windows player
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          targetPlatform: StandaloneWindows64
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          buildName: ROKAS_BedSleep_V10_Review
+          buildPath: build
+          versioning: None
+      - name: Upload playable Windows game build for user testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-BedSleep-V10-Windows64-Playable-REVIEW
+          path: build
+          if-no-files-found: error
+          retention-days: 14
