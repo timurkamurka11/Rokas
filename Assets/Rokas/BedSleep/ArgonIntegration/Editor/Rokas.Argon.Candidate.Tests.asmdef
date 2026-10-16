@@ -1,0 +1,12 @@
+{
+  "name": "Rokas.Argon.Candidate.Tests",
+  "rootNamespace": "Rokas.BedSleep.Argon.Editor",
+  "references": [],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": true
+}
