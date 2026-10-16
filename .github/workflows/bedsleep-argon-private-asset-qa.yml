@@ -69,6 +69,11 @@ jobs:
           assert (dst / "Models/ROKAS_Smartwatch_HighDetail.fbx").stat().st_size > 100000
           print("Staged genuine FBX / textures for Unity cloud import in ephemeral checkout.")
           PY
+      - name: Re-export real skinned FBX from source GLB with Blender
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --background --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/reexport_argon_master_glb.py -- "$RUNNER_TEMP/argon/original-master.glb" "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models"
       - name: Unity EditMode — real FBX, 3 skinned meshes, 25 joints, seven watch parts, eight clips
         id: unity
         uses: game-ci/unity-test-runner@v4
