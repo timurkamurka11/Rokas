@@ -134,7 +134,9 @@ namespace Rokas.Tests
             Assert.That(alarm.interactable, Is.True, "Alarm button must be enabled in HOME");
             alarm.onClick.Invoke();
             yield return new WaitForSecondsRealtime(3.0f);
-            yield return new WaitForEndOfFrame();
+            // Unity batchmode never invokes WaitForEndOfFrame; Camera.Render()
+            // below performs the explicit isolated 3D frame for pixel QA.
+            yield return null;
 
             var rig = UnityEngine.Object.FindObjectsByType<GameObject>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None)
