@@ -119,9 +119,22 @@ namespace Rokas.BedSleep.Argon.Editor
                 clipMap[clipName] = found[0];
             }
 
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(CandidatePrefab) != null)
-                throw new InvalidOperationException(
-                    "Existing Argon candidate would be overwritten. Preserve it and choose a new version.");
+            var existingCandidate = AssetDatabase.LoadAssetAtPath<GameObject>(CandidatePrefab);
+            if (existingCandidate != null)
+            {
+                // After the original FBX/PNG/metas and generated prefab are
+                // committed to the isolated PR branch, repeat QA must NEVER
+                // overwrite its serialized Unity references/animation data.
+                // Validate the existing native candidate and leave it intact.
+                if (existingCandidate.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length != 3 ||
+                    existingCandidate.GetComponentsInChildren<MeshRenderer>(true).Length != 7 ||
+                    existingCandidate.GetComponentInChildren<Animator>(true)?.runtimeAnimatorController == null)
+                    throw new InvalidOperationException(
+                        "Already staged Argon prefab is invalid; cannot overwrite it silently.");
+                Debug.Log("[ROKAS ARGON] Validated existing committed prefab without mutation: " +
+                    CandidatePrefab);
+                return;
+            }
             EnsureFolder("Assets/Rokas/BedSleep", "ArgonCandidate");
 
             var root = new GameObject("PF_Argon_Keiko_Hand_Watch_Preview");
