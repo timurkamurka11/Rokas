@@ -20,6 +20,17 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+      - name: Refuse release download when this repository is public
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          is_private="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.private')"
+          if [ "$is_private" != 'true' ]; then
+            echo "::error::Repository is PUBLIC. Never publish Argon proprietary hand/watch assets to a public GitHub Release. Change repo visibility to private first."
+            exit 1
+          fi
       - name: Fetch the original 46-file ZIP from the repository's private release
         shell: bash
         env:
