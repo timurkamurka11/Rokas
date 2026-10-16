@@ -191,7 +191,7 @@ namespace Rokas.BedSleep.V10Release
             // normals, not a guessed global camera axis. The mesh is planar.
             Vector3 normal = display.transform.forward;
             var mf = display.GetComponent<MeshFilter>();
-            if (mf != null && mf.sharedMesh != null)
+            if (mf != null && mf.sharedMesh != null && mf.sharedMesh.isReadable)
             {
                 Vector3[] sourceNormals = mf.sharedMesh.normals;
                 Vector3 avg = Vector3.zero;
