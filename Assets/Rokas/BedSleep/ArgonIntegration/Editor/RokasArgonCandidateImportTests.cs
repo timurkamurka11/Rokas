@@ -156,6 +156,76 @@ namespace Rokas.BedSleep.Argon.Editor
                         " seconds. Wrist=" + oled.bounds.center);
                 }
 
+                // Separate full-screen 1st-person presentation QA.
+                // Use the REAL supplied skinned mesh and imported FBX clips;
+                // only the independent render camera and rigid root transform
+                // are staged to match the intended lower-left bed entrance.
+                var physicalArm = root.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x => x.name == "Keiko_Hand_Skin_Mesh");
+                var shoulder = root.GetComponentsInChildren<Transform>(true)
+                    .Single(x => x.name == "Arm_ForearmRoot");
+                var realClips = animator.runtimeAnimatorController.animationClips;
+                Vector3 startingPosition = root.transform.position;
+                var inspectClip = realClips.Single(x =>
+                    x.name.EndsWith("|SleepArm_InspectIdle_ROKAS_Keiko_25Bone_GenericRig",
+                        System.StringComparison.Ordinal));
+                inspectClip.SampleAnimation(animator.gameObject, inspectClip.length * .5f);
+
+                Vector3 faceNormal = oled.transform.TransformDirection(Vector3.up).normalized;
+                Vector3 shoulderVector = shoulder.position - oled.bounds.center;
+                Vector3 projectedShoulder = Vector3.ProjectOnPlane(shoulderVector, faceNormal);
+                if (projectedShoulder.sqrMagnitude < 1e-5f)
+                    projectedShoulder = Vector3.ProjectOnPlane(Vector3.forward, faceNormal);
+                // The cuff belongs at the BOTTOM, never emerging from ceiling.
+                Quaternion bedPovRotation = Quaternion.LookRotation(
+                    -faceNormal, -projectedShoulder.normalized);
+                Vector3 inspectCenter = oled.bounds.center;
+                Vector3 bedPovCamera = inspectCenter + faceNormal * .55f;
+                cam.fieldOfView = 42f;
+                cam.transform.SetPositionAndRotation(bedPovCamera, bedPovRotation);
+                cam.backgroundColor = new Color(.06f, .055f, .065f, 0f);
+                var povStages = new[] {
+                    new { state="SleepArm_Raise", frac=.15f, slide=-.24f },
+                    new { state="SleepArm_Raise", frac=.55f, slide=-.10f },
+                    new { state="SleepArm_InspectIdle", frac=.50f, slide=0f },
+                    new { state="SleepArm_Lower", frac=.55f, slide=-.10f },
+                    new { state="SleepArm_Lower", frac=.90f, slide=-.24f }
+                };
+                foreach (var stage in povStages)
+                {
+                    var stageClip = realClips.Single(x =>
+                        x.name.EndsWith("|" + stage.state +
+                            "_ROKAS_Keiko_25Bone_GenericRig",
+                            System.StringComparison.Ordinal));
+                    root.transform.position = startingPosition;
+                    stageClip.SampleAnimation(animator.gameObject,
+                        stageClip.length * stage.frac);
+                    root.transform.position = startingPosition +
+                        (cam.transform.right + cam.transform.up) * stage.slide;
+                    cam.Render();
+                    RenderTexture.active = rt;
+                    readback.ReadPixels(new Rect(0, 0, 640, 360), 0, 0);
+                    readback.Apply();
+                    string stageName = "argon-bed-pov-" + stage.state + "-" +
+                        Mathf.RoundToInt(stage.frac * 100f) + "pct.png";
+                    File.WriteAllBytes(Path.Combine(outDir, stageName),
+                        readback.EncodeToPNG());
+                    Vector3 watchViewport = cam.WorldToViewportPoint(oled.bounds.center);
+                    Vector3 cuffViewport = cam.WorldToViewportPoint(physicalArm.bounds.center);
+                    Debug.Log("[ROKAS ARGON POV] " + stageName +
+                        " watchViewport=" + watchViewport +
+                        " armViewport=" + cuffViewport);
+                    if (stage.state == "SleepArm_InspectIdle")
+                    {
+                        Assert.That(watchViewport.z, Is.GreaterThan(0f));
+                        Assert.That(watchViewport.x, Is.InRange(.30f, .70f));
+                        Assert.That(watchViewport.y, Is.InRange(.27f, .73f));
+                        Assert.That(cuffViewport.y, Is.LessThan(watchViewport.y),
+                            "Cuff must rise FROM bottom-left, never descend from the ceiling.");
+                    }
+                }
+                root.transform.position = startingPosition;
+
                 int changed = 0;
                 foreach (var pixel in readback.GetPixels32())
                 {
