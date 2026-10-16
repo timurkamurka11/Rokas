@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -296,6 +297,21 @@ namespace Rokas.BedSleep.Argon.Editor
                 material.EnableKeyword("_NORMALMAP");
             }
             if (!string.IsNullOrEmpty(ao)) SetTexture(material, "_OcclusionMap", ao);
+            string originalRoughness = null;
+            if (name == "Mat_Keiko_Skin") originalRoughness = "Textures/Skin/Keiko_Skin_Roughness.png";
+            if (name == "Mat_Keiko_Sleeve") originalRoughness = "Textures/Sleeve/Keiko_Sleeve_Roughness.png";
+            if (name == "Mat_Watch_SiliconeStrap") originalRoughness = "Textures/Watch/Watch_Strap_Roughness.png";
+            if (!string.IsNullOrEmpty(originalRoughness))
+            {
+                // Unity Standard expects smoothness in A instead of a raw
+                // roughness PNG. Pack the *real* Argon grayscale roughness
+                // pixels into metallic=0/smoothness=1-roughness, keeping
+                // all original source PNGs untouched and still accessible.
+                material.SetTexture("_MetallicGlossMap",
+                    EnsurePackedSmoothnessMap(name, originalRoughness));
+                material.EnableKeyword("_METALLICGLOSSMAP");
+                material.SetFloat("_GlossMapScale", 1f);
+            }
             // The supplied titanium map already packs metallic and smoothness.
             // Assign its real PBR texture rather than a flat grey metallic value.
             if (name == "Mat_Watch_TitaniumCase" || name == "Mat_Watch_DigitalCrown")
@@ -306,6 +322,60 @@ namespace Rokas.BedSleep.Argon.Editor
             }
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        private static Texture2D EnsurePackedSmoothnessMap(string materialName, string roughnessPath)
+        {
+            string folder = Output + "DerivedPBR";
+            if (!AssetDatabase.IsValidFolder(folder))
+                AssetDatabase.CreateFolder(Output.TrimEnd('/'), "DerivedPBR");
+            string dest = folder + "/" + materialName + "_OriginalRoughnessPacked.png";
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(dest);
+            if (existing != null) return existing;
+
+            string srcPath = Source + roughnessPath;
+            var srcImporter = AssetImporter.GetAtPath(srcPath) as TextureImporter;
+            if (srcImporter == null)
+                throw new InvalidOperationException("Original Argon roughness is missing: " + srcPath);
+            if (!srcImporter.isReadable || srcImporter.sRGBTexture)
+            {
+                srcImporter.isReadable = true;
+                srcImporter.sRGBTexture = false;
+                srcImporter.SaveAndReimport();
+            }
+            var original = AssetDatabase.LoadAssetAtPath<Texture2D>(srcPath);
+            if (original == null)
+                throw new InvalidOperationException("Original roughness PNG cannot load: " + srcPath);
+            var pixels = original.GetPixels32();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                byte smoothness = (byte)(255 - pixels[i].r);
+                pixels[i] = new Color32(0, 0, 0, smoothness);
+            }
+            Texture2D packed = new Texture2D(original.width, original.height,
+                TextureFormat.RGBA32, false, true);
+            try
+            {
+                packed.SetPixels32(pixels);
+                packed.Apply(false);
+                File.WriteAllBytes(dest, packed.EncodeToPNG());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(packed);
+            }
+            AssetDatabase.ImportAsset(dest, ImportAssetOptions.ForceSynchronousImport);
+            var importer = AssetImporter.GetAtPath(dest) as TextureImporter;
+            if (importer != null)
+            {
+                importer.sRGBTexture = false;
+                importer.alphaIsTransparency = false;
+                importer.SaveAndReimport();
+            }
+            var result = AssetDatabase.LoadAssetAtPath<Texture2D>(dest);
+            if (result == null)
+                throw new InvalidOperationException("Derived original roughness map failed: " + dest);
+            return result;
         }
 
         private static void SetTexture(Material material, string property, string path)
