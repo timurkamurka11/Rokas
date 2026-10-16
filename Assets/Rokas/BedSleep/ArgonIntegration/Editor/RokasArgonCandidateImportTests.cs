@@ -30,6 +30,10 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(renderer.sharedMesh.bindposes.Length, Is.EqualTo(25));
                 Assert.That(renderer.sharedMaterial?.mainTexture, Is.Not.Null,
                     "All three skinned meshes must be bound to real albedo maps.");
+                if (renderer.name != "Keiko_Fingernails_Mesh")
+                    Assert.That(renderer.sharedMaterial.GetTexture("_MetallicGlossMap"),
+                        Is.Not.Null,
+                        "Original Argon roughness must be applied as real packed smoothness.");
             }
 
             var transforms = result.GetComponentsInChildren<Transform>(true);
@@ -42,6 +46,13 @@ namespace Rokas.BedSleep.Argon.Editor
             Assert.That(oled, Is.Not.Null);
             Assert.That(oled.GetComponent<MeshCollider>()?.sharedMesh, Is.Not.Null);
             Assert.That(oled.sharedMaterial?.mainTexture, Is.Not.Null);
+            var originalStraps = result.GetComponentsInChildren<MeshRenderer>(true)
+                .Where(x => x.name == "Watch_Strap_Upper" ||
+                    x.name == "Watch_Strap_Lower").ToArray();
+            Assert.That(originalStraps.Length, Is.EqualTo(2));
+            foreach (var strap in originalStraps)
+                Assert.That(strap.sharedMaterial.GetTexture("_MetallicGlossMap"),
+                    Is.Not.Null, "Original silicone strap roughness texture was ignored.");
 
             var animator = result.GetComponentInChildren<Animator>(true);
             Assert.That(animator?.runtimeAnimatorController, Is.Not.Null);
