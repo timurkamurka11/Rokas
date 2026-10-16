@@ -15,3 +15,5 @@ Render-quality QA: OLED viewer-side 24cm frame + genuine Raise/InspectIdle/Lower
 Wrist seating fix, real OLED cyan pixel gate, and Raise/InspectIdle/Lower authentic animation snapshot QA.
 
 Double-sided live physical OLED shader, original skin normals at realistic strength, no stand-in geometry.
+
+First-person camera QA: sample real Raise/InspectIdle/Lower with cuff below OLED and left-bottom screen entry; never modify production V10.
