@@ -179,7 +179,7 @@ namespace Rokas.Tests
                 "Set Alarm should reach the wrist inspection state before testing its camera.");
             float watchDistance = Vector3.Distance(camera.transform.position, oled.bounds.center);
             Debug.Log("ROKAS_V10_WATCH_CLOSEUP_CAMERA_DISTANCE=" + watchDistance.ToString("F4"));
-            Assert.That(watchDistance, Is.LessThan(0.52f),
+            Assert.That(watchDistance, Is.LessThan(0.35f),
                 "The watch inspection camera never moved from the full-arm shot.");
             Assert.That(oled.sharedMaterial, Is.Not.Null);
             Assert.That(oled.sharedMaterial.mainTexture, Is.InstanceOf<RenderTexture>(),
