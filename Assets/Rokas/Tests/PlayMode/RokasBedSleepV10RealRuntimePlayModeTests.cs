@@ -229,6 +229,28 @@ namespace Rokas.Tests
                     }
                 }
 
+                // Observe the actual imported 3D OLED mesh UVs and normals:
+                // a flat/zero-area UV map produces a single dark pixel on
+                // the whole watch even when the source RenderTexture has text.
+                var oledFilter = oled.GetComponent<MeshFilter>();
+                Assert.That(oledFilter, Is.Not.Null);
+                var importedMesh = oledFilter.sharedMesh;
+                Assert.That(importedMesh, Is.Not.Null);
+                var importedUVs = importedMesh.uv;
+                float uMin = 99f, uMax = -99f, vMin = 99f, vMax = -99f;
+                foreach (var uv in importedUVs)
+                {
+                    uMin = Mathf.Min(uMin, uv.x);
+                    uMax = Mathf.Max(uMax, uv.x);
+                    vMin = Mathf.Min(vMin, uv.y);
+                    vMax = Mathf.Max(vMax, uv.y);
+                }
+                Debug.Log("ROKAS_V10_OLED_IMPORT_UVS verts=" + importedMesh.vertexCount +
+                    " uvCount=" + importedUVs.Length + " uvBounds=(" +
+                    uMin.ToString("F4") + "," + vMin.ToString("F4") + ")-(" +
+                    uMax.ToString("F4") + "," + vMax.ToString("F4") + ")" +
+                    " meshSize=" + importedMesh.bounds.size);
+
                 // Preserve actual visual evidence for Actions even if the
                 // regression assertion fails.
                 string output = Path.Combine(Application.dataPath, "..",
