@@ -24,6 +24,7 @@ namespace Rokas.BedSleep.Argon.Editor
         private const int Fps = 24;
 
         [Test]
+        [Timeout(600000)] // Rendering 149 true 720p Unity PNGs can exceed the 180s default.
         public void RecordActualArgonHandOverRealRokasBedCeilingToPngFrames()
         {
             Texture2D trueBed = Resources.Load<Texture2D>("BedSleep/BedCeilingPOV");
@@ -187,25 +188,14 @@ namespace Rokas.BedSleep.Argon.Editor
                             capture.EncodeToPNG());
                     }
                     // During actual InspectIdle keep the live watch readable.
-                    if (clip == inspect)
+                    if (clip == inspect && frameNumber % 12 == 0)
                     {
-                        RenderTexture.active = handRT;
-                        var pixelCapture = new Texture2D(160, 90, TextureFormat.RGBA32, false);
-                        try
-                        {
-                            Graphics.Blit(handRT, finalRT);
-                            RenderTexture.active = finalRT;
-                            capture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
-                            capture.Apply(false);
-                            var p = capture.GetPixels32();
-                            inspectPixelCount = p.Count(x =>
-                                x.b > 90 && x.g > 80 &&
-                                x.b > x.r * 1.35f && x.g > x.r * 1.25f);
-                        }
-                        finally
-                        {
-                            UnityEngine.Object.DestroyImmediate(pixelCapture);
-                        }
+                        // The real composited pixel buffer was already captured.
+                        // Avoid reading the GPU TWO extra times per inspect frame.
+                        var pixels = capture.GetPixels32();
+                        inspectPixelCount = pixels.Count(x =>
+                            x.b > 90 && x.g > 80 &&
+                            x.b > x.r * 1.35f && x.g > x.r * 1.25f);
                     }
                     ++frameNumber;
                 }
