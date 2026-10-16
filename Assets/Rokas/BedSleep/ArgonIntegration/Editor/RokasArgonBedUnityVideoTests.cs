@@ -38,7 +38,7 @@ namespace Rokas.BedSleep.Argon.Editor
             Assert.That(source, Is.Not.Null, "Cloud-verified original Argon prefab missing.");
             GameObject root = null, cameraObj = null, keyObj = null;
             RenderTexture handRT = null, finalRT = null;
-            Material oledMat = null, compositeMat = null;
+            Material oledMat = null, compositeMat = null, skinPreviewMat = null;
             Texture2D capture = null;
             RenderTexture previousRt = RenderTexture.active;
             try
@@ -94,7 +94,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 keyObj = new GameObject("ROKAS_Argon_IndoorCeilingLight");
                 var key = keyObj.AddComponent<Light>();
                 key.type = LightType.Directional;
-                key.intensity = .65f;
+                // Original Argon albedo/normal/roughness remain bound.
+                // The old white directional light washed out the pale
+                // original texture; use soft warm bedroom-key illumination.
+                key.intensity = .32f;
+                key.color = new Color(1f, .86f, .74f);
+                var skinRenderer = root.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x => x.name == "Keiko_Hand_Skin_Mesh");
+                skinPreviewMat = new Material(skinRenderer.sharedMaterial);
+                skinPreviewMat.SetColor("_Color", new Color(.97f, .88f, .83f));
+                skinPreviewMat.SetFloat("_BumpScale", .09f);
+                skinRenderer.sharedMaterial = skinPreviewMat;
                 key.cullingMask = 1 << 29;
                 keyObj.transform.rotation = Quaternion.Euler(35, -20, 30);
 
@@ -275,6 +285,8 @@ namespace Rokas.BedSleep.Argon.Editor
                     if (cam != null) cam.targetTexture = null;
                 }
                 if (oledMat != null) UnityEngine.Object.DestroyImmediate(oledMat);
+                if (skinPreviewMat != null)
+                    UnityEngine.Object.DestroyImmediate(skinPreviewMat);
                 if (compositeMat != null) UnityEngine.Object.DestroyImmediate(compositeMat);
                 if (capture != null) UnityEngine.Object.DestroyImmediate(capture);
                 if (root != null) UnityEngine.Object.DestroyImmediate(root);
