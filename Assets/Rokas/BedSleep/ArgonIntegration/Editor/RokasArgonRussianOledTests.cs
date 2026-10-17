@@ -91,6 +91,27 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(oled.IsConfirmed,Is.False);
                 Assert.That(oled.OledDynamicTexture.EncodeToPNG().Length,
                     Is.GreaterThan(4000));
+                // Native render samples for VISUAL acceptance of actual
+                // Cyrillic letter spacing, seven states and sapphire border.
+                // Pure isolated RT output; no fabricated UI screenshot.
+                string dir=System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(),
+                    "Artifacts","ArgonSquareOLEDStills");
+                System.IO.Directory.CreateDirectory(dir);
+                void Snapshot(string name)
+                {
+                    oled.RenderAt(4f,true);
+                    System.IO.File.WriteAllBytes(
+                        System.IO.Path.Combine(dir,name+".png"),
+                        oled.OledDynamicTexture.EncodeToPNG());
+                }
+                oled.ShowDial(); Snapshot("01_square_dial");
+                oled.ShowPresets(); Snapshot("02_square_presets");
+                oled.ShowOverview(); Snapshot("03_square_sleep_plan");
+                oled.ShowRelaxation(); Snapshot("04_square_relaxation");
+                oled.SetConfirmedState(true); Snapshot("05_confirmed");
+                oled.SetFallingAsleep(); Snapshot("06_hourglass");
+                oled.CancelSelection(); Snapshot("07_cancelled");
             }
             finally
             {
