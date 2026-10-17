@@ -100,6 +100,10 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             Assert.That(arrived.Away,Is.EqualTo(0f).Within(1e-5f));
             Assert.That(arrived.WristPitchDegrees,Is.EqualTo(0f).Within(1e-4f));
             Assert.That(arrived.ForearmPitchDegrees,Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(arrived.ProximalElbowDegrees,Is.EqualTo(0f).Within(1e-4f),
+                "Approved final sleeve/watch/finger alignment is unchanged");
+            Assert.That(loweringStart.ProximalElbowDegrees,
+                Is.EqualTo(0f).Within(1e-4f));
             Assert.That(loweringStart.Vertical,Is.EqualTo(0f).Within(1e-5f));
             Assert.That(loweringStart.WristRollDegrees,
                 Is.EqualTo(0f).Within(1e-4f));
@@ -126,6 +130,12 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             Assert.That(Mathf.Abs(entering.ForearmPitchDegrees),
                 Is.GreaterThan(4f),
                 "Forearm secondary rotation must not be completed offscreen");
+            Assert.That(Mathf.Abs(entering.ProximalElbowDegrees),
+                Is.GreaterThan(8f),
+                "Elbow/forearm root must articulate independently, not slide as one solid stick");
+            Assert.That(Mathf.Abs(leaving.ProximalElbowDegrees),
+                Is.GreaterThan(1f),
+                "Lowering must include a separate proximal arm hinge");
             Assert.That(Mathf.Abs(leaving.WristPitchDegrees/15.6f),
                 Is.GreaterThan(Mathf.Abs(leaving.ForearmPitchDegrees/7.8f)));
 
