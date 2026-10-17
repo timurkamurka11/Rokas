@@ -43,6 +43,12 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Night sky, clouds and ring must animate in real time");
                 Assert.That(lit,Is.GreaterThan(500),
                     "Real cyan-violet circular selection ring not rendered");
+                int rendersBefore=oled.TotalFaceDraws;
+                for(int frame=0;frame<48;frame++)
+                    oled.RenderAt(10f+frame/24f,false);
+                int redraws=oled.TotalFaceDraws-rendersBefore;
+                Assert.That(redraws,Is.InRange(8,22),
+                    "Dynamic Russian OLED must animate at ~10Hz, not repeat 24fps CPU raster");
                 oled.ShowPresets();
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Presets));
                 oled.SelectPreset(1);
