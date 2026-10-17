@@ -230,7 +230,8 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             GameObject instance=null,cameraObject=null,lightObject=null;
             RenderTexture handRT=null,finalRT=null;
             Texture2D capture=null;
-            Material composite=null,oledMaterial=null,softSkinMaterial=null;
+            Material composite=null,oledMaterial=null;
+            ArgonSkinFilteredPbrCandidate filteredSkin=null;
             Material originalSkinMaterial=null;
             // Preview-only anatomical candidate, never saved to source FBX or
             // production V10. Proven neutral preservation and finger isolation
@@ -253,26 +254,14 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 // preserving all original albedo, pores, AO and source PNGs.
                 // Reduce overbright, chalky specular on moving finger joints;
                 // do not replace skin or synthesize a plastic flat color.
-                softSkinMaterial=new Material(originalSkinMaterial);
-                if(softSkinMaterial.HasProperty("_GlossMapScale"))
-                    softSkinMaterial.SetFloat("_GlossMapScale",.67f);
-                if(softSkinMaterial.HasProperty("_Glossiness"))
-                    softSkinMaterial.SetFloat("_Glossiness",.40f);
-                // Original high-frequency normal/packed-gloss maps create
-                // a prominent rectilinear checker pattern in the real
-                // 720p hand closeup. Diagnose with the same REAL albedo
-                // but without erroneous grid-like pore/roughness shading.
-                if(softSkinMaterial.HasProperty("_BumpScale"))
-                    softSkinMaterial.SetFloat("_BumpScale",0f);
-                if(softSkinMaterial.HasProperty("_BumpMap"))
-                    softSkinMaterial.SetTexture("_BumpMap",null);
-                softSkinMaterial.DisableKeyword("_NORMALMAP");
-                if(softSkinMaterial.HasProperty("_MetallicGlossMap"))
-                    softSkinMaterial.SetTexture("_MetallicGlossMap",null);
-                softSkinMaterial.DisableKeyword("_METALLICGLOSSMAP");
-                if(softSkinMaterial.HasProperty("_Color"))
-                    softSkinMaterial.SetColor("_Color",new Color(1f,.98f,.965f,1f));
-                handSkin.sharedMaterial=softSkinMaterial;
+                // Source-native PBR: the real albedo, AO, packed roughness
+                // and imported BC5/DXT5nm normal remain *the same texture
+                // references*. No GPU RGBA conversion and no checker grid.
+                // Validated on three authentic Unity closeups (run
+                // 39047411924), candidate-only material.
+                filteredSkin=ArgonSkinFilteredPbrCandidate.Build(
+                    originalSkinMaterial);
+                handSkin.sharedMaterial=filteredSkin.Material;
                 var compensated=ArgonFingerBindposeRetarget.ApplyCandidate(
                     handSkin,out compensatedMesh,out var authenticBones);
                 Assert.That(compensated.MaxNeutralDisplacement,
@@ -476,7 +465,7 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     handSkin.bones=originalHandBones;
                 }
                 if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
-                if(softSkinMaterial!=null)UnityEngine.Object.DestroyImmediate(softSkinMaterial);
+                if(filteredSkin!=null)filteredSkin.Dispose();
                                 if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
                 if(lightObject!=null)UnityEngine.Object.DestroyImmediate(lightObject);
