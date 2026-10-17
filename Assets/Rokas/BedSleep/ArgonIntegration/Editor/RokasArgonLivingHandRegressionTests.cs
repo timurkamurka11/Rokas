@@ -519,6 +519,86 @@ namespace Rokas.BedSleep.Argon.Editor
             }
         }
 
+
+        [Test]
+        [Timeout(45000)]
+        public void BedPOVRaiseAndLowerUseNaturalVerticalArcWithWristRotation()
+        {
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(prefab,Is.Not.Null);
+            GameObject instance=null,cameraObject=null;
+            try
+            {
+                instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var animator=instance.GetComponentInChildren<Animator>(true);
+                var idle=animator.runtimeAnimatorController.animationClips.Single(
+                    x=>x.name.Contains("SleepArm_InspectIdle"));
+                var wrist=instance.GetComponentsInChildren<Transform>(true)
+                    .Single(x=>x.name=="Arm_Wrist");
+                var pose=new RokasArgonHorizontalHeroPose(instance);
+                idle.SampleAnimation(animator.gameObject,idle.length*.5f);
+                pose.CaptureHeroPose();
+                pose.RestoreNaturalAnatomy();
+                cameraObject=new GameObject("Argon_Natural_Cinematic_Arc_TestCamera");
+                var cam=cameraObject.AddComponent<Camera>();
+                cam.aspect=1280f/720f;
+                pose.ConfigureCamera(cam,Vector3.up,.41f);
+
+                pose.SetCinematicPresentation(1f,false);
+                Vector3 hero=instance.transform.position;
+                Quaternion heroWrist=wrist.localRotation;
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(0f,false);
+                Vector3 entering=instance.transform.position;
+                float vertical=Mathf.Abs(Vector3.Dot(hero-entering,pose.Up));
+                float horizontal=Mathf.Abs(Vector3.Dot(hero-entering,pose.Right));
+                Assert.That(vertical,Is.GreaterThan(horizontal*2f),
+                    "Arm still slides rigidly sideways instead of rising from below");
+                Assert.That(vertical,Is.GreaterThan(.25f));
+                Assert.That(horizontal,Is.LessThan(.20f));
+                Assert.That(Quaternion.Angle(heroWrist,wrist.localRotation),
+                    Is.GreaterThan(7f),"Wrist remains a stiff stick during raise");
+
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(.12f,false);
+                float distanceEarly=Vector3.Distance(
+                    entering,instance.transform.position);
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(.50f,false);
+                float distanceHalf=Vector3.Distance(
+                    entering,instance.transform.position);
+                Assert.That(distanceEarly,Is.LessThan(distanceHalf*.17f),
+                    "Arm entrance must ease in, not move at constant speed");
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(1f,true);
+                Assert.That(Vector3.Distance(hero,instance.transform.position),
+                    Is.LessThan(.00001f),
+                    "End of entry and start of exit must share exact approved pose");
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(0f,true);
+                Vector3 leaving=instance.transform.position;
+                Assert.That(Vector3.Distance(leaving,entering),
+                    Is.GreaterThan(.03f),
+                    "Withdrawal needs a distinct down-and-away route");
+
+                pose.RestoreNaturalAnatomy();
+                pose.SetCinematicPresentation(1f,false);
+                var sleeve=pose.SleeveScreen();
+                var watch=pose.WatchScreen();
+                var finger=pose.FingertipScreen();
+                Assert.That(sleeve.x,Is.LessThan(watch.x-.09f));
+                Assert.That(watch.x,Is.InRange(.24f,.58f));
+                Assert.That(finger.x,Is.GreaterThan(watch.x+.09f));
+                Assert.That(Mathf.Abs(finger.y-watch.y),Is.LessThan(.18f));
+            }
+            finally
+            {
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+                if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
+            }
+        }
+
     }
 }
 #endif
