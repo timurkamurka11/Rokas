@@ -192,14 +192,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 SaveRussianFace("01_duration_dial");
                 russianOled.ShowPresets();
                 SaveRussianFace("02_quick_presets");
+                russianOled.SelectPreset(1);
+                Assert.That(russianOled.DurationText,Is.EqualTo("00:30"));
+                SaveRussianFace("03_30min_preset");
                 russianOled.SelectPreset(8);
-                SaveRussianFace("03_dial_changed");
+                SaveRussianFace("04_dial_changed");
                 russianOled.SetConfirmedState(true);
-                SaveRussianFace("04_alarm_confirmed");
+                SaveRussianFace("05_alarm_confirmed");
                 russianOled.SetFallingAsleep();
-                SaveRussianFace("05_falling_asleep");
+                SaveRussianFace("06_falling_asleep");
                 russianOled.CancelSelection();
-                SaveRussianFace("06_cancelled");
+                SaveRussianFace("07_cancelled");
                 russianOled.SelectPreset(14);
                 russianOled.SetConfirmedState(false);
 
