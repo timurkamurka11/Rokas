@@ -133,6 +133,123 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(root!=null)UnityEngine.Object.DestroyImmediate(root);
             }
         }
+
+        [Test]
+        [Timeout(240000)]
+        public void CaptureFiveGenuineUnityPOVFramesOfOrganicRaiseAndWithdrawal()
+        {
+            const int width=1280,height=720;
+            var realRoom=Resources.Load<Texture2D>("BedSleep/BedCeilingPOV");
+            Assert.That(realRoom,Is.Not.Null,
+                "Only the authentic ROKAS BedCeilingPOV is allowed");
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(prefab,Is.Not.Null);
+            GameObject instance=null,cameraObject=null,lightObject=null;
+            RenderTexture handRT=null,finalRT=null;
+            Texture2D capture=null;
+            Material composite=null,oledMaterial=null;
+            RenderTexture originalTarget=RenderTexture.active;
+            try
+            {
+                instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                foreach(var t in instance.GetComponentsInChildren<Transform>(true))
+                    t.gameObject.layer=29;
+                var animator=instance.GetComponentInChildren<Animator>(true);
+                AnimationClip Find(string name)=>animator.runtimeAnimatorController
+                    .animationClips.Single(c=>c.name.Contains("SleepArm_"+name+"_"));
+                var raise=Find("Raise");
+                var inspect=Find("InspectIdle");
+                var lower=Find("Lower");
+                var oled=instance.GetComponentsInChildren<MeshRenderer>(true)
+                    .Single(x=>x.name=="Watch_OLED_Display");
+                var presenter=instance.AddComponent<ArgonRussianSleepOledPresenter>();
+                presenter.InitializeOled();
+                presenter.ConfigureTime(19,30,14);
+                oledMaterial=new Material(oled.sharedMaterial);
+                oledMaterial.mainTexture=presenter.OledRenderTexture;
+                oled.sharedMaterial=oledMaterial;
+
+                cameraObject=new GameObject("ROKAS_OriginalPOV_OrganicMotion_QA");
+                var cam=cameraObject.AddComponent<Camera>();
+                cam.enabled=false;
+                cam.clearFlags=CameraClearFlags.SolidColor;
+                cam.backgroundColor=new Color(0,0,0,0);
+                cam.cullingMask=1<<29;
+                cam.aspect=(float)width/height;
+                var pose=new RokasArgonHorizontalHeroPose(instance);
+                inspect.SampleAnimation(animator.gameObject,inspect.length*.5f);
+                pose.CaptureHeroPose();
+                pose.RestoreNaturalAnatomy();
+                pose.ConfigureCamera(cam,Vector3.up,.41f);
+
+                lightObject=new GameObject("ROKAS_WarmCeilingKey_OrganicQA");
+                var key=lightObject.AddComponent<Light>();
+                key.type=LightType.Directional;
+                key.intensity=.30f;
+                key.color=new Color(1f,.86f,.78f);
+                key.cullingMask=1<<29;
+                key.transform.rotation=Quaternion.Euler(35,-20,30);
+
+                handRT=new RenderTexture(width,height,24,RenderTextureFormat.ARGB32);
+                finalRT=new RenderTexture(width,height,0,RenderTextureFormat.ARGB32);
+                handRT.Create();finalRT.Create();
+                cam.targetTexture=handRT;
+                composite=new Material(Shader.Find("Hidden/ROKAS/ArgonBedVideoComposite"));
+                Assert.That(composite.shader,Is.Not.Null);
+                composite.SetTexture("_OverlayTex",handRT);
+                capture=new Texture2D(width,height,TextureFormat.RGBA32,false);
+                string dir=System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(),
+                    "Artifacts","ArgonOrganicMotionStills");
+                System.IO.Directory.CreateDirectory(dir);
+
+                var stages=new[]{
+                    Tuple.Create("01_raise_from_below",raise,.14f,false),
+                    Tuple.Create("02_arm_lift_wrist_turn",raise,.55f,false),
+                    Tuple.Create("03_final_watch_inspect",inspect,1f,false),
+                    Tuple.Create("04_wrist_relax_lower",lower,.55f,true),
+                    Tuple.Create("05_exit_below_camera",lower,.10f,true)
+                };
+                foreach(var stage in stages)
+                {
+                    stage.Item2.SampleAnimation(animator.gameObject,
+                        stage.Item2.length*Mathf.Clamp01(stage.Item3));
+                    pose.RestoreNaturalAnatomy();
+                    pose.SetCinematicPresentation(stage.Item3,stage.Item4);
+                    presenter.RenderAt(1.0f+stage.Item3,true);
+                    cam.Render();
+                    Graphics.Blit(realRoom,finalRT,composite);
+                    RenderTexture.active=finalRT;
+                    capture.ReadPixels(new Rect(0,0,width,height),0,0);
+                    capture.Apply(false);
+                    string file=System.IO.Path.Combine(dir,stage.Item1+".png");
+                    System.IO.File.WriteAllBytes(file,capture.EncodeToPNG());
+                    Assert.That(new System.IO.FileInfo(file).Length,
+                        Is.GreaterThan(100000));
+                }
+                Debug.Log("[ARGON ORGANIC ARM CINEMATIC] Saved five authentic"+
+                    " Unity 1280x720 bed POV camera keyframes, no fake HUD.");
+            }
+            finally
+            {
+                RenderTexture.active=originalTarget;
+                if(cameraObject!=null)
+                {
+                    var cam=cameraObject.GetComponent<Camera>();
+                    if(cam!=null)cam.targetTexture=null;
+                }
+                if(capture!=null)UnityEngine.Object.DestroyImmediate(capture);
+                if(composite!=null)UnityEngine.Object.DestroyImmediate(composite);
+                if(oledMaterial!=null)UnityEngine.Object.DestroyImmediate(oledMaterial);
+                if(handRT!=null){handRT.Release();UnityEngine.Object.DestroyImmediate(handRT);}
+                if(finalRT!=null){finalRT.Release();UnityEngine.Object.DestroyImmediate(finalRT);}
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+                if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
+                if(lightObject!=null)UnityEngine.Object.DestroyImmediate(lightObject);
+            }
+        }
+
     }
 }
 #endif
