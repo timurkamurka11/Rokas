@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Rokas.BedSleep.Argon.Candidate
@@ -34,6 +35,11 @@ namespace Rokas.BedSleep.Argon.Candidate
         private byte[] cachedCloud;
         private byte[] cachedStars;
         public int TotalFaceDraws { get; private set; }
+        // Positive evidence of nonoverlapping Cyrillic screens: no text
+        // exceeds the physical safe rectangle, and labels never intersect.
+        private readonly List<Rect> textBounds=new List<Rect>(16);
+        public bool LastTextLayoutSafe { get; private set; } = true;
+        public int LastTextRows => textBounds.Count;
         private float displaySteps = 14f, animatedSeconds;
         private float lastDrawn = -100f;
         private bool requiresRedraw = true;
@@ -205,13 +211,17 @@ namespace Rokas.BedSleep.Argon.Candidate
             lastDrawn = animatedSeconds;
             requiresRedraw = false;
             TotalFaceDraws++;
+            textBounds.Clear();
+            LastTextLayoutSafe=true;
             PaintBackground();
             PaintClouds();
             if(Screen==ArgonRussianWatchScreen.Dial ||
                Screen==ArgonRussianWatchScreen.Relaxation)
                 PaintMoon();
             PaintSquareGlassFrame();
-            PaintRing();
+            if(Screen==ArgonRussianWatchScreen.Dial ||
+               Screen==ArgonRussianWatchScreen.Relaxation)
+                PaintRing();
             switch (Screen)
             {
                 case ArgonRussianWatchScreen.Presets:
@@ -394,72 +404,62 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void PaintOverview()
         {
-            // Space text using ACTUAL Cyrillic atlas cell height 28px:
-            // rendered half-height = 4.9 * scale, so bounding boxes
-            // cannot collide even in the 512px real physical watch UV.
-            CenterText("ПЛАН СНА",256,455,3,white);
-            CenterText("СЕЙЧАС",256,396,3,muted);
+            // Three compact, nonoverlapping blocks, readable at game size.
+            CenterText("ПЛАН СНА",256,458,3,white);
+            CenterText("СЕЙЧАС",256,409,2,muted);
             CenterText(CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,328,7,white);
-            CenterText("ВРЕМЯ СНА",256,277,3,muted);
-            CenterText(DurationText,256,214,7,white);
-            CenterText("ПОДЪЁМ",256,171,3,muted);
-            CenterText(WakeText,256,108,7,new Color32(171,209,255,255));
-            CenterText("ДАЛЕЕ  >",256,45,3,white);
+                CurrentMinute.ToString("D2"),256,350,7,white);
+            CenterText("ВРЕМЯ СНА",256,289,2,muted);
+            CenterText(DurationText,256,227,7,white);
+            CenterText("ПОДЪЁМ",256,163,2,muted);
+            CenterText(WakeText,256,103,7,
+                new Color32(182,215,255,255));
+            CenterText("ДАЛЕЕ",256,43,2,white);
         }
-
         private void PaintRelaxation()
         {
-            CenterText("РЕЖИМ ОТДЫХА",256,454,3,white);
+            CenterText("РЕЖИМ ОТДЫХА",256,455,2,white);
             float t=animatedSeconds*1.16f;
             for(int i=0;i<125;i++)
             {
                 float x=100f+i*2.5f;
                 float envelope=Mathf.Sin(Mathf.PI*i/124f);
-                float y=274+Mathf.Sin(i*.113f+t)*16f*envelope+
+                float y=287+Mathf.Sin(i*.113f+t)*16f*envelope+
                     Mathf.Sin(i*.059f+t*.65f)*8f*envelope;
-                Disc(x,y,3.0f,Color32.Lerp(blue,violet,(float)i/124f),.82f);
+                Disc(x,y,2.7f,Color32.Lerp(blue,violet,(float)i/124f),.78f);
             }
-            CenterText("ТИШИНА",256,207,6,white);
-            CenterText("СОН "+DurationText,256,151,4,muted);
-            CenterText("ПОДЪЁМ "+WakeText,256,112,3,muted);
-            CenterText("ПОДТВЕРДИТЬ",256,59,3,white);
+            CenterText("ТИШИНА",256,206,5,white);
+            CenterText("СОН "+DurationText,256,146,3,muted);
+            CenterText("ПОДЪЁМ "+WakeText,256,102,2,muted);
+            CenterText("ПОДТВЕРДИТЬ",256,49,2,white);
         }
-
         private void PaintSelection()
         {
-            // The physical watch occupies only ~70px in the approved bed
-            // shot: prioritize ONE large timer and TWO readable essentials.
-            // Fine print from the earlier prototype disappeared in-game.
+            // At 720p the watch is ~70 pixels high. One huge value with
+            // clear sleep/wake context beats six overlapping micro-labels.
             CenterText("СЕЙЧАС "+CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,455,3,muted);
-            CenterText(DurationText,256,255,9,white);
-            CenterText("ВРЕМЯ СНА",256,178,4,muted);
-            CenterText("-",126,252,4,muted);
-            CenterText("+",385,252,4,muted);
-            CenterText("ПОДЪЁМ "+WakeText,256,122,3,
-                new Color32(177,208,255,255));
-            // Authentic OLED touch region (bottom 20%); no external HUD
-            // graphic pasted over the genuine FBX screen.
-            for(int x=177;x<=335;x+=8)
-                Disc(x,65,18,new Color32(34,65,123,255),.46f);
-            CenterText("ПОДТВЕРДИТЬ",256,58,3,white);
+                CurrentMinute.ToString("D2"),256,462,2,muted);
+            CenterText("СОН",256,307,3,muted);
+            CenterText(DurationText,256,240,9,white);
+            CenterText("ПОДЪЁМ "+WakeText,256,135,3,
+                new Color32(182,215,255,255));
+            CenterText("ПОДТВЕРДИТЬ",256,52,2,white);
         }
         private void PaintPresets()
         {
-            CenterText("ВРЕМЯ СНА",256,454,3,white);
-            string[] labels = { "30 МИН", "1 ЧАС", "2 ЧАСА",
-                "4 ЧАСА", "8 ЧАСОВ" };
-            int[] values = { 1,2,4,8,16 };
+            CenterText("ВРЕМЯ СНА",256,455,3,white);
+            string[] labels={"30 МИН","1 ЧАС","2 ЧАСА","4 ЧАСА","8 ЧАСОВ"};
+            int[] values={1,2,4,8,16};
             for(int i=0;i<labels.Length;i++)
             {
-                int y=345-i*60;
+                int y=370-i*61;
                 bool selected=SelectedHalfHours==values[i];
-                Color32 shade=selected?blue:new Color32(28,45,84,255);
-                for(int x=120;x<=392;x+=4)Disc(x,y,18,shade,selected ? 0.42f : 0.16f);
-                CenterText(labels[i],256,y-1,3,selected?white:muted);
+                Color32 shade=selected?blue:new Color32(22,41,79,255);
+                for(int x=134;x<=378;x+=6)
+                    Disc(x,y,18,shade,selected?.34f:.17f);
+                CenterText(labels[i],256,y,3,selected?white:muted);
             }
-            CenterText("ВЫБРАТЬ",256,42,3,muted);
+            CenterText("ВЫБРАТЬ",256,46,2,muted);
         }
         private void PaintFallingAsleep()
         {
@@ -523,10 +523,23 @@ namespace Rokas.BedSleep.Argon.Candidate
         }
         private void CenterText(string text,int centerX,int y,int scale,Color32 color)
         {
-            // Antialiased, proportional Noto Sans glyph masks in Russian.
-            // The earlier 5x7 prototype text was visibly too blocky at 512px.
-            ArgonRussianFontAtlas.Draw(text,centerX,y,scale*.35f,
-                color,MixPixel);
+            // Use exact atlas advances; prevent glyphs clipping past the
+            // original watch's square sapphire bezel, not just the RT edges.
+            float f=scale*.35f;
+            float measured=ArgonRussianFontAtlas.MeasureWidth(text,f);
+            if(measured>388f) f*=388f/measured;
+            float halfWidth=ArgonRussianFontAtlas.MeasureWidth(text,f)*.5f;
+            float halfHeight=28f*f*.5f+1f;
+            var region=new Rect(centerX-halfWidth,y-halfHeight,
+                2f*halfWidth,2f*halfHeight);
+            if(region.xMin<54f || region.xMax>458f ||
+                region.yMin<24f || region.yMax>488f)
+                LastTextLayoutSafe=false;
+            foreach(var other in textBounds)
+                if(region.Overlaps(other))
+                    LastTextLayoutSafe=false;
+            textBounds.Add(region);
+            ArgonRussianFontAtlas.Draw(text,centerX,y,f,color,MixPixel);
         }
         private void Update()
         {
