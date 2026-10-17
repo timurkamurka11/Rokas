@@ -57,8 +57,11 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(joinedSkin, Is.Not.Null,
                     "Export lost the authentic skinned hand renderer");
                 Assert.That(sourceSkin.sharedMesh.vertexCount, Is.InRange(12000, 15000));
-                Assert.That(joinedSkin.sharedMesh.vertexCount, Is.InRange(12000, 30000),
-                    "Unexpected hand corruption/primitive substitute");
+                Assert.That(joinedSkin.sharedMesh.vertexCount, Is.InRange(11000, 14000),
+                    "Authentic UV seam weld reduces 454 duplicated original vertices; no primitives");
+                Assert.That(Mathf.Abs(sourceSkin.sharedMesh.vertexCount-
+                    joinedSkin.sharedMesh.vertexCount), Is.LessThan(900),
+                    "Source-based palm/finger surface replaced by unrelated remesh");
                 Assert.That(joinedSkin.bones.Length, Is.GreaterThanOrEqualTo(25),
                     "Export destroyed the authentic 25-bone deformation rig");
                 Assert.That(joinedSkin.sharedMesh.uv.Length,
