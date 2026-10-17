@@ -20,6 +20,8 @@ namespace Rokas.BedSleep.Argon.Candidate
             public float WristRollDegrees;
             public float ForearmPitchDegrees;
             public float ForearmRollDegrees;
+            public float ProximalElbowDegrees;
+            public float ProximalSwivelDegrees;
             public float FingerResponse;  // delayed/relaxing extra articulation
             public float Settling;
         }
@@ -78,6 +80,15 @@ namespace Rokas.BedSleep.Argon.Candidate
                 WristRollDegrees = (lowering ? -6.7f : 7.1f) * wrist,
                 ForearmPitchDegrees = (lowering ? -7.8f : 6.1f) * forearm,
                 ForearmRollDegrees = (lowering ? -1.65f : 2.15f) * forearm,
+                // A distinct proximal forearm/"elbow" hinge is essential:
+                // simply translating the entire prefab reproduces a wooden
+                // sliding prop, even when wrist rotates nicely. Let the
+                // proximal section follow after the wrist, with restrained
+                // independent sweep in the camera plane.
+                ProximalElbowDegrees = (lowering ? -10.2f : 10.8f) *
+                    Window(forearm,0f,1f),
+                ProximalSwivelDegrees = (lowering ? 1.8f : -2.6f) *
+                    Mathf.Sin(forearm * Mathf.PI * .5f),
                 // Every finger receives its own micro-response with a small
                 // phase lag in the living rig. Keep separate from source FBX
                 // MCP; do not over-curl malformed pinky/ring finger roots.
