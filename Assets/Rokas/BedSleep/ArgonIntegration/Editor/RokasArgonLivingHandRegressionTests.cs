@@ -178,33 +178,59 @@ namespace Rokas.BedSleep.Argon.Editor
                 // Bake into an independent MeshRenderer to prevent the
                 // EditMode SkinnedMeshRenderer's previous-frame GPU skin
                 // cache from hiding real changes after swapping sharedMesh.
+                // The previous static MeshRenderer probe did not display the
+                // hand at all because CPU BakeMesh geometry was not in the
+                // same bind/renderer space as the original skinned object.
+                // Use a fresh SKINNED renderer with real source bones instead.
+                // It bypasses the old EditMode renderer's cached GPU skin
+                // state without making a guess about FBX mesh transforms.
                 void CaptureFreshBakedMesh(string label)
                 {
-                    var baked=new Mesh();
-                    GameObject staticProbe=null;
+                    GameObject probe=null;
                     bool previousEnabled=hand.enabled;
                     try
                     {
-                        hand.BakeMesh(baked);
-                        baked.name="ROKAS_Argon_FreshlyBakedHand_ForVisualQA";
-                        staticProbe=new GameObject("QA_ONLY_ActualDeformedMesh");
-                        staticProbe.layer=29;
-                        staticProbe.transform.SetParent(hand.transform.parent,false);
-                        staticProbe.transform.localPosition=hand.transform.localPosition;
-                        staticProbe.transform.localRotation=hand.transform.localRotation;
-                        staticProbe.transform.localScale=hand.transform.localScale;
-                        var filter=staticProbe.AddComponent<MeshFilter>();
-                        filter.sharedMesh=baked;
-                        var material=staticProbe.AddComponent<MeshRenderer>();
-                        material.sharedMaterials=hand.sharedMaterials;
+                        probe=new GameObject("ROKAS_QA_RealFreshSkinnedHand");
+                        probe.layer=29;
+                        probe.transform.SetParent(hand.transform.parent,false);
+                        probe.transform.localPosition=hand.transform.localPosition;
+                        probe.transform.localRotation=hand.transform.localRotation;
+                        probe.transform.localScale=hand.transform.localScale;
+                        var duplicate=probe.AddComponent<SkinnedMeshRenderer>();
+                        duplicate.sharedMesh=hand.sharedMesh;
+                        duplicate.bones=hand.bones;
+                        duplicate.rootBone=hand.rootBone;
+                        duplicate.sharedMaterials=hand.sharedMaterials;
+                        duplicate.quality=hand.quality;
+                        duplicate.updateWhenOffscreen=true;
+                        duplicate.localBounds=hand.localBounds;
                         hand.enabled=false;
                         Capture(label);
+
+                        // Explicit visual guard: if the hand is missing or
+                        // renders outside of the approved horizontal ROI,
+                        // fail rather than giving false "identical" screenshots.
+                        Color32[] shot=result.GetPixels32();
+                        int skinPixels=0;
+                        for(int y=265;y<492;y+=2)
+                        for(int x=618;x<985;x+=2)
+                        {
+                            var c=shot[y*1280+x];
+                            if(c.r>85 && c.r>c.g*1.19f &&
+                               c.g>c.b*1.06f && c.g>65)
+                                ++skinPixels;
+                        }
+                        Debug.Log("[ARGON FRESH SKIN PROBE] "+label+
+                            " visible skin samples="+skinPixels+
+                            " mesh="+duplicate.sharedMesh.name);
+                        Assert.That(skinPixels,Is.GreaterThan(300),
+                            "Real finger/hand skin is missing from the newly"+
+                            " rendered SkinnedMeshRenderer; comparison invalid");
                     }
                     finally
                     {
                         hand.enabled=previousEnabled;
-                        if(staticProbe!=null) UnityEngine.Object.DestroyImmediate(staticProbe);
-                        UnityEngine.Object.DestroyImmediate(baked);
+                        if(probe!=null) UnityEngine.Object.DestroyImmediate(probe);
                     }
                 }
 
@@ -240,7 +266,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 living.NotifyAnimationPoseReset();
                 living.Apply(1.35f,1f,true,cam.transform.right,cam.transform.up);
                 Capture("06_original_fingers_animating_wrong_bones");
-                CaptureFreshBakedMesh("08_original_source_fingers_fresh_cpu_bake");
+                CaptureFreshBakedMesh("08_original_fingers_new_SKINNED_renderer");
                 // Compare the SAME source pose with the previous root-only
                 // geometric taper, this time drawing an actual fresh CPU-baked
                 // mesh instead of Unity's unchanged GPU renderer cache.
@@ -250,7 +276,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     var taper=ArgonFingerBaseSeamRepair.ApplyToCandidate(
                         hand,out taperCandidate);
                     Assert.That(taper.FingersPolished,Is.EqualTo(5));
-                    CaptureFreshBakedMesh("10_real_cloned_finger_taper_fresh_cpu_bake");
+                    CaptureFreshBakedMesh("10_tapered_fingers_new_SKINNED_renderer");
                 }
                 finally
                 {
@@ -268,7 +294,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     Debug.Log("[ROKAS ARGON FINGER WEIGHT MAP]\n"+reassigned.Mapping);
                     Capture("05_original_fingers_corrected_bone_bindings");
                     Capture("07_corrected_fingers_in_same_animated_pose");
-                    CaptureFreshBakedMesh("09_remapped_fingers_fresh_cpu_bake");
+                    CaptureFreshBakedMesh("09_reweighted_fingers_new_SKINNED_renderer");
                 }
                 finally
                 {
