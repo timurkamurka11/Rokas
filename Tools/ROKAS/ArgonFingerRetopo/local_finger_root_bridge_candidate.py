@@ -268,7 +268,7 @@ def main():
             return v0.co.lerp(v1.co,q),v0,v1,q
         def make_inner(v,w,point,t):
             x=bm.verts.new(point)
-            addedWeights.append((x,v.index,w.index,t))
+            addedWeights.append((x,v,w,t))
             if uv is not None:
                 seam_uv[x]=nearest_source_uv(v).lerp(
                     nearest_source_uv(w),t)
@@ -534,7 +534,7 @@ def main():
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
-    generated=[(v.index,fi,pi,t) for v,fi,pi,t in addedWeights]
+    generated=[(v.index,fi.index,pi.index,t) for v,fi,pi,t in addedWeights]
     # All transitional loops are assigned authentic source-derived bone
     # weights AFTER original five-digit retarget and remain skinned.
     merged=islands(bm)
