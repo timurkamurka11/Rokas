@@ -5,3 +5,7 @@
 - Existing FBX, watch, Russian OLED, authentic bedroom resource + cloth sound
 - 58 actual 1280x720 Unity frames at 24fps and short MP4 review
 - Focused Unity tests only; draft PR #13, DO NOT MERGE
+2026-10-17 second visual pass: actual 2.42s Unity preview revealed wrist turn occurring offscreen.
+Re-time wrist lead to remain visible at progress 0.42, forearm follows.
+Additional assertions require >8deg wrist pitch and >4deg forearm secondary rotation while on camera.
+Same approved horizontal final pose; no changes to source FBX, OLED or production V10.
