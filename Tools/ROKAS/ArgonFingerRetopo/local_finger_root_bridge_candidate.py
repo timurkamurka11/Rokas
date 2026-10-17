@@ -232,6 +232,31 @@ def main():
         # Exactly one loop winding choice is valid for each source shell.
         # The original minimization across both winding signs made inverted
         # triangular fins even while all edges remained formally manifold.
+        # Arc-length coordinates prevent uniformly indexed ring matching
+        # from stretching triangles around irregular original MCP contours.
+        def arc_units(vertices):
+            distances=[(vertices[(k+1)%len(vertices)].co-
+                        vertices[k].co).length for k in range(len(vertices))]
+            total=sum(distances)
+            if total<1e-7 or min(distances)<1e-8:
+                fail("Source contact rim has degenerate arc lengths")
+            acc=0.0
+            result=[]
+            for distance in distances:
+                result.append(acc/total)
+                acc+=distance
+            return result
+        def sample_arc(vertices, units, t):
+            t=t%1.0
+            for k in range(len(vertices)):
+                left=units[k]
+                right=units[k+1] if k+1<len(vertices) else 1.0
+                if t<=right+1e-10:
+                    q=max(0.0,min(1.0,(t-left)/(right-left)))
+                    u=vertices[k]
+                    v=vertices[(k+1)%len(vertices)]
+                    return u.co.lerp(v.co,q),u,v,q
+            fail("Normalized epidermis arc outside real ring")
         best=None
         for df in (1,-1):
             for dp in (1,-1):
@@ -243,47 +268,41 @@ def main():
                             continue
                         aa=[finger[(fi+df*k)%N] for k in range(N)]
                         pp=[hole[(pj+dp*k)%M] for k in range(M)]
-                        quality=sum((aa[min(N-1,int(k*N/60))].co-
-                            pp[min(M-1,int(k*M/60))].co).length
-                            for k in range(60))
-                        candidate=(quality,fi,pj,df,dp)
-                        if best is None or candidate<best[0]:
-                            best=(candidate,aa,pp)
+                        af=arc_units(aa);pf=arc_units(pp)
+                        quality=sum((sample_arc(aa,af,k/60)[0]-
+                           sample_arc(pp,pf,k/60)[0]).length for k in range(60))
+                        trial=(quality,fi,pj,df,dp)
+                        if best is None or trial<best[0]:
+                            best=(trial,aa,pp,af,pf)
         if best is None:
-            fail("No valid genuine epidermis orientation at finger root")
-        (_,fi,pj,df,dp),a,p=best
+            fail("Genuine palm and finger contours cannot be oriented")
+        (_,fi,pj,df,dp),a,p,frac_a,frac_p=best
         direction=dp
-        # Source 30-point digit rim -> 10..14-point palm socket previously
-        # formed naked high-aspect triangles and harsh collars. Use TWO
-        # curved, skinned transitional loops sourced from genuine contours
-        # without moving the original fingertips or rebuilding the palm.
-        # A is 1/3 from digit, B is 1/3 from palm. Real PBR UV and 25-bone
-        # weights are interpolated after the authentic digit retarget.
+        # UV and 25-bone skinning use the same true surface interpolation.
+        # No guessed index neighbour bones near ring/little fingers.
         seam_uv={}
-        def sample_linear(seq,t):
-            x=(t%1.0)*len(seq)
-            j=int(math.floor(x))
-            q=x-j
-            v0=seq[j%len(seq)];v1=seq[(j+1)%len(seq)]
-            return v0.co.lerp(v1.co,q),v0,v1,q
-        def make_inner(v,w,point,t):
+        def make_inner(point,source_mix):
             x=bm.verts.new(point)
-            addedWeights.append((x,v,w,t))
+            assert abs(sum(weight for _,weight in source_mix)-1)<1e-6
+            addedWeights.append((x,source_mix))
             if uv is not None:
-                seam_uv[x]=nearest_source_uv(v).lerp(
-                    nearest_source_uv(w),t)
+                value=Vector((0,0))
+                for vertex,weight in source_mix:
+                    value+=nearest_source_uv(vertex)*weight
+                seam_uv[x]=value
             return x
         near_finger=[]
         for i,vertex in enumerate(a):
-            pos,p0,p1,q=sample_linear(p,i/N)
-            # Smooth source-root/palm correspondence, no conical caps.
-            near_finger.append(make_inner(vertex,
-                p0,vertex.co.lerp(pos,.34),.34))
+            pos,p0,p1,q=sample_arc(p,frac_p,frac_a[i])
+            near_finger.append(make_inner(
+                vertex.co.lerp(pos,.34),
+                [(vertex,.66),(p0,.34*(1-q)),(p1,.34*q)]))
         near_palm=[]
         for j,vertex in enumerate(p):
-            pos,f0,f1,q=sample_linear(a,j/M)
-            near_palm.append(make_inner(f0,
-                vertex,pos.lerp(vertex.co,.66),.66))
+            pos,f0,f1,q=sample_arc(a,frac_a,frac_p[j])
+            near_palm.append(make_inner(
+                pos.lerp(vertex.co,.66),
+                [(f0,.34*(1-q)),(f1,.34*q),(vertex,.66)]))
         source_contact_vertices.update(near_finger)
         source_contact_vertices.update(near_palm)
         built=[]
@@ -309,8 +328,8 @@ def main():
         # medial tissue, not the visible outer knuckle border.
         index_a=index_p=0
         while index_a<N or index_p<M:
-            next_a=(index_a+1)/N if index_a<N else 1e9
-            next_p=(index_p+1)/M if index_p<M else 1e9
+            next_a=(frac_a[index_a+1] if index_a+1<N else 1.0) if index_a<N else 1e9
+            next_p=(frac_p[index_p+1] if index_p+1<M else 1.0) if index_p<M else 1e9
             u=near_finger[index_a%N]
             v=near_palm[index_p%M]
             if abs(next_a-next_p)<1e-7:
@@ -537,7 +556,8 @@ def main():
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
-    generated=[(v.index,fi.index,pi.index,t) for v,fi,pi,t in addedWeights]
+    generated=[(v.index,[(src.index,weight) for src,weight in contributors])
+               for v,contributors in addedWeights]
     # All transitional loops are assigned authentic source-derived bone
     # weights AFTER original five-digit retarget and remain skinned.
     merged=islands(bm)
@@ -627,11 +647,11 @@ def main():
     def vweights(i):
         return {group_names[x.group]:x.weight
                 for x in clone.data.vertices[i].groups if x.weight>1e-6}
-    for vi,fi,pi,t in generated:
-        a,b=vweights(fi),vweights(pi)
-        mix={}
-        for name in set(a)|set(b):
-            mix[name]=a.get(name,0)*(1-t)+b.get(name,0)*t
+    for vi,contributors in generated:
+        mix=defaultdict(float)
+        for source_index,ratio in contributors:
+            for name,weight in vweights(source_index).items():
+                mix[name]+=ratio*weight
         weightSum=sum(mix.values())
         if weightSum<.5:fail("Generated seam has no meaningful skin weights")
         for name,w in mix.items():
