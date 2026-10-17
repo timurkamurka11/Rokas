@@ -43,6 +43,10 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Real cyan-violet circular selection ring not rendered");
                 oled.ShowPresets();
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Presets));
+                oled.SelectPreset(1);
+                Assert.That(oled.SelectedHalfHours,Is.EqualTo(1));
+                Assert.That(oled.DurationText,Is.EqualTo("00:30"));
+                Assert.That(oled.WakeText,Is.EqualTo("00:00"));
                 oled.SelectPreset(8);
                 Assert.That(oled.SelectedHalfHours,Is.EqualTo(8));
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
