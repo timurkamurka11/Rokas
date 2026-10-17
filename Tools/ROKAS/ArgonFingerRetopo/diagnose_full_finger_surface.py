@@ -131,6 +131,37 @@ def main():
                 "ring_vertices_co":np.round(arr,7).tolist(),
                 "nearest_nonlocal_pair_indices":[[int(a),int(b),round(d/extent,6)]
                      for a,b,d,_ in pairs]}
+        # After reconciling EXACT duplicate UV border edges, the remaining
+        # 30-edge finger root loop needs a true palm surface socket.
+        # Distinguish distance to palm SURFACE (all 5265 source vertices)
+        # from distance to the two existing palm BORDER sockets.
+        if index>0:
+            from collections import Counter
+            keys=[tuple(round(float(t),6) for t in co) for co in arr]
+            count=Counter(tuple(sorted((keys[ii],keys[(ii+1)%len(keys)])))
+                          for ii in range(len(keys)))
+            real_keys=set()
+            for (ka,kb), multiplicity in count.items():
+                if multiplicity%2:
+                    real_keys.add(ka);real_keys.add(kb)
+            root=np.array(list(real_keys),dtype=np.float64)
+            must(len(root)==30,"expected 30 actual root rim verts after seam reconciliation")
+            root_center=root.mean(axis=0)
+            original_palm=np.array([v.co[:] for v in comps[0]])
+            delta=np.linalg.norm(original_palm-root_center,axis=1)
+            nearest=int(np.argmin(delta))
+            border_delta=np.linalg.norm(palm_xyz-root_center,axis=1)
+            result["true_root_center"]=np.round(root_center,7).tolist()
+            result["nearest_palm_actual_surface_distance"]=float(delta[nearest])
+            result["nearest_palm_actual_surface_vertex"]=np.round(
+                original_palm[nearest],7).tolist()
+            result["nearest_palm_border_distance"]=float(min(border_delta))
+            result["true_root_3d_radius"]=float(np.median(
+                np.linalg.norm(root-root_center,axis=1)))
+            print("ROKAS GRAFT ROOT",index,"surface_dist",
+                  round(float(delta[nearest]),6),"border_dist",
+                  round(float(min(border_delta)),6),"root_radius",
+                  round(result["true_root_3d_radius"],6),flush=True)
         report["islands"].append(result)
         print("ROKAS FINGER DIAG",index,"source",len(part),"boundary",n,
               "near palm",len(near),"axis-span",round(span/extent,3),
