@@ -10,7 +10,9 @@ namespace Rokas.BedSleep.Argon.Candidate
     /// Keeps production V10 SmartwatchOLEDPresenter completely untouched.
     /// The existing ArgonWatchControls reflection contract is preserved.
     /// </summary>
-    public enum ArgonRussianWatchScreen { Dial, Presets, Confirmed, FallingAsleep, Cancelled }
+    public enum ArgonRussianWatchScreen {
+        Dial, Presets, Overview, Relaxation, Confirmed, FallingAsleep, Cancelled
+    }
 
     [DisallowMultipleComponent]
     public sealed class ArgonRussianSleepOledPresenter : MonoBehaviour
@@ -118,6 +120,32 @@ namespace Rokas.BedSleep.Argon.Candidate
             ConfigureTime(CurrentHour,CurrentMinute,Mathf.Clamp(halfHours,1,24));
         }
 
+        // Square-watch reference panels remain actual dynamically drawn
+        // Russian OLED states on the physical source UV, not screen HUD.
+        public void ShowOverview()
+        {
+            Screen=ArgonRussianWatchScreen.Overview;
+            RefreshTextSummary();
+            requiresRedraw=true;
+            RenderAt(animatedSeconds,true);
+        }
+
+        public void ShowRelaxation()
+        {
+            Screen=ArgonRussianWatchScreen.Relaxation;
+            RefreshTextSummary();
+            requiresRedraw=true;
+            RenderAt(animatedSeconds,true);
+        }
+
+        public void ShowDial()
+        {
+            Screen=ArgonRussianWatchScreen.Dial;
+            RefreshTextSummary();
+            requiresRedraw=true;
+            RenderAt(animatedSeconds,true);
+        }
+
         public void SetFallingAsleep()
         {
             Screen = ArgonRussianWatchScreen.FallingAsleep;
@@ -147,7 +175,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                   Screen == ArgonRussianWatchScreen.Cancelled
                     ? "ОТМЕНЕНО" :
                   Screen == ArgonRussianWatchScreen.Presets
-                    ? "БЫСТРЫЙ ВЫБОР" : "ПОДТВЕРДИТЬ");
+                    ? "БЫСТРЫЙ ВЫБОР" :
+                  Screen == ArgonRussianWatchScreen.Overview
+                    ? "ПЛАН СНА" :
+                  Screen == ArgonRussianWatchScreen.Relaxation
+                    ? "РЕЖИМ ОТДЫХА" : "ПОДТВЕРДИТЬ");
         }
 
         public string DurationText =>
@@ -176,11 +208,16 @@ namespace Rokas.BedSleep.Argon.Candidate
             PaintBackground();
             PaintClouds();
             PaintMoon();
+            PaintSquareGlassFrame();
             PaintRing();
             switch (Screen)
             {
                 case ArgonRussianWatchScreen.Presets:
                     PaintPresets(); break;
+                case ArgonRussianWatchScreen.Overview:
+                    PaintOverview(); break;
+                case ArgonRussianWatchScreen.Relaxation:
+                    PaintRelaxation(); break;
                 case ArgonRussianWatchScreen.Confirmed:
                     PaintConfirmation(); break;
                 case ArgonRussianWatchScreen.FallingAsleep:
@@ -334,18 +371,68 @@ namespace Rokas.BedSleep.Argon.Candidate
             Disc(tipX,tipY,17f,blue,glow);
             Disc(tipX,tipY,9.1f,white,.96f);
         }
+        // A SQUARE watch panel with gently rounded rectangular inner edge,
+        // while retaining the reference's curved luminous progress ring.
+        // No new physical face mesh; still the authentic original OLED UVs.
+        private void PaintSquareGlassFrame()
+        {
+            var cool=new Color32(50,86,155,255);
+            var dim=new Color32(21,41,78,255);
+            for(int x=47;x<=465;x+=5)
+            {
+                Disc(x,42,1.3f,dim,.53f);
+                Disc(x,469,1.3f,cool,.31f);
+            }
+            for(int y=47;y<=466;y+=6)
+            {
+                Disc(42,y,1.15f,dim,.52f);
+                Disc(469,y,1.15f,cool,.34f);
+            }
+        }
+
+        private void PaintOverview()
+        {
+            CenterText("ПЛАН СНА",256,418,5,white);
+            CenterText("СЕЙЧАС",256,353,3,muted);
+            CenterText(CurrentHour.ToString("D2")+":"+
+                CurrentMinute.ToString("D2"),256,323,8,white);
+            CenterText("ВРЕМЯ СНА",256,254,3,muted);
+            CenterText(DurationText,256,220,10,white);
+            CenterText("ПОДЪЁМ",256,153,3,muted);
+            CenterText(WakeText,256,115,9,new Color32(171,209,255,255));
+            CenterText("ДАЛЕЕ  >",256,62,4,white);
+        }
+
+        private void PaintRelaxation()
+        {
+            CenterText("РЕЖИМ ОТДЫХА",256,417,4,white);
+            float t=animatedSeconds*1.16f;
+            for(int i=0;i<125;i++)
+            {
+                float x=100f+i*2.5f;
+                float envelope=Mathf.Sin(Mathf.PI*i/124f);
+                float y=274+Mathf.Sin(i*.113f+t)*16f*envelope+
+                    Mathf.Sin(i*.059f+t*.65f)*8f*envelope;
+                Disc(x,y,3.0f,Color32.Lerp(blue,violet,(float)i/124f),.82f);
+            }
+            CenterText("ТИШИНА",256,215,6,white);
+            CenterText("СОН "+DurationText,256,157,5,muted);
+            CenterText("ПОДЪЁМ "+WakeText,256,119,4,muted);
+            CenterText("ПОДТВЕРДИТЬ",256,66,4,white);
+        }
+
         private void PaintSelection()
         {
             // The physical watch occupies only ~70px in the approved bed
             // shot: prioritize ONE large timer and TWO readable essentials.
             // Fine print from the earlier prototype disappeared in-game.
             CenterText("СЕЙЧАС "+CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,412,4,muted);
+                CurrentMinute.ToString("D2"),256,412,5,muted);
             CenterText(DurationText,256,249,12,white);
-            CenterText("ВРЕМЯ СНА",256,180,4,muted);
+            CenterText("ВРЕМЯ СНА",256,179,5,muted);
             CenterText("-",130,252,5,muted);
             CenterText("+",390,252,5,muted);
-            CenterText("ПОДЪЁМ "+WakeText,256,140,4,
+            CenterText("ПОДЪЁМ "+WakeText,256,140,5,
                 new Color32(177,208,255,255));
             DrawBedIcon(256,110);
             // Authentic OLED touch region (bottom 20%); no external HUD
