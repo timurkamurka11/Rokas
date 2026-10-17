@@ -120,6 +120,12 @@ namespace Rokas.BedSleep.Argon.Editor
             var leaving=ArgonBedOrganicGesture.Evaluate(.58f,true);
             Assert.That(Mathf.Abs(entering.WristPitchDegrees/13.2f),
                 Is.LessThan(Mathf.Abs(entering.ForearmPitchDegrees/6.1f)));
+            Assert.That(Mathf.Abs(entering.WristPitchDegrees),
+                Is.GreaterThan(8f),
+                "The wrist must still visibly turn once the hand is on screen");
+            Assert.That(Mathf.Abs(entering.ForearmPitchDegrees),
+                Is.GreaterThan(4f),
+                "Forearm secondary rotation must not be completed offscreen");
             Assert.That(Mathf.Abs(leaving.WristPitchDegrees/15.6f),
                 Is.GreaterThan(Mathf.Abs(leaving.ForearmPitchDegrees/7.8f)));
 
