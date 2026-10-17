@@ -81,7 +81,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                                  Screen == ArgonRussianWatchScreen.Cancelled))
                 Screen = ArgonRussianWatchScreen.Dial;
             RefreshTextSummary();
-            if (clockChanged && OledDynamicTexture != null)
+            if ((clockChanged || requiresRedraw) && OledDynamicTexture != null)
                 RenderAt(animatedSeconds,true);
         }
 
@@ -110,6 +110,10 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         public void SelectPreset(int halfHours)
         {
+            // Even selecting the SAME duration must repaint the physical
+            // OLED when returning from the full-screen preset selector.
+            if (Screen != ArgonRussianWatchScreen.Dial)
+                requiresRedraw = true;
             Screen = ArgonRussianWatchScreen.Dial;
             ConfigureTime(CurrentHour,CurrentMinute,Mathf.Clamp(halfHours,1,24));
         }
