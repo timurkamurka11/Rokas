@@ -20,6 +20,9 @@ namespace Rokas.BedSleep.Argon.Candidate
         private Quaternion crownRest;
         private Component presenter;
         private MethodInfo configureTime, setConfirmed;
+        private MethodInfo showPresets, selectPreset, beginSleep, cancelSelection;
+        private int currentHour=19, currentMinute=30;
+        private int lastOledHour=-1, lastOledMinute=-1;
         private AudioSource audioSource;
         private AudioClip cloth, tick, confirmSound;
         private int steps = 14;
@@ -47,7 +50,13 @@ namespace Rokas.BedSleep.Argon.Candidate
             configureTime = type.GetMethod("ConfigureTime", BindingFlags.Public | BindingFlags.Instance);
             setConfirmed = type.GetMethod("SetConfirmedState", BindingFlags.Public | BindingFlags.Instance);
             if (configureTime == null || setConfirmed == null)
-                throw new InvalidOperationException("Actual ROKAS Bed Sleep OLED interface unavailable");
+                throw new InvalidOperationException("ROKAS Bed Sleep OLED contract unavailable");
+            // Additional candidate-only methods are optional; existing V10
+            // production OLED remains compatible without any changes.
+            showPresets=type.GetMethod("ShowPresets", BindingFlags.Public|BindingFlags.Instance);
+            selectPreset=type.GetMethod("SelectPreset", BindingFlags.Public|BindingFlags.Instance);
+            beginSleep=type.GetMethod("SetFallingAsleep", BindingFlags.Public|BindingFlags.Instance);
+            cancelSelection=type.GetMethod("CancelSelection", BindingFlags.Public|BindingFlags.Instance);
             oledCollider = realOled.GetComponent<Collider>();
             if (oledCollider == null)
             {
@@ -88,12 +97,15 @@ namespace Rokas.BedSleep.Argon.Candidate
             // The actual gameplay presenter redraws a full CPU 256x256 OLED
             // texture on every call. Prevent needless duplicate uploads and
             // reduce transient spikes during rapid dial scrolling.
-            if (!oledInitialized || lastOledSteps != steps)
-                configureTime.Invoke(presenter, new object[] { 19, 30, steps });
+            if (!oledInitialized || lastOledSteps != steps ||
+                lastOledHour != currentHour || lastOledMinute != currentMinute)
+                configureTime.Invoke(presenter, new object[] { currentHour, currentMinute, steps });
             if (!oledInitialized || lastOledConfirmed != confirmed)
                 setConfirmed.Invoke(presenter, new object[] { confirmed });
             lastOledSteps = steps;
             lastOledConfirmed = confirmed;
+            lastOledHour = currentHour;
+            lastOledMinute = currentMinute;
             oledInitialized = true;
         }
 
@@ -162,6 +174,41 @@ namespace Rokas.BedSleep.Argon.Candidate
             stepEvent = absoluteEvent = confirmEvent = cancelEvent = null;
             stepHandler = absoluteHandler = null;
             confirmHandler = cancelHandler = null;
+        }
+
+        /// <summary>
+        /// Use actual game time when wiring this candidate to the ROKAS room.
+        /// The 19:30 default above is only the deterministic preview clock.
+        /// </summary>
+        public void SetCurrentGameTime(int hour,int minute)
+        {
+            currentHour=(hour%24+24)%24;
+            currentMinute=Mathf.Clamp(minute,0,59);
+            UpdateOled();
+        }
+
+        public void ShowQuickPresets()
+        {
+            if(showPresets!=null)showPresets.Invoke(presenter,null);
+        }
+
+        public void SelectQuickPreset(int halfHours)
+        {
+            SetDurationSteps(halfHours,true);
+            if(selectPreset!=null)
+                selectPreset.Invoke(presenter,new object[]{steps});
+        }
+
+        public void BeginSleepingAnimation()
+        {
+            if(beginSleep!=null)beginSleep.Invoke(presenter,null);
+        }
+
+        public void CancelTimer()
+        {
+            confirmed=false;
+            UpdateOled();
+            if(cancelSelection!=null)cancelSelection.Invoke(presenter,null);
         }
 
         public void Step(int direction)
