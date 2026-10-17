@@ -1,0 +1,33 @@
+Find actual ceiling from the working Unity bed scene, not the apartment home overview. Generate cloud Unity frames and MP4 only from real scene pixels.
+
+CAPTURE_REQUEST=2026-10-16-original-roka-bed-ceiling-unity-gameview-video
+Source: user-provided Bandicam Unity recording, verified cropped PNG SHA256 9b8e543328054433a65df13dd1a393cb01d116112b4a297bac897a0ef88d5791.
+Record authentic skinned Argon FBX + actual OLED at 24fps with original ROKAS Bed Sleep POV visual.
+
+RETRY_CAPTURE=longer-inspect-6sec-video-24fps-final
+
+FINAL_MP4_RETRY=Unity_149Frames_PASS_ChecksPermissionRestored
+
+RETRY_SHARE=wait-until-original-download-button-visible
+
+MP4_ENCODE_FIX_RETRY=render-original-149-frames-encode-in-runner-temp-20261016
+
+HORIZONTAL_HERO_QA=1 sleeve-left OLED-center fingers-right natural-MCP-limits preserve-source-FBX
+
+HORIZONTAL_BASIS_HANDEDNESS_RETRY=fix-cross-armAxis-normal
+
+PHYSICAL_WATCH_DORSAL_TEST=front-+Y-depth-tested-true-OLED-camera-0.41m-600s-timeout
+
+GENTLE_SKIN_LIGHTING_QA=original-textures-untouched-0.32-warm-key-0.09-normal-preview
+
+QA_SKIN_DIAGNOSTICS=normal-off_matte_no-normal_flat-albedo_review-frame-72_20261017
+
+LIVING_HAND_AUDIO_INTERACTIVE_OLED_QA=2026-10-17-original25bone-crown-fabric-noise-pass01
+
+RETRY_LIVING_HAND_QA=2026-10-17-cli-v0.1.48-runtime-audio-safety-02
+RETRY_LIVING_HAND_QA=2026-10-17-fixed-preCLI-gameci-v4.3.1-03
+RUSSIAN_LUNAR_OLED_REFERENCE_QA=2026-10-17-v1
+
+RUSSIAN_OLED_FINAL_GLYPH_7_STATES_30MIN_REF_VIDEO=2026-10-17-01
+RU_OLED_CACHED_FAST_FULL_MP4_WITH_TIMEOUT_FALLBACK=2026-10-17-A
+QA_LOSSLESS_TGA_720P_FAST_REVIEW_20261017

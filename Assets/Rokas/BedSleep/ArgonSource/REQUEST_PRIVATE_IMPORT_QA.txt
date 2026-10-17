@@ -1,0 +1,30 @@
+Release tag: bedsleep-argon-assets
+Release asset ID: 647623286
+Asset: ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip
+SHA-256: 60d9a551c2460d5a806be9a63f52dc932960e71ae50cd90ca9631acfdb28f0bd
+This marker triggers isolated candidate Unity EditMode import in GitHub Actions. The existing active ROKAS Bed Sleep V10 and original game files remain unchanged.
+
+Native conversion requested: original master GLB to Blender FBX for actual Unity skinned-mesh reimport. Production V10 is unchanged.
+
+Retry: install numpy, remove bad FBX, require newly native-exported Blender FBX files before Unity import.
+
+Retry: native 3 skinned meshes imported; match only 8 authentic 25Bone_GenericRig animation tracks.
+
+Render-quality QA: OLED viewer-side 24cm frame + genuine Raise/InspectIdle/Lower FBX clip samples.
+
+Wrist seating fix, real OLED cyan pixel gate, and Raise/InspectIdle/Lower authentic animation snapshot QA.
+
+Double-sided live physical OLED shader, original skin normals at realistic strength, no stand-in geometry.
+
+First-person camera QA: sample real Raise/InspectIdle/Lower with cuff below OLED and left-bottom screen entry; never modify production V10.
+
+POV QA retry: inspect frame center, cuff-left roll, original OLED legibility gate, exit shot intentionally empty.
+
+POV real OLED calibration: 40 actual Unity camera renders around animated wrist; preserve Argon meshes/UVs, require readable inspect pose.
+
+Full-hand cinematography QA: calibrated original OLED at .48m FOV40, all original roughness maps mapped into Unity packed smoothness.
+
+PUBLISH_CANDIDATE=YES
+Publish only verified Argon original models/textures and Unity prefabs to the isolated draft branch, never production/main.
+
+Post-publish check: validate committed prefab and .meta on fresh cloud Unity checkout without modifying stored assets.

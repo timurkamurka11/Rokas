@@ -1,0 +1,2 @@
+ROKAS genuine finger boundary loops, proximal cap topology, source skin texture normal/roughness importer analysis — before remeshing. Candidate only. PR #13 draft, V10 untouched.
+2026-10-17 ORIENTED_RING_PAIRING_AVOID_SURFACE_PINCH_QA

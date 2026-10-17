@@ -1,0 +1,143 @@
+name: ROKAS Argon — Actual Unity Bed POV Video 720p
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths:
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_BED_VIDEO.txt'
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  unity-bed-first-person-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure exact imported Argon FBX, PNG and prefab already committed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Smartwatch_HighDetail.fbx
+          test -s Assets/Rokas/BedSleep/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/Shaders/ArgonBedVideoComposite.shader
+      - name: Fetch original bed ceiling Game View still from user's ROKAS recording
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This is a frame of the USER'S genuine Unity ROKAS bed POV video,
+          # not a stock backdrop. Download a temporary copy to the disposable
+          # runner: do NOT check it into the public ROKAS project.
+          python3 -m pip install --quiet --user playwright
+          python3 - <<'PY'
+          import pathlib, hashlib, re, shutil
+          from playwright.sync_api import sync_playwright
+          url="https://firestorage.ai/en/f/0E-m8EK9eZgC"
+          expected="9b8e543328054433a65df13dd1a393cb01d116112b4a297bac897a0ef88d5791"
+          dest=pathlib.Path("Assets/Rokas/Resources/BedSleep/BedCeilingPOV.png")
+          dest.parent.mkdir(parents=True,exist_ok=True)
+          with sync_playwright() as p:
+              chrome=shutil.which("google-chrome") or shutil.which("chromium")
+              if not chrome:
+                  raise RuntimeError("Ubuntu Chrome missing: cannot retrieve authenticated game screenshot")
+              browser=p.chromium.launch(headless=True,executable_path=chrome,
+                 args=["--disable-dev-shm-usage","--no-sandbox"])
+              page=browser.new_page(accept_downloads=True)
+              page.goto(url,wait_until="domcontentloaded",timeout=80000)
+              page.wait_for_function(
+                  "() => document.body && document.body.innerText.includes('ROKAS_BedCeilingPOV_CapturedFromUnityGame.png')",
+                  timeout=65000)
+              page.wait_for_timeout(1500)
+              print("Loaded original user game image share:",page.url,"title",page.title())
+              print("Download controls:",page.locator("body").inner_text()[-700:])
+              selectors=[
+                  page.get_by_role("button",name=re.compile(r"Download|ダウンロード",re.I)),
+                  page.get_by_role("link",name=re.compile(r"Download|ダウンロード",re.I)),
+                  page.get_by_text("Download",exact=True),
+                  page.get_by_text("ダウンロード",exact=True)
+              ]
+              success=False
+              for query in selectors:
+                  if query.count() == 0: continue
+                  try:
+                      with page.expect_download(timeout=35000) as download_info:
+                          query.first.click(timeout=15000)
+                      dl=download_info.value
+                      dl.save_as(str(dest))
+                      success=True
+                      break
+                  except Exception as e:
+                      print("Download selector failed:",str(e)[:140])
+              browser.close()
+          if not success:
+              raise RuntimeError("Could not fetch user ROKAS Game View image: do NOT use a fake ceiling")
+          actual=hashlib.sha256(dest.read_bytes()).hexdigest()
+          if actual != expected:
+              raise RuntimeError(f"Game frame SHA-256 mismatch: {actual}; refusing substitution")
+          png=dest.read_bytes()
+          if png[:8] != b"\x89PNG\r\n\x1a\n":
+              raise RuntimeError("Downloaded asset is not real PNG bytes")
+          print("Authentic user Unity bed POV PNG staged SHA256",actual,"bytes",len(png))
+          PY
+      - name: Unity 6000.3.19f1 — render original Argon FBX over authentic BedCeilingPOV
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          # Fixed pre-CLI v4 runner: avoids the new CLI's activation failure
+          # observed on run 38985888799. Production Unity QA only.
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonBedUnityVideoTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS Authentic Argon 3D Bed POV Cinematic Frames
+      - name: Encode actual Unity 24fps PNG frames into real MP4
+        # Keep the real frames if Unity's NUnit timeout trips AFTER capturing.
+        # A failed test should never discard a complete user-reviewable MP4.
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          test -s Artifacts/ArgonBedVideo/frames/frame_00000.tga
+          count="$(find Artifacts/ArgonBedVideo/frames -name 'frame_*.tga' | wc -l)"
+          test "$count" -gt 160
+          # game-ci Unity container writes frames as root. Runner may read
+          # them but cannot create files in that root-owned directory.
+          # Encode in writable RUNNER_TEMP then install just the finished
+          # movie back for actions/upload-artifact, without changing source.
+          movie="$RUNNER_TEMP/ROKAS_ARGON_BED_POV_Unity_720p.mp4"
+          test -s Artifacts/ArgonBedVideo/ArgonOriginalFoley_44100Hz.wav
+          ffmpeg -hide_banner -loglevel error -y \
+            -framerate 24 -i Artifacts/ArgonBedVideo/frames/frame_%05d.tga \
+            -i Artifacts/ArgonBedVideo/ArgonOriginalFoley_44100Hz.wav \
+            -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p \
+            -c:a aac -b:a 160k -shortest \
+            -movflags +faststart "$movie"
+          ffprobe -v error -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 "$movie"
+          sudo install -m 0644 "$movie" \
+            Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
+          test -s Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
+      - name: Upload actual Unity MP4 and storyboard for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Real-Unity-Bed-POV-VIDEO
+          path: |
+            Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
+            Artifacts/ArgonBedVideo/storyboard_*.png
+            Artifacts/ArgonBedVideo/russian_oled_face_*.png
+            Artifacts/ArgonBedVideo/russian_watch_*.png
+            Artifacts/ArgonBedVideo/ArgonOriginalFoley_44100Hz.wav
+            Artifacts/ArgonBedVideo/skin_diagnostic_*.png
+            Artifacts/ArgonBedVideo/capture_manifest.json
+            ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

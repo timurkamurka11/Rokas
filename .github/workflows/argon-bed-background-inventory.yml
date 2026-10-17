@@ -1,0 +1,36 @@
+name: ROKAS Argon Bed POV Background Inventory
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_BED_VIDEO.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  locate-actual-bed-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect actual Bed POV textures from tracked project and original V10 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo 'Tracked BedCeilingPOV references/files:'
+          git ls-files | grep -Ei 'BedCeilingPOV|BedWatchArmPOV|Bed.*POV|Ceiling' || true
+          gh release download bedsleep-v10-assets --pattern '*.zip' --dir "$RUNNER_TEMP"
+          python3 - <<'PY'
+          import pathlib, os, zipfile
+          archives=list(pathlib.Path(os.environ["RUNNER_TEMP"]).glob("*.zip"))
+          assert archives, "No V10 archive"
+          for f in archives:
+              with zipfile.ZipFile(f) as z:
+                  names=z.namelist()
+                  print("ARCHIVE:", f.name, "entries:", len(names))
+                  names=[x for x in names if x.lower().endswith((".png",".jpg",".jpeg",".webp",".prefab",".unity",".asset"))]
+                  matches=[x for x in names if any(s in x.lower() for s in ("bed","ceiling","lying","pov","room","sleep","home"))]
+                  print("BED_RELATED_MEDIA_IN_V10_RELEASE:")
+                  for x in matches[:150]: print(x, "size",z.getinfo(x).file_size)
+                  print("ALL_PNG_COUNTS:", len([x for x in names if x.lower().endswith(".png")]))
+          PY
