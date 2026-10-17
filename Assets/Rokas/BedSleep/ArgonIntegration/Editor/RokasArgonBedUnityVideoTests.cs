@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
+using Rokas.BedSleep.Argon.Candidate;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -97,13 +99,19 @@ namespace Rokas.BedSleep.Argon.Editor
                 // Original Argon albedo/normal/roughness remain bound.
                 // The old white directional light washed out the pale
                 // original texture; use soft warm bedroom-key illumination.
-                key.intensity = .32f;
-                key.color = new Color(1f, .86f, .74f);
+                key.intensity = .30f;
+                key.color = new Color(1f, .86f, .78f);
                 var skinRenderer = root.GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .Single(x => x.name == "Keiko_Hand_Skin_Mesh");
                 skinPreviewMat = new Material(skinRenderer.sharedMaterial);
-                skinPreviewMat.SetColor("_Color", new Color(.97f, .88f, .83f));
-                skinPreviewMat.SetFloat("_BumpScale", .09f);
+                // Run 38984231016 showed harsh stripes from normal/specular.
+                // Match its smooth diagnostic #02, preserving real Argon albedo,
+                // true geometry and physical RGB lighting. This is QA ONLY.
+                skinPreviewMat.SetColor("_Color", new Color(.90f, .80f, .75f));
+                skinPreviewMat.SetFloat("_BumpScale", 0f);
+                skinPreviewMat.SetFloat("_GlossMapScale", .22f);
+                skinPreviewMat.SetFloat("_SpecularHighlights", 0f);
+                skinPreviewMat.SetFloat("_GlossyReflections", 0f);
                 skinRenderer.sharedMaterial = skinPreviewMat;
                 key.cullingMask = 1 << 29;
                 keyObj.transform.rotation = Quaternion.Euler(35, -20, 30);
@@ -138,6 +146,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 inspect.SampleAnimation(animator.gameObject, inspect.length * .5f);
                 heroPose.CaptureHeroPose();
                 heroPose.RestoreNaturalAnatomy();
+                var living = new ArgonLivingRig(root);
                 // 2D reference geometry: sleeve LEFT, wrist near center, all
                 // fingers RIGHT. Face the actual imported OLED, not palm-down.
                 // Original GLB: titanium case Y=0.0157..0.0275,
@@ -146,6 +155,12 @@ namespace Rokas.BedSleep.Argon.Editor
                 // ZTest Always shader painting a flat square through skin.
                 // +Y sees the real case, straps, raised glass and nails.
                 heroPose.ConfigureCamera(cam, Vector3.up, .41f);
+                var crownRenderer = root.GetComponentsInChildren<MeshRenderer>(true)
+                    .Single(x => x.name == "Watch_DigitalCrown_Rotary");
+                // REAL source OLED presenter and REAL watch meshes get reusable
+                // runtime interactions, not simulated overlaid UI buttons.
+                var watchControls = root.AddComponent<ArgonWatchControls>();
+                watchControls.Initialize(cam, oledPresenter, oled, crownRenderer);
 
                 string outDir = Path.Combine(Directory.GetCurrentDirectory(),
                     "Artifacts", "ArgonBedVideo");
@@ -154,11 +169,16 @@ namespace Rokas.BedSleep.Argon.Editor
 
                 int frameNumber = 0;
                 int inspectPixelCount = 0;
+                int livingBendCount = 0;
+                var foleyEvents = new List<ArgonFoleyEvent>();
                 void RenderFrame(AnimationClip clip, float normalizedTime, float exitDistance,
                     int durationStep, bool confirmed)
                 {
-                    configureTime.Invoke(oledPresenter, new object[] { 19, 30, durationStep });
-                    setConfirmed.Invoke(oledPresenter, new object[] { confirmed });
+                    // Actual interactive adapter owns duration, OLED and crown.
+                    watchControls.SetDurationSteps(durationStep);
+                    if (confirmed) watchControls.Confirm();
+                    else watchControls.ResetConfirmation();
+                    watchControls.AnimateCrown(1f / Fps);
                     clip.SampleAnimation(animator.gameObject, clip.length *
                         Mathf.Clamp01(normalizedTime));
                     // Keep the REAL 25-bone source and FBX clip, but eliminate
@@ -167,6 +187,14 @@ namespace Rokas.BedSleep.Argon.Editor
                     // Rigid cinematic slide from OFF-SCREEN LEFT to horizontal
                     // hero pose; no longer rise diagonally from bottom edge.
                     heroPose.SetPresentation(exitDistance);
+                    float lifeWeight = Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp01(exitDistance));
+                    float elapsed = (float)frameNumber / Fps;
+                    living.Apply(elapsed, lifeWeight,
+                        clip == crown, heroPose.Right, heroPose.Up);
+                    if (clip == inspect && frameNumber % 6 == 0 &&
+                        living.FingerBendDegrees("Middle_PIP") > 3f)
+                        ++livingBendCount;
                     cam.Render();
                     if (clip == inspect && frameNumber % 8 == 0)
                     {
@@ -288,6 +316,22 @@ namespace Rokas.BedSleep.Argon.Editor
                 void Segment(AnimationClip clip, float duration, Func<float, float> slide,
                     Func<float, int> durationStep, bool confirmed)
                 {
+                    float at = (float)frameNumber / Fps;
+                    if (clip == raise || clip == lower)
+                    {
+                        foleyEvents.Add(new ArgonFoleyEvent(at + .09f,
+                            ArgonFoleyCue.Sleeve, .9f));
+                        foleyEvents.Add(new ArgonFoleyEvent(at + .33f,
+                            ArgonFoleyCue.Sleeve, .52f));
+                    }
+                    if (clip == crown)
+                        for (int i = 0; i < 4; ++i)
+                            foleyEvents.Add(new ArgonFoleyEvent(
+                                at + .09f + i * duration / 4f,
+                                ArgonFoleyCue.CrownTick, .9f));
+                    if (clip == confirm)
+                        foleyEvents.Add(new ArgonFoleyEvent(
+                            at + .065f, ArgonFoleyCue.Confirmation, .85f));
                     int frames = Mathf.CeilToInt(duration * Fps);
                     for (int i = 0; i < frames; i++)
                     {
@@ -305,7 +349,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     t => 14, false);
                 Segment(wrist, wrist.length, t => .86f + t * .14f,
                     t => 14, false);
-                Segment(inspect, 1.65f, t => 1f, t => 14, false);
+                Segment(inspect, 2.4f, t => 1f, t => 14, false);
                 Segment(crown, crown.length, t => 1f,
                     t => 14 + Mathf.FloorToInt(t * 4f), false);
                 Segment(confirm, confirm.length, t => 1f, t => 18, true);
@@ -314,6 +358,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 Segment(FindClip("SleepArm_ReturnIdle"), .55f,
                     t => .08f * (1f-t), t => 18, true);
 
+                // One identical, deterministic sound bank powers in-game
+                // PlayOneShot and the real candidate MP4 audio stream.
+                Assert.That(livingBendCount, Is.GreaterThan(4),
+                    "Real PIP/DIP articulation must be visible in idle.");
+                Assert.That(foleyEvents.Count, Is.GreaterThanOrEqualTo(8),
+                    "No fabric/rotation/confirm feedback events were authored.");
+                ArgonWatchFoley.WriteSoundtrack(
+                    Path.Combine(outDir, "ArgonOriginalFoley_44100Hz.wav"),
+                    frameNumber, Fps, foleyEvents);
+                Assert.That(File.Exists(Path.Combine(outDir,
+                    "ArgonOriginalFoley_44100Hz.wav")), Is.True);
                 Assert.That(frameNumber, Is.GreaterThan(105),
                     "Need a genuine continuous 24fps clip, not static animation snapshots.");
                 Assert.That(inspectPixelCount, Is.GreaterThan(12),
@@ -328,6 +383,9 @@ namespace Rokas.BedSleep.Argon.Editor
                     "  \"resolution\": \"1280x720\",\n" +
                     "  \"original_game_oled\": true,\n" +
                     "  \"original_fbx_clips\": true,\n" +
+                    "  \"living_secondary_motion\": true,\n" +
+                    "  \"physical_crown_interaction\": true,\n" +
+                    "  \"original_foley_audio\": true,\n" +
                     "  \"hero_pose\": \"sleeve-left-watch-center-fingers-right\",\n" +
                     "  \"finger_correction\": \"rest-relative-MCP-clamp-11deg\"\n" +
                     "}";
