@@ -414,6 +414,14 @@ def main():
     # both old palm pockets now have a real continuous epidermis surface.
     if sum(e.is_boundary for e in bm.edges)!=64:
         fail("Skin not fully repaired (except intentional sleeve cuff)")
+    nonmanifold=[e for e in bm.edges if not(e.is_manifold or e.is_boundary)]
+    report["post_graft_nonmanifold_edges"]=len(nonmanifold)
+    if nonmanifold:
+        fail("Reconstructed genuine skin has nonmanifold edges: "+
+             str(len(nonmanifold)))
+    if uv is None:
+        fail("Authentic source UV layer was lost in premium palm surface repair")
+    report["source_uv_layer_retained"]=True
     # Source anatomical finger 3D shell is now a genuine connected skin
     # island, except TWO unrelated original distal-palm holes and the
     # 64-edge arm cuff (which belongs UNDER THE SHIRT SLEEVE).
