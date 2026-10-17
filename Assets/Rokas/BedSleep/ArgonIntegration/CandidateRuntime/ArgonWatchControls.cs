@@ -25,6 +25,13 @@ namespace Rokas.BedSleep.Argon.Candidate
         private int steps = 14;
         private bool confirmed;
         private float crownTarget;
+        private Component existingV10Router;
+        private EventInfo stepEvent, absoluteEvent, confirmEvent, cancelEvent;
+        private Action<int> stepHandler, absoluteHandler;
+        private Action confirmHandler, cancelHandler;
+        private bool oledInitialized;
+        private int lastOledSteps;
+        private bool lastOledConfirmed;
         public int SelectedHalfHours => steps;
         public bool IsConfirmed => confirmed;
 
@@ -78,13 +85,23 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void UpdateOled()
         {
-            configureTime.Invoke(presenter, new object[] { 19, 30, steps });
-            setConfirmed.Invoke(presenter, new object[] { confirmed });
+            // The actual gameplay presenter redraws a full CPU 256x256 OLED
+            // texture on every call. Prevent needless duplicate uploads and
+            // reduce transient spikes during rapid dial scrolling.
+            if (!oledInitialized || lastOledSteps != steps)
+                configureTime.Invoke(presenter, new object[] { 19, 30, steps });
+            if (!oledInitialized || lastOledConfirmed != confirmed)
+                setConfirmed.Invoke(presenter, new object[] { confirmed });
+            lastOledSteps = steps;
+            lastOledConfirmed = confirmed;
+            oledInitialized = true;
         }
 
         public void SetDurationSteps(int halfHours, bool withSound = false)
         {
-            int next = Mathf.Clamp(halfHours, 1, 24);
+            // Original V10 presenter enforces [2,24]; match the real
+            // gameplay duration to avoid displaying a different selection.
+            int next = Mathf.Clamp(halfHours, 2, 24);
             if (next == steps) return;
             int before = steps;
             steps = next;
@@ -92,6 +109,59 @@ namespace Rokas.BedSleep.Argon.Candidate
             crownTarget += Mathf.Sign(next - before) * 4f;
             if (withSound) Play(ArgonFoleyCue.CrownTick);
             UpdateOled();
+        }
+
+        /// <summary>
+        /// Reuse existing V10 drag/ring, keyboard, wheel, confirm and cancel
+        /// input routes rather than running a competing copy of mouse input.
+        /// Bind only when integrating the candidate into the real bed flow.
+        /// The V10 assembly is not referenced directly (candidate asmdef),
+        /// so this remains isolated and safe against current production code.
+        /// </summary>
+        public void BindExistingV10InputRouter(Component router)
+        {
+            if (router == null) throw new ArgumentNullException(nameof(router));
+            UnbindV10InputRouter();
+            Type t = router.GetType();
+            stepEvent = t.GetEvent("OnStepHalfHours");
+            absoluteEvent = t.GetEvent("OnSetAbsoluteHalfHours");
+            confirmEvent = t.GetEvent("OnConfirm");
+            cancelEvent = t.GetEvent("OnCancel");
+            if (stepEvent == null || absoluteEvent == null ||
+                confirmEvent == null || cancelEvent == null ||
+                stepEvent.EventHandlerType != typeof(Action<int>) ||
+                absoluteEvent.EventHandlerType != typeof(Action<int>) ||
+                confirmEvent.EventHandlerType != typeof(Action) ||
+                cancelEvent.EventHandlerType != typeof(Action))
+                throw new InvalidOperationException("Incompatible V10 watch input router events");
+            existingV10Router = router;
+            stepHandler = Step;
+            absoluteHandler = value => SetDurationSteps(value, true);
+            confirmHandler = Confirm;
+            cancelHandler = ResetConfirmation;
+            stepEvent.AddEventHandler(router, stepHandler);
+            absoluteEvent.AddEventHandler(router, absoluteHandler);
+            confirmEvent.AddEventHandler(router, confirmHandler);
+            cancelEvent.AddEventHandler(router, cancelHandler);
+        }
+
+        public void UnbindV10InputRouter()
+        {
+            if (existingV10Router != null)
+            {
+                if (stepEvent != null && stepHandler != null)
+                    stepEvent.RemoveEventHandler(existingV10Router, stepHandler);
+                if (absoluteEvent != null && absoluteHandler != null)
+                    absoluteEvent.RemoveEventHandler(existingV10Router, absoluteHandler);
+                if (confirmEvent != null && confirmHandler != null)
+                    confirmEvent.RemoveEventHandler(existingV10Router, confirmHandler);
+                if (cancelEvent != null && cancelHandler != null)
+                    cancelEvent.RemoveEventHandler(existingV10Router, cancelHandler);
+            }
+            existingV10Router = null;
+            stepEvent = absoluteEvent = confirmEvent = cancelEvent = null;
+            stepHandler = absoluteHandler = null;
+            confirmHandler = cancelHandler = null;
         }
 
         public void Step(int direction)
@@ -148,6 +218,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         private void Update()
         {
             AnimateCrown(Time.deltaTime);
+            if (existingV10Router != null) return;
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (viewCamera == null || oledCollider == null) return;
             Ray ray = viewCamera.ScreenPointToRay(Input.mousePosition);
@@ -180,6 +251,7 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void OnDestroy()
         {
+            UnbindV10InputRouter();
             if (Application.isPlaying)
             {
                 if (cloth != null) Destroy(cloth);
