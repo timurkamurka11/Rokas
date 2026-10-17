@@ -5,12 +5,12 @@ namespace Rokas.BedSleep.Argon.Candidate
 {
     /// <summary>
     /// Authentic Argon skin PBR, filtered in GPU-memory from existing source
-    /// normal and grayscale-roughness maps. No texture/file overrides and no
+    /// original native packed normal and roughness mipmaps. No texture/file overrides and no
     /// fallback flesh-color placeholder. Disposable candidate only.
     ///
     /// At first-person watch viewing distance a high-frequency mipless source
     /// normal/roughness texture aliases into a rectilinear skin checkerboard.
-    /// Filter spatial frequencies, NOT merely disable real skin normals.
+    /// Choose higher original mip levels, NEVER decode/repack DXT5nm channels.    /// The GPU-to-RGBA prototype was visually rejected for amplifying grids.
     /// </summary>
     public sealed class ArgonSkinFilteredPbrCandidate : IDisposable
     {
@@ -46,14 +46,19 @@ namespace Rokas.BedSleep.Argon.Candidate
                 result.RoughnessSourceWidth=rough.width;
                 // 512 is enough for a moving hand occupying ~500 game px:
                 // suppress UV-frequency checker/moiré but retain form detail.
-                result.SoftNormal=Downfilter(normal,512,true);
-                result.SoftRoughness=Downfilter(rough,384,false);
+                // The original imported NormalMap uses platform-specific
+                // BC5/DXT5nm channel packing. GPU blit into RGBA32 changes
+                // its swizzle, causing an ACTUAL 720p checkerboard (visual
+                // run #39038761444). Clone imported texture WITH original
+                // mip levels/channel packing, use trilinear coarse LOD.
+                result.SoftNormal=CopyImportedMipChain(normal,2.5f);
+                result.SoftRoughness=CopyImportedMipChain(rough,2.0f);
                 result.Material.SetTexture("_BumpMap",result.SoftNormal);
                 result.Material.EnableKeyword("_NORMALMAP");
-                result.Material.SetFloat("_BumpScale",.18f);
+                result.Material.SetFloat("_BumpScale",.055f);
                 result.Material.SetTexture("_MetallicGlossMap",result.SoftRoughness);
                 result.Material.EnableKeyword("_METALLICGLOSSMAP");
-                result.Material.SetFloat("_GlossMapScale",.64f);
+                result.Material.SetFloat("_GlossMapScale",.29f);
                 result.Material.SetFloat("_Glossiness",.40f);
                 result.Material.SetFloat("_Metallic",.018f);
                 // Real AO, albedo, shader and UVs remain copied unchanged.
@@ -66,56 +71,21 @@ namespace Rokas.BedSleep.Argon.Candidate
             }
         }
 
-        private static Texture2D Downfilter(Texture source,int maxSide,bool isNormal)
+        private static Texture2D CopyImportedMipChain(Texture source,
+            float lodBias)
         {
-            var previous=RenderTexture.active;
-            RenderTexture current=null;
-            try
-            {
-                int w=source.width,h=source.height;
-                // True progressive low-pass downsampling, not nearest
-                // rescale; prevents frequencies folding into enlarged grid.
-                while(w>maxSide || h>maxSide)
-                {
-                    int newW=Mathf.Max(1,w/2),newH=Mathf.Max(1,h/2);
-                    var next=RenderTexture.GetTemporary(
-                        newW,newH,0,RenderTextureFormat.ARGB32,
-                        RenderTextureReadWrite.Linear);
-                    next.filterMode=FilterMode.Bilinear;
-                    next.wrapMode=TextureWrapMode.Repeat;
-                    Graphics.Blit(current!=null?(Texture)current:source,next);
-                    if(current!=null)RenderTexture.ReleaseTemporary(current);
-                    current=next;
-                    w=newW;h=newH;
-                }
-                // Force an RGBA32 copy to retain the Standard shader's
-                // packed normal XY channels and roughness/smoothness alpha.
-                if(current==null)
-                {
-                    current=RenderTexture.GetTemporary(
-                        w,h,0,RenderTextureFormat.ARGB32,
-                        RenderTextureReadWrite.Linear);
-                    Graphics.Blit(source,current);
-                }
-                RenderTexture.active=current;
-                var result=new Texture2D(w,h,TextureFormat.RGBA32,true,true)
-                {
-                    name=source.name+
-                        (isNormal?"_LowFrequencyOriginalNormal":"_LowFrequencyOriginalRoughness"),
-                    wrapMode=TextureWrapMode.Repeat,
-                    filterMode=FilterMode.Trilinear,
-                    anisoLevel=2,
-                    mipMapBias=-.1f
-                };
-                result.ReadPixels(new Rect(0,0,w,h),0,0,false);
-                result.Apply(true,false);
-                return result;
-            }
-            finally
-            {
-                RenderTexture.active=previous;
-                if(current!=null)RenderTexture.ReleaseTemporary(current);
-            }
+            var original=source as Texture2D;
+            if(original==null || original.mipmapCount<2)
+                throw new InvalidOperationException(
+                    "Original imported PBR texture mipmaps required. "+
+                    "Never reinterpret packed native normal channels as RGBA.");
+            var copy=UnityEngine.Object.Instantiate(original);
+            copy.name=original.name+"_OriginalPacking_AnisotropySafe_QA";
+            copy.filterMode=FilterMode.Trilinear;
+            copy.wrapMode=original.wrapMode;
+            copy.anisoLevel=1;
+            copy.mipMapBias=lodBias;
+            return copy;
         }
 
         public void Dispose()
