@@ -1,0 +1,45 @@
+name: ROKAS Argon - Exact Original Five Digit Surface Union
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_EXACT_ORIGINAL_SKIN_UNION_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-mesh-boolean-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check real source asset and exact boolean script
+        run: |
+          set -euo pipefail
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/authentic_exact_skin_union_candidate.py
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+      - name: Install real Blender 4 and source FBX importer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Boolean exact 25-bone original finger skins into source palm CLONE
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonExactOriginalUnion
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/authentic_exact_skin_union_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonExactOriginalUnion \
+            2>&1 | tee Artifacts/ArgonExactOriginalUnion/blender_exact_union_log.txt
+          test -s Artifacts/ArgonExactOriginalUnion/exact_original_skin_union_report.json
+          test -s Artifacts/ArgonExactOriginalUnion/ROKAS_ExactSourceUnionRig_QA_ONLY.fbx
+      - name: Upload validated geometry metrics ONLY (no raw proprietary FBX)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-OriginalHand-ExactBoolean-SafeReport
+          path: |
+            Artifacts/ArgonExactOriginalUnion/exact_original_skin_union_report.json
+            Artifacts/ArgonExactOriginalUnion/blender_exact_union_log.txt
+          retention-days: 7
+          if-no-files-found: warn
