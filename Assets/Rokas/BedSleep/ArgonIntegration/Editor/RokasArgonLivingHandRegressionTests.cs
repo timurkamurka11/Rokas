@@ -254,6 +254,117 @@ namespace Rokas.BedSleep.Argon.Editor
                 if (rt != null) { rt.Release(); UnityEngine.Object.DestroyImmediate(rt); }
             }
         }
+
+        [Test]
+        [Timeout(60000)]
+        public void BakeActualSkinnedFingerVerticesBeforeAfterBoneRemap()
+        {
+            // Pixel screenshots of the cloned rig were identical even under
+            // mild PIP/DIP curls. Measure REAL CPU-skinned positions instead
+            // of inferring movement from transform rotations or thumbnails.
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(prefab,Is.Not.Null);
+            GameObject instance=null;
+            Mesh baseline=null,originalBent=null,correctedRest=null,
+                correctedBent=null,temporary=null;
+            try
+            {
+                instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var skin=instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                var old=skin.sharedMesh;
+                baseline=new Mesh();originalBent=new Mesh();
+                correctedRest=new Mesh();correctedBent=new Mesh();
+                skin.BakeMesh(baseline);
+                var joints=instance.GetComponentsInChildren<Transform>(true);
+                // These physical bones are sourced from the authentic FBX;
+                // the measured bend here is deliberately more visible than
+                // subtle cinematic idle sway, for rig/weight diagnostic only.
+                string[] names={"Thumb_IP","Index_PIP","Index_DIP",
+                    "Middle_PIP","Middle_DIP","Ring_PIP","Ring_DIP",
+                    "Little_PIP","Little_DIP"};
+                foreach(string n in names)
+                {
+                    var t=joints.Single(x=>x.name==n);
+                    t.localRotation=t.localRotation*
+                        Quaternion.AngleAxis(24f,Vector3.forward);
+                }
+                skin.BakeMesh(originalBent);
+                var remap=ArgonFingerWeightRepair.ApplyToCandidate(
+                    skin,out temporary);
+                skin.BakeMesh(correctedBent);
+                // Revert joints to identify unintended rest-pose movement.
+                foreach(string n in names)
+                {
+                    var t=joints.Single(x=>x.name==n);
+                    t.localRotation=t.localRotation*
+                        Quaternion.AngleAxis(-24f,Vector3.forward);
+                }
+                skin.BakeMesh(correctedRest);
+                var a=baseline.vertices;
+                var b=originalBent.vertices;
+                var c=correctedBent.vertices;
+                var d=correctedRest.vertices;
+                Assert.That(b.Length,Is.EqualTo(a.Length));
+                Assert.That(c.Length,Is.EqualTo(a.Length));
+                Assert.That(d.Length,Is.EqualTo(a.Length));
+                float modelSpan=old.bounds.size.magnitude;
+                float threshold=Mathf.Max(1e-9f,modelSpan*.0001f);
+                int movedSource=0,movedFixed=0,remapDifference=0,
+                    restDifference=0;
+                float maxOriginalMovement=0f,maxCorrectedMovement=0f,
+                    maxChangedDueToWeights=0f,maxBindOffset=0f;
+                for(int i=0;i<a.Length;i++)
+                {
+                    float source=(b[i]-a[i]).magnitude;
+                    float corrected=(c[i]-d[i]).magnitude;
+                    float diff=(c[i]-b[i]).magnitude;
+                    float rest=(d[i]-a[i]).magnitude;
+                    if(source>threshold)movedSource++;
+                    if(corrected>threshold)movedFixed++;
+                    if(diff>threshold)remapDifference++;
+                    if(rest>threshold)restDifference++;
+                    maxOriginalMovement=Mathf.Max(maxOriginalMovement,source);
+                    maxCorrectedMovement=Mathf.Max(maxCorrectedMovement,corrected);
+                    maxChangedDueToWeights=Mathf.Max(maxChangedDueToWeights,diff);
+                    maxBindOffset=Mathf.Max(maxBindOffset,rest);
+                }
+                string report="Source original mesh: "+old.name+
+                    "\nvertices="+a.Length+" modeledSpan="+modelSpan.ToString("G9")+
+                    " threshold="+threshold.ToString("G9")+
+                    "\noriginal bent vertices="+movedSource+
+                    " max movement="+maxOriginalMovement.ToString("G9")+
+                    "\nremapped bent vertices="+movedFixed+
+                    " max movement="+maxCorrectedMovement.ToString("G9")+
+                    "\nremap changed bent vertices="+remapDifference+
+                    " max original-vs-fixed="+maxChangedDueToWeights.ToString("G9")+
+                    "\nremap displaced resting vertices="+restDifference+
+                    " max rest offset="+maxBindOffset.ToString("G9")+
+                    "\nsource bone mapping:\n"+remap.Mapping;
+                string output=System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(),
+                    "Artifacts","ArgonSeamLayers");
+                System.IO.Directory.CreateDirectory(output);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(output,
+                    "ArgonSkinnedVertices_BakeMesh_BeforeAfter.txt"),report);
+                Debug.Log("[ROKAS ARGON SKINNING DIAGNOSTIC] "+report);
+                // A successful test means actual skinning was measured and
+                // is well-defined, NOT that this remap is visually approved.
+                Assert.That(a.Length,Is.GreaterThan(10000));
+                Assert.That(remap.ReassociatedVertices,Is.EqualTo(6970));
+            }
+            finally
+            {
+                if(temporary!=null)UnityEngine.Object.DestroyImmediate(temporary);
+                if(baseline!=null)UnityEngine.Object.DestroyImmediate(baseline);
+                if(originalBent!=null)UnityEngine.Object.DestroyImmediate(originalBent);
+                if(correctedBent!=null)UnityEngine.Object.DestroyImmediate(correctedBent);
+                if(correctedRest!=null)UnityEngine.Object.DestroyImmediate(correctedRest);
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
     }
 }
 #endif
