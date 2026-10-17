@@ -625,9 +625,19 @@ def main():
     if reversed_surfaces:
         fail("Anatomical skin still has inverted or colliding face winding: "+
              str(len(reversed_surfaces)))
+    # Blender does not guarantee that just-created BMesh faces have
+    # computed normals until normal_update(); without it all new normals
+    # can report a zero vector even on valid, nondegenerate polygons.
+    bm.normal_update()
     # Winding/manifold PASS does not establish smooth tissue. Quantify
     # adjacent ORIGINAL/NEW face bending: direct anatomical evidence of
     # the visible long thin web spikes between fingers.
+    zero_normals=sum(face.normal.length_squared<1e-12
+                     for face in addedFaces if face.is_valid)
+    report["root_surface_zero_face_normals"]=zero_normals
+    if zero_normals:
+        fail("Zero-area generated skin face after actual BMesh normal update: "+
+             str(zero_normals))
     fold_angles=[]
     sewn=set(addedFaces)
     for face in addedFaces:
