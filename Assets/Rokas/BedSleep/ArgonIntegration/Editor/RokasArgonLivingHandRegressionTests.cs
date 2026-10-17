@@ -175,6 +175,39 @@ namespace Rokas.BedSleep.Argon.Editor
                         outDir,name+".png"),result.EncodeToPNG());
                 }
 
+                // Bake into an independent MeshRenderer to prevent the
+                // EditMode SkinnedMeshRenderer's previous-frame GPU skin
+                // cache from hiding real changes after swapping sharedMesh.
+                void CaptureFreshBakedMesh(string label)
+                {
+                    var baked=new Mesh();
+                    GameObject staticProbe=null;
+                    bool previousEnabled=hand.enabled;
+                    try
+                    {
+                        hand.BakeMesh(baked);
+                        baked.name="ROKAS_Argon_FreshlyBakedHand_ForVisualQA";
+                        staticProbe=new GameObject("QA_ONLY_ActualDeformedMesh");
+                        staticProbe.layer=29;
+                        staticProbe.transform.SetParent(hand.transform.parent,false);
+                        staticProbe.transform.localPosition=hand.transform.localPosition;
+                        staticProbe.transform.localRotation=hand.transform.localRotation;
+                        staticProbe.transform.localScale=hand.transform.localScale;
+                        var filter=staticProbe.AddComponent<MeshFilter>();
+                        filter.sharedMesh=baked;
+                        var material=staticProbe.AddComponent<MeshRenderer>();
+                        material.sharedMaterials=hand.sharedMaterials;
+                        hand.enabled=false;
+                        Capture(label);
+                    }
+                    finally
+                    {
+                        hand.enabled=previousEnabled;
+                        if(staticProbe!=null) UnityEngine.Object.DestroyImmediate(staticProbe);
+                        UnityEngine.Object.DestroyImmediate(baked);
+                    }
+                }
+
                 Capture("01_all_authentic_original_meshes");
                 // Candidate geometry has 5 distinct disconnected finger
                 // islands. One-time taper of *cloned* root collars only.
@@ -207,6 +240,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 living.NotifyAnimationPoseReset();
                 living.Apply(1.35f,1f,true,cam.transform.right,cam.transform.up);
                 Capture("06_original_fingers_animating_wrong_bones");
+                CaptureFreshBakedMesh("08_original_source_fingers_fresh_cpu_bake");
                 Mesh correctedBoneMesh = null;
                 try
                 {
@@ -217,6 +251,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     Debug.Log("[ROKAS ARGON FINGER WEIGHT MAP]\n"+reassigned.Mapping);
                     Capture("05_original_fingers_corrected_bone_bindings");
                     Capture("07_corrected_fingers_in_same_animated_pose");
+                    CaptureFreshBakedMesh("09_remapped_fingers_fresh_cpu_bake");
                 }
                 finally
                 {
