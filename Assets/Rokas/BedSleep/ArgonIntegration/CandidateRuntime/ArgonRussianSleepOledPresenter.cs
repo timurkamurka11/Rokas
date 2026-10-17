@@ -119,7 +119,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             currentHour = (currentHour % 24 + 24) % 24;
             currentMinute = Mathf.Clamp(currentMinute,0,59);
-            selectedHalfHours = Mathf.Clamp(selectedHalfHours,2,24);
+            selectedHalfHours = Mathf.Clamp(selectedHalfHours,1,24);
             if (CurrentHour != currentHour || CurrentMinute != currentMinute ||
                 SelectedHalfHours != selectedHalfHours)
                 requiresRedraw = true;
@@ -155,7 +155,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         public void SelectPreset(int halfHours)
         {
             Screen = ArgonRussianWatchScreen.Dial;
-            ConfigureTime(CurrentHour,CurrentMinute,Mathf.Clamp(halfHours,2,24));
+            ConfigureTime(CurrentHour,CurrentMinute,Mathf.Clamp(halfHours,1,24));
         }
 
         public void SetFallingAsleep()
@@ -314,7 +314,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         }
         private void PaintRing()
         {
-            float progress=Mathf.Clamp01((displaySteps-2f)/22f);
+            float progress=Mathf.Clamp01((displaySteps-1f)/23f);
             float centerX=256f,centerY=258f,radius=200f;
             const int steps=480;
             for(int i=0;i<steps;i++)
@@ -364,9 +364,9 @@ namespace Rokas.BedSleep.Argon.Candidate
         private void PaintPresets()
         {
             CenterText("ВРЕМЯ СНА",256,414,4,white);
-            string[] labels = { "1 ЧАС", "2 ЧАСА", "4 ЧАСА",
-                "6 ЧАСОВ", "8 ЧАСОВ" };
-            int[] values = { 2,4,8,12,16 };
+            string[] labels = { "30 МИН", "1 ЧАС", "2 ЧАСА",
+                "4 ЧАСА", "8 ЧАСОВ" };
+            int[] values = { 1,2,4,8,16 };
             for(int i=0;i<labels.Length;i++)
             {
                 int y=345-i*60;
