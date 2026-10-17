@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""ROKAS 25-bone ORIGINAL FBX: local finger/palm bridge QA candidate.
+"""ROKAS authentic 25-bone FBX — isolated complete finger-root graft QA.
 
-Unlike the REJECTED destructive voxel model, this proof of local repair
-changes ZERO original vertices, bones, normals, base UVs or vertex groups.
-It joins adjacent real original boundary strips near each finger root using
-tiny quad surface patches and maps UVs from original neighboring polygons.
-It is NOT a full closed hand: remaining long open shell boundaries require
-additional anatomical retopology. Hard-limit all patch spans, prevent
-overlapping roots and require 1 topological connected island; visual QA
-still required. Source FBX stays untouched. NO V10 INTEGRATION.
+Weld ONLY source-coincident UV seams, preserving each source per-face UV and
+its original 25-bone armature. Carve five small individually bounded openings
+in a candidate COPY of the original palm surface; zipper authentic ring
+vertices from each digit to the palm. Very small local relaxation is allowed.
+Reject nonmanifold geometry, missing weights and excessive source deformation.
+The SOURCE FBX / production V10 are NOT MODIFIED. Visual QA remains mandatory.
 """
 import bpy,bmesh,sys,json,pathlib,math
 from collections import defaultdict
+from mathutils import Vector
 
 def fail(msg):raise RuntimeError("ROKAS FINGER BRIDGE SAFETY: "+msg)
 def bbox(o):
