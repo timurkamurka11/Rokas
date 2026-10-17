@@ -56,6 +56,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 Mathf.Clamp01((p - .70f) / .30f);
             float settle = lowering ? 0f :
                 Mathf.Sin(arrive * Mathf.PI * 2f) *
+                Mathf.Pow(Mathf.Sin(arrive * Mathf.PI),2f) *
                 (1f - arrive) * (1f - arrive) *
                 (p > .70f ? 1f : 0f);
             // Exit has a distinct slower, forward-falling arc. No constant
