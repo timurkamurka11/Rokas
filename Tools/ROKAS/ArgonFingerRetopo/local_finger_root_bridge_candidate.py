@@ -137,8 +137,78 @@ def main():
     report["post_boundary_edges"]=sum(e.is_boundary for e in bm.edges)
     report["post_vertices"]=len(bm.verts)
     report["post_faces"]=len(bm.faces)
+    # Retarget source FBX's misassigned island weights to the real finger
+    # chains. Unity proved the Argon exporter reused the previous digit's
+    # influence group for successive fingers. Missing Ring DIP and all Little
+    # groups are not grounds to ignore those authentic existing joints.
+    #
+    # This does NOT move any vertex or bind bone. Blender's armature rest
+    # matrices preserve the neutral pose; animated PIP/DIP bends must be
+    # verified in Unity separately for every finger.
+    finger_vertices = sorted(
+        [sorted(v.index for v in group) for group in components[1:]],
+        key=lambda ids: sum(bm.verts[i].co.y for i in ids)/len(ids))
     bm.to_mesh(clone.data);bm.free()
     clone.data.update()
+
+    finger_target_chains = [
+        ["Hand_Palm","Thumb_CMC","Thumb_MCP","Thumb_IP"],
+        ["Hand_Palm","Index_MCP","Index_PIP","Index_DIP"],
+        ["Hand_Palm","Middle_MCP","Middle_PIP","Middle_DIP"],
+        ["Hand_Palm","Ring_MCP","Ring_PIP","Ring_DIP"],
+        ["Hand_Palm","Little_MCP","Little_PIP","Little_DIP"]]
+    original_groups={g.index:g.name for g in clone.vertex_groups}
+    bone_names={b.name for b in arm.data.bones}
+    for chain in finger_target_chains:
+        if not all(name in bone_names for name in chain):
+            fail("Authentic digit joints absent: "+str(chain))
+    retarget_report=[]
+    for digit,indices in enumerate(finger_vertices):
+        totals=defaultdict(float)
+        individual={}
+        for index in indices:
+            entries=[(original_groups[x.group],x.weight)
+                     for x in clone.data.vertices[index].groups
+                     if x.weight>1e-6 and x.group in original_groups]
+            if not entries:fail("Original digit vertex without real skin weight")
+            individual[index]=entries
+            for name,weight in entries:totals[name]+=weight
+        strong=sorted((name for name,value in totals.items()
+                       if value>1.0),key=lambda name:
+                      next(g.index for g in clone.vertex_groups if g.name==name))
+        if len(strong)!=4:
+            fail("Original finger %s influence histogram has %s strong groups: %s"%
+                 (digit,len(strong),dict(totals)))
+        fraction=sum(totals[x] for x in strong)/sum(totals.values())
+        if fraction < .999:
+            fail("Unknown original joint influence cannot be mapped safely")
+        targets=finger_target_chains[digit]
+        remap=dict(zip(strong,targets))
+        # Add authentic bone groups when Argon's FBX omitted them.
+        for name in targets:
+            if clone.vertex_groups.get(name) is None:
+                clone.vertex_groups.new(name=name)
+        for index in indices:
+            # First remove ONLY weights attached to this digit vertex;
+            # all palm/forearm weights and all ORIGINAL source meshes remain.
+            for name,_ in individual[index]:
+                clone.vertex_groups[name].remove([index])
+            target_weights=defaultdict(float)
+            for name,weight in individual[index]:
+                if name not in remap:
+                    fail("Unmappable source bone influence: "+name)
+                target_weights[remap[name]]+=weight
+            norm=sum(target_weights.values())
+            if not .99<=norm<=1.01:
+                fail("Source skin weight normalization inconsistent")
+            for name,weight in target_weights.items():
+                clone.vertex_groups[name].add([index],weight/norm,'REPLACE')
+        retarget_report.append({
+            "digit":digit,"vertices":len(indices),
+            "source_weights":dict(totals),
+            "source_to_authentic_target":remap,
+            "coverage":fraction})
+    report["anatomical_digit_influences"]=retarget_report
     b1=bbox(clone)
     report["silhouette_drift"]=max(abs(b0[i][k]-b1[i][k])
         for i in range(3) for k in range(2))/diameter
