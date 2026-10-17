@@ -387,7 +387,7 @@ namespace Rokas.BedSleep.Argon.Editor
                         restRotations[variant][joint]=transform.localRotation;
                     }
                 }
-                const int motionFrames=36;
+                const int motionFrames=72;
                 try
                 {
                     for(int frame=0;frame<motionFrames;frame++)
@@ -433,7 +433,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     "real_unity_animation_evidence.txt"),
                     "Genuine Unity 6000.3.19f1 per-frame skin rendering\\n" +
                     "Original LEFT, experimental connected finger candidate RIGHT\\n" +
-                    "36 real frames per variant, 12 fps, 3 sec seamless cycle\\n" +
+                    "72 real frames per variant, 24 fps, 3 sec seamless cycle\\n" +
                     "Same authentic 25-bone joints, same authentic 2048 PBR maps (candidate AO12), " +
                     "same stationary camera, 0-26 MCP / 0-32 PIP degrees\\n" +
                     "QA ONLY: not the game animation, not visually approved.\\n");
