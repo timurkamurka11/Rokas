@@ -388,18 +388,10 @@ namespace Rokas.BedSleep.Argon.Candidate
         // No new physical face mesh; still the authentic original OLED UVs.
         private void PaintSquareGlassFrame()
         {
-            var cool=new Color32(50,86,155,255);
-            var dim=new Color32(21,41,78,255);
-            for(int x=47;x<=465;x+=5)
-            {
-                Disc(x,42,1.3f,dim,.53f);
-                Disc(x,469,1.3f,cool,.31f);
-            }
-            for(int y=47;y<=466;y+=6)
-            {
-                Disc(42,y,1.15f,dim,.52f);
-                Disc(469,y,1.15f,cool,.34f);
-            }
+            // The real square titanium bezel and sapphire cover already
+            // frame this UV. The previous four DOTTED debug-looking lines
+            // made the tiny screen busy and prototype-like. Let its actual
+            // physical glass shader supply edge falloff instead.
         }
 
         private void PaintOverview()
