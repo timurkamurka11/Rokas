@@ -412,31 +412,10 @@ namespace Rokas.BedSleep.Argon.Candidate
         }
         private void CenterText(string text,int centerX,int y,int scale,Color32 color)
         {
-            // Highly legible actual Cyrillic raster on the 512px physical face.
-            int advance=scale*6, length=text.Length*advance-scale;
-            int start=centerX-length/2;
-            for(int i=0;i<text.Length;i++)
-            {
-                char ch=char.ToUpperInvariant(text[i]);
-                if(!Glyph.TryGetValue(ch,out string bitmap))
-                    continue;
-                int cy=0,cx=0;
-                for(int k=0;k<bitmap.Length;k++)
-                {
-                    if(bitmap[k]=='/'){cy++;cx=0;continue;}
-                    if(bitmap[k]=='1')
-                    {
-                        int px=start+i*advance+cx*scale;
-                        int py=y+(3-cy)*scale;
-                        // Smooth rounded vector-style dabs instead of
-                        // harsh rectangular pixel-font blocks; maintains
-                        // portable Cyrillic without a platform font file.
-                        Disc(px+scale*.5f,py+scale*.5f,
-                            scale*.66f,color,.93f);
-                    }
-                    cx++;
-                }
-            }
+            // Antialiased, proportional Noto Sans glyph masks in Russian.
+            // The earlier 5x7 prototype text was visibly too blocky at 512px.
+            ArgonRussianFontAtlas.Draw(text,centerX,y,scale*.35f,
+                color,MixPixel);
         }
         private void Update()
         {
