@@ -1,0 +1,46 @@
+name: ROKAS Argon — Square OLED And Living Fingers QA
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_SQUARE_OLED_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  physical-display-and-fingers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate actual original watch, skin and seven-screen presenter
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/Shaders/ArgonOLEDLiveSurface.shader
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/CandidateRuntime/ArgonRussianSleepOledPresenter.cs
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/CandidateRuntime/ArgonLivingRig.cs
+      - name: Unity 6000.3.19f1 — seven Russian states + physical OLED depth + finger dynamics
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonRussianOledTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS 7 authentic watch screens, no UV bleed, 240 frame living fingers
+      - name: Upload Unity results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-SquareOLED-PhysicalDepth-FingerQA
+          path: ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 10
