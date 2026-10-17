@@ -21,6 +21,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             new Dictionary<string, Vector3>();
         private readonly Transform wrist;
         private const float MaxRootDriftMeters = .0035f;
+        private Vector3 previousRootOverlay;
+        private Quaternion previousWristOverlay = Quaternion.identity;
+        private bool overlayApplied;
 
         private static readonly string[] Required = {
             "Arm_Wrist", "Index_MCP", "Middle_MCP", "Ring_MCP",
@@ -70,19 +73,42 @@ namespace Rokas.BedSleep.Argon.Candidate
             t.localRotation = Quaternion.AngleAxis(degrees, localAxis) * t.localRotation;
         }
 
+        /// <summary>
+        /// Call this when an Animator/SampleAnimation explicitly rewrites the
+        /// root and wrist from the base authored pose before Apply. Prevents
+        /// trying to undo an overlay that the animator has already replaced.
+        /// </summary>
+        public void NotifyAnimationPoseReset()
+        {
+            overlayApplied = false;
+            previousRootOverlay = Vector3.zero;
+            previousWristOverlay = Quaternion.identity;
+        }
+
         public void Apply(float seconds, float strength, bool isAdjusting,
             Vector3 cameraRight, Vector3 cameraUp)
         {
+            // If no animator reset occurred, remove *our own* previous
+            // offset before applying the new frame. Otherwise the former
+            // += implementation drifted meters over an extended PlayMode
+            // session and accumulated wrist rotation indefinitely.
+            if (overlayApplied)
+            {
+                root.position -= previousRootOverlay;
+                wrist.localRotation *= Quaternion.Inverse(previousWristOverlay);
+            }
             strength = Mathf.Clamp01(strength);
             float breath = Mathf.Sin(seconds * 2f * Mathf.PI * .22f);
             float secondary = Mathf.Sin(seconds * 2f * Mathf.PI * .37f + 1.2f);
             float life = strength * (.55f * breath + .45f * secondary);
-            root.position += cameraUp * (life * MaxRootDriftMeters)
+            previousRootOverlay = cameraUp * (life * MaxRootDriftMeters)
                 + cameraRight * (secondary * .00115f * strength);
+            root.position += previousRootOverlay;
             // Slow restraint: under one degree of wrist roll / pitch.
-            wrist.localRotation = wrist.localRotation *
-                Quaternion.Euler(.65f * life, 0f,
-                    (.85f * life + (isAdjusting ? .55f * secondary : 0f)) * strength);
+            previousWristOverlay = Quaternion.Euler(.65f * life, 0f,
+                (.85f * life + (isAdjusting ? .55f * secondary : 0f)) * strength);
+            wrist.localRotation *= previousWristOverlay;
+            overlayApplied = true;
 
             string[] fingers = { "Index", "Middle", "Ring", "Little" };
             float[] pip = { 4.8f, 6.8f, 8.1f, 9.3f };
