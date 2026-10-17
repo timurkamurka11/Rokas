@@ -79,7 +79,9 @@ def main():
     # 8-10 mm finger sections. Real Unity images proved severe polygons.
     # Reject distant contacts, use much shorter true surface transitions.
     diameter=max(b-a for a,b in b0)
-    maxBridge=diameter*.026
+    # Intermediate safe contact distance: 2.6% left visible unjoined collar,
+    # 4.5% caused overlong bridges. Test 3.2% with curved 3-row loft QA.
+    maxBridge=diameter*.032
     minBridge=diameter*.0001
     uv=bm.loops.layers.uv.active
     usedPalm=set()
