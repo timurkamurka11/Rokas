@@ -480,8 +480,14 @@ def main():
             ordered=sorted(edge_candidates,
                            key=lambda item:(-item[0],item[1]))
             chosen=[item[2] for item in ordered[:required]]
-            bmesh.ops.subdivide_edges(bm,edges=chosen,cuts=1,
-                                      use_grid_fill=False,smooth=0.0)
+            # bmesh.ops.subdivide_edges() can replace unrelated BMesh
+            # elements and invalidate live original 30-vertex finger
+            # references. Split ONLY each actual palm socket edge in
+            # place. Source ring vertices and 25-bone island IDs survive.
+            for old_edge in chosen:
+                if not old_edge.is_valid or not old_edge.is_boundary:
+                    fail("Original pocket edge invalid before local split")
+                bmesh.utils.edge_split(old_edge,old_edge.verts[0],.5)
             bm.normal_update()
             fresh={e for e in bm.edges if e.is_valid and e.is_boundary
                    and e not in previous_boundaries}
