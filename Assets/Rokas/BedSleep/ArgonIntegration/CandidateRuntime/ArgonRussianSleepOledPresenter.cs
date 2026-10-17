@@ -461,9 +461,18 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             Disc(256,274,55,blue,.08f+.06f*
                 (.5f+.5f*Mathf.Sin(animatedSeconds*2.4f)));
-            DrawLine(245,309,260,276,white,3);
-            DrawLine(260,276,282,331,white,3);
-            CenterText(DurationText,256,205,8,white);
+            // Reference-style animated hourglass instead of reusing the
+            // confirmation tick. A blue sand pulse falls between both
+            // tapered chambers and remains legible on a square OLED.
+            Color32 sand=new Color32(127,200,255,255);
+            DrawLine(219,334,293,334,sand,3);
+            DrawLine(224,330,288,251,sand,2);
+            DrawLine(288,330,224,251,sand,2);
+            DrawLine(219,248,293,248,sand,3);
+            Disc(256,287,5f,white,.85f);
+            float fall=Mathf.Repeat(animatedSeconds*.65f,1f);
+            Disc(256,284f-19f*fall,2.5f,blue,.78f);
+            CenterText(DurationText,256,198,8,white);
             CenterText("ЗАСЫПАЮ...",256,134,3,muted);
         }
         private void PaintCancelled()
