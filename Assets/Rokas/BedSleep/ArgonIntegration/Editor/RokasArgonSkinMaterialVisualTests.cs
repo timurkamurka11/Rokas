@@ -19,16 +19,16 @@ namespace Rokas.BedSleep.Argon.Editor
             var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
                 RokasArgonCandidateImporter.CandidatePrefab);
             Assert.That(prefab,Is.Not.Null);
-            GameObject[] instances=new GameObject[3];
+            GameObject[] instances=new GameObject[4];
             GameObject cameraObj=null,lightObj=null;
             RenderTexture rt=null;
             Texture2D readback=null;
             ArgonSkinFilteredPbrCandidate filtered=null;
-            Material noNormal=null;
+            Material noNormal=null,lowAo=null;
             var active=RenderTexture.active;
             try
             {
-                for(int i=0;i<3;i++)
+                for(int i=0;i<4;i++)
                 {
                     instances[i]=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
                     instances[i].name="ROKAS_OriginalHand_PBR_Compare_"+i;
@@ -83,6 +83,13 @@ namespace Rokas.BedSleep.Argon.Editor
                 instances[2].GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .Single(x=>x.name=="Keiko_Hand_Skin_Mesh").sharedMaterial=mat;
 
+                // Palmar dark-X artifact diagnostic: attenuate ONLY the source
+                // AO sampling strength in an isolated material, keeping its
+                // original 2048 texture reference and every other PBR map.
+                lowAo=new Material(mat) {name="ROKAS_Skin_AO35_OriginalMaps_QA"};
+                lowAo.SetFloat("_OcclusionStrength",.35f);
+                instances[3].GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh").sharedMaterial=lowAo;
                 cameraObj=new GameObject("ROKAS_OriginalHand_PBR_ComparisonCamera");
                 var camera=cameraObj.AddComponent<Camera>();
                 camera.enabled=false;
@@ -111,10 +118,11 @@ namespace Rokas.BedSleep.Argon.Editor
                 var filenames=new []{
                     "01_authentic_source_normal_roughness.png",
                     "02_flat_no_maps_diagnostic.png",
-                    "03_original_sources_matte_skin_candidate.png"
+                    "03_original_sources_matte_skin_candidate.png",
+                    "04_matte_skin_original_ao35_candidate.png"
                 };
-                Color32[][] comparisons=new Color32[3][];
-                for(int variant=0;variant<3;variant++)
+                Color32[][] comparisons=new Color32[4][];
+                for(int variant=0;variant<4;variant++)
                 {
                     instances[variant].SetActive(true);
                     camera.Render();
@@ -127,6 +135,21 @@ namespace Rokas.BedSleep.Argon.Editor
                     instances[variant].SetActive(false);
                 }
 
+                // Independent PBR check from UNDER the authentic wrist/palm.
+                // The previous large dark X shadow was identical in original
+                // geometry and linked mesh; isolate whether it is baked AO.
+                hero.ConfigureCamera(camera,Vector3.down,.41f);
+                for(int variant=0;variant<4;variant++)
+                {
+                    instances[variant].SetActive(true);
+                    camera.Render();
+                    RenderTexture.active=rt;
+                    readback.ReadPixels(new Rect(0,0,W,H),0,0);
+                    readback.Apply(false);
+                    File.WriteAllBytes(Path.Combine(dest,
+                        "palmar_"+filenames[variant]),readback.EncodeToPNG());
+                    instances[variant].SetActive(false);
+                }
                 long changes=0;
                 for(int i=0;i<comparisons[0].Length;i+=7)
                 {
@@ -174,14 +197,19 @@ namespace Rokas.BedSleep.Argon.Editor
                 float originalPattern=PatternScore(comparisons[0]);
                 float flatPattern=PatternScore(comparisons[1]);
                 float filteredPattern=PatternScore(comparisons[2]);
+                float ao35Pattern=PatternScore(comparisons[3]);
                 Assert.That(filteredPattern,Is.LessThanOrEqualTo(
                     Mathf.Max(originalPattern*1.25f,flatPattern*1.7f)),
                     "Source-faithful matte PBR candidate must not reintroduce checkerboard moire.");
+                Assert.That(ao35Pattern,Is.LessThanOrEqualTo(
+                    Mathf.Max(originalPattern*1.3f,filteredPattern*1.35f)),
+                    "AO35 on original PBR maps must not create new checkerbanding.");
                 var summary=
                     "Original source albedo kept: "+sourceAlbedo.name+"\n"+
                     "Pixel frequency original="+originalPattern+
                     ", diagnostic flat="+flatPattern+
-                    ", filtered="+filteredPattern+"\n"+
+                    ", filtered="+filteredPattern+
+                    ", ao35="+ao35Pattern+"\n"+
                     "Original normal: "+sourceNormal.name+" width "+sourceNormal.width+"\n"+
                     "Original packed roughness: "+sourceRoughness.name+" width "+sourceRoughness.width+"\n"+
                     "Native normal texture preserved as original source reference: "+sourceNormal.name+"\n"+
@@ -200,6 +228,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(readback!=null)UnityEngine.Object.DestroyImmediate(readback);
                 if(rt!=null){rt.Release();UnityEngine.Object.DestroyImmediate(rt);}
                 if(noNormal!=null)UnityEngine.Object.DestroyImmediate(noNormal);
+                if(lowAo!=null)UnityEngine.Object.DestroyImmediate(lowAo);
                 for(int i=0;i<instances.Length;i++)
                     if(instances[i]!=null)UnityEngine.Object.DestroyImmediate(instances[i]);
                 if(filtered!=null)filtered.Dispose();
