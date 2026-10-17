@@ -1,0 +1,6 @@
+{
+  "name": "Rokas.Argon.Candidate.Runtime",
+  "rootNamespace": "Rokas.BedSleep.Argon.Candidate",
+  "references": [],
+  "autoReferenced": true
+}
