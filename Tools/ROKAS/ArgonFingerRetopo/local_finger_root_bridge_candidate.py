@@ -72,6 +72,7 @@ def main():
     bm.verts.ensure_lookup_table()
     components=islands(bm)
     if len(components)!=6 or len(components[0])<5000:fail("Wrong FBX skin islands")
+    source_indices=[[v.index for v in group] for group in components]
     per=[loop(x) for x in components]
     center=per[0]
     # Previous 0.045 hand-span allowance permitted 17-18 mm bridges across
@@ -209,7 +210,6 @@ def main():
     # ring had no DIP/TIP and little had zero source named weights.
     # All five source finger meshes are identified from authentic six
     # components and Y-sorted root topology, not fabricated cylinders.
-    source_indices=[[v.index for v in group] for group in components]
     bones=set(b.name for b in arm.data.bones)
     rebuilt={}
     for fingerNo,names in [(4,["Ring_MCP","Ring_PIP","Ring_DIP","Ring_Tip"]),
