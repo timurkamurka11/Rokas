@@ -5,3 +5,4 @@
 - Focused EditMode only, no repeated 720p video rendering
 - Does not modify production V10 and DO NOT MERGE PR13
 2026-10-17 seam layer isolation: ORIGINAL hand skin vs nails vs all, one camera snapshot, no production merge.
+2026-10-17_TOPOLOGY_ISLANDS_PINKY_BASE original-FBX bone-weight report, no new video
