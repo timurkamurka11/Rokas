@@ -1,0 +1,1 @@
+ROKAS genuine finger boundary loops, proximal cap topology, source skin texture normal/roughness importer analysis — before remeshing. Candidate only. PR #13 draft, V10 untouched.
