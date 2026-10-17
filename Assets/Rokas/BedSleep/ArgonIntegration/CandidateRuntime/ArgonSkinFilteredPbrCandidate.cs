@@ -79,8 +79,17 @@ namespace Rokas.BedSleep.Argon.Candidate
                 throw new InvalidOperationException(
                     "Original imported PBR texture mipmaps required. "+
                     "Never reinterpret packed native normal channels as RGBA.");
-            var copy=UnityEngine.Object.Instantiate(original);
-            copy.name=original.name+"_OriginalPacking_AnisotropySafe_QA";
+            // Object.Instantiate(Texture2D) fails for an imported
+            // non-readable normal texture in the Linux Unity player.
+            // Allocate the SAME compressed native texture format, then use
+            // GPU CopyTexture for all actual imported mipmap pixels.
+            // Repacking through an RGBA render target is forbidden: it
+            // visibly turned the user's skin into a checkerboard.
+            var copy=new Texture2D(original.width,original.height,
+                original.format,original.mipmapCount,true);
+            copy.name=original.name+"_NativePacked_GPU_MipCopy_QA";
+            for(int mip=0;mip<original.mipmapCount;mip++)
+                Graphics.CopyTexture(original,0,mip,copy,0,mip);
             copy.filterMode=FilterMode.Trilinear;
             copy.wrapMode=original.wrapMode;
             copy.anisoLevel=1;
