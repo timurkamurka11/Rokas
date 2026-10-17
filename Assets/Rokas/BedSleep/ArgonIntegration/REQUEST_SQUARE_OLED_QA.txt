@@ -7,3 +7,4 @@ ROKAS Argon — Physical square OLED mask and seven-screen plus living finger QA
 
 Final Cyrillic optical-spacing QA 20261017 — nonoverlapping 512px watch labels, smaller ring, square physical case, option list without moon, genuine animated hourglass. Export seven face PNGs.
 OCT17_CYRILLIC_SAFE_RECT_GLYPH_BOX_ASSERT_SEVEN_ACTUAL_SQUARE_FACES
+OCT17_REMOVE_DOTTED_DEBUG_BORDER_PHYSICAL_SAPPHIRE_OLED
