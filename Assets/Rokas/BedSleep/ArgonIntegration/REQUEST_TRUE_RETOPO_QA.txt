@@ -1,2 +1,3 @@
 Full anatomical retopology feasibility, original user-owned FBX rig, six original mesh islands with ONE elongated open boundary each (not simple circular cap rings). Hard test for one watertight mesh, original UV/weights, 25-bone skeleton, and preserved bounds. DO NOT merge/pristine FBX/V10 unchanged.
 RETRY_NUMPY_BLENDER40_FBX_IMPORT_DEPENDENCY_20261017
+SECOND_GEOMETRY_PROOF_20261017_SEAL_OPEN_HAND_SHEETS_BEFORE_VOXEL_MANIFOLD_GATE
