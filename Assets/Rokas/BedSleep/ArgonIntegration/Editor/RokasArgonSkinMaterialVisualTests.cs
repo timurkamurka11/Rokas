@@ -76,6 +76,8 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(mat.GetFloat("_BumpScale"),Is.InRange(0f,.02f));
                 Assert.That(mat.GetFloat("_GlossMapScale"),Is.InRange(.08f,.20f));
                 Assert.That(mat.GetFloat("_Metallic"),Is.EqualTo(0f).Within(.001f));
+                Assert.That(mat.GetFloat("_OcclusionStrength"),Is.InRange(.10f,.14f),
+                    "Authentic baked AO X artifact requires candidate-only suppression");
                 Assert.That(mat.IsKeywordEnabled("_NORMALMAP"),Is.True,
                     "Filtered skin must retain real normal microdetail, not replace with flat skin");
                 Assert.That(mat.IsKeywordEnabled("_METALLICGLOSSMAP"),Is.True,
