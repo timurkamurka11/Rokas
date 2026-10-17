@@ -64,6 +64,23 @@ namespace Rokas.BedSleep.Argon.Editor
                 oled.SelectPreset(8);
                 Assert.That(oled.SelectedHalfHours,Is.EqualTo(8));
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
+                oled.ShowOverview();
+                Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Overview));
+                Assert.That(oled.LastRenderedTextSummary,Does.Contain("ПЛАН СНА"));
+                var plan=oled.OledDynamicTexture.GetPixels32();
+                oled.ShowRelaxation();
+                Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Relaxation));
+                Assert.That(oled.LastRenderedTextSummary,Does.Contain("РЕЖИМ ОТДЫХА"));
+                var relax=oled.OledDynamicTexture.GetPixels32();
+                int visualDifferences=0;
+                for(int p=0;p<plan.Length;p+=8)
+                    if(Mathf.Abs(plan[p].b-relax[p].b)>12 ||
+                       Mathf.Abs(plan[p].r-relax[p].r)>12)
+                        visualDifferences++;
+                Assert.That(visualDifferences,Is.GreaterThan(100),
+                    "Plan and animated rest screens must not be identical placeholders");
+                oled.ShowDial();
+                Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
                 oled.SetConfirmedState(true);
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Confirmed));
                 Assert.That(oled.LastRenderedTextSummary,Does.Contain("УСТАНОВЛЕНО"));
@@ -107,6 +124,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
                 Assert.That(face.SelectedHalfHours,Is.EqualTo(1));
                 Assert.That(face.WakeText,Is.EqualTo("00:00"));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.5f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Overview));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.5f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Relaxation));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.90f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Overview));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.90f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
                 input.ProcessWatchFaceTap(new Vector2(.5f,.10f));
                 Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Confirmed));
                 input.ProcessWatchFaceTap(new Vector2(.5f,.5f));
@@ -120,6 +145,55 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(cameraObject!=null)Object.DestroyImmediate(cameraObject);
             }
         }
+        [Test]
+        public void OLEDShaderIsOpaqueAndActuallyDepthTestedAgainstWatchCase()
+        {
+            var shader=Shader.Find("ROKAS/BedSleep/ArgonOLEDLiveSurface");
+            Assert.That(shader,Is.Not.Null);
+            var material=new Material(shader);
+            try
+            {
+                Assert.That(material.renderQueue,Is.LessThan(2500),
+                    "Physical OLED must render before sapphire glass transparency");
+                Assert.That(material.GetTag("RenderType",false),
+                    Is.EqualTo("Opaque"));
+                Assert.That(material.HasProperty("_MainTex"),Is.True);
+            }
+            finally{Object.DestroyImmediate(material);}
+        }
+
+        [Test]
+        [Timeout(10000)]
+        public void LivelyFingersHaveIndependentLimitedRingPinkyBend()
+        {
+            var source=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(source,Is.Not.Null);
+            GameObject hand=null;
+            try
+            {
+                hand=(GameObject)PrefabUtility.InstantiatePrefab(source);
+                var living=new ArgonLivingRig(hand);
+                float first=0f,last=0f;
+                for(int frame=0;frame<240;frame++)
+                {
+                    living.NotifyAnimationPoseReset();
+                    living.Apply(frame/24f,1f,false,Vector3.right,Vector3.up,1f,false);
+                    float ring=living.FingerBendDegrees("Ring_PIP");
+                    float little=living.FingerBendDegrees("Little_PIP");
+                    Assert.That(ring,Is.InRange(0f,4.8f));
+                    Assert.That(little,Is.InRange(0f,4.8f));
+                    Assert.That(living.FingerBendDegrees("Index_PIP"),
+                        Is.LessThan(9.2f));
+                    if(frame==20)first=little;
+                    if(frame==70)last=little;
+                }
+                Assert.That(Mathf.Abs(last-first),Is.GreaterThan(.1f),
+                    "Pinky motion should be alive, not completely locked");
+            }
+            finally{if(hand!=null)Object.DestroyImmediate(hand);}
+        }
+
         [Test]
         [Timeout(10000)]
         public void LosslessTgaFrameExportPreservesOriginal720pPixels()
