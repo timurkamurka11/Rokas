@@ -21,3 +21,5 @@ PHYSICAL_WATCH_DORSAL_TEST=front-+Y-depth-tested-true-OLED-camera-0.41m-600s-tim
 GENTLE_SKIN_LIGHTING_QA=original-textures-untouched-0.32-warm-key-0.09-normal-preview
 
 QA_SKIN_DIAGNOSTICS=normal-off_matte_no-normal_flat-albedo_review-frame-72_20261017
+
+LIVING_HAND_AUDIO_INTERACTIVE_OLED_QA=2026-10-17-original25bone-crown-fabric-noise-pass01
