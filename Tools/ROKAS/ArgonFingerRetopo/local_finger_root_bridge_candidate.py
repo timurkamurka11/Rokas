@@ -508,7 +508,7 @@ def main():
     peripheral.difference_update(primary)
     region=primary|peripheral
     original_positions={v:v.co.copy() for v in region}
-    for _ in range(3):
+    for _ in range(6):
         previous={v:v.co.copy() for v in region}
         changed={}
         for v in region:
@@ -516,9 +516,9 @@ def main():
             if not neighbors:continue
             average=sum((previous.get(w,w.co) for w in neighbors),
                         Vector((0,0,0)))/len(neighbors)
-            amount=.12 if v in primary else .025
+            amount=.23 if v in primary else .047
             target=v.co.lerp(average,amount)
-            max_step=diameter*.003
+            max_step=diameter*.0065
             offset=target-original_positions[v]
             if offset.length>max_step:
                 target=original_positions[v]+offset.normalized()*max_step
@@ -528,7 +528,7 @@ def main():
     report["tissue_root_relaxation"]={
         "original_boundary_vertices":len(primary),
         "one_ring_vertices":len(peripheral),
-        "passes":3,
+        "passes":6,
         "maximum_original_vertex_displacement":root_shift,
         "maximum_relative_original_displacement":root_shift/diameter}
     bm.normal_update()
