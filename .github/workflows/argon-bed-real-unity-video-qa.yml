@@ -90,6 +90,9 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           projectPath: .
+          # Pin the CLI: resolving "latest" intermittently hits GitHub API 403
+          # before Unity starts (observed run 38985707088).
+          cliVersion: v0.1.48
           unityVersion: 6000.3.19f1
           testMode: EditMode
           customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonBedUnityVideoTests
