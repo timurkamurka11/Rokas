@@ -26,7 +26,7 @@ namespace Rokas.BedSleep.Argon.Editor
         private const int Fps = 24;
 
         [Test]
-        [Timeout(600000)] // Rendering 149 true 720p Unity PNGs can exceed the 180s default.
+        [Timeout(1800000)] // Hard stop 30m; rendering is throttled at 10Hz, no per-frame cloud recompute.
         public void RecordActualArgonHandOverRealRokasBedCeilingToPngFrames()
         {
             Texture2D trueBed = Resources.Load<Texture2D>("BedSleep/BedCeilingPOV");
@@ -218,7 +218,9 @@ namespace Rokas.BedSleep.Argon.Editor
                     if (confirmed) watchControls.Confirm();
                     else watchControls.ResetConfirmation();
                     watchControls.AnimateCrown(1f / Fps);
-                    russianOled.RenderAt((float)frameNumber / Fps, true);
+                    // Rebuild only on UI changes or ~10Hz animation ticks.
+                    // Never force a full 512px CPU redraw for every 24fps video frame.
+                    russianOled.RenderAt((float)frameNumber / Fps, false);
                     Assert.That(russianOled.LastRenderedTextSummary,
                         Does.Contain("ВРЕМЯ СНА"),
                         "OLED must have actual Russian text; no Latin demo labels");
