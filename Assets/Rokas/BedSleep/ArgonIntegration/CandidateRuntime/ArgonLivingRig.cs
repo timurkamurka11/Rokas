@@ -88,6 +88,19 @@ namespace Rokas.BedSleep.Argon.Candidate
         public void Apply(float seconds, float strength, bool isAdjusting,
             Vector3 cameraRight, Vector3 cameraUp)
         {
+            Apply(seconds,strength,isAdjusting,cameraRight,cameraUp,
+                strength,false);
+        }
+
+        /// <summary>
+        /// Organic cinematic extension: finger flex follows the forearm with
+        /// intentional delay on entry and relaxed release on exit.
+        /// Original five-argument API stays compatible with existing QA.
+        /// </summary>
+        public void Apply(float seconds, float strength, bool isAdjusting,
+            Vector3 cameraRight, Vector3 cameraUp,
+            float fingerResponse, bool isLowering)
+        {
             // If no animator reset occurred, remove *our own* previous
             // offset before applying the new frame. Otherwise the former
             // += implementation drifted meters over an extended PlayMode
@@ -98,6 +111,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 wrist.localRotation *= Quaternion.Inverse(previousWristOverlay);
             }
             strength = Mathf.Clamp01(strength);
+            fingerResponse=Mathf.Clamp01(fingerResponse);
             float breath = Mathf.Sin(seconds * 2f * Mathf.PI * .22f);
             float secondary = Mathf.Sin(seconds * 2f * Mathf.PI * .37f + 1.2f);
             float microBreath = Mathf.Sin(seconds * 2f * Mathf.PI * .51f + .42f);
@@ -121,10 +135,20 @@ namespace Rokas.BedSleep.Argon.Candidate
             for (int i = 0; i < fingers.Length; ++i)
             {
                 float cycle = Mathf.Sin(seconds * (1.32f + i * .09f) + i * .84f);
-                float micro = strength * (.95f * cycle +
-                    (isAdjusting ? .70f * (1f + secondary) : 0f));
-                Curl(fingers[i] + "_PIP", strength * pip[i] + micro);
-                Curl(fingers[i] + "_DIP", strength * dip[i] + micro * .38f);
+                // Distributed phalanx timing prevents a rigid parallel
+                // "board" of fingers from riding the entering forearm.
+                // Keep ring/little amplitude conservative until true source
+                // FBX finger-root geometry is repaired.
+                float phaseLag=Mathf.Clamp01(fingerResponse-i*.045f);
+                float flex=strength*(.48f+.52f*phaseLag);
+                float relaxPulse=Mathf.Sin(phaseLag*Mathf.PI)*
+                    (isLowering ? -.55f : .68f) * strength;
+                float micro = strength * (.72f * cycle +
+                    (isAdjusting ? .62f * (1f + secondary) : 0f));
+                Curl(fingers[i] + "_PIP",
+                    flex*pip[i]+micro+relaxPulse);
+                Curl(fingers[i] + "_DIP",
+                    flex*dip[i]+micro*.32f+relaxPulse*.27f);
             }
             Curl("Thumb_IP", strength * 4.6f +
                 strength * .6f * Mathf.Sin(seconds * 1.42f + .5f));
