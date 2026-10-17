@@ -225,14 +225,21 @@ namespace Rokas.BedSleep.Argon.Candidate
                 float haze=Mathf.Clamp01((1.15f-r)*.55f);
                 float wave=.5f+.5f*Mathf.Sin((dx+dy*.36f)*4f+tt*.22f);
                 float blueHaze=haze*(.5f+.5f*wave);
+                float cloudBand=Mathf.Clamp01(1f-
+                    Mathf.Abs(y-(332f+Mathf.Sin(tt*.2f)*4f))/100f);
+                float n1=Mathf.PerlinNoise(x*.0135f+tt*.010f,y*.026f);
+                float n2=Mathf.PerlinNoise(x*.031f-tt*.007f,y*.050f+.8f);
+                float cloudShape=Mathf.SmoothStep(0f,1f,
+                    Mathf.Clamp01((n1*.69f+n2*.31f-.36f)*3f));
+                float nebula=cloudShape*cloudBand*.65f;
                 float stars=Hash(x/7,y/7);
                 float star=(stars>.996f && ((x%7)==3) && ((y%7)==3))
                     ? (.35f+.65f*(.5f+.5f*Mathf.Sin(tt*1.2f+stars*30f))) : 0f;
                 int index=y*Size+x;
                 pixels[index]=new Color32(
-                    (byte)Mathf.Clamp(4f+8f*blueHaze+110f*star,0,255),
-                    (byte)Mathf.Clamp(7f+14f*blueHaze+135f*star,0,255),
-                    (byte)Mathf.Clamp(22f+34f*blueHaze+185f*star,0,255),255);
+                    (byte)Mathf.Clamp(4f+8f*blueHaze+18f*nebula+110f*star,0,255),
+                    (byte)Mathf.Clamp(7f+14f*blueHaze+29f*nebula+135f*star,0,255),
+                    (byte)Mathf.Clamp(22f+34f*blueHaze+67f*nebula+185f*star,0,255),255);
             }
         }
         private static float Hash(int x,int y)
