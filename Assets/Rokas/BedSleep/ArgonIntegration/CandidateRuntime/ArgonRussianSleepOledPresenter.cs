@@ -208,7 +208,6 @@ namespace Rokas.BedSleep.Argon.Candidate
             PaintBackground();
             PaintClouds();
             if(Screen==ArgonRussianWatchScreen.Dial ||
-               Screen==ArgonRussianWatchScreen.Presets ||
                Screen==ArgonRussianWatchScreen.Relaxation)
                 PaintMoon();
             PaintSquareGlassFrame();
