@@ -297,6 +297,33 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     System.IO.Directory.GetCurrentDirectory(),
                     "Artifacts","ArgonOrganicMotionStills");
                 System.IO.Directory.CreateDirectory(dir);
+                // Isolated real 512px texture states from the SAME OLED
+                // bound to the original rectangular physical watch mesh.
+                // The 7-stage preview reflects live selectable states, not
+                // a composited fake HUD or images pasted on a screenshot.
+                void WatchStill(string stage)
+                {
+                    presenter.RenderAt(3.0f,true);
+                    System.IO.File.WriteAllBytes(
+                        System.IO.Path.Combine(dir,"square_oled_"+stage+".png"),
+                        presenter.OledDynamicTexture.EncodeToPNG());
+                }
+                presenter.ShowDial();
+                WatchStill("01_dial");
+                presenter.ShowPresets();
+                WatchStill("02_presets");
+                presenter.ShowOverview();
+                WatchStill("03_sleep_plan");
+                presenter.ShowRelaxation();
+                WatchStill("04_calming_waves");
+                presenter.SetConfirmedState(true);
+                WatchStill("05_confirmed");
+                presenter.SetFallingAsleep();
+                WatchStill("06_falling_asleep");
+                presenter.CancelSelection();
+                WatchStill("07_cancelled");
+                presenter.ShowDial();
+                presenter.ConfigureTime(19,30,14);
 
                 var stages=new[]{
                     Tuple.Create("01_raise_from_below",raise,.14f,false),
