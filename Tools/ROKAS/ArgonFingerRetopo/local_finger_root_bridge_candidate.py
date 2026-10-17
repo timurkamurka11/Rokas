@@ -668,6 +668,7 @@ def main():
                 for vertex,src in zip(layer,pocket):
                     cap_uv[vertex]=centroid_uv.lerp(nearest_source_uv(src),alpha)
             cap_uv[apex]=centroid_uv
+        cap_faces=[]
         for i in range(n):
             j=(i+1)%n
             for quad in ([pocket[i],pocket[j],rings[0][j],rings[0][i]],
@@ -680,14 +681,57 @@ def main():
                 face.material_index=0
                 face.smooth=True
                 addedFaces.append(face)
+                cap_faces.append(face)
                 face_origin[face]='palm_cap'
                 if uv is not None:
                     for c in face.loops:
                         v=c.vert
                         c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
+        # Source palm UV openings have nonplanar neighborhoods. A fixed
+        # outward dome creates opposing normals / 180-degree epidermis
+        # creases. Find the cap curvature that minimizes REAL boundary
+        # folds, changing ONLY source-weighted cap vertices, not the
+        # original hand, palette, normal map or 25-bone rig.
+        cap_ring_rest=[[v.co.copy() for v in layer] for layer in rings]
+        apex_rest=apex.co.copy()
+        cap_edges={e for face in cap_faces for e in face.edges
+                   if e.is_manifold and len(e.link_faces)==2}
+        cap_options=[]
+        for scale in (-1.5,-.75,0.,.5,1.,1.75):
+            for layer,initial in zip(rings,cap_ring_rest):
+                for vertex,original in zip(layer,initial):
+                    lift=(original-center).dot(skin_normal)
+                    vertex.co=original+skin_normal*lift*(scale-1)
+            lift=(apex_rest-center).dot(skin_normal)
+            apex.co=apex_rest+skin_normal*lift*(scale-1)
+            bm.normal_update()
+            folds=[]
+            for e in cap_edges:
+                fa,fb=e.link_faces
+                if fa.normal.length_squared<1e-12 or fb.normal.length_squared<1e-12:
+                    fail("True palm epidermis cap collapsed during curvature search")
+                folds.append(math.degrees(fa.normal.angle(fb.normal)))
+            n120=sum(z>120 for z in folds)
+            n90=sum(z>90 for z in folds)
+            penalty=sum(max(z-70,0)**2 for z in folds)/max(1,len(folds))
+            cap_options.append((n120,n90,penalty,scale))
+        cap_best=min(cap_options)
+        scale=cap_best[3]
+        for layer,initial in zip(rings,cap_ring_rest):
+            for vertex,original in zip(layer,initial):
+                lift=(original-center).dot(skin_normal)
+                vertex.co=original+skin_normal*lift*(scale-1)
+        lift=(apex_rest-center).dot(skin_normal)
+        apex.co=apex_rest+skin_normal*lift*(scale-1)
+        bm.normal_update()
         capped.append({"source_open_ring":n,"new_skin_vertices":2*n+1,
                        "faces":3*n,"radius":radius,
-                       "apex_displacement":(apex.co-center).length})
+                       "apex_displacement":(apex.co-center).length,
+                       "optimized_cap_curve_sign_and_scale":scale,
+                       "root_crease_over_120":cap_best[0],
+                       "root_crease_over_90":cap_best[1],
+                       "candidate_scores":[{"height_factor":w,"over_120":a,
+                            "over_90":b} for a,b,v,w in cap_options]})
     report["authentic_two_distal_palm_pockets_sealed"]=capped
     report["anatomical_skin_cap_vertices"]=len(cap_created)
     # Only a genuine 64-edge sleeve cuff remains open. All 5 digits and
