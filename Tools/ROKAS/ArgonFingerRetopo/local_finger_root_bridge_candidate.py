@@ -29,25 +29,33 @@ def islands(bm):
             stack.extend(n for edge in v.link_edges for n in edge.verts if n not in visited)
         out.append(group)
     return sorted(out,key=len,reverse=True)
-def loop(island):
-    bound=[e for v in island for e in v.link_edges if e.is_boundary and
-           all(x in island for x in e.verts)]
-    bound=list(set(bound))
+def loops(island):
+    """Return ALL boundary loops, not one: source seam welding exposes
+    separate authentic cuff/finger-socket rims on the palm mesh."""
+    boundary={e for v in island for e in v.link_edges
+              if e.is_boundary and all(x in island for x in e.verts)}
     adjacency=defaultdict(list)
-    for e in bound:
-        a,b=e.verts;adjacency[a].append(b);adjacency[b].append(a)
-    if len(adjacency)<10 or any(len(v)!=2 for v in adjacency.values()):
-        fail("Source ring is branched or unclosed")
-    first=min(adjacency,key=lambda v:v.index)
-    ordered=[];last=None;v=first
-    for _ in range(len(adjacency)+1):
-        ordered.append(v)
-        nxt=next(x for x in adjacency[v] if x!=last)
-        if nxt==first:break
-        last,v=v,nxt
-    if len(ordered)!=len(adjacency):
-        fail("Unexpected multiple rings in original finger")
-    return ordered
+    for e in boundary:
+        a,b=e.verts
+        adjacency[a].append(b)
+        adjacency[b].append(a)
+    if any(len(neighbors)!=2 for neighbors in adjacency.values()):
+        fail("Original skin rim is branched or nonmanifold after exact weld")
+    remaining=set(adjacency)
+    ordered_loops=[]
+    while remaining:
+        first=min(remaining,key=lambda v:v.index)
+        ordered=[];last=None;v=first
+        for _ in range(len(adjacency)+1):
+            if v not in remaining:fail("Boundary ring repeats before closing")
+            ordered.append(v);remaining.remove(v)
+            nxt=next(x for x in adjacency[v] if x!=last)
+            if nxt==first:break
+            last,v=v,nxt
+        else:fail("Boundary is an open ring")
+        if len(ordered)<6:fail("Degenerate short boundary loop")
+        ordered_loops.append(ordered)
+    return sorted(ordered_loops,key=len,reverse=True)
 def main():
     args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
     if len(args)!=2:fail("SOURCE.fbx OUTPUT_DIR required")
@@ -70,15 +78,65 @@ def main():
     b0=bbox(original)
     bm=bmesh.new();bm.from_mesh(clone.data)
     bm.verts.ensure_lookup_table()
+    original_mesh_vertices=len(bm.verts)
+    original_mesh_boundaries=sum(e.is_boundary for e in bm.edges)
+    b0=bbox(original)
+    extent=max(b-a for a,b in b0)
+    # Actual 2026-10-17 source boundary atlas proved 148 open edges per
+    # finger are mainly duplicated coincident UV seam vertices. Five genuine
+    # source fingers EACH have only ~30 actual open root edges after welding.
+    # Stitch ONLY co-located vertices; maintain per-face loop UV islands.
+    # Do not weld adjacent anatomical tissue or connect distinct fingers
+    # across air. This is genuine mesh repair, not fabricated geometry.
+    eps=extent*1e-6
+    original_vertex_positions={v:v.co.copy() for v in bm.verts}
+    deform_source=bm.verts.layers.deform.active
+    if deform_source is None:fail("Original authentic skin weights unavailable")
+    buckets=defaultdict(list)
+    for v in bm.verts:
+        buckets[tuple(round(float(c)/eps) for c in v.co)].append(v)
+    duplicate_groups=[group for group in buckets.values() if len(group)>1]
+    inconsistent=0
+    for group in duplicate_groups:
+        base=dict(group[0][deform_source])
+        for other in group[1:]:
+            current=dict(other[deform_source])
+            drift=max((abs(base.get(k,0)-current.get(k,0))
+                      for k in set(base)|set(current)),default=0)
+            if drift>.012:inconsistent+=1
+    if inconsistent:
+        fail("UV coincident source vertices have DIFFERENT skin weights; "+
+             "requires bone-safe weld, cannot merge blindly: "+str(inconsistent))
+    bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=eps)
+    bm.verts.ensure_lookup_table();bm.verts.index_update()
+    bm.normal_update()
+    welded_vertices=len(bm.verts)
+    welded_boundaries=sum(e.is_boundary for e in bm.edges)
+    invalid_nonmanifold=sum(not(e.is_boundary or e.is_manifold) for e in bm.edges)
+    if invalid_nonmanifold:
+        fail("Welding creates unexpected nonmanifold edges: "+
+             str(invalid_nonmanifold))
+    if original_mesh_vertices-welded_vertices<280:
+        fail("Expected many genuine duplicated source UV seam verts to weld")
+    if original_mesh_boundaries-welded_boundaries<500:
+        fail("Weld did not restore the missing original skin side surfaces")
     components=islands(bm)
-    if len(components)!=6 or len(components[0])<5000:fail("Wrong FBX skin islands")
-    source_indices=[[v.index for v in group] for group in components]
-    per=[loop(x) for x in components]
-    center=per[0]
+    if len(components)!=6 or len(components[0])<4900:
+        fail("Genuine six source islands distorted by exact UV seam weld")
+    per_component=[loops(x) for x in components]
+    if any(len(group)!=1 for group in per_component[1:]):
+        fail("Digit side seam weld must leave exactly one root rim per finger")
+    palm_rims=per_component[0]
+    per=[palm_rims[0]]+[group[0] for group in per_component[1:]]
+    print("ROKAS AUTHENTIC UV EDGE REPAIR",
+          original_mesh_vertices,welded_vertices,
+          original_mesh_boundaries,welded_boundaries,
+          "palm rims",list(map(len,palm_rims)),
+          "finger root rim lengths",list(map(len,per[1:])),flush=True)
     # Previous 0.045 hand-span allowance permitted 17-18 mm bridges across
     # 8-10 mm finger sections. Real Unity images proved severe polygons.
     # Reject distant contacts, use much shorter true surface transitions.
-    diameter=max(b-a for a,b in b0)
+    diameter=extent
     # Intermediate safe contact distance: 2.6% left visible unjoined collar,
     # 4.5% caused overlong bridges. Test 3.2% with curved 3-row loft QA.
     maxBridge=diameter*.032
@@ -116,7 +174,13 @@ def main():
         ringCache[key]=vertex
         addedWeights.append((vertex,f.index,p.index,t))
         return vertex
-    report={"original_vertices":len(bm.verts),
+    report={"original_source_vertices":original_mesh_vertices,
+            "original_source_boundaries":original_mesh_boundaries,
+            "exact_weld_epsilon":eps,
+            "exact_weld_removed_vertices":original_mesh_vertices-welded_vertices,
+            "exact_weld_closed_boundary_edges":original_mesh_boundaries-welded_boundaries,
+            "palm_remaining_loop_sizes":[len(x) for x in palm_rims],
+            "original_vertices":len(bm.verts),
             "original_islands":len(components),
             "original_boundaries":sum(e.is_boundary for e in bm.edges),
             "source_bones":len(arm.data.bones),"max_bridge":maxBridge,
@@ -125,15 +189,21 @@ def main():
         # Find real closest parallel boundary *edges*, no fabricated cylinders
         # and no moving/scaling of malformed ring finger roots.
         best=None
-        for i in range(len(ring)):
-            f0=ring[i].co;f1=ring[(i+1)%len(ring)].co
-            for j in range(len(center)):
-                p0=center[j].co;p1=center[(j+1)%len(center)].co
-                direct=(f0-p0).length+(f1-p1).length
-                reverse=(f0-p1).length+(f1-p0).length
-                cur=(min(direct,reverse),i,j,1 if direct<=reverse else -1)
-                if best is None or cur[0]<best[0]:best=cur
-        _,fi,pi,orientation=best
+        for chosen,available in enumerate(palm_rims):
+            # 64-edge genuine cuff loop is far from digit bases. Do not
+            # create webbing from fingers to the forearm sleeve opening.
+            if len(available)>45:continue
+            for i in range(len(ring)):
+                f0=ring[i].co;f1=ring[(i+1)%len(ring)].co
+                for j in range(len(available)):
+                    p0=available[j].co;p1=available[(j+1)%len(available)].co
+                    direct=(f0-p0).length+(f1-p1).length
+                    reverse=(f0-p1).length+(f1-p0).length
+                    cur=(min(direct,reverse),chosen,i,j,1 if direct<=reverse else -1)
+                    if best is None or cur[0]<best[0]:best=cur
+        if best is None:fail("Genuine finger contact socket unavailable")
+        _,chosen,fi,pi,orientation=best
+        center=palm_rims[chosen]
         bridgeCount=0;maximum=0.0
         fingerPalmVerts=set()
         for k in range(-7,8):
@@ -185,7 +255,7 @@ def main():
         usedPalm.update(fingerPalmVerts)
         report["per_finger"].append({"finger":fingerNo,
             "quads":bridgeCount,"max_root_gap":maximum,
-            "closest_pair_cost":best[0]})
+            "closest_pair_cost":best[0],"palm_socket_id":chosen})
         if bridgeCount<1:fail("Cannot safely bridge original finger "+str(fingerNo))
     # Smooth the AUTHENTIC anatomical junction and adjacent tissue only,
     # never the entire mesh. The earlier 3-row skin fillet still showed
