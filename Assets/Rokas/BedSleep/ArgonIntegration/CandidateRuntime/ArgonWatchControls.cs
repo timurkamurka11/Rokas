@@ -213,6 +213,51 @@ namespace Rokas.BedSleep.Argon.Candidate
             if(cancelSelection!=null)cancelSelection.Invoke(presenter,null);
         }
 
+        /// <summary>
+        /// Physically hit-tested watch UV gestures: header opens presets,
+        /// ring chooses duration, list entries choose quick durations,
+        /// bottom button confirms. Touch callers can reuse this method.
+        /// The watch UI is a REAL dynamic physical surface, not a static
+        /// screenshot with an invisible full-screen confirmation button.
+        /// </summary>
+        public void ProcessWatchFaceTap(Vector2 uv)
+        {
+            if (!(presenter is ArgonRussianSleepOledPresenter russian))
+            {
+                Confirm(); // Unmodified legacy V10 behavior.
+                return;
+            }
+            switch(russian.Screen)
+            {
+                case ArgonRussianWatchScreen.Presets:
+                {
+                    int row = Mathf.Clamp(Mathf.RoundToInt(
+                        (.675f-uv.y)/.117f),0,4);
+                    int[] choices={1,2,4,8,16};
+                    SelectQuickPreset(choices[row]);
+                    return;
+                }
+                case ArgonRussianWatchScreen.Confirmed:
+                    BeginSleepingAnimation();return;
+                case ArgonRussianWatchScreen.Cancelled:
+                    SelectQuickPreset(steps);return;
+                case ArgonRussianWatchScreen.FallingAsleep:
+                    return;
+            }
+            if(uv.y>.76f){ShowQuickPresets();return;}
+            if(uv.y<.20f){Confirm();return;}
+            float dx=uv.x-.5f,dy=uv.y-.5f;
+            float radius=Mathf.Sqrt(dx*dx+dy*dy);
+            if(radius>.28f && radius<.50f)
+            {
+                float angle=Mathf.Atan2(dx,dy);
+                float progress=Mathf.InverseLerp(-.73f*Mathf.PI,
+                    .73f*Mathf.PI,angle);
+                SetDurationSteps(Mathf.RoundToInt(
+                    Mathf.Lerp(minimumSteps,24,progress)),true);
+            }
+        }
+
         public void Step(int direction)
         {
             if (direction == 0) return;
@@ -278,7 +323,11 @@ namespace Rokas.BedSleep.Argon.Candidate
             {
                 float wheel = Input.GetAxis("Mouse ScrollWheel");
                 if (Mathf.Abs(wheel) > .001f) Step(wheel > 0 ? 1 : -1);
-                if (Input.GetMouseButtonDown(0)) Confirm();
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (onFace) ProcessWatchFaceTap(hit.textureCoord);
+                    else Confirm();
+                }
             }
 #elif ENABLE_INPUT_SYSTEM
             // Unity 6 projects using the new Input System exclusively must
@@ -293,7 +342,11 @@ namespace Rokas.BedSleep.Argon.Candidate
             {
                 float wheel = mouse.scroll.ReadValue().y;
                 if (Mathf.Abs(wheel) > .01f) Step(wheel > 0 ? 1 : -1);
-                if (mouse.leftButton.wasPressedThisFrame) Confirm();
+                if (mouse.leftButton.wasPressedThisFrame)
+                {
+                    if (onFace) ProcessWatchFaceTap(hit.textureCoord);
+                    else Confirm();
+                }
             }
 #endif
         }
