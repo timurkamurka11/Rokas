@@ -7,3 +7,4 @@
 2026-10-17 seam layer isolation: ORIGINAL hand skin vs nails vs all, one camera snapshot, no production merge.
 2026-10-17_TOPOLOGY_ISLANDS_PINKY_BASE original-FBX bone-weight report, no new video
 2026-10-17_RU_WATCH_OLED_512PSCREEN_STATE_TIMER_QA v1
+2026-10-17_REAL_ARGON_HAND_CLONE_FINGER_SEAM_SMOOTHING_compare_before_after
