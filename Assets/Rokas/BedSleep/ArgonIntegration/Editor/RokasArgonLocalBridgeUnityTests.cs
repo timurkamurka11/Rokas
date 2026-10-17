@@ -198,6 +198,43 @@ namespace Rokas.BedSleep.Argon.Editor
                     Assert.That(new FileInfo(file).Length, Is.GreaterThan(30000),
                         "Actual real Unity hand screenshot is missing");
                 }
+                // High-resolution source-matched anatomy closeups in three
+                // actual Unity camera directions. Whole-arm framing alone
+                // obscured precisely the MCP root collars we need to fix.
+                var baseNames = new []{"Thumb_CMC","Index_MCP","Middle_MCP",
+                    "Ring_MCP","Little_MCP"};
+                Vector3 rootCenter=Vector3.zero;
+                foreach (var name in baseNames)
+                    rootCenter += sourceJoints[name].position;
+                rootCenter /= baseNames.Length;
+                var viewNormals = new []{
+                    normal, -normal, Vector3.Cross(axis,normal).normalized
+                };
+                var viewNames = new []{"dorsal","palmar","side"};
+                camera.orthographicSize=Mathf.Max(.025f,span*.21f);
+                for(int view=0;view<viewNames.Length;view++)
+                {
+                    var vn=viewNormals[view];
+                    camera.transform.rotation=Quaternion.LookRotation(
+                        -vn,Vector3.Cross(axis,vn).normalized);
+                    camera.transform.position=rootCenter+
+                        vn*Mathf.Max(.5f,span*3f);
+                    for(int variant=0;variant<2;variant++)
+                    {
+                        instances[0].SetActive(variant==0);
+                        instances[1].SetActive(variant==1);
+                        camera.Render();
+                        RenderTexture.active=target;
+                        readback.ReadPixels(new Rect(0,0,W,H),0,0);
+                        readback.Apply(false);
+                        var filename="QA_"+viewNames[view]+"_"+
+                            (variant==0?"original":"joined_candidate")+".png";
+                        var file=Path.Combine(dir,filename);
+                        File.WriteAllBytes(file,readback.EncodeToPNG());
+                        Assert.That(new FileInfo(file).Length,Is.GreaterThan(15000),
+                            "Real root closeup render is missing "+filename);
+                    }
+                }
                 var report =
                     "Authentic original FBX vertices=" + sourceSkin.sharedMesh.vertexCount +
                     "\nCandidate source-preserving imported vertices=" + joinedSkin.sharedMesh.vertexCount +
