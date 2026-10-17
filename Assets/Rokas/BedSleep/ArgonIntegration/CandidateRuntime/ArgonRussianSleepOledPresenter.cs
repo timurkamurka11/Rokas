@@ -207,7 +207,10 @@ namespace Rokas.BedSleep.Argon.Candidate
             TotalFaceDraws++;
             PaintBackground();
             PaintClouds();
-            PaintMoon();
+            if(Screen==ArgonRussianWatchScreen.Dial ||
+               Screen==ArgonRussianWatchScreen.Presets ||
+               Screen==ArgonRussianWatchScreen.Relaxation)
+                PaintMoon();
             PaintSquareGlassFrame();
             PaintRing();
             switch (Screen)
@@ -340,7 +343,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         private void PaintRing()
         {
             float progress=Mathf.Clamp01((displaySteps-1f)/23f);
-            float centerX=256f,centerY=258f,radius=200f;
+            float centerX=256f,centerY=258f,radius=181f;
             const int steps=480;
             for(int i=0;i<steps;i++)
             {
@@ -360,8 +363,8 @@ namespace Rokas.BedSleep.Argon.Candidate
             for(int i=0;i<45;i++)
             {
                 float theta=(-.73f+(float)i/44f*1.46f)*Mathf.PI;
-                float x=256f+185f*Mathf.Sin(theta);
-                float y=258f+185f*Mathf.Cos(theta);
+                float x=256f+169f*Mathf.Sin(theta);
+                float y=258f+169f*Mathf.Cos(theta);
                 Disc(x,y,1.75f,muted,.75f);
             }
             float lead=(-.73f+1.46f*progress)*Mathf.PI;
@@ -392,20 +395,23 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void PaintOverview()
         {
-            CenterText("ПЛАН СНА",256,418,5,white);
-            CenterText("СЕЙЧАС",256,353,3,muted);
+            // Space text using ACTUAL Cyrillic atlas cell height 28px:
+            // rendered half-height = 4.9 * scale, so bounding boxes
+            // cannot collide even in the 512px real physical watch UV.
+            CenterText("ПЛАН СНА",256,455,3,white);
+            CenterText("СЕЙЧАС",256,396,3,muted);
             CenterText(CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,323,8,white);
-            CenterText("ВРЕМЯ СНА",256,254,3,muted);
-            CenterText(DurationText,256,220,10,white);
-            CenterText("ПОДЪЁМ",256,153,3,muted);
-            CenterText(WakeText,256,115,9,new Color32(171,209,255,255));
-            CenterText("ДАЛЕЕ  >",256,62,4,white);
+                CurrentMinute.ToString("D2"),256,328,7,white);
+            CenterText("ВРЕМЯ СНА",256,277,3,muted);
+            CenterText(DurationText,256,214,7,white);
+            CenterText("ПОДЪЁМ",256,171,3,muted);
+            CenterText(WakeText,256,108,7,new Color32(171,209,255,255));
+            CenterText("ДАЛЕЕ  >",256,45,3,white);
         }
 
         private void PaintRelaxation()
         {
-            CenterText("РЕЖИМ ОТДЫХА",256,417,4,white);
+            CenterText("РЕЖИМ ОТДЫХА",256,454,3,white);
             float t=animatedSeconds*1.16f;
             for(int i=0;i<125;i++)
             {
@@ -415,10 +421,10 @@ namespace Rokas.BedSleep.Argon.Candidate
                     Mathf.Sin(i*.059f+t*.65f)*8f*envelope;
                 Disc(x,y,3.0f,Color32.Lerp(blue,violet,(float)i/124f),.82f);
             }
-            CenterText("ТИШИНА",256,215,6,white);
-            CenterText("СОН "+DurationText,256,157,5,muted);
-            CenterText("ПОДЪЁМ "+WakeText,256,119,4,muted);
-            CenterText("ПОДТВЕРДИТЬ",256,66,4,white);
+            CenterText("ТИШИНА",256,207,6,white);
+            CenterText("СОН "+DurationText,256,151,4,muted);
+            CenterText("ПОДЪЁМ "+WakeText,256,112,3,muted);
+            CenterText("ПОДТВЕРДИТЬ",256,59,3,white);
         }
 
         private void PaintSelection()
@@ -427,23 +433,22 @@ namespace Rokas.BedSleep.Argon.Candidate
             // shot: prioritize ONE large timer and TWO readable essentials.
             // Fine print from the earlier prototype disappeared in-game.
             CenterText("СЕЙЧАС "+CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,412,5,muted);
-            CenterText(DurationText,256,249,12,white);
-            CenterText("ВРЕМЯ СНА",256,179,5,muted);
-            CenterText("-",130,252,5,muted);
-            CenterText("+",390,252,5,muted);
-            CenterText("ПОДЪЁМ "+WakeText,256,140,5,
+                CurrentMinute.ToString("D2"),256,455,3,muted);
+            CenterText(DurationText,256,255,9,white);
+            CenterText("ВРЕМЯ СНА",256,178,4,muted);
+            CenterText("-",126,252,4,muted);
+            CenterText("+",385,252,4,muted);
+            CenterText("ПОДЪЁМ "+WakeText,256,122,3,
                 new Color32(177,208,255,255));
-            DrawBedIcon(256,110);
             // Authentic OLED touch region (bottom 20%); no external HUD
             // graphic pasted over the genuine FBX screen.
             for(int x=177;x<=335;x+=8)
                 Disc(x,65,18,new Color32(34,65,123,255),.46f);
-            CenterText("ПОДТВЕРДИТЬ",256,64,4,white);
+            CenterText("ПОДТВЕРДИТЬ",256,58,3,white);
         }
         private void PaintPresets()
         {
-            CenterText("ВРЕМЯ СНА",256,414,4,white);
+            CenterText("ВРЕМЯ СНА",256,454,3,white);
             string[] labels = { "30 МИН", "1 ЧАС", "2 ЧАСА",
                 "4 ЧАСА", "8 ЧАСОВ" };
             int[] values = { 1,2,4,8,16 };
@@ -492,9 +497,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             Disc(256,284,54,blue,.13f+.06f*breathe);
             DrawLine(225,282,248,260,white,5);
             DrawLine(248,260,288,305,white,5);
-            CenterText("УСТАНОВЛЕНО",256,194,4,white);
-            CenterText("ПОДЪЁМ "+WakeText,256,145,5,muted);
-            CenterText("СОН "+DurationText,256,99,4,muted);
+            CenterText("УСТАНОВЛЕНО",256,187,4,white);
+            CenterText("ПОДЪЁМ "+WakeText,256,141,3,muted);
+            CenterText("СОН "+DurationText,256,95,3,muted);
         }
         private void DrawBedIcon(int x,int y)
         {
