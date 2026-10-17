@@ -26,6 +26,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         private AudioSource audioSource;
         private AudioClip cloth, tick, confirmSound;
         private int steps = 14;
+        private int minimumSteps = 2;
         private bool confirmed;
         private float crownTarget;
         private Component existingV10Router;
@@ -47,6 +48,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             viewCamera = gameCamera;
             presenter = oledPresenter;
             var type = presenter.GetType();
+            minimumSteps = presenter is ArgonRussianSleepOledPresenter ? 1 : 2;
             configureTime = type.GetMethod("ConfigureTime", BindingFlags.Public | BindingFlags.Instance);
             setConfirmed = type.GetMethod("SetConfirmedState", BindingFlags.Public | BindingFlags.Instance);
             if (configureTime == null || setConfirmed == null)
@@ -113,7 +115,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             // Original V10 presenter enforces [2,24]; match the real
             // gameplay duration to avoid displaying a different selection.
-            int next = Mathf.Clamp(halfHours, 2, 24);
+            int next = Mathf.Clamp(halfHours, minimumSteps, 24);
             if (next == steps) return;
             int before = steps;
             steps = next;
