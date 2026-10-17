@@ -256,6 +256,65 @@ namespace Rokas.BedSleep.Argon.Editor
                             "Real root closeup render is missing "+filename);
                     }
                 }
+                // The original palm shows a striking dark diagonal X
+                // even WITHOUT the new bridges. Isolate whether it comes
+                // from true source AO, normal import, or actual geometry.
+                // Diagnose with source-only materials, no fake hand texture.
+                camera.transform.rotation=Quaternion.LookRotation(
+                    -viewNormals[1],Vector3.Cross(axis,viewNormals[1]).normalized);
+                camera.transform.position=rootCenter+
+                    viewNormals[1]*Mathf.Max(.5f,span*3f);
+                camera.orthographicSize=Mathf.Max(.025f,span*.21f);
+                instances[0].SetActive(false);
+                instances[1].SetActive(true);
+                var originalAO=realMaterial.GetTexture("_OcclusionMap");
+                var originalNormal=realMaterial.GetTexture("_BumpMap");
+                float aoStrength=realMaterial.HasProperty("_OcclusionStrength")?
+                    realMaterial.GetFloat("_OcclusionStrength"):1f;
+                bool wasNormal=realMaterial.IsKeywordEnabled("_NORMALMAP");
+                var diagnostic=new Material(Shader.Find("Unlit/Color"));
+                diagnostic.color=Color.white;
+                var palmarVariants=new []{
+                    "01_actual_pbr_original",
+                    "02_original_pbr_AO_disabled",
+                    "03_AO_and_normal_disabled",
+                    "04_unlit_geometry_only"
+                };
+                try
+                {
+                    for(int k=0;k<palmarVariants.Length;k++)
+                    {
+                        if(k==1)
+                        {
+                            realMaterial.SetTexture("_OcclusionMap",null);
+                            realMaterial.SetFloat("_OcclusionStrength",0);
+                        }
+                        if(k==2)
+                        {
+                            realMaterial.SetTexture("_BumpMap",null);
+                            realMaterial.DisableKeyword("_NORMALMAP");
+                        }
+                        joinedSkin.sharedMaterial=k==3?diagnostic:realMaterial;
+                        camera.Render();
+                        RenderTexture.active=target;
+                        readback.ReadPixels(new Rect(0,0,W,H),0,0);
+                        readback.Apply(false);
+                        var filename="QA_palmar_artifact_"+palmarVariants[k]+".png";
+                        var file=Path.Combine(dir,filename);
+                        File.WriteAllBytes(file,readback.EncodeToPNG());
+                        Assert.That(new FileInfo(file).Length,Is.GreaterThan(8000),
+                            "No genuine Unity skin artifact diagnostic "+filename);
+                    }
+                }
+                finally
+                {
+                    joinedSkin.sharedMaterial=realMaterial;
+                    realMaterial.SetTexture("_OcclusionMap",originalAO);
+                    realMaterial.SetFloat("_OcclusionStrength",aoStrength);
+                    realMaterial.SetTexture("_BumpMap",originalNormal);
+                    if(wasNormal)realMaterial.EnableKeyword("_NORMALMAP");
+                    UnityEngine.Object.DestroyImmediate(diagnostic);
+                }
                 var report =
                     "Authentic original FBX vertices=" + sourceSkin.sharedMesh.vertexCount +
                     "\nCandidate source-preserving imported vertices=" + joinedSkin.sharedMesh.vertexCount +
