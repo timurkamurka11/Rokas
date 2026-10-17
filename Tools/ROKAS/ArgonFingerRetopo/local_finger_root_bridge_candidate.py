@@ -624,114 +624,91 @@ def main():
     capped=[]
     cap_created=[]
     cap_groups=[]
+    # The two genuine palm holes are source epidermis holes, NOT new
+    # fingers. The old 30->30->30->apex dome created a false 180-degree
+    # fan in actual Unity / Blender (20 of remaining 41 severe hinges).
+    # Re-tessellate just each ORIGINAL closed 30-vertex rim, with no apex,
+    # synthetic layered circular tube, replacement source vertices or
+    # altered bone weights. Constrained polygon ear clipping respects
+    # the source boundary and per-corner original 2048 UV skin data.
+    from mathutils.geometry import tessellate_polygon
     for pocket in holes:
         if len(pocket)==64:
-            continue  # Actual sleeve-hidden open FOREARM entry.
+            continue  # Intentional sleeve-hidden forearm opening.
         n=len(pocket)
-        center=sum((v.co for v in pocket),Vector((0,0,0)))/n
-        skin_normal=sum((v.normal for v in pocket),Vector((0,0,0)))
-        if skin_normal.length_squared<1e-12:
-            fail("Existing genuine palm pocket normals degenerate")
-        skin_normal.normalize()
-        # Original adjacent face defines the only valid cap winding.
-        # The earlier centroid-normal sign heuristic was unreliable.
+        if n!=30:fail("Unexpected original palm hole ring changed")
         if boundary_edge_flow(pocket[0],pocket[1])!=-1:
             pocket=list(reversed(pocket))
-        centroid_uv=sum((nearest_source_uv(v) for v in pocket),
-                        Vector((0,0)))/n if uv is not None else None
-        avg_weights=defaultdict(float)
-        for v in pocket:
-            for group,weight in v[deform_source].items():
-                avg_weights[group]+=weight/n
-        all_weight=sum(avg_weights.values())
-        if all_weight<.99 or all_weight>1.01:
-            fail("Original palm pocket source weight averaging corrupted")
+        center=sum((v.co for v in pocket),Vector((0,0,0)))/n
         radius=sum((v.co-center).length for v in pocket)/n
-        rings=[]
-        for alpha,height in ((.58,.0015),(.22,.003)):
-            layer=[]
-            for v in pocket:
-                t=bm.verts.new(center+(v.co-center)*alpha+
-                               skin_normal*min(diameter*height,radius*.08))
-                for group,weight in v[deform_source].items():
-                    if weight>1e-7:t[deform_source][group]=weight
-                layer.append(t)
-                cap_created.append(t)
-            rings.append(layer)
-        apex=bm.verts.new(center+skin_normal*min(diameter*.004,radius*.12))
-        for group,weight in avg_weights.items():
-            if weight>1e-7:apex[deform_source][group]=weight/all_weight
-        cap_created.append(apex)
-        cap_uv={}
-        if uv is not None:
-            for layer,alpha in zip(rings,(.58,.22)):
-                for vertex,src in zip(layer,pocket):
-                    cap_uv[vertex]=centroid_uv.lerp(nearest_source_uv(src),alpha)
-            cap_uv[apex]=centroid_uv
-        cap_faces=[]
-        for i in range(n):
-            j=(i+1)%n
-            for quad in ([pocket[i],pocket[j],rings[0][j],rings[0][i]],
-                         [rings[0][i],rings[0][j],rings[1][j],rings[1][i]],
-                         [rings[1][i],rings[1][j],apex]):
-                try:
-                    face=bm.faces.new(quad)
-                except ValueError:
-                    fail("Duplicate face while closing authentic palm epidermis")
-                face.material_index=0
-                face.smooth=True
-                addedFaces.append(face)
-                cap_faces.append(face)
-                face_origin[face]='palm_cap'
-                if uv is not None:
-                    for c in face.loops:
-                        v=c.vert
-                        c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
-        # Source palm UV openings have nonplanar neighborhoods. A fixed
-        # outward dome creates opposing normals / 180-degree epidermis
-        # creases. Find the cap curvature that minimizes REAL boundary
-        # folds, changing ONLY source-weighted cap vertices, not the
-        # original hand, palette, normal map or 25-bone rig.
-        cap_ring_rest=[[v.co.copy() for v in layer] for layer in rings]
-        apex_rest=apex.co.copy()
-        cap_edges={e for face in cap_faces for e in face.edges
-                   if e.is_manifold and len(e.link_faces)==2}
-        cap_options=[]
-        for scale in (-1.5,-.75,0.,.5,1.,1.75):
-            for layer,initial in zip(rings,cap_ring_rest):
-                for vertex,original in zip(layer,initial):
-                    lift=(original-center).dot(skin_normal)
-                    vertex.co=original+skin_normal*lift*(scale-1)
-            lift=(apex_rest-center).dot(skin_normal)
-            apex.co=apex_rest+skin_normal*lift*(scale-1)
-            bm.normal_update()
-            folds=[]
-            for e in cap_edges:
-                fa,fb=e.link_faces
-                if fa.normal.length_squared<1e-12 or fb.normal.length_squared<1e-12:
-                    fail("True palm epidermis cap collapsed during curvature search")
-                folds.append(math.degrees(fa.normal.angle(fb.normal)))
-            n120=sum(z>120 for z in folds)
-            n90=sum(z>90 for z in folds)
-            penalty=sum(max(z-70,0)**2 for z in folds)/max(1,len(folds))
-            cap_options.append((n120,n90,penalty,scale))
-        cap_best=min(cap_options)
-        scale=cap_best[3]
-        for layer,initial in zip(rings,cap_ring_rest):
-            for vertex,original in zip(layer,initial):
-                lift=(original-center).dot(skin_normal)
-                vertex.co=original+skin_normal*lift*(scale-1)
-        lift=(apex_rest-center).dot(skin_normal)
-        apex.co=apex_rest+skin_normal*lift*(scale-1)
+        lookup={}
+        def point_key(point):
+            return tuple(round(float(c),9) for c in point)
+        for vertex in pocket:
+            key=point_key(vertex.co)
+            if key in lookup:
+                fail("Duplicate genuine palm hole coordinates")
+            lookup[key]=vertex
+        triangles=tessellate_polygon([[v.co.copy() for v in pocket]])
+        if len(triangles)!=n-2:
+            fail("Original palm rim triangulation not 30->28 faces")
+        patch=[]
+        for tri in triangles:
+            verts=[]
+            for pos in tri:
+                key=point_key(pos)
+                if key not in lookup:
+                    fail("Original hole tessellation introduced extra vertices")
+                verts.append(lookup[key])
+            if len(set(verts))!=3:
+                fail("Original palm triangle collapsed")
+            if max((u.co-v.co).length for u in verts for v in verts)>diameter*.125:
+                fail("Source palm original triangle spans implausible tissue")
+            try:
+                face=bm.faces.new(verts)
+            except ValueError:
+                fail("Duplicate face in source-only palm epidermis patch")
+            face.material_index=0
+            face.smooth=True
+            patch.append(face)
+            if uv is not None:
+                for corner in face.loops:
+                    corner[uv].uv=nearest_source_uv(corner.vert)
         bm.normal_update()
-        capped.append({"source_open_ring":n,"new_skin_vertices":2*n+1,
-                       "faces":3*n,"radius":radius,
-                       "apex_displacement":(apex.co-center).length,
-                       "optimized_cap_curve_sign_and_scale":scale,
-                       "root_crease_over_120":cap_best[0],
-                       "root_crease_over_90":cap_best[1],
-                       "candidate_scores":[{"height_factor":w,"over_120":a,
-                            "over_90":b} for a,b,v,w in cap_options]})
+        # Blender ear clipping can return the reverse orientation for a
+        # strongly nonplanar original 3D border. Match ORIGINAL source
+        # surface direction, not a guessed average normal.
+        rim_edges={e for face in patch for e in face.edges
+                   if any(v in pocket for v in e.verts)}
+        if any(e.is_manifold and not e.is_contiguous for e in rim_edges):
+            bmesh.ops.reverse_faces(bm,faces=patch)
+            bm.normal_update()
+        if any(e.is_manifold and not e.is_contiguous
+               for face in patch for e in face.edges):
+            fail("Original palm triangulation has inconsistent wound faces")
+        new_edges={e for face in patch for e in face.edges
+                   if e.is_manifold and len(e.link_faces)==2}
+        folds=[math.degrees(e.link_faces[0].normal.angle(
+               e.link_faces[1].normal)) for e in new_edges]
+        severe=sum(z>120 for z in folds)
+        caps90=sum(z>90 for z in folds)
+        # Historical genuine source-based dome optimized >120 angles,
+        # but still had 6 and 18 severe per region. Reject new patch if
+        # the replacement is substantially worse than that baseline.
+        if severe>20:
+            fail("Original palm hole flat tessellation still folds too sharply")
+        for face in patch:
+            addedFaces.append(face)
+            face_origin[face]="palm_cap"
+        capped.append({
+            "source_open_ring":n,
+            "new_skin_vertices":0,
+            "faces":len(patch),
+            "radius":radius,
+            "method":"source_only_original_ring_triangulation",
+            "root_crease_over_120":severe,
+            "root_crease_over_90":caps90,
+            "max_angle":max(folds,default=0)})
     report["authentic_two_distal_palm_pockets_sealed"]=capped
     report["anatomical_skin_cap_vertices"]=len(cap_created)
     # Only a genuine 64-edge sleeve cuff remains open. All 5 digits and
