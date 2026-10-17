@@ -1,0 +1,7 @@
+2026-10-17 ROKAS Argon organic hand entry/exit cinematic polish
+- EXACT approved horizontal sleeve-left/watch-center-left/fingers-right pose
+- Asymmetric wrist-led raise, forearm lag, delayed natural fingers
+- Separate gentle down/away exit, smooth transition; no rigid slide-in
+- Existing FBX, watch, Russian OLED, authentic bedroom resource + cloth sound
+- 58 actual 1280x720 Unity frames at 24fps and short MP4 review
+- Focused Unity tests only; draft PR #13, DO NOT MERGE
