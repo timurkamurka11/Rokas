@@ -1,0 +1,6 @@
+2026-10-17 Argon living-hand regression check
+- Existing real FBX 25-bone candidate, not generated hand
+- 2000-frame wrist and root bounded drift
+- Authentic V10 OLED duration bounds and input router step callbacks
+- Focused EditMode only, no repeated 720p video rendering
+- Does not modify production V10 and DO NOT MERGE PR13
