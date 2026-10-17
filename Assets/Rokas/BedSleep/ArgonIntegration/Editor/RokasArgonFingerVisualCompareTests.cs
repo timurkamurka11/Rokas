@@ -178,6 +178,69 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(lightObj!=null)UnityEngine.Object.DestroyImmediate(lightObj);
             }
         }
+        [Test]
+        [Timeout(45000)]
+        public void AllFiveOriginalFingerJointsDeformOnlyTheirOwnMeshIslands()
+        {
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(prefab,Is.Not.Null);
+            GameObject instance=null;
+            Mesh compensated=null,baseMesh=null;
+            try
+            {
+                instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var skin=instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                var report=ArgonFingerBindposeRetarget.ApplyCandidate(
+                    skin,out compensated,out var originalBones);
+                baseMesh=new Mesh();
+                skin.BakeMesh(baseMesh);
+                Vector3[] rest=baseMesh.vertices;
+                var joints=new[]{"Thumb_IP","Index_PIP","Middle_PIP",
+                    "Ring_PIP","Little_PIP"};
+                float threshold=Mathf.Max(3e-7f,
+                    skin.sharedMesh.bounds.size.magnitude*.0004f);
+                for(int selected=0;selected<joints.Length;selected++)
+                {
+                    var joint=originalBones.Single(x=>x.name==joints[selected]);
+                    Quaternion originalRotation=joint.localRotation;
+                    var bent=new Mesh();
+                    try
+                    {
+                        joint.localRotation=originalRotation*
+                            Quaternion.AngleAxis(18f,Vector3.forward);
+                        skin.BakeMesh(bent);
+                        var moved=bent.vertices;
+                        int[] counts=new int[5];
+                        for(int finger=0;finger<5;finger++)
+                            foreach(int vi in report.FingerVertices[finger])
+                                if(Vector3.Distance(moved[vi],rest[vi])>threshold)
+                                    counts[finger]++;
+                        Debug.Log("[ROKAS 5 FINGER ISOLATION] "+joints[selected]+
+                            " bent 18deg: "+string.Join(",",counts));
+                        Assert.That(counts[selected],Is.GreaterThan(25),
+                            joints[selected]+" does not bend its own digit");
+                        for(int finger=0;finger<5;finger++)
+                            if(finger!=selected)
+                                Assert.That(counts[finger],Is.LessThan(6),
+                                    joints[selected]+" wrongly deforms finger "+finger);
+                    }
+                    finally
+                    {
+                        joint.localRotation=originalRotation;
+                        UnityEngine.Object.DestroyImmediate(bent);
+                    }
+                }
+            }
+            finally
+            {
+                if(baseMesh!=null)UnityEngine.Object.DestroyImmediate(baseMesh);
+                if(compensated!=null)UnityEngine.Object.DestroyImmediate(compensated);
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
     }
 }
 #endif
