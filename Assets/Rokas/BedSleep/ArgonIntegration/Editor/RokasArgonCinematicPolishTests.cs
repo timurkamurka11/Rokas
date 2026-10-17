@@ -130,6 +130,14 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             Assert.That(Mathf.Abs(entering.ForearmPitchDegrees),
                 Is.GreaterThan(4f),
                 "Forearm secondary rotation must not be completed offscreen");
+            Assert.That(Mathf.Abs(entering.WristRollDegrees),Is.GreaterThan(8f),
+                "Wrist must BEND visibly in the screen plane, not just twist around the finger axis");
+            Assert.That(Mathf.Abs(entering.ProximalSwivelDegrees),
+                Is.GreaterThan(5f),
+                "Elbow must create a visible forearm arc during the on-screen entrance");
+            Assert.That(entering.WristRollDegrees*entering.ProximalSwivelDegrees,
+                Is.LessThan(0f),
+                "Wrist and elbow form a curved human limb, not a parallel stiff board");
             Assert.That(Mathf.Abs(entering.ProximalElbowDegrees),
                 Is.GreaterThan(8f),
                 "Elbow/forearm root must articulate independently, not slide as one solid stick");
