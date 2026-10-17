@@ -154,9 +154,10 @@ def main():
     if uv is not None:
         for ring in [r for group in per_component for r in group]:
             for vertex in ring:
-                loops=[l for e in vertex.link_edges for face in e.link_faces
-                       for l in face.loops if l.vert==vertex]
-                if loops:orig_uv[vertex.index]=loops[0][uv].uv.copy()
+                source_uv_corners=[l for e in vertex.link_edges for face in e.link_faces
+                                   for l in face.loops if l.vert==vertex]
+                if source_uv_corners:
+                    orig_uv[vertex.index]=source_uv_corners[0][uv].uv.copy()
     ringCache={}
     addedWeights=[]
     addedFaces=[]
