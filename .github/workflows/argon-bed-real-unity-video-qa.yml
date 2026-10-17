@@ -98,7 +98,9 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: ROKAS Authentic Argon 3D Bed POV Cinematic Frames
       - name: Encode actual Unity 24fps PNG frames into real MP4
-        if: success()
+        # Keep the real frames if Unity's NUnit timeout trips AFTER capturing.
+        # A failed test should never discard a complete user-reviewable MP4.
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
