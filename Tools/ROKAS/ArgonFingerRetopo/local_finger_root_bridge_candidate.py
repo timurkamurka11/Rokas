@@ -364,6 +364,49 @@ def main():
         source_dist=(nearest.co-root).length
         if source_dist>diameter*.049:
             fail("Digit too far from genuine palm skin for safe anatomical graft")
+        # The original digit source has an exposed circular/cylindrical root
+        # collar: simply connecting it to a palm hole preserves a plug-like
+        # ring and triangle fins. Anatomically feather only three existing
+        # finger-base vertex rows INTO the true original palm skin. All
+        # fingertips, middle/distal bones and source FBX remain unmodified.
+        digit_island=set(components[fingerNo])
+        tiers=[list(ring)]
+        seen=set(ring)
+        for depth in range(2):
+            frontier={w for v in tiers[-1] for e in v.link_edges
+                      for w in e.verts
+                      if w in digit_island and w not in seen}
+            if len(frontier)<10 or len(frontier)>100:
+                fail("Authentic proximal finger base tier is irregular: "+
+                     str((fingerNo,depth,len(frontier))))
+            tiers.append(list(frontier))
+            seen.update(frontier)
+        root_pull=nearest.co-root
+        root_pull_size=root_pull.length
+        if root_pull_size>diameter*.049:
+            fail("Finger base cannot safely settle into distant palm tissue")
+        moved_at_root=0.0
+        for depth,(tier,pull,radial) in enumerate(zip(
+                tiers,(.32,.15,.035),(.93,.978,1.0))):
+            tier_center=sum((v.co for v in tier),
+                            Vector((0,0,0)))/len(tier)
+            for v in tier:
+                before=v.co.copy()
+                v.co=tier_center+(v.co-tier_center)*radial+root_pull*pull
+                delta=(v.co-before).length
+                moved_at_root=max(moved_at_root,delta)
+        if moved_at_root>diameter*.019:
+            fail("Proximal anatomical finger blend moved authentic tissue too far")
+        report.setdefault("proximal_digit_tissue_feather",[]).append({
+            "finger":fingerNo,
+            "source_tier_sizes":[len(tier) for tier in tiers],
+            "max_vertex_displacement":moved_at_root,
+            "fraction_hand_extent":moved_at_root/diameter,
+            "palm_surface_vector":list(root_pull)})
+        bm.normal_update()
+        # Recompute after limited proximal tissue adjustment.
+        root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+        radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
         eligible={f for v in intact_palm for f in v.link_faces
                   if f.is_valid and all(w in source_original_palm for w in f.verts)}
         target_face=min(
