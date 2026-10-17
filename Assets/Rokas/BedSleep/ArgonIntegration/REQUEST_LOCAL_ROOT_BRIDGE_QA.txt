@@ -1,3 +1,4 @@
 Continue PR#13, original 25-bone Keiko arm. Use measured 5 finger-to-palm genuine boundary arcs and stitch LOCAL QUAD FACE BRIDGES with zero original position drift and original weights, UV. Hard-stop if any finger disconnected or max gap large. Only private candidate QA; V10 untouched. Not a watertight/full-remesh claim.
 RETRY_20261017_LOCAL_LOOP_UV_SHADOWED_VARIABLE_FIXED
 RETRY_20261017_QUAD_STRIP_CONTIGUITY_1923
+RUN_20261017_REAL_UNITY_CONNECTED_FINGER_RIG_VISUAL_QA
