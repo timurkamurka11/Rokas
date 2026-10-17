@@ -176,6 +176,26 @@ namespace Rokas.BedSleep.Argon.Editor
                 }
 
                 Capture("01_all_authentic_original_meshes");
+                // Candidate geometry has 5 distinct disconnected finger
+                // islands. One-time taper of *cloned* root collars only.
+                // This comparison must be reviewed before using in video.
+                Mesh sourceHandMesh = hand.sharedMesh;
+                Mesh repairedHandMesh = null;
+                try
+                {
+                    var report = ArgonFingerBaseSeamRepair.ApplyToCandidate(
+                        hand, out repairedHandMesh);
+                    Assert.That(report.Components,Is.EqualTo(6));
+                    Assert.That(report.FingersPolished,Is.EqualTo(5));
+                    Assert.That(report.VerticesModified,Is.GreaterThan(150));
+                    Capture("04_cloned_candidate_base_seam_smoothed");
+                }
+                finally
+                {
+                    hand.sharedMesh = sourceHandMesh;
+                    if(repairedHandMesh!=null)
+                        UnityEngine.Object.DestroyImmediate(repairedHandMesh);
+                }
                 nails.enabled = false;
                 Capture("02_same_pose_nails_disabled");
                 nails.enabled = true;
