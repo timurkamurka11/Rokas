@@ -10,16 +10,22 @@ Shader "ROKAS/BedSleep/ArgonOLEDLiveSurface"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent+20" "RenderType"="Transparent" "IgnoreProjector"="True" }
+        // The emissive OLED is a PHYSICAL opaque solid panel, not a
+        // late-sorted transparent decal. The genuine sapphire glass draws
+        // after it. This prevents bezel/glass depth fights as the wrist turns.
+        Tags { "Queue"="Geometry+20" "RenderType"="Opaque" "IgnoreProjector"="True" }
         Pass
         {
             Cull Off
-            ZWrite Off
+            ZWrite On
             // Physical depth test: the OLED may only appear if its ORIGINAL
             // surface is in front of the skinned wrist and watch casing.
             // No through-skin HUD / painted square.
             ZTest LEqual
-            Blend One Zero
+            // Small depth bias only on the actual OLED triangle plane.
+            // No billboard or overlay follows the camera.
+            Offset -0.25, -0.25
+            Blend Off
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -47,7 +53,16 @@ Shader "ROKAS/BedSleep/ArgonOLEDLiveSurface"
                                  min(i.uv.y, 1.0 - i.uv.y));
                 float glassDepth = 1.0 - _EdgeFalloff *
                     (1.0 - smoothstep(0.015, 0.135, edge));
+                // Keep the high-contrast screen physically inside the actual
+                // square display, with a restrained sapphire-black edge.
+                // Opaque corners do not expose the moving skinned wrist behind.
+                float2 uv=saturate(i.uv);
+                float2 pt=abs(uv-.5);
+                float2 q=max(pt-float2(.425,.425),float2(0,0));
+                float dist=length(q)-.045;
+                float inner=saturate(1.0 - smoothstep(-.018,.012,dist));
                 float3 crisp = saturate((ui.rgb - 0.045) * _Contrast + 0.045);
+                crisp *= lerp(.065,1.0,inner);
                 crisp = saturate(crisp * _Brightness * glassDepth);
                 // Physical sapphire-like reflection is intentionally very
                 // restrained. Mostly visible on lit OLED graphics, not a
@@ -58,6 +73,7 @@ Shader "ROKAS/BedSleep/ArgonOLEDLiveSurface"
                 float polished = glassSweep * .026 * smoothstep(.02,.24,lum);
                 crisp = saturate(crisp + float3(polished*.62,
                     polished*.77,polished));
+                // Full coverage: hardware depth, not mask translucency.
                 return fixed4(crisp, 1.0) * _Color;
             }
             ENDCG
