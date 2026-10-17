@@ -1,7 +1,9 @@
 {
   "name": "Rokas.Argon.Candidate.Tests",
   "rootNamespace": "Rokas.BedSleep.Argon.Editor",
-  "references": [],
+  "references": [
+    "Rokas.Argon.Candidate.Runtime"
+  ],
   "includePlatforms": [
     "Editor"
   ],
