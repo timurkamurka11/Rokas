@@ -9,3 +9,11 @@
 Re-time wrist lead to remain visible at progress 0.42, forearm follows.
 Additional assertions require >8deg wrist pitch and >4deg forearm secondary rotation while on camera.
 Same approved horizontal final pose; no changes to source FBX, OLED or production V10.
+
+2026-10-17 FINAL TARGETED 82-frame 3.42 second authentic Unity video.
+User screen reference: disconnected pinky/ring finger collars and stiff all-at-once prop arm.
+- Live three-part forearm proximal elbow + twist + wrist lead/lag
+- Existing candidate safe compensated per-finger bindpose and socket geometry only in test movie
+- Exact original neutral pose, original bedroom ceiling, original Russian watch display and audio
+- Slower 28+12+10+32 frames; 720p 24fps; comparison before approval
+- Candidate/QA only, absolutely NO production V10/FBX writes and PR #13 stays DRAFT.
