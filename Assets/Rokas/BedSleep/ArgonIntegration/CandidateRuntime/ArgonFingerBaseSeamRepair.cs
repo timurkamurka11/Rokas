@@ -108,7 +108,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 // Sort by cross-hand Y: thumb, index, middle, ring, little.
                 // More seamless overlap for ring and little, conservatively
                 // lighter blending for the already acceptable index/thumb.
-                float blend=finger==4?.21f:finger==3?.17f:.105f;
+                float blend=finger==4 ? 0.21f : (finger==3 ? 0.17f : 0.105f);
                 foreach(int id in group)
                 {
                     float t=Mathf.SmoothStep(0f,1f,
