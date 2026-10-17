@@ -884,6 +884,109 @@ def main():
         "limit_ratio_of_hand_extent":.005}
     if fairing_drift>fairing_limit+1e-7:
         fail("Candidate anti-spike fairing exceeded hard safety displacement")
+    # Explicit ACTUAL-FACE NORMAL hinge minimizer, not more blanket
+    # smoothing. The last Blender proof still had 78 folds >120 degrees;
+    # original 25 bone skin motion passed, but visible knuckle web fins did
+    # not. Solve only newly generated bridge/cap vertices, never authentic
+    # distal/source finger vertices. Measure angles between two REAL
+    # adjacent skin polygons before/after every bounded optimization pass.
+    generated_faces={face for face in addedFaces if face.is_valid}
+    trial_skin_vertices=({v for v,_ in addedWeights if v.is_valid} |
+                         {v for v in cap_created if v.is_valid})
+    hinge_edges={edge for face in generated_faces for edge in face.edges
+                 if edge.is_manifold and len(edge.link_faces)==2}
+    bm.normal_update()
+    initial_angles={e:math.degrees(e.link_faces[0].normal.angle(
+        e.link_faces[1].normal)) for e in hinge_edges}
+    baseline_over120=sum(angle>120 for angle in initial_angles.values())
+    baseline_over90=sum(angle>90 for angle in initial_angles.values())
+    base_vertex_positions={v:v.co.copy() for v in trial_skin_vertices}
+    max_crease_shift=diameter*.006
+    # Restrict the evaluation to edges touched by faces influenced by v;
+    # otherwise optimization over all source polygons would overwhelm
+    # the actual 5 MCP/cap problem with unrelated fixed source UV edges.
+    neighborhoods={}
+    for vertex in trial_skin_vertices:
+        linked={face for face in vertex.link_faces}
+        neighborhoods[vertex]={
+            e for face in linked for e in face.edges if e in hinge_edges}
+    def local_hinge_energy(vertex):
+        total=0.
+        for edge in neighborhoods[vertex]:
+            f1,f2=edge.link_faces
+            # No normal vector guessed from a screenshot or n-gon:
+            # Blender's own actual BMesh polygon normals.
+            angle=math.degrees(f1.normal.angle(f2.normal))
+            excess=max(0.,angle-72.)
+            total+=excess*excess
+            if angle>120:
+                total+=(angle-120.)**2*2.
+        shift=(vertex.co-base_vertex_positions[vertex]).length
+        total+=180.*(shift/max_crease_shift)**2
+        return total
+    moved_crease_vertices=set()
+    changed_crease_vertices=0
+    for pass_no in range(4):
+        improvements=0
+        for vertex in sorted(trial_skin_vertices,key=lambda v:id(v)):
+            if not neighborhoods[vertex]:continue
+            neighbors={q for edge in vertex.link_edges for q in edge.verts
+                       if q!=vertex}
+            if len(neighbors)<3:continue
+            current=vertex.co.copy()
+            mean=sum((q.co for q in neighbors),
+                     Vector((0,0,0)))/len(neighbors)
+            if (mean-current).length<1e-9:continue
+            surrounding=list(vertex.link_faces)
+            for face in surrounding:face.normal_update()
+            start_cost=local_hinge_energy(vertex)
+            best_cost=start_cost
+            best=current
+            for alpha in (.14,.32,.58):
+                proposal=current.lerp(mean,alpha)
+                movement=proposal-base_vertex_positions[vertex]
+                if movement.length>max_crease_shift:
+                    proposal=base_vertex_positions[vertex]+movement.normalized()*max_crease_shift
+                vertex.co=proposal
+                for face in surrounding:face.normal_update()
+                cost=local_hinge_energy(vertex)
+                if cost+1e-3<best_cost:
+                    best_cost=cost
+                    best=proposal.copy()
+            vertex.co=best
+            for face in surrounding:face.normal_update()
+            if (best-current).length>1e-8:
+                improvements+=1
+                changed_crease_vertices+=1
+                moved_crease_vertices.add(vertex)
+        if improvements==0:break
+    bm.normal_update()
+    resulting_angles={e:math.degrees(e.link_faces[0].normal.angle(
+        e.link_faces[1].normal)) for e in hinge_edges}
+    post_over120=sum(angle>120 for angle in resulting_angles.values())
+    post_over90=sum(angle>90 for angle in resulting_angles.values())
+    drift=max(((v.co-base_vertex_positions[v]).length
+               for v in trial_skin_vertices),default=0.)
+    report["targeted_actual_face_hinge_optimization"]={
+        "sampled_generated_surface_edges":len(hinge_edges),
+        "tissue_vertices_in_scope":len(trial_skin_vertices),
+        "different_vertices_moved":len(moved_crease_vertices),
+        "accepted_changes":changed_crease_vertices,
+        "hard_position_limit":max_crease_shift,
+        "maximum_displacement":drift,
+        "before_over_90":baseline_over90,
+        "before_over_120":baseline_over120,
+        "after_over_90":post_over90,
+        "after_over_120":post_over120,
+        "before_max_angle":max(initial_angles.values(),default=0),
+        "after_max_angle":max(resulting_angles.values(),default=0)}
+    if drift>max_crease_shift+1e-7:
+        fail("Actual face hinge optimizer exceeded its safe candidate-only limit")
+    if post_over120>baseline_over120+3:
+        fail("Face-fold optimizer worsened high-risk finger/cap angles")
+    print("ROKAS ACTUAL FACE CREASE OPTIMIZER",
+          json.dumps(report["targeted_actual_face_hinge_optimization"]),
+          flush=True)
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
