@@ -118,6 +118,57 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             }
         }
+        [Test]
+        [Timeout(45000)]
+        public void FingerSocketBlendLeavesOriginalPalmAndDistalGeometryUntouched()
+        {
+            GameObject instance=null;
+            Mesh candidate=null;
+            try
+            {
+                instance=MakeOriginal();
+                var skin=instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                var source=skin.sharedMesh;
+                var originalBones=skin.bones;
+                Vector3[] a=source.vertices;
+                var b=ArgonFingerRootSocketBlend.ApplyToClone(skin,out candidate);
+                Vector3[] p=candidate.vertices;
+                Assert.That(b.SourceVertices,Is.EqualTo(12235));
+                Assert.That(b.FingerIslands,Is.EqualTo(5));
+                Assert.That(b.ModifiedVertices,Is.GreaterThan(200));
+                Assert.That(b.ModifiedVertices,Is.LessThan(3000));
+                Assert.That(b.MaxVertexMove,Is.LessThan(
+                    source.bounds.size.magnitude*.10f));
+                Assert.That(candidate.triangles,Is.EqualTo(source.triangles),
+                    "Original true finger triangles must remain intact");
+                Assert.That(candidate.uv,Is.EqualTo(source.uv));
+                Assert.That(candidate.boneWeights.Length,
+                    Is.EqualTo(source.boneWeights.Length));
+                // Verified original FBX component [0..5264] is the palm and
+                // forearm (reported by real source topology diagnostic).
+                for(int i=0;i<5265;i++)
+                    Assert.That(p[i],Is.EqualTo(a[i]),
+                        "Original wrist/palm vertex moved unexpectedly at "+i);
+                int distalUntouched=0;
+                for(int i=5265;i<a.Length;i++)
+                    if(p[i]==a[i])distalUntouched++;
+                Assert.That(distalUntouched,Is.GreaterThan(4000),
+                    "Too much distal finger mesh edited");
+                skin.sharedMesh=source;
+                Assert.That(skin.bones.Length,Is.EqualTo(originalBones.Length));
+                Debug.Log("[ARGON FINGER SOCKET] candidate-only proximal edit "+
+                    b.ModifiedVertices+" vertices; palm=5265 untouched; "+
+                    "distal unchanged="+distalUntouched+
+                    "; max displacement="+b.MaxVertexMove.ToString("G9"));
+            }
+            finally
+            {
+                if(candidate!=null)UnityEngine.Object.DestroyImmediate(candidate);
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
     }
 }
 #endif
