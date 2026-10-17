@@ -8,7 +8,7 @@ the repository is public. Public repository releases are visible to everyone.
 The GitHub workflow explicitly refuses to download such assets unless the
 repository has first been changed to PRIVATE.
 
-The binary assets are not yet in this GitHub branch. This is a source-only importer and Unity QA scaffold. No game model has been replaced or validated in cloud Unity from the Argon package yet.
+CURRENT STATUS (2026-10-17): The original Blender-reexported authentic Argon FBX, PNG maps, 25-bone skin and 7-part physical watch ARE committed on this isolated PR branch. Real Unity import and cinematics have passed candidate QA. This is NOT yet a production Bed Sleep V10 model replacement.
 
 The existing Bed Sleep V10 remains active. This importer only writes under Assets/Rokas/BedSleep/ArgonCandidate/ and never overwrites V10ReleaseCandidate, save logic, clocks, hub, combat or its preview camera.
 
@@ -41,7 +41,7 @@ After successful cloud FBX import and visual QA, add a separate runtime adapter 
 
 ## Source limitations detected
 
-The ZIP integrity passes. Its GLB has 10 meshes, 25 bones and 8 animations, but only 11 animated channels per clip; individual finger phalanges may remain static. Its GLB does not embed image textures; PNGs are delivered separately. Its eight Unity material YAML files have no texture references. Unity import has not yet been verified for these actual binaries. Never claim production-ready based only on the packaged QA JSON or web HTML demo.
+The ZIP integrity passes. Its GLB has 10 meshes, 25 bones and 8 animations, but only 11 animated channels per clip; individual finger phalanges may remain static. Its GLB does not embed image textures; PNGs are delivered separately. Its eight Unity material YAML files have no texture references. Imported original FBX/PBR/OLED binaries were subsequently verified in Unity candidate QA; the unresolved defect is the source hand/finger-base mesh shape. Never claim production-ready based only on the packaged QA JSON or web HTML demo.
 
 No whole-game archive or EXE is required.
 
@@ -52,3 +52,15 @@ The authentic GLB/Blender re-export has passed Unity EditMode import (run 389261
 A separate first-person camera screenshot gate (run 38928867250) evaluates the actual original Raise/Inspect/Lower clips with camera-up oriented toward the hand and rigid root translation for a lower-left entrance. Do not use the live game merge until those frames are reviewed.
 
 After QA passes, the disposable Actions checkout may publish **genuine original FBX, PNG textures, generated .meta, materials, and preview prefab** ONLY to the isolated Argon candidate branch if the QA request marker contains an exact line `PUBLISH_CANDIDATE=YES`. With no such line, the job remains QA-only. The gate never writes to the production Bed Sleep Resources prefab or default branch. The repository is still public, so derived assets published to this branch will be public too; the user has already intentionally published the source ZIP in a public release.
+
+## Living hand / audio candidate checkpoint (2026-10-17)
+
+Cloud Unity 6000.3.19f1 build [#38986183629](https://github.com/timurkamurka11/Rokas/actions/runs/38986183629) PASS: real Argon skinned hand and physical watch over authentic captured bed ceiling, 167 actual 1280×720/24fps frames and synced original Foley MP4/WAV (artifact `12083567201`). Horizontal framing remains APPROVED. Smooth matte skin preview avoids source normal-map aliasing.
+
+Separate isolated runtime candidate contains `ArgonLivingRig` (non-accumulating realistic breathing/wrist/finger sway), `ArgonWatchControls` (physical OLED & crown, existing V10 input router binding, no duplicate input), and `ArgonWatchFoley` (cloth, wheel clicks, confirmation). See `CandidateRuntime/README.md`.
+
+**Known blocker before any merge:** visible original FBX finger-base rectangular geometry seam and insufficient source finger detail, observed even in the older pre-living-motion render. Further 3D topology repair and manual visual acceptance required; neither the new procedural PIP/DIP curls nor specular controls can legitimately conceal broken topology.
+
+A focused Unity [no-drift / V10 input test](https://github.com/timurkamurka11/Rokas/actions/runs/38987162675) is running; do not call it successful until its final status confirms PASS.
+
+Production V10 scene, user game state and default branch are UNCHANGED. Draft PR #13 remains DO NOT MERGE.
