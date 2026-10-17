@@ -85,14 +85,7 @@ namespace Rokas.BedSleep.Argon.Editor
             }
             finally
             {
-                if(handSkin!=null && originalHandMesh!=null)
-                {
-                    handSkin.sharedMesh=originalHandMesh;
-                    handSkin.bones=originalHandBones;
-                }
-                if(socketMesh!=null)UnityEngine.Object.DestroyImmediate(socketMesh);
-                if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
-                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
             }
         }
@@ -401,7 +394,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(oledMaterial!=null)UnityEngine.Object.DestroyImmediate(oledMaterial);
                 if(handRT!=null){handRT.Release();UnityEngine.Object.DestroyImmediate(handRT);}
                 if(finalRT!=null){finalRT.Release();UnityEngine.Object.DestroyImmediate(finalRT);}
-                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+                if(handSkin!=null && originalHandMesh!=null)
+                {
+                    handSkin.sharedMesh=originalHandMesh;
+                    handSkin.bones=originalHandBones;
+                }
+                if(socketMesh!=null)UnityEngine.Object.DestroyImmediate(socketMesh);
+                if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
+                                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
                 if(lightObject!=null)UnityEngine.Object.DestroyImmediate(lightObject);
             }
