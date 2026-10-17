@@ -1,1 +1,2 @@
 Compare ORIGINAL 720p skin, flat no-maps diagnostic and 2-stage filtered authentic normal+roughness PBR with original albedo/AO intact. Source FBX/maps unchanged. PR #13 draft.
+RUN 2026-10-17 BC5_DXT5NM_NATIVE_MIP_CHAIN_SAFETY_RETEST_AFTER_REJECTED_RGBA_BLIT
