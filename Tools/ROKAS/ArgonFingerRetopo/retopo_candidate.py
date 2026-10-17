@@ -78,7 +78,15 @@ def main():
     candidate.name="ROKAS_ARGON_Retopo_Candidate_NeverMerge_WithoutUnityQA"
     bpy.context.collection.objects.link(candidate)
     select_only(candidate)
+    # Preserve imported FBX parent-space transform explicitly. Blender
+    # object.copy + reparent may silently change matrix_parent_inverse;
+    # a 64% apparent silhouette drift requires checking WORLD bounds
+    # before touching any vertices, not treating it as remesh failure.
     candidate.parent=original.parent
+    candidate.matrix_parent_inverse=original.matrix_parent_inverse.copy()
+    candidate.matrix_world=original.matrix_world.copy()
+    bpy.context.view_layer.update()
+    initialCandidateBounds=bounds(candidate)
 
     # Keep source intact, remesh COPY without Armature modifier. The
     # original skeleton is rebound with transferred 25 original vertex
@@ -127,8 +135,16 @@ def main():
     relativeDrift=max(abs(originalBounds[i][k]-nextBounds[i][k])
         for i in range(3) for k in range(2))/max(1e-10,size)
 
+    def NamedBounds(bb):
+        return [[round(float(lo),10),round(float(hi),10)] for lo,hi in bb]
+    preCopyDrift=max(abs(originalBounds[i][k]-initialCandidateBounds[i][k])
+        for i in range(3) for k in range(2))/max(1e-10,size)
     report={
         "source_file":source.name,
+        "world_bounds_source":NamedBounds(originalBounds),
+        "world_bounds_candidate_before_remesh":NamedBounds(initialCandidateBounds),
+        "world_bounds_candidate_after_remesh":NamedBounds(nextBounds),
+        "pre_voxel_copy_transform_drift":preCopyDrift,
         "source":before,
         "source_sheet_solidify":sealed,
         "remeshed_candidate":after,
@@ -140,6 +156,9 @@ def main():
     }
     (out/"geometry_before_after.json").write_text(
         json.dumps(report,indent=2,ensure_ascii=False),encoding="utf8")
+    if preCopyDrift>.001:
+        stop("Object/parent copying moved the original skin before remesh: "+
+             str(preCopyDrift)+"; abort geometry!")
     if after["islands"]!=1 or after["boundary_edges"]!=0 or relativeDrift>.025:
         # This is intentionally a HARD BLOCK: the source has one extended
         # boundary cycle per finger, not ready-to-bridge circular root rings.
