@@ -122,8 +122,8 @@ def main():
         # boundary cycle per finger, not ready-to-bridge circular root rings.
         # Never claim its six detached fingers are properly welded if
         # one manifold surface is not actually demonstrated.
-        stop("Voxel candidate rejected, isles=%s boundary=%s drift=%s; "+
-             "need reconstructed palm/finger joint patch, NOT hidden caps"%
+        stop(("Voxel candidate rejected, isles=%s boundary=%s drift=%s; "+
+             "need reconstructed palm/finger joint patch, NOT hidden caps")%
              (after["islands"],after["boundary_edges"],relativeDrift))
     if after["vertices"]<4000 or after["vertices"]>300000:
         stop("Unexpected destructive loss or voxel explosion "+str(after["vertices"]))
