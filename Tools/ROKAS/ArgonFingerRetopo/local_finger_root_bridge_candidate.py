@@ -206,70 +206,6 @@ def main():
         key=lambda ids: sum(bm.verts[i].co.y for i in ids)/len(ids))
     bm.to_mesh(clone.data);bm.free()
     clone.data.update()
-    # Correct the missing original finger influences on this isolated CLONE:
-    # ring had no DIP/TIP and little had zero source named weights.
-    # All five source finger meshes are identified from authentic six
-    # components and Y-sorted root topology, not fabricated cylinders.
-    bones=set(b.name for b in arm.data.bones)
-    rebuilt={}
-    for fingerNo,names in [(4,["Ring_MCP","Ring_PIP","Ring_DIP","Ring_Tip"]),
-                           (5,["Little_MCP","Little_PIP","Little_DIP","Little_Tip"])]:
-        if not all(x in bones for x in names):
-            fail("Original named phalanx bones missing "+str(names))
-        verts=source_indices[fingerNo]
-        if len(verts)<1300:fail("Original finger island missing vertices")
-        for name in names:
-            if name not in clone.vertex_groups:
-                clone.vertex_groups.new(name=name)
-        # Source finger longitudinal coordinate: original wrist/hand X.
-        coords=[clone.data.vertices[i].co.x for i in verts]
-        xmin,xmax=min(coords),max(coords)
-        if xmax-xmin<diameter*.05:
-            fail("Unusable original ring/little finger longitudinal span")
-        for group in clone.vertex_groups:
-            group.remove(verts)
-        anchors=(.02,.37,.68,.96)
-        lists=[[] for _ in names]
-        weights=[[] for _ in names]
-        for vi in verts:
-            u=(clone.data.vertices[vi].co.x-xmin)/(xmax-xmin)
-            u=max(anchors[0],min(anchors[-1],u))
-            for k in range(3):
-                if anchors[k]<=u<=anchors[k+1]:
-                    v=(u-anchors[k])/(anchors[k+1]-anchors[k])
-                    for nameIdx,w in ((k,1-v),(k+1,v)):
-                        if w>1e-6:
-                            lists[nameIdx].append(vi)
-                            weights[nameIdx].append(w)
-                    break
-        for k,name in enumerate(names):
-            g=clone.vertex_groups[name]
-            for vi,w in zip(lists[k],weights[k]):
-                g.add([vi],w,'REPLACE')
-        rebuilt[names[0].split("_")[0]]={
-            "source_vertices":len(verts),
-            "bone_chain":names,
-            "longitudinal_range":[xmin,xmax],
-            "deforming_groups":[len(x) for x in lists]}
-    # Shared loft vertices: interpolate original palm weights with corrected
-    # original finger weights to avoid snapping at the joining skin fold.
-    group_names={g.index:g.name for g in clone.vertex_groups}
-    def vweights(i):
-        return {group_names[x.group]:x.weight
-                for x in clone.data.vertices[i].groups if x.weight>1e-6}
-    for vi,fi,pi,t in generated:
-        a,b=vweights(fi),vweights(pi)
-        mix={}
-        for name in set(a)|set(b):
-            mix[name]=a.get(name,0)*(1-t)+b.get(name,0)*t
-        weightSum=sum(mix.values())
-        if weightSum<.5:fail("Generated seam has no meaningful skin weights")
-        for name,w in mix.items():
-            if w>1e-6:
-                clone.vertex_groups[name].add([vi],w/weightSum,'REPLACE')
-    report["rebuilt_finger_weights"]=rebuilt
-    report["loft_weighted_vertices"]=len(generated)
-
     finger_target_chains = [
         ["Hand_Palm","Thumb_CMC","Thumb_MCP","Thumb_IP"],
         ["Hand_Palm","Index_MCP","Index_PIP","Index_DIP"],
@@ -328,6 +264,28 @@ def main():
             "source_to_authentic_target":remap,
             "coverage":fraction})
     report["anatomical_digit_influences"]=retarget_report
+    # Must skin each generated fillet AFTER the verified original digit
+    # retarget. Previous order mixed WRONG old finger chains into the
+    # connecting skin. No guessed linear ring/little reweighting.
+    # Shared loft vertices: interpolate original palm weights with corrected
+    # original finger weights to avoid snapping at the joining skin fold.
+    group_names={g.index:g.name for g in clone.vertex_groups}
+    def vweights(i):
+        return {group_names[x.group]:x.weight
+                for x in clone.data.vertices[i].groups if x.weight>1e-6}
+    for vi,fi,pi,t in generated:
+        a,b=vweights(fi),vweights(pi)
+        mix={}
+        for name in set(a)|set(b):
+            mix[name]=a.get(name,0)*(1-t)+b.get(name,0)*t
+        weightSum=sum(mix.values())
+        if weightSum<.5:fail("Generated seam has no meaningful skin weights")
+        for name,w in mix.items():
+            if w>1e-6:
+                clone.vertex_groups[name].add([vi],w/weightSum,'REPLACE')
+    report["rebuilt_finger_weights"]=rebuilt
+    report["loft_weighted_vertices"]=len(generated)
+
     b1=bbox(clone)
     report["silhouette_drift"]=max(abs(b0[i][k]-b1[i][k])
         for i in range(3) for k in range(2))/diameter
