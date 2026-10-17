@@ -69,13 +69,13 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(mat.GetTexture("_OcclusionMap"),Is.SameAs(sourceAO));
                 Assert.That(mat.GetTexture("_BumpMap"),Is.Not.Null);
                 Assert.That(mat.GetTexture("_MetallicGlossMap"),Is.Not.Null);
-                Assert.That(mat.GetTexture("_BumpMap"),Is.Not.SameAs(sourceNormal));
-                Assert.That(mat.GetTexture("_MetallicGlossMap"),Is.Not.SameAs(sourceRoughness));
-                Assert.That(filtered.SoftNormal.width,Is.EqualTo(sourceNormal.width),
-                    "Preserve imported native normal-packing and original mip chain");
-                Assert.That(filtered.SoftRoughness.width,Is.EqualTo(sourceRoughness.width));
-                Assert.That(filtered.SoftNormal.mipmapCount,Is.GreaterThan(1));
-                Assert.That(filtered.SoftNormal.mipMapBias,Is.GreaterThanOrEqualTo(2f));
+                Assert.That(mat.GetTexture("_BumpMap"),Is.SameAs(sourceNormal),
+                    "Do not attempt GPU, CPU or RGBA repacking of native normal map");
+                Assert.That(mat.GetTexture("_MetallicGlossMap"),Is.SameAs(sourceRoughness),
+                    "Preserve the authentic packed roughness channels");
+                Assert.That(mat.GetFloat("_BumpScale"),Is.InRange(0f,.02f));
+                Assert.That(mat.GetFloat("_GlossMapScale"),Is.InRange(.08f,.20f));
+                Assert.That(mat.GetFloat("_Metallic"),Is.EqualTo(0f).Within(.001f));
                 Assert.That(mat.IsKeywordEnabled("_NORMALMAP"),Is.True,
                     "Filtered skin must retain real normal microdetail, not replace with flat skin");
                 Assert.That(mat.IsKeywordEnabled("_METALLICGLOSSMAP"),Is.True,
@@ -111,7 +111,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 var filenames=new []{
                     "01_authentic_source_normal_roughness.png",
                     "02_flat_no_maps_diagnostic.png",
-                    "03_original_normal_roughness_frequency_filtered.png"
+                    "03_original_sources_matte_skin_candidate.png"
                 };
                 Color32[][] comparisons=new Color32[3][];
                 for(int variant=0;variant<3;variant++)
@@ -176,7 +176,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 float filteredPattern=PatternScore(comparisons[2]);
                 Assert.That(filteredPattern,Is.LessThanOrEqualTo(
                     Mathf.Max(originalPattern*1.25f,flatPattern*1.7f)),
-                    "Filtered genuine skin must NEVER reintroduce checkerboard moire.");
+                    "Source-faithful matte PBR candidate must not reintroduce checkerboard moire.");
                 var summary=
                     "Original source albedo kept: "+sourceAlbedo.name+"\n"+
                     "Pixel frequency original="+originalPattern+
@@ -184,8 +184,10 @@ namespace Rokas.BedSleep.Argon.Editor
                     ", filtered="+filteredPattern+"\n"+
                     "Original normal: "+sourceNormal.name+" width "+sourceNormal.width+"\n"+
                     "Original packed roughness: "+sourceRoughness.name+" width "+sourceRoughness.width+"\n"+
-                    "Native-packed filtered normal width "+filtered.SoftNormal.width+" lodBias "+filtered.SoftNormal.mipMapBias+"\n"+
-                    "Native-packed filtered roughness width "+filtered.SoftRoughness.width+" lodBias "+filtered.SoftRoughness.mipMapBias+"\n"+
+                    "Native normal texture preserved as original source reference: "+sourceNormal.name+"\n"+
+                    "Original packed roughness preserved: "+sourceRoughness.name+"\n"+
+                    "Candidate smoothness scale="+mat.GetFloat("_GlossMapScale")+
+                    " bump strength="+mat.GetFloat("_BumpScale")+"\n"+
                     "Visual changed sample pixels: "+changes+"\n"+
                     "Original materials/FBX untouched; see 3 true Unity closeup PNGs";
                 File.WriteAllText(Path.Combine(dest,"material_frequency_comparison.txt"),summary);
