@@ -51,6 +51,12 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Dynamic Russian OLED must animate at ~10Hz, not repeat 24fps CPU raster");
                 oled.ShowPresets();
                 Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Presets));
+                int countBeforeReturn=oled.TotalFaceDraws;
+                oled.SelectPreset(16);
+                Assert.That(oled.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
+                Assert.That(oled.TotalFaceDraws,Is.GreaterThan(countBeforeReturn),
+                    "Selecting unchanged duration must exit preset visual immediately");
+                oled.ShowPresets();
                 oled.SelectPreset(1);
                 Assert.That(oled.SelectedHalfHours,Is.EqualTo(1));
                 Assert.That(oled.DurationText,Is.EqualTo("00:30"));
