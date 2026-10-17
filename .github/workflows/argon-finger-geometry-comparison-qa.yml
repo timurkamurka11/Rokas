@@ -1,0 +1,48 @@
+name: ROKAS Argon — True Finger Root Anatomy Comparison
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_FINGER_ANATOMY_COMPARE.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  visual-anatomy-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify unmodified authentic FBX and isolated clone repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/CandidateRuntime/ArgonFingerRootSocketBlend.cs
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/CandidateRuntime/ArgonFingerBindposeRetarget.cs
+      - name: Unity — original vs safe retarget vs softened socket, identical camera
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonFingerVisualCompareTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS true finger-root anatomy 3-pose A/B and independent deform
+      - name: Upload original 1280x720 Unity screenshots and test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-OriginalVsFingerSocket-ActualUnity
+          path: |
+            Artifacts/ArgonFingerVisualCompare/*.png
+            Artifacts/ArgonFingerVisualCompare/comparison.txt
+            ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 10
