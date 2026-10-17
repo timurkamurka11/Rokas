@@ -79,3 +79,34 @@ To avoid stacking additive secondary motions during runtime, call
 already overwritten the authored wrist/root bone pose since the previous
 `Apply`. If there was no base pose reset, `Apply` removes its own prior
 offset before adding the current bounded sway.
+
+## Russian lunar OLED redesign — reference received October 17, 2026
+
+The user provided a contact sheet of round dark-blue analog/sleep timer
+smartwatch faces. We preserve the already approved actual **rectangular**
+Argon case and 2D positioning; only the dynamic OLED texture adopts the
+reference's deep midnight palette, lit crescent, soft translucent moving
+clouds, purple/blue arc, progress dot, clock digits, bed icon, and restrained
+glass reflection. Do not swap the physical watch model or move fingers.
+
+**Candidate-only screen states:** circular dial, five quick presets including
+00:30, changed duration, confirmation with check and wake time, falling
+asleep status, and cancellation. No English labels. Uses an embedded raster
+subset of antialiased proportional Cyrillic glyphs (not a font binary), at
+512x512 on the genuine OLED mesh with actual V10-compatible input/clock
+methods. Full-size screenshots are `russian_watch_*.png` in the cloud QA
+artifact; the video includes the real 3D watch in its approved location.
+
+`ArgonWatchControls.SetCurrentGameTime(hour, minute)` forwards the actual
+session time to the new face; the 19:30 fallback is only for deterministic
+video QA. The new face supports 30-minute sleep steps. Legacy production
+`SmartwatchOLEDPresenter` remains unchanged with its 1-hour minimum.
+
+**Known anatomy blocker:** authentic source FBX skin has six triangle
+islands: one forearm/palm (5,265 vertices) + five isolated fingers
+(1,394 vertices each), so the rectangular little finger-base seam cannot
+be permanently fixed with skin shading alone. `ArgonFingerBaseSeamRepair`
+is a candidate-only copy-on-write taper of those original finger collars;
+requires real Unity before/after visual inspection before enabling in
+main cinematic. Never modify or claim repaired original FBX. No merge
+until proper runtime and visual QA pass.
