@@ -161,6 +161,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 // runtime interactions, not simulated overlaid UI buttons.
                 var watchControls = root.AddComponent<ArgonWatchControls>();
                 watchControls.Initialize(cam, oledPresenter, oled, crownRenderer);
+                // Smoke-test real reusable control logic (not a rendered HUD
+                // illusion) before spending minutes on the video sequence.
+                Assert.That(watchControls.SelectedHalfHours, Is.EqualTo(14));
+                watchControls.Step(1);
+                Assert.That(watchControls.SelectedHalfHours, Is.EqualTo(15));
+                watchControls.Step(-1);
+                Assert.That(watchControls.SelectedHalfHours, Is.EqualTo(14));
+                watchControls.Confirm();
+                Assert.That(watchControls.IsConfirmed, Is.True);
+                watchControls.ResetConfirmation();
+                Assert.That(watchControls.IsConfirmed, Is.False);
 
                 string outDir = Path.Combine(Directory.GetCurrentDirectory(),
                     "Artifacts", "ArgonBedVideo");
