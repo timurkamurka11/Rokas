@@ -131,6 +131,7 @@ jobs:
           path: |
             Artifacts/ArgonBedVideo/ROKAS_ARGON_BED_POV_Unity_720p.mp4
             Artifacts/ArgonBedVideo/storyboard_*.png
+            Artifacts/ArgonBedVideo/russian_oled_face_*.png
             Artifacts/ArgonBedVideo/ArgonOriginalFoley_44100Hz.wav
             Artifacts/ArgonBedVideo/skin_diagnostic_*.png
             Artifacts/ArgonBedVideo/capture_manifest.json
