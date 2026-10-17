@@ -328,8 +328,12 @@ namespace Rokas.BedSleep.Argon.Candidate
                 CurrentMinute.ToString("D2"),256,411,3,muted);
             CenterText(DurationText,256,247,10,white);
             CenterText("ВРЕМЯ СНА",256,185,3,muted);
+            // Delicate directional markers, not additional HUD overlays.
+            CenterText("-",142,251,4,muted);
+            CenterText("+",374,251,4,muted);
             CenterText("ПОДЪЁМ "+WakeText,256,143,3,
                 new Color32(157,196,252,255));
+            DrawBedIcon(256,106);
             CenterText("-30 МИН",131,92,2,muted);
             CenterText("+30 МИН",380,92,2,muted);
             CenterText("ПОДТВЕРДИТЬ",256,64,3,white);
@@ -378,6 +382,17 @@ namespace Rokas.BedSleep.Argon.Candidate
             CenterText("ПОДЪЁМ "+WakeText,256,147,4,muted);
             CenterText("ВРЕМЯ СНА "+DurationText,256,99,2,muted);
         }
+        private void DrawBedIcon(int x,int y)
+        {
+            Color32 c=new Color32(179,202,252,255);
+            DrawLine(x-15,y-6,x+15,y-6,c,2);
+            DrawLine(x-15,y-7,x-15,y+9,c,2);
+            DrawLine(x+15,y-7,x+15,y+2,c,2);
+            DrawLine(x-14,y,x+14,y,c,2);
+            Disc(x-9,y+5,3.5f,c,.95f);
+            DrawLine(x-5,y+3,x+12,y+3,c,2);
+        }
+
         private void DrawLine(int x1,int y1,int x2,int y2,Color32 c,int width)
         {
             int n=Mathf.CeilToInt(Vector2.Distance(new Vector2(x1,y1),
@@ -406,9 +421,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                     {
                         int px=start+i*advance+cx*scale;
                         int py=y+(3-cy)*scale;
-                        for(int dy=0;dy<scale;dy++)
-                            for(int dx=0;dx<scale;dx++)
-                                MixPixel(px+dx,py+dy,color,1f);
+                        // Smooth rounded vector-style dabs instead of
+                        // harsh rectangular pixel-font blocks; maintains
+                        // portable Cyrillic without a platform font file.
+                        Disc(px+scale*.5f,py+scale*.5f,
+                            scale*.66f,color,.93f);
                     }
                     cx++;
                 }
