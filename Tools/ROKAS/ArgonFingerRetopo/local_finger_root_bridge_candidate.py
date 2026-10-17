@@ -151,6 +151,23 @@ def main():
         fail("Original long seam was not reduced")
     if any(x["quads"]<1 or x["max_root_gap"]>maxBridge for x in report["per_finger"]):
         fail("Excessively stretched/absent bridge, reject")
+    # The temporary unmodified geometry test earlier removed the original
+    # Armature modifier. FBX export MUST restore real skinning, otherwise
+    # Unity correctly imports a static MeshRenderer instead of a true
+    # 25-bone SkinnedMeshRenderer. Original FBX and source rig stay intact.
+    if len(clone.vertex_groups)<25:
+        fail("Genuine 25 bone vertex groups were lost before FBX export")
+    weighted=sum(bool(v.groups) for v in clone.data.vertices)
+    report["skin_weight_coverage"]=weighted/max(1,len(clone.data.vertices))
+    if report["skin_weight_coverage"]<.98:
+        fail("Candidate hand lost source per-vertex bone weights")
+    skin=clone.modifiers.new("ROKAS_Authentic_25Bone_Armature","ARMATURE")
+    skin.object=arm
+    skin.use_vertex_groups=True
+    skin.use_bone_envelopes=False
+    (out/"local_root_bridge_report.json").write_text(
+        json.dumps(report,indent=2),encoding="utf-8")
+
     bpy.ops.object.select_all(action='DESELECT')
     clone.select_set(True);arm.select_set(True)
     bpy.context.view_layer.objects.active=clone
