@@ -45,5 +45,6 @@ jobs:
             Artifacts/ArgonSeamLayers/*.png
             Artifacts/ArgonSeamLayers/ArgonOriginalPinkyMeshTopology.txt
             Artifacts/ArgonSeamLayers/ArgonSkinnedVertices_BakeMesh_BeforeAfter.txt
+            Artifacts/ArgonSeamLayers/RestPreservingFingerCandidate_Results.txt
           if-no-files-found: warn
           retention-days: 7
