@@ -158,155 +158,223 @@ def main():
                                    for l in face.loops if l.vert==vertex]
                 if source_uv_corners:
                     orig_uv[vertex.index]=source_uv_corners[0][uv].uv.copy()
-    ringCache={}
-    addedWeights=[]
+    # STAGE TWO: graft the 30 real finger-root rims into individually
+    # selected pockets cut ONLY in the authentic palm skin surface.
+    # 1) Source-side UV seams already EXACT-welded; no synthetic fingers.
+    # 2) Remove a tiny contiguous island of original palm triangles.
+    # 3) Zip real finger-root ring to the new palm-hole ring with flexible
+    #    edge-count matching (triangles + quads, no center n-gon caps).
+    # 4) Preserve the anatomical 25-bone influence field and loop UVs.
+    # All operations are on disposable candidate clone, source untouched.
+    source_original_palm=set(components[0])
+    all_source_uv={}
+    if uv is not None:
+        for v in bm.verts:
+            source_loops=[l for e in v.link_edges for face in e.link_faces
+                          for l in face.loops if l.vert==v]
+            if source_loops:
+                all_source_uv[v]=source_loops[0][uv].uv.copy()
     addedFaces=[]
-    def point_between(f,p,t):
-        key=(f.index,p.index,t)
-        if key in ringCache:return ringCache[key]
-        gap=(p.co-f.co).length
-        n=f.normal+p.normal
-        if n.length_squared>1e-12:n.normalize()
-        else:n=f.normal.copy()
-        # A restrained sub-millimetre skin fold easing from the palm.
-        # No source vertex is displaced; motion weights get interpolated.
-        height=min(gap*.045,diameter*.0006)*math.sin(math.pi*t)
-        vertex=bm.verts.new(f.co.lerp(p.co,t)+n*height)
-        ringCache[key]=vertex
-        addedWeights.append((vertex,f.index,p.index,t))
-        return vertex
+    addedWeights=[]
+    source_contact_vertices=set()
     report={"original_source_vertices":original_mesh_vertices,
             "original_source_boundaries":original_mesh_boundaries,
             "exact_weld_epsilon":eps,
             "exact_weld_removed_vertices":original_mesh_vertices-welded_vertices,
             "exact_weld_closed_boundary_edges":original_mesh_boundaries-welded_boundaries,
             "palm_remaining_loop_sizes":[len(x) for x in palm_rims],
-            "original_vertices":len(bm.verts),
+            "original_vertices":welded_vertices,
             "original_islands":len(components),
-            "original_boundaries":sum(e.is_boundary for e in bm.edges),
-            "source_bones":len(arm.data.bones),"max_bridge":maxBridge,
+            "original_boundaries":welded_boundaries,
+            "source_bones":len(arm.data.bones),
+            "max_bridge":maxBridge,
             "per_finger":[]}
-    for fingerNo,ring in enumerate(per[1:],1):
-        # Find real closest parallel boundary *edges*, no fabricated cylinders
-        # and no moving/scaling of malformed ring finger roots.
+
+    def boundary_of_new_pocket(new_boundary_edges):
+        adj=defaultdict(list)
+        for e in new_boundary_edges:
+            u,v=e.verts
+            adj[u].append(v)
+            adj[v].append(u)
+        if len(adj)<6 or any(len(nn)!=2 for nn in adj.values()):
+            fail("Local palm graft pocket touches UV border or branched area")
+        start=min(adj,key=lambda v:v.index)
+        ordered=[];last=None;v=start
+        for _ in range(len(adj)+2):
+            ordered.append(v)
+            nxt=next(q for q in adj[v] if q!=last)
+            if nxt==start:break
+            last,v=v,nxt
+        if len(ordered)!=len(adj):
+            fail("Anatomical palm socket hole must be ONE closed boundary ring")
+        return ordered
+
+    def nearest_source_uv(v):
+        if v in all_source_uv:return all_source_uv[v].copy()
+        if uv is None:return None
+        for face in v.link_faces:
+            for corner in face.loops:
+                if corner.vert==v:return corner[uv].uv.copy()
+        fail("Graft source UV missing on authentic source vertex")
+
+    def join_root_to_hole(finger, hole):
+        N=len(finger);M=len(hole)
+        if N<8 or M<8:fail("Graft rim too small")
         best=None
-        for chosen,available in enumerate(palm_rims):
-            # 64-edge genuine cuff loop is far from digit bases. Do not
-            # create webbing from fingers to the forearm sleeve opening.
-            if len(available)>45:continue
-            for i in range(len(ring)):
-                f0=ring[i].co;f1=ring[(i+1)%len(ring)].co
-                for j in range(len(available)):
-                    p0=available[j].co;p1=available[(j+1)%len(available)].co
-                    direct=(f0-p0).length+(f1-p1).length
-                    reverse=(f0-p1).length+(f1-p0).length
-                    cur=(min(direct,reverse),chosen,i,j,1 if direct<=reverse else -1)
-                    if best is None or cur[0]<best[0]:best=cur
-        if best is None:fail("Genuine finger contact socket unavailable")
-        _,chosen,fi,pi,orientation=best
-        center=palm_rims[chosen]
-        bridgeCount=0;maximum=0.0
-        fingerPalmVerts=set()
-        for k in range(-7,8):
-            f0=ring[(fi+k)%len(ring)]
-            f1=ring[(fi+k+1)%len(ring)]
-            if orientation==1:
-                p0=center[(pi+k)%len(center)]
-                p1=center[(pi+k+1)%len(center)]
+        for i,v in enumerate(finger):
+            for j,w in enumerate(hole):
+                metric=(v.co-w.co).length_squared
+                if best is None or metric<best[0]:best=(metric,i,j)
+        _,fi,pj=best
+        # Choose orientation from GLOBAL source ring arc correspondence;
+        # preserve mesh winding via existing boundary-face edge orientation.
+        selections=[]
+        for direction in (1,-1):
+            a=[finger[(fi+k)%N] for k in range(N)]
+            p=[hole[(pj+direction*k)%M] for k in range(M)]
+            cost=0.
+            for k in range(30):
+                t=k/30.
+                va=a[min(N-1,int(t*N))]
+                vb=p[min(M-1,int(t*M))]
+                cost+=(va.co-vb.co).length
+            selections.append((cost,direction,a,p))
+        _,direction,a,p=min(selections,key=lambda rec:rec[0])
+        index_a=index_p=0
+        built=[]
+        while index_a<N or index_p<M:
+            next_a=(index_a+1)/N if index_a<N else 1e9
+            next_p=(index_p+1)/M if index_p<M else 1e9
+            u=a[index_a%N];v=p[index_p%M]
+            if abs(next_a-next_p)<1e-7:
+                vertices=[u,a[(index_a+1)%N],p[(index_p+1)%M],v]
+                index_a+=1;index_p+=1
+            elif next_a<next_p:
+                vertices=[u,a[(index_a+1)%N],v]
+                index_a+=1
             else:
-                p0=center[(pi-k+1)%len(center)]
-                p1=center[(pi-k)%len(center)]
-            dist0=(f0.co-p0.co).length;dist1=(f1.co-p1.co).length
-            if max(dist0,dist1)>maxBridge or min(dist0,dist1)<minBridge:
+                vertices=[u,p[(index_p+1)%M],v]
+                index_p+=1
+            if len(set(vertices))!=len(vertices):
+                fail("Degenerate finger-palm root graft triangles")
+            try:
+                face=bm.faces.new(vertices)
+            except ValueError:
+                fail("Duplicate root-to-palm surface triangle")
+            face.material_index=0;face.smooth=True
+            built.append(face)
+            if uv is not None:
+                for corner in face.loops:
+                    corner[uv].uv=nearest_source_uv(corner.vert)
+        if len(built)<max(N,M):
+            fail("Anatomical graft missing source ring faces")
+        return built,direction
+
+    for fingerNo,ring in enumerate(per[1:],1):
+        # Nearest TRUE palm surface rather than distant palm UV border.
+        # The source atlas measured 7-11 mm genuine contact depths;
+        # connecting to the old two 30-vertex perimeter loops was wrong.
+        root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+        radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
+        intact_palm=[v for v in source_original_palm
+                     if v.is_valid and any(f.is_valid for f in v.link_faces)]
+        nearest=min(intact_palm,key=lambda v:(v.co-root).length_squared)
+        source_dist=(nearest.co-root).length
+        if source_dist>diameter*.049:
+            fail("Digit too far from genuine palm skin for safe anatomical graft")
+        eligible={f for v in intact_palm for f in v.link_faces
+                  if f.is_valid and all(w in source_original_palm for w in f.verts)}
+        target_face=min(
+            (f for f in nearest.link_faces if f in eligible),
+            key=lambda f:(f.calc_center_median()-root).length_squared,default=None)
+        if target_face is None:
+            fail("Cannot isolate original palm-only face for root insertion")
+        insertion=target_face.calc_center_median()
+        surface_normal=target_face.normal.normalized()
+        # Hole smaller than finger root cross section; creates a natural
+        # graduated tissue sleeve, not a mechanically abrupt edge join.
+        radius_hole=max(radius*.57,diameter*.010)
+        radius_hole=min(radius_hole,diameter*.022)
+        pending=[target_face]; selected=set()
+        while pending:
+            face=pending.pop()
+            if face in selected or face not in eligible:continue
+            if (face.calc_center_median()-insertion).length>radius_hole:
                 continue
-            if p0.index in usedPalm or p1.index in usedPalm:continue
-            if len({f0.index,f1.index,p0.index,p1.index})!=4:continue
-            # 3 surface rows between genuine neighboring source outlines,
-            # with intermediate shared loft vertices and no new primitives.
-            a0=point_between(f0,p0,1.0/3.0)
-            a1=point_between(f1,p1,1.0/3.0)
-            b0v=point_between(f0,p0,2.0/3.0)
-            b1v=point_between(f1,p1,2.0/3.0)
-            strips=([f0,f1,a1,a0],[a0,a1,b1v,b0v],[b0v,b1v,p1,p0])
-            for quad in strips:
-                try:face=bm.faces.new(quad)
-                except ValueError:fail("Nonmanifold or duplicate loft patch")
-                face.material_index=0
-                face.smooth=True
-                addedFaces.append(face)
-                if uv is not None:
-                    for corner in face.loops:
-                        v=corner.vert
-                        if v.index in orig_uv:
-                            corner[uv].uv=orig_uv[v.index].copy()
-                        else:
-                            record=next((x for x in addedWeights if x[0]==v),None)
-                            if record is None:fail("Missing generated UV edge provenance")
-                            _,fi_idx,pi_idx,t=record
-                            if fi_idx not in orig_uv or pi_idx not in orig_uv:
-                                fail("Cannot interpolate authentic finger-palm UV")
-                            corner[uv].uv=orig_uv[fi_idx].lerp(
-                                orig_uv[pi_idx],t)
-            fingerPalmVerts.update((p0.index,p1.index))
-            source_contact_vertices.update((f0,f1,p0,p1))
-            bridgeCount+=1
-            maximum=max(maximum,dist0,dist1)
-        # A neighboring quad reuses its two end vertices: only forbid
-        # overlapping patches BETWEEN DIFFERENT fingers, not within one.
-        usedPalm.update(fingerPalmVerts)
-        report["per_finger"].append({"finger":fingerNo,
-            "quads":bridgeCount,"max_root_gap":maximum,
-            "closest_pair_cost":best[0],"palm_socket_id":chosen})
-        if bridgeCount<1:fail("Cannot safely bridge original finger "+str(fingerNo))
-    # Smooth the AUTHENTIC anatomical junction and adjacent tissue only,
-    # never the entire mesh. The earlier 3-row skin fillet still showed
-    # artificial collar normals at MCP bases in 1280x720 closeups.
-    # Move root-border vertices by a strictly bounded fraction of source
-    # hand extent; source FBX and 60%+ distal fingers remain intact.
-    loft_vertices={entry[0] for entry in addedWeights}
-    primary=source_contact_vertices | loft_vertices
-    outer={w for v in primary for e in v.link_edges for w in e.verts}
-    outer.difference_update(primary)
-    region=primary|outer
+            if face.normal.dot(surface_normal)<.55:continue
+            selected.add(face)
+            for edge in face.edges:
+                for other in edge.link_faces:
+                    if other not in selected and other in eligible:
+                        pending.append(other)
+        if len(selected)<4 or len(selected)>170:
+            fail("Palm graft hole has implausible source face count "+str(len(selected)))
+        previous_boundaries={e for e in bm.edges if e.is_boundary}
+        bmesh.ops.delete(bm,geom=list(selected),context='FACES')
+        fresh={e for e in bm.edges if e.is_boundary
+               and e not in previous_boundaries and e.is_valid}
+        pocket=boundary_of_new_pocket(fresh)
+        if len(pocket)>70:
+            fail("Oversized palm graft rim, would remove authentic tissue")
+        faces,wind=join_root_to_hole(ring,pocket)
+        addedFaces.extend(faces)
+        source_contact_vertices.update(ring)
+        source_contact_vertices.update(pocket)
+        report["per_finger"].append({
+            "finger":fingerNo,
+            "quads":len(faces),
+            "palm_socket_id":"NEW_AUTHENTIC_LOCAL_PALM_HOLE",
+            "source_nearest_skin_gap":source_dist,
+            "root_radius":radius,
+            "palm_hole_radius":radius_hole,
+            "palm_source_faces_removed":len(selected),
+            "palm_source_rim_vertices":len(pocket),
+            "original_finger_rim_vertices":len(ring),
+            "zipper_winding":wind,
+            "max_root_gap":max((v.co-w.co).length for v in ring for w in pocket)})
+    # Source anatomical finger 3D shell is now a genuine connected skin
+    # island, except TWO unrelated original distal-palm holes and the
+    # 64-edge arm cuff (which belongs UNDER THE SHIRT SLEEVE).
+    if len(islands(bm))!=1:
+        fail("Original palm and all five source fingers must form ONE 3D mesh")
+    remaining_boundaries=sum(e.is_boundary for e in bm.edges)
+    report["post_graft_remaining_boundary_edges"]=remaining_boundaries
+    if remaining_boundaries>160:
+        fail("Too many unclosed edges after real individual palm grafts")
+
+    # Bounded local epidermis relaxation at actual interfaces.
+    primary={v for v in source_contact_vertices if v.is_valid}
+    peripheral={v for v in primary for e in v.link_edges for w in e.verts}
+    peripheral.difference_update(primary)
+    region=primary|peripheral
     original_positions={v:v.co.copy() for v in region}
-    source_vertex_count=report["original_vertices"]
     for _ in range(3):
-        positions={v:v.co.copy() for v in region}
-        new_positions={}
+        previous={v:v.co.copy() for v in region}
+        changed={}
         for v in region:
-            adjacent=[w for e in v.link_edges for w in e.verts if w!=v]
-            if not adjacent:continue
-            mean=v.co*0.0
-            for w in adjacent:mean+=positions.get(w,w.co)
-            mean/=len(adjacent)
-            if v in source_contact_vertices:strength=.115
-            elif v in loft_vertices:strength=.17
-            else:strength=.035
-            target=v.co.lerp(mean,strength)
-            # Bounded original tissue relaxation: no synthetic collapse.
-            permitted=diameter*(.008 if v.index>=0 and
-                      v.index<source_vertex_count else .013)
-            delta=target-original_positions[v]
-            if delta.length>permitted:
-                target=original_positions[v]+delta.normalized()*permitted
-            new_positions[v]=target
-        for v,p in new_positions.items():v.co=p
-    original_max_shift=max(
-        (v.co-original_positions[v]).length
-        for v in region if v.index>=0 and v.index<source_vertex_count)
+            neighbors=[w for e in v.link_edges for w in e.verts if w!=v]
+            if not neighbors:continue
+            average=sum((previous.get(w,w.co) for w in neighbors),
+                        Vector((0,0,0)))/len(neighbors)
+            amount=.12 if v in primary else .025
+            target=v.co.lerp(average,amount)
+            max_step=diameter*.003
+            offset=target-original_positions[v]
+            if offset.length>max_step:
+                target=original_positions[v]+offset.normalized()*max_step
+            changed[v]=target
+        for v,target in changed.items():v.co=target
+    root_shift=max((v.co-original_positions[v]).length for v in region)
     report["tissue_root_relaxation"]={
-        "original_boundary_vertices":len(source_contact_vertices),
-        "new_blended_loft_vertices":len(loft_vertices),
-        "one_ring_vertices":len(outer),
-        "maximum_original_vertex_displacement":original_max_shift,
-        "maximum_relative_original_displacement":original_max_shift/diameter,
-        "passes":3}
-    if original_max_shift>diameter*.00801:
-        fail("Anatomical collar relaxation displaced original tissue too far")
+        "original_boundary_vertices":len(primary),
+        "one_ring_vertices":len(peripheral),
+        "passes":3,
+        "maximum_original_vertex_displacement":root_shift,
+        "maximum_relative_original_displacement":root_shift/diameter}
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
-    generated=[(v.index,fi,pi,t) for v,fi,pi,t in addedWeights]
+    generated=[]  # Surface graft uses authentic existing boundary vertices; no cloned finger proxies
     merged=islands(bm)
     report["new_bridge_vertices"]=len(generated)
     report["new_bridge_faces"]=len(addedFaces)
@@ -416,8 +484,9 @@ def main():
         fail("Topology/shape safety gate: "+json.dumps(report))
     if report["post_boundary_edges"]>=report["original_boundaries"]:
         fail("Original long seam was not reduced")
-    if any(x["quads"]<1 or x["max_root_gap"]>maxBridge for x in report["per_finger"]):
-        fail("Excessively stretched/absent bridge, reject")
+    if any(x["quads"]<8 or x["source_nearest_skin_gap"]>diameter*.049
+           for x in report["per_finger"]):
+        fail("Anatomical graft missing / source surface too far")
     # The temporary unmodified geometry test earlier removed the original
     # Armature modifier. FBX export MUST restore real skinning, otherwise
     # Unity correctly imports a static MeshRenderer instead of a true
