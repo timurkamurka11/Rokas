@@ -283,7 +283,6 @@ def main():
         for name,w in mix.items():
             if w>1e-6:
                 clone.vertex_groups[name].add([vi],w/weightSum,'REPLACE')
-    report["rebuilt_finger_weights"]=rebuilt
     report["loft_weighted_vertices"]=len(generated)
 
     b1=bbox(clone)
