@@ -28,6 +28,10 @@ namespace Rokas.BedSleep.Argon.Candidate
             SelectedHalfHours * 30) % 1440;
         public string LastRenderedTextSummary { get; private set; }
         private Color32[] pixels;
+        private Color32[] cachedSky;
+        private byte[] cachedCloud;
+        private byte[] cachedStars;
+        public int TotalFaceDraws { get; private set; }
         private float displaySteps = 14f, animatedSeconds;
         private float lastDrawn = -100f;
         private bool requiresRedraw = true;
@@ -56,6 +60,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                     wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear
                 };
                 pixels = new Color32[Size*Size];
+                BuildStaticSkyCache();
             }
             RenderAt(0f, true);
         }
@@ -65,9 +70,10 @@ namespace Rokas.BedSleep.Argon.Candidate
             currentHour = (currentHour % 24 + 24) % 24;
             currentMinute = Mathf.Clamp(currentMinute,0,59);
             selectedHalfHours = Mathf.Clamp(selectedHalfHours,1,24);
-            if (CurrentHour != currentHour || CurrentMinute != currentMinute ||
-                SelectedHalfHours != selectedHalfHours)
-                requiresRedraw = true;
+            bool clockChanged = CurrentHour != currentHour ||
+                CurrentMinute != currentMinute ||
+                SelectedHalfHours != selectedHalfHours;
+            if (clockChanged) requiresRedraw = true;
             CurrentHour = currentHour;
             CurrentMinute = currentMinute;
             SelectedHalfHours = selectedHalfHours;
@@ -75,18 +81,23 @@ namespace Rokas.BedSleep.Argon.Candidate
                                  Screen == ArgonRussianWatchScreen.Cancelled))
                 Screen = ArgonRussianWatchScreen.Dial;
             RefreshTextSummary();
-            if (OledDynamicTexture != null) RenderAt(animatedSeconds,true);
+            if (clockChanged && OledDynamicTexture != null)
+                RenderAt(animatedSeconds,true);
         }
 
         public void SetConfirmedState(bool confirmed)
         {
-            if (IsConfirmed != confirmed) requiresRedraw = true;
+            bool changed = IsConfirmed != confirmed ||
+                (confirmed && Screen != ArgonRussianWatchScreen.Confirmed) ||
+                (!confirmed && Screen == ArgonRussianWatchScreen.Confirmed);
+            if (changed) requiresRedraw = true;
             IsConfirmed = confirmed;
             if (confirmed) Screen = ArgonRussianWatchScreen.Confirmed;
             else if (Screen == ArgonRussianWatchScreen.Confirmed)
                 Screen = ArgonRussianWatchScreen.Dial;
             RefreshTextSummary();
-            if (OledDynamicTexture != null) RenderAt(animatedSeconds,true);
+            if (changed && OledDynamicTexture != null)
+                RenderAt(animatedSeconds,true);
         }
 
         public void ShowPresets()
@@ -149,10 +160,15 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (OledDynamicTexture == null) return;
             displaySteps = Mathf.Lerp(displaySteps,SelectedHalfHours,
                 force ? .45f : .20f);
-            if (!force && !requiresRedraw && animatedSeconds-lastDrawn < 1f/15f)
+            // 512px CPU raster in Unity EditMode was unnecessarily redrawn
+            // for EVERY 24fps frame, including redundant ConfigureTime and
+            // confirmation calls. Limit animated updates to ~10Hz, but always
+            // update immediately when a duration/menu state changes.
+            if (!force && !requiresRedraw && animatedSeconds-lastDrawn < .10f)
                 return;
             lastDrawn = animatedSeconds;
             requiresRedraw = false;
+            TotalFaceDraws++;
             PaintBackground();
             PaintClouds();
             PaintMoon();
@@ -175,32 +191,62 @@ namespace Rokas.BedSleep.Argon.Candidate
             Graphics.Blit(OledDynamicTexture,OledRenderTexture);
         }
 
-        private void PaintBackground()
+        /// <summary>
+        /// Evaluate expensive, soft Perlin cloud layers ONCE per watch instance.
+        /// The sky is reanimated with a cheap scrolling density sample; the
+        /// actual output stays full 512x512 and remains subtly animated.
+        /// </summary>
+        private void BuildStaticSkyCache()
         {
-            float tt=animatedSeconds;
+            int length=Size*Size;
+            cachedSky=new Color32[length];
+            cachedCloud=new byte[length];
+            cachedStars=new byte[length];
             for(int y=0;y<Size;y++)
             for(int x=0;x<Size;x++)
             {
-                float dx=(x-256f)/256f, dy=(y-266f)/256f;
-                float r=Mathf.Sqrt(dx*dx+dy*dy);
-                float haze=Mathf.Clamp01((1.15f-r)*.55f);
-                float wave=.5f+.5f*Mathf.Sin((dx+dy*.36f)*4f+tt*.22f);
-                float blueHaze=haze*(.5f+.5f*wave);
+                float dx=(x-256f)/256f,dy=(y-266f)/256f;
+                float radius=Mathf.Sqrt(dx*dx+dy*dy);
+                float haze=Mathf.Clamp01((1.15f-radius)*.55f);
+                float wave=.5f+.5f*Mathf.Sin((dx+dy*.36f)*4f);
+                float tint=haze*(.5f+.5f*wave);
                 float cloudBand=Mathf.Clamp01(1f-
-                    Mathf.Abs(y-(332f+Mathf.Sin(tt*.2f)*4f))/100f);
-                float n1=Mathf.PerlinNoise(x*.0135f+tt*.010f,y*.026f);
-                float n2=Mathf.PerlinNoise(x*.031f-tt*.007f,y*.050f+.8f);
-                float cloudShape=Mathf.SmoothStep(0f,1f,
+                    Mathf.Abs(y-333f)/112f);
+                float n1=Mathf.PerlinNoise(x*.0135f,y*.026f);
+                float n2=Mathf.PerlinNoise(x*.031f,y*.050f+.8f);
+                float shape=Mathf.SmoothStep(0f,1f,
                     Mathf.Clamp01((n1*.69f+n2*.31f-.36f)*3f));
-                float nebula=cloudShape*cloudBand*.65f;
-                float stars=Hash(x/7,y/7);
-                float star=(stars>.996f && ((x%7)==3) && ((y%7)==3))
-                    ? (.35f+.65f*(.5f+.5f*Mathf.Sin(tt*1.2f+stars*30f))) : 0f;
-                int index=y*Size+x;
-                pixels[index]=new Color32(
-                    (byte)Mathf.Clamp(4f+8f*blueHaze+18f*nebula+110f*star,0,255),
-                    (byte)Mathf.Clamp(7f+14f*blueHaze+29f*nebula+135f*star,0,255),
-                    (byte)Mathf.Clamp(22f+34f*blueHaze+67f*nebula+185f*star,0,255),255);
+                int k=y*Size+x;
+                cachedSky[k]=new Color32(
+                    (byte)(4f+8f*tint),(byte)(7f+14f*tint),
+                    (byte)(22f+34f*tint),255);
+                cachedCloud[k]=(byte)(Mathf.Clamp01(shape*cloudBand)*255f);
+                float star=Hash(x/7,y/7);
+                cachedStars[k]=(byte)(star>.996f && x%7==3 && y%7==3
+                    ? (int)(star*255) : 0);
+            }
+        }
+        private void PaintBackground()
+        {
+            if(cachedSky==null) BuildStaticSkyCache();
+            int drift=Mathf.RoundToInt(Mathf.Sin(animatedSeconds*.21f)*13f);
+            float twinkle=.84f+.16f*Mathf.Sin(animatedSeconds*1.25f);
+            for(int y=0;y<Size;y++)
+            {
+                int row=y*Size;
+                for(int x=0;x<Size;x++)
+                {
+                    int k=row+x;
+                    int shifted=row+((x+drift+Size)&(Size-1));
+                    Color32 sky=cachedSky[k];
+                    int cloud=cachedCloud[shifted];
+                    int star=(int)(cachedStars[k]*twinkle);
+                    pixels[k]=new Color32(
+                        (byte)Mathf.Min(255,sky.r+(cloud*18>>8)+(star*110>>8)),
+                        (byte)Mathf.Min(255,sky.g+(cloud*29>>8)+(star*135>>8)),
+                        (byte)Mathf.Min(255,sky.b+(cloud*67>>8)+(star*185>>8)),
+                        255);
+                }
             }
         }
         private static float Hash(int x,int y)
@@ -228,26 +274,18 @@ namespace Rokas.BedSleep.Argon.Candidate
             for(int y=ymin;y<=ymax;y++)
             for(int x=xmin;x<=xmax;x++)
             {
-                float d=Vector2.Distance(new Vector2(x,y),new Vector2(cx,cy));
-                float aa=Mathf.Clamp01(radius+1f-d);
+                float dx=x-cx,dy=y-cy;
+                float sq=dx*dx+dy*dy;
+                if(sq>(radius+1f)*(radius+1f))continue;
+                float aa=sq<(radius-1f)*(radius-1f) ? 1f :
+                    Mathf.Clamp01(radius+1f-Mathf.Sqrt(sq));
                 if(aa>0f) MixPixel(x,y,col,alpha*aa);
             }
         }
         private void PaintClouds()
         {
-            float drift=Mathf.Sin(animatedSeconds*.23f)*9f;
-            for(int layer=0;layer<3;layer++)
-            {
-                float cy=313+layer*14f;
-                Color32 c=new Color32((byte)(14+layer*4),(byte)(29+layer*7),
-                    (byte)(70+layer*12),255);
-                for(int j=0;j<9;j++)
-                {
-                    float x=90+j*45f + drift*(layer%2==0?1f:-.5f);
-                    float y=cy+Mathf.Sin(j*1.5f+layer*2f)*11f;
-                    Disc(x,y,22+layer*2,c,.11f+layer*.045f);
-                }
-            }
+            // Fine soft clouds already composited in the cached Perlin
+            // density field. No visible round dabs or overlapping discs.
         }
         private void PaintMoon()
         {
@@ -298,7 +336,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             CenterText("ВРЕМЯ СНА",256,185,3,muted);
             // Delicate directional markers, not additional HUD overlays.
             CenterText("-",142,251,4,muted);
-            CenterText("+",374,251,4,muted);
+            CenterText("+",420,251,3,muted);
             CenterText("ПОДЪЁМ "+WakeText,256,143,3,
                 new Color32(157,196,252,255));
             DrawBedIcon(256,106);
