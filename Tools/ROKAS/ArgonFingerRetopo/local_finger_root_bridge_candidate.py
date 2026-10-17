@@ -399,7 +399,7 @@ def main():
         # the movement gently to zero before proximal/middle phalanges.
         # This is an isolated candidate experiment; source FBX untouched.
         for depth,(tier,pull,radial) in enumerate(zip(
-                tiers,(.54,.27,.055),(.88,.955,1.0))):
+                tiers,(.32,.15,.035),(.93,.978,1.0))):
             tier_center=sum((v.co for v in tier),
                             Vector((0,0,0)))/len(tier)
             for v in tier:
@@ -407,7 +407,7 @@ def main():
                 v.co=tier_center+(v.co-tier_center)*radial+root_pull*pull
                 delta=(v.co-before).length
                 moved_at_root=max(moved_at_root,delta)
-        if moved_at_root>diameter*.024:
+        if moved_at_root>diameter*.019:
             fail("Proximal anatomical finger blend moved authentic tissue too far")
         report.setdefault("proximal_digit_tissue_feather",[]).append({
             "finger":fingerNo,
@@ -433,8 +433,8 @@ def main():
         # Keep palm aperture closer to the authentic 30-vertex digit root
         # rather than tapering to a tiny 10-vertex cone (visible MCP fins).
         # Existing guards forbid cutting outside original palm-only tissue.
-        radius_hole=max(radius*.74,diameter*.010)
-        radius_hole=min(radius_hole,diameter*.027)
+        radius_hole=max(radius*.94,diameter*.010)
+        radius_hole=min(radius_hole,diameter*.030)
         pending=[target_face]; selected=set()
         while pending:
             face=pending.pop()
