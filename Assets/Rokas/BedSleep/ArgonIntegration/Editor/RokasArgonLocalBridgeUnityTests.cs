@@ -315,6 +315,95 @@ namespace Rokas.BedSleep.Argon.Editor
                     if(wasNormal)realMaterial.EnableKeyword("_NORMALMAP");
                     UnityEngine.Object.DestroyImmediate(diagnostic);
                 }
+                // Real animated evidence, never a slideshow or AI mock-up.
+                // Render 36 successive frames from original and reconstructed
+                // authentic 25-bone FBX using the SAME fixed 1280x720 camera,
+                // then GitHub Actions produces a side-by-side H.264 video.
+                // This is a joint-deformation QA clip, NOT final in-game POV.
+                var animatedOriginal=Path.Combine(dir,"AnimatedOriginal");
+                var animatedCandidate=Path.Combine(dir,"AnimatedCandidate");
+                Directory.CreateDirectory(animatedOriginal);
+                Directory.CreateDirectory(animatedCandidate);
+                camera.transform.rotation=Quaternion.LookRotation(
+                    -viewNormals[0],Vector3.Cross(axis,viewNormals[0]).normalized);
+                camera.orthographicSize=Mathf.Max(.025f,span*.24f);
+                camera.transform.position=
+                    Vector3.Lerp(rootCenter,sourceJoints["Middle_Tip"].position,.3f)
+                    +viewNormals[0]*Mathf.Max(.5f,span*3f);
+                string[] animatedNames={
+                    "Thumb_CMC","Thumb_MCP","Thumb_IP",
+                    "Index_MCP","Index_PIP","Index_DIP",
+                    "Middle_MCP","Middle_PIP","Middle_DIP",
+                    "Ring_MCP","Ring_PIP","Ring_DIP",
+                    "Little_MCP","Little_PIP","Little_DIP"
+                };
+                var rigs=new[]{sourceJoints,candidateJoints};
+                var poseTransforms=new Transform[2][];
+                var restRotations=new Quaternion[2][];
+                for(int variant=0;variant<2;variant++)
+                {
+                    poseTransforms[variant]=new Transform[animatedNames.Length];
+                    restRotations[variant]=new Quaternion[animatedNames.Length];
+                    for(int joint=0;joint<animatedNames.Length;joint++)
+                    {
+                        Assert.That(rigs[variant].ContainsKey(animatedNames[joint]),
+                            Is.True,"Missing authentic animation bone "+
+                            animatedNames[joint]);
+                        var transform=rigs[variant][animatedNames[joint]];
+                        poseTransforms[variant][joint]=transform;
+                        restRotations[variant][joint]=transform.localRotation;
+                    }
+                }
+                const int motionFrames=36;
+                try
+                {
+                    for(int frame=0;frame<motionFrames;frame++)
+                    {
+                        float cycle=.5f-.5f*Mathf.Cos(
+                            2f*Mathf.PI*frame/(motionFrames-1));
+                        for(int variant=0;variant<2;variant++)
+                        {
+                            for(int joint=0;joint<animatedNames.Length;joint++)
+                            {
+                                string name=animatedNames[joint];
+                                float angle=name.EndsWith("_CMC")?10f:
+                                    name.EndsWith("_MCP")?26f:
+                                    name.EndsWith("_PIP")?32f:
+                                    name.EndsWith("_DIP")?16f:22f;
+                                poseTransforms[variant][joint].localRotation=
+                                    restRotations[variant][joint]*
+                                    Quaternion.AngleAxis(angle*cycle,
+                                        Vector3.forward);
+                            }
+                            instances[0].SetActive(variant==0);
+                            instances[1].SetActive(variant==1);
+                            camera.Render();
+                            RenderTexture.active=target;
+                            readback.ReadPixels(new Rect(0,0,W,H),0,0);
+                            readback.Apply(false);
+                            var outputDir=variant==0?animatedOriginal:
+                                animatedCandidate;
+                            File.WriteAllBytes(Path.Combine(outputDir,
+                                "frame_"+frame.ToString("D3")+".png"),
+                                readback.EncodeToPNG());
+                        }
+                    }
+                }
+                finally
+                {
+                    for(int variant=0;variant<2;variant++)
+                        for(int joint=0;joint<animatedNames.Length;joint++)
+                            poseTransforms[variant][joint].localRotation=
+                                restRotations[variant][joint];
+                }
+                File.WriteAllText(Path.Combine(dir,
+                    "real_unity_animation_evidence.txt"),
+                    "Genuine Unity 6000.3.19f1 per-frame skin rendering\\n" +
+                    "Original LEFT, experimental connected finger candidate RIGHT\\n" +
+                    "36 real frames per variant, 12 fps, 3 sec seamless cycle\\n" +
+                    "Same authentic 25-bone joints, same real 2048 PBR texture, " +
+                    "same stationary camera, 0-26 MCP / 0-32 PIP degrees\\n" +
+                    "QA ONLY: not the game animation, not visually approved.\\n");
                 var report =
                     "Authentic original FBX vertices=" + sourceSkin.sharedMesh.vertexCount +
                     "\nCandidate source-preserving imported vertices=" + joinedSkin.sharedMesh.vertexCount +
