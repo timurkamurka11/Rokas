@@ -198,6 +198,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     // Rigid cinematic slide from OFF-SCREEN LEFT to horizontal
                     // hero pose; no longer rise diagonally from bottom edge.
                     heroPose.SetPresentation(exitDistance);
+                    living.NotifyAnimationPoseReset();
                     float lifeWeight = Mathf.SmoothStep(0f, 1f,
                         Mathf.Clamp01(exitDistance));
                     float elapsed = (float)frameNumber / Fps;
