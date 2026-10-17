@@ -196,6 +196,26 @@ namespace Rokas.BedSleep.Argon.Editor
                     if(repairedHandMesh!=null)
                         UnityEngine.Object.DestroyImmediate(repairedHandMesh);
                 }
+                // This test replaces only misassigned bone INDICES in a
+                // disposable mesh clone, leaving FBX geometry and bindposes
+                // untouched. Visual comparison with the ORIGINAL reference
+                // determines whether it actually solves broken finger poses.
+                Mesh correctedBoneMesh = null;
+                try
+                {
+                    var reassigned=ArgonFingerWeightRepair.ApplyToCandidate(
+                        hand,out correctedBoneMesh);
+                    Assert.That(reassigned.Islands,Is.EqualTo(6));
+                    Assert.That(reassigned.ReassociatedVertices,Is.EqualTo(5*1394));
+                    Debug.Log("[ROKAS ARGON FINGER WEIGHT MAP]\n"+reassigned.Mapping);
+                    Capture("05_original_fingers_corrected_bone_bindings");
+                }
+                finally
+                {
+                    hand.sharedMesh=sourceHandMesh;
+                    if(correctedBoneMesh!=null)
+                        UnityEngine.Object.DestroyImmediate(correctedBoneMesh);
+                }
                 nails.enabled = false;
                 Capture("02_same_pose_nails_disabled");
                 nails.enabled = true;
