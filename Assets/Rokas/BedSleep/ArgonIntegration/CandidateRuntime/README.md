@@ -110,3 +110,31 @@ is a candidate-only copy-on-write taper of those original finger collars;
 requires real Unity before/after visual inspection before enabling in
 main cinematic. Never modify or claim repaired original FBX. No merge
 until proper runtime and visual QA pass.
+
+## Wrist-led cinematic entrance / exit (user priority, October 17)
+
+Do NOT move the approved sleeve-left/watch-center-left/fingers-right final composition.
+`ArgonBedOrganicGesture.Evaluate(visible, lowering)` is a deterministic,
+non-accumulating motion curve shared by the authentic Unity preview and
+candidate integration. It samples two distinct trajectories:
+
+- Entry: a quintic upward and toward-camera arc from below the eyes, with
+  earlier wrist articulation, delayed forearm pitch, restrained finger
+  compensation, and a tiny damped settling phase.
+- Exit: wrist relaxes first, forearm follows, then lowers down and away
+  along a genuinely separate curve; this is *not* reversed entry playback.
+- Both paths preserve the original source FBX bone hierarchy and skin;
+  at `visible=1` all offsets are exactly zero, so the approved hero pose
+  is mathematically unchanged.
+
+The candidate-only `RokasArgonHorizontalHeroPose.SetCinematicPresentation`
+samples that curve after the actual source animation clip. `ArgonLivingRig`
+adds a finger-response parameter so finger action lags behind forearm motion
+without adding problematic pinky/ring root bends. 5-argument callers still
+work.
+
+Focused CI: `.github/workflows/argon-bed-organic-gesture-qa.yml` produces
+58 **real Unity-rendered** 1280x720 24fps frames and an MP4 with fabric Foley,
+plus a distinct analytical entry/exit test and 5 storyboards. Verify actual
+CI output before claiming a visually accepted animation. Run only on the
+isolated draft PR #13 branch; **do not merge** or alter V10 production.
