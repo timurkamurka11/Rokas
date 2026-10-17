@@ -131,7 +131,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (audioSource == null) return;
             var clip = cue == ArgonFoleyCue.Sleeve ? cloth :
                 cue == ArgonFoleyCue.CrownTick ? tick : confirmSound;
-            if (clip != null) audioSource.PlayOneShot(clip);
+            // EditMode QA mixes the very same samples into a WAV offline;
+            // only real PlayMode drives an audible AudioSource.
+            if (clip != null && Application.isPlaying) audioSource.PlayOneShot(clip);
         }
 
         public void AnimateCrown(float dt)
