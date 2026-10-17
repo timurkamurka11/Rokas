@@ -331,6 +331,89 @@ def main():
             "original_finger_rim_vertices":len(ring),
             "zipper_winding":wind,
             "max_root_gap":max((v.co-w.co).length for v in ring for w in pocket)})
+    # Anatomical full-surface completion: the original palm contains TWO
+    # separate 30-edge open distal pockets unrelated to the five true root
+    # grafts. Preserve 64-edge cuff hole (hidden by the real sleeve), but
+    # fill each of the two distal palm pockets with a gently curved 2-ring
+    # epidermis cap derived from its OWN original boundary and skin weights.
+    # No polygon n-gons, artificial tubes, voxel reconstruction or props.
+    bm.normal_update()
+    holes=loops(islands(bm)[0])
+    sizes=sorted(len(k) for k in holes)
+    if sizes!=[30,30,64]:
+        fail("Unexpected true post-graft palm holes: "+str(sizes))
+    capped=[]
+    cap_created=[]
+    cap_groups=[]
+    for pocket in holes:
+        if len(pocket)==64:
+            continue  # Actual sleeve-hidden open FOREARM entry.
+        n=len(pocket)
+        center=sum((v.co for v in pocket),Vector((0,0,0)))/n
+        skin_normal=sum((v.normal for v in pocket),Vector((0,0,0)))
+        if skin_normal.length_squared<1e-12:
+            fail("Existing genuine palm pocket normals degenerate")
+        skin_normal.normalize()
+        # Winding must agree with original epidermis on the open contour.
+        orientation=(pocket[1].co-pocket[0].co).cross(
+            center-pocket[0].co).dot(skin_normal)
+        if orientation<0:pocket=list(reversed(pocket))
+        centroid_uv=sum((nearest_source_uv(v) for v in pocket),
+                        Vector((0,0)))/n if uv is not None else None
+        avg_weights=defaultdict(float)
+        for v in pocket:
+            for group,weight in v[deform_source].items():
+                avg_weights[group]+=weight/n
+        all_weight=sum(avg_weights.values())
+        if all_weight<.99 or all_weight>1.01:
+            fail("Original palm pocket source weight averaging corrupted")
+        radius=sum((v.co-center).length for v in pocket)/n
+        rings=[]
+        for alpha,height in ((.58,.0015),(.22,.003)):
+            layer=[]
+            for v in pocket:
+                t=bm.verts.new(center+(v.co-center)*alpha+
+                               skin_normal*min(diameter*height,radius*.08))
+                for group,weight in v[deform_source].items():
+                    if weight>1e-7:t[deform_source][group]=weight
+                layer.append(t)
+                cap_created.append(t)
+            rings.append(layer)
+        apex=bm.verts.new(center+skin_normal*min(diameter*.004,radius*.12))
+        for group,weight in avg_weights.items():
+            if weight>1e-7:apex[deform_source][group]=weight/all_weight
+        cap_created.append(apex)
+        cap_uv={}
+        if uv is not None:
+            for layer,alpha in zip(rings,(.58,.22)):
+                for vertex,src in zip(layer,pocket):
+                    cap_uv[vertex]=centroid_uv.lerp(nearest_source_uv(src),alpha)
+            cap_uv[apex]=centroid_uv
+        for i in range(n):
+            j=(i+1)%n
+            for quad in ([pocket[i],pocket[j],rings[0][j],rings[0][i]],
+                         [rings[0][i],rings[0][j],rings[1][j],rings[1][i]],
+                         [rings[1][i],rings[1][j],apex]):
+                try:
+                    face=bm.faces.new(quad)
+                except ValueError:
+                    fail("Duplicate face while closing authentic palm epidermis")
+                face.material_index=0
+                face.smooth=True
+                addedFaces.append(face)
+                if uv is not None:
+                    for c in face.loops:
+                        v=c.vert
+                        c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
+        capped.append({"source_open_ring":n,"new_skin_vertices":2*n+1,
+                       "faces":3*n,"radius":radius,
+                       "apex_displacement":(apex.co-center).length})
+    report["authentic_two_distal_palm_pockets_sealed"]=capped
+    report["anatomical_skin_cap_vertices"]=len(cap_created)
+    # Only a genuine 64-edge sleeve cuff remains open. All 5 digits and
+    # both old palm pockets now have a real continuous epidermis surface.
+    if sum(e.is_boundary for e in bm.edges)!=64:
+        fail("Skin not fully repaired (except intentional sleeve cuff)")
     # Source anatomical finger 3D shell is now a genuine connected skin
     # island, except TWO unrelated original distal-palm holes and the
     # 64-edge arm cuff (which belongs UNDER THE SHIRT SLEEVE).
@@ -343,7 +426,7 @@ def main():
 
     # Bounded local epidermis relaxation at actual interfaces.
     primary={v for v in source_contact_vertices if v.is_valid}
-    peripheral={v for v in primary for e in v.link_edges for w in e.verts}
+    peripheral={w for v in primary for e in v.link_edges for w in e.verts}
     peripheral.difference_update(primary)
     region=primary|peripheral
     original_positions={v:v.co.copy() for v in region}
