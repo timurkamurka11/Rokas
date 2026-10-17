@@ -222,7 +222,8 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             GameObject instance=null,cameraObject=null,lightObject=null;
             RenderTexture handRT=null,finalRT=null;
             Texture2D capture=null;
-            Material composite=null,oledMaterial=null;
+            Material composite=null,oledMaterial=null,softSkinMaterial=null;
+            Material originalSkinMaterial=null;
             // Preview-only anatomical candidate, never saved to source FBX or
             // production V10. Proven neutral preservation and finger isolation
             // have separate focused Unity test coverage.
@@ -239,6 +240,21 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
                 originalHandMesh=handSkin.sharedMesh;
                 originalHandBones=handSkin.bones;
+                originalSkinMaterial=handSkin.sharedMaterial;
+                // Preview-only premium skin light response on the real FBX,
+                // preserving all original albedo, pores, AO and source PNGs.
+                // Reduce overbright, chalky specular on moving finger joints;
+                // do not replace skin or synthesize a plastic flat color.
+                softSkinMaterial=new Material(originalSkinMaterial);
+                if(softSkinMaterial.HasProperty("_GlossMapScale"))
+                    softSkinMaterial.SetFloat("_GlossMapScale",.67f);
+                if(softSkinMaterial.HasProperty("_Glossiness"))
+                    softSkinMaterial.SetFloat("_Glossiness",.40f);
+                if(softSkinMaterial.HasProperty("_BumpScale"))
+                    softSkinMaterial.SetFloat("_BumpScale",.16f);
+                if(softSkinMaterial.HasProperty("_Color"))
+                    softSkinMaterial.SetColor("_Color",new Color(1f,.98f,.965f,1f));
+                handSkin.sharedMaterial=softSkinMaterial;
                 var compensated=ArgonFingerBindposeRetarget.ApplyCandidate(
                     handSkin,out compensatedMesh,out var authenticBones);
                 Assert.That(compensated.MaxNeutralDisplacement,
@@ -282,8 +298,8 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 lightObject=new GameObject("ROKAS_WarmCeilingKey_OrganicQA");
                 var key=lightObject.AddComponent<Light>();
                 key.type=LightType.Directional;
-                key.intensity=.30f;
-                key.color=new Color(1f,.86f,.78f);
+                key.intensity=.265f;
+                key.color=new Color(1f,.92f,.875f);
                 key.cullingMask=1<<29;
                 key.transform.rotation=Quaternion.Euler(35,-20,30);
 
@@ -393,18 +409,19 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 }
                 // Choreographed in genuine source FBX phases, without a
                 // discontinuity at their shared visibility=.82 boundary.
-                Shoot(raise,28,t=>.82f*t,false);
+                // Give the physical forearm, twist and wrist distinct visible beats.
+                // Preserve the same approved hero pose and original FBX.
+                Shoot(raise,39,t=>.82f*t,false);
                 var turn=Find("WristTurn");
-                Shoot(turn,12,t=>.82f+.18f*t,false);
-                // Allow the real wrist+finger skin to settle before lowering.
-                Shoot(inspect,10,t=>1f,false);
-                Shoot(lower,32,t=>1f-t,true);
-                Assert.That(videoFrames,Is.EqualTo(82));
+                Shoot(turn,17,t=>.82f+.18f*t,false);
+                Shoot(inspect,12,t=>1f,false);
+                Shoot(lower,38,t=>1f-t,true);
+                Assert.That(videoFrames,Is.EqualTo(106));
                 var cloth=new List<ArgonFoleyEvent>{
-                    new ArgonFoleyEvent(.13f,ArgonFoleyCue.Sleeve,.62f),
-                    new ArgonFoleyEvent(.87f,ArgonFoleyCue.Sleeve,.30f),
-                    new ArgonFoleyEvent(2.18f,ArgonFoleyCue.Sleeve,.40f),
-                    new ArgonFoleyEvent(2.82f,ArgonFoleyCue.Sleeve,.23f)
+                    new ArgonFoleyEvent(.18f,ArgonFoleyCue.Sleeve,.55f),
+                    new ArgonFoleyEvent(1.05f,ArgonFoleyCue.Sleeve,.24f),
+                    new ArgonFoleyEvent(2.92f,ArgonFoleyCue.Sleeve,.37f),
+                    new ArgonFoleyEvent(3.75f,ArgonFoleyCue.Sleeve,.23f)
                 };
                 ArgonWatchFoley.WriteSoundtrack(System.IO.Path.Combine(
                     dir,"OrganicRaiseLower_44100Hz.wav"),
@@ -412,7 +429,7 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(dir,
                     "organic_motion_manifest.txt"),
                     "Actual FBX/Unity 6000.3.19f1, original BedCeilingPOV;"+
-                    " 82 real frames 1280x720 24fps; three FBX arm bones articulate,"+
+                    " 106 real frames 1280x720 24fps; three FBX arm bones articulate,"+
                     " entry wrist leads, forearm follows, neutral-safe finger retarget;"+
                     " approved horizontal final pose unchanged.");
                 Debug.Log("[ARGON ORGANIC ARM VIDEO] "+videoFrames+
@@ -435,10 +452,13 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(finalRT!=null){finalRT.Release();UnityEngine.Object.DestroyImmediate(finalRT);}
                 if(handSkin!=null && originalHandMesh!=null)
                 {
+                    if(originalSkinMaterial!=null)
+                        handSkin.sharedMaterial=originalSkinMaterial;
                     handSkin.sharedMesh=originalHandMesh;
                     handSkin.bones=originalHandBones;
                 }
                 if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
+                if(softSkinMaterial!=null)UnityEngine.Object.DestroyImmediate(softSkinMaterial);
                                 if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
                 if(lightObject!=null)UnityEngine.Object.DestroyImmediate(lightObject);
