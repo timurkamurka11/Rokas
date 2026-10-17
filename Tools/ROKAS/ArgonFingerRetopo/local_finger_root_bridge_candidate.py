@@ -269,15 +269,33 @@ def main():
                         aa=[finger[(fi+df*k)%N] for k in range(N)]
                         pp=[hole[(pj+dp*k)%M] for k in range(M)]
                         af=arc_units(aa);pf=arc_units(pp)
-                        quality=sum((sample_arc(aa,af,k/60)[0]-
-                           sample_arc(pp,pf,k/60)[0]).length for k in range(60))
+                        # Penalize isolated bridge spikes quadratically.
+                        # Old minimum-SUM-distance could sacrifice one
+                        # inter-finger web to make most root points closer.
+                        # Optimize the full matched 3D skin contour instead.
+                        errors=[(sample_arc(aa,af,k/60)[0]-
+                                 sample_arc(pp,pf,k/60)[0]).length
+                                 for k in range(60)]
+                        mean_square=sum(d*d for d in errors)/60
+                        largest=max(errors)
+                        quality=mean_square+largest*largest*.65
                         trial=(quality,fi,pj,df,dp)
                         if best is None or trial<best[0]:
-                            best=(trial,aa,pp,af,pf)
+                            best=(trial,aa,pp,af,pf,mean_square,largest)
         if best is None:
             fail("Genuine palm and finger contours cannot be oriented")
-        (_,fi,pj,df,dp),a,p,frac_a,frac_p=best
+        (_,fi,pj,df,dp),a,p,frac_a,frac_p,bridge_square,bridge_max=best
         direction=dp
+        if bridge_max>diameter*.085:
+            fail("Root-to-palm contour creates a high-aspect interdigit web")
+        report.setdefault("root_surface_correspondence",[]).append({
+            "finger_root_N":N,"authentic_palm_rim_M":M,
+            "rms_distance":math.sqrt(bridge_square),
+            "largest_matched_gap":bridge_max,
+            "phase_indices":[fi,pj],
+            "source_ring_orientation":[df,dp],
+            "quadratic_spike_aware_score":bridge_square+
+                                           .65*bridge_max**2})
         # UV and 25-bone skinning use the same true surface interpolation.
         # No guessed index neighbour bones near ring/little fingers.
         seam_uv={}
@@ -607,6 +625,24 @@ def main():
     if reversed_surfaces:
         fail("Anatomical skin still has inverted or colliding face winding: "+
              str(len(reversed_surfaces)))
+    # Winding/manifold PASS does not establish smooth tissue. Quantify
+    # adjacent ORIGINAL/NEW face bending: direct anatomical evidence of
+    # the visible long thin web spikes between fingers.
+    fold_angles=[]
+    sewn=set(addedFaces)
+    for face in addedFaces:
+        if not face.is_valid:continue
+        for edge in face.edges:
+            if edge.is_manifold and len(edge.link_faces)==2:
+                other=next((f for f in edge.link_faces if f!=face),None)
+                if other is None:continue
+                fold_angles.append(math.degrees(face.normal.angle(other.normal)))
+    report["root_surface_dihedral_degrees"]={
+        "sample_count":len(fold_angles),
+        "max_angle":max(fold_angles,default=0),
+        "over_90":sum(a>90 for a in fold_angles),
+        "over_120":sum(a>120 for a in fold_angles)}
+
     if uv is None:
         fail("Authentic source UV layer was lost in premium palm surface repair")
     report["source_uv_layer_retained"]=True
