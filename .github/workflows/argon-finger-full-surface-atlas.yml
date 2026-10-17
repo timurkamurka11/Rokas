@@ -31,10 +31,25 @@ jobs:
             Artifacts/ArgonFullFingerSurfaceAtlas \
             2>&1 | tee Artifacts/ArgonFullFingerSurfaceAtlas/source_diagnostics.log
           test -s Artifacts/ArgonFullFingerSurfaceAtlas/finger_boundary_full_surface_atlas.json
+      - name: Actual no-voxel UV seam repair plus bounded palm-root loft — Blender preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/local_finger_root_bridge_candidate.py
+          mkdir -p Artifacts/ArgonSourceSurfacePreflight
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/local_finger_root_bridge_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonSourceSurfacePreflight \
+            2>&1 | tee Artifacts/ArgonSourceSurfacePreflight/preflight.log
+          test -s Artifacts/ArgonSourceSurfacePreflight/local_root_bridge_report.json
       - name: Preserve source anatomical boundary atlas (no FBX)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ROKAS-Real-Finger-Surface-Atlas-ReadOnly
-          path: Artifacts/ArgonFullFingerSurfaceAtlas/*
+          path: |
+            Artifacts/ArgonFullFingerSurfaceAtlas/*
+            Artifacts/ArgonSourceSurfacePreflight/*.log
+            Artifacts/ArgonSourceSurfacePreflight/*.json
           retention-days: 7
