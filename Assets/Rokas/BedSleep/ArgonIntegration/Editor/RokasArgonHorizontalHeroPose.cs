@@ -169,8 +169,13 @@ namespace Rokas.BedSleep.Argon.Editor
                     Quaternion.AngleAxis(degrees,inParent)*t.localRotation;
             }
 
-            // Lead-lag articulation: the wrist responds early, the forearm
-            // follows later. Exit reverses neither the path nor the timing.
+            // Three anatomically distinct sections: proximal forearm
+            // sweeps gently, forearm twist follows, wrist moves first.
+            // All added rotations return to ZERO at approved hero framing.
+            RotateWorld("Arm_ForearmRoot",right,
+                gesture.ProximalElbowDegrees);
+            RotateWorld("Arm_ForearmRoot",Camera.transform.forward,
+                gesture.ProximalSwivelDegrees);
             RotateWorld("Arm_ForearmTwist",right,
                 gesture.ForearmPitchDegrees);
             RotateWorld("Arm_ForearmTwist",Camera.transform.forward,
