@@ -205,6 +205,71 @@ namespace Rokas.BedSleep.Argon.Editor
                 if (lightGo!=null) UnityEngine.Object.DestroyImmediate(lightGo);
             }
         }
+        [Test]
+        [Timeout(120000)]
+        public void AllFiveAuthenticFingerJointsMustActuallyMoveTheirOwnSkin()
+        {
+            var generated = AssetDatabase.LoadAssetAtPath<GameObject>(CandidatePath);
+            Assert.That(generated, Is.Not.Null);
+            GameObject instance = null;
+            Mesh neutral = null, bent = null;
+            try
+            {
+                instance = (GameObject)PrefabUtility.InstantiatePrefab(generated);
+                var skin = Skin(instance);
+                Assert.That(skin, Is.Not.Null);
+                var mesh = skin.sharedMesh;
+                neutral = new Mesh();
+                bent = new Mesh();
+                skin.BakeMesh(neutral);
+                var original = neutral.vertices;
+                var names = new []{"Thumb_IP","Index_PIP","Middle_PIP",
+                    "Ring_PIP","Little_PIP"};
+                var report = new System.Collections.Generic.List<string>();
+                bool allHaveActualMovement = true;
+                float threshold = Mathf.Max(1e-6f,
+                    mesh.bounds.size.magnitude*.0004f);
+                foreach (string name in names)
+                {
+                    var joint = instance.GetComponentsInChildren<Transform>(true)
+                        .FirstOrDefault(x => x.name == name);
+                    Assert.That(joint, Is.Not.Null,
+                        "Original 25-bone candidate joint lost: " + name);
+                    var originalRotation = joint.localRotation;
+                    try
+                    {
+                        joint.localRotation = originalRotation *
+                            Quaternion.AngleAxis(18f,Vector3.forward);
+                        skin.BakeMesh(bent);
+                        int moved = 0;
+                        var vertices = bent.vertices;
+                        for (int i=0;i<vertices.Length;i++)
+                            if (Vector3.Distance(original[i],vertices[i])>threshold)
+                                moved++;
+                        report.Add(name + " 18 degree skin movement: " + moved +
+                            " vertices");
+                        if (moved<35) allHaveActualMovement = false;
+                    }
+                    finally { joint.localRotation = originalRotation; }
+                }
+                var output = Path.Combine(Directory.GetCurrentDirectory(),
+                    "Artifacts","ArgonLocalBridgeUnity");
+                Directory.CreateDirectory(output);
+                File.WriteAllLines(Path.Combine(output,
+                    "five_digit_weights_diagnostic.txt"),report);
+                Debug.Log("[ARGON 5 AUTHENTIC FINGER BONES]\n" +
+                    string.Join("\n",report));
+                Assert.That(allHaveActualMovement, Is.True,
+                    "Visual reject: some real finger bones are present but their " +
+                    "source skin vertex groups are absent/unweighted. Do not merge.");
+            }
+            finally
+            {
+                if (neutral!=null) UnityEngine.Object.DestroyImmediate(neutral);
+                if (bent!=null) UnityEngine.Object.DestroyImmediate(bent);
+                if (instance!=null) UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
     }
 }
 #endif
