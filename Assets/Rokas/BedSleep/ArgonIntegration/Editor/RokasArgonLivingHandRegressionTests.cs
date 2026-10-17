@@ -241,6 +241,23 @@ namespace Rokas.BedSleep.Argon.Editor
                 living.Apply(1.35f,1f,true,cam.transform.right,cam.transform.up);
                 Capture("06_original_fingers_animating_wrong_bones");
                 CaptureFreshBakedMesh("08_original_source_fingers_fresh_cpu_bake");
+                // Compare the SAME source pose with the previous root-only
+                // geometric taper, this time drawing an actual fresh CPU-baked
+                // mesh instead of Unity's unchanged GPU renderer cache.
+                Mesh taperCandidate=null;
+                try
+                {
+                    var taper=ArgonFingerBaseSeamRepair.ApplyToCandidate(
+                        hand,out taperCandidate);
+                    Assert.That(taper.FingersPolished,Is.EqualTo(5));
+                    CaptureFreshBakedMesh("10_real_cloned_finger_taper_fresh_cpu_bake");
+                }
+                finally
+                {
+                    hand.sharedMesh=sourceHandMesh;
+                    if(taperCandidate!=null)
+                        UnityEngine.Object.DestroyImmediate(taperCandidate);
+                }
                 Mesh correctedBoneMesh = null;
                 try
                 {
