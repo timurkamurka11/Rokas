@@ -237,6 +237,14 @@ namespace Rokas.BedSleep.Argon.Candidate
                     SelectQuickPreset(choices[row]);
                     return;
                 }
+                case ArgonRussianWatchScreen.Overview:
+                    if(uv.y>.76f){russian.ShowDial();return;}
+                    if(uv.y<.20f){Confirm();return;}
+                    russian.ShowRelaxation();return;
+                case ArgonRussianWatchScreen.Relaxation:
+                    if(uv.y>.76f){russian.ShowOverview();return;}
+                    if(uv.y<.20f){Confirm();return;}
+                    russian.ShowDial();return;
                 case ArgonRussianWatchScreen.Confirmed:
                     BeginSleepingAnimation();return;
                 case ArgonRussianWatchScreen.Cancelled:
@@ -246,6 +254,13 @@ namespace Rokas.BedSleep.Argon.Candidate
             }
             if(uv.y>.76f){ShowQuickPresets();return;}
             if(uv.y<.20f){Confirm();return;}
+            // Center: 7-stage premium sleep flow (dial -> plan -> calming
+            // animated display -> dial); ring still adjusts real duration.
+            if(Mathf.Abs(uv.x-.5f)<.21f &&
+                Mathf.Abs(uv.y-.5f)<.19f)
+            {
+                russian.ShowOverview(); return;
+            }
             float dx=uv.x-.5f,dy=uv.y-.5f;
             float radius=Mathf.Sqrt(dx*dx+dy*dy);
             if(radius>.28f && radius<.50f)
