@@ -105,6 +105,107 @@ namespace Rokas.BedSleep.Argon.Editor
                 if (cameraObject != null) UnityEngine.Object.DestroyImmediate(cameraObject);
             }
         }
+
+        [Test]
+        [Timeout(90000)]
+        public void IsolateOriginalPinkyMeshSeamWithoutMutatingSourceFbx()
+        {
+            // One focused, real Unity rendering diagnostic. The rectangular
+            // finger-base seam exists in older pre-living-motion screenshots.
+            // Isolate 3 authentic renderer layers to find actual source of it
+            // BEFORE sculpting or changing skin weights/materials blindly.
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(source, Is.Not.Null);
+            GameObject instance = null, cameraObj = null, lightObj = null;
+            RenderTexture rt = null;
+            Texture2D result = null;
+            RenderTexture originalRt = RenderTexture.active;
+            try
+            {
+                instance = (GameObject)PrefabUtility.InstantiatePrefab(source);
+                foreach (Transform t in instance.GetComponentsInChildren<Transform>(true))
+                    t.gameObject.layer = 29;
+                var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                var hand = skins.Single(x => x.name == "Keiko_Hand_Skin_Mesh");
+                var nails = skins.Single(x => x.name == "Keiko_Fingernails_Mesh");
+                var sleeve = skins.Single(x => x.name == "Keiko_Homewear_Sleeve_Mesh");
+                var watches = instance.GetComponentsInChildren<MeshRenderer>(true);
+                Assert.That(watches.Length, Is.EqualTo(7));
+                Assert.That(hand.sharedMesh.vertexCount, Is.GreaterThan(100));
+                Assert.That(nails.sharedMesh.vertexCount, Is.GreaterThan(10));
+                var animator = instance.GetComponentInChildren<Animator>(true);
+                var clip = animator.runtimeAnimatorController.animationClips.Single(
+                    a => a.name.Contains("SleepArm_InspectIdle"));
+                var pose = new RokasArgonHorizontalHeroPose(instance);
+                clip.SampleAnimation(animator.gameObject, clip.length * .5f);
+                pose.CaptureHeroPose();
+                pose.RestoreNaturalAnatomy();
+                cameraObj = new GameObject("Argon_SourceSeam_RealUnity_InspectionCam");
+                var cam = cameraObj.AddComponent<Camera>();
+                cam.enabled = false;
+                cam.cullingMask = 1 << 29;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(.15f,.19f,.23f,1f);
+                cam.aspect = 1280f / 720f;
+                cam.nearClipPlane = .01f;
+                cam.farClipPlane = 10f;
+                pose.ConfigureCamera(cam, Vector3.up, .41f);
+                lightObj = new GameObject("Argon_SoftBedroomLight_SeamCheck");
+                var l = lightObj.AddComponent<Light>();
+                l.type = LightType.Directional;
+                l.intensity = .3f;
+                l.color = new Color(1f,.86f,.78f);
+                l.cullingMask = 1 << 29;
+                lightObj.transform.rotation = Quaternion.Euler(35,-20,30);
+                rt = new RenderTexture(1280,720,24,RenderTextureFormat.ARGB32);
+                rt.Create();
+                cam.targetTexture = rt;
+                result = new Texture2D(1280,720,TextureFormat.RGBA32,false);
+                string outDir = System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(), "Artifacts", "ArgonSeamLayers");
+                System.IO.Directory.CreateDirectory(outDir);
+                void Capture(string name)
+                {
+                    cam.Render();
+                    RenderTexture.active = rt;
+                    result.ReadPixels(new Rect(0,0,1280,720),0,0);
+                    result.Apply(false);
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(
+                        outDir,name+".png"),result.EncodeToPNG());
+                }
+
+                Capture("01_all_authentic_original_meshes");
+                nails.enabled = false;
+                Capture("02_same_pose_nails_disabled");
+                nails.enabled = true;
+                hand.enabled = false;
+                sleeve.enabled = false;
+                foreach (var w in watches) w.enabled = false;
+                Capture("03_only_original_nails_mesh");
+                // The isolated diagnostic MUST NOT make a quality PASS claim.
+                // It only identifies source of the pre-existing rectangular seam.
+                Debug.Log("[ROKAS ARGON FINGER SEAM DIAGNOSTIC] handVerts=" +
+                    hand.sharedMesh.vertexCount + " nailsVerts=" +
+                    nails.sharedMesh.vertexCount + " saved 3 real Unity screenshots");
+                Assert.That(System.IO.File.Exists(System.IO.Path.Combine(
+                    outDir,"02_same_pose_nails_disabled.png")),Is.True);
+            }
+            finally
+            {
+                RenderTexture.active = originalRt;
+                if (cameraObj != null)
+                {
+                    var c = cameraObj.GetComponent<Camera>();
+                    if (c != null) c.targetTexture = null;
+                }
+                if (instance != null) UnityEngine.Object.DestroyImmediate(instance);
+                if (cameraObj != null) UnityEngine.Object.DestroyImmediate(cameraObj);
+                if (lightObj != null) UnityEngine.Object.DestroyImmediate(lightObj);
+                if (result != null) UnityEngine.Object.DestroyImmediate(result);
+                if (rt != null) { rt.Release(); UnityEngine.Object.DestroyImmediate(rt); }
+            }
+        }
     }
 }
 #endif
