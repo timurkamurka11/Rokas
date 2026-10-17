@@ -88,12 +88,15 @@ namespace Rokas.BedSleep.Argon.Candidate
                     breathingArc*(lowering ? .003f : -.004f),
                 WristPitchDegrees = (lowering ? -15.6f : 13.2f)*wrist+
                     wristCounter*(lowering ? -1.1f : 2.4f)+settle*.52f,
-                WristRollDegrees = (lowering ? -6.7f : 7.1f)*wrist+
-                    wristCounter*(lowering ? 1.7f : -2.8f),
+                // The hand points screen-RIGHT, so turning around camera RIGHT
+                // only pronates it. Visible life comes from camera-forward
+                // pitch: wrist and elbow must arc within the screen plane.
+                WristRollDegrees = (lowering ? -12.0f : 16.5f)*wrist+
+                    wristCounter*(lowering ? 2.1f : -4.4f),
                 ForearmPitchDegrees = (lowering ? -7.8f : 6.1f)*forearm+
                     breathingArc*(lowering ? -1.3f : 2.1f),
-                ForearmRollDegrees = (lowering ? -1.65f : 2.15f)*forearm+
-                    breathingArc*(lowering ? -.7f : .9f),
+                ForearmRollDegrees = (lowering ? -5.8f : 7.5f)*forearm+
+                    breathingArc*(lowering ? -1.1f : 1.65f),
                 // A distinct proximal forearm/"elbow" hinge is essential:
                 // simply translating the entire prefab reproduces a wooden
                 // sliding prop, even when wrist rotates nicely. Let the
@@ -102,9 +105,9 @@ namespace Rokas.BedSleep.Argon.Candidate
                 ProximalElbowDegrees = (lowering ? -10.2f : 10.8f)*
                     Window(forearm,0f,1f)+
                     breathingArc*(lowering ? -.8f : 1.6f),
-                ProximalSwivelDegrees = (lowering ? 1.8f : -2.6f)*
+                ProximalSwivelDegrees = (lowering ? 9.8f : -9.3f)*
                     Mathf.Sin(forearm*Mathf.PI*.5f)+
-                    breathingArc*(lowering ? 1.8f : -2.0f),
+                    breathingArc*(lowering ? 2.3f : -2.7f),
                 // Every finger receives its own micro-response with a small
                 // phase lag in the living rig. Keep separate from source FBX
                 // MCP; do not over-curl malformed pinky/ring finger roots.
