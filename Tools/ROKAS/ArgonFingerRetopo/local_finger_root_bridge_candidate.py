@@ -297,12 +297,17 @@ def main():
             near_finger.append(make_inner(
                 vertex.co.lerp(pos,.34),
                 [(vertex,.66),(p0,.34*(1-q)),(p1,.34*q)]))
+        # Maintain 30 vertices on BOTH medial tissue rings. Previously
+        # 30->13 midpoint zipper introduced high-aspect triangles inside
+        # the visible webbing; carry the full evenly matched surface across
+        # the knuckle and concentrate the final socket's rim-count change
+        # at its original palm epidermis edge.
         near_palm=[]
-        for j,vertex in enumerate(p):
-            pos,f0,f1,q=sample_arc(a,frac_a,frac_p[j])
+        for i,vertex in enumerate(a):
+            position,p0,p1,q=sample_arc(p,frac_p,frac_a[i])
             near_palm.append(make_inner(
-                pos.lerp(vertex.co,.66),
-                [(f0,.34*(1-q)),(f1,.34*q),(vertex,.66)]))
+                vertex.co.lerp(position,.72),
+                [(vertex,.28),(p0,.72*(1-q)),(p1,.72*q)]))
         source_contact_vertices.update(near_finger)
         source_contact_vertices.update(near_palm)
         built=[]
@@ -324,30 +329,32 @@ def main():
         for i in range(N):
             j=(i+1)%N
             add_skin_face([a[i],a[j],near_finger[j],near_finger[i]])
-        # Inner transition 30 -> 10..14, distribute mismatch across
-        # medial tissue, not the visible outer knuckle border.
+        # SOURCE anatomically matched central transition 30 -> 30:
+        # entirely quad surface with no fan triangles at exposed MCP roots.
+        for i in range(N):
+            j=(i+1)%N
+            add_skin_face([near_finger[i],near_finger[j],
+                           near_palm[j],near_palm[i]])
+        # Only the FINAL short near-palm ring connects to the true 13-21
+        # original palm perimeter. Real arc-length zipper is kept here
+        # because the socket must keep its authentic existing skin outline.
         index_a=index_p=0
         while index_a<N or index_p<M:
             next_a=(frac_a[index_a+1] if index_a+1<N else 1.0) if index_a<N else 1e9
             next_p=(frac_p[index_p+1] if index_p+1<M else 1.0) if index_p<M else 1e9
-            u=near_finger[index_a%N]
-            v=near_palm[index_p%M]
+            u=near_palm[index_a%N]
+            v=p[index_p%M]
             if abs(next_a-next_p)<1e-7:
-                vertices=[u,near_finger[(index_a+1)%N],
-                          near_palm[(index_p+1)%M],v]
+                vertices=[u,near_palm[(index_a+1)%N],
+                          p[(index_p+1)%M],v]
                 index_a+=1;index_p+=1
             elif next_a<next_p:
-                vertices=[u,near_finger[(index_a+1)%N],v]
+                vertices=[u,near_palm[(index_a+1)%N],v]
                 index_a+=1
             else:
-                vertices=[u,near_palm[(index_p+1)%M],v]
+                vertices=[u,p[(index_p+1)%M],v]
                 index_p+=1
             add_skin_face(vertices)
-        # Near-palm ring -> original palm socket, preserving outward
-        # winding and the authentic adjacent original epidermis surface.
-        for i in range(M):
-            j=(i+1)%M
-            add_skin_face([near_palm[i],near_palm[j],p[j],p[i]])
         if len(built)<max(N,M):
             fail("Anatomical graft missing source ring faces")
         return built,direction
