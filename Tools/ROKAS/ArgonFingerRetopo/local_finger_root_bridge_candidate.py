@@ -216,29 +216,43 @@ def main():
                 if corner.vert==v:return corner[uv].uv.copy()
         fail("Graft source UV missing on authentic source vertex")
 
+    def boundary_edge_flow(a,b):
+        # Adjacent original face direction on this one-face boundary edge.
+        edge=next((e for e in a.link_edges if b in e.verts),None)
+        if edge is None or not edge.is_boundary or len(edge.link_faces)!=1:
+            fail("Actual skin rim has no single-face edge")
+        for corner in edge.link_faces[0].loops:
+            if corner.vert==a and corner.link_loop_next.vert==b:return 1
+            if corner.vert==b and corner.link_loop_next.vert==a:return -1
+        fail("Cannot orient genuine finger/palm rim")
+
     def join_root_to_hole(finger, hole):
         N=len(finger);M=len(hole)
         if N<8 or M<8:fail("Graft rim too small")
+        # Exactly one loop winding choice is valid for each source shell.
+        # The original minimization across both winding signs made inverted
+        # triangular fins even while all edges remained formally manifold.
         best=None
-        for i,v in enumerate(finger):
-            for j,w in enumerate(hole):
-                metric=(v.co-w.co).length_squared
-                if best is None or metric<best[0]:best=(metric,i,j)
-        _,fi,pj=best
-        # Choose orientation from GLOBAL source ring arc correspondence;
-        # preserve mesh winding via existing boundary-face edge orientation.
-        selections=[]
-        for direction in (1,-1):
-            a=[finger[(fi+k)%N] for k in range(N)]
-            p=[hole[(pj+direction*k)%M] for k in range(M)]
-            cost=0.
-            for k in range(30):
-                t=k/30.
-                va=a[min(N-1,int(t*N))]
-                vb=p[min(M-1,int(t*M))]
-                cost+=(va.co-vb.co).length
-            selections.append((cost,direction,a,p))
-        _,direction,a,p=min(selections,key=lambda rec:rec[0])
+        for df in (1,-1):
+            for dp in (1,-1):
+                for fi in range(N):
+                    if boundary_edge_flow(finger[fi],finger[(fi+df)%N])!=-1:
+                        continue
+                    for pj in range(M):
+                        if boundary_edge_flow(hole[pj],hole[(pj+dp)%M])!=1:
+                            continue
+                        aa=[finger[(fi+df*k)%N] for k in range(N)]
+                        pp=[hole[(pj+dp*k)%M] for k in range(M)]
+                        quality=sum((aa[min(N-1,int(k*N/60))].co-
+                            pp[min(M-1,int(k*M/60))].co).length
+                            for k in range(60))
+                        candidate=(quality,fi,pj,df,dp)
+                        if best is None or candidate<best[0]:
+                            best=(candidate,aa,pp)
+        if best is None:
+            fail("No valid genuine epidermis orientation at finger root")
+        (_,fi,pj,df,dp),a,p=best
+        direction=dp
         index_a=index_p=0
         built=[]
         while index_a<N or index_p<M:
