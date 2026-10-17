@@ -227,7 +227,7 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
             // production V10. Proven neutral preservation and finger isolation
             // have separate focused Unity test coverage.
             SkinnedMeshRenderer handSkin=null;
-            Mesh originalHandMesh=null, compensatedMesh=null,socketMesh=null;
+            Mesh originalHandMesh=null, compensatedMesh=null;
             Transform[] originalHandBones=null;
             RenderTexture originalTarget=RenderTexture.active;
             try
@@ -244,9 +244,11 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 Assert.That(compensated.MaxNeutralDisplacement,
                     Is.LessThan(1e-6f),
                     "Do not deform the source neutral hand in the cinematic");
-                var socket=ArgonFingerRootSocketBlend.ApplyToClone(
-                    handSkin,out socketMesh);
-                Assert.That(socket.FingerIslands,Is.EqualTo(5));
+                // Actual three-way Unity comparison #39030324837:
+                // compensated joints preserve neutral pose and articulate
+                // individual fingers, but aggressive root socket nesting
+                // created new dark seams/pinches on close-up. Keep that
+                // experimental mesh out of the cinematic candidate.
                 Assert.That(compensated.RetargetedVertices,Is.EqualTo(6970));
                 Assert.That(authenticBones.Length,Is.EqualTo(25));
                 var animator=instance.GetComponentInChildren<Animator>(true);
@@ -411,7 +413,7 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     "organic_motion_manifest.txt"),
                     "Actual FBX/Unity 6000.3.19f1, original BedCeilingPOV;"+
                     " 82 real frames 1280x720 24fps; three FBX arm bones articulate,"+
-                    " entry wrist leads, forearm follows, 5 correct finger weights;"+
+                    " entry wrist leads, forearm follows, neutral-safe finger retarget;"+
                     " approved horizontal final pose unchanged.");
                 Debug.Log("[ARGON ORGANIC ARM VIDEO] "+videoFrames+
                     " REAL Unity scene/mesh frames at 24fps recorded.");
@@ -436,7 +438,6 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     handSkin.sharedMesh=originalHandMesh;
                     handSkin.bones=originalHandBones;
                 }
-                if(socketMesh!=null)UnityEngine.Object.DestroyImmediate(socketMesh);
                 if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
                                 if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
