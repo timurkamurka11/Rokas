@@ -608,6 +608,55 @@ def main():
         "passes":3,
         "maximum_original_vertex_displacement":root_shift,
         "maximum_relative_original_displacement":root_shift/diameter}
+    # Targeted candidate-only anti-spike fairing. The 30->13 palm rim
+    # reduction can create very high curvature on individual newly-made
+    # tissue vertices even if Blender reports manifold winding. Work ONLY
+    # with the original-source-weighted transition vertices, never distal
+    # finger geometry, the source file, bones, texture or sleeve.
+    generated_skin_vertices={v for v,_ in addedWeights if v.is_valid}
+    fairing_rest={v:v.co.copy() for v in generated_skin_vertices}
+    fairing_counts=0
+    fairing_limit=diameter*.005
+    for _ in range(3):
+        rest={v:v.co.copy() for v in generated_skin_vertices}
+        movements={}
+        for v in generated_skin_vertices:
+            neighbors={w for e in v.link_edges for w in e.verts if w!=v}
+            if len(neighbors)<3:
+                continue
+            lengths=sorted((rest.get(w,w.co)-rest[v]).length
+                           for w in neighbors)
+            typical=lengths[len(lengths)//2]
+            if typical<1e-8:
+                fail("Collapsed original-weighted knuckle transition edge")
+            mean=sum((rest.get(w,w.co) for w in neighbors),
+                     Vector((0,0,0)))/len(neighbors)
+            distortion=(mean-rest[v]).length
+            # Adapt only clear local outliers rather than another global
+            # laplacian pass; protect the actual contours at fingers.
+            excess=distortion/typical-.24
+            if excess<=0:
+                continue
+            coefficient=min(.23,excess*.17)
+            target=rest[v].lerp(mean,coefficient)
+            correction=target-fairing_rest[v]
+            if correction.length>fairing_limit:
+                target=fairing_rest[v]+correction.normalized()*fairing_limit
+            if (target-rest[v]).length>1e-8:
+                movements[v]=target
+        for v,p in movements.items():
+            v.co=p
+        fairing_counts+=len(movements)
+    fairing_drift=max(((v.co-fairing_rest[v]).length
+                       for v in generated_skin_vertices),default=0)
+    report["localized_generated_tissue_anti_spike"]={
+        "vertices_examined":len(generated_skin_vertices),
+        "vertex_adjustments":fairing_counts,
+        "passes":3,
+        "max_vertex_displacement":fairing_drift,
+        "limit_ratio_of_hand_extent":.005}
+    if fairing_drift>fairing_limit+1e-7:
+        fail("Candidate anti-spike fairing exceeded hard safety displacement")
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
