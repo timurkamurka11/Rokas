@@ -11,6 +11,8 @@ namespace Rokas.BedSleep.Argon.Candidate
     /// Keeps production V10 SmartwatchOLEDPresenter completely untouched.
     /// The existing ArgonWatchControls reflection contract is preserved.
     /// </summary>
+    public enum ArgonRussianWatchScreen { Dial, Presets, Confirmed, FallingAsleep, Cancelled }
+
     [DisallowMultipleComponent]
     public sealed class ArgonRussianSleepOledPresenter : MonoBehaviour
     {
@@ -19,6 +21,8 @@ namespace Rokas.BedSleep.Argon.Candidate
         public Texture2D OledDynamicTexture { get; private set; }
         public int SelectedHalfHours { get; private set; } = 14;
         public bool IsConfirmed { get; private set; }
+        public ArgonRussianWatchScreen Screen { get; private set; } =
+            ArgonRussianWatchScreen.Dial;
         public int CurrentHour { get; private set; } = 19;
         public int CurrentMinute { get; private set; } = 30;
         public int WakeMinutes => (CurrentHour * 60 + CurrentMinute +
@@ -122,6 +126,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             CurrentHour = currentHour;
             CurrentMinute = currentMinute;
             SelectedHalfHours = selectedHalfHours;
+            if (!IsConfirmed && (Screen == ArgonRussianWatchScreen.Confirmed ||
+                                 Screen == ArgonRussianWatchScreen.Cancelled))
+                Screen = ArgonRussianWatchScreen.Dial;
             LastRenderedTextSummary = "СЕЙЧАС " + CurrentHour.ToString("D2") +
                 ":" + CurrentMinute.ToString("D2") + " ВРЕМЯ СНА " +
                 DurationText + " ПОДЪЁМ " + WakeText +
@@ -133,7 +140,38 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             if (IsConfirmed != confirmed) requiresRedraw = true;
             IsConfirmed = confirmed;
+            if (confirmed) Screen = ArgonRussianWatchScreen.Confirmed;
+            else if (Screen == ArgonRussianWatchScreen.Confirmed)
+                Screen = ArgonRussianWatchScreen.Dial;
             if (OledDynamicTexture != null) RenderAt(animatedSeconds,true);
+        }
+
+        public void ShowPresets()
+        {
+            Screen = ArgonRussianWatchScreen.Presets;
+            requiresRedraw = true;
+            RenderAt(animatedSeconds,true);
+        }
+
+        public void SelectPreset(int halfHours)
+        {
+            Screen = ArgonRussianWatchScreen.Dial;
+            ConfigureTime(CurrentHour,CurrentMinute,Mathf.Clamp(halfHours,2,24));
+        }
+
+        public void SetFallingAsleep()
+        {
+            Screen = ArgonRussianWatchScreen.FallingAsleep;
+            requiresRedraw = true;
+            RenderAt(animatedSeconds,true);
+        }
+
+        public void CancelSelection()
+        {
+            IsConfirmed = false;
+            Screen = ArgonRussianWatchScreen.Cancelled;
+            requiresRedraw = true;
+            RenderAt(animatedSeconds,true);
         }
 
         public string DurationText =>
@@ -158,8 +196,19 @@ namespace Rokas.BedSleep.Argon.Candidate
             PaintClouds();
             PaintMoon();
             PaintRing();
-            if (IsConfirmed) PaintConfirmation();
-            else PaintSelection();
+            switch (Screen)
+            {
+                case ArgonRussianWatchScreen.Presets:
+                    PaintPresets(); break;
+                case ArgonRussianWatchScreen.Confirmed:
+                    PaintConfirmation(); break;
+                case ArgonRussianWatchScreen.FallingAsleep:
+                    PaintFallingAsleep(); break;
+                case ArgonRussianWatchScreen.Cancelled:
+                    PaintCancelled(); break;
+                default:
+                    PaintSelection(); break;
+            }
             OledDynamicTexture.SetPixels32(pixels);
             OledDynamicTexture.Apply(false,false);
             Graphics.Blit(OledDynamicTexture,OledRenderTexture);
@@ -284,6 +333,40 @@ namespace Rokas.BedSleep.Argon.Candidate
             CenterText("-30 МИН",131,92,2,muted);
             CenterText("+30 МИН",380,92,2,muted);
             CenterText("ПОДТВЕРДИТЬ",256,64,3,white);
+        }
+        private void PaintPresets()
+        {
+            CenterText("ВРЕМЯ СНА",256,414,4,white);
+            string[] labels = { "1 ЧАС", "2 ЧАСА", "4 ЧАСА",
+                "6 ЧАСОВ", "8 ЧАСОВ" };
+            int[] values = { 2,4,8,12,16 };
+            for(int i=0;i<labels.Length;i++)
+            {
+                int y=345-i*60;
+                bool selected=SelectedHalfHours==values[i];
+                Color32 shade=selected?blue:new Color32(28,45,84,255);
+                for(int x=120;x<=392;x+=4)Disc(x,y,18,shade,selected?.42f:.16f);
+                CenterText(labels[i],256,y-1,3,selected?white:muted);
+            }
+            CenterText("ВЫБРАТЬ",256,42,3,muted);
+        }
+        private void PaintFallingAsleep()
+        {
+            Disc(256,274,55,blue,.08f+.06f*
+                (.5f+.5f*Mathf.Sin(animatedSeconds*2.4f)));
+            DrawLine(245,309,260,276,white,3);
+            DrawLine(260,276,282,331,white,3);
+            CenterText(DurationText,256,205,8,white);
+            CenterText("ЗАСЫПАЮ...",256,134,3,muted);
+        }
+        private void PaintCancelled()
+        {
+            Color32 red=new Color32(255,92,108,255);
+            Disc(256,278,69,red,.11f);
+            DrawLine(232,255,281,303,red,5);
+            DrawLine(281,255,232,303,red,5);
+            CenterText("ОТМЕНЕНО",256,173,4,white);
+            CenterText("НАЗАД",256,106,3,muted);
         }
         private void PaintConfirmation()
         {
