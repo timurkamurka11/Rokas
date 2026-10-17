@@ -81,7 +81,7 @@ jobs:
           print("Authentic user Unity bed POV PNG staged SHA256",actual,"bytes",len(png))
           PY
       - name: Unity 6000.3.19f1 — render original Argon FBX over authentic BedCeilingPOV
-        uses: game-ci/unity-test-runner@v4
+        uses: game-ci/unity-test-runner@v4.3.1
         id: unity
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -90,9 +90,8 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           projectPath: .
-          # Pin the CLI: resolving "latest" intermittently hits GitHub API 403
-          # before Unity starts (observed run 38985707088).
-          cliVersion: v0.1.48
+          # Fixed pre-CLI v4 runner: avoids the new CLI's activation failure
+          # observed on run 38985888799. Production Unity QA only.
           unityVersion: 6000.3.19f1
           testMode: EditMode
           customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonBedUnityVideoTests
