@@ -152,7 +152,7 @@ def main():
     if deform is None:fail("Original skinned Blender vertex groups absent")
     orig_uv={}
     if uv is not None:
-        for ring in per:
+        for ring in [r for group in per_component for r in group]:
             for vertex in ring:
                 loops=[l for e in vertex.link_edges for face in e.link_faces
                        for l in face.loops if l.vert==vertex]
