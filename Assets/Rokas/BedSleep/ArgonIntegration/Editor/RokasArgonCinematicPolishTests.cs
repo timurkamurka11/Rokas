@@ -85,6 +85,13 @@ namespace Rokas.BedSleep.Argon.Editor
             }
             finally
             {
+                if(handSkin!=null && originalHandMesh!=null)
+                {
+                    handSkin.sharedMesh=originalHandMesh;
+                    handSkin.bones=originalHandBones;
+                }
+                if(socketMesh!=null)UnityEngine.Object.DestroyImmediate(socketMesh);
+                if(compensatedMesh!=null)UnityEngine.Object.DestroyImmediate(compensatedMesh);
                 if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                 if(cameraObject!=null)UnityEngine.Object.DestroyImmediate(cameraObject);
             }
@@ -213,12 +220,32 @@ namespace Rokas.BedSleep.Argon.Editor
             RenderTexture handRT=null,finalRT=null;
             Texture2D capture=null;
             Material composite=null,oledMaterial=null;
+            // Preview-only anatomical candidate, never saved to source FBX or
+            // production V10. Proven neutral preservation and finger isolation
+            // have separate focused Unity test coverage.
+            SkinnedMeshRenderer handSkin=null;
+            Mesh originalHandMesh=null, compensatedMesh=null,socketMesh=null;
+            Transform[] originalHandBones=null;
             RenderTexture originalTarget=RenderTexture.active;
             try
             {
                 instance=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 foreach(var t in instance.GetComponentsInChildren<Transform>(true))
                     t.gameObject.layer=29;
+                handSkin=instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                originalHandMesh=handSkin.sharedMesh;
+                originalHandBones=handSkin.bones;
+                var compensated=ArgonFingerBindposeRetarget.ApplyCandidate(
+                    handSkin,out compensatedMesh,out var authenticBones);
+                Assert.That(compensated.MaxNeutralDisplacement,
+                    Is.LessThan(1e-6f),
+                    "Do not deform the source neutral hand in the cinematic");
+                var socket=ArgonFingerRootSocketBlend.ApplyToClone(
+                    handSkin,out socketMesh);
+                Assert.That(socket.FingerIslands,Is.EqualTo(5));
+                Assert.That(compensated.RetargetedVertices,Is.EqualTo(6970));
+                Assert.That(authenticBones.Length,Is.EqualTo(25));
                 var animator=instance.GetComponentInChildren<Animator>(true);
                 AnimationClip Find(string name)=>animator.runtimeAnimatorController
                     .animationClips.Single(c=>c.name.Contains("SleepArm_"+name+"_"));
@@ -334,17 +361,18 @@ namespace Rokas.BedSleep.Argon.Editor
                 }
                 // Choreographed in genuine source FBX phases, without a
                 // discontinuity at their shared visibility=.82 boundary.
-                Shoot(raise,19,t=>.82f*t,false);
+                Shoot(raise,28,t=>.82f*t,false);
                 var turn=Find("WristTurn");
-                Shoot(turn,9,t=>.82f+.18f*t,false);
-                Shoot(inspect,6,t=>1f,false);
-                Shoot(lower,24,t=>1f-t,true);
-                Assert.That(videoFrames,Is.EqualTo(58));
+                Shoot(turn,12,t=>.82f+.18f*t,false);
+                // Allow the real wrist+finger skin to settle before lowering.
+                Shoot(inspect,10,t=>1f,false);
+                Shoot(lower,32,t=>1f-t,true);
+                Assert.That(videoFrames,Is.EqualTo(82));
                 var cloth=new List<ArgonFoleyEvent>{
-                    new ArgonFoleyEvent(.10f,ArgonFoleyCue.Sleeve,.70f),
-                    new ArgonFoleyEvent(.48f,ArgonFoleyCue.Sleeve,.35f),
-                    new ArgonFoleyEvent(1.51f,ArgonFoleyCue.Sleeve,.43f),
-                    new ArgonFoleyEvent(2.03f,ArgonFoleyCue.Sleeve,.25f)
+                    new ArgonFoleyEvent(.13f,ArgonFoleyCue.Sleeve,.62f),
+                    new ArgonFoleyEvent(.87f,ArgonFoleyCue.Sleeve,.30f),
+                    new ArgonFoleyEvent(2.18f,ArgonFoleyCue.Sleeve,.40f),
+                    new ArgonFoleyEvent(2.82f,ArgonFoleyCue.Sleeve,.23f)
                 };
                 ArgonWatchFoley.WriteSoundtrack(System.IO.Path.Combine(
                     dir,"OrganicRaiseLower_44100Hz.wav"),
@@ -352,8 +380,8 @@ namespace Rokas.BedSleep.Argon.Editor
                 System.IO.File.WriteAllText(System.IO.Path.Combine(dir,
                     "organic_motion_manifest.txt"),
                     "Actual FBX/Unity 6000.3.19f1, original BedCeilingPOV;"+
-                    " 58 real frames 1280x720 24fps; entry wrist leads, forearm"+
-                    " follows, delayed phalanges; exit wrist relaxes first;"+
+                    " 82 real frames 1280x720 24fps; three FBX arm bones articulate,"+
+                    " entry wrist leads, forearm follows, 5 correct finger weights;"+
                     " approved horizontal final pose unchanged.");
                 Debug.Log("[ARGON ORGANIC ARM VIDEO] "+videoFrames+
                     " REAL Unity scene/mesh frames at 24fps recorded.");
