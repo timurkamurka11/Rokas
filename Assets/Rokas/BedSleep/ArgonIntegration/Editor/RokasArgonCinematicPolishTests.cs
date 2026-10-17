@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Rokas.BedSleep.Argon.Candidate;
@@ -192,7 +193,7 @@ namespace Rokas.BedSleep.Argon.Editor
         }
 
         [Test]
-        [Timeout(240000)]
+        [Timeout(900000)]
         public void CaptureFiveGenuineUnityPOVFramesOfOrganicRaiseAndWithdrawal()
         {
             const int width=1280,height=720;
@@ -285,6 +286,71 @@ namespace Rokas.BedSleep.Argon.Editor
                     Assert.That(new System.IO.FileInfo(file).Length,
                         Is.GreaterThan(100000));
                 }
+                // Short REAL Unity motion video, not an interpolated slideshow.
+                // Preserve full 1280x720 genuine 3D skin, watch mesh and
+                // authentic bedroom POV; stage ~2.42 seconds at 24fps.
+                // No extra fullscreen camera movements or stock assets.
+                const int videoFps=24;
+                string framesDir=System.IO.Path.Combine(dir,"frames");
+                System.IO.Directory.CreateDirectory(framesDir);
+                int videoFrames=0;
+                var living=new ArgonLivingRig(instance);
+                void Frame(AnimationClip clip,float t,float visible,bool lowering)
+                {
+                    clip.SampleAnimation(animator.gameObject,
+                        clip.length*Mathf.Clamp01(t));
+                    pose.RestoreNaturalAnatomy();
+                    var gesture=pose.SetCinematicPresentation(visible,lowering);
+                    living.NotifyAnimationPoseReset();
+                    living.Apply((float)videoFrames/videoFps,
+                        Mathf.SmoothStep(0f,1f,visible),false,
+                        pose.Right,pose.Up,gesture.FingerResponse,lowering);
+                    presenter.RenderAt((float)videoFrames/videoFps);
+                    cam.Render();
+                    Graphics.Blit(realRoom,finalRT,composite);
+                    RenderTexture.active=finalRT;
+                    capture.ReadPixels(new Rect(0,0,width,height),0,0);
+                    capture.Apply(false);
+                    string file=System.IO.Path.Combine(framesDir,
+                        "frame_"+videoFrames.ToString("D5")+".tga");
+                    System.IO.File.WriteAllBytes(file,
+                        ImageConversion.EncodeToTGA(capture));
+                    videoFrames++;
+                }
+                void Shoot(AnimationClip clip,int count,
+                    Func<float,float> visibility,bool lowering)
+                {
+                    for(int i=0;i<count;i++)
+                    {
+                        float t=count==1?1f:(float)i/(count-1);
+                        Frame(clip,t,visibility(t),lowering);
+                    }
+                }
+                // Choreographed in genuine source FBX phases, without a
+                // discontinuity at their shared visibility=.82 boundary.
+                Shoot(raise,19,t=>.82f*t,false);
+                var turn=Find("WristTurn");
+                Shoot(turn,9,t=>.82f+.18f*t,false);
+                Shoot(inspect,6,t=>1f,false);
+                Shoot(lower,24,t=>1f-t,true);
+                Assert.That(videoFrames,Is.EqualTo(58));
+                var cloth=new List<ArgonFoleyEvent>{
+                    new ArgonFoleyEvent(.10f,ArgonFoleyCue.Sleeve,.70f),
+                    new ArgonFoleyEvent(.48f,ArgonFoleyCue.Sleeve,.35f),
+                    new ArgonFoleyEvent(1.51f,ArgonFoleyCue.Sleeve,.43f),
+                    new ArgonFoleyEvent(2.03f,ArgonFoleyCue.Sleeve,.25f)
+                };
+                ArgonWatchFoley.WriteSoundtrack(System.IO.Path.Combine(
+                    dir,"OrganicRaiseLower_44100Hz.wav"),
+                    videoFrames,videoFps,cloth);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir,
+                    "organic_motion_manifest.txt"),
+                    "Actual FBX/Unity 6000.3.19f1, original BedCeilingPOV;"+
+                    " 58 real frames 1280x720 24fps; entry wrist leads, forearm"+
+                    " follows, delayed phalanges; exit wrist relaxes first;"+
+                    " approved horizontal final pose unchanged.");
+                Debug.Log("[ARGON ORGANIC ARM VIDEO] "+videoFrames+
+                    " REAL Unity scene/mesh frames at 24fps recorded.");
                 Debug.Log("[ARGON ORGANIC ARM CINEMATIC] Saved five authentic"+
                     " Unity 1280x720 bed POV camera keyframes, no fake HUD.");
             }
