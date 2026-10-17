@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using NUnit.Framework;
 using UnityEngine;
+using UnityEditor;
+using System.Linq;
 using Rokas.BedSleep.Argon.Candidate;
 
 namespace Rokas.BedSleep.Argon.Editor
@@ -64,6 +66,46 @@ namespace Rokas.BedSleep.Argon.Editor
             finally
             {
                 if(root!=null)Object.DestroyImmediate(root);
+            }
+        }
+        [Test]
+        [Timeout(90000)]
+        public void OriginalPhysicalWatchOledUvTapSelectsRussianPresetsAndStartsSleep()
+        {
+            GameObject instance=null, cameraObject=null;
+            try
+            {
+                var source=AssetDatabase.LoadAssetAtPath<GameObject>(
+                    RokasArgonCandidateImporter.CandidatePrefab);
+                Assert.That(source,Is.Not.Null);
+                instance=(GameObject)PrefabUtility.InstantiatePrefab(source);
+                cameraObject=new GameObject("Argon_Russian_OriginalPhysicalWatch_QA");
+                var camera=cameraObject.AddComponent<Camera>();
+                var renderers=instance.GetComponentsInChildren<MeshRenderer>(true);
+                var oledMesh=renderers.Single(x=>x.name=="Watch_OLED_Display");
+                var crown=renderers.Single(x=>x.name=="Watch_DigitalCrown_Rotary");
+                var face=instance.AddComponent<ArgonRussianSleepOledPresenter>();
+                face.InitializeOled();
+                var input=instance.AddComponent<ArgonWatchControls>();
+                input.Initialize(camera,face,oledMesh,crown);
+                input.SetCurrentGameTime(23,30);
+                input.ProcessWatchFaceTap(new Vector2(.5f,.90f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Presets));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.675f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Dial));
+                Assert.That(face.SelectedHalfHours,Is.EqualTo(1));
+                Assert.That(face.WakeText,Is.EqualTo("00:00"));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.10f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Confirmed));
+                input.ProcessWatchFaceTap(new Vector2(.5f,.5f));
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.FallingAsleep));
+                input.CancelTimer();
+                Assert.That(face.Screen,Is.EqualTo(ArgonRussianWatchScreen.Cancelled));
+            }
+            finally
+            {
+                if(instance!=null)Object.DestroyImmediate(instance);
+                if(cameraObject!=null)Object.DestroyImmediate(cameraObject);
             }
         }
     }
