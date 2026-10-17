@@ -316,16 +316,17 @@ namespace Rokas.BedSleep.Argon.Candidate
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (viewCamera == null || oledCollider == null) return;
             Ray ray = viewCamera.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            bool onFace = oledCollider.Raycast(ray, out hit, 15f);
-            bool onCrown = crownCollider != null && crownCollider.Raycast(ray, out hit, 15f);
+            RaycastHit faceHit, crownHit;
+            bool onFace = oledCollider.Raycast(ray, out faceHit, 15f);
+            bool onCrown = crownCollider != null &&
+                crownCollider.Raycast(ray, out crownHit, 15f);
             if (onFace || onCrown)
             {
                 float wheel = Input.GetAxis("Mouse ScrollWheel");
                 if (Mathf.Abs(wheel) > .001f) Step(wheel > 0 ? 1 : -1);
                 if (Input.GetMouseButtonDown(0))
                 {
-                    if (onFace) ProcessWatchFaceTap(hit.textureCoord);
+                    if (onFace) ProcessWatchFaceTap(faceHit.textureCoord);
                     else Confirm();
                 }
             }
@@ -335,16 +336,17 @@ namespace Rokas.BedSleep.Argon.Candidate
             var mouse = UnityEngine.InputSystem.Mouse.current;
             if (viewCamera == null || oledCollider == null || mouse == null) return;
             Ray ray = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
-            RaycastHit hit;
-            bool onFace = oledCollider.Raycast(ray, out hit, 15f);
-            bool onCrown = crownCollider != null && crownCollider.Raycast(ray, out hit, 15f);
+            RaycastHit faceHit, crownHit;
+            bool onFace = oledCollider.Raycast(ray, out faceHit, 15f);
+            bool onCrown = crownCollider != null &&
+                crownCollider.Raycast(ray, out crownHit, 15f);
             if (onFace || onCrown)
             {
                 float wheel = mouse.scroll.ReadValue().y;
                 if (Mathf.Abs(wheel) > .01f) Step(wheel > 0 ? 1 : -1);
                 if (mouse.leftButton.wasPressedThisFrame)
                 {
-                    if (onFace) ProcessWatchFaceTap(hit.textureCoord);
+                    if (onFace) ProcessWatchFaceTap(faceHit.textureCoord);
                     else Confirm();
                 }
             }
