@@ -129,10 +129,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (!IsConfirmed && (Screen == ArgonRussianWatchScreen.Confirmed ||
                                  Screen == ArgonRussianWatchScreen.Cancelled))
                 Screen = ArgonRussianWatchScreen.Dial;
-            LastRenderedTextSummary = "СЕЙЧАС " + CurrentHour.ToString("D2") +
-                ":" + CurrentMinute.ToString("D2") + " ВРЕМЯ СНА " +
-                DurationText + " ПОДЪЁМ " + WakeText +
-                (IsConfirmed ? " УСТАНОВЛЕНО" : " ПОДТВЕРДИТЬ");
+            RefreshTextSummary();
             if (OledDynamicTexture != null) RenderAt(animatedSeconds,true);
         }
 
@@ -143,12 +140,14 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (confirmed) Screen = ArgonRussianWatchScreen.Confirmed;
             else if (Screen == ArgonRussianWatchScreen.Confirmed)
                 Screen = ArgonRussianWatchScreen.Dial;
+            RefreshTextSummary();
             if (OledDynamicTexture != null) RenderAt(animatedSeconds,true);
         }
 
         public void ShowPresets()
         {
             Screen = ArgonRussianWatchScreen.Presets;
+            RefreshTextSummary();
             requiresRedraw = true;
             RenderAt(animatedSeconds,true);
         }
@@ -162,6 +161,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         public void SetFallingAsleep()
         {
             Screen = ArgonRussianWatchScreen.FallingAsleep;
+            RefreshTextSummary();
             requiresRedraw = true;
             RenderAt(animatedSeconds,true);
         }
@@ -170,8 +170,24 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             IsConfirmed = false;
             Screen = ArgonRussianWatchScreen.Cancelled;
+            RefreshTextSummary();
             requiresRedraw = true;
             RenderAt(animatedSeconds,true);
+        }
+
+        private void RefreshTextSummary()
+        {
+            LastRenderedTextSummary = "СЕЙЧАС " + CurrentHour.ToString("D2") +
+                ":" + CurrentMinute.ToString("D2") + " ВРЕМЯ СНА " +
+                DurationText + " ПОДЪЁМ " + WakeText + " " +
+                (Screen == ArgonRussianWatchScreen.Confirmed
+                    ? "УСТАНОВЛЕНО" :
+                  Screen == ArgonRussianWatchScreen.FallingAsleep
+                    ? "ЗАСЫПАЮ" :
+                  Screen == ArgonRussianWatchScreen.Cancelled
+                    ? "ОТМЕНЕНО" :
+                  Screen == ArgonRussianWatchScreen.Presets
+                    ? "БЫСТРЫЙ ВЫБОР" : "ПОДТВЕРДИТЬ");
         }
 
         public string DurationText =>
