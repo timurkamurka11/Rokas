@@ -124,7 +124,18 @@ def main():
   report["unmatched_fingers"]=[k+1 for k in range(5) if k not in used_finger]
   # Two existing 30-point palm openings can be bridged with true original
   # finger ring vertices, but three missing sockets require NEW palm cuts.
-  if len(selected)!=2:fail("Two source sockets could not be matched safely")
+  # Preserve the measured mismatch in QA even on deliberate rejection.
+  # These two original palm openings are 24-26mm beyond the authentic
+  # finger-base cross sections in a metre-scale source model; pretending
+  # that they directly join creates long webbing and non-anatomical collars.
+  report["maximum_allowed_original_ring_gap"]=size*.05
+  report["requires_distal_palm_socket_reconstruction"]=len(selected)<2
+  (out/"real_source_socket_fit_report.json").write_text(
+    json.dumps(report,indent=2),encoding="utf8")
+  if len(selected)!=2:
+    fail("Existing original palm openings are displaced from genuine finger "+
+         "roots; do NOT stretch digits to meet them. Open new palm sockets "+
+         "by actual surface surgery; see report for exact fit distances.")
   seams=[]
   for cost,maxgap,j,k,socket_aligned,flipped,shift in selected:
     finger=fingers[k][0]
