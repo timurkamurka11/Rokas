@@ -80,9 +80,10 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             int next = Mathf.Clamp(halfHours, 1, 24);
             if (next == steps) return;
+            int before = steps;
             steps = next;
             confirmed = false;
-            crownTarget += Mathf.Sign(next - SelectedHalfHours) * 4f;
+            crownTarget += Mathf.Sign(next - before) * 4f;
             if (withSound) Play(ArgonFoleyCue.CrownTick);
             UpdateOled();
         }
@@ -109,6 +110,7 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         public void ResetConfirmation()
         {
+            if (!confirmed) return;
             confirmed = false;
             UpdateOled();
         }
