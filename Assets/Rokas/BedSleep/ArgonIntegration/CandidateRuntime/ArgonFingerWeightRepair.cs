@@ -34,6 +34,150 @@ namespace Rokas.BedSleep.Argon.Candidate
             new[] { "Hand_Palm", "Little_MCP", "Little_PIP", "Little_DIP" }
         };
 
+
+        /// <summary>
+        /// Reassigns experimental finger joints while solving a per-vertex
+        /// inverse blended skin matrix to KEEP THE CURRENT REST SHAPE intact.
+        /// Must be invoked on the freshly instantiated NEUTRAL preview rig
+        /// before any hand animation, and visually verified before shipping.
+        /// This is temporary candidate-only geometry, not an FBX overwrite.
+        /// </summary>
+        public static Report ApplyRestPreservingToCandidate(
+            SkinnedMeshRenderer skin,out Mesh temporaryMesh)
+        {
+            temporaryMesh=null;
+            if(skin==null||skin.sharedMesh==null)
+                throw new ArgumentNullException(nameof(skin));
+            var source=skin.sharedMesh;
+            var sourceVertices=source.vertices;
+            var sourceWeights=source.boneWeights;
+            var bindposes=source.bindposes;
+            var bones=skin.bones;
+            var cpuRest=new Mesh();
+            try
+            {
+                skin.BakeMesh(cpuRest);
+                var actualRest=cpuRest.vertices;
+                var scope=skin.transform.worldToLocalMatrix;
+                Matrix4x4 BlendedMatrix(BoneWeight w)
+                {
+                    var output=Matrix4x4.zero;
+                    void Include(int b,float influence)
+                    {
+                        if(influence<=0f)return;
+                        if(b<0||b>=bones.Length || b>=bindposes.Length)
+                            throw new InvalidOperationException(
+                                "Invalid original FBX skin bindpose index");
+                        var matrix=scope*bones[b].localToWorldMatrix*bindposes[b];
+                        for(int row=0;row<4;row++)
+                            for(int col=0;col<4;col++)
+                                output[row,col]+=matrix[row,col]*influence;
+                    }
+                    Include(w.boneIndex0,w.weight0);
+                    Include(w.boneIndex1,w.weight1);
+                    Include(w.boneIndex2,w.weight2);
+                    Include(w.boneIndex3,w.weight3);
+                    return output;
+                }
+
+                // Guard against coordinate-system mismatch (FBX scene scale,
+                // Blender axis conversion or differing BakeMesh local space).
+                // Without this validation an inverse skin solve could create
+                // exploding fingers, even if the maths itself is sound.
+                float scale=Mathf.Max(1e-8f,source.bounds.size.magnitude);
+                float maxForwardError=0f;
+                for(int i=0;i<sourceVertices.Length;i++)
+                {
+                    if(i%37!=0)continue;
+                    var predicted=BlendedMatrix(sourceWeights[i]).
+                        MultiplyPoint3x4(sourceVertices[i]);
+                    maxForwardError=Mathf.Max(maxForwardError,
+                        Vector3.Distance(predicted,actualRest[i]));
+                }
+                if(maxForwardError>scale*.02f)
+                    throw new InvalidOperationException(
+                        "FBX skin matrix convention mismatch (error "+
+                        maxForwardError.ToString("G9")+
+                        ", source span "+scale.ToString("G9")+
+                        "). Refusing any vertex inversion.");
+
+                // The original experimental reweight is NOT usable as-is:
+                // cloud BakeMesh QA showed 4,895 neutral vertices moved.
+                // Make a disposable mesh clone first, then restore its
+                // neutral raster by solving weighted NEW bone transforms.
+                var report=ApplyToCandidate(skin,out temporaryMesh);
+                var nextWeights=temporaryMesh.boneWeights;
+                var corrected=temporaryMesh.vertices;
+                int changed=0;
+                for(int i=0;i<corrected.Length;i++)
+                {
+                    var a=sourceWeights[i];
+                    var b=nextWeights[i];
+                    bool changedBones=
+                        a.boneIndex0!=b.boneIndex0||
+                        a.boneIndex1!=b.boneIndex1||
+                        a.boneIndex2!=b.boneIndex2||
+                        a.boneIndex3!=b.boneIndex3;
+                    if(!changedBones)continue;
+                    var forward=BlendedMatrix(b);
+                    float det=forward.determinant;
+                    if(float.IsNaN(det)||float.IsInfinity(det)||
+                        Mathf.Abs(det)<1e-8f)
+                        throw new InvalidOperationException(
+                            "Singular target skin transform at vertex "+i);
+                    var vertex=forward.inverse.MultiplyPoint3x4(actualRest[i]);
+                    if(float.IsNaN(vertex.x)||float.IsNaN(vertex.y)||
+                        float.IsNaN(vertex.z)||float.IsInfinity(vertex.x)||
+                        float.IsInfinity(vertex.y)||float.IsInfinity(vertex.z))
+                        throw new InvalidOperationException(
+                            "Invalid compensated vertex position at "+i);
+                    // A correct neutral-rest inverse often requires
+                    // significant coordinate adjustment when source
+                    // bindposes were associated with the wrong skeleton.
+                    corrected[i]=vertex;
+                    changed++;
+                }
+                temporaryMesh.vertices=corrected;
+                temporaryMesh.RecalculateBounds();
+                skin.sharedMesh=temporaryMesh;
+
+                // If the corrected neutral skin does not match the original,
+                // REJECT the candidate rather than produce another broken
+                // hand in the game.
+                var verify=new Mesh();
+                try
+                {
+                    skin.BakeMesh(verify);
+                    var after=verify.vertices;
+                    float maxDelta=0f;
+                    for(int i=0;i<after.Length;i++)
+                        maxDelta=Mathf.Max(maxDelta,
+                            Vector3.Distance(after[i],actualRest[i]));
+                    if(maxDelta>scale*.002f)
+                        throw new InvalidOperationException(
+                            "Bone remap failed original neutral pose safety: "+
+                            "max delta="+maxDelta.ToString("G9")+
+                            ", model span="+scale.ToString("G9"));
+                    report.Mapping+="\nrest compensation vertices="+changed+
+                        "; CPU BakeMesh max rest delta="+
+                        maxDelta.ToString("G9");
+                }
+                finally{UnityEngine.Object.DestroyImmediate(verify);}
+                return report;
+            }
+            catch
+            {
+                // The current user game's imported arm must never retain an
+                // unsafe, partially corrected runtime mesh on error.
+                skin.sharedMesh=source;
+                if(temporaryMesh!=null)
+                    UnityEngine.Object.DestroyImmediate(temporaryMesh);
+                temporaryMesh=null;
+                throw;
+            }
+            finally{UnityEngine.Object.DestroyImmediate(cpuRest);}
+        }
+
         public static Report ApplyToCandidate(
             SkinnedMeshRenderer skin, out Mesh temporaryMesh)
         {
