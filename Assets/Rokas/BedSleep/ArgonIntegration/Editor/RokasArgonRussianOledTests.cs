@@ -101,6 +101,10 @@ namespace Rokas.BedSleep.Argon.Editor
                 void Snapshot(string name)
                 {
                     oled.RenderAt(4f,true);
+                    Assert.That(oled.LastTextRows,Is.GreaterThan(0),
+                        name+" must paint real Cyrillic glyphs");
+                    Assert.That(oled.LastTextLayoutSafe,Is.True,
+                        name+" has intersecting/clipped text on the real 512px OLED");
                     System.IO.File.WriteAllBytes(
                         System.IO.Path.Combine(dir,name+".png"),
                         oled.OledDynamicTexture.EncodeToPNG());
