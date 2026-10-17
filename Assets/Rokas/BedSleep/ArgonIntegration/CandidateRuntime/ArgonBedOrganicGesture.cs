@@ -38,7 +38,9 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             float v = Mathf.Clamp01(visibility);
             float p = lowering ? 1f - v : v;
-            // Entry: wrist leads and forearm follows. Exit: the wrist relaxes
+            // Entry: wrist leads and forearm follows *while visible*, instead
+            // of spending the whole wrist gesture below the frame. Exit:
+            // the wrist relaxes
             // first, then the forearm drops, with its own different arc.
             float moved = lowering
                 ? Window(p, .11f, .96f)
@@ -46,10 +48,10 @@ namespace Rokas.BedSleep.Argon.Candidate
             float hidden = lowering ? moved : 1f - moved;
             float wrist = lowering
                 ? Window(p, .025f, .77f)
-                : 1f - Window(p, .045f, .68f);
+                : 1f - Window(p, .17f, .88f);
             float forearm = lowering
                 ? Window(p, .14f, .87f)
-                : 1f - Window(p, .16f, .89f);
+                : 1f - Window(p, .28f, .98f);
             // A tiny damped settle AFTER most of the lift, decaying exactly
             // to zero at the final hero keyframe, with no perpetual drift.
             float arrive = lowering ? 0f :
