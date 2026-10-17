@@ -95,20 +95,29 @@ def main():
                   range(0,len(candidate.data.vertices),max(1,len(candidate.data.vertices)//200)))
     localBbox=max(max(v.co[i] for v in candidate.data.vertices)-
                   min(v.co[i] for v in candidate.data.vertices) for i in range(3))
-    # The input is an OPEN surface sheet, not five closed cylinders.
-    # A direct voxel pass produced 60 fragments and >64% silhouette
-    # destruction (first real Blender run). First give the ORIGINAL
-    # hand sheet modest evenly centered thickness without new geometry
-    # primitives; only then may an outer-surface voxel union be valid.
-    sld=candidate.modifiers.new("ROKAS_SourceSkin_SealOpenSheets","SOLIDIFY")
-    sld.thickness=localBbox/72.0
-    sld.offset=-.5
-    sld.use_even_offset=True
-    sld.use_rim=True
-    bpy.ops.object.modifier_apply(modifier=sld.name)
+    # Original palm + 5 finger SHELLS each contain one long open
+    # boundary. Previous naked voxel remesh produced 60 fragments; a
+    # solidify modifier created 37 fragments, 688k vertices and >136%
+    # silhouette drift. Both were correctly hard rejected. New variant:
+    # close each AUTHENTIC boundary loop in-place, without expanding or
+    # doubling surfaces, before attempting an outer-volume union.
+    bm=bmesh.new()
+    bm.from_mesh(candidate.data)
+    border=[e for e in bm.edges if e.is_boundary]
+    if len(border)<500:stop("Missing six authentic original open boundaries")
+    caps=bmesh.ops.holes_fill(bm,edges=border,sides=0)
+    bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
+    bm.to_mesh(candidate.data)
+    bm.free()
+    candidate.data.update()
     sealed=mesh_report(candidate)
-
-    candidate.data.remesh_voxel_size=localBbox/540.0
+    # A closed pre-voxel shell is required. If the genuine source has
+    # folds that cannot be safely filled, never move on to volumetrics.
+    if sealed["boundary_edges"]!=0 or sealed["islands"]!=6:
+        stop("Actual source-hole fill failed, do not voxel broken fingers")
+    # Hard cap on memory: no destructive million-vertex explosion. This
+    # variant must preserve original hand bounds and all finger islands.
+    candidate.data.remesh_voxel_size=localBbox/430.0
     candidate.data.remesh_voxel_adaptivity=0.0
     bpy.ops.object.voxel_remesh()
     for face in candidate.data.polygons:
