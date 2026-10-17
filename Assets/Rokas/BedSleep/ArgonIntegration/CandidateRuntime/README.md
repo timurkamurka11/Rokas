@@ -53,3 +53,29 @@ while the GitHub repo remains public.
 Visual pass criteria: preserved 2D positioning, actual subtle motion across
 frames, PIP/DIP motion with no broken bones, clear physical OLED, natural
 matte skin and audible quiet cloth/scroll/confirm cues.
+
+## Reusing production V10 input safely
+
+The actual V10 `SmartwatchInputRouter` supports crown wheel, drag ring,
+screen dial taps, keyboard arrow keys, confirm and cancel. Do **not**
+parallel-process those inputs again in the Argon candidate. When the
+preview is installed into a separate PlayMode rig (NOT merged yet), call:
+
+```csharp
+argonControls.BindExistingV10InputRouter(existingV10Router);
+```
+
+This uses the real V10 events without a new assembly dependency and
+automatically disables duplicate local pointer reads. Call
+`argonControls.UnbindV10InputRouter()` before unloading the candidate;
+`OnDestroy` also releases subscriptions. The original V10 controller is
+never changed by the candidate. Real V10 duration bounds are **2..24
+half-hour steps**. Its OLED now redraws only when the selection or
+confirmed state actually changes. The 2,000-frame no-drift regression
+validates the wrist/root and PIP motion without a full video render.
+
+To avoid stacking additive secondary motions during runtime, call
+`living.NotifyAnimationPoseReset()` only when the base Animator has
+already overwritten the authored wrist/root bone pose since the previous
+`Apply`. If there was no base pose reset, `Apply` removes its own prior
+offset before adding the current bounded sway.
