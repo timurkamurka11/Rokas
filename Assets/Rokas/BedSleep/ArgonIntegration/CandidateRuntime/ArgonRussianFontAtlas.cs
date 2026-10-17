@@ -53,6 +53,21 @@ namespace Rokas.BedSleep.Argon.Candidate
             float b=Mathf.Lerp(Sample(gi,x0,y0+1),Sample(gi,x0+1,y0+1),fx);
             return Mathf.Lerp(a,b,fy);
         }
+        // Exact occupied horizontal glyph advance in source atlas pixels.
+        // Layout validation is based on THIS atlas, not guessed font metrics.
+        public static float MeasureWidth(string text,float scale)
+        {
+            EnsureLoaded();
+            if(string.IsNullOrEmpty(text))return 0f;
+            float result=0f;
+            foreach(char c in text.ToUpperInvariant())
+            {
+                int gi=Alphabet.IndexOf(c);
+                result+=(gi>=0?widths[gi]+2:10)*scale;
+            }
+            return result;
+        }
+
         public static void Draw(string text,int centerX,int centerY,
             float scale,Color32 color,Action<int,int,Color32,float> pixel)
         {
