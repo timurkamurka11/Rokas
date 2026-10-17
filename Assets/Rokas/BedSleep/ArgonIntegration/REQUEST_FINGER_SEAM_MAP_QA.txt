@@ -1,0 +1,1 @@
+Continuing PR #13: produce original 25-bone six-island palm/finger boundary coordinates and true contact correspondences, no fake root caps, global voxel remesh disabled, no V10 change.
