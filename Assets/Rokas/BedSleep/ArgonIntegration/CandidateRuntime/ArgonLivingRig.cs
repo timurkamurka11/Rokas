@@ -100,7 +100,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             strength = Mathf.Clamp01(strength);
             float breath = Mathf.Sin(seconds * 2f * Mathf.PI * .22f);
             float secondary = Mathf.Sin(seconds * 2f * Mathf.PI * .37f + 1.2f);
-            float life = strength * (.55f * breath + .45f * secondary);
+            float microBreath = Mathf.Sin(seconds * 2f * Mathf.PI * .51f + .42f);
+            float life = strength * (.53f * breath + .38f * secondary +
+                .09f * microBreath);
             previousRootOverlay = cameraUp * (life * MaxRootDriftMeters)
                 + cameraRight * (secondary * .00115f * strength);
             root.position += previousRootOverlay;
@@ -111,12 +113,16 @@ namespace Rokas.BedSleep.Argon.Candidate
             overlayApplied = true;
 
             string[] fingers = { "Index", "Middle", "Ring", "Little" };
-            float[] pip = { 4.8f, 6.8f, 8.1f, 9.3f };
-            float[] dip = { 2.2f, 3.2f, 3.9f, 4.9f };
+            // Source FBX contains five detached finger base islands.
+            // Ring/little must NOT be curled harder than the intact
+            // index/middle while collars are being visually repaired.
+            float[] pip = { 4.8f, 6.4f, 6.3f, 5.5f };
+            float[] dip = { 2.2f, 3.0f, 2.8f, 2.4f };
             for (int i = 0; i < fingers.Length; ++i)
             {
                 float cycle = Mathf.Sin(seconds * (1.32f + i * .09f) + i * .84f);
-                float micro = strength * (.85f * cycle + (isAdjusting ? 1.1f : 0f));
+                float micro = strength * (.95f * cycle +
+                    (isAdjusting ? .70f * (1f + secondary) : 0f));
                 Curl(fingers[i] + "_PIP", strength * pip[i] + micro);
                 Curl(fingers[i] + "_DIP", strength * dip[i] + micro * .38f);
             }
