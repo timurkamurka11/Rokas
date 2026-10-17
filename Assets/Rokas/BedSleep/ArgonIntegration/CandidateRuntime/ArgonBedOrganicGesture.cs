@@ -66,29 +66,45 @@ namespace Rokas.BedSleep.Argon.Candidate
             // Exit has a distinct slower, forward-falling arc. No constant
             // lateral slide, no sudden reverse playback of the entry.
             float arc = Mathf.Sin(moved * Mathf.PI);
+            // Elbow/forearm/wrist are ONE articulated chain, not one
+            // translated plank. This raised middle-phase counter-motion
+            // happens on camera, then dies away before the approved pose.
+            // Gentle and deterministic: no randomized/floating arm sway.
+            float reach=Window(p,.16f,.90f);
+            float breathingArc=Mathf.Pow(Mathf.Sin(reach*Mathf.PI),2f);
+            float wristCounter= Mathf.Pow(Mathf.Sin(
+                Window(p,.21f,.94f)*Mathf.PI),2f);
             return new Sample
             {
-                Horizontal = -(lowering ? .080f : .106f) * hidden +
-                    arc * (lowering ? -.004f : .007f),
-                Vertical = -(lowering ? .348f : .315f) * hidden +
-                    arc * (lowering ? -.008f : .017f) +
-                    settle * .0023f,
-                Away = (lowering ? .116f : .080f) * hidden +
-                    (lowering ? .010f : -.006f) * arc,
-                WristPitchDegrees = (lowering ? -15.6f : 13.2f) * wrist +
-                    settle * .52f,
-                WristRollDegrees = (lowering ? -6.7f : 7.1f) * wrist,
-                ForearmPitchDegrees = (lowering ? -7.8f : 6.1f) * forearm,
-                ForearmRollDegrees = (lowering ? -1.65f : 2.15f) * forearm,
+                Horizontal = -(lowering ? .080f : .106f)*hidden+
+                    arc*(lowering ? -.004f : .007f)+
+                    breathingArc*(lowering ? -.003f : .004f),
+                Vertical = -(lowering ? .348f : .315f)*hidden+
+                    arc*(lowering ? -.008f : .017f)+
+                    breathingArc*(lowering ? -.006f : .006f)+
+                    settle*.0023f,
+                Away = (lowering ? .116f : .080f)*hidden+
+                    (lowering ? .010f : -.006f)*arc+
+                    breathingArc*(lowering ? .003f : -.004f),
+                WristPitchDegrees = (lowering ? -15.6f : 13.2f)*wrist+
+                    wristCounter*(lowering ? -1.1f : 2.4f)+settle*.52f,
+                WristRollDegrees = (lowering ? -6.7f : 7.1f)*wrist+
+                    wristCounter*(lowering ? 1.7f : -2.8f),
+                ForearmPitchDegrees = (lowering ? -7.8f : 6.1f)*forearm+
+                    breathingArc*(lowering ? -1.3f : 2.1f),
+                ForearmRollDegrees = (lowering ? -1.65f : 2.15f)*forearm+
+                    breathingArc*(lowering ? -.7f : .9f),
                 // A distinct proximal forearm/"elbow" hinge is essential:
                 // simply translating the entire prefab reproduces a wooden
                 // sliding prop, even when wrist rotates nicely. Let the
                 // proximal section follow after the wrist, with restrained
                 // independent sweep in the camera plane.
-                ProximalElbowDegrees = (lowering ? -10.2f : 10.8f) *
-                    Window(forearm,0f,1f),
-                ProximalSwivelDegrees = (lowering ? 1.8f : -2.6f) *
-                    Mathf.Sin(forearm * Mathf.PI * .5f),
+                ProximalElbowDegrees = (lowering ? -10.2f : 10.8f)*
+                    Window(forearm,0f,1f)+
+                    breathingArc*(lowering ? -.8f : 1.6f),
+                ProximalSwivelDegrees = (lowering ? 1.8f : -2.6f)*
+                    Mathf.Sin(forearm*Mathf.PI*.5f)+
+                    breathingArc*(lowering ? 1.8f : -2.0f),
                 // Every finger receives its own micro-response with a small
                 // phase lag in the living rig. Keep separate from source FBX
                 // MCP; do not over-curl malformed pinky/ring finger roots.
