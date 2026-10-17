@@ -32,11 +32,37 @@ jobs:
             2>&1 | tee Artifacts/ArgonFingerLocalBridge/blender_qa_log.txt
           test -s Artifacts/ArgonFingerLocalBridge/local_root_bridge_report.json
           test -s Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
-      - name: Keep private candidate until real Unity visual approval
+      - name: Stage generated original-bone QA FBX inside TEMPORARY Unity checkout
+        run: |
+          mkdir -p Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA
+          cp Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx \
+            Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+      - name: Unity - actual source hand versus Blender root-joined skinned FBX
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonLocalBridgeUnityTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS authentic 25 bone connected finger root Unity deform and 1280x720 comparison
+      - name: Keep diagnostics without distributing proprietary experimental FBX
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ROKAS-Argon-LocalRootBridge-Candidate-PrivateQA
-          path: Artifacts/ArgonFingerLocalBridge/*
+          path: |
+            Artifacts/ArgonFingerLocalBridge/local_root_bridge_report.json
+            Artifacts/ArgonFingerLocalBridge/blender_qa_log.txt
+            Artifacts/ArgonLocalBridgeUnity/*.png
+            Artifacts/ArgonLocalBridgeUnity/*.txt
+            ${{ steps.unity.outputs.artifactsPath }}
           retention-days: 7
           if-no-files-found: warn
