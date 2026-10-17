@@ -74,11 +74,44 @@ def main():
     if len(components)!=6 or len(components[0])<5000:fail("Wrong FBX skin islands")
     per=[loop(x) for x in components]
     center=per[0]
+    # Previous 0.045 hand-span allowance permitted 17-18 mm bridges across
+    # 8-10 mm finger sections. Real Unity images proved severe polygons.
+    # Reject distant contacts, use much shorter true surface transitions.
     diameter=max(b-a for a,b in b0)
-    maxBridge=diameter*.045
+    maxBridge=diameter*.026
     minBridge=diameter*.0001
     uv=bm.loops.layers.uv.active
     usedPalm=set()
+    # Build a genuine shared two-ring fillet, not one huge face connecting
+    # anatomical surfaces with a flat hard collar. Cache crossed-edge
+    # vertices between consecutive quads: NO cracks/T-junctions.
+    bm.normal_update()
+    deform=bm.verts.layers.deform.active
+    if deform is None:fail("Original skinned Blender vertex groups absent")
+    orig_uv={}
+    if uv is not None:
+        for ring in per:
+            for vertex in ring:
+                loops=[l for e in vertex.link_edges for face in e.link_faces
+                       for l in face.loops if l.vert==vertex]
+                if loops:orig_uv[vertex.index]=loops[0][uv].uv.copy()
+    ringCache={}
+    addedWeights=[]
+    addedFaces=[]
+    def point_between(f,p,t):
+        key=(f.index,p.index,t)
+        if key in ringCache:return ringCache[key]
+        gap=(p.co-f.co).length
+        n=f.normal+p.normal
+        if n.length_squared>1e-12:n.normalize()
+        else:n=f.normal.copy()
+        # A restrained sub-millimetre skin fold easing from the palm.
+        # No source vertex is displaced; motion weights get interpolated.
+        height=min(gap*.045,diameter*.0006)*math.sin(math.pi*t)
+        vertex=bm.verts.new(f.co.lerp(p.co,t)+n*height)
+        ringCache[key]=vertex
+        addedWeights.append((vertex,f.index,p.index,t))
+        return vertex
     report={"original_vertices":len(bm.verts),
             "original_islands":len(components),
             "original_boundaries":sum(e.is_boundary for e in bm.edges),
@@ -113,15 +146,32 @@ def main():
                 continue
             if p0.index in usedPalm or p1.index in usedPalm:continue
             if len({f0.index,f1.index,p0.index,p1.index})!=4:continue
-            try:face=bm.faces.new([f0,f1,p1,p0])
-            except ValueError:continue
-            face.material_index=0
-            face.smooth=True
-            # Copy existing source UV per corner: not an opaque blank strip.
-            if uv is not None:
-                for face_loop in face.loops:
-                    existing=[l for l in face_loop.vert.link_loops if l.face!=face]
-                    if existing:face_loop[uv].uv=existing[0][uv].uv.copy()
+            # 3 surface rows between genuine neighboring source outlines,
+            # with intermediate shared loft vertices and no new primitives.
+            a0=point_between(f0,p0,1.0/3.0)
+            a1=point_between(f1,p1,1.0/3.0)
+            b0v=point_between(f0,p0,2.0/3.0)
+            b1v=point_between(f1,p1,2.0/3.0)
+            strips=([f0,f1,a1,a0],[a0,a1,b1v,b0v],[b0v,b1v,p1,p0])
+            for quad in strips:
+                try:face=bm.faces.new(quad)
+                except ValueError:fail("Nonmanifold or duplicate loft patch")
+                face.material_index=0
+                face.smooth=True
+                addedFaces.append(face)
+                if uv is not None:
+                    for corner in face.loops:
+                        v=corner.vert
+                        if v.index in orig_uv:
+                            corner[uv].uv=orig_uv[v.index].copy()
+                        else:
+                            record=next((x for x in addedWeights if x[0]==v),None)
+                            if record is None:fail("Missing generated UV edge provenance")
+                            _,fi_idx,pi_idx,t=record
+                            if fi_idx not in orig_uv or pi_idx not in orig_uv:
+                                fail("Cannot interpolate authentic finger-palm UV")
+                            corner[uv].uv=orig_uv[fi_idx].lerp(
+                                orig_uv[pi_idx],t)
             fingerPalmVerts.update((p0.index,p1.index))
             bridgeCount+=1
             maximum=max(maximum,dist0,dist1)
@@ -132,7 +182,12 @@ def main():
             "quads":bridgeCount,"max_root_gap":maximum,
             "closest_pair_cost":best[0]})
         if bridgeCount<1:fail("Cannot safely bridge original finger "+str(fingerNo))
+    bm.verts.index_update()
+    bm.verts.ensure_lookup_table()
+    generated=[(v.index,fi,pi,t) for v,fi,pi,t in addedWeights]
     merged=islands(bm)
+    report["new_bridge_vertices"]=len(generated)
+    report["new_bridge_faces"]=len(addedFaces)
     report["post_islands"]=len(merged)
     report["post_boundary_edges"]=sum(e.is_boundary for e in bm.edges)
     report["post_vertices"]=len(bm.verts)
@@ -150,6 +205,70 @@ def main():
         key=lambda ids: sum(bm.verts[i].co.y for i in ids)/len(ids))
     bm.to_mesh(clone.data);bm.free()
     clone.data.update()
+    # Correct the missing original finger influences on this isolated CLONE:
+    # ring had no DIP/TIP and little had zero source named weights.
+    # All five source finger meshes are identified from authentic six
+    # components and Y-sorted root topology, not fabricated cylinders.
+    source_indices=[[v.index for v in group] for group in components]
+    bones=set(b.name for b in arm.data.bones)
+    rebuilt={}
+    for fingerNo,names in [(4,["Ring_MCP","Ring_PIP","Ring_DIP","Ring_Tip"]),
+                           (5,["Little_MCP","Little_PIP","Little_DIP","Little_Tip"])]:
+        if not all(x in bones for x in names):
+            fail("Original named phalanx bones missing "+str(names))
+        verts=source_indices[fingerNo]
+        if len(verts)<1300:fail("Original finger island missing vertices")
+        for name in names:
+            if name not in clone.vertex_groups:
+                clone.vertex_groups.new(name=name)
+        # Source finger longitudinal coordinate: original wrist/hand X.
+        coords=[clone.data.vertices[i].co.x for i in verts]
+        xmin,xmax=min(coords),max(coords)
+        if xmax-xmin<diameter*.05:
+            fail("Unusable original ring/little finger longitudinal span")
+        for group in clone.vertex_groups:
+            group.remove(verts)
+        anchors=(.02,.37,.68,.96)
+        lists=[[] for _ in names]
+        weights=[[] for _ in names]
+        for vi in verts:
+            u=(clone.data.vertices[vi].co.x-xmin)/(xmax-xmin)
+            u=max(anchors[0],min(anchors[-1],u))
+            for k in range(3):
+                if anchors[k]<=u<=anchors[k+1]:
+                    v=(u-anchors[k])/(anchors[k+1]-anchors[k])
+                    for nameIdx,w in ((k,1-v),(k+1,v)):
+                        if w>1e-6:
+                            lists[nameIdx].append(vi)
+                            weights[nameIdx].append(w)
+                    break
+        for k,name in enumerate(names):
+            g=clone.vertex_groups[name]
+            for vi,w in zip(lists[k],weights[k]):
+                g.add([vi],w,'REPLACE')
+        rebuilt[names[0].split("_")[0]]={
+            "source_vertices":len(verts),
+            "bone_chain":names,
+            "longitudinal_range":[xmin,xmax],
+            "deforming_groups":[len(x) for x in lists]}
+    # Shared loft vertices: interpolate original palm weights with corrected
+    # original finger weights to avoid snapping at the joining skin fold.
+    group_names={g.index:g.name for g in clone.vertex_groups}
+    def vweights(i):
+        return {group_names[x.group]:x.weight
+                for x in clone.data.vertices[i].groups if x.weight>1e-6}
+    for vi,fi,pi,t in generated:
+        a,b=vweights(fi),vweights(pi)
+        mix={}
+        for name in set(a)|set(b):
+            mix[name]=a.get(name,0)*(1-t)+b.get(name,0)*t
+        weightSum=sum(mix.values())
+        if weightSum<.5:fail("Generated seam has no meaningful skin weights")
+        for name,w in mix.items():
+            if w>1e-6:
+                clone.vertex_groups[name].add([vi],w/weightSum,'REPLACE')
+    report["rebuilt_finger_weights"]=rebuilt
+    report["loft_weighted_vertices"]=len(generated)
 
     finger_target_chains = [
         ["Hand_Palm","Thumb_CMC","Thumb_MCP","Thumb_IP"],
