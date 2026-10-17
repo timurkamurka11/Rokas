@@ -345,7 +345,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 int y=345-i*60;
                 bool selected=SelectedHalfHours==values[i];
                 Color32 shade=selected?blue:new Color32(28,45,84,255);
-                for(int x=120;x<=392;x+=4)Disc(x,y,18,shade,selected?.42f:.16f);
+                for(int x=120;x<=392;x+=4)Disc(x,y,18,shade,selected ? 0.42f : 0.16f);
                 CenterText(labels[i],256,y-1,3,selected?white:muted);
             }
             CenterText("ВЫБРАТЬ",256,42,3,muted);
