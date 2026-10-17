@@ -393,8 +393,13 @@ def main():
         if root_pull_size>diameter*.049:
             fail("Finger base cannot safely settle into distant palm tissue")
         moved_at_root=0.0
+        # Candidate V2: source tube crowns still protrude 1-2 cm from
+        # epidermis in Unity even with quad loops. Settle the real first
+        # root ring deeper into the physically nearest palm tissue, taper
+        # the movement gently to zero before proximal/middle phalanges.
+        # This is an isolated candidate experiment; source FBX untouched.
         for depth,(tier,pull,radial) in enumerate(zip(
-                tiers,(.32,.15,.035),(.93,.978,1.0))):
+                tiers,(.54,.27,.055),(.88,.955,1.0))):
             tier_center=sum((v.co for v in tier),
                             Vector((0,0,0)))/len(tier)
             for v in tier:
@@ -402,7 +407,7 @@ def main():
                 v.co=tier_center+(v.co-tier_center)*radial+root_pull*pull
                 delta=(v.co-before).length
                 moved_at_root=max(moved_at_root,delta)
-        if moved_at_root>diameter*.019:
+        if moved_at_root>diameter*.024:
             fail("Proximal anatomical finger blend moved authentic tissue too far")
         report.setdefault("proximal_digit_tissue_feather",[]).append({
             "finger":fingerNo,
