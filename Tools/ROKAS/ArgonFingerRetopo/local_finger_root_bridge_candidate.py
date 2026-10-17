@@ -253,32 +253,82 @@ def main():
             fail("No valid genuine epidermis orientation at finger root")
         (_,fi,pj,df,dp),a,p=best
         direction=dp
-        index_a=index_p=0
+        # Source 30-point digit rim -> 10..14-point palm socket previously
+        # formed naked high-aspect triangles and harsh collars. Use TWO
+        # curved, skinned transitional loops sourced from genuine contours
+        # without moving the original fingertips or rebuilding the palm.
+        # A is 1/3 from digit, B is 1/3 from palm. Real PBR UV and 25-bone
+        # weights are interpolated after the authentic digit retarget.
+        seam_uv={}
+        def sample_linear(seq,t):
+            x=(t%1.0)*len(seq)
+            j=int(math.floor(x))
+            q=x-j
+            v0=seq[j%len(seq)];v1=seq[(j+1)%len(seq)]
+            return v0.co.lerp(v1.co,q),v0,v1,q
+        def make_inner(v,w,point,t):
+            x=bm.verts.new(point)
+            addedWeights.append((x,v.index,w.index,t))
+            if uv is not None:
+                seam_uv[x]=nearest_source_uv(v).lerp(
+                    nearest_source_uv(w),t)
+            return x
+        near_finger=[]
+        for i,vertex in enumerate(a):
+            pos,p0,p1,q=sample_linear(p,i/N)
+            # Smooth source-root/palm correspondence, no conical caps.
+            near_finger.append(make_inner(vertex,
+                p0,vertex.co.lerp(pos,.34),.34))
+        near_palm=[]
+        for j,vertex in enumerate(p):
+            pos,f0,f1,q=sample_linear(a,j/M)
+            near_palm.append(make_inner(f0,
+                vertex,pos.lerp(vertex.co,.66),.66))
+        source_contact_vertices.update(near_finger)
+        source_contact_vertices.update(near_palm)
         built=[]
-        while index_a<N or index_p<M:
-            next_a=(index_a+1)/N if index_a<N else 1e9
-            next_p=(index_p+1)/M if index_p<M else 1e9
-            u=a[index_a%N];v=p[index_p%M]
-            if abs(next_a-next_p)<1e-7:
-                vertices=[u,a[(index_a+1)%N],p[(index_p+1)%M],v]
-                index_a+=1;index_p+=1
-            elif next_a<next_p:
-                vertices=[u,a[(index_a+1)%N],v]
-                index_a+=1
-            else:
-                vertices=[u,p[(index_p+1)%M],v]
-                index_p+=1
+        def add_skin_face(vertices):
             if len(set(vertices))!=len(vertices):
-                fail("Degenerate finger-palm root graft triangles")
+                fail("Anatomical transition has a degenerate polygon")
             try:
                 face=bm.faces.new(vertices)
             except ValueError:
-                fail("Duplicate root-to-palm surface triangle")
+                fail("Anatomical transition duplicated original surface")
             face.material_index=0;face.smooth=True
             built.append(face)
             if uv is not None:
                 for corner in face.loops:
-                    corner[uv].uv=nearest_source_uv(corner.vert)
+                    vertex=corner.vert
+                    corner[uv].uv=(seam_uv[vertex] if vertex in seam_uv
+                                   else nearest_source_uv(vertex))
+        # Original authentic digit ring -> 30-vertex near-digit ring.
+        for i in range(N):
+            j=(i+1)%N
+            add_skin_face([a[i],a[j],near_finger[j],near_finger[i]])
+        # Inner transition 30 -> 10..14, distribute mismatch across
+        # medial tissue, not the visible outer knuckle border.
+        index_a=index_p=0
+        while index_a<N or index_p<M:
+            next_a=(index_a+1)/N if index_a<N else 1e9
+            next_p=(index_p+1)/M if index_p<M else 1e9
+            u=near_finger[index_a%N]
+            v=near_palm[index_p%M]
+            if abs(next_a-next_p)<1e-7:
+                vertices=[u,near_finger[(index_a+1)%N],
+                          near_palm[(index_p+1)%M],v]
+                index_a+=1;index_p+=1
+            elif next_a<next_p:
+                vertices=[u,near_finger[(index_a+1)%N],v]
+                index_a+=1
+            else:
+                vertices=[u,near_palm[(index_p+1)%M],v]
+                index_p+=1
+            add_skin_face(vertices)
+        # Near-palm ring -> original palm socket, preserving outward
+        # winding and the authentic adjacent original epidermis surface.
+        for i in range(M):
+            j=(i+1)%M
+            add_skin_face([near_palm[i],near_palm[j],p[j],p[i]])
         if len(built)<max(N,M):
             fail("Anatomical graft missing source ring faces")
         return built,direction
@@ -484,7 +534,9 @@ def main():
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
-    generated=[]  # Surface graft uses authentic existing boundary vertices; no cloned finger proxies
+    generated=[(v.index,fi,pi,t) for v,fi,pi,t in addedWeights]
+    # All transitional loops are assigned authentic source-derived bone
+    # weights AFTER original five-digit retarget and remain skinned.
     merged=islands(bm)
     report["new_bridge_vertices"]=len(generated)
     report["new_bridge_faces"]=len(addedFaces)
