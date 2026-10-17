@@ -98,6 +98,7 @@ def main():
                 if best is None or cur[0]<best[0]:best=cur
         _,fi,pi,orientation=best
         bridgeCount=0;maximum=0.0
+        fingerPalmVerts=set()
         for k in range(-7,8):
             f0=ring[(fi+k)%len(ring)]
             f1=ring[(fi+k+1)%len(ring)]
@@ -121,9 +122,12 @@ def main():
                 for face_loop in face.loops:
                     existing=[l for l in face_loop.vert.link_loops if l.face!=face]
                     if existing:face_loop[uv].uv=existing[0][uv].uv.copy()
-            usedPalm.update((p0.index,p1.index))
+            fingerPalmVerts.update((p0.index,p1.index))
             bridgeCount+=1
             maximum=max(maximum,dist0,dist1)
+        # A neighboring quad reuses its two end vertices: only forbid
+        # overlapping patches BETWEEN DIFFERENT fingers, not within one.
+        usedPalm.update(fingerPalmVerts)
         report["per_finger"].append({"finger":fingerNo,
             "quads":bridgeCount,"max_root_gap":maximum,
             "closest_pair_cost":best[0]})
@@ -140,6 +144,7 @@ def main():
         for i in range(3) for k in range(2))/diameter
     (out/"local_root_bridge_report.json").write_text(
         json.dumps(report,indent=2),encoding="utf-8")
+    print("ROKAS ORIGINAL ROOT BRIDGE MEASUREMENTS",json.dumps(report),flush=True)
     if report["post_islands"]!=1 or report["silhouette_drift"]>1e-7:
         fail("Topology/shape safety gate: "+json.dumps(report))
     if report["post_boundary_edges"]>=report["original_boundaries"]:
