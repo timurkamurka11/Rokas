@@ -411,6 +411,48 @@ def main():
             add_skin_face(vertices)
         if len(built)<max(N,M):
             fail("Anatomical graft missing source ring faces")
+        # The curved interpolation is better on SOME fingers and worse on
+        # others. Rather than assign one global hand-tuned smoothness,
+        # compare the real source-backed, authenticated 25-bone geometry
+        # at each digit and SELECT by actual Blender fold angles. Only
+        # the 60 GENERATED intermediate vertices are moved.
+        paired=[]
+        for i,vertex in enumerate(a):
+            pos,_,_,_=sample_arc(p,frac_p,frac_a[i])
+            paired.append((vertex.co.lerp(pos,.34),
+                           vertex.co.lerp(pos,.72)))
+        curved_f=[v.co.copy() for v in near_finger]
+        curved_p=[v.co.copy() for v in near_palm]
+        unique_skin_edges={e for face in built for e in face.edges if
+                           e.is_manifold and len(e.link_faces)==2}
+        outcomes=[]
+        for blend in (0.,.5,1.):
+            for i in range(N):
+                near_finger[i].co=paired[i][0].lerp(curved_f[i],blend)
+                near_palm[i].co=paired[i][1].lerp(curved_p[i],blend)
+            bm.normal_update()
+            observed=[]
+            for edge in unique_skin_edges:
+                fa,fb=edge.link_faces
+                if fa.normal.length_squared<1e-12 or fb.normal.length_squared<1e-12:
+                    fail("Zero-normal quads in anatomical shape search")
+                observed.append(math.degrees(fa.normal.angle(fb.normal)))
+            count_120=sum(z>120 for z in observed)
+            count_90=sum(z>90 for z in observed)
+            mean_fold=sum(max(z-70,0)**2 for z in observed)/max(1,len(observed))
+            outcomes.append((count_120,count_90,mean_fold,blend))
+        winner=min(outcomes)
+        for i in range(N):
+            near_finger[i].co=paired[i][0].lerp(curved_f[i],winner[3])
+            near_palm[i].co=paired[i][1].lerp(curved_p[i],winner[3])
+        bm.normal_update()
+        report.setdefault("per_finger_shape_search",[]).append({
+            "source_accurate_30x30":True,
+            "candidates":[{"curvature_blend":w,"angles_over_120":n120,
+                           "angles_over_90":n90,"mean_fold_penalty":v}
+                          for n120,n90,v,w in outcomes],
+            "selected_curvature_blend":winner[3],
+            "selected_angles_over_120":winner[0]})
         return built,direction
 
     for fingerNo,ring in enumerate(per[1:],1):
