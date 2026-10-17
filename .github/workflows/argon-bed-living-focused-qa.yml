@@ -32,9 +32,9 @@ jobs:
           projectPath: .
           unityVersion: 6000.3.19f1
           testMode: EditMode
-          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonFingerVisualCompareTests
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonCinematicPolishTests.OrganicGestureHasNoSidewaysSlideOrAbruptHeroPoseCut
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: ROKAS Argon 2000-frame no-drift and V10 watch routing
+          checkName: ROKAS first-person bed gesture continuity and wrist/forearm stagger
       - name: Upload focused test reports
         uses: actions/upload-artifact@v4
         if: always()
