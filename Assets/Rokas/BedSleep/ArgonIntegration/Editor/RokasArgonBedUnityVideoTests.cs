@@ -229,9 +229,12 @@ namespace Rokas.BedSleep.Argon.Editor
                     // Keep the REAL 25-bone source and FBX clip, but eliminate
                     // base-only finger curling and excessive wrist twisting.
                     heroPose.RestoreNaturalAnatomy();
-                    // Rigid cinematic slide from OFF-SCREEN LEFT to horizontal
-                    // hero pose; no longer rise diagonally from bottom edge.
-                    heroPose.SetPresentation(exitDistance);
+                    // Organic first-person lift from BELOW and slightly AWAY
+                    // from the camera, with genuine wrist/forearm turns.
+                    // Withdrawal follows a DIFFERENT natural relaxation track.
+                    bool retreating=clip==lower ||
+                        clip.name.Contains("SleepArm_ReturnIdle");
+                    heroPose.SetCinematicPresentation(exitDistance,retreating);
                     living.NotifyAnimationPoseReset();
                     float lifeWeight = Mathf.SmoothStep(0f, 1f,
                         Mathf.Clamp01(exitDistance));
@@ -381,8 +384,8 @@ namespace Rokas.BedSleep.Argon.Editor
                     {
                         foleyEvents.Add(new ArgonFoleyEvent(at + .09f,
                             ArgonFoleyCue.Sleeve, .9f));
-                        foleyEvents.Add(new ArgonFoleyEvent(at + .33f,
-                            ArgonFoleyCue.Sleeve, .52f));
+                        foleyEvents.Add(new ArgonFoleyEvent(at + .53f,
+                            ArgonFoleyCue.Sleeve, .42f));
                     }
                     if (clip == crown)
                         for (int i = 0; i < 4; ++i)
@@ -400,23 +403,25 @@ namespace Rokas.BedSleep.Argon.Editor
                     }
                 }
 
-                // Reference: sleeve enters from off-screen LEFT. The whole
-                // skinned hand translates rigidly toward watch-center at the
-                // exact horizontal viewing angle, never swings up to ceiling.
-                Segment(FindClip("SleepArm_HiddenIdle"), .65f,
+                // Bed-first-person staging: hidden cuff BELOW camera, then
+                // a gradual lift / wrist turn / soft settle into the EXACT
+                // same approved sleeve-left, watch-center, fingers-right pose.
+                // Two original FBX animation clips are still sampled.
+                Segment(FindClip("SleepArm_HiddenIdle"), .55f,
                     t => 0f, t => 14, false);
-                Segment(raise, raise.length, t => t * .86f,
-                    t => 14, false);
-                Segment(wrist, wrist.length, t => .86f + t * .14f,
-                    t => 14, false);
+                Segment(raise, Mathf.Max(1.45f,raise.length*1.30f),
+                    t => t*.82f, t => 14, false);
+                Segment(wrist, Mathf.Max(.85f,wrist.length*1.12f),
+                    t => .82f+.18f*t, t => 14, false);
                 Segment(inspect, 2.4f, t => 1f, t => 14, false);
                 Segment(crown, crown.length, t => 1f,
                     t => 14 + Mathf.FloorToInt(t * 4f), false);
                 Segment(confirm, confirm.length, t => 1f, t => 18, true);
-                Segment(lower, lower.length, t => 1f - t * .92f,
-                    t => 18, true);
+                // Down-and-away lowering has its own different wrist arc.
+                Segment(lower, Mathf.Max(1.40f,lower.length*1.28f),
+                    t => 1f-t*.92f, t => 18, true);
                 Segment(FindClip("SleepArm_ReturnIdle"), .55f,
-                    t => .08f * (1f-t), t => 18, true);
+                    t => .08f*(1f-t), t => 18, true);
 
                 // One identical, deterministic sound bank powers in-game
                 // PlayOneShot and the real candidate MP4 audio stream.
