@@ -78,7 +78,10 @@ def main():
   if start_edges!=1028 or len(bm.verts)!=12240:fail("Source mesh changed")
   # Source has identical source UV split lips and a 31-vertex collapsed-tip
   # pole. The original authored positions must not shift at all.
-  bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=size*1e-7)
+  # Blender FBX precision leaves one socket vertex ~1e-7 handspan
+  # from its authored identical neighbor. 1e-6 of source span remains
+  # a sub-micrometre merge (0.00000041 in Blender coordinates).
+  bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=size*1e-6)
   groups=components(bm)
   if len(groups)!=6:fail("Exact source-pair weld fused anatomically distinct digits")
   palm=loops(groups[0]);fingers=[loops(g) for g in groups[1:]]
