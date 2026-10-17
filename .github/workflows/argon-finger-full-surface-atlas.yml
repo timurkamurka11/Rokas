@@ -1,0 +1,40 @@
+name: ROKAS Argon - Full Authentic Finger Surface Atlas
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_FULL_SURFACE_ATLAS_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-hand-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate read-only Blender analysis
+        run: |
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/diagnose_full_finger_surface.py
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+      - name: Install Blender and numpy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Measure actual raw five finger shell openings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonFullFingerSurfaceAtlas
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/diagnose_full_finger_surface.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonFullFingerSurfaceAtlas \
+            2>&1 | tee Artifacts/ArgonFullFingerSurfaceAtlas/source_diagnostics.log
+          test -s Artifacts/ArgonFullFingerSurfaceAtlas/finger_boundary_full_surface_atlas.json
+      - name: Preserve source anatomical boundary atlas (no FBX)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Real-Finger-Surface-Atlas-ReadOnly
+          path: Artifacts/ArgonFullFingerSurfaceAtlas/*
+          retention-days: 7
