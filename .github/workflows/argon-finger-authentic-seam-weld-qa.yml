@@ -1,0 +1,45 @@
+name: ROKAS Argon - Original Finger Sheet Lips Repair
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_SHEET_LIP_REPAIR_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-surface-slit-stitch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure authentic Blender source skin and script
+        run: |
+          set -euo pipefail
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/source_surface_seam_weld.py
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+      - name: Install Blender importer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Weld ONLY exact source-sheet twin lip vertices on candidate clone
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonSourceLongitudinalRepair
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/source_surface_seam_weld.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonSourceLongitudinalRepair \
+            2>&1 | tee Artifacts/ArgonSourceLongitudinalRepair/blender_source_weld_log.txt
+          test -s Artifacts/ArgonSourceLongitudinalRepair/authentic_longitudinal_seam_report.json
+          test -s Artifacts/ArgonSourceLongitudinalRepair/ROKAS_AuthenticSeamWeld_QA_ONLY.fbx
+      - name: Save actual topology metrics, never distribute private original FBX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-SourceSheetLipRealTopologyQA
+          path: |
+            Artifacts/ArgonSourceLongitudinalRepair/authentic_longitudinal_seam_report.json
+            Artifacts/ArgonSourceLongitudinalRepair/blender_source_weld_log.txt
+          retention-days: 7
+          if-no-files-found: warn
