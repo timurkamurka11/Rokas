@@ -118,9 +118,9 @@ def main():
             face.smooth=True
             # Copy existing source UV per corner: not an opaque blank strip.
             if uv is not None:
-                for loop in face.loops:
-                    existing=[l for l in loop.vert.link_loops if l.face!=face]
-                    if existing:loop[uv].uv=existing[0][uv].uv.copy()
+                for face_loop in face.loops:
+                    existing=[l for l in face_loop.vert.link_loops if l.face!=face]
+                    if existing:face_loop[uv].uv=existing[0][uv].uv.copy()
             usedPalm.update((p0.index,p1.index))
             bridgeCount+=1
             maximum=max(maximum,dist0,dist1)
