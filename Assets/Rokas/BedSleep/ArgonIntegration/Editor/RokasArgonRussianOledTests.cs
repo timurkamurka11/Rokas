@@ -120,6 +120,40 @@ namespace Rokas.BedSleep.Argon.Editor
                 if(cameraObject!=null)Object.DestroyImmediate(cameraObject);
             }
         }
+        [Test]
+        [Timeout(10000)]
+        public void LosslessTgaFrameExportPreservesOriginal720pPixels()
+        {
+            // Fast focused probe: verify Unity's uncompressed export on
+            // the exact RGBA32 format used by the 1280x720 Game View capture.
+            const int width = 1280, height = 720;
+            var tex=new Texture2D(width,height,TextureFormat.RGBA32,false);
+            try
+            {
+                var samples=new Color32[width*height];
+                for(int i=0;i<samples.Length;i++)
+                    samples[i]=new Color32(
+                        (byte)(i&255),(byte)((i>>7)&255),
+                        (byte)((i>>13)&255),255);
+                tex.SetPixels32(samples);
+                tex.Apply(false);
+                byte[] tga=ImageConversion.EncodeToTGA(tex);
+                Assert.That(tga,Is.Not.Null);
+                Assert.That(tga.Length,Is.GreaterThan(width*height*3));
+                Assert.That(tga[12]+256*tga[13],Is.EqualTo(width));
+                Assert.That(tga[14]+256*tga[15],Is.EqualTo(height));
+                Assert.That(tga[16],Is.EqualTo(32));
+                // TGA stores B,G,R,A; check raw uncompressed pixel bytes.
+                Assert.That(tga[2],Is.EqualTo(2),
+                    "Video encoder expects lossless non-RLE true-color TGA");
+                Assert.That(tga[18],Is.EqualTo(samples[0].b));
+                Assert.That(tga[19],Is.EqualTo(samples[0].g));
+                Assert.That(tga[20],Is.EqualTo(samples[0].r));
+                Assert.That(tga[21],Is.EqualTo(samples[0].a));
+            }
+            finally { Object.DestroyImmediate(tex); }
+        }
+
     }
 }
 #endif
