@@ -310,22 +310,57 @@ def main():
                     value+=nearest_source_uv(vertex)*weight
                 seam_uv[x]=value
             return x
+        # C1-like tissue curvature from ACTUAL source epidermis.
+        # The prior linear loft has real >120 degree folds/needle-like webs
+        # even with 30x30 quads and perfect manifold orientation. Follow
+        # original digit/palm surface tangents instead of a straight line.
+        root_boundary=set(a)
+        palm_boundary=set(p)
+        def epidermis_tangent(v,boundary,out_of_surface):
+            adjacent=[w for e in v.link_edges for w in e.verts
+                      if w!=v and w not in boundary]
+            if not adjacent:return None
+            mean=sum((w.co for w in adjacent),
+                     Vector((0,0,0)))/len(adjacent)
+            vec=(v.co-mean) if out_of_surface else (mean-v.co)
+            return vec.normalized() if vec.length>1e-8 else None
+        def shaped_skin(f,p0,p1,q,t):
+            palm_target=p0.co.lerp(p1.co,q)
+            delta=palm_target-f.co
+            gap=delta.length
+            if gap<=1e-8:return f.co.copy()
+            along=delta/gap
+            t0=epidermis_tangent(f,root_boundary,True)
+            a0=epidermis_tangent(p0,palm_boundary,False) or along
+            a1=epidermis_tangent(p1,palm_boundary,False) or along
+            t1=a0.lerp(a1,q)
+            if t1.length<1e-8:t1=along
+            if t0 is None:t0=along
+            # Blend authentic epidermis direction with source-to-palm
+            # displacement to prevent folded backwards Bezier handles.
+            t0=(t0*.55+along*.45).normalized()
+            t1=(t1*.55+along*.45).normalized()
+            if t0.dot(along)<.15:t0=along
+            if t1.dot(along)<.15:t1=along
+            arm=min(gap*.62,diameter*.020)
+            c1=f.co+t0*arm
+            c2=palm_target-t1*arm
+            u=1-t
+            curved=f.co*(u*u*u)+c1*(3*u*u*t)+c2*(3*u*t*t)+palm_target*(t*t*t)
+            straight=f.co.lerp(palm_target,t)
+            shift=curved-straight
+            if shift.length>diameter*.012:
+                curved=straight+shift.normalized()*diameter*.012
+            return curved
         near_finger=[]
+        near_palm=[]
         for i,vertex in enumerate(a):
             pos,p0,p1,q=sample_arc(p,frac_p,frac_a[i])
             near_finger.append(make_inner(
-                vertex.co.lerp(pos,.34),
+                shaped_skin(vertex,p0,p1,q,.34),
                 [(vertex,.66),(p0,.34*(1-q)),(p1,.34*q)]))
-        # Maintain 30 vertices on BOTH medial tissue rings. Previously
-        # 30->13 midpoint zipper introduced high-aspect triangles inside
-        # the visible webbing; carry the full evenly matched surface across
-        # the knuckle and concentrate the final socket's rim-count change
-        # at its original palm epidermis edge.
-        near_palm=[]
-        for i,vertex in enumerate(a):
-            position,p0,p1,q=sample_arc(p,frac_p,frac_a[i])
             near_palm.append(make_inner(
-                vertex.co.lerp(position,.72),
+                shaped_skin(vertex,p0,p1,q,.72),
                 [(vertex,.28),(p0,.72*(1-q)),(p1,.72*q)]))
         source_contact_vertices.update(near_finger)
         source_contact_vertices.update(near_palm)
