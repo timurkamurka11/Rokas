@@ -25,3 +25,4 @@ QA_SKIN_DIAGNOSTICS=normal-off_matte_no-normal_flat-albedo_review-frame-72_20261
 LIVING_HAND_AUDIO_INTERACTIVE_OLED_QA=2026-10-17-original25bone-crown-fabric-noise-pass01
 
 RETRY_LIVING_HAND_QA=2026-10-17-cli-v0.1.48-runtime-audio-safety-02
+RETRY_LIVING_HAND_QA=2026-10-17-fixed-preCLI-gameci-v4.3.1-03
