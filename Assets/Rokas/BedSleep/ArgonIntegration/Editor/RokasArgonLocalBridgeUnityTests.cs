@@ -41,6 +41,8 @@ namespace Rokas.BedSleep.Argon.Editor
             GameObject[] instances = new GameObject[2];
             GameObject cameraGo = null, lightGo = null;
             Material realMaterial = null;
+            Rokas.BedSleep.Argon.Candidate.ArgonSkinFilteredPbrCandidate
+                combinedPresentationSkin = null;
             RenderTexture target = null;
             Texture2D readback = null;
             Mesh rest = null, bent = null;
@@ -315,6 +317,37 @@ namespace Rokas.BedSleep.Argon.Editor
                     if(wasNormal)realMaterial.EnableKeyword("_NORMALMAP");
                     UnityEngine.Object.DestroyImmediate(diagnostic);
                 }
+                // Isolated INTEGRATED HERO preview on authentic generated
+                // connected FBX. Keep the earlier camera-matched geometry
+                // comparison on the SAME source material, then and only then
+                // attach genuine 2048 candidate skin with reduced baked AO.
+                combinedPresentationSkin=Rokas.BedSleep.Argon.Candidate
+                    .ArgonSkinFilteredPbrCandidate.Build(sourceSkin.sharedMaterial);
+                Assert.That(combinedPresentationSkin.Material.GetFloat(
+                    "_OcclusionStrength"),Is.InRange(.10f,.14f));
+                joinedSkin.sharedMaterial=combinedPresentationSkin.Material;
+                instances[0].SetActive(false);
+                instances[1].SetActive(true);
+                string[] presentationViews={"Dorsal","Palmar"};
+                for(int view=0;view<2;view++)
+                {
+                    var direction=viewNormals[view];
+                    camera.transform.rotation=Quaternion.LookRotation(
+                        -direction,Vector3.Cross(axis,direction).normalized);
+                    camera.orthographicSize=Mathf.Max(.025f,span*.21f);
+                    camera.transform.position=rootCenter+
+                        direction*Mathf.Max(.5f,span*3f);
+                    camera.Render();
+                    RenderTexture.active=target;
+                    readback.ReadPixels(new Rect(0,0,W,H),0,0);
+                    readback.Apply(false);
+                    var file=Path.Combine(dir,
+                        "QA_COMBINED_CONNECTED_25BONE_SKIN_AO12_"+
+                        presentationViews[view]+".png");
+                    File.WriteAllBytes(file,readback.EncodeToPNG());
+                    Assert.That(new FileInfo(file).Length,Is.GreaterThan(16000),
+                        "Connected candidate plus source-faithful PBR evidence missing");
+                }
                 // Real animated evidence, never a slideshow or AI mock-up.
                 // Render 36 successive frames from original and reconstructed
                 // authentic 25-bone FBX using the SAME fixed 1280x720 camera,
@@ -401,7 +434,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Genuine Unity 6000.3.19f1 per-frame skin rendering\\n" +
                     "Original LEFT, experimental connected finger candidate RIGHT\\n" +
                     "36 real frames per variant, 12 fps, 3 sec seamless cycle\\n" +
-                    "Same authentic 25-bone joints, same real 2048 PBR texture, " +
+                    "Same authentic 25-bone joints, same authentic 2048 PBR maps (candidate AO12), " +
                     "same stationary camera, 0-26 MCP / 0-32 PIP degrees\\n" +
                     "QA ONLY: not the game animation, not visually approved.\\n");
                 var report =
@@ -423,6 +456,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 if (target!=null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); }
                 if (rest!=null) UnityEngine.Object.DestroyImmediate(rest);
                 if (bent!=null) UnityEngine.Object.DestroyImmediate(bent);
+                if (combinedPresentationSkin!=null) combinedPresentationSkin.Dispose();
                 if (realMaterial!=null) UnityEngine.Object.DestroyImmediate(realMaterial);
                 foreach (var instance in instances)
                     if (instance!=null) UnityEngine.Object.DestroyImmediate(instance);
