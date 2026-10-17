@@ -32,7 +32,7 @@ jobs:
           projectPath: .
           unityVersion: 6000.3.19f1
           testMode: EditMode
-          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonLivingHandRegressionTests
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonFingerTopologyDiagnostics
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: ROKAS Argon 2000-frame no-drift and V10 watch routing
       - name: Upload focused test reports
@@ -43,5 +43,6 @@ jobs:
           path: |
             ${{ steps.unity.outputs.artifactsPath }}
             Artifacts/ArgonSeamLayers/*.png
+            Artifacts/ArgonSeamLayers/ArgonOriginalPinkyMeshTopology.txt
           if-no-files-found: warn
           retention-days: 7
