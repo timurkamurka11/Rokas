@@ -456,6 +456,39 @@ def main():
         pocket=boundary_of_new_pocket(fresh)
         if len(pocket)>70:
             fail("Oversized palm graft rim, would remove authentic tissue")
+        # The prior shape still had visible wedge-shaped knuckle fins:
+        # 30 source digit ring vertices collapsing into 15-26 authentic
+        # palm rim points at the final zipper. Insert the missing VERTICES
+        # IN THE EXISTING PALM BOUNDARY EDGES, not another long triangle
+        # fan. Blender interpolates original face UV/deform data while
+        # subdividing selected authentic palm boundary edges.
+        socket_before=len(pocket)
+        required=len(ring)-socket_before
+        if required<0 or required>30:
+            fail("Original palm socket vertex density outside safe range")
+        if required:
+            edge_candidates=[]
+            for j in range(socket_before):
+                v0=pocket[j];v1=pocket[(j+1)%socket_before]
+                edge=next((e for e in v0.link_edges if v1 in e.verts),
+                          None)
+                if edge is None or not edge.is_boundary:
+                    fail("Authentic palm ring subdivide edge missing")
+                edge_candidates.append((edge.calc_length(),j,edge))
+            # Splitting the longest source edges creates a regular 30-sided
+            # anatomical palm aperture; no duplicated source mesh/cylinders.
+            ordered=sorted(edge_candidates,
+                           key=lambda item:(-item[0],item[1]))
+            chosen=[item[2] for item in ordered[:required]]
+            bmesh.ops.subdivide_edges(bm,edges=chosen,cuts=1,
+                                      use_grid_fill=False,smooth=0.0)
+            bm.normal_update()
+            fresh={e for e in bm.edges if e.is_valid and e.is_boundary
+                   and e not in previous_boundaries}
+            pocket=boundary_of_new_pocket(fresh)
+            if len(pocket)!=len(ring):
+                fail("Equal-density anatomical palm socket failed: "+
+                     str((len(pocket),len(ring),required)))
         faces,wind=join_root_to_hole(ring,pocket)
         addedFaces.extend(faces)
         source_contact_vertices.update(ring)
@@ -469,6 +502,8 @@ def main():
             "palm_hole_radius":radius_hole,
             "palm_source_faces_removed":len(selected),
             "palm_source_rim_vertices":len(pocket),
+            "palm_rim_before_edge_density_match":socket_before,
+            "authentic_palm_boundary_edge_splits":required,
             "original_finger_rim_vertices":len(ring),
             "zipper_winding":wind,
             "max_root_gap":max((v.co-w.co).length for v in ring for w in pocket)})
