@@ -62,12 +62,13 @@ jobs:
           BASE=Artifacts/ArgonLocalBridgeUnity
           test "$(find "$BASE/AnimatedOriginal" -name 'frame_*.png' | wc -l)" -eq 36
           test "$(find "$BASE/AnimatedCandidate" -name 'frame_*.png' | wc -l)" -eq 36
-          ffmpeg -hide_banner -loglevel warning -y \
+          sudo ffmpeg -hide_banner -loglevel warning -y \
             -framerate 12 -i "$BASE/AnimatedOriginal/frame_%03d.png" \
             -framerate 12 -i "$BASE/AnimatedCandidate/frame_%03d.png" \
             -filter_complex "[0:v]scale=960:540[left];[1:v]scale=960:540[right];[left][right]hstack=inputs=2,format=yuv420p[out]" \
             -map "[out]" -c:v libx264 -crf 20 -preset medium -movflags +faststart \
             "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_12fps.mp4"
+          sudo chmod 644 "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_12fps.mp4"
           ffprobe -v error -show_entries format=duration,size \
             -of default=noprint_wrappers=1 "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_12fps.mp4"
           test -s "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_12fps.mp4"
