@@ -27,6 +27,7 @@ namespace Rokas.BedSleep.Argon.Editor
             Assert.That(prefab,Is.Not.Null);
             GameObject[] roots=new GameObject[3];
             Mesh[] temps=new Mesh[3];
+            Mesh intermediateRetarget=null;
             GameObject cameraObj=null,lightObj=null;
             RenderTexture rt=null;
             Texture2D capture=null;
@@ -66,7 +67,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 var w1=ArgonFingerBindposeRetarget.ApplyCandidate(
                     baseline[1],out temps[1],out var originalBones1);
                 var w2=ArgonFingerBindposeRetarget.ApplyCandidate(
-                    baseline[2],out var compensated2,out var originalBones2);
+                    baseline[2],out intermediateRetarget,out var originalBones2);
                 // Save both disposable clones for safe final cleanup.
                 // The socket clone is a second allocation over compensated2.
                 Mesh socket=null;
@@ -154,8 +155,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Retargeted finger rendering identical to original; QA inconclusive");
                 Assert.That(differ12,Is.GreaterThan(70),
                     "Socket geometry not visible; QA inconclusive");
-                UnityEngine.Object.DestroyImmediate(compensated2);
-                compensated2=null;
+
             }
             finally
             {
@@ -167,6 +167,8 @@ namespace Rokas.BedSleep.Argon.Editor
                 }
                 if(capture!=null)UnityEngine.Object.DestroyImmediate(capture);
                 if(rt!=null){rt.Release();UnityEngine.Object.DestroyImmediate(rt);}
+                if(intermediateRetarget!=null)
+                    UnityEngine.Object.DestroyImmediate(intermediateRetarget);
                 for(int i=0;i<roots.Length;i++)
                 {
                     if(roots[i]!=null)UnityEngine.Object.DestroyImmediate(roots[i]);
