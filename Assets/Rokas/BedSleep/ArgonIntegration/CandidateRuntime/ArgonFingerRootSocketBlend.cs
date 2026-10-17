@@ -12,7 +12,7 @@ namespace Rokas.BedSleep.Argon.Candidate
     /// The source FBX has hard rectangular proximal finger collars outside
     /// the palm. The previous 10–21% Y/Z shrink left those collars visible.
     /// This candidate locally narrows AND nests ONLY the proximal 28% of
-    /// each real finger inside the original palm; all distal 72% is bitwise
+    /// each real finger inside the original palm; distal 62-69% is bitwise
     /// identical. Surface quality must be approved by real Unity frames
     /// before any cinematic/runtime activation.
     /// </summary>
@@ -72,8 +72,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             var edited=new float[n];
             int modified=0;
             float maxMove=0f;
-            foreach(var f in fingers)
+            for(int finger=0;finger<fingers.Length;finger++)
             {
+                var f=fingers[finger];
                 float minX=float.PositiveInfinity,maxX=float.NegativeInfinity;
                 foreach(int i in f)
                 {
@@ -95,7 +96,10 @@ namespace Rokas.BedSleep.Argon.Candidate
                 if(count<5)
                     throw new InvalidOperationException("Cannot determine real proximal ring");
                 centerY/=count;centerZ/=count;
-                float begin=maxX-length*.28f;
+                // Ring and little have the most conspicuous square caps.
+                // Nest those genuine skin rings further inside the palm.
+                float fraction=finger>=3 ? .38f : .31f;
+                float begin=maxX-length*fraction;
                 for(int j=0;j<f.Count;j++)
                 {
                     int i=f[j];
@@ -104,9 +108,10 @@ namespace Rokas.BedSleep.Argon.Candidate
                     // Smooth 0 slope at the untouched distal boundary,
                     // smooth 0 slope at proximal end, no geometric crease.
                     float s=t*t*(3f-2f*t);
-                    float narrow=.60f*s;
+                    float narrow=(finger>=3 ? .78f : .62f)*s;
                     Vector3 p=v[i];
-                    p.x+=length*.11f*s; // seat the hard cap inside palm
+                    p.x+=length*(finger>=3 ? .25f : .18f)*s;
+                    // Hide the original hard proximal end under palm skin.
                     p.y=Mathf.Lerp(p.y,centerY,narrow);
                     p.z=Mathf.Lerp(p.z,centerZ,narrow);
                     copy[i]=p;
