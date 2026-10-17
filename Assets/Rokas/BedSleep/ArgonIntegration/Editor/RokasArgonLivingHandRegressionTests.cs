@@ -200,6 +200,13 @@ namespace Rokas.BedSleep.Argon.Editor
                 // disposable mesh clone, leaving FBX geometry and bindposes
                 // untouched. Visual comparison with the ORIGINAL reference
                 // determines whether it actually solves broken finger poses.
+                // The neutral bind pose masks bad source influence
+                // assignments. Compare original versus corrected finger
+                // skins under the SAME real relaxed PIP/DIP bend.
+                var living = new ArgonLivingRig(instance);
+                living.NotifyAnimationPoseReset();
+                living.Apply(1.35f,1f,true,cam.transform.right,cam.transform.up);
+                Capture("06_original_fingers_animating_wrong_bones");
                 Mesh correctedBoneMesh = null;
                 try
                 {
@@ -209,6 +216,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     Assert.That(reassigned.ReassociatedVertices,Is.EqualTo(5*1394));
                     Debug.Log("[ROKAS ARGON FINGER WEIGHT MAP]\n"+reassigned.Mapping);
                     Capture("05_original_fingers_corrected_bone_bindings");
+                    Capture("07_corrected_fingers_in_same_animated_pose");
                 }
                 finally
                 {
