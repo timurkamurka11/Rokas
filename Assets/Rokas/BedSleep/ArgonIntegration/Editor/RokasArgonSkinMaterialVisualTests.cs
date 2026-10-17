@@ -137,8 +137,47 @@ namespace Rokas.BedSleep.Argon.Editor
                 }
                 Assert.That(changes,Is.GreaterThan(40),
                     "Filtered genuine skin texture must produce visible PBR differences");
+                // Real-image checkerboard rejection: measure repeated
+                // one-pixel oscillation INSIDE authentic hand skin only,
+                // excluding outside background/watch sleeve silhouettes.
+                float PatternScore(Color32[] frame)
+                {
+                    double total=0;
+                    int count=0;
+                    for(int y=225;y<475;y+=2)
+                    for(int x=475;x<1035;x+=2)
+                    {
+                        int idx=y*W+x;
+                        var a=frame[idx];
+                        if(a.r<100||a.r<a.g*1.07f||a.g<a.b*.99f ||
+                           a.g<64)continue;
+                        var l=frame[idx-1];var r=frame[idx+1];
+                        var u=frame[idx+W];var d=frame[idx-W];
+                        if(l.r<90||r.r<90||u.r<90||d.r<90)continue;
+                        // Second difference suppresses broad hand lighting
+                        // and highlights only unstable pixel-frequency grids.
+                        double hz=Math.Abs(2*a.r-l.r-r.r)+
+                            Math.Abs(2*a.g-l.g-r.g)+
+                            Math.Abs(2*a.b-l.b-r.b);
+                        double vt=Math.Abs(2*a.r-u.r-d.r)+
+                            Math.Abs(2*a.g-u.g-d.g)+
+                            Math.Abs(2*a.b-u.b-d.b);
+                        total+=hz+vt;count++;
+                    }
+                    Assert.That(count,Is.GreaterThan(500));
+                    return (float)(total/count);
+                }
+                float originalPattern=PatternScore(comparisons[0]);
+                float flatPattern=PatternScore(comparisons[1]);
+                float filteredPattern=PatternScore(comparisons[2]);
+                Assert.That(filteredPattern,Is.LessThanOrEqualTo(
+                    Mathf.Max(originalPattern*1.25f,flatPattern*1.7f)),
+                    "Filtered genuine skin must NEVER reintroduce checkerboard moire.");
                 var summary=
                     "Original source albedo kept: "+sourceAlbedo.name+"\n"+
+                    "Pixel frequency original="+originalPattern+
+                    ", diagnostic flat="+flatPattern+
+                    ", filtered="+filteredPattern+"\n"+
                     "Original normal: "+sourceNormal.name+" width "+sourceNormal.width+"\n"+
                     "Original packed roughness: "+sourceRoughness.name+" width "+sourceRoughness.width+"\n"+
                     "Native-packed filtered normal width "+filtered.SoftNormal.width+" lodBias "+filtered.SoftNormal.mipMapBias+"\n"+
