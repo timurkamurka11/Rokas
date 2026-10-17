@@ -1,0 +1,6 @@
+ROKAS Argon — Physical square OLED mask and seven-screen plus living finger QA
+- Original genuine UVs/casing, opaque depth-tested watch surface under sapphire glass.
+- 7 Russian dynamically rendered screens: Dial/Presets/Overview/Relaxation/Confirmed/FallingAsleep/Cancelled.
+- Animated calming waveform, clearer time and wake-up typography, actual UV touch navigation.
+- Finger roots protected with under-4.2 degree articulation; 240-frame independent organic movement.
+- Focused EditMode only. Do not merge PR #13 or alter production V10.
