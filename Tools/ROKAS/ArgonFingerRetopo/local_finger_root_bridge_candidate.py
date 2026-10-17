@@ -356,8 +356,11 @@ def main():
         surface_normal=target_face.normal.normalized()
         # Hole smaller than finger root cross section; creates a natural
         # graduated tissue sleeve, not a mechanically abrupt edge join.
-        radius_hole=max(radius*.57,diameter*.010)
-        radius_hole=min(radius_hole,diameter*.022)
+        # Keep palm aperture closer to the authentic 30-vertex digit root
+        # rather than tapering to a tiny 10-vertex cone (visible MCP fins).
+        # Existing guards forbid cutting outside original palm-only tissue.
+        radius_hole=max(radius*.74,diameter*.010)
+        radius_hole=min(radius_hole,diameter*.027)
         pending=[target_face]; selected=set()
         while pending:
             face=pending.pop()
@@ -508,7 +511,7 @@ def main():
     peripheral.difference_update(primary)
     region=primary|peripheral
     original_positions={v:v.co.copy() for v in region}
-    for _ in range(6):
+    for _ in range(3):
         previous={v:v.co.copy() for v in region}
         changed={}
         for v in region:
@@ -516,9 +519,9 @@ def main():
             if not neighbors:continue
             average=sum((previous.get(w,w.co) for w in neighbors),
                         Vector((0,0,0)))/len(neighbors)
-            amount=.23 if v in primary else .047
+            amount=.12 if v in primary else .025
             target=v.co.lerp(average,amount)
-            max_step=diameter*.0065
+            max_step=diameter*.003
             offset=target-original_positions[v]
             if offset.length>max_step:
                 target=original_positions[v]+offset.normalized()*max_step
@@ -528,7 +531,7 @@ def main():
     report["tissue_root_relaxation"]={
         "original_boundary_vertices":len(primary),
         "one_ring_vertices":len(peripheral),
-        "passes":6,
+        "passes":3,
         "maximum_original_vertex_displacement":root_shift,
         "maximum_relative_original_displacement":root_shift/diameter}
     bm.normal_update()
