@@ -83,6 +83,7 @@ def main():
     minBridge=diameter*.0001
     uv=bm.loops.layers.uv.active
     usedPalm=set()
+    source_contact_vertices=set()
     # Build a genuine shared two-ring fillet, not one huge face connecting
     # anatomical surfaces with a flat hard collar. Cache crossed-edge
     # vertices between consecutive quads: NO cracks/T-junctions.
@@ -174,6 +175,7 @@ def main():
                             corner[uv].uv=orig_uv[fi_idx].lerp(
                                 orig_uv[pi_idx],t)
             fingerPalmVerts.update((p0.index,p1.index))
+            source_contact_vertices.update((f0,f1,p0,p1))
             bridgeCount+=1
             maximum=max(maximum,dist0,dist1)
         # A neighboring quad reuses its two end vertices: only forbid
@@ -183,6 +185,52 @@ def main():
             "quads":bridgeCount,"max_root_gap":maximum,
             "closest_pair_cost":best[0]})
         if bridgeCount<1:fail("Cannot safely bridge original finger "+str(fingerNo))
+    # Smooth the AUTHENTIC anatomical junction and adjacent tissue only,
+    # never the entire mesh. The earlier 3-row skin fillet still showed
+    # artificial collar normals at MCP bases in 1280x720 closeups.
+    # Move root-border vertices by a strictly bounded fraction of source
+    # hand extent; source FBX and 60%+ distal fingers remain intact.
+    loft_vertices={entry[0] for entry in addedWeights}
+    primary=source_contact_vertices | loft_vertices
+    outer={w for v in primary for e in v.link_edges for w in e.verts}
+    outer.difference_update(primary)
+    region=primary|outer
+    original_positions={v:v.co.copy() for v in region}
+    source_vertex_count=report["original_vertices"]
+    for _ in range(3):
+        positions={v:v.co.copy() for v in region}
+        new_positions={}
+        for v in region:
+            adjacent=[w for e in v.link_edges for w in e.verts if w!=v]
+            if not adjacent:continue
+            mean=v.co*0.0
+            for w in adjacent:mean+=positions.get(w,w.co)
+            mean/=len(adjacent)
+            if v in source_contact_vertices:strength=.115
+            elif v in loft_vertices:strength=.17
+            else:strength=.035
+            target=v.co.lerp(mean,strength)
+            # Bounded original tissue relaxation: no synthetic collapse.
+            permitted=diameter*(.008 if v.index>=0 and
+                      v.index<source_vertex_count else .013)
+            delta=target-original_positions[v]
+            if delta.length>permitted:
+                target=original_positions[v]+delta.normalized()*permitted
+            new_positions[v]=target
+        for v,p in new_positions.items():v.co=p
+    original_max_shift=max(
+        (v.co-original_positions[v]).length
+        for v in region if v.index>=0 and v.index<source_vertex_count)
+    report["tissue_root_relaxation"]={
+        "original_boundary_vertices":len(source_contact_vertices),
+        "new_blended_loft_vertices":len(loft_vertices),
+        "one_ring_vertices":len(outer),
+        "maximum_original_vertex_displacement":original_max_shift,
+        "maximum_relative_original_displacement":original_max_shift/diameter,
+        "passes":3}
+    if original_max_shift>diameter*.00801:
+        fail("Anatomical collar relaxation displaced original tissue too far")
+    bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
     generated=[(v.index,fi,pi,t) for v,fi,pi,t in addedWeights]
