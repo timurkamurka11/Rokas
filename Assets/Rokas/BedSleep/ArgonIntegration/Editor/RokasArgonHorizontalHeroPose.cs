@@ -134,6 +134,56 @@ namespace Rokas.BedSleep.Argon.Editor
                 up * upOffsetMeters;
         }
 
+        /// <summary>
+        /// Organic first-person bed POV motion. The old "SetPresentation"
+        /// moved the entire rigid arm 0.65m horizontally from the LEFT,
+        /// visibly sliding into camera like a stick. This does NOT.
+        /// An entry grows from BELOW the camera, coming toward the eyes with
+        /// natural forearm pitch/wrist roll. Exit is an independently staged
+        /// downward, away-from-face relaxation. At visibility=1 both land
+        /// exactly on the existing approved horizontal hero pose.
+        /// </summary>
+        internal void SetCinematicPresentation(float visibility, bool isLowering)
+        {
+            if (Camera == null)
+                throw new InvalidOperationException("ConfigureCamera before cinematic motion");
+            visibility=Mathf.Clamp01(visibility);
+            float smooth=visibility*visibility*(3f-2f*visibility);
+            float hidden=1f-smooth;
+            // Camera frame is unchanged; the limb genuinely moves through
+            // height/depth rather than rigidly travelling from x=-0.65m.
+            // Small side bias keeps the cuff rooted at the lower LEFT edge.
+            float lowerDistance=isLowering ? .36f : .32f;
+            float leftDistance=isLowering ? .095f : .13f;
+            float depthAway=isLowering ? .115f : .075f;
+            float arc=Mathf.Sin(visibility*Mathf.PI);
+            root.position=originalRootPosition
+                -up*(lowerDistance*hidden)
+                -right*(leftDistance*hidden)
+                +Camera.transform.forward*(depthAway*hidden)
+                +up*(.017f*arc)
+                +right*(.006f*arc);
+
+            // Retain the actual authored FBX source arm animation beneath
+            // subtle transitions. The wrist tilts toward the face and settles
+            // into its original hero orientation (no new geometry / bones).
+            float wristPitch=(isLowering ? -20f : 16f)*hidden;
+            float wristRoll=(isLowering ? -7f : 8f)*hidden;
+            float forearmPitch=(isLowering ? -10f : 7f)*hidden;
+            void AddWorldRotation(string bone,Vector3 axis,float degrees)
+            {
+                var t=joints[bone];
+                Vector3 localAxis=t.parent!=null
+                    ? t.parent.InverseTransformDirection(axis).normalized
+                    : axis;
+                t.localRotation=Quaternion.AngleAxis(degrees,localAxis)
+                    *t.localRotation;
+            }
+            AddWorldRotation("Arm_ForearmTwist",right,forearmPitch);
+            AddWorldRotation("Arm_Wrist",right,wristPitch);
+            AddWorldRotation("Arm_Wrist",Camera.transform.forward,wristRoll);
+        }
+
         internal Vector3 SleeveScreen() =>
             Camera.WorldToViewportPoint(sleeve.bounds.center);
         internal Vector3 WatchScreen() =>
