@@ -158,6 +158,21 @@ namespace Rokas.BedSleep.Argon.Candidate
                 if (Mathf.Abs(wheel) > .001f) Step(wheel > 0 ? 1 : -1);
                 if (Input.GetMouseButtonDown(0)) Confirm();
             }
+#elif ENABLE_INPUT_SYSTEM
+            // Unity 6 projects using the new Input System exclusively must
+            // retain the exact same physical OLED/crown hit targets.
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (viewCamera == null || oledCollider == null || mouse == null) return;
+            Ray ray = viewCamera.ScreenPointToRay(mouse.position.ReadValue());
+            RaycastHit hit;
+            bool onFace = oledCollider.Raycast(ray, out hit, 15f);
+            bool onCrown = crownCollider != null && crownCollider.Raycast(ray, out hit, 15f);
+            if (onFace || onCrown)
+            {
+                float wheel = mouse.scroll.ReadValue().y;
+                if (Mathf.Abs(wheel) > .01f) Step(wheel > 0 ? 1 : -1);
+                if (mouse.leftButton.wasPressedThisFrame) Confirm();
+            }
 #endif
         }
 
