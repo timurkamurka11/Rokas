@@ -95,7 +95,20 @@ def main():
                   range(0,len(candidate.data.vertices),max(1,len(candidate.data.vertices)//200)))
     localBbox=max(max(v.co[i] for v in candidate.data.vertices)-
                   min(v.co[i] for v in candidate.data.vertices) for i in range(3))
-    candidate.data.remesh_voxel_size=localBbox/480.0
+    # The input is an OPEN surface sheet, not five closed cylinders.
+    # A direct voxel pass produced 60 fragments and >64% silhouette
+    # destruction (first real Blender run). First give the ORIGINAL
+    # hand sheet modest evenly centered thickness without new geometry
+    # primitives; only then may an outer-surface voxel union be valid.
+    sld=candidate.modifiers.new("ROKAS_SourceSkin_SealOpenSheets","SOLIDIFY")
+    sld.thickness=localBbox/72.0
+    sld.offset=-.5
+    sld.use_even_offset=True
+    sld.use_rim=True
+    bpy.ops.object.modifier_apply(modifier=sld.name)
+    sealed=mesh_report(candidate)
+
+    candidate.data.remesh_voxel_size=localBbox/540.0
     candidate.data.remesh_voxel_adaptivity=0.0
     bpy.ops.object.voxel_remesh()
     for face in candidate.data.polygons:
@@ -108,6 +121,7 @@ def main():
     report={
         "source_file":source.name,
         "source":before,
+        "source_sheet_solidify":sealed,
         "remeshed_candidate":after,
         "source_bones":len(armature.data.bones),
         "original_span":size,
