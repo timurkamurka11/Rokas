@@ -234,13 +234,15 @@ namespace Rokas.BedSleep.Argon.Editor
                     // Withdrawal follows a DIFFERENT natural relaxation track.
                     bool retreating=clip==lower ||
                         clip.name.Contains("SleepArm_ReturnIdle");
-                    heroPose.SetCinematicPresentation(exitDistance,retreating);
+                    var gesture=heroPose.SetCinematicPresentation(
+                        exitDistance,retreating);
                     living.NotifyAnimationPoseReset();
                     float lifeWeight = Mathf.SmoothStep(0f, 1f,
                         Mathf.Clamp01(exitDistance));
                     float elapsed = (float)frameNumber / Fps;
-                    living.Apply(elapsed, lifeWeight,
-                        clip == crown, heroPose.Right, heroPose.Up);
+                    living.Apply(elapsed,lifeWeight,clip==crown,
+                        heroPose.Right,heroPose.Up,
+                        gesture.FingerResponse,retreating);
                     if (clip == inspect && frameNumber % 6 == 0 &&
                         living.FingerBendDegrees("Middle_PIP") > 3f)
                         ++livingBendCount;
@@ -409,17 +411,20 @@ namespace Rokas.BedSleep.Argon.Editor
                 // Two original FBX animation clips are still sampled.
                 Segment(FindClip("SleepArm_HiddenIdle"), .55f,
                     t => 0f, t => 14, false);
-                Segment(raise, Mathf.Max(1.45f,raise.length*1.30f),
+                // Wrist leads the forearm out of the bedding: two staged
+                // movements, no fixed-velocity sliding beam. Hero endpoint
+                // stays exactly the previously approved composition.
+                Segment(raise,Mathf.Max(1.72f,raise.length*1.38f),
                     t => t*.82f, t => 14, false);
-                Segment(wrist, Mathf.Max(.85f,wrist.length*1.12f),
-                    t => .82f+.18f*t, t => 14, false);
+                Segment(wrist,Mathf.Max(.94f,wrist.length*1.16f),
+                    t => .82f+.18f*t,t=>14,false);
                 Segment(inspect, 2.4f, t => 1f, t => 14, false);
                 Segment(crown, crown.length, t => 1f,
                     t => 14 + Mathf.FloorToInt(t * 4f), false);
                 Segment(confirm, confirm.length, t => 1f, t => 18, true);
                 // Down-and-away lowering has its own different wrist arc.
-                Segment(lower, Mathf.Max(1.40f,lower.length*1.28f),
-                    t => 1f-t*.92f, t => 18, true);
+                Segment(lower,Mathf.Max(1.72f,lower.length*1.38f),
+                    t => 1f-t*.92f,t=>18,true);
                 Segment(FindClip("SleepArm_ReturnIdle"), .55f,
                     t => .08f*(1f-t), t => 18, true);
 
@@ -451,6 +456,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     "  \"russian_labels_verified\": true,\n" +
                     "  \"original_fbx_clips\": true,\n" +
                     "  \"living_secondary_motion\": true,\n" +
+                    "  \"gesture_motion\": \"asymmetric_wrist_lead_forearm_lag_quintic_v2\",\n" +
                     "  \"physical_crown_interaction\": true,\n" +
                     "  \"original_foley_audio\": true,\n" +
                     "  \"hero_pose\": \"sleeve-left-watch-center-fingers-right\",\n" +
