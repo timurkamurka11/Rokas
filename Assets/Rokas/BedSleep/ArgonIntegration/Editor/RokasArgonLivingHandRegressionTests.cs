@@ -400,6 +400,63 @@ namespace Rokas.BedSleep.Argon.Editor
             }
         }
 
+
+        [Test]
+        [Timeout(60000)]
+        public void RestPreservingFingerBoneCandidateProtectsNeutralPoseOrRejects()
+        {
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(
+                RokasArgonCandidateImporter.CandidatePrefab);
+            Assert.That(prefab,Is.Not.Null);
+            GameObject obj=null;
+            Mesh before=null,after=null,corrected=null;
+            try
+            {
+                obj=(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var renderer=obj.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                Mesh original=renderer.sharedMesh;
+                before=new Mesh();after=new Mesh();
+                renderer.BakeMesh(before);
+                var report=ArgonFingerWeightRepair.ApplyRestPreservingToCandidate(
+                    renderer,out corrected);
+                renderer.BakeMesh(after);
+                var initial=before.vertices;
+                var fixedRest=after.vertices;
+                Assert.That(initial.Length,Is.EqualTo(fixedRest.Length));
+                float maxDelta=0f;
+                for(int i=0;i<initial.Length;i++)
+                    maxDelta=Mathf.Max(maxDelta,
+                        Vector3.Distance(initial[i],fixedRest[i]));
+                float allowed=original.bounds.size.magnitude*.002f;
+                string results="original vertices="+initial.Length+
+                    "\noriginal mesh span="+original.bounds.size.magnitude+
+                    "\nneutral pose max displacement="+maxDelta+
+                    "\nallowed displacement="+allowed+
+                    "\nweight remap="+report.Mapping;
+                string output=System.IO.Path.Combine(
+                    System.IO.Directory.GetCurrentDirectory(),
+                    "Artifacts","ArgonSeamLayers");
+                System.IO.Directory.CreateDirectory(output);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(output,
+                        "RestPreservingFingerCandidate_Results.txt"),results);
+                Debug.Log("[ARGON REST POSE SAFE REMAP] "+results);
+                Assert.That(maxDelta,Is.LessThanOrEqualTo(allowed));
+                Assert.That(report.ReassociatedVertices,Is.EqualTo(6970));
+                // DO NOT serialise new mesh, it still needs close-up dynamic
+                // QA for joints, topology and natural-looking finger bases.
+                renderer.sharedMesh=original;
+            }
+            finally
+            {
+                if(corrected!=null)UnityEngine.Object.DestroyImmediate(corrected);
+                if(before!=null)UnityEngine.Object.DestroyImmediate(before);
+                if(after!=null)UnityEngine.Object.DestroyImmediate(after);
+                if(obj!=null)UnityEngine.Object.DestroyImmediate(obj);
+            }
+        }
+
     }
 }
 #endif
