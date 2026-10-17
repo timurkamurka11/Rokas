@@ -46,6 +46,12 @@ namespace Rokas.BedSleep.Argon.Candidate
             result.Material.SetFloat("_GlossMapScale",.12f);
             result.Material.SetFloat("_Glossiness",.32f);
             result.Material.SetFloat("_Metallic",0f);
+            // Real cloud Unity A/B isolated the harsh X pattern to the
+            // original baked AO map, NOT missing finger topology or normals.
+            // Keep the authentic 2048x2048 AO texture reference for detail,
+            // but substantially attenuate its excessive baked self-shadow.
+            // Source Unity material remains untouched; candidate QA only.
+            result.Material.SetFloat("_OcclusionStrength",.12f);
 
             // Warm epidermis only in material tint, not replaced texture.
             if(result.Material.HasProperty("_Color"))
