@@ -106,6 +106,72 @@ namespace Rokas.BedSleep.Argon.Editor
                     }
                 }
 
+                // Walk AUTHENTIC oriented boundary half-edges. Each
+                // component can expose multiple open finger-root rings.
+                var next=new Dictionary<int,int>();
+                for(int j=0;j+2<tri.Length;j+=3)
+                {
+                    int aa=tri[j],bb=tri[j+1],cc=tri[j+2];
+                    void Boundary(int x,int y)
+                    {
+                        if(edgeCounts[Key(x,y)]!=1)return;
+                        if(next.ContainsKey(x))throw new InvalidOperationException(
+                            "Nonmanifold/open boundary branch at vertex "+x);
+                        next.Add(x,y);
+                    }
+                    Boundary(aa,bb);Boundary(bb,cc);Boundary(cc,aa);
+                }
+                var remaining=new HashSet<int>(next.Keys);
+                var ringData=new List<Tuple<int,int[],Vector3>>();
+                int loopNo=0;
+                while(remaining.Count>0)
+                {
+                    int first=remaining.First(),current=first;
+                    var ring=new List<int>();
+                    do
+                    {
+                        if(!remaining.Remove(current))
+                            throw new InvalidOperationException(
+                                "Broken boundary chain, shared vertex "+current);
+                        ring.Add(current);
+                        if(!next.TryGetValue(current,out current))
+                            throw new InvalidOperationException(
+                                "Open non-loop boundary at "+ring.Last());
+                    }
+                    while(current!=first && ring.Count<2000);
+                    if(current!=first)
+                        throw new InvalidOperationException(
+                            "Unclosed source boundary loop");
+                    Vector3 avg=Vector3.zero;
+                    foreach(int i in ring)avg+=v[i];
+                    avg/=ring.Count;
+                    int compId=Find(ring[0]);
+                    ringData.Add(Tuple.Create(compId,ring.ToArray(),avg));
+                    sb.AppendLine("boundaryLoop "+loopNo+
+                        " componentSize="+comps[compId].Count+
+                        " vertices="+ring.Count+
+                        " centroid=("+avg.x.ToString("G9")+","+
+                            avg.y.ToString("G9")+","+
+                            avg.z.ToString("G9")+")"+
+                        " xRange="+ring.Min(i=>v[i].x).ToString("G9")+
+                        ".."+ring.Max(i=>v[i].x).ToString("G9"));
+                    loopNo++;
+                }
+                var palmRoot=Find(ordered[0][0]);
+                var palmLoops=ringData.Where(r=>r.Item1==palmRoot).ToArray();
+                var fingerLoops=ringData.Where(r=>r.Item1!=palmRoot).ToArray();
+                foreach(var finger in fingerLoops)
+                {
+                    var nearest=palmLoops.OrderBy(p=>
+                        Vector3.Distance(p.Item3,finger.Item3)).FirstOrDefault();
+                    if(nearest==null)continue;
+                    float dist=Vector3.Distance(nearest.Item3,finger.Item3);
+                    sb.AppendLine("closest palm/finger rings "+
+                        "fSize="+finger.Item2.Length+
+                        " palmSize="+nearest.Item2.Length+
+                        " centroidSeparation="+dist.ToString("G9"));
+                }
+
                 var mat=skin.sharedMaterial;
                 sb.AppendLine("MATERIAL name="+mat.name+" shader="+mat.shader.name);
                 foreach(string key in new[]{
