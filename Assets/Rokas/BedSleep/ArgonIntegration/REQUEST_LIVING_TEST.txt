@@ -4,3 +4,4 @@
 - Authentic V10 OLED duration bounds and input router step callbacks
 - Focused EditMode only, no repeated 720p video rendering
 - Does not modify production V10 and DO NOT MERGE PR13
+2026-10-17 seam layer isolation: ORIGINAL hand skin vs nails vs all, one camera snapshot, no production merge.
