@@ -157,20 +157,41 @@ namespace Rokas.BedSleep.Argon.Editor
                 var candidateJoints = instances[1]
                     .GetComponentsInChildren<Transform>(true)
                     .GroupBy(t=>t.name).ToDictionary(g=>g.Key,g=>g.First());
-                int poseMatched=0;
-                foreach (var kv in sourceJoints)
-                {
-                    if (!candidateJoints.TryGetValue(kv.Key,out var dst)) continue;
-                    if (kv.Key.EndsWith("_MCP") || kv.Key.EndsWith("_PIP") ||
-                        kv.Key.EndsWith("_DIP") || kv.Key.EndsWith("_CMC") ||
-                        kv.Key.EndsWith("_Tip") || kv.Key=="Arm_Wrist")
-                    {
-                        dst.localRotation=kv.Value.localRotation;
-                        ++poseMatched;
-                    }
-                }
-                Assert.That(poseMatched,Is.GreaterThanOrEqualTo(18),
-                    "Original and joined hand poses cannot be matched");
+                // Two distinct FBX exports legitimately have different
+                // top-level importer axes. Directly copying LOCAL joint
+                // rotations warped the entire arm in our prior screenshot.
+                // Compare their unmodified rest pose, applying only a rigid
+                // presentation-space alignment to the disposable candidate.
+                var sourceRoot=sourceJoints["Arm_ForearmRoot"];
+                var targetRoot=candidateJoints["Arm_ForearmRoot"];
+                var srcLong=(sourceJoints["Middle_Tip"].position-
+                    sourceRoot.position).normalized;
+                var dstLong=(candidateJoints["Middle_Tip"].position-
+                    targetRoot.position).normalized;
+                Assert.That(srcLong.sqrMagnitude,Is.GreaterThan(.95f));
+                Assert.That(dstLong.sqrMagnitude,Is.GreaterThan(.95f));
+                instances[1].transform.rotation=
+                    Quaternion.FromToRotation(dstLong,srcLong)*
+                    instances[1].transform.rotation;
+                var srcAcross=Vector3.ProjectOnPlane(
+                    sourceJoints["Little_MCP"].position-
+                    sourceJoints["Index_MCP"].position,srcLong).normalized;
+                var dstAcross=Vector3.ProjectOnPlane(
+                    candidateJoints["Little_MCP"].position-
+                    candidateJoints["Index_MCP"].position,srcLong).normalized;
+                Assert.That(srcAcross.sqrMagnitude,Is.GreaterThan(.8f));
+                Assert.That(dstAcross.sqrMagnitude,Is.GreaterThan(.8f));
+                instances[1].transform.rotation=
+                    Quaternion.FromToRotation(dstAcross,srcAcross)*
+                    instances[1].transform.rotation;
+                instances[1].transform.position +=
+                    sourceRoot.position-targetRoot.position;
+                float finalAxis=Vector3.Dot(srcLong,
+                    (candidateJoints["Middle_Tip"].position-
+                    targetRoot.position).normalized);
+                Assert.That(finalAxis,Is.GreaterThan(.995f),
+                    "Rig axes must be aligned before any genuine silhouette comparison");
+                int poseMatched=2; // longitudinal axis + palm transverse axis
                 var sourceCuff=sourceJoints["Arm_ForearmRoot"];
                 var sourceTip=sourceJoints["Middle_Tip"];
                 var axis=(sourceTip.position-sourceCuff.position).normalized;
