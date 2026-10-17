@@ -42,12 +42,13 @@ namespace Rokas.BedSleep.Argon.Editor
             RenderTexture handRT = null, finalRT = null;
             Material oledMat = null, compositeMat = null, skinPreviewMat = null;
             Texture2D capture = null;
+            Mesh candidateCorrectedFingerSkin = null;
             RenderTexture previousRt = RenderTexture.active;
             try
             {
                 root = (GameObject)PrefabUtility.InstantiatePrefab(source);
                 Assert.That(root, Is.Not.Null);
-                root.name = "ROKAS_Argon_OriginalArm_Untouched_CinematicCapture";
+                root.name = "ROKAS_Argon_OriginalArm_CorrectedFingerCandidatePreview";
                 foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
                     t.gameObject.layer = 29; // isolated 3D Unity camera only
 
@@ -112,6 +113,18 @@ namespace Rokas.BedSleep.Argon.Editor
                 skinPreviewMat.SetFloat("_SpecularHighlights", 0f);
                 skinPreviewMat.SetFloat("_GlossyReflections", 0f);
                 skinRenderer.sharedMaterial = skinPreviewMat;
+                // Genuine source 25-bone FBX remains unchanged. The verified
+                // candidate only adds twenty compensated bindpose slots to
+                // steer each of the five original finger islands with its
+                // actual joints. Unity QA #39025463826 and #39025700502
+                // confirmed neutral-shape safety and digit isolation.
+                var fingerReport=ArgonFingerBindposeRetarget.ApplyCandidate(
+                    skinRenderer,out candidateCorrectedFingerSkin,
+                    out var originalSkinBones);
+                Assert.That(fingerReport.RetargetedVertices,Is.EqualTo(6970));
+                Assert.That(fingerReport.ExtraBoneSlots,Is.EqualTo(20));
+                // Geometry socket smoothing is intentionally NOT included:
+                // visual QA still shows a hard square seam. No blind changes.
                 key.cullingMask = 1 << 29;
                 keyObj.transform.rotation = Quaternion.Euler(35, -20, 30);
 
@@ -460,7 +473,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     "  \"physical_crown_interaction\": true,\n" +
                     "  \"original_foley_audio\": true,\n" +
                     "  \"hero_pose\": \"sleeve-left-watch-center-fingers-right\",\n" +
-                    "  \"finger_correction\": \"rest-relative-MCP-clamp-11deg\"\n" +
+                    "  \"finger_correction\": \"25-original-bones-plus-20-rest-compensated-finger-slots\"\n" +
                     "}";
                 File.WriteAllText(Path.Combine(outDir, "capture_manifest.json"), report);
                 Debug.Log("[ROKAS ARGON BED VIDEO] PASS recorded " + frameNumber +
@@ -480,6 +493,8 @@ namespace Rokas.BedSleep.Argon.Editor
                 if (compositeMat != null) UnityEngine.Object.DestroyImmediate(compositeMat);
                 if (capture != null) UnityEngine.Object.DestroyImmediate(capture);
                 if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                if (candidateCorrectedFingerSkin != null)
+                    UnityEngine.Object.DestroyImmediate(candidateCorrectedFingerSkin);
                 if (keyObj != null) UnityEngine.Object.DestroyImmediate(keyObj);
                 if (cameraObj != null) UnityEngine.Object.DestroyImmediate(cameraObj);
                 if (handRT != null) { handRT.Release(); UnityEngine.Object.DestroyImmediate(handRT); }
