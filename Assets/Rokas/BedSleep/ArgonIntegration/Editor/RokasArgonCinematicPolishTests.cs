@@ -250,8 +250,18 @@ if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
                     softSkinMaterial.SetFloat("_GlossMapScale",.67f);
                 if(softSkinMaterial.HasProperty("_Glossiness"))
                     softSkinMaterial.SetFloat("_Glossiness",.40f);
+                // Original high-frequency normal/packed-gloss maps create
+                // a prominent rectilinear checker pattern in the real
+                // 720p hand closeup. Diagnose with the same REAL albedo
+                // but without erroneous grid-like pore/roughness shading.
                 if(softSkinMaterial.HasProperty("_BumpScale"))
-                    softSkinMaterial.SetFloat("_BumpScale",.16f);
+                    softSkinMaterial.SetFloat("_BumpScale",0f);
+                if(softSkinMaterial.HasProperty("_BumpMap"))
+                    softSkinMaterial.SetTexture("_BumpMap",null);
+                softSkinMaterial.DisableKeyword("_NORMALMAP");
+                if(softSkinMaterial.HasProperty("_MetallicGlossMap"))
+                    softSkinMaterial.SetTexture("_MetallicGlossMap",null);
+                softSkinMaterial.DisableKeyword("_METALLICGLOSSMAP");
                 if(softSkinMaterial.HasProperty("_Color"))
                     softSkinMaterial.SetColor("_Color",new Color(1f,.98f,.965f,1f));
                 handSkin.sharedMaterial=softSkinMaterial;
