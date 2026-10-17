@@ -177,6 +177,32 @@ namespace Rokas.BedSleep.Argon.Editor
                 string framesDir = Path.Combine(outDir, "frames");
                 Directory.CreateDirectory(framesDir);
 
+                // Capture EVERY distinct supplied Russian reference stage at
+                // full native OLED resolution, while keeping the physical
+                // game camera/framing fixed. Screens are not baked into video:
+                // the actual candidate presenter draws each real state.
+                void SaveRussianFace(string name)
+                {
+                    russianOled.RenderAt(0f,true);
+                    File.WriteAllBytes(Path.Combine(outDir,
+                        "russian_watch_" + name + ".png"),
+                        russianOled.OledDynamicTexture.EncodeToPNG());
+                }
+                russianOled.ConfigureTime(19,30,16);
+                SaveRussianFace("01_duration_dial");
+                russianOled.ShowPresets();
+                SaveRussianFace("02_quick_presets");
+                russianOled.SelectPreset(8);
+                SaveRussianFace("03_dial_changed");
+                russianOled.SetConfirmedState(true);
+                SaveRussianFace("04_alarm_confirmed");
+                russianOled.SetFallingAsleep();
+                SaveRussianFace("05_falling_asleep");
+                russianOled.CancelSelection();
+                SaveRussianFace("06_cancelled");
+                russianOled.SelectPreset(14);
+                russianOled.SetConfirmedState(false);
+
                 int frameNumber = 0;
                 int inspectPixelCount = 0;
                 int livingBendCount = 0;
