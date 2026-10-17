@@ -90,6 +90,63 @@ namespace Rokas.BedSleep.Argon.Editor
         }
 
         [Test]
+        public void OrganicGestureHasNoSidewaysSlideOrAbruptHeroPoseCut()
+        {
+            var arrived=ArgonBedOrganicGesture.Evaluate(1f,false);
+            var loweringStart=ArgonBedOrganicGesture.Evaluate(1f,true);
+            Assert.That(arrived.Horizontal,Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(arrived.Vertical,Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(arrived.Away,Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(arrived.WristPitchDegrees,Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(arrived.ForearmPitchDegrees,Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(loweringStart.Vertical,Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(loweringStart.WristRollDegrees,
+                Is.EqualTo(0f).Within(1e-4f));
+
+            var start=ArgonBedOrganicGesture.Evaluate(0f,false);
+            var end=ArgonBedOrganicGesture.Evaluate(0f,true);
+            Assert.That(Mathf.Abs(start.Vertical),Is.GreaterThan(.30f));
+            Assert.That(Mathf.Abs(start.Vertical),
+                Is.GreaterThan(Mathf.Abs(start.Horizontal)*2f));
+            Assert.That(Vector2.Distance(
+                new Vector2(start.Vertical,start.Away),
+                new Vector2(end.Vertical,end.Away)),Is.GreaterThan(.025f),
+                "Exit must follow a DIFFERENT depth/height arc");
+
+            // Wrist turns before forearm settles. During exit it relaxes
+            // before the forearm is fully lowered, not a backwards replay.
+            var entering=ArgonBedOrganicGesture.Evaluate(.42f,false);
+            var leaving=ArgonBedOrganicGesture.Evaluate(.58f,true);
+            Assert.That(Mathf.Abs(entering.WristPitchDegrees/13.2f),
+                Is.LessThan(Mathf.Abs(entering.ForearmPitchDegrees/6.1f)));
+            Assert.That(Mathf.Abs(leaving.WristPitchDegrees/15.6f),
+                Is.GreaterThan(Mathf.Abs(leaving.ForearmPitchDegrees/7.8f)));
+
+            // Small sampled boundary velocities protect against "a stick
+            // suddenly arriving" and visible stop/start at hero position.
+            var nearHero=ArgonBedOrganicGesture.Evaluate(.999f,false);
+            var beforeLeave=ArgonBedOrganicGesture.Evaluate(.999f,true);
+            Assert.That(Mathf.Abs(nearHero.Vertical),Is.LessThan(.001f));
+            Assert.That(Mathf.Abs(beforeLeave.Vertical),Is.LessThan(.001f));
+            Assert.That(Mathf.Abs(nearHero.WristPitchDegrees),
+                Is.LessThan(.2f));
+            Assert.That(Mathf.Abs(beforeLeave.WristPitchDegrees),
+                Is.LessThan(.2f));
+
+            // Position is continuous across source FBX raise -> wrist turn
+            // clips (at visible=.82), despite their independent sampling.
+            var left=ArgonBedOrganicGesture.Evaluate(.8199f,false);
+            var right=ArgonBedOrganicGesture.Evaluate(.8201f,false);
+            Assert.That(Mathf.Abs(left.Vertical-right.Vertical),
+                Is.LessThan(.002f));
+            Assert.That(Mathf.Abs(left.WristPitchDegrees-right.WristPitchDegrees),
+                Is.LessThan(.15f));
+            Assert.That(start.FingerResponse,Is.LessThan(.02f));
+            Assert.That(arrived.FingerResponse,Is.GreaterThan(.98f));
+            Assert.That(end.FingerResponse,Is.LessThan(.02f));
+        }
+
+        [Test]
         [Timeout(45000)]
         public void RussianSleepTimerRetainsReadableDigitsAndQuietMoonConfirmation()
         {
