@@ -368,10 +368,10 @@ def main():
         if skin_normal.length_squared<1e-12:
             fail("Existing genuine palm pocket normals degenerate")
         skin_normal.normalize()
-        # Winding must agree with original epidermis on the open contour.
-        orientation=(pocket[1].co-pocket[0].co).cross(
-            center-pocket[0].co).dot(skin_normal)
-        if orientation<0:pocket=list(reversed(pocket))
+        # Original adjacent face defines the only valid cap winding.
+        # The earlier centroid-normal sign heuristic was unreliable.
+        if boundary_edge_flow(pocket[0],pocket[1])!=-1:
+            pocket=list(reversed(pocket))
         centroid_uv=sum((nearest_source_uv(v) for v in pocket),
                         Vector((0,0)))/n if uv is not None else None
         avg_weights=defaultdict(float)
@@ -433,6 +433,12 @@ def main():
     if nonmanifold:
         fail("Reconstructed genuine skin has nonmanifold edges: "+
              str(len(nonmanifold)))
+    reversed_surfaces=[e for e in bm.edges if e.is_manifold and
+                       not e.is_contiguous]
+    report["inconsistent_face_winding_edges"]=len(reversed_surfaces)
+    if reversed_surfaces:
+        fail("Anatomical skin still has inverted or colliding face winding: "+
+             str(len(reversed_surfaces)))
     if uv is None:
         fail("Authentic source UV layer was lost in premium palm surface repair")
     report["source_uv_layer_retained"]=True
