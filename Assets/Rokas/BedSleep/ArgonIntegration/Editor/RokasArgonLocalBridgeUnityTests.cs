@@ -148,28 +148,47 @@ namespace Rokas.BedSleep.Argon.Editor
                     "01_original_authentic_hand.png",
                     "02_connected_root_bridge_candidate.png"
                 };
+                // Strict apples-to-apples: same source camera, light, pose,
+                // scale and focal settings for BOTH actual Unity renders.
+                // Previous moving camera was NOT a valid silhouette A/B.
+                var sourceJoints = instances[0]
+                    .GetComponentsInChildren<Transform>(true)
+                    .GroupBy(t=>t.name).ToDictionary(g=>g.Key,g=>g.First());
+                var candidateJoints = instances[1]
+                    .GetComponentsInChildren<Transform>(true)
+                    .GroupBy(t=>t.name).ToDictionary(g=>g.Key,g=>g.First());
+                int poseMatched=0;
+                foreach (var kv in sourceJoints)
+                {
+                    if (!candidateJoints.TryGetValue(kv.Key,out var dst)) continue;
+                    if (kv.Key.EndsWith("_MCP") || kv.Key.EndsWith("_PIP") ||
+                        kv.Key.EndsWith("_DIP") || kv.Key.EndsWith("_CMC") ||
+                        kv.Key.EndsWith("_Tip") || kv.Key=="Arm_Wrist")
+                    {
+                        dst.localRotation=kv.Value.localRotation;
+                        ++poseMatched;
+                    }
+                }
+                Assert.That(poseMatched,Is.GreaterThanOrEqualTo(18),
+                    "Original and joined hand poses cannot be matched");
+                var sourceCuff=sourceJoints["Arm_ForearmRoot"];
+                var sourceTip=sourceJoints["Middle_Tip"];
+                var axis=(sourceTip.position-sourceCuff.position).normalized;
+                Assert.That(axis.sqrMagnitude,Is.GreaterThan(.95f));
+                var normal=Vector3.ProjectOnPlane(Vector3.up,axis).normalized;
+                if(normal.sqrMagnitude<.5f)
+                    normal=Vector3.ProjectOnPlane(Vector3.forward,axis).normalized;
+                camera.transform.rotation=Quaternion.LookRotation(
+                    -normal,Vector3.Cross(axis,normal).normalized);
+                var extents=sourceSkin.bounds.extents;
+                float span=Mathf.Max(extents.x,extents.y,extents.z)*2f;
+                camera.orthographicSize=Mathf.Max(.03f,span*.83f);
+                camera.transform.position=sourceSkin.bounds.center+
+                    normal*Mathf.Max(.5f,span*3f);
                 for (int variant = 0; variant < 2; ++variant)
                 {
                     instances[0].SetActive(variant == 0);
                     instances[1].SetActive(variant == 1);
-                    var skin = variant == 0 ? sourceSkin : joinedSkin;
-                    var transforms = instances[variant]
-                        .GetComponentsInChildren<Transform>(true);
-                    var cuff = transforms.FirstOrDefault(t => t.name == "Arm_ForearmRoot");
-                    var finger = transforms.FirstOrDefault(t => t.name == "Middle_Tip");
-                    Assert.That(cuff, Is.Not.Null);
-                    Assert.That(finger, Is.Not.Null);
-                    var axis = (finger.position - cuff.position).normalized;
-                    Assert.That(axis.sqrMagnitude, Is.GreaterThan(.95f));
-                    var normal = Vector3.ProjectOnPlane(Vector3.up, axis).normalized;
-                    if (normal.sqrMagnitude < .5f)
-                        normal = Vector3.ProjectOnPlane(Vector3.forward, axis).normalized;
-                    camera.transform.rotation = Quaternion.LookRotation(
-                        -normal, Vector3.Cross(axis,normal).normalized);
-                    var extents = skin.bounds.extents;
-                    float span = Mathf.Max(extents.x,extents.y,extents.z) * 2f;
-                    camera.orthographicSize = Mathf.Max(.03f, span*.83f);
-                    camera.transform.position = skin.bounds.center + normal * Mathf.Max(.5f,span*3f);
                     camera.Render();
                     RenderTexture.active = target;
                     readback.ReadPixels(new Rect(0,0,W,H),0,0);
