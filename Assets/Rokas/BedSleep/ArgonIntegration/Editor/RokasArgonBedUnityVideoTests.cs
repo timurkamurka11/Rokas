@@ -26,7 +26,7 @@ namespace Rokas.BedSleep.Argon.Editor
         private const int Fps = 24;
 
         [Test]
-        [Timeout(1800000)] // Hard stop 30m; rendering is throttled at 10Hz, no per-frame cloud recompute.
+        [Timeout(1800000)] // Hard stop 30m; cloud cache + lossless uncompressed 720p video-frame capture.
         public void RecordActualArgonHandOverRealRokasBedCeilingToPngFrames()
         {
             Texture2D trueBed = Resources.Load<Texture2D>("BedSleep/BedCeilingPOV");
@@ -262,9 +262,13 @@ namespace Rokas.BedSleep.Argon.Editor
                     RenderTexture.active = finalRT;
                     capture.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
                     capture.Apply(false);
-                    string name = Path.Combine(framesDir,
-                        "frame_" + frameNumber.ToString("D5") + ".png");
-                    File.WriteAllBytes(name, capture.EncodeToPNG());
+                    // Lossless uncompressed TGA is far cheaper than 167 PNG
+                // deflate passes inside software-rendered cloud Unity.
+                // Original 1280x720 RGBA pixels are preserved exactly.
+                // Only storyboard and isolated watch-face stills use PNG.
+                string name = Path.Combine(framesDir,
+                        "frame_" + frameNumber.ToString("D5") + ".tga");
+                    File.WriteAllBytes(name, ImageConversion.EncodeToTGA(capture));
                     if (frameNumber == 0 || frameNumber % 24 == 0)
                     {
                         File.WriteAllBytes(Path.Combine(outDir,
