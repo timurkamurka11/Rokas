@@ -71,8 +71,11 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(mat.GetTexture("_MetallicGlossMap"),Is.Not.Null);
                 Assert.That(mat.GetTexture("_BumpMap"),Is.Not.SameAs(sourceNormal));
                 Assert.That(mat.GetTexture("_MetallicGlossMap"),Is.Not.SameAs(sourceRoughness));
-                Assert.That(filtered.SoftNormal.width,Is.LessThanOrEqualTo(512));
-                Assert.That(filtered.SoftRoughness.width,Is.LessThanOrEqualTo(384));
+                Assert.That(filtered.SoftNormal.width,Is.EqualTo(sourceNormal.width),
+                    "Preserve imported native normal-packing and original mip chain");
+                Assert.That(filtered.SoftRoughness.width,Is.EqualTo(sourceRoughness.width));
+                Assert.That(filtered.SoftNormal.mipmapCount,Is.GreaterThan(1));
+                Assert.That(filtered.SoftNormal.mipMapBias,Is.GreaterThanOrEqualTo(2f));
                 Assert.That(mat.IsKeywordEnabled("_NORMALMAP"),Is.True,
                     "Filtered skin must retain real normal microdetail, not replace with flat skin");
                 Assert.That(mat.IsKeywordEnabled("_METALLICGLOSSMAP"),Is.True,
@@ -138,8 +141,8 @@ namespace Rokas.BedSleep.Argon.Editor
                     "Original source albedo kept: "+sourceAlbedo.name+"\n"+
                     "Original normal: "+sourceNormal.name+" width "+sourceNormal.width+"\n"+
                     "Original packed roughness: "+sourceRoughness.name+" width "+sourceRoughness.width+"\n"+
-                    "New lowpass normal width "+filtered.SoftNormal.width+"\n"+
-                    "New lowpass roughness width "+filtered.SoftRoughness.width+"\n"+
+                    "Native-packed filtered normal width "+filtered.SoftNormal.width+" lodBias "+filtered.SoftNormal.mipMapBias+"\n"+
+                    "Native-packed filtered roughness width "+filtered.SoftRoughness.width+" lodBias "+filtered.SoftRoughness.mipMapBias+"\n"+
                     "Visual changed sample pixels: "+changes+"\n"+
                     "Original materials/FBX untouched; see 3 true Unity closeup PNGs";
                 File.WriteAllText(Path.Combine(dest,"material_frequency_comparison.txt"),summary);
