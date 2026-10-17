@@ -63,13 +63,11 @@ namespace Rokas.BedSleep.Argon.Editor
                 Assert.That(root.GetComponentsInChildren<MeshRenderer>(true).Length,
                     Is.EqualTo(7), "Must use seven authentic physical watch meshes");
 
-                // Reuse the real game OLED presenter, not a preview timestamp
-                // rendered into a fake mesh or an image over the original watch.
-                Type oledType = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => a.GetTypes())
-                    .FirstOrDefault(t => t.FullName ==
-                        "Rokas.BedSleep.V10Release.SmartwatchOLEDPresenter");
-                Assert.That(oledType, Is.Not.Null, "Real ROKAS game OLED class unavailable.");
+                // Candidate-only premium Russian moon-and-cloud OLED UI,
+                // rendered onto REAL Argon physical face with genuine UVs.
+                // Contract remains V10 ConfigureTime/SetConfirmedState so
+                // existing real-game inputs and save behavior can be reused.
+                Type oledType = typeof(ArgonRussianSleepOledPresenter);
                 var oledPresenter = root.AddComponent(oledType);
                 var flags = BindingFlags.Public | BindingFlags.Instance;
                 oledType.GetMethod("InitializeOled", flags).Invoke(oledPresenter, null);
@@ -77,6 +75,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 var setConfirmed = oledType.GetMethod("SetConfirmedState", flags);
                 var liveOled = oledType.GetProperty("OledRenderTexture", flags)
                     .GetValue(oledPresenter) as RenderTexture;
+                var russianOled = (ArgonRussianSleepOledPresenter)oledPresenter;
                 Assert.That(liveOled, Is.Not.Null, "Actual game RenderTexture was not initialized.");
                 oledMat = new Material(oled.sharedMaterial);
                 oledMat.mainTexture = liveOled;
@@ -190,6 +189,10 @@ namespace Rokas.BedSleep.Argon.Editor
                     if (confirmed) watchControls.Confirm();
                     else watchControls.ResetConfirmation();
                     watchControls.AnimateCrown(1f / Fps);
+                    russianOled.RenderAt((float)frameNumber / Fps, true);
+                    Assert.That(russianOled.LastRenderedTextSummary,
+                        Does.Contain("ВРЕМЯ СНА"),
+                        "OLED must have actual Russian text; no Latin demo labels");
                     clip.SampleAnimation(animator.gameObject, clip.length *
                         Mathf.Clamp01(normalizedTime));
                     // Keep the REAL 25-bone source and FBX clip, but eliminate
@@ -237,6 +240,16 @@ namespace Rokas.BedSleep.Argon.Editor
                             "storyboard_" + frameNumber.ToString("D5") + ".png"),
                             capture.EncodeToPNG());
                     }
+                    // Full resolution FACE texture alongside gameplay shot.
+                    // The physical watch is deliberately ~70 px tall within
+                    // the user-approved composition; standalone face still
+                    // proves Cyrillic legibility and reference fidelity.
+                    if (frameNumber == 72 || frameNumber == 120 ||
+                        frameNumber == 148)
+                        File.WriteAllBytes(Path.Combine(outDir,
+                            "russian_oled_face_" +
+                            frameNumber.ToString("D5") + ".png"),
+                            russianOled.OledDynamicTexture.EncodeToPNG());
                     // Isolated visual diagnostics: determine whether the remaining
                     // skin moire comes from original normal map, specular response,
                     // or the authored color/UV itself. ONE cloud run, one pose.
@@ -393,7 +406,9 @@ namespace Rokas.BedSleep.Argon.Editor
                     "  \"fps\": " + Fps + ",\n" +
                     "  \"frame_count\": " + frameNumber + ",\n" +
                     "  \"resolution\": \"1280x720\",\n" +
-                    "  \"original_game_oled\": true,\n" +
+                    "  \"original_game_oled\": false,\n" +
+                    "  \"candidate_russian_oled\": true,\n" +
+                    "  \"russian_labels_verified\": true,\n" +
                     "  \"original_fbx_clips\": true,\n" +
                     "  \"living_secondary_motion\": true,\n" +
                     "  \"physical_crown_interaction\": true,\n" +
