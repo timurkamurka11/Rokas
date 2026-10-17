@@ -52,9 +52,15 @@ namespace Rokas.BedSleep.Argon.Candidate
             crownCollider = realCrown.GetComponent<Collider>();
             if (crownCollider == null)
             {
+                // Readability of supplied Argon crown FBX triangles is not
+                // guaranteed on all builds; a close-fitting original-mesh
+                // bounds collider avoids unreliable MeshCollider imports.
                 var filter = realCrown.GetComponent<MeshFilter>();
-                var collider = realCrown.gameObject.AddComponent<MeshCollider>();
-                collider.sharedMesh = filter.sharedMesh;
+                if (filter == null || filter.sharedMesh == null)
+                    throw new InvalidOperationException("Authentic watch crown mesh missing");
+                var collider = realCrown.gameObject.AddComponent<BoxCollider>();
+                collider.center = filter.sharedMesh.bounds.center;
+                collider.size = filter.sharedMesh.bounds.size + Vector3.one * .002f;
                 crownCollider = collider;
             }
             crown = realCrown.transform;
