@@ -44,5 +44,6 @@ jobs:
             ${{ steps.unity.outputs.artifactsPath }}
             Artifacts/ArgonSeamLayers/*.png
             Artifacts/ArgonSeamLayers/ArgonOriginalPinkyMeshTopology.txt
+            Artifacts/ArgonSeamLayers/ArgonSkinnedVertices_BakeMesh_BeforeAfter.txt
           if-no-files-found: warn
           retention-days: 7
