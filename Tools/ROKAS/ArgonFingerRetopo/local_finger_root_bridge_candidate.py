@@ -174,6 +174,7 @@ def main():
             if source_loops:
                 all_source_uv[v]=source_loops[0][uv].uv.copy()
     addedFaces=[]
+    face_origin={}
     addedWeights=[]
     source_contact_vertices=set()
     report={"original_source_vertices":original_mesh_vertices,
@@ -515,6 +516,7 @@ def main():
                      str((len(pocket),len(ring),required)))
         faces,wind=join_root_to_hole(ring,pocket)
         addedFaces.extend(faces)
+        face_origin.update({f:'finger_'+str(fingerNo) for f in faces})
         source_contact_vertices.update(ring)
         source_contact_vertices.update(pocket)
         report["per_finger"].append({
@@ -601,6 +603,7 @@ def main():
                 face.material_index=0
                 face.smooth=True
                 addedFaces.append(face)
+                face_origin[face]='palm_cap'
                 if uv is not None:
                     for c in face.loops:
                         v=c.vert
@@ -639,19 +642,35 @@ def main():
         fail("Zero-area generated skin face after actual BMesh normal update: "+
              str(zero_normals))
     fold_angles=[]
-    sewn=set(addedFaces)
+    fold_by_region=defaultdict(list)
+    seen_fold_edges=set()
     for face in addedFaces:
         if not face.is_valid:continue
         for edge in face.edges:
-            if edge.is_manifold and len(edge.link_faces)==2:
-                other=next((f for f in edge.link_faces if f!=face),None)
-                if other is None:continue
-                fold_angles.append(math.degrees(face.normal.angle(other.normal)))
+            if edge in seen_fold_edges:continue
+            if not(edge.is_manifold and len(edge.link_faces)==2):continue
+            seen_fold_edges.add(edge)
+            neighbor=next((f for f in edge.link_faces if f!=face),None)
+            if neighbor is None:continue
+            angle=math.degrees(face.normal.angle(neighbor.normal))
+            fold_angles.append(angle)
+            region=face_origin.get(face,"source")
+            opposite=face_origin.get(neighbor,"source")
+            if region=="palm_cap" or opposite=="palm_cap":
+                region="palm_cap"
+            elif region.startswith("finger_"):
+                pass
+            else:
+                region=opposite
+            fold_by_region[region].append(angle)
     report["root_surface_dihedral_degrees"]={
         "sample_count":len(fold_angles),
         "max_angle":max(fold_angles,default=0),
         "over_90":sum(a>90 for a in fold_angles),
-        "over_120":sum(a>120 for a in fold_angles)}
+        "over_120":sum(a>120 for a in fold_angles),
+        "by_region":{k:{"count":len(v),"over_90":sum(a>90 for a in v),
+                         "over_120":sum(a>120 for a in v),
+                         "max":max(v)} for k,v in fold_by_region.items()}}
 
     if uv is None:
         fail("Authentic source UV layer was lost in premium palm surface repair")
