@@ -21,8 +21,9 @@ jobs:
       - name: Install Blender for original 3D rig reconstruction
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version | head -2
+          blender -b --factory-startup --python-expr "import numpy; print('ROKAS Blender numpy ready:', numpy.__version__)"
       - name: Attempt true continuous skin retopology from original rig
         shell: bash
         run: |
