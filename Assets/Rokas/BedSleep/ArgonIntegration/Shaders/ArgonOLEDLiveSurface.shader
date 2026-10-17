@@ -49,6 +49,15 @@ Shader "ROKAS/BedSleep/ArgonOLEDLiveSurface"
                     (1.0 - smoothstep(0.015, 0.135, edge));
                 float3 crisp = saturate((ui.rgb - 0.045) * _Contrast + 0.045);
                 crisp = saturate(crisp * _Brightness * glassDepth);
+                // Physical sapphire-like reflection is intentionally very
+                // restrained. Mostly visible on lit OLED graphics, not a
+                // glowing HUD square laid over the original real watch.
+                float diagonal = abs(i.uv.y - (.93 - i.uv.x*.22));
+                float glassSweep = exp(-diagonal*diagonal*310.0);
+                float lum = dot(crisp, float3(.2126,.7152,.0722));
+                float polished = glassSweep * .026 * smoothstep(.02,.24,lum);
+                crisp = saturate(crisp + float3(polished*.62,
+                    polished*.77,polished));
                 return fixed4(crisp, 1.0) * _Color;
             }
             ENDCG
