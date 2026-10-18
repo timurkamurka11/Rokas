@@ -151,6 +151,21 @@ namespace Rokas.Presentation
             // Unlike the 2D photographic fallback, the production hand
             // has a living idle and a physically animated crown.
             productionRig?.TickIdle(dt);
+            // The physical face moves a few pixels with breathing/fingers.
+            // TimeSelection previously captured a click zone ONCE while the
+            // raise animation was still settling, leaving UI taps offset
+            // from the new close-up OLED. Track its actual 3D projection.
+            if (productionRig != null && productionRig.Ready && watchHitRect != null)
+            {
+                Rect hit = productionRig.GetProjectedWatchInputRect();
+                if (hit.width > 1f && hit.height > 1f)
+                {
+                    watchHitRect.anchoredPosition =
+                        new Vector2(hit.x, -hit.y);
+                    watchHitRect.sizeDelta =
+                        new Vector2(hit.width, hit.height);
+                }
+            }
             float scroll = 0f;
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current != null)
