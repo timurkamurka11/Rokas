@@ -72,6 +72,17 @@ jobs:
           ffprobe -v error -show_entries format=duration,size \
             -of default=noprint_wrappers=1 "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
           test -s "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
+      # Private build artifact for local Unity inspection. The repository is
+      # public; DO NOT commit/export the modified FBX into Git or Releases.
+      # User retrieves this only with their authenticated gh CLI.
+      - name: Upload candidate hand mesh for authenticated Unity local preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Unity-PrivateHandModel
+          path: Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+          retention-days: 3
+          if-no-files-found: error
       - name: Keep diagnostics without distributing proprietary experimental FBX
         if: always()
         uses: actions/upload-artifact@v4
