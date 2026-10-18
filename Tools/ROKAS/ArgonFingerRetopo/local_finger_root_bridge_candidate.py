@@ -1029,7 +1029,8 @@ def main():
                    sum((v.co for v in rim),Vector((0,0,0)))/len(rim)],
          "radial_max":max((v.co-sum((v1.co for v1 in rim),
                        Vector((0,0,0)))/len(rim)).length for v in rim)}
-        for rim in holes if len(rim)==30]
+        for rim in holes if len(rim)==30 and
+        all(v.is_valid for v in rim)]
     report["targeted_actual_face_hinge_optimization"]={
         "sampled_generated_surface_edges":len(hinge_edges),
         "tissue_vertices_in_scope":len(trial_skin_vertices),
