@@ -582,8 +582,12 @@ def main():
                     not any(face in first_strip for face in edge.link_faces)
                     for edge in first_edges):
                 fail("Index first source strip is not 30-edge original collar")
+            # The 'FACES' delete mode can already remove orphaned rim
+            # vertices. Never submit invalidated BMVert references again.
             bmesh.ops.delete(bm,geom=list(first_strip),context='FACES')
-            bmesh.ops.delete(bm,geom=list(old_ring),context='VERTS')
+            still_valid=[v for v in old_ring if v.is_valid]
+            if still_valid:
+                bmesh.ops.delete(bm,geom=still_valid,context='VERTS')
             bm.verts.index_update()
             bm.normal_update()
             components[fingerNo].difference_update(old_ring)
