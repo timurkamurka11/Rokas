@@ -745,7 +745,7 @@ def main():
             if normal_a.length<1e-7:
                 fail("Original skin surface normals cancel at open lip")
             normal_a.normalize()
-            outward=normal_a.cross(along)
+            outward=along.cross(normal_a)
             if outward.length<1e-7:
                 fail("Source tangent cannot define anatomical rollover")
             outward.normalize()
