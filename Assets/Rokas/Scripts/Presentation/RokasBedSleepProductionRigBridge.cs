@@ -262,6 +262,19 @@ namespace Rokas.Presentation
                 Mathf.Repeat(currentGameTimeHours, 24f) * 60f), h);
         }
 
+        // Updates the native clock without resetting the selected duration.
+        public void SyncComputerClock(float clockHours,float durationHours)
+        {
+            if(!Ready) return;
+            currentGameTimeHours=Mathf.Repeat(clockHours,24f);
+            if(usesV10)
+            {
+                int minutes=Mathf.FloorToInt(currentGameTimeHours*60f) % 1440;
+                int steps=Mathf.Clamp(Mathf.RoundToInt(durationHours*2f),2,24);
+                Call(oled,"ConfigureTime",minutes/60,minutes%60,steps);
+            }
+        }
+
         private float currentGameTimeHours;
         public void ConfigureClock(float clockHours)
         {
