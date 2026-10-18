@@ -18,7 +18,7 @@ namespace Rokas.Presentation
             new List<RokasBedWatchPngState>();
         private Action<int> selectTab;
         private Action confirm, exit;
-        private AudioSource audio;
+        private AudioSource uiAudioSource;
         private AudioClip uiClick;
         // -1 means initial, genuinely unselected: all five buttons AMBER.
         private int selected = -1;
@@ -40,7 +40,7 @@ namespace Rokas.Presentation
             AudioClip clickSound)
         {
             selectTab = onSelect; confirm = onConfirm; exit = onExit;
-            audio = soundSource; uiClick = clickSound;
+            uiAudioSource = soundSource; uiClick = clickSound;
             var original = new Texture2D[7];
             var active = new Texture2D[7];
             for (int i = 0; i < ResourceNames.Length; i++)
@@ -80,8 +80,8 @@ namespace Rokas.Presentation
 
         private void PlayFeedback()
         {
-            if (audio != null && uiClick != null)
-                audio.PlayOneShot(uiClick, .28f);
+            if (uiAudioSource != null && uiClick != null)
+                uiAudioSource.PlayOneShot(uiClick, .28f);
         }
 
         private void OnClick(int index)
