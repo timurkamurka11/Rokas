@@ -50,6 +50,10 @@ namespace Rokas.Presentation
         private bool hasExplicitWatchTab;
         private int lastSystemMinute=-1;
         private float focusBlend;
+        // A zoom anchored to moving skinned-mesh bounds amplified tiny idle
+        // motion into a full-frame jump after each crown step.
+        private bool focusAnchorCaptured;
+        private Vector2 focusAnchorViewport;
         private RectTransform watchHitRect;
         private AudioSource audio;
         private AudioClip tickClip;
@@ -185,6 +189,21 @@ namespace Rokas.Presentation
                     float xCenter = (hit.x + hit.width * .5f) / 1920f;
                     float yCenter = 1f -
                         (hit.y + hit.height * .5f) / 1080f;
+                    // While focused, lock the crop to the first stable face
+                    // position. The old implementation chased the breathing
+                    // hand bounds every frame, causing the visible image to
+                    // vibrate whenever an OLED value or crown was changed.
+                    // The actual interactive hit target still uses live bounds.
+                    if (watchFocus && !focusAnchorCaptured)
+                    {
+                        focusAnchorViewport = new Vector2(xCenter,yCenter);
+                        focusAnchorCaptured = true;
+                    }
+                    if (focusAnchorCaptured)
+                    {
+                        xCenter = focusAnchorViewport.x;
+                        yCenter = focusAnchorViewport.y;
+                    }
                     Rect uv = new Rect(
                         Mathf.Clamp(xCenter - size * .5f, 0f, 1f - size),
                         Mathf.Clamp(yCenter - size * .5f, 0f, 1f - size),
@@ -315,6 +334,7 @@ namespace Rokas.Presentation
         {
             if (state != State.TimeSelection || real3DArmPov == null) return;
             watchFocus = !watchFocus;
+            if (watchFocus) focusAnchorCaptured = false;
             if (focusButton != null)
             {
                 var label = focusButton.GetComponentInChildren<Text>();
@@ -583,6 +603,7 @@ namespace Rokas.Presentation
         {
             state = State.WatchRaise;
             watchFocus = false;
+            focusAnchorCaptured = false;
             hasExplicitWatchTab = false;
             if (pngTabs != null) pngTabs.SetSelected(-1, false);
             focusBlend = 0f;
@@ -870,6 +891,7 @@ namespace Rokas.Presentation
             alarmButton = confirmButton = focusButton = exitBedButton = null;
             pngTabs = null;
             watchFocus = false;
+            focusAnchorCaptured = false;
             focusBlend = 0f;
             armPov = lyingPov = blurredPov = null;
             onFinished?.Invoke();
