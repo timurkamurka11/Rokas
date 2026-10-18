@@ -175,6 +175,8 @@ namespace Rokas.BedSleep.V10Release
             var oled = _argonHand.WatchScreen;
             if (oled == null) return false;
             _argonHand.NotifyWatchInteraction();
+            // Tactile top watch button responds to real touch activation.
+            _argonHand.PressPhysicalButton();
             switch (oled.Screen)
             {
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
@@ -291,6 +293,18 @@ namespace Rokas.BedSleep.V10Release
         private void OnArgonCycleOledScreen()
         {
             CyclePhysicalOledScreen();
+        }
+
+        public void StepPhysicalCrown(int steps)
+        {
+            if (_argonFullVisualActive && _argonHand != null)
+                _argonHand.RotatePhysicalCrown(steps);
+        }
+
+        public void PressPhysicalWatchButton()
+        {
+            if (_argonFullVisualActive && _argonHand != null)
+                _argonHand.PressPhysicalButton();
         }
 
         public void HoverPhysicalOled(Vector2 uv,bool active)
