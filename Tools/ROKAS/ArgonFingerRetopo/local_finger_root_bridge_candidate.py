@@ -551,8 +551,25 @@ def main():
         # Keep palm aperture closer to the authentic 30-vertex digit root
         # rather than tapering to a tiny 10-vertex cone (visible MCP fins).
         # Existing guards forbid cutting outside original palm-only tissue.
-        radius_hole=max(radius*.94,diameter*.010)
-        radius_hole=min(radius_hole,diameter*.030)
+        # STRUCTURAL NATIVE PALM WEB RESECTION: at index and little
+        # finger, the nearest small source patch ends exactly at the
+        # heavily folded original triangles (visible MCP tabs). Enlarge
+        # the *original face selection* into healthy native palm tissue
+        # before constructing a fresh connected quad/zipper bridge. This
+        # changes WHICH original source faces form the seam, not how
+        # already-built vertices are smoothed. The two restored source
+        # epidermis slit volumes are elsewhere and remain untouched.
+        ordinary_radius=max(radius*.94,diameter*.010)
+        if fingerNo in (2,5):
+            radius_hole=max(radius*1.15,diameter*.0115)
+            radius_hole=min(radius_hole,diameter*.033)
+        else:
+            radius_hole=min(ordinary_radius,diameter*.030)
+        report.setdefault("native_palm_web_resection_target",[]).append({
+            "digit":fingerNo,
+            "original_selected_radius":ordinary_radius,
+            "target_native_source_radius":radius_hole,
+            "structural_broader_palm_reconstruction":fingerNo in (2,5)})
         pending=[target_face]; selected=set()
         while pending:
             face=pending.pop()
