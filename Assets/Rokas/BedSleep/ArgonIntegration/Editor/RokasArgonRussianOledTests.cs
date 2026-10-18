@@ -10,6 +10,10 @@ namespace Rokas.BedSleep.Argon.Editor
     /// <summary>Fast candidate-only Cyrillic OLED state and clock tests.</summary>
     public sealed class RokasArgonRussianOledTests
     {
+        // Independent of the candidate import workshop. The normal local
+        // game installer does not install RokasArgonCandidateImporter.cs.
+        private const string CandidatePrefabPath =
+            "Assets/Rokas/BedSleep/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab";
         [Test]
         [Timeout(90000)]
         public void RussianMoonFaceHasRealClockProgressAndAllReferenceStates()
@@ -130,7 +134,7 @@ namespace Rokas.BedSleep.Argon.Editor
             try
             {
                 var source=AssetDatabase.LoadAssetAtPath<GameObject>(
-                    RokasArgonCandidateImporter.CandidatePrefab);
+                    CandidatePrefabPath);
                 Assert.That(source,Is.Not.Null);
                 instance=(GameObject)PrefabUtility.InstantiatePrefab(source);
                 cameraObject=new GameObject("Argon_Russian_OriginalPhysicalWatch_QA");
@@ -192,7 +196,7 @@ namespace Rokas.BedSleep.Argon.Editor
         public void LivelyFingersHaveIndependentLimitedRingPinkyBend()
         {
             var source=AssetDatabase.LoadAssetAtPath<GameObject>(
-                RokasArgonCandidateImporter.CandidatePrefab);
+                CandidatePrefabPath);
             Assert.That(source,Is.Not.Null);
             GameObject hand=null;
             try
