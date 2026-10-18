@@ -19,6 +19,7 @@ namespace Rokas.BedSleep.V10Release
         internal static bool TryInstall(
             KeikoFPSArmRigController gameArm, Smartwatch3DController oldWatch,
             SmartwatchOLEDPresenter gameOled, Camera camera,
+            BedSleepSFXController gameFoley,
             out MeshRenderer physicalOled, out MeshCollider physicalCollider)
         {
             physicalOled = null;
@@ -110,6 +111,25 @@ namespace Rokas.BedSleep.V10Release
                 russian.ConfigureTime(gameOled.CurrentHour, gameOled.CurrentMinute,
                     gameOled.SelectedHalfHours);
                 russian.SetConfirmedState(gameOled.IsConfirmed);
+                // Preserve the real albedo and UVs. The previous game view
+                // showed a dark X at the wrist: source skin AO was 100%.
+                // This disposable PBR instance attenuates AO only and adds
+                // restrained warm epidermis; never modify authored assets.
+                Material skinMaterial = new Material(skin.sharedMaterial);
+                skinMaterial.name = "ROKAS_Argon_Gameplay_NaturalWarmSkin";
+                if (skinMaterial.HasProperty("_Color"))
+                    skinMaterial.SetColor("_Color", new Color(1f, .965f, .935f, 1f));
+                if (skinMaterial.HasProperty("_OcclusionStrength"))
+                    skinMaterial.SetFloat("_OcclusionStrength", .10f);
+                if (skinMaterial.HasProperty("_BumpScale"))
+                    skinMaterial.SetFloat("_BumpScale", .045f);
+                if (skinMaterial.HasProperty("_GlossMapScale"))
+                    skinMaterial.SetFloat("_GlossMapScale", .16f);
+                if (skinMaterial.HasProperty("_Glossiness"))
+                    skinMaterial.SetFloat("_Glossiness", .34f);
+                if (skinMaterial.HasProperty("_Metallic"))
+                    skinMaterial.SetFloat("_Metallic", 0f);
+                skin.sharedMaterial = skinMaterial;
                 Material oledMaterial = new Material(face.sharedMaterial);
                 oledMaterial.name = "ROKAS_Argon_Gameplay_Russian_OLED";
                 oledMaterial.SetTexture("_MainTex", russian.OledRenderTexture);
@@ -117,7 +137,8 @@ namespace Rokas.BedSleep.V10Release
 
                 var follow = instance.AddComponent<RokasArgonFullHandFollower>();
                 follow.Initialize(instance.transform, sourceWrist, targetWrist,
-                    fingertip, sleeve, face, gameArm, gameOled, russian, camera);
+                    fingertip, sleeve, face, gameArm, gameOled, russian, camera,
+                    gameFoley, skinMaterial, oledMaterial);
                 foreach (var t in joints) t.gameObject.layer = 30;
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                     renderer.enabled = true;
@@ -165,18 +186,28 @@ namespace Rokas.BedSleep.V10Release
         private KeikoFPSArmRigController.ArmClipState previousState;
         private float stateSeconds;
         private float visibility;
-        private Vector3 sleeveAxis;
-        private Vector3 faceNormal;
+        private BedSleepSFXController foley;
+        private Material ownedSkinMaterial, ownedOledMaterial;
+        private Quaternion authoredRootRotation;
+        private Vector3 lastCameraWatchNormal;
+        private Vector3 lastCameraArmAxis;
 
         internal void Initialize(Transform root, Transform source, Transform destination,
             Transform tip, SkinnedMeshRenderer cloth, MeshRenderer oled,
             KeikoFPSArmRigController originalArm, SmartwatchOLEDPresenter oldPresenter,
-            ArgonRussianSleepOledPresenter newPresenter, Camera cam)
+            ArgonRussianSleepOledPresenter newPresenter, Camera cam,
+            BedSleepSFXController gameplayFoley,
+            Material skinMaterial, Material oledMaterial)
         {
             rigRoot = root; sourceWrist = source; targetWrist = destination;
             middleTip = tip; sleeve = cloth; watchFace = oled;
             arm = originalArm; oldOled = oldPresenter;
             russian = newPresenter; presentationCamera = cam;
+            foley = gameplayFoley;
+            ownedSkinMaterial = skinMaterial; ownedOledMaterial = oledMaterial;
+            // V10 wrist bones have a different bind pose. Preserve the exact
+            // authored Argon wrist/forearm roll sampled from InspectIdle.
+            authoredRootRotation = root.rotation;
             previousState = arm.CurrentState;
             stateSeconds = 0f;
             visibility = 0f;
@@ -198,49 +229,59 @@ namespace Rokas.BedSleep.V10Release
         {
             if (sourceWrist == null || targetWrist == null || presentationCamera == null)
                 return;
-            // Align the authentic skeleton to the invisible game driver.
-            // No original V10 bindpose is assigned to the Argon mesh.
-            Quaternion correction = targetWrist.rotation *
-                Quaternion.Inverse(sourceWrist.rotation);
-            rigRoot.rotation = correction * rigRoot.rotation;
+            // Reset every frame to the AUTHORED Argon pose. Never copy the
+            // old V10 wrist rotation: that is what inverted the watch.
+            // Translation follows the gameplay wrist without changing the
+            // orientation of Argon's original 25-bone skeleton.
+            rigRoot.rotation = authoredRootRotation;
             rigRoot.position += targetWrist.position - sourceWrist.position;
 
             Vector3 armAxis = middleTip.position - sleeve.bounds.center;
-            if (armAxis.sqrMagnitude < 0.000001f)
+            if (armAxis.sqrMagnitude < .000001f)
                 armAxis = middleTip.position - sourceWrist.position;
+            if (armAxis.sqrMagnitude < .000001f) return;
             armAxis.Normalize();
 
-            MeshFilter mf = watchFace.GetComponent<MeshFilter>();
-            Vector3 normal = watchFace.transform.forward;
-            if (mf != null && mf.sharedMesh != null && mf.sharedMesh.isReadable)
+            // The physical OLED lies OUTSIDE the wrist on the WATCH side.
+            // Its mesh normal is not reliable for front/back on this FBX;
+            // the previous camera faced the back of the hand. Use the real
+            // watch position relative to Arm_Wrist to select the visible side.
+            Vector3 front = Vector3.ProjectOnPlane(
+                watchFace.bounds.center - sourceWrist.position, armAxis);
+            MeshRenderer glass = rigRoot.GetComponentsInChildren<MeshRenderer>(true)
+                .FirstOrDefault(x => x.name == "Watch_SapphireGlass");
+            Vector3 lensOut = glass != null
+                ? Vector3.ProjectOnPlane(
+                    glass.bounds.center - sourceWrist.position, armAxis)
+                : Vector3.zero;
+            if (lensOut.sqrMagnitude > front.sqrMagnitude * .30f)
+                front = lensOut;
+            if (front.sqrMagnitude < .00000001f)
             {
-                var normals = mf.sharedMesh.normals;
-                Vector3 average = Vector3.zero;
-                for (int i = 0; i < normals.Length; i += Mathf.Max(1, normals.Length / 64))
-                    average += normals[i];
-                if (average.sqrMagnitude > 0.00001f)
-                    normal = watchFace.transform.TransformDirection(average.normalized);
+                // Deterministic fallback for co-planar watch/wrist imports:
+                // reverse the previous back-facing normal, not the wrist.
+                front = -watchFace.transform.forward;
+                front = Vector3.ProjectOnPlane(front, armAxis);
             }
-            normal = Vector3.ProjectOnPlane(normal, armAxis).normalized;
-            if (normal.sqrMagnitude < 0.1f) normal = Vector3.ProjectOnPlane(
-                watchFace.transform.forward, armAxis).normalized;
-            if (normal.sqrMagnitude < 0.1f) return;
-            Vector3 up = Vector3.Cross(armAxis, normal).normalized;
-            Quaternion horizontalView = Quaternion.LookRotation(-normal, up);
+            if (front.sqrMagnitude < .00000001f) return;
+            front.Normalize();
+            Vector3 up = Vector3.Cross(armAxis, front).normalized;
+            Quaternion horizontalView = Quaternion.LookRotation(-front, up);
             Vector3 screenRight = horizontalView * Vector3.right;
             if (Vector3.Dot(screenRight, armAxis) < 0f)
             {
-                // Never flip the sleeve/fingers or present an upside-down arm.
                 up = -up;
-                horizontalView = Quaternion.LookRotation(-normal, up);
+                horizontalView = Quaternion.LookRotation(-front, up);
                 screenRight = horizontalView * Vector3.right;
             }
+            lastCameraWatchNormal = front;
+            lastCameraArmAxis = armAxis;
 
             // Hero pose: sleeve extends off LEFT edge, watch centre-left,
             // fingers RIGHT. This matches the approved Argon preview.
             Vector3 heroWatchCenter = watchFace.bounds.center;
             presentationCamera.transform.SetPositionAndRotation(
-                heroWatchCenter + screenRight * .040f + normal * .57f,
+                heroWatchCenter + screenRight * .040f + front * .48f,
                 horizontalView);
             presentationCamera.fieldOfView = 38f;
             presentationCamera.nearClipPlane = .01f;
@@ -266,6 +307,16 @@ namespace Rokas.BedSleep.V10Release
             {
                 previousState = state;
                 stateSeconds = 0f;
+                if (foley != null)
+                {
+                    if (state == KeikoFPSArmRigController.ArmClipState.Raise)
+                    {
+                        foley.PlaySleeveRaise();
+                        foley.PlayOledPowerOn();
+                    }
+                    else if (state == KeikoFPSArmRigController.ArmClipState.Lower)
+                        foley.PlaySleeveLower();
+                }
             }
             else
                 stateSeconds += Time.unscaledDeltaTime;
@@ -287,6 +338,13 @@ namespace Rokas.BedSleep.V10Release
                     break;
             }
             SnapAndFrame();
+        }
+
+        private void OnDestroy()
+        {
+            // Clone-only materials; preserve every imported FBX/PBR source.
+            if (ownedSkinMaterial != null) Destroy(ownedSkinMaterial);
+            if (ownedOledMaterial != null) Destroy(ownedOledMaterial);
         }
     }
 }
