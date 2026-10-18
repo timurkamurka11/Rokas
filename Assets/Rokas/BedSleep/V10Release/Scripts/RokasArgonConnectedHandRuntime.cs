@@ -189,8 +189,14 @@ namespace Rokas.BedSleep.V10Release
         private BedSleepSFXController foley;
         private Material ownedSkinMaterial, ownedOledMaterial;
         private Quaternion authoredRootRotation;
-        private Vector3 lastCameraWatchNormal;
-        private Vector3 lastCameraArmAxis;
+        private Vector3 authoredRootPosition;
+        private Transform forearmRoot, forearmTwist, activeWrist;
+        private Quaternion forearmRootRest, forearmTwistRest, wristRest;
+        private ArgonLivingRig livingRig;
+        private Vector3 heroCameraRight, heroCameraUp, heroCameraForward;
+        private bool cameraFramed;
+        private float interactingUntil;
+        internal ArgonRussianSleepOledPresenter WatchScreen => russian;
 
         internal void Initialize(Transform root, Transform source, Transform destination,
             Transform tip, SkinnedMeshRenderer cloth, MeshRenderer oled,
@@ -208,6 +214,20 @@ namespace Rokas.BedSleep.V10Release
             // V10 wrist bones have a different bind pose. Preserve the exact
             // authored Argon wrist/forearm roll sampled from InspectIdle.
             authoredRootRotation = root.rotation;
+            authoredRootPosition = root.position;
+            forearmRoot = root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
+            forearmTwist = root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Arm_ForearmTwist");
+            activeWrist = root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Arm_Wrist");
+            if (forearmRoot == null || forearmTwist == null || activeWrist == null)
+                throw new MissingReferenceException("Original Argon forearm/wrist rig is missing");
+            forearmRootRest = forearmRoot.localRotation;
+            forearmTwistRest = forearmTwist.localRotation;
+            wristRest = activeWrist.localRotation;
+            livingRig = new ArgonLivingRig(root.gameObject);
+            cameraFramed = false;
             previousState = arm.CurrentState;
             stateSeconds = 0f;
             visibility = 0f;
@@ -225,78 +245,107 @@ namespace Rokas.BedSleep.V10Release
                 russian.SetConfirmedState(oldOled.IsConfirmed);
         }
 
+        internal void NotifyWatchInteraction()
+        {
+            interactingUntil = Time.unscaledTime + .55f;
+        }
+
+        private void RotateBoneInWorldAxis(Transform bone, Vector3 worldAxis, float degrees)
+        {
+            if (bone == null || Mathf.Abs(degrees) < .001f) return;
+            Vector3 localAxis = bone.parent != null
+                ? bone.parent.InverseTransformDirection(worldAxis)
+                : worldAxis;
+            bone.localRotation = Quaternion.AngleAxis(degrees, localAxis.normalized)
+                * bone.localRotation;
+        }
+
         internal void SnapAndFrame()
         {
-            if (sourceWrist == null || targetWrist == null || presentationCamera == null)
+            if (sourceWrist == null || presentationCamera == null || watchFace == null)
                 return;
-            // Reset every frame to the AUTHORED Argon pose. Never copy the
-            // old V10 wrist rotation: that is what inverted the watch.
-            // Translation follows the gameplay wrist without changing the
-            // orientation of Argon's original 25-bone skeleton.
-            rigRoot.rotation = authoredRootRotation;
-            rigRoot.position += targetWrist.position - sourceWrist.position;
 
-            Vector3 armAxis = middleTip.position - sleeve.bounds.center;
-            if (armAxis.sqrMagnitude < .000001f)
-                armAxis = middleTip.position - sourceWrist.position;
-            if (armAxis.sqrMagnitude < .000001f) return;
-            armAxis.Normalize();
-
-            // The physical OLED lies OUTSIDE the wrist on the WATCH side.
-            // Its mesh normal is not reliable for front/back on this FBX;
-            // the previous camera faced the back of the hand. Use the real
-            // watch position relative to Arm_Wrist to select the visible side.
-            Vector3 front = Vector3.ProjectOnPlane(
-                watchFace.bounds.center - sourceWrist.position, armAxis);
-            MeshRenderer glass = rigRoot.GetComponentsInChildren<MeshRenderer>(true)
-                .FirstOrDefault(x => x.name == "Watch_SapphireGlass");
-            Vector3 lensOut = glass != null
-                ? Vector3.ProjectOnPlane(
-                    glass.bounds.center - sourceWrist.position, armAxis)
-                : Vector3.zero;
-            if (lensOut.sqrMagnitude > front.sqrMagnitude * .30f)
-                front = lensOut;
-            if (front.sqrMagnitude < .00000001f)
+            // Framing is CAPTURED ONCE from the real source hero pose.
+            // Previously it tracked the already-displaced wrist every frame
+            // and cancelled the entry arc by following the moving hand.
+            if (!cameraFramed)
             {
-                // Deterministic fallback for co-planar watch/wrist imports:
-                // reverse the previous back-facing normal, not the wrist.
-                front = -watchFace.transform.forward;
-                front = Vector3.ProjectOnPlane(front, armAxis);
+                rigRoot.SetPositionAndRotation(authoredRootPosition, authoredRootRotation);
+                Vector3 armAxis = middleTip.position - sleeve.bounds.center;
+                if (armAxis.sqrMagnitude < .000001f)
+                    armAxis = middleTip.position - sourceWrist.position;
+                if (armAxis.sqrMagnitude < .000001f) return;
+                armAxis.Normalize();
+                Vector3 front = Vector3.ProjectOnPlane(
+                    watchFace.bounds.center - sourceWrist.position, armAxis);
+                MeshRenderer glass = rigRoot.GetComponentsInChildren<MeshRenderer>(true)
+                    .FirstOrDefault(x => x.name == "Watch_SapphireGlass");
+                Vector3 lensOut = glass != null
+                    ? Vector3.ProjectOnPlane(glass.bounds.center -
+                        sourceWrist.position, armAxis) : Vector3.zero;
+                if (lensOut.sqrMagnitude > front.sqrMagnitude * .30f)
+                    front = lensOut;
+                if (front.sqrMagnitude < .00000001f)
+                    front = Vector3.ProjectOnPlane(
+                        -watchFace.transform.forward, armAxis);
+                if (front.sqrMagnitude < .00000001f) return;
+                front.Normalize();
+                Vector3 up = Vector3.Cross(armAxis, front).normalized;
+                Quaternion view = Quaternion.LookRotation(-front, up);
+                if (Vector3.Dot(view * Vector3.right, armAxis) < 0f)
+                    view = Quaternion.LookRotation(-front, -up);
+                Vector3 right = view * Vector3.right;
+                presentationCamera.transform.SetPositionAndRotation(
+                    watchFace.bounds.center + right * .035f + front * .355f,
+                    view);
+                // A 35-degree close-up makes the OLED materially larger
+                // without changing the real watch mesh or source textures.
+                presentationCamera.fieldOfView = 35f;
+                presentationCamera.nearClipPlane = .012f;
+                presentationCamera.farClipPlane = 10f;
+                presentationCamera.cullingMask = 1 << 30;
+                heroCameraRight = right;
+                heroCameraUp = view * Vector3.up;
+                heroCameraForward = view * Vector3.forward;
+                cameraFramed = true;
             }
-            if (front.sqrMagnitude < .00000001f) return;
-            front.Normalize();
-            Vector3 up = Vector3.Cross(armAxis, front).normalized;
-            Quaternion horizontalView = Quaternion.LookRotation(-front, up);
-            Vector3 screenRight = horizontalView * Vector3.right;
-            if (Vector3.Dot(screenRight, armAxis) < 0f)
-            {
-                up = -up;
-                horizontalView = Quaternion.LookRotation(-front, up);
-                screenRight = horizontalView * Vector3.right;
-            }
-            lastCameraWatchNormal = front;
-            lastCameraArmAxis = armAxis;
 
-            // Hero pose: sleeve extends off LEFT edge, watch centre-left,
-            // fingers RIGHT. This matches the approved Argon preview.
-            Vector3 heroWatchCenter = watchFace.bounds.center;
-            presentationCamera.transform.SetPositionAndRotation(
-                heroWatchCenter + screenRight * .040f + front * .48f,
-                horizontalView);
-            presentationCamera.fieldOfView = 38f;
-            presentationCamera.nearClipPlane = .01f;
-            presentationCamera.farClipPlane = 10f;
-            presentationCamera.cullingMask = 1 << 30;
+            // Start from an absolute unmodified pose every frame. NEVER
+            // integrate additive wrist rotations or translation over time.
+            rigRoot.SetPositionAndRotation(authoredRootPosition, authoredRootRotation);
+            forearmRoot.localRotation = forearmRootRest;
+            forearmTwist.localRotation = forearmTwistRest;
+            activeWrist.localRotation = wristRest;
+            bool lowering = arm.CurrentState ==
+                KeikoFPSArmRigController.ArmClipState.Lower;
+            var gesture = ArgonBedOrganicGesture.Evaluate(visibility, lowering);
+            // The model remains HORIZONTAL as it rises in a soft shallow arc
+            // from lower-left, then comes ~8 cm toward the viewer.
+            rigRoot.position = authoredRootPosition +
+                heroCameraRight * gesture.Horizontal +
+                heroCameraUp * gesture.Vertical +
+                heroCameraForward * gesture.Away;
+            // Keep entry articulation subtle and separate between sections.
+            // All bends return exactly to neutral on the final hero frame.
+            RotateBoneInWorldAxis(forearmRoot, heroCameraRight,
+                gesture.ProximalElbowDegrees * .26f);
+            RotateBoneInWorldAxis(forearmRoot, heroCameraForward,
+                gesture.ProximalSwivelDegrees * .28f);
+            RotateBoneInWorldAxis(forearmTwist, heroCameraRight,
+                gesture.ForearmPitchDegrees * .32f);
+            RotateBoneInWorldAxis(forearmTwist, heroCameraForward,
+                gesture.ForearmRollDegrees * .30f);
+            RotateBoneInWorldAxis(activeWrist, heroCameraRight,
+                gesture.WristPitchDegrees * .28f);
+            RotateBoneInWorldAxis(activeWrist, heroCameraForward,
+                gesture.WristRollDegrees * .29f);
 
-            float smooth = visibility * visibility *
-                (3f - 2f * visibility);
-            // The camera was already framed at the final, unshifted wrist.
-            // Move ONLY the model left to reveal it organically from sleeve.
-            float slide = Mathf.Lerp(-.79f, 0f, smooth);
-            float organic = Mathf.Sin(Time.unscaledTime * 1.35f) *
-                .0017f * smooth;
-            rigRoot.position += screenRight * slide +
-                (horizontalView * Vector3.up) * organic;
+            float response = Mathf.SmoothStep(0f, 1f, visibility);
+            livingRig.NotifyAnimationPoseReset();
+            livingRig.Apply(Time.unscaledTime, response,
+                Time.unscaledTime < interactingUntil,
+                heroCameraRight, heroCameraUp,
+                gesture.FingerResponse, lowering);
         }
 
         private void LateUpdate()
