@@ -514,7 +514,12 @@ def main():
         # contiguous ring into the common palm. No fake fingers, UV hiding,
         # overlapping skin panels or new bone hierarchy. This modifies
         # ONLY the disposable imported candidate mesh, never its FBX.
-        if fingerNo in (2,3,4,5):
+        # Blender source-surface atlas shows true proximal collar excision
+        # improves index (156->136deg) and middle (150->110deg), but
+        # worsens ring to ~179deg and little to 159deg. Different MCP
+        # geometry needs different surgery: keep their known-good original
+        # source rings instead of damaging them for a shared algorithm.
+        if fingerNo in (2,3):
             old_ring=set(ring)
             retained_native=set(tiers[1])
             next_native=set(tiers[2])
