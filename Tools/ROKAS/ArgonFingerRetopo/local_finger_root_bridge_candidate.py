@@ -674,124 +674,152 @@ def main():
     # and uses the source per-corner UVs and intact 25-bone vertex weights.
     # The original FBX remains immutable. If any source topology, bone
     # weights or border geometry differs, reject the entire candidate.
+    # Structural candidate: two 30-edge source openings were revealed by
+    # genuine Blender atlas to be hairline slits (14 true opposed skin
+    # pairs plus 2 terminal vertices each), not round palm cavities.
+    # Direct BMesh welding produced 15 near-180-degree native folds PER
+    # slit; beveling that zero-thickness crease created zero-area faces.
+    # Instead form a continuous, narrow SOURCE-LIP ROLLOVER with the
+    # ORIGINAL 30 boundary vertices and 3 new skinned cross-section rows.
+    # No cylinder, artificial palm dome, voxel repair or original FBX edit.
     capped=[]
     cap_created=[]
     cap_groups=[]
-    stitched_source_edges=[]
-    initial_cuff_boundaries=64
     slit_tolerance=diameter*.00018
-    for slit_index,pocket in enumerate(holes):
+    for slit_id,pocket in enumerate(holes):
         if len(pocket)==64:
             continue
-        if len(pocket)!=30:
-            fail("Expected precisely two authentic 30-edge metacarpal slits")
-        source_edges={e for v in pocket for e in v.link_edges
-                      if e.is_boundary and all(w in pocket for w in e.verts)}
-        if len(source_edges)!=30:
-            fail("Original metacarpal slit contains branched edges")
-        # The original rings have very small thickness relative to length
-        # (7e-6 and 55e-6 maximum opposed-lip separation); don't collapse
-        # any anatomically real palm area. Require flat source Z on both.
-        zspan=max(v.co.z for v in pocket)-min(v.co.z for v in pocket)
-        if zspan>diameter*1e-5:
-            fail("Metacarpal source slit not truly planar; cannot stitch")
         n=len(pocket)
-        candidates=[]
+        if n!=30:fail("Metacarpal source rim no longer 30 authentic verts")
+        if max(v.co.z for v in pocket)-min(v.co.z for v in pocket)>diameter*1e-5:
+            fail("Source opening is not an authentic near-planar slit")
+        nearby=[]
         for i in range(n):
             for j in range(i+1,n):
-                if j in ((i+1)%n,(i-1)%n):
-                    continue
-                dist=(pocket[i].co-pocket[j].co).length
-                if dist<slit_tolerance:
-                    candidates.append((dist,i,j))
-        candidates.sort(key=lambda row:(row[0],row[1],row[2]))
-        unmatched=set(range(n))
+                if j in ((i-1)%n,(i+1)%n):continue
+                gap=(pocket[i].co-pocket[j].co).length
+                if gap<slit_tolerance:nearby.append((gap,i,j))
+        nearby.sort()
+        free=set(range(n))
         pairs=[]
-        for distance,i,j in candidates:
-            if i in unmatched and j in unmatched:
-                unmatched.remove(i);unmatched.remove(j)
-                pairs.append((i,j,distance))
-        if len(pairs)!=14 or len(unmatched)!=2:
-            fail("True source metacarpal slit does not have 14 lip pairs")
-        if any(((i+1)%n in unmatched and (j+1)%n in unmatched)
-               for i,j,_ in pairs):
-            fail("Slit tips confused with skinned source vertices")
-        # End vertices are the only two unpaired tips. They must be far
-        # apart along the original palm, not a truncated real skin hole.
-        tips=list(unmatched)
-        tip_span=(pocket[tips[0]].co-pocket[tips[1]].co).length
-        if tip_span<diameter*.025:
-            fail("Metacarpal slit has insufficient real source length")
-        targetmap={}
-        bone_mismatch=0.
-        pairs_safety=[]
-        for i,j,distance in pairs:
-            va,vb=pocket[i],pocket[j]
-            wa,wb=dict(va[deform_source]),dict(vb[deform_source])
-            drift=max((abs(wa.get(k,0)-wb.get(k,0))
-                       for k in set(wa)|set(wb)),default=0.)
-            bone_mismatch=max(bone_mismatch,drift)
-            if drift>.035:
-                fail("Original slit lip has incompatible 25-bone influences")
-            # Deterministic survivor keeps the original data. Per-face UV
-            # interpolation continues through BMesh loop layers.
-            target,discard=(va,vb) if va.index<vb.index else (vb,va)
-            targetmap[discard]=target
-            pairs_safety.append({"separation":distance,
-                                 "influence_delta":drift})
-        if len(targetmap)!=14 or len(set(targetmap.values()))!=14:
-            fail("Source slit cannot be stitched without T-junctions")
-        previous_boundaries=sum(e.is_boundary for e in bm.edges)
-        lip_midpoints=[(pocket[i].co+pocket[j].co)*.5 for i,j,_ in pairs]
-        bmesh.ops.weld_verts(bm,targetmap=targetmap)
+        for gap,i,j in nearby:
+            if i in free and j in free:
+                free.remove(i);free.remove(j)
+                pairs.append((i,j,gap))
+        if len(pairs)!=14 or len(free)!=2:
+            fail("Original metacarpal slit cannot be paired 14+2")
+        source_tips=sorted(free)
+        start=source_tips[0];end_tip=source_tips[1]
+        orientation=boundary_edge_flow(pocket[start],pocket[(start+1)%n])
+        delta=1 if orientation==1 else -1
+        path_a=[pocket[(start+k*delta)%n] for k in range(16)]
+        path_b=[pocket[(start-k*delta)%n] for k in range(16)]
+        if path_a[-1]!=pocket[end_tip] or path_b[-1]!=pocket[end_tip]:
+            fail("Authentic slit rim is not two 15-edge opposed arcs")
+        if any((path_a[k].co-path_b[k].co).length>=slit_tolerance
+               for k in range(1,15)):
+            fail("Source slit contains unmatched authentic skin lip")
+        for k in range(1,15):
+            a,b=path_a[k],path_b[k]
+            wa,wb=dict(a[deform_source]),dict(b[deform_source])
+            drift=max((abs(wa.get(g,0)-wb.get(g,0))
+                       for g in set(wa)|set(wb)),default=0)
+            if drift>.035:fail("Two skin source lip bone fields disagree")
+        before_edges=sum(e.is_boundary for e in bm.edges)
+        added_lip_faces=[]
+        source_skin_uv={}
+        rolled=[]
+        def source_edge_normal(a,b):
+            edge=next((e for e in a.link_edges if b in e.verts),None)
+            if edge is None or not edge.is_boundary or len(edge.link_faces)!=1:
+                fail("True 30-rim source lip no longer has adjacent skin")
+            return edge.link_faces[0].normal.copy()
+        for k in range(1,15):
+            a,b=path_a[k],path_b[k]
+            along=path_a[k+1].co-path_a[k-1].co
+            if along.length<diameter*1e-7:
+                fail("True source skin longitudinal tangent collapsed")
+            along.normalize()
+            normal_a=source_edge_normal(path_a[k-1],a)+\
+                     source_edge_normal(a,path_a[k+1])
+            if normal_a.length<1e-7:
+                fail("Original skin surface normals cancel at open lip")
+            normal_a.normalize()
+            outward=normal_a.cross(along)
+            if outward.length<1e-7:
+                fail("Source tangent cannot define anatomical rollover")
+            outward.normalize()
+            radius=diameter*.003*math.sin(math.pi*k/15.)
+            row=[a]
+            for fraction in (.25,.5,.75):
+                position=a.co.lerp(b.co,fraction)+\
+                         outward*(radius*math.sin(math.pi*fraction))
+                vertex=bm.verts.new(position)
+                mixture=[(a,1.-fraction),(b,fraction)]
+                addedWeights.append((vertex,mixture))
+                if uv is not None:
+                    source_skin_uv[vertex]=nearest_source_uv(a).lerp(
+                        nearest_source_uv(b),fraction)
+                cap_created.append(vertex)
+                row.append(vertex)
+            row.append(b)
+            rolled.append(row)
+        def add_lip_patch_face(vertices):
+            if len(set(vertices))!=len(vertices):
+                fail("Source constrained rollover has collapsed face")
+            try:face=bm.faces.new(vertices)
+            except ValueError:fail("Duplicate authentic source lip patch polygon")
+            face.smooth=True;face.material_index=0
+            addedFaces.append(face)
+            added_lip_faces.append(face)
+            face_origin[face]="palm_cap"
+            if uv is not None:
+                for corner in face.loops:
+                    vertex=corner.vert
+                    corner[uv].uv=(source_skin_uv[vertex] if vertex in
+                        source_skin_uv else nearest_source_uv(vertex))
+        # Seam border face orientation: original A path runs tip0->tip1,
+        # and original B edge loop returns from tip1->tip0. The new mesh
+        # traverses BOTH in the opposite direction, preserving winding.
+        for band in range(4):
+            add_lip_patch_face([path_a[0],rolled[0][band+1],
+                                rolled[0][band]])
+        for row_id in range(len(rolled)-1):
+            first=rolled[row_id]
+            next_row=rolled[row_id+1]
+            for band in range(4):
+                add_lip_patch_face([first[band],first[band+1],
+                                    next_row[band+1],next_row[band]])
+        for band in range(4):
+            add_lip_patch_face([path_a[-1],rolled[-1][band],
+                                rolled[-1][band+1]])
         bm.normal_update()
-        remaining_boundaries=sum(e.is_boundary for e in bm.edges)
-        if remaining_boundaries!=previous_boundaries-30:
-            fail("Genuine metacarpal lip stitch did not seal entire slit")
+        if sum(e.is_boundary for e in bm.edges)!=before_edges-30:
+            fail("Rounded genuine palm skin rollover did not close its slit")
         if any(not(e.is_manifold or e.is_boundary) for e in bm.edges):
-            fail("True lip weld created a nonmanifold 25-bone palm surface")
+            fail("Actual source rollover created nonmanifold shared palm web")
         if any(e.is_manifold and not e.is_contiguous for e in bm.edges):
-            fail("True lip weld reversed original source face orientation")
-        if any(face.calc_area()<=diameter*diameter*1e-11
-               for face in bm.faces):
-            fail("Metacarpal structural seam weld made zero-area source faces")
-        # Audit the ACTUAL original faces newly joined at the lip.
-        # Generated-only fold counts necessarily drop when a false dome
-        # disappears; also measure folds along real source-skin seams so
-        # that moving a 180-degree crease does not count as success.
-        seam_verts=set()
-        for point in lip_midpoints:
-            nearest_lip=min((v for v in bm.verts if v.is_valid),
-                            key=lambda v:(v.co-point).length_squared)
-            if (nearest_lip.co-point).length>slit_tolerance:
-                fail("Original 25-bone rim pairing lost source position")
-            seam_verts.add(nearest_lip)
-        seam_edges={e for v in seam_verts for e in v.link_edges
-                    if e.is_manifold and len(e.link_faces)==2}
-        seam_angles=[math.degrees(e.link_faces[0].normal.angle(
-                     e.link_faces[1].normal)) for e in seam_edges]
-        seam_closure_high=sum(a>120 for a in seam_angles)
-        seam_closure_medium=sum(a>90 for a in seam_angles)
+            fail("True metacarpal source lip winding is inverted")
+        if any(face.normal.length_squared<1e-12 or face.calc_area()<
+               diameter*diameter*1e-11 for face in added_lip_faces):
+            fail("Source rollover contains collapsed tissue skin polygon")
+        local_edges={e for face in added_lip_faces for e in face.edges
+                     if e.is_manifold and len(e.link_faces)==2}
+        angles=[math.degrees(e.link_faces[0].normal.angle(
+                e.link_faces[1].normal)) for e in local_edges]
         capped.append({
-            "stitched_source_adjacent_edges":len(seam_angles),
-            "stitched_source_folds_over_120":seam_closure_high,
-            "stitched_source_folds_over_90":seam_closure_medium,
-            "stitched_source_max_angle":max(seam_angles,default=0),
-            "source_lip_vertex_targets":len(seam_verts),
-            "source_open_ring":n,
-            "method":"authentic_opposed_lip_stitch_NO_FALSE_DOME",
-            "original_lip_pairs":len(pairs),
-            "original_source_face_weights_preserved":True,
-            "max_lip_separation":max(d for i,j,d in pairs),
-            "max_source_influence_delta":bone_mismatch,
-            "source_tip_distance":tip_span,
-            "new_skin_vertices":0,
-            "faces":0,
-            "boundary_edges_eliminated":previous_boundaries-remaining_boundaries,
-            "slit_index":slit_index,
-            "physical_pair_gaps":pairs_safety})
+            "method":"source_constrained_two_lip_skin_cross_section",
+            "source_open_ring":30,
+            "native_opposed_skin_pairs":14,
+            "new_skin_vertices":len(rolled)*3,
+            "faces":len(added_lip_faces),
+            "genuine_original_palm_corners":30,
+            "over120_including_original_boundary":sum(a>120 for a in angles),
+            "over90_including_original_boundary":sum(a>90 for a in angles),
+            "max_angle_including_original_boundary":max(angles,default=0),
+            "max_real_lip_gap":max(gap for _,_,gap in pairs)})
     report["authentic_two_distal_palm_pockets_sealed"]=capped
-    report["anatomical_skin_cap_vertices"]=0
+    report["anatomical_skin_cap_vertices"]=len(cap_created)
     report["true_structural_palm_slit_lip_stitch"]=True
     # Only a genuine 64-edge sleeve cuff remains open. All 5 digits and
     # both old palm pockets now have a real continuous epidermis surface.
