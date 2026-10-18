@@ -587,6 +587,7 @@ def main():
                         pending.append(other)
         if len(selected)<4 or len(selected)>170:
             fail("Palm graft hole has implausible source face count "+str(len(selected)))
+        original_nearest_palm_xyz=nearest.co.copy()
         previous_boundaries={e for e in bm.edges if e.is_boundary}
         bmesh.ops.delete(bm,geom=list(selected),context='FACES')
         fresh={e for e in bm.edges if e.is_boundary
@@ -664,7 +665,7 @@ def main():
         report["per_finger"].append({
             "finger":fingerNo,
             "original_finger_root_center_xyz":[round(float(c),8) for c in root],
-            "native_nearest_palm_vertex_xyz":[round(float(c),8) for c in nearest.co],
+            "native_nearest_palm_vertex_xyz":[round(float(c),8) for c in original_nearest_palm_xyz],
             "native_palm_incision_face_center_xyz":[round(float(c),8) for c in insertion],
             "native_palm_incision_normal_xyz":[round(float(c),8) for c in surface_normal],
             "post_cut_hole_center_xyz":[round(float(c),8) for c in
