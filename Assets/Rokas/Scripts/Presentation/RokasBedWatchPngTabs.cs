@@ -214,4 +214,73 @@ namespace Rokas.Presentation
             if (selectedSprite != null) Destroy(selectedSprite);
         }
     }
+    public sealed class RokasBedWatchFocusButton : MonoBehaviour,
+        IPointerEnterHandler, IPointerExitHandler,
+        IPointerDownHandler, IPointerUpHandler
+    {
+        private Image surface;
+        private Text caption;
+        private Button button;
+        private bool over, down;
+        private float t;
+        private AudioSource source;
+        private AudioClip hoverCue;
+
+        private void Awake()
+        {
+            surface = GetComponent<Image>();
+            button = GetComponent<Button>();
+            caption = GetComponentInChildren<Text>();
+            source = GetComponentInParent<AudioSource>();
+            if (button != null) button.transition = Selectable.Transition.None;
+            const int hz = 22050;
+            var samples = new float[950];
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float sec = (float)i / hz;
+                samples[i] = Mathf.Sin(sec * 2f * Mathf.PI * 970f)
+                    * Mathf.Exp(-sec * 95f) * .13f;
+            }
+            hoverCue = AudioClip.Create("ROKAS_WatchFocus_Hover", samples.Length,
+                1, hz, false);
+            hoverCue.SetData(samples, 0);
+        }
+
+        public void OnPointerEnter(PointerEventData e)
+        {
+            over = true;
+            if (source != null && hoverCue != null)
+                source.PlayOneShot(hoverCue, .15f);
+        }
+        public void OnPointerExit(PointerEventData e)
+        { over = false; down = false; }
+        public void OnPointerDown(PointerEventData e)
+        { if (e.button == PointerEventData.InputButton.Left) down = true; }
+        public void OnPointerUp(PointerEventData e) { down = false; }
+
+        private void Update()
+        {
+            t = Mathf.MoveTowards(t, over || down ? 1f : 0f,
+                Time.unscaledDeltaTime / .16f);
+            if (surface != null)
+                surface.color = Color.Lerp(
+                    new Color(.19f,.12f,.055f,.94f),
+                    new Color(.04f,.17f,.24f,.96f),t);
+            if (caption != null)
+                caption.color = Color.Lerp(
+                    new Color(1f,.80f,.50f,1f),
+                    new Color(.57f,.91f,1f,1f),t);
+            float pulse = over ? 1.008f +
+                .002f * Mathf.Sin(Time.unscaledTime * 4f) : 1f;
+            float scale = down ? .985f : pulse;
+            transform.localScale = Vector3.Lerp(transform.localScale,
+                new Vector3(scale,scale,1f),
+                Mathf.Clamp01(Time.unscaledDeltaTime * 12f));
+        }
+
+        private void OnDestroy()
+        {
+            if (hoverCue != null) Destroy(hoverCue);
+        }
+    }
 }
