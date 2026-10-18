@@ -346,6 +346,15 @@ namespace Rokas.Presentation
             return method == null ? 0 : (int)method.Invoke(controller, null);
         }
 
+        public void SetWatchHover(Vector2 uv,bool active)
+        {
+            if(!Ready || !usesV10 || controller==null) return;
+            var method=controller.GetType().GetMethod("HoverPhysicalOled",
+                BindingFlags.Public | BindingFlags.Instance);
+            if(method!=null)
+                method.Invoke(controller,new object[]{uv,active});
+        }
+
         public int GetWatchSetting(int key)
         {
             if(!Ready || !usesV10 || controller==null)
