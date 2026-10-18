@@ -31,6 +31,13 @@ namespace Rokas.BedSleep.Argon.Candidate
         public int QuietMask { get; private set; } = 7;
         public bool PhasePlanningEnabled { get; private set; }
         private const string PrefPrefix = "ROKAS.Watch.Sleep.";
+        private Vector2 hoverUv = new Vector2(.5f,.5f);
+        private bool hoverActive;
+        public void SetHover(Vector2 uv,bool active)
+        {
+            hoverUv=uv;
+            hoverActive=active;
+        }
         private float lastGpuDraw = -100f;
         private float interactionFlashEnd;
         private void LoadWatchPreferences()
@@ -829,6 +836,9 @@ namespace Rokas.BedSleep.Argon.Candidate
             gpuComposite.SetFloat("_MotionTime", now);
             gpuComposite.SetFloat("_Focus",
                 now<interactionFlashEnd ? 1f : 0f);
+            gpuComposite.SetFloat("_HoverActive",hoverActive ? 1f : 0f);
+            gpuComposite.SetVector("_HoverUv",
+                new Vector4(hoverUv.x,hoverUv.y,0f,0f));
             Graphics.Blit(authoredFaces[ActiveGpuFace()],
                 OledRenderTexture, gpuComposite);
         }
