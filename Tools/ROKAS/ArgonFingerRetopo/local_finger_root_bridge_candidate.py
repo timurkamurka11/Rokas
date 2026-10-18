@@ -517,11 +517,47 @@ def main():
         radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
         eligible={f for v in intact_palm for f in v.link_faces
                   if f.is_valid and all(w in source_original_palm for w in f.verts)}
-        target_face=min(
-            (f for f in nearest.link_faces if f in eligible),
-            key=lambda f:(f.calc_center_median()-root).length_squared,default=None)
-        if target_face is None:
+        # Source finger root is an OPEN cylinder protruding from the skin.
+        # A closest surface vertex alone can select the SIDE of the palm,
+        # leaving a sharp triangular MCP/crotch fin. Resolve a source-driven
+        # proximal digit axis from real island anatomy and seek a palm
+        # epidermis patch along THAT axis, not across air to another finger.
+        digit_centroid=sum((v.co for v in components[fingerNo]),
+                           Vector((0,0,0)))/len(components[fingerNo])
+        proximal_axis=root-digit_centroid
+        if proximal_axis.length<1e-7:
+            fail("Authentic finger longitudinal axis collapsed")
+        proximal_axis.normalize()
+        projected=root+proximal_axis*min(source_dist,diameter*.028)
+        original_nearest=min(
+            (face for face in nearest.link_faces if face in eligible),
+            key=lambda face:(face.calc_center_median()-root).length_squared,
+            default=None)
+        if original_nearest is None:
             fail("Cannot isolate original palm-only face for root insertion")
+        candidate_palm_faces=[
+            face for face in eligible
+            if (face.calc_center_median()-root).length<diameter*.055]
+        # Hard fallback: authentic proximal target may be beyond the palm
+        # shell for unusual thumb positions. In that case keep the proven
+        # nearest-face construction rather than invent geometry.
+        projected_face=min(
+            candidate_palm_faces,
+            key=lambda face:(face.calc_center_median()-projected).length_squared,
+            default=None)
+        target_face=original_nearest
+        if projected_face is not None and (
+              (projected_face.calc_center_median()-root).length
+              < min(diameter*.050,source_dist*2.35)):
+            target_face=projected_face
+        report.setdefault("axis_guided_palm_socket_selection",[]).append({
+            "finger":fingerNo,
+            "original_nearest_face_center":list(original_nearest.calc_center_median()),
+            "selected_face_center":list(target_face.calc_center_median()),
+            "projected_proximal_goal":list(projected),
+            "was_adjusted":target_face is not original_nearest,
+            "source_axis":list(proximal_axis)})
+
         insertion=target_face.calc_center_median()
         surface_normal=target_face.normal.normalized()
         # Hole smaller than finger root cross section; creates a natural
