@@ -742,6 +742,7 @@ def main():
         if len(targetmap)!=14 or len(set(targetmap.values()))!=14:
             fail("Source slit cannot be stitched without T-junctions")
         previous_boundaries=sum(e.is_boundary for e in bm.edges)
+        lip_midpoints=[(pocket[i].co+pocket[j].co)*.5 for i,j,_ in pairs]
         bmesh.ops.weld_verts(bm,targetmap=targetmap)
         bm.normal_update()
         remaining_boundaries=sum(e.is_boundary for e in bm.edges)
@@ -754,7 +755,29 @@ def main():
         if any(face.calc_area()<=diameter*diameter*1e-11
                for face in bm.faces):
             fail("Metacarpal structural seam weld made zero-area source faces")
+        # Audit the ACTUAL original faces newly joined at the lip.
+        # Generated-only fold counts necessarily drop when a false dome
+        # disappears; also measure folds along real source-skin seams so
+        # that moving a 180-degree crease does not count as success.
+        seam_verts=set()
+        for point in lip_midpoints:
+            nearest_lip=min((v for v in bm.verts if v.is_valid),
+                            key=lambda v:(v.co-point).length_squared)
+            if (nearest_lip.co-point).length>slit_tolerance:
+                fail("Original 25-bone rim pairing lost source position")
+            seam_verts.add(nearest_lip)
+        seam_edges={e for v in seam_verts for e in v.link_edges
+                    if e.is_manifold and len(e.link_faces)==2}
+        seam_angles=[math.degrees(e.link_faces[0].normal.angle(
+                     e.link_faces[1].normal)) for e in seam_edges]
+        seam_closure_high=sum(a>120 for a in seam_angles)
+        seam_closure_medium=sum(a>90 for a in seam_angles)
         capped.append({
+            "stitched_source_adjacent_edges":len(seam_angles),
+            "stitched_source_folds_over_120":seam_closure_high,
+            "stitched_source_folds_over_90":seam_closure_medium,
+            "stitched_source_max_angle":max(seam_angles,default=0),
+            "source_lip_vertex_targets":len(seam_verts),
             "source_open_ring":n,
             "method":"authentic_opposed_lip_stitch_NO_FALSE_DOME",
             "original_lip_pairs":len(pairs),
