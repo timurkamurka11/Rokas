@@ -12,6 +12,8 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
         _PhaseMode ("Phase Planning", Float) = 0
         _MotionTime ("Animation Clock", Float) = 0
         _Focus ("Interaction Strength", Float) = 0
+        _HoverActive ("Pointer Hover", Float) = 0
+        _HoverUv ("Pointer Position", Vector) = (.5,.5,0,0)
     }
     SubShader
     {
@@ -26,6 +28,8 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
             sampler2D _MainTex, _LiveText;
             float _FaceIndex, _Duration01, _AlarmMode, _AlarmOn;
             float _QuietMask, _PhaseMode, _MotionTime, _Focus;
+            float _HoverActive;
+            float4 _HoverUv;
             float ring(float2 p,float2 center,float radius,float thickness)
             {
                 float d=abs(length(p-center)-radius);
@@ -129,6 +133,10 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
                     if(_PhaseMode>.5)
                         glow+=cyan*halo(uv,float2(.54,.56),.043)*.12;
                 }
+                // Subtle physical-pointer glint on real OLED controls.
+                // Never overlay a second static PNG or text outline.
+                if(_HoverActive>.5)
+                    glow+=cyan*halo(uv,_HoverUv.xy,.032)*.21;
                 // Restrict art-preserving motion to the watch inner display.
                 glow*=smoothstep(.035,.085,uv.x)*
                     (1.-smoothstep(.92,.965,uv.x))*
