@@ -346,6 +346,16 @@ namespace Rokas.Presentation
             return method == null ? 0 : (int)method.Invoke(controller, null);
         }
 
+        public int GetWatchSetting(int key)
+        {
+            if(!Ready || !usesV10 || controller==null)
+                return key==2 ? 7 : (key==1 ? 1 : 0);
+            var method=controller.GetType().GetMethod("GetPhysicalWatchSetting",
+                BindingFlags.Public | BindingFlags.Instance);
+            if(method==null) return key==2 ? 7 : (key==1 ? 1 : 0);
+            return (int)method.Invoke(controller,new object[]{key});
+        }
+
         public bool SelectWatchTab(int index)
         {
             if (!Ready || !usesV10 || controller == null) return false;
