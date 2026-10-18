@@ -563,33 +563,52 @@ def main():
         if required<0 or required>30:
             fail("Original palm socket vertex density outside safe range")
         if required:
-            edge_candidates=[]
-            for j in range(socket_before):
-                v0=pocket[j];v1=pocket[(j+1)%socket_before]
-                edge=next((e for e in v0.link_edges if v1 in e.verts),
-                          None)
-                if edge is None or not edge.is_boundary:
-                    fail("Authentic palm ring subdivide edge missing")
-                edge_candidates.append((edge.calc_length(),j,edge))
-            # Splitting the longest source edges creates a regular 30-sided
-            # anatomical palm aperture; no duplicated source mesh/cylinders.
-            ordered=sorted(edge_candidates,
-                           key=lambda item:(-item[0],item[1]))
-            chosen=[item[2] for item in ordered[:required]]
-            # bmesh.ops.subdivide_edges() can replace unrelated BMesh
-            # elements and invalidate live original 30-vertex finger
-            # references. Split ONLY each actual palm socket edge in
-            # place. Source ring vertices and 25-bone island IDs survive.
-            for old_edge in chosen:
-                if not old_edge.is_valid or not old_edge.is_boundary:
-                    fail("Original pocket edge invalid before local split")
-                bmesh.utils.edge_split(old_edge,old_edge.verts[0],.5)
-            bm.normal_update()
-            fresh={e for e in bm.edges if e.is_valid and e.is_boundary
-                   and e not in previous_boundaries}
-            pocket=boundary_of_new_pocket(fresh)
+            # Local 30-vertex adaptive edge refinement. Earlier code chose
+            # 13 of the 17 index-socket edges ONCE before splitting, leaving
+            # long, uneven original edges beside the new half-edges. This
+            # creates sharply unequal 30->30 quad widths even though Blender
+            # calls the surface manifold. Redistribute density against the
+            # evolving AUTHENTIC rim, one longest real edge at a time; never
+            # manufacture a circular synthetic socket or move source skin.
+            def socket_lengths(boundary):
+                lengths=[]
+                for j in range(len(boundary)):
+                    a0=boundary[j];a1=boundary[(j+1)%len(boundary)]
+                    edge=next((e for e in a0.link_edges
+                               if a1 in e.verts and e.is_boundary),None)
+                    if edge is None:fail("Original socket edge disconnected")
+                    lengths.append((edge.calc_length(),j,edge))
+                return lengths
+            before_edges=socket_lengths(pocket)
+            before_spacing=[length for length,_,_ in before_edges]
+            added_socket_vertices=0
+            for step in range(required):
+                current=socket_lengths(pocket)
+                # Stable index breaks length ties. Revisit long original
+                # segments only if they remain longer than newly split ones.
+                length,j,edge=max(current,key=lambda row:(row[0],-row[1]))
+                if length<=diameter*1e-7:
+                    fail("Cannot subdivide nearly zero-area original palm edge")
+                bmesh.utils.edge_split(edge,edge.verts[0],.5)
+                bm.normal_update()
+                fresh={e for e in bm.edges if e.is_valid and e.is_boundary
+                       and e not in previous_boundaries}
+                pocket=boundary_of_new_pocket(fresh)
+                added_socket_vertices+=1
+                if len(pocket)!=socket_before+added_socket_vertices:
+                    fail("Authentic adaptive palm socket ring split lost verts")
+            after_spacing=[length for length,_,_ in socket_lengths(pocket)]
+            report.setdefault("adaptive_true_socket_spacing",[]).append({
+                "finger":fingerNo,"original_vertex_count":socket_before,
+                "final_vertex_count":len(pocket),"genuine_edge_splits":required,
+                "before_max_edge":max(before_spacing),
+                "after_max_edge":max(after_spacing),
+                "before_min_edge":min(before_spacing),
+                "after_min_edge":min(after_spacing),
+                "before_edge_length_ratio":max(before_spacing)/min(before_spacing),
+                "after_edge_length_ratio":max(after_spacing)/min(after_spacing)})
             if len(pocket)!=len(ring):
-                fail("Equal-density anatomical palm socket failed: "+
+                fail("Adaptive authentic palm socket density incorrect: "+
                      str((len(pocket),len(ring),required)))
         faces,wind=join_root_to_hole(ring,pocket)
         addedFaces.extend(faces)
