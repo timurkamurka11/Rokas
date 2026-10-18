@@ -218,10 +218,10 @@ namespace Rokas.BedSleep.V10Release
                     {
                         // Arrow keys on the watch face change the actual
                         // wake time through the existing sleep-duration owner.
-                        int delta=uv.x<.32f ? -1 : (uv.x>.68f ? 1 : 0);
-                        if(delta!=0)
+                        int alarmStepDelta = uv.x < .32f ? -1 : (uv.x > .68f ? 1 : 0);
+                        if (alarmStepDelta != 0)
                             applyHalfHours?.Invoke(Mathf.Clamp(
-                                oled.SelectedHalfHours+delta,2,24));
+                                oled.SelectedHalfHours + alarmStepDelta, 2, 24));
                     }
                     return true;
                 }
