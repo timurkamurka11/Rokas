@@ -1016,6 +1016,36 @@ def main():
                       "max_angle":max(angles,default=0)}
                 for name,angles in groups.items()}
     report["post_hinge_optimizer_by_region"]=summarize_actual_regions()
+    # Structural rather than cosmetic QA: record where real >120-degree
+    # bends are physically located. A green 25-bone manifold check does
+    # NOT imply that the two source palm apertures form natural epidermis.
+    # Keep enough 3D evidence to reconstruct the shared metacarpal sheet.
+    structural_regions=defaultdict(list)
+    for edge in hinge_edges:
+        faces=list(edge.link_faces)
+        regions=[face_origin.get(f,"source") for f in faces]
+        region=("palm_cap" if "palm_cap" in regions else next(
+            (name for name in regions if name.startswith("finger_")),
+            "source"))
+        angle=math.degrees(faces[0].normal.angle(faces[1].normal))
+        if angle<=90.:continue
+        midpoint=(edge.verts[0].co+edge.verts[1].co)*.5
+        structural_regions[region].append({
+            "degrees":round(angle,4),
+            "midpoint":[round(float(c),6) for c in midpoint],
+            "length":round(float(edge.calc_length()),6),
+            "face_sources":regions})
+    report["structural_high_angle_edge_atlas"]={
+        group:sorted(entries,key=lambda e:e["degrees"],reverse=True)[:30]
+        for group,entries in structural_regions.items()}
+    report["structural_true_palm_apertures"]=[
+        {"source_rim_vertices":len(rim),
+         "root_coords":[[round(float(q),7) for q in v.co] for v in rim],
+         "center":[round(float(q),7) for q in
+                   sum((v.co for v in rim),Vector((0,0,0)))/len(rim)],
+         "radial_max":max((v.co-sum((v1.co for v1 in rim),
+                       Vector((0,0,0)))/len(rim)).length for v in rim)}
+        for rim in holes if len(rim)==30]
     report["targeted_actual_face_hinge_optimization"]={
         "sampled_generated_surface_edges":len(hinge_edges),
         "tissue_vertices_in_scope":len(trial_skin_vertices),
