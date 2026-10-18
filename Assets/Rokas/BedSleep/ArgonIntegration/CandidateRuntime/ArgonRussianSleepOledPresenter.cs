@@ -116,7 +116,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                                  Screen == ArgonRussianWatchScreen.Cancelled))
                 Screen = ArgonRussianWatchScreen.Dial;
             RefreshTextSummary();
-            if ((clockChanged || requiresRedraw) && OledDynamicTexture != null)
+            if ((clockChanged || requiresRedraw) && (GpuFacesActive || OledDynamicTexture != null))
                 RenderAt(animatedSeconds,true);
         }
 
@@ -131,7 +131,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             else if (Screen == ArgonRussianWatchScreen.Confirmed)
                 Screen = ArgonRussianWatchScreen.Dial;
             RefreshTextSummary();
-            if (changed && OledDynamicTexture != null)
+            if (changed && (GpuFacesActive || OledDynamicTexture != null))
                 RenderAt(animatedSeconds,true);
         }
 
@@ -710,7 +710,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             {
                 case 0:
                     LiveText(DurationText,256,265,3.15f,225,light);
-                    LiveText(WakeText,306,343,1.15f,80,cyan);
+                    LiveText(WakeText,256,372,1.35f,124,cyan);
                     LiveText(CurrentHour.ToString("D2")+":"+
                         CurrentMinute.ToString("D2"),74,409,1.55f,92,cyan);
                     int hours=SelectedHalfHours/2;
