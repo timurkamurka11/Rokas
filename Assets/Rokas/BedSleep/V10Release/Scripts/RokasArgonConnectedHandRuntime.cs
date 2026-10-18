@@ -47,8 +47,35 @@ namespace Rokas.BedSleep.V10Release
             {
                 instance = UnityEngine.Object.Instantiate(prefab, gameArm.transform.parent);
                 instance.name = "ROKAS_Argon_Complete_Hand_Watch_InGame";
+                // Match the previous approved Unity video: its hand pose
+                // was sampled from the genuine SleepArm_InspectIdle FBX clip,
+                // not from a raw bind/T-pose. Gently restore finger knuckles
+                // toward their authored rest so root-only curls cannot break
+                // the visible skin at finger bases.
+                var baseJoints = instance.GetComponentsInChildren<Transform>(true);
+                string[] knuckles = {
+                    "Thumb_CMC", "Index_MCP", "Middle_MCP", "Ring_MCP", "Little_MCP"
+                };
+                var neutral = baseJoints.Where(x => knuckles.Contains(x.name))
+                    .GroupBy(x => x.name)
+                    .ToDictionary(g => g.Key, g => g.First().localRotation);
                 foreach (var animator in instance.GetComponentsInChildren<Animator>(true))
-                    animator.enabled = false; // V10 gameplay remains sole animation authority.
+                {
+                    var clips = animator.runtimeAnimatorController != null
+                        ? animator.runtimeAnimatorController.animationClips : null;
+                    var inspect = clips == null ? null : clips.FirstOrDefault(
+                        x => x != null && x.name.Contains("SleepArm_InspectIdle"));
+                    if (inspect != null)
+                    {
+                        inspect.SampleAnimation(animator.gameObject,
+                            inspect.length * .5f);
+                        foreach (var joint in baseJoints)
+                            if (neutral.TryGetValue(joint.name, out var rest))
+                                joint.localRotation = Quaternion.Slerp(
+                                    rest, joint.localRotation, .28f);
+                    }
+                    animator.enabled = false; // V10 is sole gameplay driver.
+                }
 
                 var joints = instance.GetComponentsInChildren<Transform>(true);
                 var sourceWrist = joints.FirstOrDefault(x => x.name == "Arm_Wrist");
