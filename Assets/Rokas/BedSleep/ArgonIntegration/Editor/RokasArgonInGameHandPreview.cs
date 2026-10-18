@@ -142,12 +142,25 @@ namespace Rokas.BedSleep.Argon.Editor
                             sourceName + " -> " + targetName);
                     sourceJoints.Add(a); destinationJoints.Add(b);
                 }
-                var oldBounds = current.sharedMesh.bounds;
-                var newBounds = incoming.sharedMesh.bounds;
+                // Mesh.bounds is in FBX-local units, and the two exported
+                // sources have DIFFERENT model root scale conversions.
+                // Compare genuinely rendered WORLD bounds instead. Keep
+                // the candidate's own imported bone hierarchy intact.
+                var oldBounds = current.bounds;
+                var newBounds = incoming.bounds;
                 float oldExtent=oldBounds.size.magnitude, newExtent=newBounds.size.magnitude;
-                if (oldExtent<1e-5f || newExtent<1e-5f ||
-                    newExtent/oldExtent<.7f || newExtent/oldExtent>1.4f)
-                    throw new InvalidOperationException("Argon/V10 actual geometry sizes are incompatible");
+                if (oldExtent<1e-5f || newExtent<1e-5f)
+                    throw new InvalidOperationException("Invalid world-rendered FBX bounds");
+                float ratio=newExtent/oldExtent;
+                Debug.Log("[ROKAS Argon] Live original/candidate world-size calibration " +
+                    "V10=" + oldExtent.ToString("G7") +
+                    " Argon=" + newExtent.ToString("G7") +
+                    " ratio=" + ratio.ToString("G7"));
+                if (ratio<.67f || ratio>1.65f)
+                    throw new InvalidOperationException(
+                        "Argon/V10 world-scale mismatch ratio=" + ratio.ToString("G7") +
+                        " original=" + oldExtent.ToString("G7") +
+                        " candidate=" + newExtent.ToString("G7"));
 
                 // All corrections happen on the disposable imported skin
                 // GameObject only, retaining the original skinned bind rig.
