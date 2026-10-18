@@ -227,6 +227,25 @@ namespace Rokas.BedSleep.V10Release
             CyclePhysicalOledScreen();
         }
 
+        public int GetPhysicalOledTab()
+        {
+            if (!_argonFullVisualActive || _argonHand == null ||
+                _argonHand.WatchScreen == null) return 0;
+            switch (_argonHand.WatchScreen.Screen)
+            {
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
+                    return 1;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Alarm:
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
+                    return 2;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
+                    return 3;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Phases:
+                    return 4;
+                default: return 0;
+            }
+        }
+
         public bool SelectPhysicalOledTab(int tab)
         {
             if (!_argonFullVisualActive || _argonHand == null) return false;
@@ -247,20 +266,8 @@ namespace Rokas.BedSleep.V10Release
 
         public bool CyclePhysicalOledScreen()
         {
-            if (!_argonFullVisualActive || _argonHand == null) return false;
-            var oled = _argonHand.WatchScreen;
-            if (oled == null) return false;
-            _argonHand.NotifyWatchInteraction();
-            switch (oled.Screen)
-            {
-                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Dial:
-                    oled.ShowOverview(); break;
-                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
-                    oled.ShowRelaxation(); break;
-                default:
-                    oled.ShowDial(); break;
-            }
-            return true;
+            if (!_argonFullVisualActive) return false;
+            return SelectPhysicalOledTab((GetPhysicalOledTab() + 1) % 5);
         }
 
         private void OnArgonCrownStep(int direction)
