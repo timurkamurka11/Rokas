@@ -163,6 +163,8 @@ namespace Rokas.Presentation
                     Keyboard.current.leftArrowKey.wasPressedThisFrame) Step(-1);
                 if (Keyboard.current.enterKey.wasPressedThisFrame ||
                     Keyboard.current.spaceKey.wasPressedThisFrame) Confirm();
+                if (Keyboard.current.tabKey.wasPressedThisFrame)
+                    productionRig?.CycleWatchFace();
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
             scroll = Input.mouseScrollDelta.y;
@@ -172,6 +174,8 @@ namespace Rokas.Presentation
                 Input.GetKeyDown(KeyCode.LeftArrow)) Step(-1);
             if (Input.GetKeyDown(KeyCode.Return) ||
                 Input.GetKeyDown(KeyCode.Space)) Confirm();
+            if (Input.GetKeyDown(KeyCode.Tab))
+                productionRig?.CycleWatchFace();
 #endif
             if (scroll > .01f) Step(1);
             else if (scroll < -.01f) Step(-1);
@@ -208,6 +212,22 @@ namespace Rokas.Presentation
                 productionRig.CrownStep(steps);
             }
             PlayTick();
+        }
+
+        private void SetDurationFromPhysicalWatch(int halfHours)
+        {
+            if (state != State.TimeSelection) return;
+            float wanted = QuantizeDuration(halfHours * StepHours);
+            SetDurationFromDial(Mathf.InverseLerp(
+                MinimumHours, MaximumHours, wanted));
+        }
+
+        private bool OnNativeOledTap(Vector2 uv)
+        {
+            if (state != State.TimeSelection ||
+                productionRig == null || !productionRig.Ready) return false;
+            return productionRig.NavigateWatchFace(
+                uv, SetDurationFromPhysicalWatch, Confirm);
         }
 
         public void Confirm()
@@ -329,7 +349,8 @@ namespace Rokas.Presentation
                 new Color(1f, 1f, 1f, .001f), true);
             watchHitRect = hit.rectTransform;
             var pointer = hit.gameObject.AddComponent<RokasBedWatchPointer>();
-            pointer.Configure(Step, Confirm, SetDurationFromDial);
+            pointer.Configure(Step, Confirm, SetDurationFromDial,
+                OnNativeOledTap);
             // Clock face itself takes mouse wheel/drag. Small external
             // affordances are secondary, not the primary selection UI.
             ui.Button(watchControls.transform, "WatchMinus", "−30м",
@@ -356,7 +377,9 @@ namespace Rokas.Presentation
                 18, UiKit.Muted, false, TextAnchor.MiddleCenter);
             alarmHint = ui.Label(watchControls.transform,
                 "WatchControlsHint",
-                "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
+                productionRig != null && productionRig.Ready
+                    ? "ТАП ПО ЧАСАМ: МЕНЮ  •  TAB: ЭКРАНЫ  •  КОЛЁСИКО: 30 МИН"
+                    : "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
                 630, 958, 700, 33, 17, UiKit.Muted,
                 false, TextAnchor.MiddleCenter);
 
@@ -650,14 +673,17 @@ namespace Rokas.Presentation
         private Action<int> step;
         private Action confirm;
         private Action<float> setDurationByDial;
+        private Func<Vector2, bool> physicalOledTap;
         private float accumulator;
 
         public void Configure(Action<int> stepAction,
-            Action confirmAction, Action<float> dialAction)
+            Action confirmAction, Action<float> dialAction,
+            Func<Vector2, bool> physicalTapAction = null)
         {
             step = stepAction;
             confirm = confirmAction;
             setDurationByDial = dialAction;
+            physicalOledTap = physicalTapAction;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -688,6 +714,14 @@ namespace Rokas.Presentation
 
             float width = Mathf.Max(rt.rect.width, .001f);
             float height = Mathf.Max(rt.rect.height, .001f);
+            // UiKit watch hit zone is top-left pivot (y goes -height..0).
+            // The actual OLED menu consumes the normalized physical UV,
+            // while the legacy photographic watch keeps its existing dial.
+            Vector2 faceUv = new Vector2(
+                Mathf.Clamp01(local.x / width),
+                Mathf.Clamp01(1f + local.y / height));
+            if (physicalOledTap != null && physicalOledTap(faceUv))
+                return;
             // Tap the bottom confirm area, just like the V3 OLED footer.
             if (local.y <= -height*.76f)
             {
