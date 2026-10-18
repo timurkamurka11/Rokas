@@ -42,6 +42,12 @@ namespace Rokas.BedSleep.V10Release
         {
             if (CompositeRenderTexture != null && ArmRig != null) return;
 
+            // Close-up UI previously cropped a 1920px composite 2.1x,
+            // making the watch text look soft even with 1024px OLED source.
+            // Render the SAME original camera at 1.5x linear pixel density;
+            // never change its FOV, pose, 3D lighting or body animation.
+            renderWidth = Mathf.Max(renderWidth, 2880);
+            renderHeight = Mathf.Max(renderHeight, 1620);
             transform.position = new Vector3(0f, -50f, 0f);
             transform.rotation = Quaternion.identity;
 
@@ -352,7 +358,10 @@ namespace Rokas.BedSleep.V10Release
 
             float minX = float.MaxValue, minY = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue;
-            Rect refBounds = referenceRect != null ? referenceRect.rect : new Rect(0f, 0f, renderWidth, renderHeight);
+            // Return logical ROKAS UI coordinates regardless of internal render
+            // target pixel density. The native pointer uses 1920x1080.
+            Rect refBounds = referenceRect != null ? referenceRect.rect :
+                new Rect(0f, 0f, 1920f, 1080f);
 
             if (_argonFullVisualActive && _argonOledRenderer != null)
             {
