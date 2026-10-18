@@ -175,8 +175,9 @@ namespace Rokas.BedSleep.V10Release
             var oled = _argonHand.WatchScreen;
             if (oled == null) return false;
             _argonHand.NotifyWatchInteraction();
-            // Tactile top watch button responds to real touch activation.
-            _argonHand.PressPhysicalButton();
+            // Surface tap is a lightweight OLED click, not a physical top
+            // button press. Physical hardware is animated only when used.
+            Sfx?.PlayUiSelect();
             switch (oled.Screen)
             {
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
@@ -208,13 +209,13 @@ namespace Rokas.BedSleep.V10Release
                     if (uv.x > .71f && uv.y > .72f)
                     {
                         oled.ToggleAlarm();
-                        Sfx?.PlayCrownClick();
+                        Sfx?.PlayUiToggle();
                     }
                     else if (uv.y >= .14f && uv.y <= .39f)
                     {
                         oled.SetAlarmMode(Mathf.Clamp(
                             Mathf.FloorToInt(uv.x * 3f),0,2));
-                        Sfx?.PlayCrownClick();
+                        Sfx?.PlayUiToggle();
                     }
                     else if (uv.y>.40f && uv.y<.62f)
                     {
@@ -235,13 +236,13 @@ namespace Rokas.BedSleep.V10Release
                         int index=Mathf.Clamp(
                             Mathf.FloorToInt(uv.x*3f),0,2);
                         oled.ToggleQuietOption(index);
-                        Sfx?.PlayCrownClick();
+                        Sfx?.PlayUiToggle();
                     }
                     else if (uv.x>.67f && uv.y>.70f)
                     {
                         // Top toggle enables/disables all quiet modes.
                         oled.SetQuietMask(oled.QuietMask==0 ? 7 : 0);
-                        Sfx?.PlayCrownClick();
+                        Sfx?.PlayUiToggle();
                     }
                     return true;
                 }
@@ -251,7 +252,7 @@ namespace Rokas.BedSleep.V10Release
                     if (uv.y>=.48f && uv.y<=.76f)
                     {
                         oled.TogglePhasePlanning();
-                        Sfx?.PlayCrownClick();
+                        Sfx?.PlayUiToggle();
                     }
                     return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
@@ -300,13 +301,19 @@ namespace Rokas.BedSleep.V10Release
         public void StepPhysicalCrown(int steps)
         {
             if (_argonFullVisualActive && _argonHand != null)
+            {
                 _argonHand.RotatePhysicalCrown(steps);
+                Sfx?.PlayCrownClick();
+            }
         }
 
         public void PressPhysicalWatchButton()
         {
             if (_argonFullVisualActive && _argonHand != null)
+            {
                 _argonHand.PressPhysicalButton();
+                Sfx?.PlayButtonMechanical();
+            }
         }
 
         public void HoverPhysicalOled(Vector2 uv,bool active)
@@ -358,6 +365,7 @@ namespace Rokas.BedSleep.V10Release
             var oled = _argonHand.WatchScreen;
             if (oled == null) return false;
             _argonHand.NotifyWatchInteraction();
+            Sfx?.PlayUiSelect();
             switch (tab)
             {
                 case 0: oled.ShowDial(); break;
