@@ -338,6 +338,17 @@ namespace Rokas.Presentation
             }) is bool navigated && navigated;
         }
 
+        public bool SelectWatchTab(int index)
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "SelectPhysicalOledTab",
+                BindingFlags.Public | BindingFlags.Instance);
+            return method != null &&
+                method.Invoke(controller, new object[] { index })
+                    is bool handled && handled;
+        }
+
         public bool CycleWatchFace()
         {
             if (!Ready || !usesV10 || controller == null) return false;
