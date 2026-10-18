@@ -54,6 +54,14 @@ namespace Rokas.BedSleep.Argon.Candidate
             PlayerPrefs.SetInt(PrefPrefix+"AlarmEnabled",AlarmEnabled?1:0);
             MarkGpuInteraction();
         }
+        public void SetQuietMask(int mask)
+        {
+            mask=Mathf.Clamp(mask,0,7);
+            if (QuietMask==mask) return;
+            QuietMask=mask;
+            PlayerPrefs.SetInt(PrefPrefix+"QuietMask",QuietMask);
+            MarkGpuInteraction();
+        }
         public void ToggleQuietOption(int index)
         {
             if(index<0||index>2)return;
