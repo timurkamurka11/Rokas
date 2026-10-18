@@ -254,8 +254,14 @@ namespace Rokas.Presentation
                 hovering ? 1f : 0f, dt * 6.5f);
             pressRemaining = Mathf.Max(0f, pressRemaining - dt);
             if (shaderReady)
+                // The supplied gold/cyan artwork has small differences
+                // in glyph placement and bezel proportions. The full
+                // 150ms transition is the laptop-like hover pulse; restrict
+                // actual PNG morphing to its centre ~12ms to eliminate
+                // apparent DOUBLE outlines and ghosted lettering.
                 blendMaterial.SetFloat("_Blend",
-                    blend * blend * (3f - 2f * blend));
+                    Mathf.SmoothStep(0f, 1f,
+                        Mathf.InverseLerp(.46f, .54f, blend)));
             else
                 image.sprite = blend >= .5f ? blueSprite : amberSprite;
 
