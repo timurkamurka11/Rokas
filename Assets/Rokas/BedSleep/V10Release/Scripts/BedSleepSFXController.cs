@@ -1,4 +1,5 @@
 using UnityEngine;
+using Rokas.BedSleep.Argon.Candidate;
 
 namespace Rokas.BedSleep.V10Release
 {
@@ -13,6 +14,9 @@ namespace Rokas.BedSleep.V10Release
         private int _pendingClicks;
         private float _nextClickIn;
         private float _lastPlayed = -10f;
+        private float _lastRaise = -10f, _lastLower = -10f;
+        private float _lastConfirm = -10f, _lastPower = -10f;
+        private bool ownsRaise, ownsLower, ownsCrown, ownsConfirm, ownsPower;
 
         public void InitializeAudio()
         {
@@ -30,30 +34,69 @@ namespace Rokas.BedSleep.V10Release
                 _source.playOnAwake = false;
                 _source.spatialBlend = 0f;
             }
+            // V10's Inspector audio fields were empty in the integrated game.
+            // Populate only missing slots from the already-authored Argon Foley.
+            // Existing developer-assigned sound assets always take priority.
+            if (sleeveRaiseClip == null)
+            {
+                sleeveRaiseClip = ArgonWatchFoley.CreateClip(ArgonFoleyCue.Sleeve);
+                ownsRaise = true;
+            }
+            if (sleeveLowerClip == null)
+            {
+                sleeveLowerClip = ArgonWatchFoley.CreateClip(ArgonFoleyCue.Sleeve);
+                ownsLower = true;
+            }
             if (watchCrownClickClip == null)
             {
-                const int sampleRate = 44100;
-                int count = Mathf.RoundToInt(sampleRate * 0.015f);
-                float[] data = new float[count];
-                for (int i = 0; i < count; i++)
+                watchCrownClickClip = ArgonWatchFoley.CreateClip(ArgonFoleyCue.CrownTick);
+                ownsCrown = true;
+            }
+            if (watchButtonConfirmClip == null)
+            {
+                watchButtonConfirmClip = ArgonWatchFoley.CreateClip(ArgonFoleyCue.Confirmation);
+                ownsConfirm = true;
+            }
+            if (watchOledPowerOnClip == null)
+            {
+                // Brief soft watch wake-up, distinct from confirm and crown.
+                const int hz = ArgonWatchFoley.SampleRate;
+                int n = Mathf.RoundToInt(hz * .12f);
+                float[] data = new float[n];
+                for (int i = 0; i < n; i++)
                 {
-                    float t = (float)i / sampleRate;
-                    data[i] = Mathf.Sin(2f * Mathf.PI * 2400f * t) * Mathf.Exp(-t * 420f) * .5f;
+                    float t = (float)i / hz;
+                    float smooth = Mathf.Sin(Mathf.PI * i / (n - 1));
+                    float tone = Mathf.Sin(2f * Mathf.PI * (720f * t + 450f * t * t));
+                    data[i] = tone * smooth * .085f;
                 }
-                watchCrownClickClip = AudioClip.Create("ROKAS_WatchCrownMechanicalTick", count, 1, sampleRate, false);
-                watchCrownClickClip.SetData(data, 0);
+                watchOledPowerOnClip = AudioClip.Create(
+                    "ROKAS_Argon_Watch_Wake", n, 1, hz, false);
+                watchOledPowerOnClip.SetData(data, 0);
+                ownsPower = true;
             }
         }
 
         private void PlayIfAssigned(AudioClip clip, float gain)
         {
             InitializeAudio();
-            if (clip != null) _source.PlayOneShot(clip, masterVolume * gain);
+            if (clip != null && _source != null)
+                _source.PlayOneShot(clip, masterVolume * gain);
         }
-        public void PlaySleeveRaise() => PlayIfAssigned(sleeveRaiseClip, .5f);
-        public void PlayOledPowerOn() => PlayIfAssigned(watchOledPowerOnClip, .4f);
-        public void PlayConfirm() => PlayIfAssigned(watchButtonConfirmClip, .65f);
-        public void PlaySleeveLower() => PlayIfAssigned(sleeveLowerClip, .5f);
+        private void PlayDebounced(AudioClip clip, float gain, ref float lastTime)
+        {
+            if (Time.unscaledTime - lastTime < .18f) return;
+            lastTime = Time.unscaledTime;
+            PlayIfAssigned(clip, gain);
+        }
+        public void PlaySleeveRaise() =>
+            PlayDebounced(sleeveRaiseClip, .85f, ref _lastRaise);
+        public void PlayOledPowerOn() =>
+            PlayDebounced(watchOledPowerOnClip, .6f, ref _lastPower);
+        public void PlayConfirm() =>
+            PlayDebounced(watchButtonConfirmClip, .9f, ref _lastConfirm);
+        public void PlaySleeveLower() =>
+            PlayDebounced(sleeveLowerClip, .8f, ref _lastLower);
 
         public void QueueCrownClicks(int deltaHalfHours, int selectedHalfHours)
         {
@@ -79,7 +122,17 @@ namespace Rokas.BedSleep.V10Release
             _lastPlayed = now;
             ++TotalCrownTicksPlayed;
             _source.pitch = selectedHalfHours >= 2 ? Mathf.Lerp(.94f, 1.12f, (selectedHalfHours - 2f) / 22f) : 1f;
-            _source.PlayOneShot(watchCrownClickClip, masterVolume * .62f);
+            if (watchCrownClickClip != null)
+                _source.PlayOneShot(watchCrownClickClip, masterVolume * .90f);
+        }
+        private void OnDestroy()
+        {
+            // Only generated game-instance PCM. Never destroy user-assigned clips.
+            if (ownsRaise && sleeveRaiseClip != null) Destroy(sleeveRaiseClip);
+            if (ownsLower && sleeveLowerClip != null) Destroy(sleeveLowerClip);
+            if (ownsCrown && watchCrownClickClip != null) Destroy(watchCrownClickClip);
+            if (ownsConfirm && watchButtonConfirmClip != null) Destroy(watchButtonConfirmClip);
+            if (ownsPower && watchOledPowerOnClip != null) Destroy(watchOledPowerOnClip);
         }
     }
 }
