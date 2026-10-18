@@ -506,6 +506,74 @@ def main():
                      str((fingerNo,depth,len(frontier))))
             tiers.append(list(frontier))
             seen.update(frontier)
+        # DEEP SOURCE-TO-PALM ANATOMICAL RETOPOLOGY — INDEX PILOT.
+        # The visual pin/stubs are at the actual isolated finger tube
+        # crowns. Closing the correct palm hole with 30 quads cannot
+        # eliminate the already-exposed cylindrical *source* collar.
+        # This candidate surgically replaces TWO native proximal collar
+        # bands (NOT the finger or distal anatomy) with a common original
+        # skin-root surface. Only the disposable loaded BMesh is changed.
+        # The original FBX, game V10, UV set, weights and 25 armature bones
+        # are NEVER overwritten.
+        if fingerNo==2:
+            if any(len(tier)!=30 for tier in tiers):
+                fail("Deep index web surgery requires 3 native 30-point rings")
+            old_boundary=set(tiers[0])
+            first_belt=set(tiers[1])
+            new_boundary=set(tiers[2])
+            obsolete=old_boundary|first_belt
+            affected={face for v in obsolete for face in v.link_faces
+                      if face.is_valid}
+            if not(105<=len(affected)<=145) or any(
+                    not set(face.verts).issubset(obsolete|new_boundary)
+                    for face in affected):
+                fail("Source index double-band resection crosses protected PIP geometry")
+            old_edge_count=sum(e.is_boundary for v in old_boundary
+                               for e in v.link_edges
+                               if all(q in old_boundary for q in e.verts))
+            if old_edge_count!=60:
+                fail("Index source native entry rim must contain 30 unique boundary edges")
+            remaining_original=set(components[fingerNo])-obsolete
+            if not new_boundary.issubset(remaining_original):
+                fail("Resected index skin ring was not actually source-native")
+            bmesh.ops.delete(bm,geom=list(affected),context='FACES')
+            alive=[v for v in obsolete if v.is_valid]
+            if alive:bmesh.ops.delete(bm,geom=alive,context='VERTS')
+            bm.normal_update()
+            components[fingerNo].difference_update(obsolete)
+            reconstructed_island=set(components[fingerNo])
+            new_edges={e for v in new_boundary if v.is_valid
+                       for e in v.link_edges if e.is_valid and
+                       e.is_boundary and all(q in new_boundary for q in e.verts)}
+            if len(new_edges)!=30:
+                fail("Deep original index surgery did not reveal 30-edge clean ring")
+            ring=boundary_of_new_pocket(new_edges)
+            if set(ring)!=new_boundary:
+                fail("Real original index remnant ring topology corrupt")
+            seen=set(ring)
+            new_tiers=[list(ring)]
+            for depth in range(2):
+                next_ring={w for v in new_tiers[-1] for e in v.link_edges
+                           for w in e.verts if w in reconstructed_island
+                           and w not in seen}
+                if len(next_ring)!=30:
+                    fail("Deep index original next PIP skin tier not 30 native vertices")
+                new_tiers.append(list(next_ring))
+                seen.update(next_ring)
+            tiers=new_tiers
+            root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+            radius=sorted(((v.co-root).length for v in ring))[len(ring)//2]
+            source_dist=(nearest.co-root).length
+            if source_dist>diameter*.058:
+                fail("Deep index collar left the original metacarpal surface")
+            report.setdefault("native_double_collar_web_surgery",[]).append({
+                "finger":fingerNo,
+                "deleted_authentic_root_skin_faces":len(affected),
+                "deleted_native_source_collar_vertices":len(obsolete),
+                "retained_next_original_ring_vertices":len(ring),
+                "source_original_fbx_untouched":True,
+                "new_three_native_ring_sizes":[len(tier) for tier in tiers],
+                "source_to_original_palm_gap":source_dist})
         root_pull=nearest.co-root
         root_pull_size=root_pull.length
         if root_pull_size>diameter*.049:
