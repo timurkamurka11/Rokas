@@ -66,6 +66,34 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
                 float tick=_MotionTime;
                 float energy=.72+.20*sin(tick*2.15);
                 float3 glow=0;
+                // Suppress highlights baked into the reference PNG when
+                // its new live controls are deselected. Keep typography.
+                if(_FaceIndex>1.5 && _FaceIndex<2.5)
+                {
+                    float2 lo=float2(.035,.165),hi=float2(.32,.359);
+                    float2 bounds=smoothstep(lo,lo+.012,uv)*
+                        (1.-smoothstep(hi-.012,hi,uv));
+                    art*=1.-bounds.x*bounds.y*
+                        (step(.5,_AlarmMode)*.30);
+                    if(_AlarmOn<.5 && uv.x>.72 && uv.y>.73 &&
+                        uv.x<.96 && uv.y<.88)
+                        art*=.53;
+                }
+                if(_FaceIndex>2.5 && _FaceIndex<3.5)
+                {
+                    for(int n=0;n<3;n++)
+                    {
+                        float bit=fmod(floor(_QuietMask/exp2((float)n)),2.);
+                        float2 lo=float2(.033+(float)n*.31,.16);
+                        float2 hi=lo+float2(.29,.19);
+                        float2 bounds=smoothstep(lo,lo+.012,uv)*
+                            (1.-smoothstep(hi-.012,hi,uv));
+                        art*=1.-bounds.x*bounds.y*(1.-bit)*.53;
+                    }
+                    if(_QuietMask<.5 && uv.x>.62 && uv.y>.76 &&
+                        uv.x<.94 && uv.y<.87)
+                        art*=.47;
+                }
                 if(_FaceIndex<.5)
                 {
                     // Timer: real selected duration drives the ring length.
