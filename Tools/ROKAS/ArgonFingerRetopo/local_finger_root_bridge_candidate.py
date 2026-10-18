@@ -399,7 +399,7 @@ def main():
         # corresponding native rings by 30 quads, NOT radial wedges or
         # cylinder replacements. Keep the other four digits unchanged
         # until the single critical web passes real Blender and Unity.
-        if finger_number in (1,2,3):
+        if finger_number in (1,2,3,5):
             if N!=30 or M!=30:
                 fail("Original digit and shared palm contour must be 30x30")
             for i in range(N):
