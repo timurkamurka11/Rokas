@@ -179,15 +179,25 @@ namespace Rokas.BedSleep.V10Release
             {
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
                 {
-                    // Five physical watch rows. V10 gameplay permits 1..12h
-                    // in half-hour increments, so never display a preset that
-                    // the gameplay clock silently rejects.
-                    int index = Mathf.Clamp(Mathf.RoundToInt(
-                        (.675f - uv.y) / .117f), 0, 4);
-                    int[] presets = { 2, 4, 8, 12, 16 };
-                    int choice = presets[index];
+                    // New authored screen is a genuine circular 0.5–12h dial,
+                    // not the old five stacked preset rows. Keep its active
+                    // page visible while the user rotates/taps the ring.
+                    Vector2 fromCenter=uv-new Vector2(.5f,.5f);
+                    int choice=oled.SelectedHalfHours;
+                    if(fromCenter.magnitude < .19f)
+                    {
+                        // Top/bottom chevrons are +/-30 minute buttons.
+                        if(fromCenter.y>.06f) choice++;
+                        else if(fromCenter.y<-.06f) choice--;
+                    }
+                    else
+                    {
+                        float angle=Mathf.Atan2(fromCenter.x,fromCenter.y);
+                        float normalized=Mathf.InverseLerp(-2.36f,2.36f,angle);
+                        choice=Mathf.RoundToInt(Mathf.Lerp(1f,24f,normalized));
+                    }
+                    choice=Mathf.Clamp(choice,2,24);
                     applyHalfHours?.Invoke(choice);
-                    oled.SelectPreset(choice);
                     return true;
                 }
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
