@@ -319,8 +319,8 @@ def main():
                     u,v,w,z=(aa[i].co,aa[j].co,pp[j].co,pp[i].co)
                     t1=(v-u).cross(w-u)
                     t2=(w-u).cross(z-u)
-                    if t1.length<diameter*diameter*1e-8 or
-                       t2.length<diameter*diameter*1e-8:
+                    if (t1.length<diameter*diameter*1e-8 or
+                        t2.length<diameter*diameter*1e-8):
                         source_normals_valid=False;break
                     t1.normalize();t2.normalize()
                     quad_normal=t1+t2
