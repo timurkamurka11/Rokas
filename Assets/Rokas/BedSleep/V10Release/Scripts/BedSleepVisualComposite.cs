@@ -46,15 +46,19 @@ namespace Rokas.BedSleep.V10Release
             // making the watch text look soft even with 1024px OLED source.
             // Render the SAME original camera at 1.5x linear pixel density;
             // never change its FOV, pose, 3D lighting or body animation.
-            renderWidth = Mathf.Max(renderWidth, 2880);
-            renderHeight = Mathf.Max(renderHeight, 1620);
+            // Preserve close-up clarity but stop rendering an always-on
+            // 2880x1620 MSAA4 texture before the player even zooms.
+            // 2560x1440 MSAA2 halves the expensive multi-sample workload
+            // while the watch's authored UI remains sharp at 1024x1024.
+            renderWidth = 2560;
+            renderHeight = 1440;
             transform.position = new Vector3(0f, -50f, 0f);
             transform.rotation = Quaternion.identity;
 
             CompositeRenderTexture = new RenderTexture(renderWidth, renderHeight, 24, RenderTextureFormat.ARGB32)
             {
                 name = "RT_ROKAS_BedSleep_3DComposite_V6",
-                antiAliasing = 4
+                antiAliasing = 2
             };
             CompositeRenderTexture.Create();
 
