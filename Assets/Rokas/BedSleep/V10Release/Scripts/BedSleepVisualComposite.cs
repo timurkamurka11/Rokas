@@ -13,6 +13,9 @@ namespace Rokas.BedSleep.V10Release
         // Framing is computed from genuine imported mesh bounds, not the old
         // fixed V9 camera offset, which could leave the whole watch outside FOV.
         private bool _hasReportedCameraFraming;
+        private bool _argonFullVisualActive;
+        private MeshRenderer _argonOledRenderer;
+        private MeshCollider _argonOledCollider;
 
         public int renderWidth = 1920;
         public int renderHeight = 1080;
@@ -109,22 +112,27 @@ namespace Rokas.BedSleep.V10Release
             Watch.SeatOledAboveBezel(_presentationCamera);
             FrameImportedArmAndWatch();
 
-            // The NORMAL bed click uses this exact 3D V10 composite.
-            // Install the corrected, genuine source-skinned Argon hand
-            // automatically at runtime, with no separate preview scene,
-            // menu switch, or replacement of the watch/OLED/game scripts.
-            // On incompatible/missing source FBX, preserve existing V10.
-            RokasArgonConnectedHandRuntime.TryInstall(ArmRig);
+            // The existing bed click is the only entry point. Replace the WHOLE
+            // visual set with the authentic Argon hand, sleeve and premium watch,
+            // not the old V10 watch with an Argon skin graft.
+            _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
+                ArmRig, Watch, Oled, _presentationCamera,
+                out _argonOledRenderer, out _argonOledCollider);
 
             Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
 
             InputRouter = GetComponent<SmartwatchInputRouter>() ?? gameObject.AddComponent<SmartwatchInputRouter>();
-            InputRouter.ConfigureRouter(_presentationCamera, Watch.OledMeshCollider, targetUiRect);
+            InputRouter.ConfigureRouter(_presentationCamera,
+                _argonFullVisualActive ? _argonOledCollider : Watch.OledMeshCollider,
+                targetUiRect);
         }
 
         private void LateUpdate()
         {
+            // The Argon presenter has its own fixed horizontal camera framing.
+            // Do not let the legacy V10 raised-from-bottom camera override it.
+            if (_argonFullVisualActive) return;
             // Animator and bone attachments settle before LateUpdate, so the
             // camera frames the actual animated wrist. This does not depend
             // on ROKAS View.Tick being called in a focused frame.
@@ -142,7 +150,9 @@ namespace Rokas.BedSleep.V10Release
         public Rect GetProjectedOledRect(RectTransform referenceRect)
         {
             if (_presentationCamera == null || Watch == null) return new Rect(0f, 0f, 0f, 0f);
-            Transform oledTr = Watch.OledRenderer != null ? Watch.OledRenderer.transform : Watch.transform;
+            Transform oledTr = _argonFullVisualActive && _argonOledRenderer != null
+                ? _argonOledRenderer.transform
+                : (Watch.OledRenderer != null ? Watch.OledRenderer.transform : Watch.transform);
 
             Vector3[] localCorners = new Vector3[4]
             {
