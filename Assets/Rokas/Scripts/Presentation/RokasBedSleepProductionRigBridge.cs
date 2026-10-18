@@ -322,6 +322,31 @@ namespace Rokas.Presentation
                 width, height);
         }
 
+        // Native BedSleep owns mouse/keyboard input in the actual game.
+        // The V10 router is deliberately disabled, so expose ONLY the
+        // physical Argon watch menu response through the existing UI,
+        // preserving its single duration/confirm gameplay authority.
+        public bool NavigateWatchFace(Vector2 uv,
+            Action<int> applyHalfHours, Action confirm)
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "NavigatePhysicalOledTap", BindingFlags.Public | BindingFlags.Instance);
+            if (method == null) return false;
+            return method.Invoke(controller, new object[] {
+                uv, applyHalfHours, confirm
+            }) is bool navigated && navigated;
+        }
+
+        public bool CycleWatchFace()
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "CyclePhysicalOledScreen", BindingFlags.Public | BindingFlags.Instance);
+            return method != null &&
+                method.Invoke(controller, null) is bool handled && handled;
+        }
+
         public void SetStateInputDisabled()
         {
             if (!Ready) return;
