@@ -18,7 +18,11 @@ namespace Rokas.BedSleep.Argon.Candidate
     [DisallowMultipleComponent]
     public sealed class ArgonRussianSleepOledPresenter : MonoBehaviour
     {
+        // Keep original authored 512-unit layout, draw final Cyrillic glyphs
+        // at native 1024 pixels instead of magnifying blurry 512px text.
         public const int Size = 512;
+        public const int DisplaySize = 1024;
+        private const int OutputScale = DisplaySize / Size;
         public RenderTexture OledRenderTexture { get; private set; }
         public Texture2D OledDynamicTexture { get; private set; }
         public int SelectedHalfHours { get; private set; } = 14;
@@ -31,6 +35,15 @@ namespace Rokas.BedSleep.Argon.Candidate
             SelectedHalfHours * 30) % 1440;
         public string LastRenderedTextSummary { get; private set; }
         private Color32[] pixels;
+        private Color32[] highPixels;
+        private struct TextRun
+        {
+            public string Text;
+            public int X, Y;
+            public float Scale;
+            public Color32 Color;
+        }
+        private readonly List<TextRun> highText = new List<TextRun>(20);
         private Color32[] cachedSky;
         private byte[] cachedCloud;
         private byte[] cachedStars;
@@ -52,9 +65,9 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             if (OledRenderTexture == null)
             {
-                OledRenderTexture = new RenderTexture(Size,Size,0,RenderTextureFormat.ARGB32)
+                OledRenderTexture = new RenderTexture(DisplaySize,DisplaySize,0,RenderTextureFormat.ARGB32)
                 {
-                    name = "RT_ROKAS_Argon_Russian_MoonOLED_512",
+                    name = "RT_ROKAS_Argon_Russian_MoonOLED_1024",
                     antiAliasing = 1,
                     filterMode = FilterMode.Bilinear
                 };
@@ -62,12 +75,13 @@ namespace Rokas.BedSleep.Argon.Candidate
             }
             if (OledDynamicTexture == null)
             {
-                OledDynamicTexture = new Texture2D(Size,Size,TextureFormat.RGBA32,false)
+                OledDynamicTexture = new Texture2D(DisplaySize,DisplaySize,TextureFormat.RGBA32,false)
                 {
                     name = "ROKAS_Argon_Russian_MoonOLED",
                     wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear
                 };
                 pixels = new Color32[Size*Size];
+                highPixels = new Color32[DisplaySize*DisplaySize];
                 BuildStaticSkyCache();
             }
             RenderAt(0f, true);
@@ -232,6 +246,7 @@ namespace Rokas.BedSleep.Argon.Candidate
             requiresRedraw = false;
             TotalFaceDraws++;
             textBounds.Clear();
+            highText.Clear();
             LastTextLayoutSafe=true;
             PaintBackground();
             PaintClouds();
@@ -263,7 +278,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                 default:
                     PaintSelection(); break;
             }
-            OledDynamicTexture.SetPixels32(pixels);
+            // Smooth physical night-scene artwork is enlarged once; Cyrillic
+            // is drawn AFTER that upscale directly at full display
+            // resolution from the original anti-aliased Noto atlas.
+            PaintHighResolutionOled();
+            OledDynamicTexture.SetPixels32(highPixels);
             OledDynamicTexture.Apply(false,false);
             Graphics.Blit(OledDynamicTexture,OledRenderTexture);
         }
@@ -587,8 +606,58 @@ namespace Rokas.BedSleep.Argon.Candidate
                 if(region.Overlaps(other))
                     LastTextLayoutSafe=false;
             textBounds.Add(region);
-            ArgonRussianFontAtlas.Draw(text,centerX,y,f,color,MixPixel);
+            highText.Add(new TextRun {
+                Text = text, X = centerX, Y = y, Scale = f, Color = color
+            });
         }
+        private void PaintHighResolutionOled()
+        {
+            // Do not scale the small 512px bitmap typography. This stage
+            // supersamples ONLY the non-text sky, moon and watch decorations.
+            // Each text run uses the source vector-like coverage atlas and
+            // gets rasterized at full 1024x1024 native output pixels.
+            for (int y = 0; y < DisplaySize; y++)
+            {
+                float fy = (y + .5f) / OutputScale - .5f;
+                int y0 = Mathf.Clamp(Mathf.FloorToInt(fy),0,Size-1);
+                int y1 = Mathf.Min(y0+1,Size-1);
+                float wy = Mathf.Clamp01(fy - y0);
+                int row0 = y0 * Size, row1 = y1 * Size;
+                int destRow = y * DisplaySize;
+                for (int x = 0; x < DisplaySize; x++)
+                {
+                    float fx = (x+.5f) / OutputScale - .5f;
+                    int x0 = Mathf.Clamp(Mathf.FloorToInt(fx),0,Size-1);
+                    int x1 = Mathf.Min(x0+1,Size-1);
+                    float wx = Mathf.Clamp01(fx - x0);
+                    Color32 a = Color32.Lerp(
+                        pixels[row0+x0], pixels[row0+x1], wx);
+                    Color32 b = Color32.Lerp(
+                        pixels[row1+x0], pixels[row1+x1], wx);
+                    highPixels[destRow+x] = Color32.Lerp(a,b,wy);
+                }
+            }
+            for (int i=0; i<highText.Count; i++)
+            {
+                TextRun t = highText[i];
+                ArgonRussianFontAtlas.Draw(t.Text,
+                    t.X * OutputScale, t.Y * OutputScale,
+                    t.Scale * OutputScale, t.Color, MixHighPixel);
+            }
+        }
+
+        private void MixHighPixel(int x,int y,Color32 color,float alpha)
+        {
+            if (x<0||y<0||x>=DisplaySize||y>=DisplaySize)return;
+            int i=y*DisplaySize+x;
+            Color32 old=highPixels[i];
+            float a=Mathf.Clamp01(alpha);
+            highPixels[i]=new Color32(
+                (byte)Mathf.Lerp(old.r,color.r,a),
+                (byte)Mathf.Lerp(old.g,color.g,a),
+                (byte)Mathf.Lerp(old.b,color.b,a),255);
+        }
+
         private void Update()
         {
             if(Application.isPlaying) RenderAt(Time.unscaledTime);
