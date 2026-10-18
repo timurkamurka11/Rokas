@@ -317,6 +317,13 @@ namespace Rokas.Presentation
                 MinimumHours, MaximumHours, wanted));
         }
 
+        private void OnNativeOledHover(Vector2 uv,bool active)
+        {
+            if(state==State.TimeSelection && productionRig!=null &&
+                productionRig.Ready)
+                productionRig.SetWatchHover(uv,active);
+        }
+
         private bool OnNativeOledTap(Vector2 uv)
         {
             if (state != State.TimeSelection ||
@@ -453,7 +460,7 @@ namespace Rokas.Presentation
             watchHitRect = hit.rectTransform;
             var pointer = hit.gameObject.AddComponent<RokasBedWatchPointer>();
             pointer.Configure(Step, Confirm, SetDurationFromDial,
-                OnNativeOledTap);
+                OnNativeOledTap, OnNativeOledHover);
             // Clock face itself takes mouse wheel/drag. Small external
             // affordances are secondary, not the primary selection UI.
             ui.Button(watchControls.transform, "WatchMinus", "−30м",
@@ -855,22 +862,67 @@ namespace Rokas.Presentation
     /// hit area is anchored to the projected 3D OLED, not to the old PNG.
     /// </summary>
     public sealed class RokasBedWatchPointer : MonoBehaviour,
-        IDragHandler, IBeginDragHandler, IPointerClickHandler
+        IDragHandler, IBeginDragHandler, IPointerClickHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         private Action<int> step;
         private Action confirm;
         private Action<float> setDurationByDial;
         private Func<Vector2, bool> physicalOledTap;
+        private Action<Vector2,bool> physicalOledHover;
+        private bool pointerInside;
         private float accumulator;
 
         public void Configure(Action<int> stepAction,
             Action confirmAction, Action<float> dialAction,
-            Func<Vector2, bool> physicalTapAction = null)
+            Func<Vector2, bool> physicalTapAction = null,
+            Action<Vector2,bool> physicalHoverAction = null)
         {
             step = stepAction;
             confirm = confirmAction;
             setDurationByDial = dialAction;
             physicalOledTap = physicalTapAction;
+            physicalOledHover = physicalHoverAction;
+        }
+
+        public void OnPointerEnter(PointerEventData e)
+        {
+            pointerInside=true;
+            UpdateHover(e.position, e.enterEventCamera);
+        }
+        public void OnPointerExit(PointerEventData e)
+        {
+            pointerInside=false;
+            physicalOledHover?.Invoke(Vector2.zero,false);
+        }
+        private void Update()
+        {
+            if(!pointerInside || physicalOledHover==null)return;
+            Vector2 mp=Vector2.zero;
+#if ENABLE_INPUT_SYSTEM
+            if(Mouse.current!=null)
+                mp=Mouse.current.position.ReadValue();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            mp=Input.mousePosition;
+#endif
+            // UI canvas is ScreenSpaceOverlay in the existing game.
+            UpdateHover(mp,null);
+        }
+        private void UpdateHover(Vector2 position,Camera cam)
+        {
+            var rt=transform as RectTransform;
+            if(rt==null || physicalOledHover==null) return;
+            Vector2 local;
+            if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rt,position,cam,out local))return;
+            float w=Mathf.Max(rt.rect.width,.001f);
+            float h=Mathf.Max(rt.rect.height,.001f);
+            Vector2 uv=new Vector2(local.x/w,1f+local.y/h);
+            bool valid=pointerInside && uv.x>=0f && uv.x<=1f &&
+                uv.y>=0f && uv.y<=1f;
+            physicalOledHover.Invoke(
+                new Vector2(Mathf.Clamp01(uv.x),Mathf.Clamp01(uv.y)),
+                valid);
         }
 
         public void OnBeginDrag(PointerEventData eventData)
