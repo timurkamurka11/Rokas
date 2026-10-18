@@ -66,100 +66,85 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
                 float tick=_MotionTime;
                 float energy=.72+.20*sin(tick*2.15);
                 float3 glow=0;
-                // Suppress highlights baked into the reference PNG when
-                // its new live controls are deselected. Keep typography.
-                if(_FaceIndex>1.5 && _FaceIndex<2.5)
+                // Preserve all artwork, captions and glyphs as the
+                // untouched base. Never dim or draw rectangles across
+                // existing art: previous versions covered labels/cards.
+                if (_FaceIndex < .5)
                 {
-                    float2 lo=float2(.035,.165),hi=float2(.32,.359);
-                    float2 bounds=smoothstep(lo,lo+.012,uv)*
-                        (1.-smoothstep(hi-.012,hi,uv));
-                    art*=1.-bounds.x*bounds.y*
-                        (step(.5,_AlarmMode)*.30);
-                    if(_AlarmOn<.5 && uv.x>.72 && uv.y>.73 &&
-                        uv.x<.96 && uv.y<.88)
-                        art*=.53;
+                    // Timer. Animate a THIN inner guide along the existing
+                    // round track, not a second glowing ring over the PNG.
+                    float2 c = float2(.5,.537);
+                    float pct = saturate(_Duration01);
+                    float2 d = uv - c;
+                    float ang = frac(atan2(d.x,d.y)/6.2831853+1.);
+                    float radius = length(d);
+                    float guide = (1.-smoothstep(.002,.007,
+                        abs(radius-.306))) *
+                        (1.-smoothstep(pct-.01,pct+.005,ang));
+                    float2 tip=c+.306*float2(sin(pct*6.2831853),
+                        cos(pct*6.2831853));
+                    glow += cyan*(guide*.28+
+                        halo(uv,tip,.012)*.30)*energy;
                 }
-                if(_FaceIndex>2.5 && _FaceIndex<3.5)
+                else if (_FaceIndex < 1.5)
                 {
+                    // Wheel. Align tracer to ACTUAL ring center in the
+                    // authored 1024x1024 texture. No blur over numerals.
+                    float2 c = float2(.5,.50);
+                    float a=lerp(-2.36,2.36,saturate(_Duration01));
+                    float2 tip=c+.307*float2(sin(a),cos(a));
+                    float rim=ring(uv,c,.305,.002);
+                    glow+=lerp(cyan,violet,.5+.5*sin(tick*.45))*
+                        (halo(uv,tip,.013)*.32+rim*.085);
+                }
+                else if (_FaceIndex < 2.5)
+                {
+                    // Alarm cards: a narrow luminous top accent per
+                    // selection, not a rectangular glow across the text.
+                    float mode=floor(_AlarmMode+.5);
+                    float2 selectedCenter=float2(.178+mode*.309,.366);
+                    float bar=(1.-smoothstep(.003,.010,
+                        abs(uv.y-selectedCenter.y)))*
+                        (1.-smoothstep(.115,.142,
+                        abs(uv.x-selectedCenter.x)));
+                    glow+=cyan*bar*(.27+.07*sin(tick*2.));
+                    float enabled=step(.5,_AlarmOn);
+                    glow+=cyan*halo(uv,float2(.87,.827),.030)*
+                        enabled*.16;
+                }
+                else if (_FaceIndex < 3.5)
+                {
+                    // Quiet cards are vertically HIGHER than alarm cards.
+                    // Their real pixel bounds run y=.225...48 in UV.
                     for(int n=0;n<3;n++)
                     {
-                        float bit=fmod(floor(_QuietMask/exp2((float)n)),2.);
-                        float2 lo=float2(.033+(float)n*.31,.16);
-                        float2 hi=lo+float2(.29,.19);
-                        float2 bounds=smoothstep(lo,lo+.012,uv)*
-                            (1.-smoothstep(hi-.012,hi,uv));
-                        art*=1.-bounds.x*bounds.y*(1.-bit)*.53;
+                        float enabled=fmod(floor(
+                            _QuietMask/exp2((float)n)),2.);
+                        float centerX=.195+.317*n;
+                        float accent=(1.-smoothstep(.004,.013,
+                            abs(uv.y-.470)))*
+                            (1.-smoothstep(.11,.14,
+                            abs(uv.x-centerX)));
+                        glow+=cyan*accent*enabled*.25;
                     }
-                    if(_QuietMask<.5 && uv.x>.62 && uv.y>.76 &&
-                        uv.x<.94 && uv.y<.87)
-                        art*=.47;
-                }
-                if(_FaceIndex<.5)
-                {
-                    // Timer: real selected duration drives the ring length.
-                    // Static artwork is preserved below the new live tracer.
-                    float arc=curve(uv,center,.335,.0035,
-                        saturate(_Duration01)*.95);
-                    float ang=_Duration01*6.2831853;
-                    float2 tip=center+.335*float2(sin(ang),cos(ang));
-                    glow+=cyan*(arc*.7*energy+halo(uv,tip,.017)*1.1);
-                }
-                else if(_FaceIndex<1.5)
-                {
-                    // Dial: an animated selection tracer travels to the
-                    // chosen duration, with a soft moving tick when hovered.
-                    float angle=lerp(-2.36,2.36,saturate(_Duration01));
-                    float2 tip=center+.317*float2(sin(angle),cos(angle));
-                    glow+=(lerp(cyan,violet,.5+.5*sin(tick*.8))) *
-                        (halo(uv,tip,.018)*.9+
-                        ring(uv,center,.315,.0025)*.11*energy);
-                }
-                else if(_FaceIndex<2.5)
-                {
-                    // Alarm: selected one of 3 physical buttons; the
-                    // highlight is composited over the authored button art.
-                    float mode=floor(_AlarmMode+.5);
-                    float2 lo=float2(.035+mode*.31,.165);
-                    float2 hi=lo+float2(.285,.194);
-                    float selected=boxOutline(uv,lo,hi,.009);
-                    glow+=cyan*(selected*1.35+energy*selected*.2);
-                    float on=step(.5,_AlarmOn);
-                    // Real enabled state over the image's upper switch.
-                    float2 toggle=float2(.84,.825);
-                    glow+=lerp(float3(.12,.06,.02),cyan,
-                        on)*halo(uv,toggle,.047)*(.12+.15*on);
-                }
-                else if(_FaceIndex<3.5)
-                {
-                    // Quiet mode: three toggles have individual fade and
-                    // hover response; static icon artwork is left untouched.
-                    for(int k=0;k<3;k++)
-                    {
-                        float bit=fmod(floor(_QuietMask/exp2((float)k)),2.);
-                        float2 lo=float2(.033+(float)k*.31,.16);
-                        float2 hi=lo+float2(.29,.19);
-                        float outl=boxOutline(uv,lo,hi,.008);
-                        glow+=lerp(float3(.045,.035,.015),cyan,
-                            bit)*outl*(bit*.7+.1);
-                    }
-                    glow+=cyan*halo(uv,float2(.79,.815),.036)*
-                        (.12+.06*sin(tick*1.8));
+                    float allOn=step(.5,_QuietMask);
+                    glow+=cyan*halo(uv,float2(.87,.832),.032)*
+                        allOn*.14;
                 }
                 else
                 {
-                    // Planning graph: sweeping line and glints animate
-                    // without misrepresenting authored static phase curves
-                    // as live biometric samples.
-                    float wave=frac(tick*.0625);
-                    float x=lerp(.10,.91,wave);
-                    float phaseSweepLine=(1.-smoothstep(.001,.006,abs(uv.x-x)))*
-                        smoothstep(.37,.44,uv.y)*
-                        (1.-smoothstep(.73,.79,uv.y));
-                    glow+=lerp(cyan,violet,.5+.5*sin(tick))*
-                        (phaseSweepLine*.48+
-                        halo(uv,float2(x,.55+.04*sin(tick*1.7)),.015)*.5);
+                    // Time-aware planning cursor: the planned sleep window
+                    // moves with duration; sweep stays inside CHART only.
+                    float planned=lerp(.12,.91,saturate(_Duration01));
+                    float sweep=lerp(.12,planned,frac(tick*.042));
+                    float cursor=1.-smoothstep(.001,.004,
+                        abs(uv.x-sweep));
+                    float chartMask=smoothstep(.48,.50,uv.y)*
+                        (1.-smoothstep(.73,.75,uv.y));
+                    glow+=lerp(cyan,violet,.5+.5*sin(tick*.7))*
+                        cursor*chartMask*.23;
                     if(_PhaseMode>.5)
-                        glow+=cyan*halo(uv,float2(.54,.56),.043)*.12;
+                        glow+=cyan*halo(uv,float2(planned,.66),.020)*.24;
                 }
                 // Subtle physical-pointer glint on real OLED controls.
                 // Never overlay a second static PNG or text outline.
