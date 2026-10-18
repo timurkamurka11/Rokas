@@ -227,7 +227,7 @@ def main():
             if corner.vert==b and corner.link_loop_next.vert==a:return -1
         fail("Cannot orient genuine finger/palm rim")
 
-    def join_root_to_hole(finger, hole):
+    def join_root_to_hole(finger, hole, finger_number):
         N=len(finger);M=len(hole)
         if N<8 or M<8:fail("Graft rim too small")
         # Exactly one loop winding choice is valid for each source shell.
@@ -392,23 +392,45 @@ def main():
         # Only the FINAL short near-palm ring connects to the true 13-21
         # original palm perimeter. Real arc-length zipper is kept here
         # because the socket must keep its authentic existing skin outline.
-        index_a=index_p=0
-        while index_a<N or index_p<M:
-            next_a=(frac_a[index_a+1] if index_a+1<N else 1.0) if index_a<N else 1e9
-            next_p=(frac_p[index_p+1] if index_p+1<M else 1.0) if index_p<M else 1e9
-            u=near_palm[index_a%N]
-            v=p[index_p%M]
-            if abs(next_a-next_p)<1e-7:
-                vertices=[u,near_palm[(index_a+1)%N],
-                          p[(index_p+1)%M],v]
-                index_a+=1;index_p+=1
-            elif next_a<next_p:
-                vertices=[u,near_palm[(index_a+1)%N],v]
-                index_a+=1
-            else:
-                vertices=[u,p[(index_p+1)%M],v]
-                index_p+=1
-            add_skin_face(vertices)
+        # Index MCP: re-topologize the actual index-to-shared-palm sheet.
+        # Both ORIGINAL rings now have 30 authentic perimeter vertices.
+        # The old arc-length zipper nonetheless built 59 tiny triangles,
+        # leaving diagonal wedge fins at the index-palm boundary. Join
+        # corresponding native rings by 30 quads, NOT radial wedges or
+        # cylinder replacements. Keep the other four digits unchanged
+        # until the single critical web passes real Blender and Unity.
+        if finger_number==2:
+            if N!=30 or M!=30:
+                fail("Real index palm two source rings not 30x30")
+            for i in range(N):
+                j=(i+1)%N
+                add_skin_face([near_palm[i],near_palm[j],p[j],p[i]])
+            report.setdefault("shared_palm_index_surface_quad_remesh",[]).append({
+                "digit":finger_number,
+                "original_digit_rim":N,
+                "genuine_palm_rim":M,
+                "replacement_quad_faces":N,
+                "old_arc_zipper_faces":N+M-1,
+                "preserve_original_palm_skin_uv_25_bones":True,
+                "correspondence":"one-to-one_source_arc_phase"})
+        else:
+            index_a=index_p=0
+            while index_a<N or index_p<M:
+                next_a=(frac_a[index_a+1] if index_a+1<N else 1.0) if index_a<N else 1e9
+                next_p=(frac_p[index_p+1] if index_p+1<M else 1.0) if index_p<M else 1e9
+                u=near_palm[index_a%N]
+                v=p[index_p%M]
+                if abs(next_a-next_p)<1e-7:
+                    vertices=[u,near_palm[(index_a+1)%N],
+                              p[(index_p+1)%M],v]
+                    index_a+=1;index_p+=1
+                elif next_a<next_p:
+                    vertices=[u,near_palm[(index_a+1)%N],v]
+                    index_a+=1
+                else:
+                    vertices=[u,p[(index_p+1)%M],v]
+                    index_p+=1
+                add_skin_face(vertices)
         if len(built)<max(N,M):
             fail("Anatomical graft missing source ring faces")
         # The curved interpolation is better on SOME fingers and worse on
@@ -610,7 +632,7 @@ def main():
             if len(pocket)!=len(ring):
                 fail("Adaptive authentic palm socket density incorrect: "+
                      str((len(pocket),len(ring),required)))
-        faces,wind=join_root_to_hole(ring,pocket)
+        faces,wind=join_root_to_hole(ring,pocket,fingerNo)
         addedFaces.extend(faces)
         face_origin.update({f:'finger_'+str(fingerNo) for f in faces})
         source_contact_vertices.update(ring)
