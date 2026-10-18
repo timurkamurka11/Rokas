@@ -25,6 +25,54 @@ namespace Rokas.BedSleep.Argon.Candidate
         private const int OutputScale = DisplaySize / Size;
         public RenderTexture OledRenderTexture { get; private set; }
         public bool GpuFacesActive { get; private set; }
+        public int AlarmMode { get; private set; } = 1;
+        public bool AlarmEnabled { get; private set; } = true;
+        // Bit 0: suppress notifications, 1: soft fade, 2: calm ambience.
+        public int QuietMask { get; private set; } = 7;
+        public bool PhasePlanningEnabled { get; private set; }
+        private const string PrefPrefix = "ROKAS.Watch.Sleep.";
+        private float lastGpuDraw = -100f;
+        private float interactionFlashEnd;
+        private void LoadWatchPreferences()
+        {
+            AlarmMode=Mathf.Clamp(PlayerPrefs.GetInt(PrefPrefix+"AlarmMode",1),0,2);
+            AlarmEnabled=PlayerPrefs.GetInt(PrefPrefix+"AlarmEnabled",1)!=0;
+            QuietMask=Mathf.Clamp(PlayerPrefs.GetInt(PrefPrefix+"QuietMask",7),0,7);
+            PhasePlanningEnabled=PlayerPrefs.GetInt(PrefPrefix+"PhasePlan",0)!=0;
+        }
+        public void SetAlarmMode(int mode)
+        {
+            mode=Mathf.Clamp(mode,0,2);
+            if(AlarmMode==mode) return;
+            AlarmMode=mode;
+            PlayerPrefs.SetInt(PrefPrefix+"AlarmMode",mode);
+            MarkGpuInteraction();
+        }
+        public void ToggleAlarm()
+        {
+            AlarmEnabled=!AlarmEnabled;
+            PlayerPrefs.SetInt(PrefPrefix+"AlarmEnabled",AlarmEnabled?1:0);
+            MarkGpuInteraction();
+        }
+        public void ToggleQuietOption(int index)
+        {
+            if(index<0||index>2)return;
+            QuietMask^=(1<<index);
+            PlayerPrefs.SetInt(PrefPrefix+"QuietMask",QuietMask);
+            MarkGpuInteraction();
+        }
+        public void TogglePhasePlanning()
+        {
+            PhasePlanningEnabled=!PhasePlanningEnabled;
+            PlayerPrefs.SetInt(PrefPrefix+"PhasePlan",PhasePlanningEnabled?1:0);
+            MarkGpuInteraction();
+        }
+        public void MarkGpuInteraction()
+        {
+            interactionFlashEnd=Time.unscaledTime+.30f;
+            requiresRedraw=true;
+            if(GpuFacesActive)RenderAt(Time.unscaledTime,true);
+        }
         private Texture2D[] authoredFaces;
         private Texture2D gpuOverlay;
         private Color32[] liveOverlayPixels;
@@ -68,6 +116,7 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         public void InitializeOled()
         {
+            LoadWatchPreferences();
             // Production game: use the five real, preauthored GPU textures
             // and only regenerate tiny live time glyphs when data changes.
             // EditMode/editor without supplied assets keeps legacy fallback.
@@ -253,7 +302,15 @@ namespace Rokas.BedSleep.Argon.Candidate
             animatedSeconds = Mathf.Max(0f,timeSeconds);
             if (GpuFacesActive)
             {
+                // Text atlas/CPU upload ONLY on selection/time changes.
+                // The GPU shader animates the art; only a tiny Blit at
+                // up to 30 Hz is needed, not a full pixel upload each frame.
                 if (force || requiresRedraw) PaintGpuFace();
+                if (force || animatedSeconds-lastGpuDraw>=1f/30f)
+                {
+                    CompositeGpuFace(animatedSeconds);
+                    lastGpuDraw=animatedSeconds;
+                }
                 return;
             }
             if (OledDynamicTexture == null) return;
@@ -748,8 +805,24 @@ namespace Rokas.BedSleep.Argon.Candidate
             gpuOverlay.SetPixels32(liveOverlayPixels);
             gpuOverlay.Apply(false,false);
             gpuComposite.SetTexture("_LiveText",gpuOverlay);
+        }
+
+        private void CompositeGpuFace(float now)
+        {
+            if (!GpuFacesActive || gpuComposite == null) return;
+            gpuComposite.SetFloat("_FaceIndex", ActiveGpuFace());
+            gpuComposite.SetFloat("_Duration01",
+                Mathf.Clamp01((SelectedHalfHours-2f)/22f));
+            gpuComposite.SetFloat("_AlarmMode", AlarmMode);
+            gpuComposite.SetFloat("_AlarmOn", AlarmEnabled ? 1f : 0f);
+            gpuComposite.SetFloat("_QuietMask", QuietMask);
+            gpuComposite.SetFloat("_PhaseMode",
+                PhasePlanningEnabled ? 1f : 0f);
+            gpuComposite.SetFloat("_MotionTime", now);
+            gpuComposite.SetFloat("_Focus",
+                now<interactionFlashEnd ? 1f : 0f);
             Graphics.Blit(authoredFaces[ActiveGpuFace()],
-                OledRenderTexture,gpuComposite);
+                OledRenderTexture, gpuComposite);
         }
 
         private void LiveText(string value,int x,int yTop,
