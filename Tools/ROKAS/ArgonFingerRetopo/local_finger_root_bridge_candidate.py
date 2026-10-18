@@ -743,6 +743,7 @@ def main():
             fail("Source slit cannot be stitched without T-junctions")
         previous_boundaries=sum(e.is_boundary for e in bm.edges)
         lip_midpoints=[(pocket[i].co+pocket[j].co)*.5 for i,j,_ in pairs]
+        lip_midpoints.extend(pocket[t].co.copy() for t in unmatched)
         bmesh.ops.weld_verts(bm,targetmap=targetmap)
         bm.normal_update()
         remaining_boundaries=sum(e.is_boundary for e in bm.edges)
@@ -772,7 +773,58 @@ def main():
                      e.link_faces[1].normal)) for e in seam_edges]
         seam_closure_high=sum(a>120 for a in seam_angles)
         seam_closure_medium=sum(a>90 for a in seam_angles)
+        # This slit originally ended two almost coplanar source layers
+        # edge-on: welding alone made a connected but 177-degree sharp
+        # fold. STRUCTURAL BEVEL replaces that singular 1D border with a
+        # finite-radius real skin strip built by Blender from the authentic
+        # adjacent source polygons, inheriting UV and bone influence.
+        # This is not vertex smoothing or a fabricated palm dome.
+        severe_fold_edges=[
+            e for e in seam_edges
+            if e.is_valid and all(v in seam_verts for v in e.verts)
+            and math.degrees(e.link_faces[0].normal.angle(
+                e.link_faces[1].normal))>120]
+        if len(severe_fold_edges)<12 or len(severe_fold_edges)>16:
+            fail("Expected authentic native crease segment chain not found")
+        rounded=bmesh.ops.bevel(
+            bm,geom=severe_fold_edges,offset=diameter*.002,
+            offset_type='OFFSET',profile_type='SUPERELLIPSE',
+            segments=3,profile=.5,affect='EDGES',
+            clamp_overlap=True,material=0,loop_slide=False,
+            mark_seam=False,mark_sharp=False,
+            harden_normals=False,face_strength_mode='NONE',
+            miter_outer='ARC',miter_inner='ARC',vmesh_method='ADJ')
+        new_roll_faces=[f for f in rounded.get('faces',[]) if f.is_valid]
+        new_roll_verts=[v for v in rounded.get('verts',[]) if v.is_valid]
+        if not new_roll_faces or not new_roll_verts:
+            fail("Authentic source skin crease rollover did not generate geometry")
+        for face in new_roll_faces:
+            face.material_index=0;face.smooth=True
+        bm.normal_update()
+        if any(sum(v[deform_source].values())<.94 or
+               sum(v[deform_source].values())>1.06
+               for v in new_roll_verts):
+            fail("Native source bevel lost 25-bone skin influence normalization")
+        if any(e.is_valid and not(e.is_manifold or e.is_boundary)
+               for e in bm.edges):
+            fail("Source lip rollover created high-degree nonmanifold edges")
+        if any(e.is_valid and e.is_manifold and not e.is_contiguous
+               for e in bm.edges):
+            fail("Source lip rollover changed correct source face winding")
+        if sum(e.is_boundary for e in bm.edges)!=previous_boundaries-30:
+            fail("Source lip rollover tore the rejoined source skin")
+        rollover_edges={
+            e for face in new_roll_faces for e in face.edges
+            if e.is_valid and e.is_manifold and len(e.link_faces)==2}
+        rollover_angles=[math.degrees(e.link_faces[0].normal.angle(
+             e.link_faces[1].normal)) for e in rollover_edges]
         capped.append({
+            "structural_crease_rollover_faces":len(new_roll_faces),
+            "structural_crease_rollover_vertices":len(new_roll_verts),
+            "structural_crease_rollover_original_edges":len(severe_fold_edges),
+            "structural_crease_rollover_over120":sum(a>120 for a in rollover_angles),
+            "structural_crease_rollover_over90":sum(a>90 for a in rollover_angles),
+            "structural_crease_rollover_max":max(rollover_angles,default=0),
             "stitched_source_adjacent_edges":len(seam_angles),
             "stitched_source_folds_over_120":seam_closure_high,
             "stitched_source_folds_over_90":seam_closure_medium,
