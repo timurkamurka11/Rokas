@@ -71,7 +71,8 @@ namespace Rokas.BedSleep.Argon.Editor
             // InitializeComposite: avoid a second outdated editor-only hand
             // if the user previously left the QA toggle enabled.
             if (game.GetComponentsInChildren<Transform>(true).Any(t =>
-                t.name == "ROKAS_Argon_25Bone_Runtime_Integrated"))
+                t.name == "ROKAS_Argon_25Bone_Runtime_Integrated" ||
+                t.name == "ROKAS_Argon_Complete_Hand_Watch_InGame"))
             {
                 Installed.Add(id);
                 return;
