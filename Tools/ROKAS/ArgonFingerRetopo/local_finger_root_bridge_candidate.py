@@ -657,8 +657,18 @@ def main():
         face_origin.update({f:'finger_'+str(fingerNo) for f in faces})
         source_contact_vertices.update(ring)
         source_contact_vertices.update(pocket)
+        # Native metacarpal incision atlas: source-geometry coordinates
+        # required to steer the NEXT true source-face resection toward
+        # exact observed 25-bone Unity web defects, rather than guessing
+        # new radius factors or smoothing generated triangles.
         report["per_finger"].append({
             "finger":fingerNo,
+            "original_finger_root_center_xyz":[round(float(c),8) for c in root],
+            "native_nearest_palm_vertex_xyz":[round(float(c),8) for c in nearest.co],
+            "native_palm_incision_face_center_xyz":[round(float(c),8) for c in insertion],
+            "native_palm_incision_normal_xyz":[round(float(c),8) for c in surface_normal],
+            "post_cut_hole_center_xyz":[round(float(c),8) for c in
+                 sum((v.co for v in pocket),Vector((0,0,0)))/len(pocket)],
             "quads":len(faces),
             "palm_socket_id":"NEW_AUTHENTIC_LOCAL_PALM_HOLE",
             "source_nearest_skin_gap":source_dist,
