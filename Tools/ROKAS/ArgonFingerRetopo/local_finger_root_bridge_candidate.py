@@ -734,6 +734,68 @@ def main():
             if edge is None or not edge.is_boundary or len(edge.link_faces)!=1:
                 fail("True 30-rim source lip no longer has adjacent skin")
             return edge.link_faces[0].normal.copy()
+        # Three-dimensional source-sheet separation: these two original
+        # epidermis lips occupy nearly identical 3D coordinates. A bridge
+        # crossing coincident lips cannot represent anatomical thickness.
+        # Move only native source palm vertices in the cloned candidate,
+        # along their OWN local source face normals, tapering to zero at
+        # original slit endpoints. Nearby original source faces follow a
+        # bounded soft transition to avoid merely creating a sharp seam
+        # one polygon farther from the slit. This is genuine volume
+        # reconstruction, NOT a smoothing/normal-map trick.
+        skin_before={}
+        skin_motion={}
+        source_skin_vertices=set(pocket)
+        original_normals={}
+        native_gap=[]
+        for k in range(1,15):
+            a,b=path_a[k],path_b[k]
+            na=source_edge_normal(path_a[k-1],a)+\
+               source_edge_normal(a,path_a[k+1])
+            nb=source_edge_normal(path_b[k-1],b)+\
+               source_edge_normal(b,path_b[k+1])
+            if na.length<1e-8 or nb.length<1e-8:
+                fail("Source palm surface normals degenerate before thickness reconstruction")
+            na.normalize();nb.normalize()
+            if na.dot(nb)>-.45:
+                fail("Source lips are not opposing skin layers; refusing false thickness")
+            source_thickness=diameter*.0045*math.sin(math.pi*k/15.)
+            skin_motion[a]=na*source_thickness
+            skin_motion[b]=nb*source_thickness
+            original_normals[a]=na.copy(); original_normals[b]=nb.copy()
+            native_gap.append(na.dot(nb))
+        # Deform source-neighbour face vertices a smaller amount; no
+        # original finger, wrist, cuff or source FBX positions change.
+        soft_motion={}
+        for v,displacement in skin_motion.items():
+            adjacent={q for edge in v.link_edges for q in edge.verts
+                      if q!=v and q not in source_skin_vertices
+                      and q in source_original_palm}
+            for q in adjacent:
+                soft_motion.setdefault(q,[]).append(displacement*.32)
+        max_shift=0.
+        for v,displacement in skin_motion.items():
+            skin_before[v]=v.co.copy()
+            v.co=v.co+displacement
+            max_shift=max(max_shift,displacement.length)
+        for v,displacements in soft_motion.items():
+            skin_before[v]=v.co.copy()
+            shift=sum(displacements,Vector((0,0,0)))/len(displacements)
+            if shift.length>diameter*.002:
+                shift=shift.normalized()*diameter*.002
+            v.co=v.co+shift
+            max_shift=max(max_shift,shift.length)
+        if max_shift>diameter*.005:
+            fail("Source skin volume reconstruction exceeds displacement gate")
+        bm.normal_update()
+        report.setdefault("source_palm_sheet_volume",[]).append({
+            "slit":slit_id,
+            "original_lip_vertices_moved":len(skin_motion),
+            "adjacent_original_source_vertices_moved":len(soft_motion),
+            "max_candidate_source_displacement":max_shift,
+            "min_opposed_normal_dot":min(native_gap),
+            "max_opposed_normal_dot":max(native_gap),
+            "source_fbx_untouched":True})
         for k in range(1,15):
             a,b=path_a[k],path_b[k]
             along=path_a[k+1].co-path_a[k-1].co
