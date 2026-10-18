@@ -67,6 +67,15 @@ namespace Rokas.BedSleep.Argon.Editor
             if (game == null) return;
             int id = game.GetInstanceID();
             if (Installed.Contains(id) || Rejected.Contains(id)) return;
+            // The regular game now installs its connected skin during
+            // InitializeComposite: avoid a second outdated editor-only hand
+            // if the user previously left the QA toggle enabled.
+            if (game.GetComponentsInChildren<Transform>(true).Any(t =>
+                t.name == "ROKAS_Argon_25Bone_Runtime_Integrated"))
+            {
+                Installed.Add(id);
+                return;
+            }
             try
             {
                 InstallIntoLiveGameOnly(game);
