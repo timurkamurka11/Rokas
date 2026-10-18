@@ -35,6 +35,19 @@ jobs:
                           if x.filename.lower().endswith((".fbx",".glb",".gltf",".blend",".obj")):
                               models.append({"name":x.filename,"bytes":x.file_size,"crc":hex(x.CRC)})
                       groups[label].append({"archive":z.name,"files":len(allfiles),"model_candidates":models,"model_count":len(models),"manifest_sample":[x.filename for x in allfiles[:80]]})
+          # Compare vendor-supplied V10 rig/volume validation (not raw assets).
+          refit=next(pathlib.Path("/tmp/argon_audit/v10").glob("*.zip"))
+          with zipfile.ZipFile(refit) as z:
+              reports={}
+              for name in ("14_V10_QA/V10_GEOMETRY_QA.json",
+                           "14_V10_QA/V10_INDEPENDENT_VALIDATION.json",
+                           "14_V10_QA/V10_VERTEX_SKINNING_REPORT.json"):
+                  try:
+                      obj=json.loads(z.read(name))
+                      reports[name]=obj
+                  except (KeyError,UnicodeError,ValueError) as e:
+                      reports[name]={"unavailable":str(e)}
+              groups["v10_native_geometry_qa"]=reports
           src=pathlib.Path("Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx")
           groups["current_source"]={"name":src.name,"bytes":src.stat().st_size,
                                     "sha256":hashlib.sha256(src.read_bytes()).hexdigest()}
