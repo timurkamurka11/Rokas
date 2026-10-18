@@ -506,6 +506,58 @@ def main():
                      str((fingerNo,depth,len(frontier))))
             tiers.append(list(frontier))
             seen.update(frontier)
+        # USER-VERIFIED UNITY BUG: 3-4 vertical square flaps are actually
+        # at the disconnected original proximal FINGER root cuffs. They
+        # survive every previous bridge-fairing/projection experiment.
+        # Do TRUE native collar root excision (ONE short 30-edge ring only),
+        # then grow the SAME authentic skinned digit from the next ORIGINAL
+        # contiguous ring into the common palm. No fake fingers, UV hiding,
+        # overlapping skin panels or new bone hierarchy. This modifies
+        # ONLY the disposable imported candidate mesh, never its FBX.
+        if fingerNo in (2,3,4,5):
+            old_ring=set(ring)
+            retained_native=set(tiers[1])
+            next_native=set(tiers[2])
+            if len(old_ring)!=30 or len(retained_native)!=30 or len(next_native)!=30:
+                fail("Source native one-ring root surgery expects 30+30+30")
+            damaged={face for v in old_ring for face in v.link_faces
+                     if face.is_valid}
+            if (not 30<=len(damaged)<=90 or
+                any(not set(face.verts).issubset(old_ring|retained_native)
+                    for face in damaged)):
+                fail("Original digit root contains unexpectedly extended skin faces")
+            original_source_count=len(components[fingerNo])
+            bmesh.ops.delete(bm,geom=list(damaged),context='FACES')
+            bmesh.ops.delete(bm,geom=[v for v in old_ring if v.is_valid],
+                             context='VERTS')
+            components[fingerNo].difference_update(old_ring)
+            bm.normal_update()
+            boundary={edge for v in retained_native for edge in v.link_edges
+                      if edge.is_valid and edge.is_boundary
+                      and all(q in retained_native for q in edge.verts)}
+            if len(boundary)!=30 or any(not v.is_valid for v in retained_native):
+                fail("Native 30-vertex ring replacement tore authentic finger skin")
+            ring=boundary_of_new_pocket(boundary)
+            remaining=set(components[fingerNo])
+            seen=set(ring)|next_native
+            final_outer={w for v in next_native for edge in v.link_edges
+                         for w in edge.verts
+                         if w in remaining and w not in seen}
+            if len(final_outer)!=30:
+                fail("Original PIP ring after one-root-cut is not native 30 verts")
+            tiers=[list(ring),list(next_native),list(final_outer)]
+            root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+            radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
+            if (nearest.co-root).length>diameter*.062:
+                fail("Original next finger ring too far from palm for native reattachment")
+            report.setdefault("one_original_root_cuff_removed",[]).append({
+                "finger":fingerNo,"removed_source_faces":len(damaged),
+                "removed_source_root_vertices":len(old_ring),
+                "new_original_finger_vertices":len(components[fingerNo]),
+                "original_component_before":original_source_count,
+                "retained_native_rim_vertices":len(ring),
+                "retained_four_bone_chain":True,
+                "original_fbx_untouched":True})
         root_pull=nearest.co-root
         root_pull_size=root_pull.length
         if root_pull_size>diameter*.049:
