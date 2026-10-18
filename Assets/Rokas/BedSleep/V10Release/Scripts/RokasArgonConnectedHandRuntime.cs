@@ -186,6 +186,7 @@ namespace Rokas.BedSleep.V10Release
         private KeikoFPSArmRigController.ArmClipState previousState;
         private float stateSeconds;
         private float visibility;
+        private float visibilityVelocity;
         private BedSleepSFXController foley;
         private Material ownedSkinMaterial, ownedOledMaterial;
         private Quaternion authoredRootRotation;
@@ -370,21 +371,23 @@ namespace Rokas.BedSleep.V10Release
             else
                 stateSeconds += Time.unscaledDeltaTime;
 
-            switch (state)
+            // Continuous critically-damped visibility across V10 state
+            // changes: unlike stateSeconds-based poses this NEVER jumps from
+            // a partially raised hand to a hard-coded 100% on entering
+            // TimeSelection, and never snaps when Lower begins.
+            bool hidden=state==KeikoFPSArmRigController.ArmClipState.HiddenIdle ||
+                state==KeikoFPSArmRigController.ArmClipState.ReturnIdle ||
+                state==KeikoFPSArmRigController.ArmClipState.Lower;
+            float target=hidden ? 0f : 1f;
+            float smoothTime=hidden ? .32f : .37f;
+            float delta=Mathf.Clamp(Time.unscaledDeltaTime,.001f,.05f);
+            visibility=Mathf.SmoothDamp(visibility,target,
+                ref visibilityVelocity,smoothTime,4f,delta);
+            visibility=Mathf.Clamp01(visibility);
+            if (Mathf.Abs(visibility-target)<.0003f)
             {
-                case KeikoFPSArmRigController.ArmClipState.HiddenIdle:
-                case KeikoFPSArmRigController.ArmClipState.ReturnIdle:
-                    visibility = 0f;
-                    break;
-                case KeikoFPSArmRigController.ArmClipState.Raise:
-                    visibility = Mathf.Clamp01(stateSeconds / 1.05f);
-                    break;
-                case KeikoFPSArmRigController.ArmClipState.Lower:
-                    visibility = 1f - Mathf.Clamp01(stateSeconds / .90f);
-                    break;
-                default:
-                    visibility = 1f;
-                    break;
+                visibility=target;
+                visibilityVelocity=0f;
             }
             SnapAndFrame();
         }
