@@ -31,3 +31,9 @@ Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity.meta
 # CI-generated Argon local Unity anatomical inspection only.
 # Never accidentally push derived skinned mesh through the user's BAT.
 Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/
+
+# Genuine skinned Argon hand comes from authenticated Actions binary,
+# staged only into the local game Resources folder by the user's BAT.
+# Never distribute proprietary raw models through public Git commits.
+Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/*.fbx
+Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/*.fbx.meta
