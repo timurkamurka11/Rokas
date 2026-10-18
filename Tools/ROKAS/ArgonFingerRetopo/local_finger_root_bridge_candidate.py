@@ -560,7 +560,10 @@ def main():
         # already-built vertices are smoothed. The two restored source
         # epidermis slit volumes are elsewhere and remain untouched.
         ordinary_radius=max(radius*.94,diameter*.010)
-        if fingerNo in (2,5):
+        if fingerNo==2:
+            radius_hole=max(radius*1.15,diameter*.0115)
+            radius_hole=min(radius_hole,diameter*.033)
+        elif fingerNo==5:
             radius_hole=max(radius*1.28,diameter*.0120)
             radius_hole=min(radius_hole,diameter*.033)
         else:
