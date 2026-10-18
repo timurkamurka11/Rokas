@@ -230,7 +230,7 @@ namespace Rokas.BedSleep.V10Release
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
                 {
                     // Each of the 3 cards is independently toggleable.
-                    if (uv.y>=.13f && uv.y<=.46f)
+                    if (uv.y>=.205f && uv.y<=.49f)
                     {
                         int index=Mathf.Clamp(
                             Mathf.FloorToInt(uv.x*3f),0,2);
@@ -246,11 +246,13 @@ namespace Rokas.BedSleep.V10Release
                     return true;
                 }
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Phases:
-                    // Sleep-phase graph is an estimated planning display;
-                    // opt-in highlights the suggested wake window. It does
-                    // not claim to measure real REM or clinical sleep.
-                    oled.TogglePhasePlanning();
-                    Sfx?.PlayCrownClick();
+                    // Only tapping the ACTUAL chart enables planning.
+                    // Touching labels or the footer should not alter it.
+                    if (uv.y>=.48f && uv.y<=.76f)
+                    {
+                        oled.TogglePhasePlanning();
+                        Sfx?.PlayCrownClick();
+                    }
                     return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
                     if (uv.y > .76f) oled.ShowDial();
