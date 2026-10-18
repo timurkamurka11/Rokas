@@ -20,7 +20,8 @@ namespace Rokas.Presentation
         private Action confirm, exit;
         private AudioSource audio;
         private AudioClip uiClick;
-        private int selected;
+        // -1 means initial, genuinely unselected: all five buttons AMBER.
+        private int selected = -1;
         public int SelectedTab => selected;
         public bool Available { get; private set; }
 
@@ -74,7 +75,7 @@ namespace Rokas.Presentation
                 items.Add(view);
             }
             Available = true;
-            SetSelected(0, false);
+            SetSelected(-1, false);
         }
 
         private void PlayFeedback()
@@ -101,7 +102,7 @@ namespace Rokas.Presentation
 
         public void SetSelected(int index, bool dispatch = true)
         {
-            if (index < 0 || index >= 5) return;
+            if (index < -1 || index >= 5) return;
             selected = index;
             for (int i = 0; i < items.Count; i++)
                 items[i].SetSelected(i == index && i < 5);
@@ -109,51 +110,93 @@ namespace Rokas.Presentation
         }
     }
 
+    /// <summary>
+    /// LaptopChoiceHover timing/feedback, but with the user's ORIGINAL
+    /// amber and cyan PNGs. Only ONE Image is rasterized at a time.
+    /// The WatchPngBlend shader mixes the PNG pixels before alpha compositing
+    /// (no ghostly overlapping glow or double typography).
+    /// </summary>
     public sealed class RokasBedWatchPngState : MonoBehaviour,
         IPointerEnterHandler, IPointerExitHandler,
         IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
     {
-        private Image normal, highlighted;
-        private Sprite normalSprite, selectedSprite;
+        private Image image;
+        private Sprite amberSprite, blueSprite;
+        private Material blendMaterial;
         private bool persistent, selected, hovering, pressed;
-        private float highlight;
+        private float blend;
+        private float hoverWeight;
+        private float pressRemaining;
+        private float animTime;
         private Action clicked, feedback;
         private RectTransform rect;
+        private Vector3 baseScale;
+        private bool shaderReady;
 
         public void Initialize(Texture2D baseTex, Texture2D activeTex,
             bool isTab, Action onClick, Action onFeedback)
         {
+            if (baseTex == null || activeTex == null)
+                throw new ArgumentNullException("Authored watch PNG");
             persistent = isTab;
             clicked = onClick;
             feedback = onFeedback;
-            rect = (RectTransform)transform;
-            normalSprite = Sprite.Create(baseTex,
+            rect = transform as RectTransform;
+            baseScale = rect != null ? rect.localScale : Vector3.one;
+            amberSprite = Sprite.Create(baseTex,
                 new Rect(0f, 0f, baseTex.width, baseTex.height),
-                new Vector2(.5f,.5f));
-            selectedSprite = Sprite.Create(activeTex,
+                new Vector2(.5f, .5f));
+            blueSprite = Sprite.Create(activeTex,
                 new Rect(0f, 0f, activeTex.width, activeTex.height),
-                new Vector2(.5f,.5f));
-            normal = MakeLayer("Normal_AuthoredPNG",normalSprite,true);
-            highlighted = MakeLayer("Selected_AuthoredPNG",selectedSprite,false);
-            highlight = 0f;
-            highlighted.color = new Color(1f,1f,1f,0f);
+                new Vector2(.5f, .5f));
+            var go = new GameObject("AuthoredWatchPNG_SingleImage",
+                typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(transform, false);
+            var size = (RectTransform)go.transform;
+            size.anchorMin = Vector2.zero;
+            size.anchorMax = Vector2.one;
+            size.offsetMin = size.offsetMax = Vector2.zero;
+            image = go.GetComponent<Image>();
+            image.sprite = amberSprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.raycastTarget = true;
+            image.color = Color.white;
+
+            var shader = Shader.Find("ROKAS/UI/WatchPngBlend");
+            shaderReady = shader != null && shader.isSupported &&
+                baseTex.width == activeTex.width &&
+                baseTex.height == activeTex.height;
+            if (shaderReady)
+            {
+                blendMaterial = new Material(shader);
+                blendMaterial.name = "ROKAS_WatchPngBlend_" + name;
+                blendMaterial.SetTexture("_MainTex", baseTex);
+                blendMaterial.SetTexture("_SelectedTex", activeTex);
+                blendMaterial.SetFloat("_Blend", 0f);
+                image.material = blendMaterial;
+            }
+            else
+            {
+                // If a shader is unsupported we still draw ONLY ONE PNG.
+                Debug.LogWarning("[ROKAS WatchTabs] Single-sprite fallback: " +
+                    "WatchPngBlend shader unavailable or button atlas mismatch.");
+            }
+            ResetVisualState();
         }
 
-        private Image MakeLayer(string name, Sprite sprite, bool interactive)
+        private void ResetVisualState()
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(transform, false);
-            RectTransform rt = (RectTransform)go.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-            Image img = go.GetComponent<Image>();
-            img.sprite = sprite;
-            img.type = Image.Type.Simple;
-            img.preserveAspect = false;
-            img.raycastTarget = interactive;
-            img.color = Color.white;
-            return img;
+            hovering = pressed = false;
+            selected = false;
+            blend = hoverWeight = pressRemaining = animTime = 0f;
+            if (rect != null) rect.localScale = baseScale;
+            if (image != null)
+            {
+                image.sprite = amberSprite;
+                image.color = Color.white;
+            }
+            if (blendMaterial != null) blendMaterial.SetFloat("_Blend", 0f);
         }
 
         public void SetSelected(bool selectedState)
@@ -176,10 +219,20 @@ namespace Rokas.Presentation
         public void OnPointerDown(PointerEventData e)
         {
             if (e.button == PointerEventData.InputButton.Left)
+            {
                 pressed = true;
+                pressRemaining = .14f;
+            }
         }
 
-        public void OnPointerUp(PointerEventData e) { pressed = false; }
+        public void OnPointerUp(PointerEventData e)
+        {
+            if (e.button == PointerEventData.InputButton.Left)
+            {
+                pressed = false;
+                pressRemaining = Mathf.Min(pressRemaining, .06f);
+            }
+        }
 
         public void OnPointerClick(PointerEventData e)
         {
@@ -190,28 +243,45 @@ namespace Rokas.Presentation
 
         private void Update()
         {
-            if (highlighted == null || normal == null) return;
+            if (image == null || rect == null) return;
+            float dt = Mathf.Max(0f, Time.unscaledDeltaTime);
+            animTime += dt;
+            // Same damped response as LaptopChoiceHover, preserving the
+            // 0.15s colour transition from the watch UI brief.
             float target = selected || hovering || pressed ? 1f : 0f;
-            highlight = Mathf.MoveTowards(highlight, target,
-                Time.unscaledDeltaTime / .15f);
-            highlighted.color = new Color(1f,1f,1f,highlight);
-            normal.color = Color.white;
-            // Do not move/resize the hit box or redraw the source art.
-            // Micromotion is confined to the image transform and always
-            // returns to a fixed resting scale on exit.
-            float breathing = selected ? .003f *
-                Mathf.Sin(Time.unscaledTime * 2f) : 0f;
-            float scale = pressed ? .985f :
-                (hovering ? 1.008f : 1f + breathing);
+            blend = Mathf.MoveTowards(blend, target, dt / .15f);
+            hoverWeight = Mathf.MoveTowards(hoverWeight,
+                hovering ? 1f : 0f, dt * 6.5f);
+            pressRemaining = Mathf.Max(0f, pressRemaining - dt);
+            if (shaderReady)
+                blendMaterial.SetFloat("_Blend",
+                    blend * blend * (3f - 2f * blend));
+            else
+                image.sprite = blend >= .5f ? blueSprite : amberSprite;
+
+            // Hover + tactile press like the laptop. PNG rectangles never
+            // move or change their authorized layout coordinates.
+            float idlePulse = selected ?
+                .003f * Mathf.Sin(animTime * 2.1f) : 0f;
+            float hoverPulse = .004f * Mathf.Sin(animTime * 5.2f);
+            float press = -.025f * Mathf.Clamp01(pressRemaining / .14f);
+            float targetScale = 1f + idlePulse +
+                hoverWeight * (.015f + hoverPulse) + press;
+            float ease = 1f - Mathf.Exp(-15f * dt);
             rect.localScale = Vector3.Lerp(rect.localScale,
-                new Vector3(scale,scale,1f),
-                Mathf.Clamp01(Time.unscaledDeltaTime * 13f));
+                baseScale * targetScale, ease);
+        }
+
+        private void OnDisable()
+        {
+            ResetVisualState();
         }
 
         private void OnDestroy()
         {
-            if (normalSprite != null) Destroy(normalSprite);
-            if (selectedSprite != null) Destroy(selectedSprite);
+            if (blendMaterial != null) Destroy(blendMaterial);
+            if (amberSprite != null) Destroy(amberSprite);
+            if (blueSprite != null) Destroy(blueSprite);
         }
     }
     public sealed class RokasBedWatchFocusButton : MonoBehaviour,
