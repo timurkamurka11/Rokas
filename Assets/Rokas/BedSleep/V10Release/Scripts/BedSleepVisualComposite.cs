@@ -16,6 +16,7 @@ namespace Rokas.BedSleep.V10Release
         private bool _argonFullVisualActive;
         private MeshRenderer _argonOledRenderer;
         private MeshCollider _argonOledCollider;
+        private RokasArgonFullHandFollower _argonHand;
         private Light _argonWarmKey, _argonSoftFill;
 
         public int renderWidth = 1920;
@@ -122,7 +123,11 @@ namespace Rokas.BedSleep.V10Release
             _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
                 ArmRig, Watch, Oled, _presentationCamera, Sfx,
                 out _argonOledRenderer, out _argonOledCollider);
-            if (_argonFullVisualActive) ConfigureArgonGameLighting();
+            if (_argonFullVisualActive)
+            {
+                _argonHand = GetComponentInChildren<RokasArgonFullHandFollower>(true);
+                ConfigureArgonGameLighting();
+            }
 
             InputRouter = GetComponent<SmartwatchInputRouter>();
             if (InputRouter == null) InputRouter = gameObject.AddComponent<SmartwatchInputRouter>();
@@ -137,6 +142,88 @@ namespace Rokas.BedSleep.V10Release
                 InputRouter.OnStepHalfHours += OnArgonCrownStep;
                 InputRouter.OnSetAbsoluteHalfHours += OnArgonCrownAbsolute;
                 InputRouter.OnConfirm += OnArgonWatchConfirm;
+                InputRouter.UseArgonFaceNavigation = true;
+                InputRouter.OnPhysicalOledTap += OnArgonPhysicalOledTap;
+                InputRouter.OnCycleOledScreen += OnArgonCycleOledScreen;
+            }
+        }
+
+        private void OnArgonPhysicalOledTap(Vector2 uv)
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return;
+            var oled = _argonHand.WatchScreen;
+            if (oled == null) return;
+            _argonHand.NotifyWatchInteraction();
+            switch (oled.Screen)
+            {
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
+                {
+                    // Five physical watch rows. V10 gameplay permits 1..12h
+                    // in half-hour increments, so never display a preset that
+                    // the gameplay clock silently rejects.
+                    int index = Mathf.Clamp(Mathf.RoundToInt(
+                        (.675f - uv.y) / .117f), 0, 4);
+                    int[] presets = { 2, 4, 8, 12, 16 };
+                    int choice = presets[index];
+                    InputRouter.SetHalfHoursFromPhysicalOled(choice);
+                    oled.SelectPreset(choice);
+                    return;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
+                    if (uv.y > .76f) oled.ShowDial();
+                    else if (uv.y < .20f) InputRouter.ConfirmFromPhysicalOled();
+                    else oled.ShowRelaxation();
+                    return;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
+                    if (uv.y > .76f) oled.ShowOverview();
+                    else if (uv.y < .20f) InputRouter.ConfirmFromPhysicalOled();
+                    else oled.ShowDial();
+                    return;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Confirmed:
+                    oled.SetFallingAsleep();
+                    return;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Cancelled:
+                    oled.ShowDial();
+                    return;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.FallingAsleep:
+                    return;
+            }
+            // DIAL: top text opens physical watch presets; large central
+            // sleep-time number opens plan screens; bottom confirms in
+            // existing game flow; touch ring sets a real duration.
+            if (uv.y > .76f) { oled.ShowPresets(); return; }
+            if (uv.y < .20f) { InputRouter.ConfirmFromPhysicalOled(); return; }
+            Vector2 delta = uv - new Vector2(.5f, .5f);
+            if (Mathf.Abs(delta.x) < .21f && Mathf.Abs(delta.y) < .19f)
+            {
+                oled.ShowOverview();
+                return;
+            }
+            float radius = delta.magnitude;
+            if (radius >= .26f && radius <= .50f)
+            {
+                float angle = Mathf.Atan2(delta.x, delta.y);
+                float progress = Mathf.InverseLerp(-.73f * Mathf.PI,
+                    .73f * Mathf.PI, angle);
+                int steps = Mathf.RoundToInt(Mathf.Lerp(2f, 24f, progress));
+                InputRouter.SetHalfHoursFromPhysicalOled(steps);
+            }
+        }
+
+        private void OnArgonCycleOledScreen()
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return;
+            var oled = _argonHand.WatchScreen;
+            if (oled == null) return;
+            _argonHand.NotifyWatchInteraction();
+            switch (oled.Screen)
+            {
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Dial:
+                    oled.ShowOverview(); break;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
+                    oled.ShowRelaxation(); break;
+                default:
+                    oled.ShowDial(); break;
             }
         }
 
@@ -432,6 +519,9 @@ namespace Rokas.BedSleep.V10Release
         {
             if (InputRouter != null)
             {
+                InputRouter.OnPhysicalOledTap -= OnArgonPhysicalOledTap;
+                InputRouter.OnCycleOledScreen -= OnArgonCycleOledScreen;
+                InputRouter.UseArgonFaceNavigation = false;
                 InputRouter.OnStepHalfHours -= OnArgonCrownStep;
                 InputRouter.OnSetAbsoluteHalfHours -= OnArgonCrownAbsolute;
                 InputRouter.OnConfirm -= OnArgonWatchConfirm;
