@@ -640,130 +640,114 @@ def main():
     sizes=sorted(len(k) for k in holes)
     if sizes!=[30,30,64]:
         fail("Unexpected true post-graft palm holes: "+str(sizes))
+    # The REAL input geometry atlas exposed the problem: these are NOT
+    # round holes requiring invented epidermis domes. Each '30-edge hole'
+    # is a nearly zero-area SOURCE SLIT: two opposed contours following
+    # the same original palm crease, with 14 physically corresponding
+    # pairs plus 2 terminal points. The old 30->30->30->apex filler was
+    # geometrically false and caused 19-20 near-180 degree angle folds.
+    #
+    # Structural repair stitches matching authentic slit lips together
+    # DIRECTLY. This removes false cap faces instead of smoothing them,
+    # and uses the source per-corner UVs and intact 25-bone vertex weights.
+    # The original FBX remains immutable. If any source topology, bone
+    # weights or border geometry differs, reject the entire candidate.
     capped=[]
     cap_created=[]
     cap_groups=[]
-    # The two genuine palm holes are source epidermis holes, NOT new
-    # fingers. The old 30->30->30->apex dome created a false 180-degree
-    # fan in actual Unity / Blender (20 of remaining 41 severe hinges).
-    # Re-tessellate just each ORIGINAL closed 30-vertex rim, with no apex,
-    # synthetic layered circular tube, replacement source vertices or
-    # altered bone weights. Constrained polygon ear clipping respects
-    # the source boundary and per-corner original 2048 UV skin data.
-    from mathutils.geometry import tessellate_polygon
-    for pocket in holes:
+    stitched_source_edges=[]
+    initial_cuff_boundaries=64
+    slit_tolerance=diameter*.00018
+    for slit_index,pocket in enumerate(holes):
         if len(pocket)==64:
-            continue  # Actual sleeve-hidden open FOREARM entry.
+            continue
+        if len(pocket)!=30:
+            fail("Expected precisely two authentic 30-edge metacarpal slits")
+        source_edges={e for v in pocket for e in v.link_edges
+                      if e.is_boundary and all(w in pocket for w in e.verts)}
+        if len(source_edges)!=30:
+            fail("Original metacarpal slit contains branched edges")
+        # The original rings have very small thickness relative to length
+        # (7e-6 and 55e-6 maximum opposed-lip separation); don't collapse
+        # any anatomically real palm area. Require flat source Z on both.
+        zspan=max(v.co.z for v in pocket)-min(v.co.z for v in pocket)
+        if zspan>diameter*1e-5:
+            fail("Metacarpal source slit not truly planar; cannot stitch")
         n=len(pocket)
-        center=sum((v.co for v in pocket),Vector((0,0,0)))/n
-        skin_normal=sum((v.normal for v in pocket),Vector((0,0,0)))
-        if skin_normal.length_squared<1e-12:
-            fail("Existing genuine palm pocket normals degenerate")
-        skin_normal.normalize()
-        # Original adjacent face defines the only valid cap winding.
-        # The earlier centroid-normal sign heuristic was unreliable.
-        if boundary_edge_flow(pocket[0],pocket[1])!=-1:
-            pocket=list(reversed(pocket))
-        centroid_uv=sum((nearest_source_uv(v) for v in pocket),
-                        Vector((0,0)))/n if uv is not None else None
-        avg_weights=defaultdict(float)
-        for v in pocket:
-            for group,weight in v[deform_source].items():
-                avg_weights[group]+=weight/n
-        all_weight=sum(avg_weights.values())
-        if all_weight<.99 or all_weight>1.01:
-            fail("Original palm pocket source weight averaging corrupted")
-        radius=sum((v.co-center).length for v in pocket)/n
-        # Source-derived 30->30->15->center manifold patch: reduce
-        # the last 30-face apex fan to 15 faces without touching the
-        # nonplanar authentic rim, source bone weights or 2048 PBR maps.
-        rings=[]
-        for alpha,height in ((.58,.0015),(.22,.003)):
-            layer=[]
-            for v in pocket:
-                t=bm.verts.new(center+(v.co-center)*alpha+
-                               skin_normal*min(diameter*height,radius*.08))
-                for group,weight in v[deform_source].items():
-                    if weight>1e-7:t[deform_source][group]=weight
-                layer.append(t)
-                cap_created.append(t)
-            rings.append(layer)
-        apex=bm.verts.new(center+skin_normal*min(diameter*.004,radius*.12))
-        for group,weight in avg_weights.items():
-            if weight>1e-7:apex[deform_source][group]=weight/all_weight
-        cap_created.append(apex)
-        cap_uv={}
-        if uv is not None:
-            for layer,alpha in zip(rings,(.58,.22)):
-                for vertex,src in zip(layer,pocket):
-                    cap_uv[vertex]=centroid_uv.lerp(nearest_source_uv(src),alpha)
-            cap_uv[apex]=centroid_uv
-        cap_faces=[]
+        candidates=[]
         for i in range(n):
-            j=(i+1)%n
-            for quad in ([pocket[i],pocket[j],rings[0][j],rings[0][i]],
-                         [rings[0][i],rings[0][j],rings[1][j],rings[1][i]],
-                         [rings[1][i],rings[1][j],apex]):
-                try:
-                    face=bm.faces.new(quad)
-                except ValueError:
-                    fail("Duplicate face while closing authentic palm epidermis")
-                face.material_index=0
-                face.smooth=True
-                addedFaces.append(face)
-                cap_faces.append(face)
-                face_origin[face]='palm_cap'
-                if uv is not None:
-                    for c in face.loops:
-                        v=c.vert
-                        c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
-        # Source palm UV openings have nonplanar neighborhoods. A fixed
-        # outward dome creates opposing normals / 180-degree epidermis
-        # creases. Find the cap curvature that minimizes REAL boundary
-        # folds, changing ONLY source-weighted cap vertices, not the
-        # original hand, palette, normal map or 25-bone rig.
-        cap_ring_rest=[[v.co.copy() for v in layer] for layer in rings]
-        apex_rest=apex.co.copy()
-        cap_edges={e for face in cap_faces for e in face.edges
-                   if e.is_manifold and len(e.link_faces)==2}
-        cap_options=[]
-        for scale in (-1.5,-.75,0.,.5,1.,1.75):
-            for layer,initial in zip(rings,cap_ring_rest):
-                for vertex,original in zip(layer,initial):
-                    lift=(original-center).dot(skin_normal)
-                    vertex.co=original+skin_normal*lift*(scale-1)
-            lift=(apex_rest-center).dot(skin_normal)
-            apex.co=apex_rest+skin_normal*lift*(scale-1)
-            bm.normal_update()
-            folds=[]
-            for e in cap_edges:
-                fa,fb=e.link_faces
-                if fa.normal.length_squared<1e-12 or fb.normal.length_squared<1e-12:
-                    fail("True palm epidermis cap collapsed during curvature search")
-                folds.append(math.degrees(fa.normal.angle(fb.normal)))
-            n120=sum(z>120 for z in folds)
-            n90=sum(z>90 for z in folds)
-            penalty=sum(max(z-70,0)**2 for z in folds)/max(1,len(folds))
-            cap_options.append((n120,n90,penalty,scale))
-        cap_best=min(cap_options)
-        scale=cap_best[3]
-        for layer,initial in zip(rings,cap_ring_rest):
-            for vertex,original in zip(layer,initial):
-                lift=(original-center).dot(skin_normal)
-                vertex.co=original+skin_normal*lift*(scale-1)
-        lift=(apex_rest-center).dot(skin_normal)
-        apex.co=apex_rest+skin_normal*lift*(scale-1)
+            for j in range(i+1,n):
+                if j in ((i+1)%n,(i-1)%n):
+                    continue
+                dist=(pocket[i].co-pocket[j].co).length
+                if dist<slit_tolerance:
+                    candidates.append((dist,i,j))
+        candidates.sort(key=lambda row:(row[0],row[1],row[2]))
+        unmatched=set(range(n))
+        pairs=[]
+        for distance,i,j in candidates:
+            if i in unmatched and j in unmatched:
+                unmatched.remove(i);unmatched.remove(j)
+                pairs.append((i,j,distance))
+        if len(pairs)!=14 or len(unmatched)!=2:
+            fail("True source metacarpal slit does not have 14 lip pairs")
+        if any(((i+1)%n in unmatched and (j+1)%n in unmatched)
+               for i,j,_ in pairs):
+            fail("Slit tips confused with skinned source vertices")
+        # End vertices are the only two unpaired tips. They must be far
+        # apart along the original palm, not a truncated real skin hole.
+        tips=list(unmatched)
+        tip_span=(pocket[tips[0]].co-pocket[tips[1]].co).length
+        if tip_span<diameter*.025:
+            fail("Metacarpal slit has insufficient real source length")
+        targetmap={}
+        bone_mismatch=0.
+        pairs_safety=[]
+        for i,j,distance in pairs:
+            va,vb=pocket[i],pocket[j]
+            wa,wb=dict(va[deform_source]),dict(vb[deform_source])
+            drift=max((abs(wa.get(k,0)-wb.get(k,0))
+                       for k in set(wa)|set(wb)),default=0.)
+            bone_mismatch=max(bone_mismatch,drift)
+            if drift>.035:
+                fail("Original slit lip has incompatible 25-bone influences")
+            # Deterministic survivor keeps the original data. Per-face UV
+            # interpolation continues through BMesh loop layers.
+            target,discard=(va,vb) if va.index<vb.index else (vb,va)
+            targetmap[discard]=target
+            pairs_safety.append({"separation":distance,
+                                 "influence_delta":drift})
+        if len(targetmap)!=14 or len(set(targetmap.values()))!=14:
+            fail("Source slit cannot be stitched without T-junctions")
+        previous_boundaries=sum(e.is_boundary for e in bm.edges)
+        bmesh.ops.weld_verts(bm,targetmap=targetmap)
         bm.normal_update()
-        capped.append({"source_open_ring":n,"new_skin_vertices":2*n+1,
-                       "faces":3*n,"radius":radius,
-                       "apex_displacement":(apex.co-center).length,
-                       "optimized_cap_curve_sign_and_scale":scale,
-                       "root_crease_over_120":cap_best[0],
-                       "root_crease_over_90":cap_best[1],
-                       "candidate_scores":[{"height_factor":w,"over_120":a,
-                            "over_90":b} for a,b,v,w in cap_options]})
+        remaining_boundaries=sum(e.is_boundary for e in bm.edges)
+        if remaining_boundaries!=previous_boundaries-30:
+            fail("Genuine metacarpal lip stitch did not seal entire slit")
+        if any(not(e.is_manifold or e.is_boundary) for e in bm.edges):
+            fail("True lip weld created a nonmanifold 25-bone palm surface")
+        if any(e.is_manifold and not e.is_contiguous for e in bm.edges):
+            fail("True lip weld reversed original source face orientation")
+        if any(face.calc_area()<=diameter*diameter*1e-11
+               for face in bm.faces):
+            fail("Metacarpal structural seam weld made zero-area source faces")
+        capped.append({
+            "source_open_ring":n,
+            "method":"authentic_opposed_lip_stitch_NO_FALSE_DOME",
+            "original_lip_pairs":len(pairs),
+            "original_source_face_weights_preserved":True,
+            "max_lip_separation":max(d for i,j,d in pairs),
+            "max_source_influence_delta":bone_mismatch,
+            "source_tip_distance":tip_span,
+            "new_skin_vertices":0,
+            "faces":0,
+            "boundary_edges_eliminated":previous_boundaries-remaining_boundaries,
+            "slit_index":slit_index,
+            "physical_pair_gaps":pairs_safety})
     report["authentic_two_distal_palm_pockets_sealed"]=capped
-    report["anatomical_skin_cap_vertices"]=len(cap_created)
+    report["anatomical_skin_cap_vertices"]=0
+    report["true_structural_palm_slit_lip_stitch"]=True
     # Only a genuine 64-edge sleeve cuff remains open. All 5 digits and
     # both old palm pockets now have a real continuous epidermis surface.
     if sum(e.is_boundary for e in bm.edges)!=64:
