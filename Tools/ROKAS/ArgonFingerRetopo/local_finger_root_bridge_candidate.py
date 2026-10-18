@@ -1339,6 +1339,90 @@ def main():
         "original_palm_slits_unchanged":True,
         "source_fbx_untouched":True,
         "preserve_original_25_bones_and_uv":True}
+    # LAST-MILE MCP TIP REMESH by the ACTUAL visible hinge creases:
+    # user Unity screenshot showed narrow, bright polygon tongues at four
+    # finger roots, not an incorrect overall palm. Earlier global angular
+    # smoothing was deliberately tightly limited and cannot change those
+    # tongues. Here choose only generated skin corners ON the true >115deg
+    # bridge folds, and solve the geometry with an expanded but localized
+    # native-neighbor closure. No source-ring, source-palm, UV or bones move.
+    fin_hinges={edge for edge in hinge_edges
+                if any(face_origin.get(face,"") in
+                       ("finger_2","finger_3","finger_4","finger_5")
+                       for face in edge.link_faces)}
+    severe_before=sum(
+        math.degrees(e.link_faces[0].normal.angle(e.link_faces[1].normal))>120
+        for e in fin_hinges)
+    local_candidate_vertices={vertex for edge in fin_hinges
+        if math.degrees(edge.link_faces[0].normal.angle(
+            edge.link_faces[1].normal))>110
+        for face in edge.link_faces for vertex in face.verts
+        if vertex in trial_skin_vertices and vertex.is_valid}
+    local_positions={v:v.co.copy() for v in local_candidate_vertices}
+    max_tip_rebuild=diameter*.0125
+    repaired=0
+    for iteration in range(5):
+        accepted=0
+        for vertex in sorted(local_candidate_vertices,key=lambda v:v.index):
+            faces=[face for face in vertex.link_faces if face.is_valid]
+            edges={edge for face in faces for edge in face.edges
+                   if edge in fin_hinges}
+            if not edges:continue
+            def actual_fold_cost():
+                angles=[math.degrees(edge.link_faces[0].normal.angle(
+                    edge.link_faces[1].normal)) for edge in edges]
+                if any(face.calc_area()<diameter*diameter*1e-11 for face in faces):
+                    return float('inf')
+                return (sum(max(0.,a-78.)**2 for a in angles)+
+                        4*sum(max(0.,a-120.)**2 for a in angles))
+            neighbors={q for edge in vertex.link_edges
+                       for q in edge.verts if q!=vertex}
+            if len(neighbors)<3:continue
+            current=vertex.co.copy()
+            mean=sum((v.co for v in neighbors),Vector((0,0,0)))/len(neighbors)
+            if (mean-current).length<1e-8:continue
+            base_score=actual_fold_cost()
+            chosen=current
+            chosen_score=base_score
+            for factor in (.22,.5,.82,1.0):
+                proposal=current.lerp(mean,factor)
+                from_original=proposal-local_positions[vertex]
+                if from_original.length>max_tip_rebuild:
+                    proposal=local_positions[vertex]+from_original.normalized()*max_tip_rebuild
+                vertex.co=proposal
+                for face in faces:face.normal_update()
+                trial=actual_fold_cost()
+                if trial+1e-3<chosen_score:
+                    chosen_score=trial
+                    chosen=proposal.copy()
+            vertex.co=chosen
+            for face in faces:face.normal_update()
+            if (chosen-current).length>1e-8:
+                accepted+=1
+                repaired+=1
+        if not accepted:break
+    bm.normal_update()
+    severe_after=sum(
+        math.degrees(e.link_faces[0].normal.angle(e.link_faces[1].normal))>120
+        for e in fin_hinges)
+    if severe_after>severe_before:
+        # Don't trade the cleaner projected image for non-physical folded
+        # skin. Revert only this experimental final tab fix.
+        for v,point in local_positions.items():v.co=point
+        bm.normal_update()
+        severe_after=severe_before
+        repaired=0
+    report["root_fin_actual_topology_rebuild"]={
+        "original_real_crease_over120":severe_before,
+        "after_real_crease_over120":severe_after,
+        "candidate_skin_tips_targeted":len(local_candidate_vertices),
+        "accepted_local_corner_moves":repaired,
+        "max_allowed_skin_tip_shift":max_tip_rebuild,
+        "actual_max_corner_shift":max(
+            ((v.co-local_positions[v]).length
+             for v in local_candidate_vertices),default=0),
+        "source_original_fbx_unchanged":True,
+        "no_source_palm_or_finger_ring_moved":True}
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
