@@ -227,6 +227,24 @@ namespace Rokas.BedSleep.V10Release
             CyclePhysicalOledScreen();
         }
 
+        public bool SelectPhysicalOledTab(int tab)
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return false;
+            var oled = _argonHand.WatchScreen;
+            if (oled == null) return false;
+            _argonHand.NotifyWatchInteraction();
+            switch (tab)
+            {
+                case 0: oled.ShowDial(); break;
+                case 1: oled.ShowPresets(); break;
+                case 2: oled.ShowAlarm(); break;
+                case 3: oled.ShowRelaxation(); break;
+                case 4: oled.ShowPhases(); break;
+                default: return false;
+            }
+            return true;
+        }
+
         public bool CyclePhysicalOledScreen()
         {
             if (!_argonFullVisualActive || _argonHand == null) return false;
