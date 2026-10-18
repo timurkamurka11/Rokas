@@ -491,10 +491,15 @@ namespace Rokas.BedSleep.Argon.Editor
                     .Count(x => x.sharedMesh != null);
                 Assert.That(before, Is.GreaterThanOrEqualTo(7),
                     "V10 original physical watch must remain in game");
-                RokasArgonInGameHandPreview.InstallIntoLiveGameOnly(scene);
+                // The actual game must auto-load the connected hand when
+                // BedSleepVisualComposite initializes; never rely on the
+                // old editor Preview menu or a separate QA scene.
                 var connected = scene.GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .Single(x => x.gameObject.name ==
-                        "ROKAS_ConnectedHand_QA_PlayOnly");
+                        "ROKAS_ConnectedHand_GameSkin");
+                Assert.That(scene.GetComponentsInChildren<Transform>(true)
+                    .Any(x=>x.name=="ROKAS_Argon_25Bone_Runtime_Integrated"),
+                    Is.True,"Actual game is required to instantiate connected Argon rig");
                 Assert.That(connected.sharedMesh.bindposes.Length, Is.EqualTo(25));
                 Assert.That(connected.bones.Length, Is.EqualTo(25));
                 Assert.That(connected.sharedMaterial, Is.Not.Null);
