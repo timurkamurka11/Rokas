@@ -293,6 +293,13 @@ namespace Rokas.BedSleep.V10Release
             CyclePhysicalOledScreen();
         }
 
+        public void HoverPhysicalOled(Vector2 uv,bool active)
+        {
+            if (_argonFullVisualActive && _argonHand != null &&
+                _argonHand.WatchScreen != null)
+                _argonHand.WatchScreen.SetHover(uv,active);
+        }
+
         public int GetPhysicalOledTab()
         {
             if (!_argonFullVisualActive || _argonHand == null ||
