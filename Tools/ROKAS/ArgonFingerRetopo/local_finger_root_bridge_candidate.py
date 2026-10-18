@@ -544,6 +544,41 @@ def main():
             key=lambda f:(f.calc_center_median()-root).length_squared,default=None)
         if target_face is None:
             fail("Cannot isolate original palm-only face for root insertion")
+        # From true Blender 3D high-angle edge atlas #39109362000,
+        # index native seam has a 172-degree inversion at
+        # (0.04767,-0.024071,-0.008975). The existing source face
+        # incision center is (0.05519,-0.02804,-0.00668): the defect
+        # lies almost precisely ON the rim of the 1.15x source hole.
+        # Move the FACE PATCH itself toward the high-angle original
+        # tissue, not the finger tube / weights or the generated quads.
+        # Do not move source FBX vertices; choose another authenticated
+        # ORIGINAL palm face near the reference incision instead.
+        if fingerNo==2:
+            native_face_before=target_face
+            native_center=native_face_before.calc_center_median()
+            native_normal=native_face_before.normal.normalized()
+            atlas_bad_edge=Vector((.04767,-.024071,-.008975))
+            if (atlas_bad_edge-native_center).length>diameter*.035:
+                fail("Known source index high-fold atlas no longer registered")
+            desired=native_center.lerp(atlas_bad_edge,.36)
+            candidates=[face for face in eligible
+                        if face.is_valid
+                        and face.normal.dot(native_normal)>.60
+                        and (face.calc_center_median()-native_center).length
+                             <radius*.65]
+            if len(candidates)<2:
+                fail("No healthy native palm faces near index original crease")
+            candidate_face=min(candidates,key=lambda face:
+                (face.calc_center_median()-desired).length_squared)
+            target_face=candidate_face
+            report.setdefault("source_index_real_crease_recenter",[]).append({
+                "old_original_source_face_center":[float(c) for c in native_center],
+                "requested_blender_high_angle_edge":[float(c) for c in atlas_bad_edge],
+                "new_original_source_face_center":[float(c) for c in
+                    target_face.calc_center_median()],
+                "old_to_new_source_incison_face_distance":(
+                    target_face.calc_center_median()-native_center).length,
+                "native_eligible_face_count":len(candidates)})
         insertion=target_face.calc_center_median()
         surface_normal=target_face.normal.normalized()
         # Hole smaller than finger root cross section; creates a natural
