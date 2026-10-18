@@ -1,13 +1,7 @@
-name: ROKAS Bed Sleep V10 — Windows Playable Review Build
+# Manual opt-in only. Gameplay/assets are delivered as Unity source changes through PRs;
+# never generate a complete Windows executable on ordinary source updates.
+name: ROKAS Bed Sleep V10 — Windows Playable Review Build (Manual Only)
 on:
-  push:
-    branches: [codex/bedsleep-v10-release-stage]
-    paths:
-      - 'Assets/Rokas/Resources/BedSleep/V10ReleaseCandidate/**'
-      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepCinematic.cs'
-      - 'Assets/Rokas/Scripts/Presentation/RokasBedSleepProductionRigBridge.cs'
-      - 'Assets/Rokas/BedSleep/V10Release/Scripts/**'
-      - '.github/workflows/bedsleep-v10-windows-playable-build.yml'
   workflow_dispatch:
 permissions:
   contents: read
