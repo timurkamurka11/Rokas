@@ -29,10 +29,19 @@ if ($LASTEXITCODE -ne 0 -or -not $runsText) {
     throw 'Cannot list authenticated GitHub Actions runs.'
 }
 $runs = @($runsText | ConvertFrom-Json)
-$good = $runs | Where-Object {
+$good = $null
+foreach ($run in ($runs | Where-Object {
     $_.status -eq 'completed' -and $_.conclusion -eq 'success'
-} | Select-Object -First 1
-if (-not $good) { throw 'No successful candidate Unity QA run yet. Wait for GitHub Actions to finish.' }
+})) {
+    # Older green QA runs predate the downloadable FBX. Never accidentally
+    # report their success and then fail while guessing an artifact name.
+    $names = @(& gh api "repos/$repo/actions/runs/$($run.databaseId)/artifacts" --jq '.artifacts[].name')
+    if ($LASTEXITCODE -ne 0) { continue }
+    if ($names -contains $artifactName) { $good = $run; break }
+}
+if (-not $good) {
+    throw 'No successful Unity QA run with the actual hand FBX yet. Wait for the new GitHub Action run to succeed.'
+}
 $dir = Join-Path $env:TEMP ("ROKAS_ARGON_UNITY_QA_" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $dir -Force | Out-Null
 try {
