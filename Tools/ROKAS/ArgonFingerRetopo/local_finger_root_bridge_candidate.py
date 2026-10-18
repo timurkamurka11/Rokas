@@ -259,6 +259,12 @@ def main():
                     return u.co.lerp(v.co,q),u,v,q
             fail("Normalized epidermis arc outside real ring")
         best=None
+        # Targeted structural seam registration for original INDEX and
+        # LITTLE MCP webs. A shortest-distance-only cyclic correspondence
+        # can connect the correct 30 vertices with quad normals facing
+        # *against* the genuine source epidermis, causing triangular fins.
+        # Optimize discrete topology (phase/quad winding), not smoothing.
+        structural_candidates=[]
         for df in (1,-1):
             for dp in (1,-1):
                 for fi in range(N):
@@ -283,8 +289,76 @@ def main():
                         trial=(quality,fi,pj,df,dp)
                         if best is None or trial<best[0]:
                             best=(trial,aa,pp,af,pf,mean_square,largest)
+                        if finger_number in (2,5) and N==M==30:
+                            structural_candidates.append(
+                                (trial,aa,pp,af,pf,mean_square,largest))
         if best is None:
             fail("Genuine palm and finger contours cannot be oriented")
+        if finger_number in (2,5) and N==M==30:
+            # Retain a real topological reach envelope: no candidate may
+            # grow the original bridge gap over 135% of the *best* source
+            # cyclic registration. Within it, favor boundary face normal
+            # continuity on BOTH original source meshes, and reject
+            # warped/degenerate quad elements. No synthetic source normals.
+            reference_distance=best[0][0]
+            quality_trials=[]
+            for candidate in structural_candidates:
+                trial,aa,pp,af,pf,ms,lg=candidate
+                if trial[0]>reference_distance*1.35:
+                    continue
+                severe=0;over90=0;worst=0.;energy=0.;twists=0
+                source_normals_valid=True
+                for i in range(N):
+                    j=(i+1)%N
+                    root_edge=next((e for e in aa[i].link_edges
+                                    if aa[j] in e.verts and e.is_boundary),None)
+                    palm_edge=next((e for e in pp[i].link_edges
+                                    if pp[j] in e.verts and e.is_boundary),None)
+                    if root_edge is None or palm_edge is None:
+                        source_normals_valid=False;break
+                    u,v,w,z=(aa[i].co,aa[j].co,pp[j].co,pp[i].co)
+                    t1=(v-u).cross(w-u)
+                    t2=(w-u).cross(z-u)
+                    if t1.length<diameter*diameter*1e-8 or
+                       t2.length<diameter*diameter*1e-8:
+                        source_normals_valid=False;break
+                    t1.normalize();t2.normalize()
+                    quad_normal=t1+t2
+                    if quad_normal.length<1e-8:
+                        source_normals_valid=False;break
+                    quad_normal.normalize()
+                    trial_angles=[
+                        math.degrees(quad_normal.angle(
+                            root_edge.link_faces[0].normal)),
+                        math.degrees(quad_normal.angle(
+                            palm_edge.link_faces[0].normal)),
+                        math.degrees(t1.angle(t2))]
+                    worst=max(worst,*trial_angles)
+                    severe+=sum(vv>120 for vv in trial_angles)
+                    over90+=sum(vv>90 for vv in trial_angles)
+                    energy+=sum(max(0.,vv-75.)**2 for vv in trial_angles)
+                    twists+=trial_angles[-1]>110
+                if not source_normals_valid:
+                    continue
+                # Real native-face dihedral is the primary objective;
+                # the cyclic phase must still satisfy the 1.35x spatial
+                # correspondence envelope.
+                score=(severe,over90,round(energy,5),twists,trial[0])
+                quality_trials.append((score,candidate,worst))
+            if quality_trials:
+                best_score, best_candidate, worst_edge=min(
+                    quality_trials,key=lambda item:item[0])
+                best=best_candidate
+                report.setdefault("native_source_quad_phase_search",[]).append({
+                    "finger":finger_number,
+                    "evaluated_safe_original_phase_pairs":len(quality_trials),
+                    "selected_phase_indices":[best[0][1],best[0][2]],
+                    "selected_predicted_severe_boundary_angles":best_score[0],
+                    "selected_predicted_over90_boundary_angles":best_score[1],
+                    "selected_predicted_max_angle":worst_edge,
+                    "original_best_source_distance_cost":reference_distance,
+                    "new_selected_distance_cost":best[0][0],
+                    "source_real_uv_bone_preserved":True})
         (_,fi,pj,df,dp),a,p,frac_a,frac_p,bridge_square,bridge_max=best
         direction=dp
         if bridge_max>diameter*.085:
@@ -399,7 +473,7 @@ def main():
         # corresponding native rings by 30 quads, NOT radial wedges or
         # cylinder replacements. Keep the other four digits unchanged
         # until the single critical web passes real Blender and Unity.
-        if finger_number in (1,2,3):
+        if finger_number in (1,2,3,5):
             if N!=30 or M!=30:
                 fail("Original digit and shared palm contour must be 30x30")
             for i in range(N):
