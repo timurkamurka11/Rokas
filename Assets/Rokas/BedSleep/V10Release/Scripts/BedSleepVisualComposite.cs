@@ -16,6 +16,7 @@ namespace Rokas.BedSleep.V10Release
         private bool _argonFullVisualActive;
         private MeshRenderer _argonOledRenderer;
         private MeshCollider _argonOledCollider;
+        private Light _argonWarmKey, _argonSoftFill;
 
         public int renderWidth = 1920;
         public int renderHeight = 1080;
@@ -115,17 +116,74 @@ namespace Rokas.BedSleep.V10Release
             // The existing bed click is the only entry point. Replace the WHOLE
             // visual set with the authentic Argon hand, sleeve and premium watch,
             // not the old V10 watch with an Argon skin graft.
-            _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
-                ArmRig, Watch, Oled, _presentationCamera,
-                out _argonOledRenderer, out _argonOledCollider);
-
-            Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
+            Sfx = GetComponent<BedSleepSFXController>();
+            if (Sfx == null) Sfx = gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
+            _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
+                ArmRig, Watch, Oled, _presentationCamera, Sfx,
+                out _argonOledRenderer, out _argonOledCollider);
+            if (_argonFullVisualActive) ConfigureArgonGameLighting();
 
-            InputRouter = GetComponent<SmartwatchInputRouter>() ?? gameObject.AddComponent<SmartwatchInputRouter>();
+            InputRouter = GetComponent<SmartwatchInputRouter>();
+            if (InputRouter == null) InputRouter = gameObject.AddComponent<SmartwatchInputRouter>();
             InputRouter.ConfigureRouter(_presentationCamera,
                 _argonFullVisualActive ? _argonOledCollider : Watch.OledMeshCollider,
                 targetUiRect);
+            if (_argonFullVisualActive)
+            {
+                // Existing gameplay handlers retain the timer/save state.
+                // These extra listeners provide Foley only, never a second
+                // gameplay input/confirmation handler.
+                InputRouter.OnStepHalfHours += OnArgonCrownStep;
+                InputRouter.OnSetAbsoluteHalfHours += OnArgonCrownAbsolute;
+                InputRouter.OnConfirm += OnArgonWatchConfirm;
+            }
+        }
+
+        private void OnArgonCrownStep(int direction)
+        {
+            if (direction != 0) Sfx?.PlayCrownClick();
+        }
+        private void OnArgonCrownAbsolute(int selectedHalfHours)
+        {
+            Sfx?.PlayCrownClick(selectedHalfHours);
+        }
+        private void OnArgonWatchConfirm()
+        {
+            Sfx?.PlayConfirm();
+        }
+
+        private void ConfigureArgonGameLighting()
+        {
+            // The 3D hand is rendered on layer 30 in its own RT, while the
+            // BEDROOM backdrop remains the original 2D scene. Give that 3D
+            // skin a local night-room key/fill rather than the grey unlit look.
+            _argonWarmKey = CreateArgonLight(
+                "ROKAS_Argon_SoftWarmRoomKey", new Color(1f, .77f, .59f),
+                .96f, Quaternion.Euler(21f, -36f, 0f));
+            _argonSoftFill = CreateArgonLight(
+                "ROKAS_Argon_NightWindowFill", new Color(.64f, .76f, 1f),
+                .27f, Quaternion.Euler(-20f, 50f, 0f));
+        }
+
+        private Light CreateArgonLight(string name, Color tint,
+            float intensity, Quaternion cameraRelativeRotation)
+        {
+            Transform existing = _presentationCamera.transform.Find(name);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(name);
+            go.transform.SetParent(_presentationCamera.transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = cameraRelativeRotation;
+            Light light = go.GetComponent<Light>();
+            if (light == null) light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.color = tint;
+            light.intensity = intensity;
+            light.shadows = LightShadows.None;
+            light.cullingMask = 1 << 30;
+            light.renderMode = LightRenderMode.ForcePixel;
+            light.enabled = true;
+            return light;
         }
 
         private void LateUpdate()
@@ -372,6 +430,12 @@ namespace Rokas.BedSleep.V10Release
 
         private void OnDestroy()
         {
+            if (InputRouter != null)
+            {
+                InputRouter.OnStepHalfHours -= OnArgonCrownStep;
+                InputRouter.OnSetAbsoluteHalfHours -= OnArgonCrownAbsolute;
+                InputRouter.OnConfirm -= OnArgonWatchConfirm;
+            }
             if (CompositeRenderTexture != null)
             {
                 if (_presentationCamera != null) _presentationCamera.targetTexture = null;
