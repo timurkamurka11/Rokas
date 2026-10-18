@@ -469,6 +469,57 @@ namespace Rokas.BedSleep.Argon.Editor
         }
         [Test]
         [Timeout(120000)]
+        public void LocalHandCanPreviewInActualV10BedWithWatchSleeveAndOriginalBoneAnimation()
+        {
+            const string resource =
+                "BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate";
+            var prefab = Resources.Load<GameObject>(resource);
+            Assert.That(prefab, Is.Not.Null,
+                "Existing ROKAS game V10 Bed Sleep composite must remain available");
+            GameObject scene = null;
+            try
+            {
+                scene = UnityEngine.Object.Instantiate(prefab);
+                var composite = scene.GetComponents<MonoBehaviour>().FirstOrDefault(x =>
+                    x != null && x.GetType().FullName ==
+                    "Rokas.BedSleep.V10Release.BedSleepVisualComposite");
+                Assert.That(composite, Is.Not.Null);
+                var initialize = composite.GetType().GetMethod("InitializeComposite");
+                Assert.That(initialize, Is.Not.Null);
+                initialize.Invoke(composite, new object[]{null});
+                var before = scene.GetComponentsInChildren<MeshFilter>(true)
+                    .Count(x => x.sharedMesh != null);
+                Assert.That(before, Is.GreaterThanOrEqualTo(7),
+                    "V10 original physical watch must remain in game");
+                RokasArgonInGameHandPreview.InstallIntoLiveGameOnly(scene);
+                var connected = scene.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x => x.gameObject.name ==
+                        "ROKAS_ConnectedHand_QA_PlayOnly");
+                Assert.That(connected.sharedMesh.bindposes.Length, Is.EqualTo(25));
+                Assert.That(connected.bones.Length, Is.EqualTo(25));
+                Assert.That(connected.sharedMaterial, Is.Not.Null);
+                Assert.That(scene.GetComponentsInChildren<MeshFilter>(true)
+                    .Count(x => x.sharedMesh != null), Is.EqualTo(before),
+                    "Connected hand must not remove watch meshes");
+                var originalSleeve = scene.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x => x != connected && x.sharedMesh != null &&
+                                 x.sharedMesh.subMeshCount == 3);
+                Assert.That(originalSleeve.sharedMesh.GetTriangles(0).Length,
+                    Is.EqualTo(0), "Only original V10 hand skin must be hidden");
+                Assert.That(originalSleeve.sharedMesh.GetTriangles(1).Length,
+                    Is.GreaterThan(0), "Actual V10 sleeve retained");
+                Assert.That(originalSleeve.sharedMesh.GetTriangles(2).Length,
+                    Is.GreaterThan(0), "Actual V10 nails retained");
+            }
+            finally
+            {
+                if (scene != null)
+                    UnityEngine.Object.DestroyImmediate(scene);
+            }
+        }
+
+        [Test]
+        [Timeout(120000)]
         public void AllFiveAuthenticFingerJointsMustActuallyMoveTheirOwnSkin()
         {
             var generated = AssetDatabase.LoadAssetAtPath<GameObject>(CandidatePath);
