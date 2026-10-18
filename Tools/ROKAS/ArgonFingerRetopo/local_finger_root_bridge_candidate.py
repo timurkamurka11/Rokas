@@ -564,6 +564,56 @@ def main():
                      str((fingerNo,depth,len(frontier))))
             tiers.append(list(frontier))
             seen.update(frontier)
+        # SINGLE-FINGER CANDIDATE: remove only the original index-finger
+        # root collar belt, reattach the NEXT AUTHENTIC SOURCE 30-ring to
+        # the palm. The real source FBX is never written or replaced.
+        if fingerNo==2:
+            old_ring=set(ring)
+            second_ring=set(tiers[1])
+            first_strip={face for v in old_ring for face in v.link_faces
+                         if face.is_valid}
+            if not(30<=len(first_strip)<=65) or any(
+                    not set(face.verts).issubset(old_ring|second_ring)
+                    for face in first_strip):
+                fail("Index source-first skin strip touches protected phalanges")
+            first_edges={e for v in old_ring for e in v.link_edges
+                         if e.is_boundary and all(w in old_ring for w in e.verts)}
+            if len(first_edges)!=30 or any(
+                    not any(face in first_strip for face in edge.link_faces)
+                    for edge in first_edges):
+                fail("Index first source strip is not 30-edge original collar")
+            bmesh.ops.delete(bm,geom=list(first_strip),context='FACES')
+            bmesh.ops.delete(bm,geom=list(old_ring),context='VERTS')
+            bm.verts.index_update()
+            bm.normal_update()
+            components[fingerNo].difference_update(old_ring)
+            digit_island.difference_update(old_ring)
+            new_edges={e for v in second_ring for e in v.link_edges
+                       if e.is_valid and e.is_boundary and
+                       all(w in second_ring for w in e.verts)}
+            if len(new_edges)!=30:
+                fail("Index collar excision did not expose true 30 vertex rim")
+            ring=boundary_of_new_pocket(new_edges)
+            if set(ring)!=second_ring:
+                fail("Original source index second rim changed topology")
+            third_ring=set(tiers[2])
+            fourth_ring={w for v in third_ring for e in v.link_edges
+                         for w in e.verts if w in digit_island
+                         and w not in (second_ring|third_ring)}
+            if not 15<=len(fourth_ring)<=80:
+                fail("Index original deeper source skin not a ring")
+            tiers=[list(ring),list(third_ring),list(fourth_ring)]
+            root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+            radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
+            nearest=min(intact_palm,key=lambda v:(v.co-root).length_squared)
+            source_dist=(nearest.co-root).length
+            if source_dist>diameter*.049:
+                fail("Rebuilt true index root detached from palm source")
+            report.setdefault("source_finger_root_belt_removal",[]).append({
+                "finger":fingerNo,"deleted_source_strip_faces":len(first_strip),
+                "previous_original_root_vertices":len(old_ring),
+                "next_original_root_vertices":len(ring),
+                "next_three_native_tier_sizes":[len(x) for x in tiers]})
         root_pull=nearest.co-root
         root_pull_size=root_pull.length
         if root_pull_size>diameter*.049:
