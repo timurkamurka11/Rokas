@@ -76,6 +76,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                 RenderAt(0f, true);
                 return;
             }
+            if (Application.isPlaying)
+                Debug.LogWarning("[ROKAS WATCH] GPU watch faces unavailable. " +
+                    "Check all five Resources/BedSleep/WatchFaces PNGs and the " +
+                    "ROKAS/BedSleep/GpuWatchFaceComposite shader. " +
+                    "Using throttled legacy OLED.");
             if (OledRenderTexture == null)
             {
                 OledRenderTexture = new RenderTexture(DisplaySize,DisplaySize,0,RenderTextureFormat.ARGB32)
@@ -254,11 +259,14 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (OledDynamicTexture == null) return;
             displaySteps = Mathf.Lerp(displaySteps,SelectedHalfHours,
                 force ? .45f : .20f);
-            // 512px CPU raster in Unity EditMode was unnecessarily redrawn
-            // for EVERY 24fps frame, including redundant ConfigureTime and
-            // confirmation calls. Limit animated updates to ~10Hz, but always
-            // update immediately when a duration/menu state changes.
-            if (!force && !requiresRedraw && animatedSeconds-lastDrawn < .10f)
+            // Legacy fallback stays responsive to clock/menu changes.
+            // If GPU resources are missing during gameplay, throttle its
+            // million-pixel CPU path to 2Hz to prevent a continuous hitch
+            // while preserving the watch visuals and interactions.
+            // EditMode reference tests retain the original 10Hz cadence.
+            float fallbackInterval = Application.isPlaying ? .50f : .10f;
+            if (!force && !requiresRedraw &&
+                animatedSeconds-lastDrawn < fallbackInterval)
                 return;
             lastDrawn = animatedSeconds;
             requiresRedraw = false;
