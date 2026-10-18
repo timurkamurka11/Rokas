@@ -12,7 +12,7 @@ namespace Rokas.BedSleep.Argon.Candidate
     /// The existing ArgonWatchControls reflection contract is preserved.
     /// </summary>
     public enum ArgonRussianWatchScreen {
-        Dial, Presets, Overview, Relaxation, Confirmed, FallingAsleep, Cancelled
+        Dial, Presets, Overview, Relaxation, Confirmed, FallingAsleep, Cancelled, Alarm, Phases
     }
 
     [DisallowMultipleComponent]
@@ -144,6 +144,22 @@ namespace Rokas.BedSleep.Argon.Candidate
             RenderAt(animatedSeconds,true);
         }
 
+        public void ShowAlarm()
+        {
+            Screen=ArgonRussianWatchScreen.Alarm;
+            RefreshTextSummary();
+            requiresRedraw=true;
+            RenderAt(animatedSeconds,true);
+        }
+
+        public void ShowPhases()
+        {
+            Screen=ArgonRussianWatchScreen.Phases;
+            RefreshTextSummary();
+            requiresRedraw=true;
+            RenderAt(animatedSeconds,true);
+        }
+
         public void ShowDial()
         {
             Screen=ArgonRussianWatchScreen.Dial;
@@ -185,7 +201,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                   Screen == ArgonRussianWatchScreen.Overview
                     ? "ПЛАН СНА" :
                   Screen == ArgonRussianWatchScreen.Relaxation
-                    ? "РЕЖИМ ОТДЫХА" : "ПОДТВЕРДИТЬ");
+                    ? "РЕЖИМ ОТДЫХА" :
+                  Screen == ArgonRussianWatchScreen.Alarm
+                    ? "БУДИЛЬНИК" :
+                  Screen == ArgonRussianWatchScreen.Phases
+                    ? "ФАЗЫ СНА" : "ПОДТВЕРДИТЬ");
         }
 
         public string DurationText =>
@@ -230,6 +250,10 @@ namespace Rokas.BedSleep.Argon.Candidate
                     PaintOverview(); break;
                 case ArgonRussianWatchScreen.Relaxation:
                     PaintRelaxation(); break;
+                case ArgonRussianWatchScreen.Alarm:
+                    PaintAlarm(); break;
+                case ArgonRussianWatchScreen.Phases:
+                    PaintPhases(); break;
                 case ArgonRussianWatchScreen.Confirmed:
                     PaintConfirmation(); break;
                 case ArgonRussianWatchScreen.FallingAsleep:
@@ -408,6 +432,38 @@ namespace Rokas.BedSleep.Argon.Candidate
                 new Color32(182,215,255,255));
             CenterText("ДАЛЕЕ",256,43,2,white);
         }
+        private void PaintAlarm()
+        {
+            CenterText("БУДИЛЬНИК",256,452,3,white);
+            CenterText("СЕЙЧАС",256,372,2,muted);
+            CenterText(CurrentHour.ToString("D2")+":"+
+                CurrentMinute.ToString("D2"),256,310,6,white);
+            CenterText("ПРОСНУТЬСЯ",256,232,3,blue);
+            CenterText(WakeText,256,163,8,white);
+            CenterText("СОН "+DurationText,256,95,3,muted);
+            CenterText("ПОДТВЕРДИТЬ",256,39,2,white);
+        }
+
+        private void PaintPhases()
+        {
+            CenterText("ФАЗЫ СНА",256,450,3,white);
+            // Indicative four-stage timeline, not real sleep tracking.
+            for(int i=0;i<4;i++)
+            {
+                float centerX=92f+i*107f;
+                float wave=.5f+.5f*Mathf.Sin(animatedSeconds*.9f+i*.9f);
+                float high=58f+i%2*31f+wave*10f;
+                for(int j=0;j<5;j++)
+                    Disc(centerX+j*8f,258f+high*.35f,4f,
+                        Color32.Lerp(blue,violet,i/3f),.5f+j*.08f);
+            }
+            CenterText("ЦИКЛЫ СНА",256,350,3,muted);
+            CenterText("ЛЁГКИЙ / ГЛУБОКИЙ",256,226,2,white);
+            CenterText("БЫСТРЫЙ СОН",256,176,2,muted);
+            CenterText("ДЛИТЕЛЬНОСТЬ",256,120,2,muted);
+            CenterText(DurationText,256,62,6,white);
+        }
+
         private void PaintRelaxation()
         {
             CenterText("РЕЖИМ ОТДЫХА",256,455,2,white);
