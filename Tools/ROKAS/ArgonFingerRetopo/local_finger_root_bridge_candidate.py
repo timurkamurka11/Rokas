@@ -1223,6 +1223,110 @@ def main():
     print("ROKAS ACTUAL FACE CREASE OPTIMIZER",
           json.dumps(report["targeted_actual_face_hinge_optimization"]),
           flush=True)
+    # SOURCE-SKIN GUIDED MCP FIN RETRACTION — verified user close-up:
+    # small bright square tabs sticking out between proximal phalanges,
+    # while the remaining continuous hand is visually satisfactory.
+    # Prior 3D source-preserving graft left a few narrow, sharply folded
+    # candidate-only interdigit quads at original finger/palm sockets.
+    # Do NOT change native finger source vertices, original palm/cuff,
+    # two solved 3D epidermis slits, original UV, skin weights or bones.
+    # Pull ONLY bad generated bridge corners toward the closest TRUE
+    # original palm face, with a bounded sheet-to-sheet tissue transition.
+    # No cosmetic normal smoothing, alpha hiding, material change or
+    # opaque patch that conceals the problem.
+    from mathutils.bvhtree import BVHTree
+    source_palm_faces=[face for face in bm.faces
+        if face.is_valid and face not in generated_faces
+        and all(v in source_original_palm for v in face.verts)]
+    source_palm_verts=list({
+        vert for face in source_palm_faces for vert in face.verts})
+    palm_index={v:i for i,v in enumerate(source_palm_verts)}
+    original_skin_bvh=BVHTree.FromPolygons(
+        [tuple(v.co) for v in source_palm_verts],
+        [tuple(palm_index[v] for v in face.verts)
+         for face in source_palm_faces],all_triangles=False)
+    source_guide={}
+    fin_corner_set=set()
+    for edge in hinge_edges:
+        region=next((face_origin.get(face,"") for face in edge.link_faces
+                     if face_origin.get(face,"").startswith("finger_")), "")
+        if region not in ("finger_2","finger_3","finger_4","finger_5"):
+            continue
+        angle=math.degrees(edge.link_faces[0].normal.angle(
+            edge.link_faces[1].normal))
+        if angle<108.:
+            continue
+        for face in edge.link_faces:
+            for vertex in face.verts:
+                if vertex in trial_skin_vertices and vertex.is_valid:
+                    fin_corner_set.add(vertex)
+    for vertex in fin_corner_set:
+        hit=original_skin_bvh.find_nearest(vertex.co)
+        if hit is None or hit[0] is None:
+            continue
+        point,normal,face_id,dist=hit
+        if dist<=diameter*.0004 or dist>diameter*.024:
+            continue
+        move=point-vertex.co
+        if move.length>diameter*.010:
+            move.normalize()
+            move*=diameter*.010
+        source_guide[vertex]=move
+    original_fin_positions={v:v.co.copy() for v in source_guide}
+    fin_faces={face for v in source_guide for face in v.link_faces}
+    fin_affected_edges={edge for face in fin_faces for edge in face.edges
+                        if edge.is_manifold and len(edge.link_faces)==2}
+    def fin_score():
+        # Judge actual geometry; source epidermis is the target
+        # envelope, not an artistic screenshot-derived fake surface.
+        folds=[]
+        for edge in fin_affected_edges:
+            f1,f2=edge.link_faces
+            folds.append(math.degrees(f1.normal.angle(f2.normal)))
+        if any((not face.is_valid or face.calc_area()<diameter**2*1e-12)
+               for face in fin_faces):
+            return None
+        return (sum(x>120 for x in folds),
+                sum(x>90 for x in folds),
+                sum(max(0.,x-72)**2 for x in folds))
+    baseline_fin_score=fin_score()
+    if baseline_fin_score is None:fail("Source MCP fin patch was already degenerate")
+    decisions=[]
+    for fraction in (0.,.25,.50,.75):
+        for vertex,displacement in source_guide.items():
+            vertex.co=original_fin_positions[vertex]+displacement*fraction
+        for face in fin_faces:face.normal_update()
+        value=fin_score()
+        if value is not None:
+            # Prefer a visibly retracted root only if it doesn't
+            # increase the number of real severe local face bends.
+            decisions.append((value[0],value[1],
+                value[2]+(1.-fraction)*12.,-fraction,fraction))
+    if not decisions:fail("No fold-safe source guided fin retraction exists")
+    winner=min(decisions)
+    fraction=winner[-1]
+    for vertex,displacement in source_guide.items():
+        vertex.co=original_fin_positions[vertex]+displacement*fraction
+    bm.normal_update()
+    fin_result=fin_score()
+    if (fin_result is None or
+        fin_result[0]>baseline_fin_score[0] or
+        fin_result[1]>baseline_fin_score[1]):
+        fail("Physical native palm guide worsened actual finger-web creases")
+    report["source_guided_mcp_fin_retraction"]={
+        "authentic_palm_reference_faces":len(source_palm_faces),
+        "candidate_only_vertices_near_severe_finger_fins":len(fin_corner_set),
+        "vertices_with_real_source_palm_contact":len(source_guide),
+        "chosen_anatomical_retraction_fraction":fraction,
+        "maximum_source_skin_retraction":max(
+            (disp.length*fraction for disp in source_guide.values()),default=0.),
+        "before_local_over120":baseline_fin_score[0],
+        "after_local_over120":fin_result[0],
+        "before_local_over90":baseline_fin_score[1],
+        "after_local_over90":fin_result[1],
+        "original_palm_slits_unchanged":True,
+        "source_fbx_untouched":True,
+        "preserve_original_25_bones_and_uv":True}
     bm.normal_update()
     bm.verts.index_update()
     bm.verts.ensure_lookup_table()
