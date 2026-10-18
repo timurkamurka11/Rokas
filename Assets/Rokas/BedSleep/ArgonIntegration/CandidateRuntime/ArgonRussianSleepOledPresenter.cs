@@ -504,13 +504,18 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             // At 720p the watch is ~70 pixels high. One huge value with
             // clear sleep/wake context beats six overlapping micro-labels.
-            CenterText("СЕЙЧАС "+CurrentHour.ToString("D2")+":"+
-                CurrentMinute.ToString("D2"),256,462,2,muted);
+            // Two-tier typography for watch focus: large numeric readouts
+            // and separated labels instead of thin 6px combined strings.
+            // No overlapping atlas bounds inside the sapphire safe region.
+            CenterText("СЕЙЧАС",256,462,2,muted);
+            CenterText(CurrentHour.ToString("D2")+":"+
+                CurrentMinute.ToString("D2"),256,407,5,white);
             CenterText("СОН",256,307,3,muted);
             CenterText(DurationText,256,240,9,white);
-            CenterText("ПОДЪЁМ "+WakeText,256,135,3,
+            CenterText("ПОДЪЁМ",256,147,3,muted);
+            CenterText(WakeText,256,95,6,
                 new Color32(182,215,255,255));
-            CenterText("ПОДТВЕРДИТЬ",256,52,2,white);
+            CenterText("ПОДТВЕРДИТЬ",256,40,2,white);
         }
         private void PaintPresets()
         {
