@@ -909,7 +909,7 @@ def main():
     baseline_over120=sum(angle>120 for angle in initial_angles.values())
     baseline_over90=sum(angle>90 for angle in initial_angles.values())
     base_vertex_positions={v:v.co.copy() for v in trial_skin_vertices}
-    max_crease_shift=diameter*.012
+    max_crease_shift=diameter*.006
     # Restrict the evaluation to edges touched by faces influenced by v;
     # otherwise optimization over all source polygons would overwhelm
     # the actual 5 MCP/cap problem with unrelated fixed source UV edges.
@@ -930,11 +930,11 @@ def main():
             if angle>120:
                 total+=(angle-120.)**2*2.
         shift=(vertex.co-base_vertex_positions[vertex]).length
-        total+=110.*(shift/max_crease_shift)**2
+        total+=180.*(shift/max_crease_shift)**2
         return total
     moved_crease_vertices=set()
     changed_crease_vertices=0
-    for pass_no in range(6):
+    for pass_no in range(4):
         improvements=0
         for vertex in sorted(trial_skin_vertices,key=lambda v:id(v)):
             if not neighborhoods[vertex]:continue
@@ -950,7 +950,7 @@ def main():
             start_cost=local_hinge_energy(vertex)
             best_cost=start_cost
             best=current
-            for alpha in (.18,.42,.76):
+            for alpha in (.14,.32,.58):
                 proposal=current.lerp(mean,alpha)
                 movement=proposal-base_vertex_positions[vertex]
                 if movement.length>max_crease_shift:
