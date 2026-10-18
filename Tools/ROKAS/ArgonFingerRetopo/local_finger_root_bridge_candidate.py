@@ -227,7 +227,7 @@ def main():
             if corner.vert==b and corner.link_loop_next.vert==a:return -1
         fail("Cannot orient genuine finger/palm rim")
 
-    def join_root_to_hole(finger, hole, source_tiers):
+    def join_root_to_hole(finger, hole):
         N=len(finger);M=len(hole)
         if N<8 or M<8:fail("Graft rim too small")
         # Exactly one loop winding choice is valid for each source shell.
@@ -453,86 +453,6 @@ def main():
                           for n120,n90,v,w in outcomes],
             "selected_curvature_blend":winner[3],
             "selected_angles_over_120":winner[0]})
-        # LOCAL SOURCE EPIDERMIS ROOT SHAPING, not another global smooth.
-        # Technical Unity captures show a hard rim around authentic MCP
-        # rings: the old fillet smooths only GENERATED bridge vertices,
-        # leaving a geometric discontinuity exactly where the original
-        # finger tube enters the new palm socket. Allow paired SOURCE
-        # proximal 30-vertex tiers to settle toward the actual original
-        # 30-vertex palm contour, fading by distance into the finger.
-        # Keep the original FBX and distal phalanges completely untouched.
-        if len(source_tiers)!=3 or len(source_tiers[0])!=N:
-            fail("Per-digit original MCP 3-tier anatomical source lost")
-        if len({v for tier in source_tiers for v in tier})!=sum(
-                len(tier) for tier in source_tiers):
-            fail("Authentic source root tiers overlap")
-        first=list(a)
-        if set(first)!=set(source_tiers[0]):
-            fail("Original source ring topology changed unexpectedly")
-        root_to_palm={}
-        for i,vertex in enumerate(a):
-            target,_,_,_=sample_arc(p,frac_p,frac_a[i])
-            displacement=target-vertex.co
-            limit=diameter*.011
-            if displacement.length>limit:
-                displacement=displacement.normalized()*limit
-            root_to_palm[vertex]=displacement
-        moving={}
-        for tier,decay in zip(source_tiers,(1.,.48,.12)):
-            for vertex in tier:
-                nearest_root=min(first,key=lambda v:
-                                 (v.co-vertex.co).length_squared)
-                moving[vertex]=root_to_palm[nearest_root]*decay
-        for i,vertex in enumerate(near_finger):
-            moving[vertex]=root_to_palm[a[i]]*.24
-        original_root_positions={v:v.co.copy() for v in moving}
-        root_faces={f for v in moving for f in v.link_faces if f.is_valid}
-        bm.normal_update()
-        original_root_normals={f:f.normal.copy() for f in root_faces}
-        angle_edges={e for face in root_faces for e in face.edges
-                     if e.is_manifold and len(e.link_faces)==2 and
-                     any(f in root_faces for f in e.link_faces)}
-        root_options=[]
-        for alpha in (0.,.18,.36,.55):
-            for vertex,d in moving.items():
-                vertex.co=original_root_positions[vertex]+d*alpha
-            bm.normal_update()
-            invalid_faces=sum(1 for face in root_faces
-                              if face.normal.length_squared<1e-12 or
-                              face.calc_area()<=1e-11 or
-                              face.normal.dot(original_root_normals[face])<.0)
-            if invalid_faces:
-                root_options.append((10**6,10**6,10**12,alpha,
-                                     invalid_faces))
-                continue
-            angles=[math.degrees(e.link_faces[0].normal.angle(
-                    e.link_faces[1].normal)) for e in angle_edges]
-            n120=sum(degrees>120 for degrees in angles)
-            n90=sum(degrees>90 for degrees in angles)
-            penalty=sum(max(0.,degrees-75.)**2
-                        for degrees in angles)/max(1,len(angles))
-            root_options.append((n120,n90,penalty,alpha,0))
-        selected=min(root_options)
-        for vertex,d in moving.items():
-            vertex.co=original_root_positions[vertex]+d*selected[3]
-        bm.normal_update()
-        source_proximal_verts=set().union(*map(set,source_tiers))
-        report.setdefault("source_proximal_contour_fit",[]).append({
-            "source_tiers":[len(tier) for tier in source_tiers],
-            "tissue_source_vertices_moved":sum(
-                1 for v in moving if v in source_proximal_verts and
-                (v.co-original_root_positions[v]).length>1e-8),
-            "candidate_results":[{"alpha":a,"over120":c120,
-                                  "over90":c90,"fold_energy":energy,
-                                  "invalid_faces":invalid}
-                                 for c120,c90,energy,a,invalid in root_options],
-            "selected_alpha":selected[3],
-            "selected_over120":selected[0],
-            "max_real_skin_shift":max(
-                ((v.co-original_root_positions[v]).length
-                  for v in moving if v in source_proximal_verts),default=0.)})
-        if selected[4]:
-            fail("No safe original proximal finger fit")
         return built,direction
 
     for fingerNo,ring in enumerate(per[1:],1):
@@ -564,60 +484,6 @@ def main():
                      str((fingerNo,depth,len(frontier))))
             tiers.append(list(frontier))
             seen.update(frontier)
-        # SINGLE-FINGER CANDIDATE: remove only the original index-finger
-        # root collar belt, reattach the NEXT AUTHENTIC SOURCE 30-ring to
-        # the palm. The real source FBX is never written or replaced.
-        if fingerNo==2:
-            old_ring=set(ring)
-            second_ring=set(tiers[1])
-            first_strip={face for v in old_ring for face in v.link_faces
-                         if face.is_valid}
-            if not(30<=len(first_strip)<=65) or any(
-                    not set(face.verts).issubset(old_ring|second_ring)
-                    for face in first_strip):
-                fail("Index source-first skin strip touches protected phalanges")
-            first_edges={e for v in old_ring for e in v.link_edges
-                         if e.is_boundary and all(w in old_ring for w in e.verts)}
-            if len(first_edges)!=30 or any(
-                    not any(face in first_strip for face in edge.link_faces)
-                    for edge in first_edges):
-                fail("Index first source strip is not 30-edge original collar")
-            # The 'FACES' delete mode can already remove orphaned rim
-            # vertices. Never submit invalidated BMVert references again.
-            bmesh.ops.delete(bm,geom=list(first_strip),context='FACES')
-            still_valid=[v for v in old_ring if v.is_valid]
-            if still_valid:
-                bmesh.ops.delete(bm,geom=still_valid,context='VERTS')
-            bm.verts.index_update()
-            bm.normal_update()
-            components[fingerNo].difference_update(old_ring)
-            digit_island.difference_update(old_ring)
-            new_edges={e for v in second_ring for e in v.link_edges
-                       if e.is_valid and e.is_boundary and
-                       all(w in second_ring for w in e.verts)}
-            if len(new_edges)!=30:
-                fail("Index collar excision did not expose true 30 vertex rim")
-            ring=boundary_of_new_pocket(new_edges)
-            if set(ring)!=second_ring:
-                fail("Original source index second rim changed topology")
-            third_ring=set(tiers[2])
-            fourth_ring={w for v in third_ring for e in v.link_edges
-                         for w in e.verts if w in digit_island
-                         and w not in (second_ring|third_ring)}
-            if not 15<=len(fourth_ring)<=80:
-                fail("Index original deeper source skin not a ring")
-            tiers=[list(ring),list(third_ring),list(fourth_ring)]
-            root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
-            radius=sorted((v.co-root).length for v in ring)[len(ring)//2]
-            nearest=min(intact_palm,key=lambda v:(v.co-root).length_squared)
-            source_dist=(nearest.co-root).length
-            if source_dist>diameter*.049:
-                fail("Rebuilt true index root detached from palm source")
-            report.setdefault("source_finger_root_belt_removal",[]).append({
-                "finger":fingerNo,"deleted_source_strip_faces":len(first_strip),
-                "previous_original_root_vertices":len(old_ring),
-                "next_original_root_vertices":len(ring),
-                "next_three_native_tier_sizes":[len(x) for x in tiers]})
         root_pull=nearest.co-root
         root_pull_size=root_pull.length
         if root_pull_size>diameter*.049:
@@ -744,7 +610,7 @@ def main():
             if len(pocket)!=len(ring):
                 fail("Adaptive authentic palm socket density incorrect: "+
                      str((len(pocket),len(ring),required)))
-        faces,wind=join_root_to_hole(ring,pocket,tiers)
+        faces,wind=join_root_to_hole(ring,pocket)
         addedFaces.extend(faces)
         face_origin.update({f:'finger_'+str(fingerNo) for f in faces})
         source_contact_vertices.update(ring)
