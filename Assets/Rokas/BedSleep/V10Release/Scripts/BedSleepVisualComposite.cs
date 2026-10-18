@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Rokas.BedSleep.V10Release
@@ -150,9 +151,19 @@ namespace Rokas.BedSleep.V10Release
 
         private void OnArgonPhysicalOledTap(Vector2 uv)
         {
-            if (!_argonFullVisualActive || _argonHand == null) return;
+            NavigatePhysicalOledTap(uv,
+                InputRouter.SetHalfHoursFromPhysicalOled,
+                InputRouter.ConfirmFromPhysicalOled);
+        }
+
+        // Called both by the existing native BedSleep UI and (when enabled)
+        // the dedicated 3D pointer. Single gameplay owner for each event.
+        public bool NavigatePhysicalOledTap(Vector2 uv,
+            Action<int> applyHalfHours, Action confirm)
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return false;
             var oled = _argonHand.WatchScreen;
-            if (oled == null) return;
+            if (oled == null) return false;
             _argonHand.NotifyWatchInteraction();
             switch (oled.Screen)
             {
@@ -165,39 +176,39 @@ namespace Rokas.BedSleep.V10Release
                         (.675f - uv.y) / .117f), 0, 4);
                     int[] presets = { 2, 4, 8, 12, 16 };
                     int choice = presets[index];
-                    InputRouter.SetHalfHoursFromPhysicalOled(choice);
+                    applyHalfHours?.Invoke(choice);
                     oled.SelectPreset(choice);
-                    return;
+                    return true;
                 }
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
                     if (uv.y > .76f) oled.ShowDial();
-                    else if (uv.y < .20f) InputRouter.ConfirmFromPhysicalOled();
+                    else if (uv.y < .20f) confirm?.Invoke();
                     else oled.ShowRelaxation();
-                    return;
+                    return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
                     if (uv.y > .76f) oled.ShowOverview();
-                    else if (uv.y < .20f) InputRouter.ConfirmFromPhysicalOled();
+                    else if (uv.y < .20f) confirm?.Invoke();
                     else oled.ShowDial();
-                    return;
+                    return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Confirmed:
                     oled.SetFallingAsleep();
-                    return;
+                    return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Cancelled:
                     oled.ShowDial();
-                    return;
+                    return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.FallingAsleep:
-                    return;
+                    return true;
             }
             // DIAL: top text opens physical watch presets; large central
             // sleep-time number opens plan screens; bottom confirms in
             // existing game flow; touch ring sets a real duration.
-            if (uv.y > .76f) { oled.ShowPresets(); return; }
-            if (uv.y < .20f) { InputRouter.ConfirmFromPhysicalOled(); return; }
+            if (uv.y > .76f) { oled.ShowPresets(); return true; }
+            if (uv.y < .20f) { confirm?.Invoke(); return true; }
             Vector2 delta = uv - new Vector2(.5f, .5f);
             if (Mathf.Abs(delta.x) < .21f && Mathf.Abs(delta.y) < .19f)
             {
                 oled.ShowOverview();
-                return;
+                return true;
             }
             float radius = delta.magnitude;
             if (radius >= .26f && radius <= .50f)
@@ -206,15 +217,21 @@ namespace Rokas.BedSleep.V10Release
                 float progress = Mathf.InverseLerp(-.73f * Mathf.PI,
                     .73f * Mathf.PI, angle);
                 int steps = Mathf.RoundToInt(Mathf.Lerp(2f, 24f, progress));
-                InputRouter.SetHalfHoursFromPhysicalOled(steps);
+                applyHalfHours?.Invoke(steps);
             }
+            return true;
         }
 
         private void OnArgonCycleOledScreen()
         {
-            if (!_argonFullVisualActive || _argonHand == null) return;
+            CyclePhysicalOledScreen();
+        }
+
+        public bool CyclePhysicalOledScreen()
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return false;
             var oled = _argonHand.WatchScreen;
-            if (oled == null) return;
+            if (oled == null) return false;
             _argonHand.NotifyWatchInteraction();
             switch (oled.Screen)
             {
@@ -225,6 +242,7 @@ namespace Rokas.BedSleep.V10Release
                 default:
                     oled.ShowDial(); break;
             }
+            return true;
         }
 
         private void OnArgonCrownStep(int direction)
@@ -310,6 +328,28 @@ namespace Rokas.BedSleep.V10Release
             float minX = float.MaxValue, minY = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue;
             Rect refBounds = referenceRect != null ? referenceRect.rect : new Rect(0f, 0f, renderWidth, renderHeight);
+
+            if (_argonFullVisualActive && _argonOledRenderer != null)
+            {
+                // Project the actual imported face bounds: its origin and
+                // dimensions differ from the hard-coded old V10 quad.
+                Bounds realFace = _argonOledRenderer.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 point = new Vector3(
+                        (i & 1) == 0 ? realFace.min.x : realFace.max.x,
+                        (i & 2) == 0 ? realFace.min.y : realFace.max.y,
+                        (i & 4) == 0 ? realFace.min.z : realFace.max.z);
+                    Vector3 vp = _presentationCamera.WorldToViewportPoint(point);
+                    if (vp.z <= 0f) continue;
+                    float x = refBounds.xMin + vp.x * refBounds.width;
+                    float y = refBounds.yMin + vp.y * refBounds.height;
+                    minX = Mathf.Min(minX, x); minY = Mathf.Min(minY, y);
+                    maxX = Mathf.Max(maxX, x); maxY = Mathf.Max(maxY, y);
+                }
+                if (maxX > minX && maxY > minY)
+                    return Rect.MinMaxRect(minX, minY, maxX, maxY);
+            }
 
             for (int i = 0; i < 4; i++)
             {
