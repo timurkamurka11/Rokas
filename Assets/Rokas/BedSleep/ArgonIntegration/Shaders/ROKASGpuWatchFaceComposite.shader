@@ -152,11 +152,11 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
                     // as live biometric samples.
                     float wave=frac(tick*.0625);
                     float x=lerp(.10,.91,wave);
-                    float line=(1.-smoothstep(.001,.006,abs(uv.x-x)))*
+                    float phaseSweepLine=(1.-smoothstep(.001,.006,abs(uv.x-x)))*
                         smoothstep(.37,.44,uv.y)*
                         (1.-smoothstep(.73,.79,uv.y));
                     glow+=lerp(cyan,violet,.5+.5*sin(tick))*
-                        (line*.48+
+                        (phaseSweepLine*.48+
                         halo(uv,float2(x,.55+.04*sin(tick*1.7)),.015)*.5);
                     if(_PhaseMode>.5)
                         glow+=cyan*halo(uv,float2(.54,.56),.043)*.12;
