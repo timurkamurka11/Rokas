@@ -289,6 +289,7 @@ namespace Rokas.Presentation
                 !productionRig.Ready) return;
             if (productionRig.CycleWatchFace())
             {
+                productionRig.PressWatchHardware();
                 hasExplicitWatchTab = true;
                 if (pngTabs != null)
                     pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
@@ -303,6 +304,7 @@ namespace Rokas.Presentation
                 !productionRig.Ready) return;
             if (productionRig.SelectWatchTab(tab))
             {
+                productionRig.PressWatchHardware();
                 hasExplicitWatchTab = true;
                 if (pngTabs != null) pngTabs.SetSelected(tab, false);
                 PlayTick();
