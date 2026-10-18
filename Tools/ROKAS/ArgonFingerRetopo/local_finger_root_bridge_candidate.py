@@ -869,7 +869,24 @@ def main():
                      if e.is_manifold and len(e.link_faces)==2}
         angles=[math.degrees(e.link_faces[0].normal.angle(
                 e.link_faces[1].normal)) for e in local_edges]
+        # Measure the complete affected original + generated epidermis,
+        # not just the new strip. A removed 180-degree dome can otherwise
+        # hide severe bends in the adjacent untouched source polygons.
+        actual_native_edges={
+            edge for vert in skin_before for edge in vert.link_edges
+            if edge.is_manifold and len(edge.link_faces)==2}
+        actual_native_angles=[
+            math.degrees(edge.link_faces[0].normal.angle(
+                edge.link_faces[1].normal)) for edge in actual_native_edges
+            if edge.link_faces[0].normal.length_squared>1e-12
+            and edge.link_faces[1].normal.length_squared>1e-12]
+        actual_native_severe=sum(angle>120 for angle in actual_native_angles)
         capped.append({
+            "source_native_affected_edges":len(actual_native_angles),
+            "source_native_affected_over120":actual_native_severe,
+            "source_native_affected_over90":sum(
+                angle>90 for angle in actual_native_angles),
+            "source_native_max_angle":max(actual_native_angles,default=0),
             "method":"source_constrained_two_lip_skin_cross_section",
             "source_open_ring":30,
             "native_opposed_skin_pairs":14,
