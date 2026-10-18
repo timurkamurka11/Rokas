@@ -47,6 +47,7 @@ namespace Rokas.Presentation
         private Button alarmButton, confirmButton, focusButton, exitBedButton;
         private RokasBedWatchPngTabs pngTabs;
         private bool watchFocus;
+        private bool hasExplicitWatchTab;
         private float focusBlend;
         private RectTransform watchHitRect;
         private AudioSource audio;
@@ -185,7 +186,10 @@ namespace Rokas.Presentation
                     watchHitRect.sizeDelta = new Vector2(
                         hit.width / uv.width, hit.height / uv.height);
                 }
-                if (pngTabs != null && pngTabs.Available)
+                // When the watch opens, the dial is visible but NO top tab
+                // is selected: all authored PNGs must remain amber until
+                // an explicit mouse/keyboard choice.
+                if (pngTabs != null && pngTabs.Available && hasExplicitWatchTab)
                     pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
                         false);
             }
@@ -202,7 +206,7 @@ namespace Rokas.Presentation
                 if (Keyboard.current.enterKey.wasPressedThisFrame ||
                     Keyboard.current.spaceKey.wasPressedThisFrame) Confirm();
                 if (Keyboard.current.tabKey.wasPressedThisFrame)
-                    productionRig?.CycleWatchFace();
+                    CycleWatchTab();
                 if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectWatchTab(0);
                 if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectWatchTab(1);
                 if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectWatchTab(2);
@@ -220,7 +224,7 @@ namespace Rokas.Presentation
             if (Input.GetKeyDown(KeyCode.Return) ||
                 Input.GetKeyDown(KeyCode.Space)) Confirm();
             if (Input.GetKeyDown(KeyCode.Tab))
-                productionRig?.CycleWatchFace();
+                CycleWatchTab();
             if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWatchTab(0);
             if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWatchTab(1);
             if (Input.GetKeyDown(KeyCode.Alpha3)) SelectWatchTab(2);
@@ -266,12 +270,27 @@ namespace Rokas.Presentation
             PlayTick();
         }
 
+        private void CycleWatchTab()
+        {
+            if (state != State.TimeSelection || productionRig == null ||
+                !productionRig.Ready) return;
+            if (productionRig.CycleWatchFace())
+            {
+                hasExplicitWatchTab = true;
+                if (pngTabs != null)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
+                PlayTick();
+            }
+        }
+
         private void SelectWatchTab(int tab)
         {
             if (state != State.TimeSelection || productionRig == null ||
                 !productionRig.Ready) return;
             if (productionRig.SelectWatchTab(tab))
             {
+                hasExplicitWatchTab = true;
                 if (pngTabs != null) pngTabs.SetSelected(tab, false);
                 PlayTick();
             }
@@ -302,8 +321,16 @@ namespace Rokas.Presentation
         {
             if (state != State.TimeSelection ||
                 productionRig == null || !productionRig.Ready) return false;
-            return productionRig.NavigateWatchFace(
+            bool handled = productionRig.NavigateWatchFace(
                 uv, SetDurationFromPhysicalWatch, Confirm);
+            if (handled)
+            {
+                hasExplicitWatchTab = true;
+                if (pngTabs != null)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
+            }
+            return handled;
         }
 
         public void Confirm()
@@ -531,6 +558,8 @@ namespace Rokas.Presentation
         {
             state = State.WatchRaise;
             watchFocus = false;
+            hasExplicitWatchTab = false;
+            if (pngTabs != null) pngTabs.SetSelected(-1, false);
             focusBlend = 0f;
             if (real3DArmPov != null) real3DArmPov.uvRect =
                 new Rect(0f, 0f, 1f, 1f);
