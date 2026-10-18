@@ -24,6 +24,11 @@ namespace Rokas.BedSleep.Argon.Candidate
         public const int DisplaySize = 1024;
         private const int OutputScale = DisplaySize / Size;
         public RenderTexture OledRenderTexture { get; private set; }
+        public bool GpuFacesActive { get; private set; }
+        private Texture2D[] authoredFaces;
+        private Texture2D gpuOverlay;
+        private Color32[] liveOverlayPixels;
+        private Material gpuComposite;
         public Texture2D OledDynamicTexture { get; private set; }
         public int SelectedHalfHours { get; private set; } = 14;
         public bool IsConfirmed { get; private set; }
@@ -63,6 +68,14 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         public void InitializeOled()
         {
+            // Production game: use the five real, preauthored GPU textures
+            // and only regenerate tiny live time glyphs when data changes.
+            // EditMode/editor without supplied assets keeps legacy fallback.
+            if (TryInitializeGpuFaces())
+            {
+                RenderAt(0f, true);
+                return;
+            }
             if (OledRenderTexture == null)
             {
                 OledRenderTexture = new RenderTexture(DisplaySize,DisplaySize,0,RenderTextureFormat.ARGB32)
@@ -233,6 +246,11 @@ namespace Rokas.BedSleep.Argon.Candidate
         public void RenderAt(float timeSeconds, bool force = false)
         {
             animatedSeconds = Mathf.Max(0f,timeSeconds);
+            if (GpuFacesActive)
+            {
+                if (force || requiresRedraw) PaintGpuFace();
+                return;
+            }
             if (OledDynamicTexture == null) return;
             displaySteps = Mathf.Lerp(displaySteps,SelectedHalfHours,
                 force ? .45f : .20f);
@@ -615,6 +633,140 @@ namespace Rokas.BedSleep.Argon.Candidate
                 Text = text, X = centerX, Y = y, Scale = f, Color = color
             });
         }
+        private static readonly string[] GpuNames = {
+            "screen_timer", "screen_wheel", "screen_alarm",
+            "screen_quiet", "screen_phases"
+        };
+
+        private bool TryInitializeGpuFaces()
+        {
+            if (GpuFacesActive) return true;
+            if (!Application.isPlaying) return false;
+            if (OledDynamicTexture != null || OledRenderTexture != null)
+                return false;
+            Shader shader=Shader.Find("ROKAS/BedSleep/GpuWatchFaceComposite");
+            if(shader==null || !shader.isSupported) return false;
+            Texture2D[] faces=new Texture2D[GpuNames.Length];
+            for(int i=0;i<faces.Length;i++)
+            {
+                faces[i]=Resources.Load<Texture2D>(
+                    "BedSleep/WatchFaces/"+GpuNames[i]);
+                if(faces[i]==null || faces[i].width<512 ||
+                    faces[i].height<512)
+                    return false;
+            }
+            authoredFaces=faces;
+            gpuComposite=new Material(shader);
+            gpuComposite.name="ROKAS_Argon_Watch_GPU_5Screens";
+            OledRenderTexture=new RenderTexture(DisplaySize,DisplaySize,
+                0,RenderTextureFormat.ARGB32)
+            {
+                name="RT_ROKAS_Argon_Authored_GPU_1024",
+                antiAliasing=1,
+                filterMode=FilterMode.Bilinear
+            };
+            OledRenderTexture.Create();
+            gpuOverlay=new Texture2D(DisplaySize,DisplaySize,
+                TextureFormat.RGBA32,false)
+            {
+                name="ROKAS_Argon_DynamicTime_OnChangeOnly",
+                wrapMode=TextureWrapMode.Clamp,
+                filterMode=FilterMode.Bilinear
+            };
+            liveOverlayPixels=new Color32[DisplaySize*DisplaySize];
+            GpuFacesActive=true;
+            requiresRedraw=true;
+            Debug.Log("[ROKAS WATCH] GPU-authored five faces enabled. " +
+                "No CPU sky/upscale loops in TimeSelection.");
+            return true;
+        }
+
+        private int ActiveGpuFace()
+        {
+            switch(Screen)
+            {
+                case ArgonRussianWatchScreen.Presets: return 1;
+                case ArgonRussianWatchScreen.Alarm:
+                case ArgonRussianWatchScreen.Overview: return 2;
+                case ArgonRussianWatchScreen.Relaxation:
+                case ArgonRussianWatchScreen.FallingAsleep: return 3;
+                case ArgonRussianWatchScreen.Phases: return 4;
+                default: return 0;
+            }
+        }
+
+        private void PaintGpuFace()
+        {
+            if (!GpuFacesActive) return;
+            requiresRedraw=false;
+            TotalFaceDraws++;
+            // No CPU 1024x1024 background, clouds, smoothstep, or
+            // per-frame GPU upload. Only new clock/menu events touch
+            // this small writable overlay, then GPU composites PNG art.
+            Array.Clear(liveOverlayPixels,0,liveOverlayPixels.Length);
+            Color32 light = new Color32(226,240,255,255);
+            Color32 cyan = new Color32(131,220,255,255);
+            switch(ActiveGpuFace())
+            {
+                case 0:
+                    LiveText(DurationText,256,265,3.15f,225,light);
+                    LiveText(WakeText,306,343,1.15f,80,cyan);
+                    LiveText(CurrentHour.ToString("D2")+":"+
+                        CurrentMinute.ToString("D2"),74,409,1.55f,92,cyan);
+                    int hours=SelectedHalfHours/2;
+                    string detail=hours.ToString()+"Ч "+
+                        ((SelectedHalfHours%2)==0?"00":"30")+" МИН";
+                    LiveText(detail,435,410,.88f,126,cyan);
+                    break;
+                case 1:
+                    LiveText(DurationText,256,265,3.25f,230,light);
+                    break;
+                case 2:
+                    LiveText(WakeText,257,269,3.1f,198,light);
+                    break;
+                case 3:
+                    // Authored quiet-mode illustration; no timer sample
+                    // is painted or uploaded until state changes.
+                    break;
+                case 4:
+                    // Phase chart is a planning illustration. The game
+                    // must not claim real biometric measurements.
+                    break;
+            }
+            if(Screen==ArgonRussianWatchScreen.Confirmed)
+                LiveText("УСТАНОВЛЕНО",256,271,1.4f,275,cyan);
+            if(Screen==ArgonRussianWatchScreen.Cancelled)
+                LiveText("ОТМЕНЕНО",256,269,1.6f,285,cyan);
+            gpuOverlay.SetPixels32(liveOverlayPixels);
+            gpuOverlay.Apply(false,false);
+            gpuComposite.SetTexture("_LiveText",gpuOverlay);
+            Graphics.Blit(authoredFaces[ActiveGpuFace()],
+                OledRenderTexture,gpuComposite);
+        }
+
+        private void LiveText(string value,int x,int yTop,
+            float sourceScale,float maxWidth,Color32 tint)
+        {
+            if(string.IsNullOrEmpty(value)) return;
+            float f=sourceScale*OutputScale;
+            float measured=ArgonRussianFontAtlas.MeasureWidth(value,f);
+            float max= maxWidth*OutputScale;
+            if(measured>max && measured>0f) f*=max/measured;
+            ArgonRussianFontAtlas.Draw(value,x*OutputScale,
+                (Size-yTop)*OutputScale,f,tint,MixLivePixel);
+        }
+
+        private void MixLivePixel(int x,int y,Color32 color,float coverage)
+        {
+            if(x<0||y<0||x>=DisplaySize||y>=DisplaySize)return;
+            int index=y*DisplaySize+x;
+            byte alpha=(byte)Mathf.Clamp(
+                Mathf.RoundToInt(coverage*255f),0,255);
+            if(alpha>liveOverlayPixels[index].a)
+                liveOverlayPixels[index]=new Color32(
+                    color.r,color.g,color.b,alpha);
+        }
+
         private void PaintHighResolutionOled()
         {
             // Do not scale the small 512px bitmap typography. This stage
@@ -669,6 +821,16 @@ namespace Rokas.BedSleep.Argon.Candidate
         }
         private void OnDestroy()
         {
+            if(gpuComposite!=null)
+            {
+                if(Application.isPlaying)Destroy(gpuComposite);
+                else DestroyImmediate(gpuComposite);
+            }
+            if(gpuOverlay!=null)
+            {
+                if(Application.isPlaying)Destroy(gpuOverlay);
+                else DestroyImmediate(gpuOverlay);
+            }
             if(OledRenderTexture!=null)
             {
                 OledRenderTexture.Release();
