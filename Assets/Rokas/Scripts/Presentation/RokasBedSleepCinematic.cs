@@ -44,7 +44,10 @@ namespace Rokas.Presentation
         private Image curtain, topEyelid, bottomEyelid;
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
-        private Button alarmButton, confirmButton;
+        private Button alarmButton, confirmButton, focusButton, exitBedButton;
+        private RokasBedWatchPngTabs pngTabs;
+        private bool watchFocus;
+        private float focusBlend;
         private RectTransform watchHitRect;
         private AudioSource audio;
         private AudioClip tickClip;
@@ -151,20 +154,40 @@ namespace Rokas.Presentation
             // Unlike the 2D photographic fallback, the production hand
             // has a living idle and a physically animated crown.
             productionRig?.TickIdle(dt);
-            // The physical face moves a few pixels with breathing/fingers.
-            // TimeSelection previously captured a click zone ONCE while the
-            // raise animation was still settling, leaving UI taps offset
-            // from the new close-up OLED. Track its actual 3D projection.
-            if (productionRig != null && productionRig.Ready && watchHitRect != null)
+            if (productionRig != null && productionRig.Ready &&
+                watchHitRect != null)
             {
+                // Close look is a 2D crop of the ORIGINAL hand render texture:
+                // the 3D model, gameplay camera, lights and motion are untouched.
+                focusBlend = Mathf.MoveTowards(focusBlend,
+                    watchFocus ? 1f : 0f,
+                    Mathf.Max(0f, Time.unscaledDeltaTime) / .38f);
                 Rect hit = productionRig.GetProjectedWatchInputRect();
                 if (hit.width > 1f && hit.height > 1f)
                 {
-                    watchHitRect.anchoredPosition =
-                        new Vector2(hit.x, -hit.y);
-                    watchHitRect.sizeDelta =
-                        new Vector2(hit.width, hit.height);
+                    float zoom = Mathf.Lerp(1f, 2.12f,
+                        focusBlend * focusBlend * (3f - 2f * focusBlend));
+                    float size = 1f / zoom;
+                    float xCenter = (hit.x + hit.width * .5f) / 1920f;
+                    float yCenter = 1f -
+                        (hit.y + hit.height * .5f) / 1080f;
+                    Rect uv = new Rect(
+                        Mathf.Clamp(xCenter - size * .5f, 0f, 1f - size),
+                        Mathf.Clamp(yCenter - size * .5f, 0f, 1f - size),
+                        size, size);
+                    if (real3DArmPov != null) real3DArmPov.uvRect = uv;
+                    // The click target follows the actual enlarged OLED,
+                    // so screen navigation remains accurate in focus mode.
+                    float x = (hit.x / 1920f - uv.x) / uv.width * 1920f;
+                    float y = (1f - (1f - hit.y / 1080f - uv.y) /
+                        uv.height) * 1080f;
+                    watchHitRect.anchoredPosition = new Vector2(x, -y);
+                    watchHitRect.sizeDelta = new Vector2(
+                        hit.width / uv.width, hit.height / uv.height);
                 }
+                if (pngTabs != null && pngTabs.Available)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
             }
             float scroll = 0f;
 #if ENABLE_INPUT_SYSTEM
@@ -180,6 +203,13 @@ namespace Rokas.Presentation
                     Keyboard.current.spaceKey.wasPressedThisFrame) Confirm();
                 if (Keyboard.current.tabKey.wasPressedThisFrame)
                     productionRig?.CycleWatchFace();
+                if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectWatchTab(0);
+                if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectWatchTab(1);
+                if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectWatchTab(2);
+                if (Keyboard.current.digit4Key.wasPressedThisFrame) SelectWatchTab(3);
+                if (Keyboard.current.digit5Key.wasPressedThisFrame) SelectWatchTab(4);
+                if (Keyboard.current.eKey.wasPressedThisFrame) Confirm();
+                if (Keyboard.current.escapeKey.wasPressedThisFrame) { Cancel(); return; }
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
             scroll = Input.mouseScrollDelta.y;
@@ -191,6 +221,13 @@ namespace Rokas.Presentation
                 Input.GetKeyDown(KeyCode.Space)) Confirm();
             if (Input.GetKeyDown(KeyCode.Tab))
                 productionRig?.CycleWatchFace();
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWatchTab(0);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWatchTab(1);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) SelectWatchTab(2);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) SelectWatchTab(3);
+            if (Input.GetKeyDown(KeyCode.Alpha5)) SelectWatchTab(4);
+            if (Input.GetKeyDown(KeyCode.E)) Confirm();
+            if (Input.GetKeyDown(KeyCode.Escape)) { Cancel(); return; }
 #endif
             if (scroll > .01f) Step(1);
             else if (scroll < -.01f) Step(-1);
@@ -225,6 +262,30 @@ namespace Rokas.Presentation
             {
                 productionRig.SetDuration(selectedHours);
                 productionRig.CrownStep(steps);
+            }
+            PlayTick();
+        }
+
+        private void SelectWatchTab(int tab)
+        {
+            if (state != State.TimeSelection || productionRig == null ||
+                !productionRig.Ready) return;
+            if (productionRig.SelectWatchTab(tab))
+            {
+                if (pngTabs != null) pngTabs.SetSelected(tab, false);
+                PlayTick();
+            }
+        }
+
+        private void ToggleWatchFocus()
+        {
+            if (state != State.TimeSelection || real3DArmPov == null) return;
+            watchFocus = !watchFocus;
+            if (focusButton != null)
+            {
+                var label = focusButton.GetComponentInChildren<Text>();
+                if (label != null) label.text = watchFocus
+                    ? "ВЕРНУТЬСЯ К РУКЕ" : "НАСТРОИТЬ ВРЕМЯ";
             }
             PlayTick();
         }
@@ -387,19 +448,28 @@ namespace Rokas.Presentation
                 if (plus != null) plus.gameObject.SetActive(false);
                 if (confirm != null) confirm.gameObject.SetActive(false);
             }
-            currentClock = ui.Label(watchControls.transform,
-                "CurrentGameTime", "", 739, 908, 460, 39,
-                18, UiKit.Muted, false, TextAnchor.MiddleCenter);
-            alarmHint = ui.Label(watchControls.transform,
-                "WatchControlsHint",
-                productionRig != null && productionRig.Ready
-                    ? "ТАП ПО ЧАСАМ: МЕНЮ  •  TAB: ЭКРАНЫ  •  КОЛЁСИКО: 30 МИН"
-                    : "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
-                630, 958, 700, 33, 17, UiKit.Muted,
-                false, TextAnchor.MiddleCenter);
+            // New authentic PNG tabs replace the verbose under-hand
+            // labels. Fallback photo path retains the original text.
+            if (productionRig == null || !productionRig.Ready)
+            {
+                currentClock = ui.Label(watchControls.transform,
+                    "CurrentGameTime", "", 739, 908, 460, 39,
+                    18, UiKit.Muted, false, TextAnchor.MiddleCenter);
+                alarmHint = ui.Label(watchControls.transform,
+                    "WatchControlsHint", "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
+                    630, 958, 700, 33, 17, UiKit.Muted,
+                    false, TextAnchor.MiddleCenter);
+            }
+            else
+            {
+                focusButton = ui.Button(watchControls.transform,
+                    "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
+                    741, 953, 438, 69, ToggleWatchFocus, true);
+                focusButton.gameObject.AddComponent<RokasBedWatchFocusButton>();
+            }
 
-            ui.Button(root, "ReturnFromBed", "ВСТАТЬ / ESC",
-                1549, 65, 274, 59, Cancel);
+            exitBedButton = ui.Button(root, "ReturnFromBed",
+                "ВСТАТЬ / ESC", 1549, 65, 274, 59, Cancel);
 
             topEyelid = ui.Box(root, "BedSleepUpperEyelid",
                 0, 0, 1920, 0, Color.black);
@@ -417,6 +487,15 @@ namespace Rokas.Presentation
             audio.spatialBlend = 0f;
             audio.volume = .30f;
             tickClip = BuildTick();
+            if (productionRig != null && productionRig.Ready)
+            {
+                pngTabs = watchControls.gameObject.AddComponent<RokasBedWatchPngTabs>();
+                pngTabs.Initialize(watchControls.transform,
+                    SelectWatchTab, Confirm, Cancel, audio, tickClip);
+                // Never display a second EXIT button over the authored PNG.
+                if (pngTabs.Available && exitBedButton != null)
+                    exitBedButton.gameObject.SetActive(false);
+            }
             RefreshWatch();
         }
 
@@ -451,6 +530,10 @@ namespace Rokas.Presentation
         private IEnumerator RaiseWatch()
         {
             state = State.WatchRaise;
+            watchFocus = false;
+            focusBlend = 0f;
+            if (real3DArmPov != null) real3DArmPov.uvRect =
+                new Rect(0f, 0f, 1f, 1f);
             productionRig?.ChangeState("WatchRaise");
             yield return FadeControls(alarmControls, alarmControls.alpha, 0f,
                 .25f);
@@ -672,7 +755,10 @@ namespace Rokas.Presentation
                 UnityEngine.Object.Destroy(tickClip);
             tickClip = null;
             alarmControls = watchControls = null;
-            alarmButton = confirmButton = null;
+            alarmButton = confirmButton = focusButton = exitBedButton = null;
+            pngTabs = null;
+            watchFocus = false;
+            focusBlend = 0f;
             armPov = lyingPov = blurredPov = null;
             onFinished?.Invoke();
         }
