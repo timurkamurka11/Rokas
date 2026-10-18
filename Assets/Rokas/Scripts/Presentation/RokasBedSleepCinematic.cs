@@ -586,6 +586,27 @@ namespace Rokas.Presentation
 
         private IEnumerator FinishSleep()
         {
+            // Opt-in cycle planning snaps the sleep session to a nearby
+            // 90-minute multiple BEFORE committing the canonical ROKAS time.
+            // Phase display itself remains a planning estimate, NOT sensor data.
+            if(productionRig != null && productionRig.Ready &&
+               productionRig.GetWatchSetting(3)==1)
+            {
+                float aligned=QuantizeDuration(
+                    Mathf.Round(selectedHours/1.5f)*1.5f);
+                if(!Mathf.Approximately(aligned,selectedHours))
+                {
+                    selectedHours=aligned;
+                    RefreshWatch();
+                    productionRig.SetDuration(selectedHours);
+                }
+            }
+            int quietMask=productionRig != null && productionRig.Ready ?
+                productionRig.GetWatchSetting(2) : 7;
+            int alarmMode=productionRig != null && productionRig.Ready ?
+                productionRig.GetWatchSetting(0) : 1;
+            bool alarmEnabled=productionRig == null ||
+                !productionRig.Ready || productionRig.GetWatchSetting(1)==1;
             state = State.ConfirmSelection;
             productionRig?.Confirm();
             productionRig?.ChangeState("ConfirmSelection");
@@ -605,7 +626,10 @@ namespace Rokas.Presentation
             yield return FadeEyelids(0f, .45f, .46f);
             yield return Wait(.16f);
             yield return FadeEyelids(.45f, .20f, .38f);
-            yield return FadeEyelids(.20f, 1f, 1.12f);
+            // The "Soft Fade" quiet-watch option actually changes the
+            // sleep transition without modifying the room/hand composition.
+            yield return FadeEyelids(.20f, 1f,
+                (quietMask & 2) != 0 ? 1.42f : 1.12f);
             state = State.SleepCommitted;
             // ROKAS remains the ONLY owner of the durable save.
             // V3's optional event must not create a parallel save path.
@@ -625,7 +649,18 @@ namespace Rokas.Presentation
                 save?.Invoke();
             }
             yield return Wait(.70f);
+            // Wake mode is deliberately audible and distinct: Soft is
+            // shorter/quieter, Standard balanced, Strong pronounced. No
+            // second clock/save system is created by this option.
+            AudioClip wakeCue=null;
+            if(alarmEnabled && audio!=null)
+            {
+                wakeCue=BuildWakeCue(alarmMode);
+                audio.PlayOneShot(wakeCue,
+                    alarmMode==0 ? .22f : (alarmMode==1 ? .40f : .57f));
+            }
             yield return FadeEyelids(1f, 0f, 1.0f);
+            if(wakeCue!=null) UnityEngine.Object.Destroy(wakeCue);
             Complete();
         }
 
@@ -739,6 +774,28 @@ namespace Rokas.Presentation
             if (audio == null || tickClip == null) return;
             audio.pitch = UnityEngine.Random.Range(.96f, 1.07f);
             audio.PlayOneShot(tickClip, .23f);
+        }
+
+        private static AudioClip BuildWakeCue(int alarmMode)
+        {
+            const int rate=24000;
+            int mode=Mathf.Clamp(alarmMode,0,2);
+            int count=Mathf.RoundToInt(rate*(mode==2 ? .34f : .22f));
+            float[] samples=new float[count];
+            float hz=mode==0 ? 660f : (mode==1 ? 860f : 1090f);
+            for(int i=0;i<count;i++)
+            {
+                float t=(float)i/rate;
+                float envelope=Mathf.Sin(Mathf.PI*i/(count-1));
+                float doublePulse=mode==2 ?
+                    (.5f+.5f*Mathf.Cos(t*2f*Mathf.PI*9f)) : 1f;
+                samples[i]=Mathf.Sin(2f*Mathf.PI*
+                    (hz*t+95f*t*t))*envelope*doublePulse*.16f;
+            }
+            var cue=AudioClip.Create("ROKAS_Wake_Mode_"+mode,
+                count,1,rate,false);
+            cue.SetData(samples,0);
+            return cue;
         }
 
         private static AudioClip BuildTick()
