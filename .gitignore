@@ -27,3 +27,7 @@ Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json
 Assets/Rokas/Resources/HubDialogue/HubDialogueConfig.user.json.meta
 Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity
 Assets/Rokas/EditorWorkshops/HubDialogueWorkshop.unity.meta
+
+# CI-generated Argon local Unity anatomical inspection only.
+# Never accidentally push derived skinned mesh through the user's BAT.
+Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/
