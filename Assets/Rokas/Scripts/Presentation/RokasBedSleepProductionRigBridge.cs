@@ -24,6 +24,8 @@ namespace Rokas.Presentation
         private readonly Type stateType;
         private bool released;
         private readonly bool usesV10;
+        private MethodInfo cachedHoverMethod;
+        private object[] cachedHoverArgs;
 
         public RenderTexture Texture => target;
         public bool Ready => !released && controller != null && camera != null;
@@ -349,10 +351,16 @@ namespace Rokas.Presentation
         public void SetWatchHover(Vector2 uv,bool active)
         {
             if(!Ready || !usesV10 || controller==null) return;
-            var method=controller.GetType().GetMethod("HoverPhysicalOled",
-                BindingFlags.Public | BindingFlags.Instance);
-            if(method!=null)
-                method.Invoke(controller,new object[]{uv,active});
+            if(cachedHoverMethod==null)
+                cachedHoverMethod=controller.GetType().GetMethod(
+                    "HoverPhysicalOled",
+                    BindingFlags.Public | BindingFlags.Instance);
+            if(cachedHoverMethod==null)return;
+            if(cachedHoverArgs==null)
+                cachedHoverArgs=new object[2];
+            cachedHoverArgs[0]=uv;
+            cachedHoverArgs[1]=active;
+            cachedHoverMethod.Invoke(controller,cachedHoverArgs);
         }
 
         public int GetWatchSetting(int key)
