@@ -312,6 +312,23 @@ namespace Rokas.BedSleep.V10Release
             }
         }
 
+        // Read-only settings exposure to the existing ROKAS sleep owner.
+        // 0 alarm mode, 1 alarm on, 2 quiet bitmask, 3 cycle planning.
+        public int GetPhysicalWatchSetting(int key)
+        {
+            if (!_argonFullVisualActive || _argonHand == null ||
+                _argonHand.WatchScreen == null) return key == 2 ? 7 : (key == 1 ? 1 : 0);
+            var oled=_argonHand.WatchScreen;
+            switch(key)
+            {
+                case 0: return oled.AlarmMode;
+                case 1: return oled.AlarmEnabled ? 1 : 0;
+                case 2: return oled.QuietMask;
+                case 3: return oled.PhasePlanningEnabled ? 1 : 0;
+                default: return 0;
+            }
+        }
+
         public bool SelectPhysicalOledTab(int tab)
         {
             if (!_argonFullVisualActive || _argonHand == null) return false;
