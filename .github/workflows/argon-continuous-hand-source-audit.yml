@@ -1,0 +1,51 @@
+name: ROKAS Argon - Continuous Hand Source Audit
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths:
+      - '.github/workflows/argon-continuous-hand-source-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare-hand-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect authenticated original Argon and V10 release sources without distributing assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/argon_audit/argon /tmp/argon_audit/v10
+          gh release download bedsleep-argon-assets -R "${GITHUB_REPOSITORY}" -p '*.zip' -D /tmp/argon_audit/argon --clobber
+          gh release download bedsleep-v10-assets -R "${GITHUB_REPOSITORY}" -p '*.zip' -D /tmp/argon_audit/v10 --clobber
+          python3 - <<'PY'
+          import json,zipfile,hashlib,pathlib
+          groups={}
+          for label,root in (("original_argon",pathlib.Path("/tmp/argon_audit/argon")),("refit_v10",pathlib.Path("/tmp/argon_audit/v10"))):
+              groups[label]=[]
+              for z in sorted(root.glob("*.zip")):
+                  with zipfile.ZipFile(z) as f:
+                      models=[]
+                      allfiles=f.infolist()
+                      for x in allfiles:
+                          if x.filename.lower().endswith((".fbx",".glb",".gltf",".blend",".obj")):
+                              models.append({"name":x.filename,"bytes":x.file_size,"crc":hex(x.CRC)})
+                      groups[label].append({"archive":z.name,"files":len(allfiles),"model_candidates":models,"model_count":len(models),"manifest_sample":[x.filename for x in allfiles[:80]]})
+          src=pathlib.Path("Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx")
+          groups["current_source"]={"name":src.name,"bytes":src.stat().st_size,
+                                    "sha256":hashlib.sha256(src.read_bytes()).hexdigest()}
+          out=pathlib.Path("Artifacts/ArgonContinuousHandSourceAudit")
+          out.mkdir(parents=True,exist_ok=True)
+          (out/"source_model_manifest.json").write_text(json.dumps(groups,indent=2,ensure_ascii=False))
+          print("ROKAS AUTHENTIC RELEASE MODEL AUDIT "+json.dumps(groups))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Continuous-Hand-Source-Audit-JSON-ONLY
+          path: Artifacts/ArgonContinuousHandSourceAudit/source_model_manifest.json
+          retention-days: 7
+          if-no-files-found: error
