@@ -274,12 +274,21 @@ namespace Rokas.Presentation
             if (!Ready || direction == 0) return;
             if (usesV10)
             {
+                // Step the real watch crown only. The hidden V10 hand's
+                // PlayCrownFeedback forced pose-state changes which caused
+                // visible Argon wrist/camera jitter on every wheel notch.
                 Call(watch, "StepCrown", direction);
-                Call(armAnimation, "PlayCrownFeedback", direction);
+                Call(controller, "StepPhysicalCrown", direction);
                 return;
             }
             Call(watch, "RotateCrownForStep", direction);
             Call(armAnimation, "TriggerCrownTickImpulse", direction);
+        }
+
+        public void PressWatchHardware()
+        {
+            if (Ready && usesV10)
+                Call(controller, "PressPhysicalWatchButton");
         }
 
         public void TickIdle(float deltaTime)
