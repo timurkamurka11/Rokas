@@ -678,71 +678,45 @@ def main():
         # the last 30-face apex fan to 15 faces without touching the
         # nonplanar authentic rim, source bone weights or 2048 PBR maps.
         rings=[]
-        ring_sources=[]
-        outer=[]
-        for v in pocket:
-            x=bm.verts.new(center+(v.co-center)*.58+
-                skin_normal*min(diameter*.0015,radius*.08))
-            for group,weight in v[deform_source].items():
-                if weight>1e-7:x[deform_source][group]=weight
-            outer.append(x);cap_created.append(x)
-        rings.append(outer)
-        ring_sources.append([[(v,1.0)] for v in pocket])
-        inner=[]
-        inner_sources=[]
-        for k in range(n//2):
-            a=pocket[2*k];b=pocket[(2*k+1)%n]
-            x=bm.verts.new(center+((a.co+b.co)*.5-center)*.22+
-                skin_normal*min(diameter*.003,radius*.08))
-            weights=defaultdict(float)
-            for source in (a,b):
-                for group,weight in source[deform_source].items():
-                    weights[group]+=.5*weight
-            total=sum(weights.values())
-            if not .99<=total<=1.01:
-                fail("Authentic 15-sided palm cap weights not normalized")
-            for group,weight in weights.items():
-                if weight>1e-7:x[deform_source][group]=weight/total
-            inner.append(x);cap_created.append(x)
-            inner_sources.append([(a,.5),(b,.5)])
-        rings.append(inner)
-        ring_sources.append(inner_sources)
+        for alpha,height in ((.58,.0015),(.22,.003)):
+            layer=[]
+            for v in pocket:
+                t=bm.verts.new(center+(v.co-center)*alpha+
+                               skin_normal*min(diameter*height,radius*.08))
+                for group,weight in v[deform_source].items():
+                    if weight>1e-7:t[deform_source][group]=weight
+                layer.append(t)
+                cap_created.append(t)
+            rings.append(layer)
         apex=bm.verts.new(center+skin_normal*min(diameter*.004,radius*.12))
         for group,weight in avg_weights.items():
             if weight>1e-7:apex[deform_source][group]=weight/all_weight
         cap_created.append(apex)
         cap_uv={}
         if uv is not None:
-            for layer,sources,alpha in zip(rings,ring_sources,(.58,.22)):
-                for vertex,contributions in zip(layer,sources):
-                    source_uv=sum((nearest_source_uv(v)*weight
-                                  for v,weight in contributions),Vector((0,0)))
-                    cap_uv[vertex]=centroid_uv.lerp(source_uv,alpha)
+            for layer,alpha in zip(rings,(.58,.22)):
+                for vertex,src in zip(layer,pocket):
+                    cap_uv[vertex]=centroid_uv.lerp(nearest_source_uv(src),alpha)
             cap_uv[apex]=centroid_uv
         cap_faces=[]
-        def add_cap_face(vertices):
-            try:face=bm.faces.new(vertices)
-            except ValueError:
-                fail("Duplicate face while remeshing original palm disk")
-            face.material_index=0;face.smooth=True
-            addedFaces.append(face);cap_faces.append(face)
-            face_origin[face]='palm_cap'
-            if uv is not None:
-                for c in face.loops:
-                    v=c.vert
-                    c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
         for i in range(n):
             j=(i+1)%n
-            add_cap_face([pocket[i],pocket[j],outer[j],outer[i]])
-        # First half-sector triangle, then full-sector quad. Every
-        # annulus edge is shared twice, source UVs stay continuous.
-        for i in range(n//2):
-            a=2*i;b=(a+1)%n;c=(a+2)%n;j=(i+1)%(n//2)
-            add_cap_face([outer[a],outer[b],inner[i]])
-            add_cap_face([outer[b],outer[c],inner[j],inner[i]])
-        for i in range(n//2):
-            j=(i+1)%(n//2)
-            add_cap_face([inner[i],inner[j],apex])
+            for quad in ([pocket[i],pocket[j],rings[0][j],rings[0][i]],
+                         [rings[0][i],rings[0][j],rings[1][j],rings[1][i]],
+                         [rings[1][i],rings[1][j],apex]):
+                try:
+                    face=bm.faces.new(quad)
+                except ValueError:
+                    fail("Duplicate face while closing authentic palm epidermis")
+                face.material_index=0
+                face.smooth=True
+                addedFaces.append(face)
+                cap_faces.append(face)
+                face_origin[face]='palm_cap'
+                if uv is not None:
+                    for c in face.loops:
+                        v=c.vert
+                        c[uv].uv=cap_uv[v] if v in cap_uv else nearest_source_uv(v)
         # Source palm UV openings have nonplanar neighborhoods. A fixed
         # outward dome creates opposing normals / 180-degree epidermis
         # creases. Find the cap curvature that minimizes REAL boundary
@@ -780,8 +754,8 @@ def main():
         lift=(apex_rest-center).dot(skin_normal)
         apex.co=apex_rest+skin_normal*lift*(scale-1)
         bm.normal_update()
-        capped.append({"source_open_ring":n,"new_skin_vertices":len(outer)+len(inner)+1,
-                        "faces":len(cap_faces),"radius":radius,
+        capped.append({"source_open_ring":n,"new_skin_vertices":2*n+1,
+                       "faces":3*n,"radius":radius,
                        "apex_displacement":(apex.co-center).length,
                        "optimized_cap_curve_sign_and_scale":scale,
                        "root_crease_over_120":cap_best[0],
