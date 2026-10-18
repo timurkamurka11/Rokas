@@ -233,7 +233,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 {
                     int row = Mathf.Clamp(Mathf.RoundToInt(
                         (.675f-uv.y)/.117f),0,4);
-                    int[] choices={1,2,4,8,16};
+                    int[] choices={2,4,8,12,16};
                     SelectQuickPreset(choices[row]);
                     return;
                 }
