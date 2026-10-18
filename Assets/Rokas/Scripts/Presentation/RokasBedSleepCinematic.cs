@@ -358,7 +358,10 @@ namespace Rokas.Presentation
         public void Confirm()
         {
             if (state == State.TimeSelection && sequence == null)
+            {
+                productionRig?.PressWatchHardware();
                 sequence = runner.StartCoroutine(FinishSleep());
+            }
         }
 
         public void Cancel()
