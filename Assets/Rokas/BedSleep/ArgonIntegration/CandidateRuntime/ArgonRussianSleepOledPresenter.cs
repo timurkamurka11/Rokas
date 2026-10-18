@@ -440,8 +440,8 @@ namespace Rokas.BedSleep.Argon.Candidate
         private void PaintPresets()
         {
             CenterText("ВРЕМЯ СНА",256,455,3,white);
-            string[] labels={"30 МИН","1 ЧАС","2 ЧАСА","4 ЧАСА","8 ЧАСОВ"};
-            int[] values={1,2,4,8,16};
+            string[] labels={"1 ЧАС","2 ЧАСА","4 ЧАСА","6 ЧАСОВ","8 ЧАСОВ"};
+            int[] values={2,4,8,12,16};
             for(int i=0;i<labels.Length;i++)
             {
                 int y=370-i*61;
