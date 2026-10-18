@@ -109,6 +109,13 @@ namespace Rokas.BedSleep.V10Release
             Watch.SeatOledAboveBezel(_presentationCamera);
             FrameImportedArmAndWatch();
 
+            // The NORMAL bed click uses this exact 3D V10 composite.
+            // Install the corrected, genuine source-skinned Argon hand
+            // automatically at runtime, with no separate preview scene,
+            // menu switch, or replacement of the watch/OLED/game scripts.
+            // On incompatible/missing source FBX, preserve existing V10.
+            RokasArgonConnectedHandRuntime.TryInstall(ArmRig);
+
             Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
 
