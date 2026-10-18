@@ -516,8 +516,22 @@ def main():
         # root ring deeper into the physically nearest palm tissue, taper
         # the movement gently to zero before proximal/middle phalanges.
         # This is an isolated candidate experiment; source FBX untouched.
+        # Geometric root integration (NOT another edge-split exercise):
+        # Unity AO12 shows visible upright plugs at source metacarpal
+        # bases. Their real source root vertices are still ~7-11mm
+        # separated from the palm even after the old 32% settlement.
+        # Settle four non-thumb 25-bone genuine source digit root shells
+        # into the TRUE nearest original palm surface with a decaying
+        # three-native-tier profile. No global smoothing, no finger tips
+        # altered, no synthetic cylinders, original FBX never modified.
+        # 78/42/8% source-to-source displacement decreases the exposed
+        # tab while maintaining a gradual longitudinal transition.
+        original_root_gap=root_pull_size
+        settle=(.78,.42,.08) if fingerNo in (2,3,4,5) else (.32,.15,.035)
+        if fingerNo in (2,3,4,5) and root_pull_size>diameter*.045:
+            fail("Root insertion unexpectedly long, reject deep settlement")
         for depth,(tier,pull,radial) in enumerate(zip(
-                tiers,(.32,.15,.035),(.93,.978,1.0))):
+                tiers,settle,(.93,.978,1.0))):
             tier_center=sum((v.co for v in tier),
                             Vector((0,0,0)))/len(tier)
             for v in tier:
@@ -527,8 +541,17 @@ def main():
                 moved_at_root=max(moved_at_root,delta)
         if moved_at_root>diameter*.019:
             fail("Proximal anatomical finger blend moved authentic tissue too far")
+        settled_root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
+        gap_after=(nearest.co-settled_root).length
+        if fingerNo in (2,3,4,5) and gap_after>original_root_gap*.68:
+            fail("Native finger root remains too far above the source palm")
         report.setdefault("proximal_digit_tissue_feather",[]).append({
             "finger":fingerNo,
+            "source_root_gap_before":original_root_gap,
+            "source_root_gap_after":gap_after,
+            "relative_gap_reduction":1-gap_after/max(original_root_gap,1e-9),
+            "native_three_ring_settlement_profile":list(settle),
+            "structural_skin_root_embedding":fingerNo in (2,3,4,5),
             "source_tier_sizes":[len(tier) for tier in tiers],
             "max_vertex_displacement":moved_at_root,
             "fraction_hand_extent":moved_at_root/diameter,
