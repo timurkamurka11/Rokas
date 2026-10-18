@@ -39,6 +39,12 @@ jobs:
           cp Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx \
             Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/
           test -s Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+          # Stage THE SAME genuine 25-bone FBX into its real runtime
+          # Resources path in CI only. Do not commit proprietary binary.
+          mkdir -p Assets/Rokas/Resources/BedSleep/ArgonConnectedHand
+          cp Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx \
+            Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/ROKAS_Argon_ConnectedHand_25Bone.fbx
+          test -s Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/ROKAS_Argon_ConnectedHand_25Bone.fbx
       - name: Unity - actual source hand versus Blender root-joined skinned FBX
         uses: game-ci/unity-test-runner@v4.3.1
         id: unity
