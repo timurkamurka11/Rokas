@@ -799,7 +799,8 @@ namespace Rokas.BedSleep.Argon.Candidate
                     LiveText(detail,435,410,.88f,126,cyan);
                     break;
                 case 1:
-                    LiveText(DurationText,256,265,3.25f,230,light);
+                    LiveText(DurationText,256,263,3.15f,214,light);
+                    LiveText("ВРЕМЯ СНА",256,320,1.10f,250,cyan);
                     break;
                 case 2:
                     LiveText(WakeText,257,269,3.1f,198,light);
@@ -809,8 +810,30 @@ namespace Rokas.BedSleep.Argon.Candidate
                     // is painted or uploaded until state changes.
                     break;
                 case 4:
-                    // Phase chart is a planning illustration. The game
-                    // must not claim real biometric measurements.
+                    // Illustrative phase PLAN anchored to the live PC clock,
+                    // not invented sensor readings. 5 timeline labels always
+                    // follow the actual sleep duration and midnight rollover.
+                    for (int k=0;k<5;k++)
+                    {
+                        int minute=(CurrentHour*60+CurrentMinute+
+                            Mathf.RoundToInt(SelectedHalfHours*30f*k/4f))%1440;
+                        string clock=(minute/60).ToString("D2")+":"+
+                            (minute%60).ToString("D2");
+                        LiveText(clock,55+k*101,247,1.1f,88,cyan);
+                    }
+                    int totalMinutes=SelectedHalfHours*30;
+                    int lightMinutes=Mathf.RoundToInt(totalMinutes*.55f);
+                    int deepMinutes=Mathf.RoundToInt(totalMinutes*.28f);
+                    int remMinutes=totalMinutes-lightMinutes-deepMinutes;
+                    LiveText((lightMinutes/60)+"Ч "+(lightMinutes%60)+"М",
+                        105,343,1.25f,115,light);
+                    LiveText((deepMinutes/60)+"Ч "+(deepMinutes%60)+"М",
+                        266,343,1.25f,115,light);
+                    LiveText((remMinutes/60)+"Ч "+(remMinutes%60)+"М",
+                        423,343,1.25f,115,light);
+                    LiveText("55%",156,386,1.00f,54,cyan);
+                    LiveText("28%",317,386,1.00f,54,cyan);
+                    LiveText("17%",468,386,1.00f,54,cyan);
                     break;
             }
             if(Screen==ArgonRussianWatchScreen.Confirmed)
