@@ -58,7 +58,7 @@ namespace Rokas.BedSleep.V10Release
                 var sleeve = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .FirstOrDefault(x => x.name == "Keiko_Homewear_Sleeve_Mesh");
                 var skin = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
-                    .FirstOrDefault(x => x.name == "Keiko_Skin_Mesh");
+                    .FirstOrDefault(x => x.name == "Keiko_Hand_Skin_Mesh");
                 var face = instance.GetComponentsInChildren<MeshRenderer>(true)
                     .FirstOrDefault(x => x.name == "Watch_OLED_Display");
                 var watchParts = instance.GetComponentsInChildren<MeshRenderer>(true)
