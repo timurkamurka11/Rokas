@@ -197,6 +197,23 @@ namespace Rokas.BedSleep.V10Release
         private Vector3 heroCameraRight, heroCameraUp, heroCameraForward;
         private bool cameraFramed;
         private float interactingUntil;
+        private Transform physicalCrown, physicalButton;
+        private Quaternion crownNeutral;
+        private Vector3 buttonNeutral;
+        private float crownAngle, crownTargetAngle;
+        private float crownAngularVelocity, buttonPress, buttonTarget;
+        internal void RotatePhysicalCrown(int steps)
+        {
+            if (steps == 0) return;
+            crownTargetAngle += Mathf.Clamp(steps, -12, 12) * 18f;
+            interactingUntil = Time.unscaledTime + .32f;
+        }
+        internal void PressPhysicalButton()
+        {
+            buttonPress = 1f;
+            buttonTarget = 0f;
+            interactingUntil = Time.unscaledTime + .22f;
+        }
         internal ArgonRussianSleepOledPresenter WatchScreen => russian;
 
         internal void Initialize(Transform root, Transform source, Transform destination,
@@ -228,6 +245,20 @@ namespace Rokas.BedSleep.V10Release
             forearmTwistRest = forearmTwist.localRotation;
             wristRest = activeWrist.localRotation;
             livingRig = new ArgonLivingRig(root.gameObject);
+            // Watch hardware is separate from the original skin rig.
+            // Its physical crown and upper button react without driving
+            // old V10 wrist/hand pose or changing the camera.
+            physicalCrown = root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(x => x.name.IndexOf("Watch_", StringComparison.Ordinal) >= 0 &&
+                    (x.name.IndexOf("Crown", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     x.name.IndexOf("DialKnob", StringComparison.OrdinalIgnoreCase) >= 0));
+            physicalButton = root.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(x => x != physicalCrown &&
+                    x.name.StartsWith("Watch_", StringComparison.Ordinal) &&
+                    (x.name.IndexOf("Button", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     x.name.IndexOf("Power", StringComparison.OrdinalIgnoreCase) >= 0));
+            if (physicalCrown != null) crownNeutral = physicalCrown.localRotation;
+            if (physicalButton != null) buttonNeutral = physicalButton.localPosition;
             cameraFramed = false;
             previousState = arm.CurrentState;
             stateSeconds = 0f;
@@ -343,10 +374,27 @@ namespace Rokas.BedSleep.V10Release
 
             float response = Mathf.SmoothStep(0f, 1f, visibility);
             livingRig.NotifyAnimationPoseReset();
-            livingRig.Apply(Time.unscaledTime, response,
-                Time.unscaledTime < interactingUntil,
+            // Wheel gestures should move the watch hardware, not rock
+            // the wrist. Keep natural non-interaction breathing/fingers.
+            livingRig.Apply(Time.unscaledTime, response, false,
                 heroCameraRight, heroCameraUp,
                 gesture.FingerResponse, lowering);
+
+            if (physicalCrown != null)
+            {
+                crownAngle = Mathf.SmoothDampAngle(crownAngle,
+                    crownTargetAngle, ref crownAngularVelocity,
+                    .105f, 700f, Mathf.Min(Time.unscaledDeltaTime, .05f));
+                physicalCrown.localRotation = crownNeutral *
+                    Quaternion.AngleAxis(crownAngle, Vector3.right);
+            }
+            if (physicalButton != null)
+            {
+                buttonPress = Mathf.MoveTowards(buttonPress, buttonTarget,
+                    Time.unscaledDeltaTime * 5f);
+                physicalButton.localPosition = buttonNeutral +
+                    Vector3.back * (.0018f * buttonPress);
+            }
         }
 
         private void LateUpdate()
