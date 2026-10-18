@@ -516,22 +516,8 @@ def main():
         # root ring deeper into the physically nearest palm tissue, taper
         # the movement gently to zero before proximal/middle phalanges.
         # This is an isolated candidate experiment; source FBX untouched.
-        # Geometric root integration (NOT another edge-split exercise):
-        # Unity AO12 shows visible upright plugs at source metacarpal
-        # bases. Their real source root vertices are still ~7-11mm
-        # separated from the palm even after the old 32% settlement.
-        # Settle four non-thumb 25-bone genuine source digit root shells
-        # into the TRUE nearest original palm surface with a decaying
-        # three-native-tier profile. No global smoothing, no finger tips
-        # altered, no synthetic cylinders, original FBX never modified.
-        # 78/42/8% source-to-source displacement decreases the exposed
-        # tab while maintaining a gradual longitudinal transition.
-        original_root_gap=root_pull_size
-        settle=(.78,.42,.08) if fingerNo in (2,3,4,5) else (.32,.15,.035)
-        if fingerNo in (2,3,4,5) and root_pull_size>diameter*.045:
-            fail("Root insertion unexpectedly long, reject deep settlement")
         for depth,(tier,pull,radial) in enumerate(zip(
-                tiers,settle,(.93,.978,1.0))):
+                tiers,(.32,.15,.035),(.93,.978,1.0))):
             tier_center=sum((v.co for v in tier),
                             Vector((0,0,0)))/len(tier)
             for v in tier:
@@ -541,17 +527,8 @@ def main():
                 moved_at_root=max(moved_at_root,delta)
         if moved_at_root>diameter*.019:
             fail("Proximal anatomical finger blend moved authentic tissue too far")
-        settled_root=sum((v.co for v in ring),Vector((0,0,0)))/len(ring)
-        gap_after=(nearest.co-settled_root).length
-        if fingerNo in (2,3,4,5) and gap_after>original_root_gap*.68:
-            fail("Native finger root remains too far above the source palm")
         report.setdefault("proximal_digit_tissue_feather",[]).append({
             "finger":fingerNo,
-            "source_root_gap_before":original_root_gap,
-            "source_root_gap_after":gap_after,
-            "relative_gap_reduction":1-gap_after/max(original_root_gap,1e-9),
-            "native_three_ring_settlement_profile":list(settle),
-            "structural_skin_root_embedding":fingerNo in (2,3,4,5),
             "source_tier_sizes":[len(tier) for tier in tiers],
             "max_vertex_displacement":moved_at_root,
             "fraction_hand_extent":moved_at_root/diameter,
@@ -567,41 +544,6 @@ def main():
             key=lambda f:(f.calc_center_median()-root).length_squared,default=None)
         if target_face is None:
             fail("Cannot isolate original palm-only face for root insertion")
-        # From true Blender 3D high-angle edge atlas #39109362000,
-        # index native seam has a 172-degree inversion at
-        # (0.04767,-0.024071,-0.008975). The existing source face
-        # incision center is (0.05519,-0.02804,-0.00668): the defect
-        # lies almost precisely ON the rim of the 1.15x source hole.
-        # Move the FACE PATCH itself toward the high-angle original
-        # tissue, not the finger tube / weights or the generated quads.
-        # Do not move source FBX vertices; choose another authenticated
-        # ORIGINAL palm face near the reference incision instead.
-        if fingerNo==2:
-            native_face_before=target_face
-            native_center=native_face_before.calc_center_median()
-            native_normal=native_face_before.normal.normalized()
-            atlas_bad_edge=Vector((.04767,-.024071,-.008975))
-            if (atlas_bad_edge-native_center).length>diameter*.035:
-                fail("Known source index high-fold atlas no longer registered")
-            desired=native_center.lerp(atlas_bad_edge,.36)
-            candidates=[face for face in eligible
-                        if face.is_valid
-                        and face.normal.dot(native_normal)>.60
-                        and (face.calc_center_median()-native_center).length
-                             <radius*.65]
-            if len(candidates)<2:
-                fail("No healthy native palm faces near index original crease")
-            candidate_face=min(candidates,key=lambda face:
-                (face.calc_center_median()-desired).length_squared)
-            target_face=candidate_face
-            report.setdefault("source_index_real_crease_recenter",[]).append({
-                "old_original_source_face_center":[float(c) for c in native_center],
-                "requested_blender_high_angle_edge":[float(c) for c in atlas_bad_edge],
-                "new_original_source_face_center":[float(c) for c in
-                    target_face.calc_center_median()],
-                "old_to_new_source_incison_face_distance":(
-                    target_face.calc_center_median()-native_center).length,
-                "native_eligible_face_count":len(candidates)})
         insertion=target_face.calc_center_median()
         surface_normal=target_face.normal.normalized()
         # Hole smaller than finger root cross section; creates a natural
@@ -645,7 +587,6 @@ def main():
                         pending.append(other)
         if len(selected)<4 or len(selected)>170:
             fail("Palm graft hole has implausible source face count "+str(len(selected)))
-        original_nearest_palm_xyz=nearest.co.copy()
         previous_boundaries={e for e in bm.edges if e.is_boundary}
         bmesh.ops.delete(bm,geom=list(selected),context='FACES')
         fresh={e for e in bm.edges if e.is_boundary
@@ -716,18 +657,8 @@ def main():
         face_origin.update({f:'finger_'+str(fingerNo) for f in faces})
         source_contact_vertices.update(ring)
         source_contact_vertices.update(pocket)
-        # Native metacarpal incision atlas: source-geometry coordinates
-        # required to steer the NEXT true source-face resection toward
-        # exact observed 25-bone Unity web defects, rather than guessing
-        # new radius factors or smoothing generated triangles.
         report["per_finger"].append({
             "finger":fingerNo,
-            "original_finger_root_center_xyz":[round(float(c),8) for c in root],
-            "native_nearest_palm_vertex_xyz":[round(float(c),8) for c in original_nearest_palm_xyz],
-            "native_palm_incision_face_center_xyz":[round(float(c),8) for c in insertion],
-            "native_palm_incision_normal_xyz":[round(float(c),8) for c in surface_normal],
-            "post_cut_hole_center_xyz":[round(float(c),8) for c in
-                 sum((v.co for v in pocket),Vector((0,0,0)))/len(pocket)],
             "quads":len(faces),
             "palm_socket_id":"NEW_AUTHENTIC_LOCAL_PALM_HOLE",
             "source_nearest_skin_gap":source_dist,
