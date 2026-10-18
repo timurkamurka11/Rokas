@@ -399,13 +399,13 @@ def main():
         # corresponding native rings by 30 quads, NOT radial wedges or
         # cylinder replacements. Keep the other four digits unchanged
         # until the single critical web passes real Blender and Unity.
-        if finger_number==2:
+        if finger_number in (1,2,3,4,5):
             if N!=30 or M!=30:
-                fail("Real index palm two source rings not 30x30")
+                fail("Original digit and shared palm contour must be 30x30")
             for i in range(N):
                 j=(i+1)%N
                 add_skin_face([near_palm[i],near_palm[j],p[j],p[i]])
-            report.setdefault("shared_palm_index_surface_quad_remesh",[]).append({
+            report.setdefault("shared_palm_five_digit_surface_quad_remesh",[]).append({
                 "digit":finger_number,
                 "original_digit_rim":N,
                 "genuine_palm_rim":M,
