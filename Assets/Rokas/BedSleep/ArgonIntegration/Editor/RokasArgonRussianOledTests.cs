@@ -21,7 +21,7 @@ namespace Rokas.BedSleep.Argon.Editor
                 var oled=root.AddComponent<ArgonRussianSleepOledPresenter>();
                 oled.InitializeOled();
                 Assert.That(oled.OledDynamicTexture,Is.Not.Null);
-                Assert.That(oled.OledRenderTexture.width,Is.EqualTo(512));
+                Assert.That(oled.OledRenderTexture.width,Is.EqualTo(ArgonRussianSleepOledPresenter.DisplaySize));
                 oled.ConfigureTime(23,30,16);
                 Assert.That(oled.WakeText,Is.EqualTo("07:30"));
                 Assert.That(oled.DurationText,Is.EqualTo("08:00"));
@@ -104,7 +104,7 @@ namespace Rokas.BedSleep.Argon.Editor
                     Assert.That(oled.LastTextRows,Is.GreaterThan(0),
                         name+" must paint real Cyrillic glyphs");
                     Assert.That(oled.LastTextLayoutSafe,Is.True,
-                        name+" has intersecting/clipped text on the real 512px OLED");
+                        name+" has intersecting/clipped text on the 1024px OLED");
                     System.IO.File.WriteAllBytes(
                         System.IO.Path.Combine(dir,name+".png"),
                         oled.OledDynamicTexture.EncodeToPNG());
