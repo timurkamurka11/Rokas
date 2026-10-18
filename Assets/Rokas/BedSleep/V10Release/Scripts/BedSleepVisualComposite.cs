@@ -200,16 +200,62 @@ namespace Rokas.BedSleep.V10Release
                     applyHalfHours?.Invoke(choice);
                     return true;
                 }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Alarm:
+                {
+                    // Top-right switch and three genuine on-face alarm modes.
+                    if (uv.x > .71f && uv.y > .72f)
+                    {
+                        oled.ToggleAlarm();
+                        Sfx?.PlayCrownClick();
+                    }
+                    else if (uv.y >= .14f && uv.y <= .39f)
+                    {
+                        oled.SetAlarmMode(Mathf.Clamp(
+                            Mathf.FloorToInt(uv.x * 3f),0,2));
+                        Sfx?.PlayCrownClick();
+                    }
+                    else if (uv.y>.40f && uv.y<.62f)
+                    {
+                        // Arrow keys on the watch face change the actual
+                        // wake time through the existing sleep-duration owner.
+                        int delta=uv.x<.32f ? -1 : (uv.x>.68f ? 1 : 0);
+                        if(delta!=0)
+                            applyHalfHours?.Invoke(Mathf.Clamp(
+                                oled.SelectedHalfHours+delta,2,24));
+                    }
+                    return true;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
+                {
+                    // Each of the 3 cards is independently toggleable.
+                    if (uv.y>=.13f && uv.y<=.46f)
+                    {
+                        int index=Mathf.Clamp(
+                            Mathf.FloorToInt(uv.x*3f),0,2);
+                        oled.ToggleQuietOption(index);
+                        Sfx?.PlayCrownClick();
+                    }
+                    else if (uv.x>.67f && uv.y>.70f)
+                    {
+                        // Top toggle enables/disables all quiet modes.
+                        oled.SetQuietMask(oled.QuietMask==0 ? 7 : 0);
+                        Sfx?.PlayCrownClick();
+                    }
+                    return true;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Phases:
+                    // Sleep-phase graph is an estimated planning display;
+                    // opt-in highlights the suggested wake window. It does
+                    // not claim to measure real REM or clinical sleep.
+                    oled.TogglePhasePlanning();
+                    Sfx?.PlayCrownClick();
+                    return true;
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
                     if (uv.y > .76f) oled.ShowDial();
                     else if (uv.y < .20f) confirm?.Invoke();
                     else oled.ShowRelaxation();
                     return true;
-                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
-                    if (uv.y > .76f) oled.ShowOverview();
-                    else if (uv.y < .20f) confirm?.Invoke();
-                    else oled.ShowDial();
-                    return true;
+
                 case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Confirmed:
                     oled.SetFallingAsleep();
                     return true;
