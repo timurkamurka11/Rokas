@@ -71,80 +71,122 @@ Shader "ROKAS/BedSleep/GpuWatchFaceComposite"
                 // existing art: previous versions covered labels/cards.
                 if (_FaceIndex < .5)
                 {
-                    // Timer. Animate a THIN inner guide along the existing
-                    // round track, not a second glowing ring over the PNG.
-                    float2 c = float2(.5,.537);
-                    float pct = saturate(_Duration01);
-                    float2 d = uv - c;
-                    float ang = frac(atan2(d.x,d.y)/6.2831853+1.);
-                    float radius = length(d);
-                    float guide = (1.-smoothstep(.002,.007,
-                        abs(radius-.306))) *
-                        (1.-smoothstep(pct-.01,pct+.005,ang));
-                    float2 tip=c+.306*float2(sin(pct*6.2831853),
-                        cos(pct*6.2831853));
-                    glow += cyan*(guide*.28+
-                        halo(uv,tip,.012)*.30)*energy;
+                    // Strong but restrained two-tone timer arc. The band
+                    // remains entirely outside the numeral's center.
+                    float2 c=float2(.5,.537);
+                    float fraction=saturate(_Duration01);
+                    float2 d=uv-c;
+                    float angle=frac(atan2(d.x,d.y)/6.2831853+1.);
+                    float radial=length(d);
+                    float arcSpan=1.-smoothstep(fraction-.012,
+                        fraction+.004,angle);
+                    float thinBand=1.-smoothstep(.003,.012,
+                        abs(radial-.307));
+                    float outerBand=1.-smoothstep(.002,.009,
+                        abs(radial-.319));
+                    float3 bandColor=lerp(cyan,violet,
+                        smoothstep(.40,.95,angle));
+                    glow+=bandColor*(thinBand*.72+
+                        outerBand*.24)*arcSpan*(.81+.09*sin(tick*1.8));
+                    float a=fraction*6.2831853;
+                    float2 endpoint=c+.307*float2(sin(a),cos(a));
+                    glow+=bandColor*halo(uv,endpoint,.012)*.58;
                 }
                 else if (_FaceIndex < 1.5)
                 {
-                    // Wheel. Align tracer to ACTUAL ring center in the
-                    // authored 1024x1024 texture. No blur over numerals.
-                    float2 c = float2(.5,.50);
-                    float a=lerp(-2.36,2.36,saturate(_Duration01));
-                    float2 tip=c+.307*float2(sin(a),cos(a));
-                    float rim=ring(uv,c,.305,.002);
-                    glow+=lerp(cyan,violet,.5+.5*sin(tick*.45))*
-                        (halo(uv,tip,.013)*.32+rim*.085);
+                    // Dynamic precision dial: active ticks illuminate
+                    // with the selected duration, not a blurred full ring.
+                    float2 c=float2(.5,.50);
+                    float fraction=saturate(_Duration01);
+                    float a=lerp(-2.36,2.36,fraction);
+                    float2 d=uv-c;
+                    float2 endpoint=c+.306*float2(sin(a),cos(a));
+                    float radius=length(d);
+                    float phase=atan2(d.x,d.y);
+                    float progress=saturate((phase+2.36)/4.72);
+                    float lit=1.-smoothstep(fraction-.015,
+                        fraction+.004,progress);
+                    float ticks=pow(max(0.,cos(phase*48.)),28.);
+                    float fine=1.-smoothstep(.005,.011,
+                        abs(radius-.307));
+                    float3 tint=lerp(cyan,violet,progress);
+                    glow+=tint*(fine*.56*lit+
+                        ticks*fine*.34*lit)*
+                        (.88+.09*sin(tick*1.55));
+                    glow+=lerp(cyan,violet,fraction)*
+                        halo(uv,endpoint,.012)*.59;
                 }
                 else if (_FaceIndex < 2.5)
                 {
-                    // Alarm cards: a narrow luminous top accent per
-                    // selection, not a rectangular glow across the text.
+                    // Alarm: selection markers above cards, no panels
+                    // or ghost borders over the original Russian labels.
                     float mode=floor(_AlarmMode+.5);
-                    float2 selectedCenter=float2(.178+mode*.309,.366);
-                    float bar=(1.-smoothstep(.003,.010,
-                        abs(uv.y-selectedCenter.y)))*
-                        (1.-smoothstep(.115,.142,
-                        abs(uv.x-selectedCenter.x)));
-                    glow+=cyan*bar*(.27+.07*sin(tick*2.));
+                    float2 mark=float2(.178+mode*.309,.366);
+                    float bar=(1.-smoothstep(.002,.008,
+                        abs(uv.y-mark.y)))*
+                        (1.-smoothstep(.11,.135,abs(uv.x-mark.x)));
+                    glow+=cyan*bar*(.41+.05*sin(tick*1.8));
                     float enabled=step(.5,_AlarmOn);
-                    glow+=cyan*halo(uv,float2(.87,.827),.030)*
-                        enabled*.16;
+                    glow+=cyan*halo(uv,
+                        float2(lerp(.785,.885,enabled),.827),.019)*
+                        (.12+.15*enabled);
                 }
                 else if (_FaceIndex < 3.5)
                 {
-                    // Quiet cards are vertically HIGHER than alarm cards.
-                    // Their real pixel bounds run y=.225...48 in UV.
+                    // Only drift the cloud band a tiny amount. Captions,
+                    // toggle, crescent and selected cards stay stationary.
+                    float cloudArea=smoothstep(.465,.515,uv.y)*
+                        (1.-smoothstep(.615,.677,uv.y))*
+                        smoothstep(.06,.13,uv.x)*
+                        (1.-smoothstep(.87,.95,uv.x));
+                    float horizontal=.0028*sin(tick*.16);
+                    float3 drifting=tex2D(_MainTex,
+                        uv+float2(horizontal,0.)).rgb;
+                    art=lerp(art,drifting,cloudArea*.66);
+
                     for(int n=0;n<3;n++)
                     {
-                        float enabled=fmod(floor(
-                            _QuietMask/exp2((float)n)),2.);
-                        float centerX=.195+.317*n;
-                        float accent=(1.-smoothstep(.004,.013,
-                            abs(uv.y-.470)))*
-                            (1.-smoothstep(.11,.14,
-                            abs(uv.x-centerX)));
-                        glow+=cyan*accent*enabled*.25;
+                        float enabled=fmod(floor(_QuietMask/
+                            exp2((float)n)),2.);
+                        float cx=.195+.317*n;
+                        float dash=(1.-smoothstep(.003,.011,
+                            abs(uv.y-.465)))*
+                            (1.-smoothstep(.11,.137,
+                            abs(uv.x-cx)));
+                        glow+=cyan*dash*enabled*.38;
                     }
-                    float allOn=step(.5,_QuietMask);
-                    glow+=cyan*halo(uv,float2(.87,.832),.032)*
-                        allOn*.14;
+                    float quietOn=step(.5,_QuietMask);
+                    float toggleX=lerp(.77,.885,quietOn);
+                    glow+=cyan*halo(uv,
+                        float2(toggleX,.83),.019)*
+                        (.12+.14*quietOn);
+                    // Slow moon halo and tiny star glints; restrained so
+                    // the authored text and moon details stay crisp.
+                    float lunarPulse=.5+.5*sin(tick*1.08);
+                    glow+=float3(.08,.23,.54)*
+                        halo(uv,float2(.49,.715),.105)*
+                        (.025+.035*lunarPulse);
+                    float starA=halo(uv,float2(.704,.73),.004);
+                    float starB=halo(uv,float2(.321,.792),.003);
+                    float starC=halo(uv,float2(.59,.81),.003);
+                    glow+=cyan*(starA*(.11+.15*sin(tick*.63)*sin(tick*.63))+
+                        starB*(.06+.11*sin(tick*.48+2.)*sin(tick*.48+2.))+
+                        starC*(.06+.12*sin(tick*.76+1.)*sin(tick*.76+1.)));
                 }
                 else
                 {
-                    // Time-aware planning cursor: the planned sleep window
-                    // moves with duration; sweep stays inside CHART only.
+                    // Light touch only: thin time-planning sweep inside
+                    // the chart. The original phase graph remains intact.
                     float planned=lerp(.12,.91,saturate(_Duration01));
-                    float sweep=lerp(.12,planned,frac(tick*.042));
-                    float cursor=1.-smoothstep(.001,.004,
+                    float sweep=lerp(.12,planned,frac(tick*.037));
+                    float cursor=1.-smoothstep(.001,.0035,
                         abs(uv.x-sweep));
-                    float chartMask=smoothstep(.48,.50,uv.y)*
-                        (1.-smoothstep(.73,.75,uv.y));
+                    float region=smoothstep(.48,.51,uv.y)*
+                        (1.-smoothstep(.735,.76,uv.y));
                     glow+=lerp(cyan,violet,.5+.5*sin(tick*.7))*
-                        cursor*chartMask*.23;
+                        cursor*region*.30;
                     if(_PhaseMode>.5)
-                        glow+=cyan*halo(uv,float2(planned,.66),.020)*.24;
+                        glow+=cyan*halo(uv,float2(planned,.66),.015)*.25;
                 }
                 // Subtle physical-pointer glint on real OLED controls.
                 // Never overlay a second static PNG or text outline.
