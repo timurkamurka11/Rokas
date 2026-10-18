@@ -48,6 +48,7 @@ namespace Rokas.Presentation
         private RokasBedWatchPngTabs pngTabs;
         private bool watchFocus;
         private bool hasExplicitWatchTab;
+        private int lastSystemMinute=-1;
         private float focusBlend;
         private RectTransform watchHitRect;
         private AudioSource audio;
@@ -110,8 +111,11 @@ namespace Rokas.Presentation
             state = State.BedHotspotPressed;
             cancelRequested = committed = false;
             selectedHours = 7f;
-            startHours = session.State.hubSleepInitialized
-                ? Mathf.Repeat(session.State.hubClockHours, 24f) : 23.5f;
+            // The smartwatch displays the actual LOCAL computer clock.
+            // It is sampled once per minute while selecting sleep duration.
+            // Existing ROKAS save ownership and wake-day rollover are kept.
+            DateTime localNow=DateTime.Now;
+            startHours = localNow.Hour + localNow.Minute / 60f;
             startDay = session.State.hubSleepInitialized
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
@@ -152,6 +156,15 @@ namespace Rokas.Presentation
             }
 
             if (state != State.TimeSelection) return;
+            DateTime wallClock=DateTime.Now;
+            int wallMinute=wallClock.Hour*60+wallClock.Minute;
+            if(wallMinute!=lastSystemMinute)
+            {
+                lastSystemMinute=wallMinute;
+                startHours=wallMinute/60f;
+                productionRig?.SyncComputerClock(startHours,selectedHours);
+                RefreshWatch();
+            }
             // Unlike the 2D photographic fallback, the production hand
             // has a living idle and a physically animated crown.
             productionRig?.TickIdle(dt);
@@ -575,6 +588,7 @@ namespace Rokas.Presentation
                 .25f);
             yield return FadeArm(0f, 1f, .82f);
             state = State.TimeSelection;
+            lastSystemMinute=-1;
             productionRig?.ChangeState("TimeSelection");
             if (productionRig != null && productionRig.Ready &&
                 watchHitRect != null)
