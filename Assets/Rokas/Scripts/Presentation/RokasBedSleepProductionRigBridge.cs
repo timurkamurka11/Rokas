@@ -338,6 +338,14 @@ namespace Rokas.Presentation
             }) is bool navigated && navigated;
         }
 
+        public int GetSelectedWatchTab()
+        {
+            if (!Ready || !usesV10 || controller == null) return 0;
+            MethodInfo method = controller.GetType().GetMethod(
+                "GetPhysicalOledTab", BindingFlags.Public | BindingFlags.Instance);
+            return method == null ? 0 : (int)method.Invoke(controller, null);
+        }
+
         public bool SelectWatchTab(int index)
         {
             if (!Ready || !usesV10 || controller == null) return false;
