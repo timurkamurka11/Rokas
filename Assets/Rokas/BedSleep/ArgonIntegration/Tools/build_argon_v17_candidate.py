@@ -107,6 +107,14 @@ def rebuild_watertight_surface(candidate, original):
     smoothing.factor=.45
     smoothing.iterations=3
     bpy.ops.object.modifier_apply(modifier=smoothing.name)
+    # Controlled topology reduction from 61k voxel vertices toward ~28k;
+    # verify closed manifold surface again after the reduction.
+    decimate=candidate.modifiers.new("ROKAS_V17_OptimizedSkinTris","DECIMATE")
+    decimate.ratio=.46
+    bpy.ops.object.modifier_apply(modifier=decimate.name)
+    post_open,post_bad=boundary_and_bad(candidate.data)
+    require(not(post_open or post_bad) and groups(candidate.data)==1,
+            "Optimization broke anatomical manifold continuity")
     # Project UV onto authentic original triangles with explicit barycentric
     # mapping. Blender 3.0 DataTransfer does NOT create a new target UV
     # channel automatically on a remeshed surface.
@@ -275,6 +283,8 @@ def animator_actions(arm):
         arm.animation_data_create().action=action
         for frame,extent in timeline:
             for finger, names in bone_names.items():
+                # Index QA clip MUST NOT animate the other four fingers.
+                amplitude=extent if "Independent_Index" not in action_name or finger=="Index" else 0
                 stagger={"Thumb":.78,"Index":1.0,"Middle":1.03,
                          "Ring":.97,"Little":.88}[finger]
                 for j,n in enumerate(names):
@@ -282,7 +292,7 @@ def animator_actions(arm):
                     # Convert anatomically planned global hinge axis into
                     # original bone local rotation frame.
                     axis=bone.bone.matrix_local.to_quaternion().inverted()@Vector((0,1,0))
-                    angle=math.radians(extent*stagger*(.50 if j==0 else
+                    angle=math.radians(amplitude*stagger*(.50 if j==0 else
                          .76 if j==1 else .48))
                     if finger=="Thumb":
                         axis=bone.bone.matrix_local.to_quaternion().inverted()@Vector((0,0,1))
@@ -328,7 +338,11 @@ def save_proof(scene,obj,out,cam_name):
     scene.render.resolution_percentage=100
     scene.render.image_settings.file_format='PNG'
     scene.render.film_transparent=False
-    scene.world.color=(.03,.035,.06)
+    if scene.world is None: scene.world=bpy.data.worlds.new("ROKAS_V17_GeometryProofWorld")
+    scene.world.color=(.07,.08,.10)
+    scene.display.shading.light="STUDIO"
+    scene.display.shading.color_type="MATERIAL"
+    scene.render.engine="BLENDER_WORKBENCH"
     obj.hide_render=False
     scene.render.filepath=str(out/"ROKAS_V17_Candidate_3D.png")
     bpy.ops.render.render(write_still=True)
@@ -355,7 +369,8 @@ def main():
     for digit in pieces[1:]:
         apply_boolean(palm,digit)
         bpy.data.objects.remove(digit,do_unlink=True)
-    palm.name="Keiko_Hand_Skin_Mesh_V17_ContinuousCandidate"
+    src_skin.name="ROKAS_OriginalSkin_UnmodifiedNotExported"
+    palm.name="Keiko_Hand_Skin_Mesh"
     palm.data.name="ROKAS_Keiko_V17_Skin"
     palm.hide_render=False
     # Prevent accidental bone-mapping changes: export original 25-bone rig.
