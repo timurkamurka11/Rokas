@@ -89,6 +89,40 @@ def apply_boolean(palm,finger):
     bpy.ops.object.modifier_apply(modifier=mod.name)
     return palm
 
+def rebuild_watertight_surface(candidate, original):
+    """Convert overlapped Boolean seam into continuous watertight 3D surface.
+    Remesh is a structural intermediate; preserve actual UV by projecting to
+    the authentic PBR source triangles, then regenerate anatomical weights.
+    """
+    bpy.ops.object.select_all(action="DESELECT")
+    candidate.select_set(True)
+    bpy.context.view_layer.objects.active=candidate
+    candidate.data.remesh_voxel_size=.00135
+    candidate.data.remesh_voxel_adaptivity=.0
+    log("Begin V17 controlled watertight voxel reconstruction at 1.35mm")
+    bpy.ops.object.voxel_remesh()
+    require(len(candidate.data.vertices)>10000, "Voxel reconstruction too coarse")
+    # Correct stair stepping without destroying finger volume.
+    smoothing=candidate.modifiers.new("AnatomicalSurfaceLaplacian","SMOOTH")
+    smoothing.factor=.45
+    smoothing.iterations=3
+    bpy.ops.object.modifier_apply(modifier=smoothing.name)
+    # Recover original 4K PBR UV coordinates from closest visible surfaces.
+    if original.data.uv_layers:
+        dt=candidate.modifiers.new("TransferAuthenticArgon4KUV","DATA_TRANSFER")
+        dt.object=original
+        dt.use_loop_data=True
+        dt.data_types_loops={'UV'}
+        dt.loop_mapping='POLYINTERP_NEAREST'
+        dt.use_max_distance=False
+        bpy.ops.object.modifier_apply(modifier=dt.name)
+    require(len(candidate.data.uv_layers)>0,
+            "UV transfer failed; do not install skin with broken material")
+    for polygon in candidate.data.polygons:polygon.use_smooth=True
+    candidate.data.update()
+    return dict(voxel_meters=.00135,uv_layers=len(candidate.data.uv_layers),
+                vertices=len(candidate.data.vertices))
+
 def select_influences(candidate,arm):
     # Create finger-local weights, never drive little finger by Ring_PIP.
     vertices=candidate.data.vertices
@@ -317,7 +351,13 @@ def main():
         palm.data.materials.append(m)
     bdr,bad=boundary_and_bad(palm.data)
     comp=groups(palm.data)
-    log(f"boolean result vertices={len(palm.data.vertices)} components={comp} boundary={bdr} nonmanifold={bad}")
+    log(f"raw boolean vertices={len(palm.data.vertices)} components={comp} boundary={bdr} nonmanifold={bad}")
+    if bdr or bad or comp!=1:
+        surface=rebuild_watertight_surface(palm,src_skin)
+        bdr,bad=boundary_and_bad(palm.data)
+        comp=groups(palm.data)
+        log("rebuilt surface="+json.dumps(surface)+
+            f" components={comp} open={bdr} nonmanifold={bad}")
     # A candidate cannot pass when the five digits are not attached.
     require(comp==1,"Merged surface remains disconnected: "+str(comp))
     require(bad==0,"Boolean candidate contains nonmanifold edges")
