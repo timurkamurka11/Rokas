@@ -29,6 +29,23 @@ namespace Rokas.BedSleep.Argon.Candidate
         public static Report ApplyToClone(SkinnedMeshRenderer skin,
             out Mesh temporaryMesh)
         {
+            return ApplyInternal(skin,out temporaryMesh,false);
+        }
+
+        /// <summary>
+        /// Conservative GAMEPLAY candidate: only index (next to thumb)
+        /// and little finger, which have obvious squared proximal seams.
+        /// Never retopo/modify source FBX; rejects unknown topology.
+        /// </summary>
+        public static Report ApplyIndexLittleToClone(SkinnedMeshRenderer skin,
+            out Mesh temporaryMesh)
+        {
+            return ApplyInternal(skin,out temporaryMesh,true);
+        }
+
+        private static Report ApplyInternal(SkinnedMeshRenderer skin,
+            out Mesh temporaryMesh,bool indexLittleOnly)
+        {
             temporaryMesh=null;
             if(skin==null||skin.sharedMesh==null)
                 throw new ArgumentNullException(nameof(skin));
@@ -74,6 +91,8 @@ namespace Rokas.BedSleep.Argon.Candidate
             float maxMove=0f;
             for(int finger=0;finger<fingers.Length;finger++)
             {
+                // Retain original thumb/middle/ring shapes, UVs and weights.
+                if(indexLittleOnly && finger!=1 && finger!=4)continue;
                 var f=fingers[finger];
                 float minX=float.PositiveInfinity,maxX=float.NegativeInfinity;
                 foreach(int i in f)
@@ -98,7 +117,9 @@ namespace Rokas.BedSleep.Argon.Candidate
                 centerY/=count;centerZ/=count;
                 // Ring and little have the most conspicuous square caps.
                 // Nest those genuine skin rings further inside the palm.
-                float fraction=finger>=3 ? .38f : .31f;
+                float fraction=indexLittleOnly
+                    ? (finger==4 ? .29f : .24f)
+                    : (finger>=3 ? .38f : .31f);
                 float begin=maxX-length*fraction;
                 for(int j=0;j<f.Count;j++)
                 {
@@ -108,9 +129,13 @@ namespace Rokas.BedSleep.Argon.Candidate
                     // Smooth 0 slope at the untouched distal boundary,
                     // smooth 0 slope at proximal end, no geometric crease.
                     float s=t*t*(3f-2f*t);
-                    float narrow=(finger>=3 ? .78f : .62f)*s;
+                    float narrow=(indexLittleOnly
+                        ? (finger==4 ? .48f : .37f)
+                        : (finger>=3 ? .78f : .62f))*s;
                     Vector3 p=v[i];
-                    p.x+=length*(finger>=3 ? .25f : .18f)*s;
+                    p.x+=length*(indexLittleOnly
+                        ? (finger==4 ? .15f : .11f)
+                        : (finger>=3 ? .25f : .18f))*s;
                     // Hide the original hard proximal end under palm skin.
                     p.y=Mathf.Lerp(p.y,centerY,narrow);
                     p.z=Mathf.Lerp(p.z,centerZ,narrow);
@@ -120,11 +145,13 @@ namespace Rokas.BedSleep.Argon.Candidate
                     if(delta>1e-10f){modified++;maxMove=Mathf.Max(maxMove,delta);}
                 }
             }
-            if(modified<200||modified>n/2)
+            if(modified<(indexLittleOnly ? 60 : 200)||modified>n/2)
                 throw new InvalidOperationException(
                     "Unexpected proximal-finger edit extent; do not use repair");
             temporaryMesh=UnityEngine.Object.Instantiate(source);
-            temporaryMesh.name=source.name+"_Candidate_ProximalSocketNesting";
+            temporaryMesh.name=source.name+(indexLittleOnly
+                ? "_ROKAS_IndexLittleOnly_SafeSocketBlend"
+                : "_Candidate_ProximalSocketNesting");
             temporaryMesh.vertices=copy;
             if(source.normals.Length==n)
             {
