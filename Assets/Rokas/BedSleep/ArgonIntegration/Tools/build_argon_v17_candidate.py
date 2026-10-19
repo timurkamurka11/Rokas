@@ -284,7 +284,7 @@ def animator_actions(arm):
         for frame,extent in timeline:
             for finger, names in bone_names.items():
                 # Index QA clip MUST NOT animate the other four fingers.
-                amplitude=extent if "Independent_Index" not in action_name or finger=="Index" else 0
+                amplitude=extent if action_name!="V17_Index" or finger=="Index" else 0
                 stagger={"Thumb":.78,"Index":1.0,"Middle":1.03,
                          "Ring":.97,"Little":.88}[finger]
                 for j,n in enumerate(names):
@@ -308,12 +308,12 @@ def animator_actions(arm):
         action.use_fake_user=True
         return action
     actions=[
-        key_pose("ROKAS_V17_Organic_Grip_OpenClose",
+        key_pose("V17_Grip",
             [(1,0),(9,5),(18,26),(30,65),(46,91),(56,92),
              (70,56),(83,14),(96,0)]),
-        key_pose("ROKAS_V17_Independent_Index_Flex",
+        key_pose("V17_Index",
             [(1,0),(12,0),(26,36),(43,57),(64,0)]),
-        key_pose("ROKAS_V17_BedSleep_LivingSettle",
+        key_pose("V17_Living",
             [(1,4),(15,10),(32,4),(51,0),(75,5),(95,1)])
     ]
     for bone in real:
