@@ -118,7 +118,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                 // Ring and little have the most conspicuous square caps.
                 // Nest those genuine skin rings further inside the palm.
                 float fraction=indexLittleOnly
-                    ? (finger==4 ? .29f : .24f)
+                    ? (finger==4 ? .34f : .30f)
                     : (finger>=3 ? .38f : .31f);
                 float begin=maxX-length*fraction;
                 for(int j=0;j<f.Count;j++)
@@ -130,11 +130,11 @@ namespace Rokas.BedSleep.Argon.Candidate
                     // smooth 0 slope at proximal end, no geometric crease.
                     float s=t*t*(3f-2f*t);
                     float narrow=(indexLittleOnly
-                        ? (finger==4 ? .48f : .37f)
+                        ? (finger==4 ? .49f : .39f)
                         : (finger>=3 ? .78f : .62f))*s;
                     Vector3 p=v[i];
                     p.x+=length*(indexLittleOnly
-                        ? (finger==4 ? .15f : .11f)
+                        ? (finger==4 ? .135f : .105f)
                         : (finger>=3 ? .25f : .18f))*s;
                     // Hide the original hard proximal end under palm skin.
                     p.y=Mathf.Lerp(p.y,centerY,narrow);
@@ -148,6 +148,14 @@ namespace Rokas.BedSleep.Argon.Candidate
             if(modified<(indexLittleOnly ? 60 : 200)||modified>n/2)
                 throw new InvalidOperationException(
                     "Unexpected proximal-finger edit extent; do not use repair");
+            // Reject unusual scaling, a wrong socket axis, or an imported
+            // mesh whose bind-space units differ from the source FBX.
+            // This check happens BEFORE instantiating/replacing the mesh.
+            if (float.IsNaN(maxMove) || float.IsInfinity(maxMove) ||
+                maxMove > source.bounds.size.magnitude * .15f)
+                throw new InvalidOperationException(
+                    "Proximal correction would move vertices too far; " +
+                    "preserving the original Argon finger mesh.");
             temporaryMesh=UnityEngine.Object.Instantiate(source);
             temporaryMesh.name=source.name+(indexLittleOnly
                 ? "_ROKAS_IndexLittleOnly_SafeSocketBlend"
