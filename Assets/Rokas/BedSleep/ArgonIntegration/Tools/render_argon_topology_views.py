@@ -11,6 +11,7 @@ import sys
 from collections import defaultdict
 from mathutils import Vector
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from audit_argon_hand_anatomy import connected_components, boundary_edges
 
 WIDTH, HEIGHT=1480,860
