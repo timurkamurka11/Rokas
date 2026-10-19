@@ -7,7 +7,7 @@ on:
       - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build-v17:
     runs-on: ubuntu-22.04
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
       - name: Parse production reconstruction script
         run: python3 -m py_compile Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py
       - name: Install headless Blender
@@ -67,6 +67,32 @@ jobs:
           assert (d/'V17_FBX_Full_Grip.png').stat().st_size>10000
           print('V17 REAL FBX GENERATED, STRUCTURAL PASS; UNITY VISUAL APPROVAL STILL REQUIRED')
           PY
+      - name: Commit actual V17 FBX as quarantined PR-only candidate (NEVER REPLACE V16)
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 13 && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          test "$TARGET_BRANCH" = "codex/bedsleep-argon-import-candidate"
+          test -s Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx
+          test -s Artifacts/ArgonV17Candidate/ROKAS_V17_BuildMetrics.json
+          test -s Artifacts/ArgonV17Candidate/ROKAS_V17_FBX_Roundtrip_Motion.json
+          git fetch --no-tags origin "$TARGET_BRANCH"
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED_SHA" || {
+            echo "PR branch moved during V17 build; refusing overwrite"; exit 1;
+          }
+          git checkout -B "$TARGET_BRANCH" "$EXPECTED_SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_BuildMetrics.json
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_FBX_Roundtrip_Motion.json
+          if ! git diff --cached --quiet; then
+            git commit -m "WIP: Preserve real skinned V17 FBX as inactive candidate; V16 remains production"
+            git push origin HEAD:"$TARGET_BRANCH"
+          fi
+          echo "V17 FBX preserved only under Artifacts/; never linked to live Unity."
       - name: Publish unmerged V17 candidate asset and geometry proof
         if: always()
         uses: actions/upload-artifact@v4
