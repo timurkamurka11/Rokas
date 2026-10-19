@@ -1,0 +1,39 @@
+{
+  "source_vertices": 12240,
+  "source_components": 6,
+  "candidate_vertices": 28294,
+  "candidate_triangles": 56584,
+  "candidate_components": 1,
+  "exposed_edges": 0,
+  "nonmanifold_edges": 0,
+  "finger_vertex_owners": {
+    "Palm": 18544,
+    "Thumb": 1154,
+    "Index": 2403,
+    "Middle": 2391,
+    "Ring": 2057,
+    "Little": 1745
+  },
+  "mcp_collar_polish": {
+    "affected_vertices": 981,
+    "max_displacement_m": 0.0010702204011483873,
+    "total_vertices": 28294
+  },
+  "corrective_shapes": {
+    "Index_MCP_Corrective": 523,
+    "Index_PIP_Corrective": 158,
+    "Index_DIP_Corrective": 26,
+    "Little_MCP_Corrective": 344,
+    "Little_PIP_Corrective": 138,
+    "Thumb_Opposition_Corrective": 299,
+    "Knuckle_Compression_Corrective": 587,
+    "Fist_Grip_Corrective": 1975
+  },
+  "authored_actions": [
+    "V17_Grip",
+    "V17_Index",
+    "V17_Living"
+  ],
+  "output_fbx": "ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx",
+  "status": "CANDIDATE: NOT YET VERIFIED IN UNITY"
+}
