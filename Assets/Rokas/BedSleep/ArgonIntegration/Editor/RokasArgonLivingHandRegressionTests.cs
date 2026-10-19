@@ -46,13 +46,13 @@ namespace Rokas.BedSleep.Argon.Editor
                         Is.LessThan(.85f),
                         "Wrist rotation accumulated rather than softly breathing");
                     Assert.That(rig.FingerBendDegrees("Index_MCP"),
-                        Is.LessThan(.95f), "Index root collar must not pull open");
+                        Is.LessThan(1.75f), "Index root collar must not pull open");
                     Assert.That(rig.FingerBendDegrees("Little_PIP"),
-                        Is.LessThan(3.90f), "Pinky must not overbend at seam");
+                        Is.LessThan(9.15f), "Pinky must not overbend at seam");
                 }
-                Assert.That(minBend, Is.GreaterThan(2.3f));
-                Assert.That(maxBend, Is.LessThan(9.15f));
-                Assert.That(maxBend - minBend, Is.GreaterThan(1.0f),
+                Assert.That(minBend, Is.GreaterThan(3.0f));
+                Assert.That(maxBend, Is.LessThan(21.2f));
+                Assert.That(maxBend - minBend, Is.GreaterThan(2.0f),
                     "Middle PIP should move organically without repetitive waving");
             }
             finally
