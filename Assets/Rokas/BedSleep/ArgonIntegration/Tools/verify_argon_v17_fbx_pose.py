@@ -131,10 +131,17 @@ def main():
     arm=next((m.object for m in skin.modifiers if m.type=="ARMATURE"),None)
     check(arm is not None,"Re-import lost skeleton")
     available=[a.name for a in bpy.data.actions]
-    missing=[p for p in NEEDED if not any(p in a for a in available)]
-    check(not missing,"Imported FBX missing animation actions: "+str(missing)+
-          " available="+repr(available[:25]))
-    actions={name:next(a for a in bpy.data.actions if name in a.name)
+    # Blender importer can create BOTH skeletal pose and corrective
+    # shape-key actions containing identical "V17_Grip" names.
+    # Only a genuine POSE action can drive armature bones.
+    skeletal=[a for a in bpy.data.actions
+              if any(fc.data_path.startswith('pose.bones[') for fc in a.fcurves)]
+    print("[ROKAS V17 RIG DEBUG] available_skeleton_actions",
+          [a.name for a in skeletal],flush=True)
+    missing=[p for p in NEEDED if not any(p in a.name for a in skeletal)]
+    check(not missing,"Imported FBX missing SKELETAL animation actions: "+
+          str(missing)+" available="+repr([a.name for a in skeletal]))
+    actions={name:next(a for a in skeletal if name in a.name)
              for name in NEEDED}
     for name,ac in actions.items():
         print("[ROKAS V17 RIG DEBUG] imported",name,
