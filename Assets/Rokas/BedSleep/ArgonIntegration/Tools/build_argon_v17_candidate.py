@@ -547,6 +547,13 @@ def main():
     arm.name="RokasV17Rig"
     arm.data.name="RokasV17Skeleton"
     authored=animator_actions(arm,palm)
+    # Diagnostics: distinguish correct animated source shape data from an
+    # FBX exporter that silently bakes ALL blendshapes at zero.
+    for act in bpy.data.actions:
+        if act.name.startswith("V17_") and "Corrective" in act.name:
+            values=[(fc.data_path,round(fc.evaluate(1),4),
+                     round(fc.evaluate(51),4)) for fc in act.fcurves[:3]]
+            log("V17 SHAPE ACTION SOURCE "+act.name+" "+str(values))
     # Export source sleeve/nails and authentic armature with new candidate skin.
     src_skin.hide_render=True
     selected=[arm,palm]
