@@ -14,9 +14,9 @@ from collections import defaultdict
 from mathutils import Vector
 
 FINGERS=("Thumb","Index","Middle","Ring","Little")
-NEEDED=("ROKAS_V17_Organic_Grip_OpenClose",
-        "ROKAS_V17_Independent_Index_Flex",
-        "ROKAS_V17_BedSleep_LivingSettle")
+NEEDED=("V17_Grip",
+        "V17_Index",
+        "V17_Living")
 
 def check(ok,reason):
     if not ok:raise RuntimeError("[ROKAS V17 FBX ROUNDTRIP] "+reason)
