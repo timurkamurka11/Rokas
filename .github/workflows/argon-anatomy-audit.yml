@@ -1,0 +1,54 @@
+name: Argon anatomical source audit
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/argon-anatomy-audit.yml'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py'
+      - 'Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  anatomyscan:
+    name: Read-only FBX topology scan
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check anatomy script Python syntax
+        run: python3 -m py_compile Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py
+      - name: Install headless Blender
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          blender --version | head -2
+      - name: Audit the real imported source FBX (NEVER MODIFY)
+        run: |
+          blender --background --noaudio \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonAnatomyAudit
+      - name: Summary and hard blocker status
+        if: always()
+        run: |
+          if test -f Artifacts/ArgonAnatomyAudit/ROKAS_Argon_Anatomy_DefectMap.json; then
+            python3 - <<'PY'
+          import json
+          p='Artifacts/ArgonAnatomyAudit/ROKAS_Argon_Anatomy_DefectMap.json'
+          r=json.load(open(p,encoding='utf-8'))
+          print('COMPONENTS:', r['components'], 'PALM_BOUNDARY:', r['palm_open_boundary_edges'])
+          for f in r['fingers']:
+              print(f['finger'], 'component', f['component'], 'open_edges', f['boundary_edges'], 'palm_gap_m', f['proximal_to_palm_min_m'])
+          print('BLOCKING CONDITIONS:', r['blocking_conditions'])
+          PY
+          fi
+      - name: Retain geometry and skin audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argon-anatomy-source-defect-map
+          path: Artifacts/ArgonAnatomyAudit/
+          if-no-files-found: warn
+          retention-days: 14
