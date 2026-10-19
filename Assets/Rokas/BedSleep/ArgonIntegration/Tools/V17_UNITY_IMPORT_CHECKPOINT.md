@@ -16,6 +16,36 @@
 - GitHub Actions `Argon V17 actual FBX reconstruction` run **39341073413 PASSED**.
 - Existing `Core behavior` job fails on unrelated checked-in general image/audio resource validation; it is **not** proof of C# or Unity Play Mode pass.
 
+## Continued checkpoint — 2026-10-20
+- The current **PR #13** still contains the four actual FBX files and the three
+  `PairedClipQA.json` reports. Do not run Blender again just to start importing.
+- New Editor-only verifier:
+  `Assets/Rokas/BedSleep/ArgonIntegration/Editor/RokasV17ImportedPoseProof.cs`.
+  This inspects actual Unity `ModelImporter` products, including imported
+  finger bone hierarchy, blendshape curves, skin and motion.
+- Staging now offers an all-in-one entry:
+  `Rokas.BedSleep.Argon.Editor.RokasV17CandidateStaging.StageAndVerify`
+  and menu `ROKAS > Bed Sleep > Argon > Stage and verify V17 in Unity (inactive)`.
+- It imports four FBXs under
+  `Assets/Rokas/BedSleep/ArgonIntegration/V17Candidate/Imported/`, samples
+  the three real imported clips, checks nonzero index MCP morph changes, uses
+  `SkinnedMeshRenderer.BakeMesh` to ensure moving vertices, and verifies
+  index-only motion does not move unrelated fingertip bones.
+- This is **not yet executed in a live Unity Editor** in this chat. Neither
+  compilation success in Unity nor the Game View presentation is claimed.
+- A one-click Windows staging ZIP is supplied in the ChatGPT conversation.
+  It acts directly on `D:\Rokas\Rokas-FULL-R11-FINISHED-UI COPY`, verifies
+  Git blobs, uses no checkout or merge, makes local Library backups, and
+  launches the matching Unity Hub editor in batchmode. A nonzero Unity exit
+  means stop and inspect `Unity_V17_StageAndVerify.log`.
+- Latest PR head may report GitHub Actions `action_required` after its
+  previous bot-authored updates; this is not a verified Unity PASS.
+- **Release hold remains:** do not replace V16 until the actual Unity
+  test succeeds, then visually inspect neutral/partial/full/released poses
+  in the already existing bed scene. Correct remaining index/little
+  knuckle distortion, preserve watch and OLED functionality, and compare
+  real frame timings before any production cutover.
+
 ## Prepared Unity import (not yet run)
 
 `Assets/Rokas/BedSleep/ArgonIntegration/Editor/RokasV17CandidateStaging.cs`
