@@ -35,5 +35,10 @@
     "V17_Living"
   ],
   "output_fbx": "ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx",
+  "paired_corrective_clip_fbxs": [
+    "ROKAS_V17_V17_Grip_Animated.fbx",
+    "ROKAS_V17_V17_Index_Animated.fbx",
+    "ROKAS_V17_V17_Living_Animated.fbx"
+  ],
   "status": "CANDIDATE: NOT YET VERIFIED IN UNITY"
 }

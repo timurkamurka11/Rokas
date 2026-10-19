@@ -105,11 +105,44 @@
       "moved_gt_3mm": 1585
     }
   },
+  "index_only_motion": {
+    "Thumb": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    },
+    "Index": {
+      "max_m": 0.050393,
+      "mean_m": 0.018377
+    },
+    "Middle": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    },
+    "Ring": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    },
+    "Little": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    }
+  },
+  "corrective_shape_values_at_grip": {
+    "Index_MCP_Corrective": 0.0,
+    "Little_MCP_Corrective": 0.0,
+    "Fist_Grip_Corrective": 0.0
+  },
+  "imported_corrective_actions": [
+    "Key|RokasV17Rig|V17_Grip|RokasV17Rig|V17_Grip",
+    "Key|RokasV17Rig|V17_Index|RokasV17Rig|V17_Index",
+    "Key|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living"
+  ],
   "projected_face_counts": {
     "neutral": 56577,
     "half_fist": 56563,
     "full_fist": 56527,
     "release": 56577,
+    "index_flex": 56575,
     "profile_neutral": 56577,
     "profile_fist": 56527,
     "Index_MCP_neutral": 20247,
