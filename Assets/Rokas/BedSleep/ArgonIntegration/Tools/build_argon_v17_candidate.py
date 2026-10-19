@@ -147,6 +147,70 @@ def rebuild_watertight_surface(candidate, original):
     return dict(voxel_meters=.00135,uv_layers=len(candidate.data.uv_layers),
                 vertices=len(candidate.data.vertices))
 
+def locally_relax_mcp_collars(candidate,arm):
+    """Targeted geometry polish on actual ONE-PIECE skin near finger roots.
+
+    Keep all geometry/UV/weights and topology, but smooth high-frequency
+    boolean-remesh rim transitions. Soft falloff prevents flattening the
+    whole palm, thinning tips or pulling the OLED-facing wrist.
+    """
+    mesh=candidate.data
+    xyz=[v.co.copy() for v in mesh.vertices]
+    adjacency=[set() for _ in xyz]
+    for e in mesh.edges:
+        a,b=e.vertices
+        adjacency[a].add(b)
+        adjacency[b].add(a)
+    to_local=candidate.matrix_world.inverted()
+    locations={}
+    radii={"Thumb":.025,"Index":.028,"Middle":.022,
+           "Ring":.021,"Little":.026}
+    for f in NAMES:
+        mcp=f+"_MCP"
+        require(mcp in arm.pose.bones,"Missing finger MCP during collar polish")
+        locations[f]=to_local@(arm.matrix_world@arm.pose.bones[mcp].head)
+    influence=[]
+    for v in xyz:
+        falloffs=[]
+        for f,center in locations.items():
+            d=(v-center).length
+            r=radii[f]
+            if d<r:
+                t=1.-d/r
+                falloffs.append((t*t*(3.-2.*t))*.92)
+        influence.append(max(falloffs,default=0.))
+    original=[p.copy() for p in xyz]
+    # Bounded Taubin-style geometry relaxation. No new polygons, no
+    # renormalization artifacts, no uniform shrink of the hand volume.
+    def pass_smoothing(positions,factor):
+        new=[p.copy() for p in positions]
+        for i,fall in enumerate(influence):
+            if fall<1e-6 or not adjacency[i]:continue
+            avg=sum((positions[j] for j in adjacency[i]),Vector())/len(adjacency[i])
+            new[i]=positions[i]+(avg-positions[i])*factor*fall
+        return new
+    for _ in range(7):
+        xyz=pass_smoothing(xyz,.42)
+        xyz=pass_smoothing(xyz,-.43)
+    maximum=0.
+    displaced=0
+    for i,p in enumerate(xyz):
+        delta=p-original[i]
+        d=delta.length
+        if d>.0024:
+            # Restrict any one socket vertex to 2.4mm in local space.
+            delta*=.0024/d
+            d=.0024
+        if d>.00010:displaced+=1
+        maximum=max(maximum,d)
+        mesh.vertices[i].co=original[i]+delta
+    mesh.update()
+    log("Anatomical MCP collar relaxation: displaced="+str(displaced)+
+        " max_mm="+str(round(maximum*1000,3)))
+    require(displaced>25,"No real junction correction generated")
+    return {"affected_vertices":displaced,"max_displacement_m":maximum,
+            "total_vertices":len(mesh.vertices)}
+
 def select_influences(candidate,arm):
     # Create finger-local weights, never drive little finger by Ring_PIP.
     vertices=candidate.data.vertices
@@ -426,6 +490,12 @@ def main():
     require(comp==1,"Merged surface remains disconnected: "+str(comp))
     require(bad==0,"Boolean candidate contains nonmanifold edges")
     require(bdr==0,"Boolean candidate still has open seams")
+    collar_metrics=locally_relax_mcp_collars(palm,arm)
+    # Retopology of the junctions changes vertex POSITION only. Confirm
+    # the mesh remains one closed nonmanifold-free component.
+    polished_open,polished_bad=boundary_and_bad(palm.data)
+    require(groups(palm.data)==1 and polished_open==0 and polished_bad==0,
+            "Collar polish introduced a broken topological skin")
     weightmap=select_influences(palm,arm)
     correctives=build_correctives(palm,arm)
     require(len(correctives)>=5,"Candidate shape keys missing")
@@ -464,7 +534,9 @@ def main():
         candidate_vertices=len(palm.data.vertices),
         candidate_triangles=sum(len(x.vertices)-2 for x in palm.data.polygons),
         candidate_components=comp,exposed_edges=bdr,nonmanifold_edges=bad,
-        finger_vertex_owners=weightmap,corrective_shapes=correctives,
+        finger_vertex_owners=weightmap,
+        mcp_collar_polish=collar_metrics,
+        corrective_shapes=correctives,
         authored_actions=authored,output_fbx=outfbx.name,
         status="CANDIDATE: NOT YET VERIFIED IN UNITY")
     (out/"ROKAS_V17_BuildMetrics.json").write_text(json.dumps(results,indent=2))
