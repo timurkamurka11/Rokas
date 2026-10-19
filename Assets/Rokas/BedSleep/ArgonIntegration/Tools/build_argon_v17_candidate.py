@@ -332,7 +332,19 @@ def build_correctives(candidate,arm):
         made[keyname]=n
     return made
 
-def animator_actions(arm):
+def animator_actions(arm,candidate):
+    # Shape keys without authored curves stay at zero: they were present in
+    # V17 but did NOT actually correct bent joints. Build synchronized
+    # deform curves for each action, exported with the real skinned FBX.
+    shape_data=candidate.data.shape_keys
+    require(shape_data is not None,"No authored corrective shapes to animate")
+    correctives={name:shape_data.key_blocks.get(name) for name in (
+        "Index_MCP_Corrective","Index_PIP_Corrective",
+        "Index_DIP_Corrective","Little_MCP_Corrective",
+        "Little_PIP_Corrective","Thumb_Opposition_Corrective",
+        "Knuckle_Compression_Corrective","Fist_Grip_Corrective")}
+    require(all(x is not None for x in correctives.values()),
+            "Corrective key names missing from reconstruction")
     bone_names={}
     for name in NAMES:
         bone_names[name]=[name+x for x in (
@@ -345,6 +357,8 @@ def animator_actions(arm):
     def key_pose(action_name,timeline):
         action=bpy.data.actions.new(action_name)
         arm.animation_data_create().action=action
+        shape_action=bpy.data.actions.new(action_name+"_Corrective")
+        shape_data.animation_data_create().action=shape_action
         for frame,extent in timeline:
             for finger, names in bone_names.items():
                 # Index QA clip MUST NOT animate the other four fingers.
@@ -364,12 +378,36 @@ def animator_actions(arm):
                     bone.rotation_quaternion=Quaternion(axis.normalized(),angle)
                     bone.keyframe_insert(data_path="rotation_quaternion",
                                          frame=frame,group=finger)
+            # Each corrective is synchronized with joint flexion.
+            # Finger-specific keys only respond to their own gesture;
+            # V17_Index must not bulge pinky/thumb/whole palm.
+            grip=max(0.,min(1.,extent/95.))
+            only_index=action_name=="V17_Index"
+            curve_scale={
+                "Index_MCP_Corrective":.58,
+                "Index_PIP_Corrective":.52,
+                "Index_DIP_Corrective":.36,
+                "Little_MCP_Corrective":0. if only_index else .53,
+                "Little_PIP_Corrective":0. if only_index else .40,
+                "Thumb_Opposition_Corrective":0. if only_index else .38,
+                "Knuckle_Compression_Corrective":0. if only_index else .47,
+                "Fist_Grip_Corrective":0. if only_index else .43}
+            for name,key in correctives.items():
+                key.value=grip*curve_scale[name]
+                key.keyframe_insert(data_path="value",frame=frame,
+                                    group="ROKAS_FlexCorrectives")
         for curve in action.fcurves:
             for key in curve.keyframe_points:
                 key.interpolation="BEZIER"
                 key.handle_left_type="AUTO_CLAMPED"
                 key.handle_right_type="AUTO_CLAMPED"
+        for curve in shape_action.fcurves:
+            for key in curve.keyframe_points:
+                key.interpolation="BEZIER"
+                key.handle_left_type="AUTO_CLAMPED"
+                key.handle_right_type="AUTO_CLAMPED"
         action.use_fake_user=True
+        shape_action.use_fake_user=True
         return action
     actions=[
         key_pose("V17_Grip",
@@ -383,6 +421,8 @@ def animator_actions(arm):
     for bone in real:
         bone.rotation_quaternion=Quaternion((1,0,0,0))
     arm.animation_data.action=None
+    shape_data.animation_data.action=None
+    for key in correctives.values():key.value=0.
     return [a.name for a in actions]
 
 def save_proof(scene,obj,out,cam_name):
@@ -506,7 +546,7 @@ def main():
     # bone names and hierarchies stay unchanged for Unity retargeting.
     arm.name="RokasV17Rig"
     arm.data.name="RokasV17Skeleton"
-    authored=animator_actions(arm)
+    authored=animator_actions(arm,palm)
     # Export source sleeve/nails and authentic armature with new candidate skin.
     src_skin.hide_render=True
     selected=[arm,palm]
