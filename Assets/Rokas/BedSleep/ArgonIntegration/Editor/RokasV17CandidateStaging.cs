@@ -187,7 +187,7 @@ namespace Rokas.BedSleep.Argon.Editor
             }
         }
 
-        private static T ReadJson<T>(string path)
+        private static T ReadJson<T>(string path) where T : class
         {
             if (!File.Exists(path))
                 throw new FileNotFoundException("Required V17 QA report", path);
