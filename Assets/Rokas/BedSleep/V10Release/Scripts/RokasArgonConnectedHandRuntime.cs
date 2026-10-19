@@ -44,6 +44,7 @@ namespace Rokas.BedSleep.V10Release
             }
 
             GameObject instance = null;
+            Mesh runtimeFingerCandidate = null;
             try
             {
                 instance = UnityEngine.Object.Instantiate(prefab, gameArm.transform.parent);
@@ -129,7 +130,34 @@ namespace Rokas.BedSleep.V10Release
                     skinMaterial.SetFloat("_Glossiness", .34f);
                 if (skinMaterial.HasProperty("_Metallic"))
                     skinMaterial.SetFloat("_Metallic", 0f);
+                Mesh originalHandMesh=skin.sharedMesh;
                 skin.sharedMaterial = skinMaterial;
+
+                // Copy-only guarded repair of the two conspicuous collar
+                // seams. If this exact historic Argon topology differs, keep
+                // the completely untouched original hand and keep playing.
+                // No welded/retopologized claim: proximal socket nesting only.
+                try
+                {
+                    var report=ArgonFingerRootSocketBlend.ApplyIndexLittleToClone(
+                        skin,out runtimeFingerCandidate);
+                    Debug.Log("[ROKAS HAND] Conservative original-mesh index " +
+                        "and little finger socket blend: vertices=" +
+                        report.ModifiedVertices + " maxOffset=" +
+                        report.MaxVertexMove.ToString("G5"));
+                }
+                catch (Exception geometryError)
+                {
+                    if (runtimeFingerCandidate != null)
+                    {
+                        skin.sharedMesh = originalHandMesh;
+                        UnityEngine.Object.Destroy(runtimeFingerCandidate);
+                        runtimeFingerCandidate = null;
+                    }
+                    Debug.LogWarning("[ROKAS HAND] Original mesh preserved; " +
+                        "targeted finger seam polish skipped: " +
+                        geometryError.Message);
+                }
                 Material oledMaterial = new Material(face.sharedMaterial);
                 oledMaterial.name = "ROKAS_Argon_Gameplay_Russian_OLED";
                 oledMaterial.SetTexture("_MainTex", russian.OledRenderTexture);
@@ -139,6 +167,7 @@ namespace Rokas.BedSleep.V10Release
                 follow.Initialize(instance.transform, sourceWrist, targetWrist,
                     fingertip, sleeve, face, gameArm, gameOled, russian, camera,
                     gameFoley, skinMaterial, oledMaterial);
+                follow.SetOwnedSkinCandidate(runtimeFingerCandidate);
                 foreach (var t in joints) t.gameObject.layer = 30;
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                     renderer.enabled = true;
@@ -160,6 +189,8 @@ namespace Rokas.BedSleep.V10Release
             catch (Exception ex)
             {
                 if (instance != null) UnityEngine.Object.Destroy(instance);
+                if (runtimeFingerCandidate != null)
+                    UnityEngine.Object.Destroy(runtimeFingerCandidate);
                 Debug.LogError("[ROKAS Bed Sleep] Complete Argon model unavailable: " +
                     ex.Message + ". Old visuals remain active.");
                 return false;
@@ -189,6 +220,11 @@ namespace Rokas.BedSleep.V10Release
         private float visibilityVelocity;
         private BedSleepSFXController foley;
         private Material ownedSkinMaterial, ownedOledMaterial;
+        private Mesh ownedSkinCandidate;
+        internal void SetOwnedSkinCandidate(Mesh candidate)
+        {
+            ownedSkinCandidate=candidate;
+        }
         private Quaternion authoredRootRotation;
         private Vector3 authoredRootPosition;
         private Transform forearmRoot, forearmTwist, activeWrist;
@@ -443,6 +479,7 @@ namespace Rokas.BedSleep.V10Release
         private void OnDestroy()
         {
             // Clone-only materials; preserve every imported FBX/PBR source.
+            if (ownedSkinCandidate != null) Destroy(ownedSkinCandidate);
             if (ownedSkinMaterial != null) Destroy(ownedSkinMaterial);
             if (ownedOledMaterial != null) Destroy(ownedOledMaterial);
         }
