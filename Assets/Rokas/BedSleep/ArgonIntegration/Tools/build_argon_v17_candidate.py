@@ -107,17 +107,33 @@ def rebuild_watertight_surface(candidate, original):
     smoothing.factor=.45
     smoothing.iterations=3
     bpy.ops.object.modifier_apply(modifier=smoothing.name)
-    # Recover original 4K PBR UV coordinates from closest visible surfaces.
-    if original.data.uv_layers:
-        dt=candidate.modifiers.new("TransferAuthenticArgon4KUV","DATA_TRANSFER")
-        dt.object=original
-        dt.use_loop_data=True
-        dt.data_types_loops={'UV'}
-        dt.loop_mapping='POLYINTERP_NEAREST'
-        dt.use_max_distance=False
-        bpy.ops.object.modifier_apply(modifier=dt.name)
-    require(len(candidate.data.uv_layers)>0,
-            "UV transfer failed; do not install skin with broken material")
+    # Project UV onto authentic original triangles with explicit barycentric
+    # mapping. Blender 3.0 DataTransfer does NOT create a new target UV
+    # channel automatically on a remeshed surface.
+    if not original.data.uv_layers:
+        raise RuntimeError("Original Argon source has no UV channel")
+    from mathutils.geometry import barycentric_transform
+    source=original.data
+    uv_in=source.uv_layers.active.data
+    out_uv=candidate.data.uv_layers.new(name="ROKAS_V17_AuthenticSkinUV")
+    raw_points=[v.co.copy() for v in source.vertices]
+    triangles=[list(p.vertices) for p in source.polygons]
+    tree=BVHTree.FromPolygons(raw_points,triangles,all_triangles=True)
+    for poly in candidate.data.polygons:
+        for li in poly.loop_indices:
+            pt=candidate.data.vertices[candidate.data.loops[li].vertex_index].co
+            closest,normal,fi,distance=tree.find_nearest(pt)
+            if fi is None:raise RuntimeError("UV projection missing a source triangle")
+            face=source.polygons[fi]
+            require(len(face.vertices)==3,"Expected authentic triangulated skin")
+            a,b,c=(raw_points[i] for i in face.vertices)
+            uvtri=[Vector((uv_in[lp].uv.x,uv_in[lp].uv.y,0))
+                   for lp in face.loop_indices]
+            mapped=barycentric_transform(closest,a,b,c,*uvtri)
+            out_uv.data[li].uv=(mapped.x,mapped.y)
+    require(len(candidate.data.uv_layers)>0 and
+            len(candidate.data.uv_layers.active.data)==len(candidate.data.loops),
+            "Barycentric UV transfer failed")
     for polygon in candidate.data.polygons:polygon.use_smooth=True
     candidate.data.update()
     return dict(voxel_meters=.00135,uv_layers=len(candidate.data.uv_layers),
