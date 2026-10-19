@@ -429,6 +429,13 @@ def main():
     weightmap=select_influences(palm,arm)
     correctives=build_correctives(palm,arm)
     require(len(correctives)>=5,"Candidate shape keys missing")
+    # Blender FBX exporter encodes action names as
+    # <rig-object>|<rig-object>|<action>. The original verbose rig name
+    # consumed the 63-character FBX name limit so ALL three imported bone
+    # actions were indistinguishable. This is a NEW candidate only;
+    # bone names and hierarchies stay unchanged for Unity retargeting.
+    arm.name="RokasV17Rig"
+    arm.data.name="RokasV17Skeleton"
     authored=animator_actions(arm)
     # Export source sleeve/nails and authentic armature with new candidate skin.
     src_skin.hide_render=True
