@@ -120,6 +120,88 @@ namespace Rokas.BedSleep.Argon.Editor
         }
         [Test]
         [Timeout(45000)]
+        public void LivingHandMovesRealSkinVerticesOnAllFiveFingers()
+        {
+            // Regression for the V14 defect: rotating bone transforms is not
+            // enough when the FBX weights target neighbouring finger joints.
+            // Compare actual Unity CPU-skinned positions, not only angles.
+            GameObject instance=null;
+            Mesh correction=null,frameA=null,frameB=null;
+            try
+            {
+                instance=MakeOriginal();
+                var skin=instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .Single(x=>x.name=="Keiko_Hand_Skin_Mesh");
+                var original=skin.sharedMesh;
+                var originalBones=skin.bones;
+                var report=ArgonFingerBindposeRetarget.ApplyCandidate(
+                    skin,out correction,out var rememberedBones);
+                Assert.That(report.RetargetedVertices,Is.EqualTo(6970));
+                var rig=new ArgonLivingRig(instance);
+                Transform wrist=rememberedBones.Single(
+                    x=>x.name=="Arm_Wrist");
+                Quaternion wristRest=wrist.localRotation;
+                Vector3 rootRest=instance.transform.position;
+                try
+                {
+                    rig.NotifyAnimationPoseReset();
+                    rig.Apply(1.2f,1f,false,Vector3.right,Vector3.up,
+                        1f,false);
+                    // Isolate actual finger vertices from wrist oscillation.
+                    wrist.localRotation=wristRest;
+                    frameA=new Mesh();
+                    skin.BakeMesh(frameA);
+
+                    instance.transform.position=rootRest;
+                    wrist.localRotation=wristRest;
+                    rig.NotifyAnimationPoseReset();
+                    rig.Apply(6.1f,1f,false,Vector3.right,Vector3.up,
+                        1f,false);
+                    wrist.localRotation=wristRest;
+                    frameB=new Mesh();
+                    skin.BakeMesh(frameB);
+                    float threshold=Mathf.Max(2e-7f,
+                        original.bounds.size.magnitude*.00035f);
+                    var a=frameA.vertices;
+                    var b=frameB.vertices;
+                    var moved=new int[5];
+                    for(int digit=0;digit<5;digit++)
+                        foreach(int index in report.FingerVertices[digit])
+                            if((a[index]-b[index]).magnitude>threshold)
+                                ++moved[digit];
+                    Debug.Log("[ROKAS LIVING HAND] actual moving skin "+
+                        string.Join(",",moved)+" threshold="+
+                        threshold.ToString("G6"));
+                    Assert.That(moved[1],Is.GreaterThan(45),
+                        "Index pixels cannot animate if retarget is absent");
+                    Assert.That(moved[2],Is.GreaterThan(45),
+                        "Middle finger must respond to independent motion");
+                    Assert.That(moved[3],Is.GreaterThan(45),
+                        "Ring finger must respond to independent motion");
+                    Assert.That(moved[4],Is.GreaterThan(20),
+                        "Little finger must flex gently rather than remain frozen");
+                    Assert.That(moved[0],Is.GreaterThan(15),
+                        "Thumb must have a separate live curl");
+                }
+                finally
+                {
+                    skin.sharedMesh=original;
+                    skin.bones=originalBones;
+                    wrist.localRotation=wristRest;
+                    instance.transform.position=rootRest;
+                }
+            }
+            finally
+            {
+                if(correction!=null)UnityEngine.Object.DestroyImmediate(correction);
+                if(frameA!=null)UnityEngine.Object.DestroyImmediate(frameA);
+                if(frameB!=null)UnityEngine.Object.DestroyImmediate(frameB);
+                if(instance!=null)UnityEngine.Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        [Timeout(45000)]
         public void FingerSocketBlendLeavesOriginalPalmAndDistalGeometryUntouched()
         {
             GameObject instance=null;
