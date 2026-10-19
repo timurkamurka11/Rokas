@@ -120,14 +120,17 @@ namespace Rokas.BedSleep.V10Release
                 skinMaterial.name = "ROKAS_Argon_Gameplay_NaturalWarmSkin";
                 if (skinMaterial.HasProperty("_Color"))
                     skinMaterial.SetColor("_Color", new Color(1f, .965f, .935f, 1f));
+                // Preserve original albedo and normals, but restore soft
+                // skin micro-detail from the authored high-resolution maps.
+                // Do not flatten the model with strong AO or glossy plastic.
                 if (skinMaterial.HasProperty("_OcclusionStrength"))
-                    skinMaterial.SetFloat("_OcclusionStrength", .10f);
+                    skinMaterial.SetFloat("_OcclusionStrength", .135f);
                 if (skinMaterial.HasProperty("_BumpScale"))
-                    skinMaterial.SetFloat("_BumpScale", .045f);
+                    skinMaterial.SetFloat("_BumpScale", .062f);
                 if (skinMaterial.HasProperty("_GlossMapScale"))
                     skinMaterial.SetFloat("_GlossMapScale", .16f);
                 if (skinMaterial.HasProperty("_Glossiness"))
-                    skinMaterial.SetFloat("_Glossiness", .34f);
+                    skinMaterial.SetFloat("_Glossiness", .305f);
                 if (skinMaterial.HasProperty("_Metallic"))
                     skinMaterial.SetFloat("_Metallic", 0f);
                 Mesh originalHandMesh=skin.sharedMesh;
@@ -172,6 +175,10 @@ namespace Rokas.BedSleep.V10Release
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                     renderer.enabled = true;
                 follow.SnapAndFrame();
+                // Reuse actual skinned palm surface and authored joints.
+                // A failed ray-projection simply skips vascular detail;
+                // no new fake skin mesh or change to the OLED / camera.
+                ArgonDorsalVeinDetail.TryAttach(skin,joints,camera);
 
                 // Only NOW that the complete replacement is initialized hide
                 // every old skinned V10 hand/sleeve/nail/watch mesh. Their
