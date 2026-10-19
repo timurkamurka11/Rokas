@@ -63,6 +63,52 @@ def boundary_edges(mesh):
 def vector(v):
     return [round(float(x),7) for x in v]
 
+def inspect_boundary_loops(skin, mesh, boundary, piece_map, arm):
+    # Each ring is a connected subgraph of all edges used by exactly
+    # one polygon. Closed loops with degree-two vertices are stitchable
+    # only after identifying their anatomical finger/palm assignment.
+    graph=defaultdict(set)
+    for a,b in boundary:
+        graph[a].add(b)
+        graph[b].add(a)
+    bones=["Arm_Wrist","Thumb_MCP","Index_MCP","Middle_MCP",
+           "Ring_MCP","Little_MCP"]
+    centers={n:arm.matrix_world@arm.pose.bones[n].head for n in bones
+             if n in arm.pose.bones}
+    seen=set()
+    loops=[]
+    for first in graph:
+        if first in seen:
+            continue
+        stack=[first]
+        seen.add(first)
+        group=[]
+        while stack:
+            node=stack.pop()
+            group.append(node)
+            for nxt in graph[node]:
+                if nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        world=[skin.matrix_world@mesh.vertices[n].co for n in group]
+        centroid=sum(world,Vector())/len(world)
+        nearest=sorted((float((centroid-v).length),name)
+                       for name,v in centers.items())
+        loops.append({
+            "id":len(loops),
+            "skin_component":piece_map[group[0]],
+            "vertex_count":len(group),
+            "closed_degree_two":all(len(graph[n])==2 for n in group),
+            "center_world":vector(centroid),
+            "closest_joint":nearest[0][1],
+            "joint_distance_m":nearest[0][0],
+            "perimeter_m":sum(float((skin.matrix_world@
+                mesh.vertices[a].co-skin.matrix_world@
+                mesh.vertices[b].co).length)
+                for a,b in boundary if a in group and b in group)
+        })
+    return sorted(loops,key=lambda d:(d["skin_component"],d["closest_joint"]))
+
 def main():
     args=sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else []
     if len(args)!=2:
@@ -101,6 +147,7 @@ def main():
         mx=[max(v[j] for v in world) for j in range(3)]
         bounds_by_piece[i]={"vertices":len(ids),
             "min":vector(mn),"max":vector(mx)}
+    loop_inventory=inspect_boundary_loops(skin,mesh,edge_list,index_to_piece,arm)
     boundary_by_piece=defaultdict(int)
     for a,b in edge_list:
         if index_to_piece[a]==index_to_piece[b]:
@@ -197,6 +244,7 @@ def main():
         "components":len(pieces),
         "component_bounds":bounds_by_piece,
         "total_open_boundary_edges":len(edge_list),
+        "boundary_loop_inventory":loop_inventory,
         "nonmanifold_edges":nonmanifold,
         "palm_open_boundary_edges":boundary_by_piece.get(palm_id,0),
         "fingers":finger_info,
@@ -224,6 +272,13 @@ def main():
         print("[ROKAS ANATOMY AUDIT] " + f["finger"] +
               " palm gap min="+format(f["proximal_to_palm_min_m"],".6f")+
               "m; open edges="+str(f["boundary_edges"]),flush=True)
+    for loop in loop_inventory:
+        print("[ROKAS RIM INVENTORY] component="+str(loop["skin_component"])+
+              " ring="+str(loop["id"])+" n="+str(loop["vertex_count"])+
+              " closed="+str(loop["closed_degree_two"])+
+              " nearest="+loop["closest_joint"]+
+              " distance="+format(loop["joint_distance_m"],".5f"),
+              flush=True)
     print("[ROKAS ANATOMY AUDIT] No geometry modified. Source FBX unchanged.",flush=True)
 
 if __name__=="__main__":
