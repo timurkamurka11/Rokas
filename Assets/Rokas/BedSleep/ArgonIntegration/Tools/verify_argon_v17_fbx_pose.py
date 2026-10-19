@@ -154,9 +154,15 @@ def main():
                          for fc in list(ac.fcurves)[:5]],flush=True)
     shape_actions=[a for a in bpy.data.actions if
         any(fc.data_path.startswith('key_blocks[') for fc in a.fcurves)]
+    print("[ROKAS V17 CORRECTIVE DEBUG] imported",
+          [(a.name,len(a.fcurves),
+            [(c.data_path,len(c.keyframe_points))
+             for c in a.fcurves[:2]]) for a in shape_actions[-10:]],flush=True)
     corrective_actions={}
     for name in NEEDED:
-        matches=[a for a in shape_actions if name+"_Corrective" in a.name]
+        # Blender FBX names the shape-key action after the source *skeletal*
+        # clip, NOT necessarily after its standalone *_Corrective data-block.
+        matches=[a for a in shape_actions if name in a.name]
         check(matches,"Exported V17 missing animated corrective shape action: "+name)
         correction=matches[0]
         check(len(correction.fcurves)>=8,
