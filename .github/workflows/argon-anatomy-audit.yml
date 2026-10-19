@@ -27,13 +27,13 @@ jobs:
           blender --version | head -2
       - name: Audit the real imported source FBX (NEVER MODIFY)
         run: |
-          blender --background -noaudio \
+          blender --background -noaudio --python-exit-code 2 \
             --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py \
             -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
             Artifacts/ArgonAnatomyAudit
       - name: Render real hand source seam wireframes (SVG)
         run: |
-          blender --background -noaudio \
+          blender --background -noaudio --python-exit-code 2 \
             --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/render_argon_topology_views.py \
             -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
             Artifacts/ArgonAnatomyAudit
