@@ -136,29 +136,55 @@ namespace Rokas.BedSleep.V10Release
                 Mesh originalHandMesh=skin.sharedMesh;
                 skin.sharedMaterial = skinMaterial;
 
-                // Copy-only guarded repair of the two conspicuous collar
-                // seams. If this exact historic Argon topology differs, keep
-                // the completely untouched original hand and keep playing.
-                // No welded/retopologized claim: proximal socket nesting only.
+                // V14 only changed transform angles, but the imported FBX
+                // has finger-island weights mapped to other digit bones.
+                // A moving bone therefore did NOT move its own finger skin.
+                // Apply the already-validated, neutral-pose-preserving bindpose
+                // retarget to a disposable runtime mesh before cosmetic edits.
+                // No source FBX, animator, game camera or shader is changed.
+                Transform[] originalSkinBones = skin.bones;
+                bool fingerSkinRetargeted = false;
                 try
                 {
-                    var report=ArgonFingerRootSocketBlend.ApplyIndexLittleToClone(
-                        skin,out runtimeFingerCandidate);
-                    Debug.Log("[ROKAS HAND] Conservative original-mesh index " +
-                        "and little finger socket blend: vertices=" +
-                        report.ModifiedVertices + " maxOffset=" +
-                        report.MaxVertexMove.ToString("G5"));
+                    var report = ArgonFingerBindposeRetarget.ApplyCandidate(
+                        skin, out runtimeFingerCandidate, out originalSkinBones);
+                    fingerSkinRetargeted = true;
+                    Debug.Log("[ROKAS HAND] Live finger skinning active: " +
+                        report.RetargetedVertices + " vertices, " +
+                        report.ExtraBoneSlots + " compensated slots; neutral drift=" +
+                        report.MaxNeutralDisplacement.ToString("G6"));
+                }
+                catch (Exception bindError)
+                {
+                    // ApplyCandidate restores bones+mesh on failure itself.
+                    // Do not let a failed optional finger remap hide the watch.
+                    skin.sharedMesh = originalHandMesh;
+                    skin.bones = originalSkinBones;
+                    runtimeFingerCandidate = null;
+                    Debug.LogWarning("[ROKAS HAND] Original skin kept: finger " +
+                        "remap rejected: " + bindError.Message);
+                }
+
+                // Retain the V13 index/little seam improvements on top of the
+                // live corrected skin if its topology matches exactly.
+                // On a seam failure, keep the retargeted, animatable fingers.
+                Mesh beforeSocket = skin.sharedMesh;
+                Mesh socketMesh = null;
+                try
+                {
+                    var socket = ArgonFingerRootSocketBlend.ApplyIndexLittleToClone(
+                        skin, out socketMesh);
+                    runtimeFingerCandidate = socketMesh;
+                    if (fingerSkinRetargeted && beforeSocket != socketMesh)
+                        UnityEngine.Object.Destroy(beforeSocket);
+                    Debug.Log("[ROKAS HAND] Index/little seam blend retained: " +
+                        socket.ModifiedVertices + " adjusted vertices");
                 }
                 catch (Exception geometryError)
                 {
-                    if (runtimeFingerCandidate != null)
-                    {
-                        skin.sharedMesh = originalHandMesh;
-                        UnityEngine.Object.Destroy(runtimeFingerCandidate);
-                        runtimeFingerCandidate = null;
-                    }
-                    Debug.LogWarning("[ROKAS HAND] Original mesh preserved; " +
-                        "targeted finger seam polish skipped: " +
+                    skin.sharedMesh = beforeSocket;
+                    if (socketMesh != null) UnityEngine.Object.Destroy(socketMesh);
+                    Debug.LogWarning("[ROKAS HAND] Safe finger socket fallback: " +
                         geometryError.Message);
                 }
                 Material oledMaterial = new Material(face.sharedMaterial);
