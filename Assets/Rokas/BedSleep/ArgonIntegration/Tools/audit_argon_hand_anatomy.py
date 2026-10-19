@@ -232,6 +232,27 @@ def main():
         blockers.append("At least one finger shell has no open edge boundary: do not auto-bridge watertight shells")
     if nonmanifold:
         blockers.append(f"{nonmanifold} non-manifold edges: resolve before joining the topology")
+    palm_rims=[l for l in loop_inventory if l["skin_component"]==0]
+    finger_rims=[l for l in loop_inventory if l["skin_component"]!=0]
+    if len(palm_rims)==1 and len(finger_rims)==5:
+        blockers.append(
+            "The palm has ONE 288-edge boundary perimeter and EACH finger has " +
+            "ONE 148-edge perimeter, not a matched palm/finger proximal ring pair. " +
+            "Do not bridge nearest vertices. Author anatomical proximal loops " +
+            "with correct webbing, UVs and deformation topology first.")
+    crossed=[]
+    for finger in finger_info:
+        name=finger["finger"]
+        wrong=[n for n,w in finger["dominant_weights"]
+               if w>10 and n.startswith(("Thumb_","Index_","Middle_",
+                                           "Ring_","Little_"))
+               and not n.startswith(name+"_")]
+        if wrong:
+            crossed.append({"finger":name,"wrong_finger_bones":wrong})
+    if crossed:
+        blockers.append(
+            "Major skin influences are assigned to bones of OTHER fingers; " +
+            "repair weights/bindpose before authoring full curls.")
     report={
         "project":"ROKAS",
         "source":str(source),
@@ -246,6 +267,7 @@ def main():
         "total_open_boundary_edges":len(edge_list),
         "boundary_loop_inventory":loop_inventory,
         "nonmanifold_edges":nonmanifold,
+        "cross_finger_skin_influences":crossed,
         "palm_open_boundary_edges":boundary_by_piece.get(palm_id,0),
         "fingers":finger_info,
         "geometry_reconstruction_is_proven":False,
