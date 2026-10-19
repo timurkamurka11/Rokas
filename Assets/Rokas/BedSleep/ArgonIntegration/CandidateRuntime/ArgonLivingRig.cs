@@ -20,7 +20,7 @@ namespace Rokas.BedSleep.Argon.Candidate
         private readonly Dictionary<string, Vector3> bendAxis =
             new Dictionary<string, Vector3>();
         private readonly Transform wrist;
-        private const float MaxRootDriftMeters = .0045f;
+        private const float MaxRootDriftMeters = .00065f; // submillimetre, not a floating arm
         private Vector3 previousRootOverlay;
         private Quaternion previousWristOverlay = Quaternion.identity;
         private bool overlayApplied;
@@ -112,17 +112,19 @@ namespace Rokas.BedSleep.Argon.Candidate
             }
             strength = Mathf.Clamp01(strength);
             fingerResponse=Mathf.Clamp01(fingerResponse);
-            float breath = Mathf.Sin(seconds * 2f * Mathf.PI * .22f);
-            float secondary = Mathf.Sin(seconds * 2f * Mathf.PI * .37f + 1.2f);
-            float microBreath = Mathf.Sin(seconds * 2f * Mathf.PI * .51f + .42f);
-            float life = strength * (.53f * breath + .38f * secondary +
-                .09f * microBreath);
+            // Single low-frequency breathing rhythm with a tiny harmonic,
+            // rather than three competing oscillators (0.22/0.37/0.51Hz).
+            // The old motion translated 4.5 mm vertically plus 1.45 mm
+            // sideways and rolled the wrist 1.3 degrees: visibly rocking.
+            float breath = Mathf.Sin(seconds * 2f * Mathf.PI * .145f);
+            float harmonic = Mathf.Sin(seconds * 2f * Mathf.PI * .29f + .45f);
+            float life = strength * (.86f * breath + .14f * harmonic);
             previousRootOverlay = cameraUp * (life * MaxRootDriftMeters)
-                + cameraRight * (secondary * .00145f * strength);
+                + cameraRight * (.00018f * harmonic * strength);
             root.position += previousRootOverlay;
-            // Slow restraint: under one degree of wrist roll / pitch.
-            previousWristOverlay = Quaternion.Euler(1.05f * life, 0f,
-                (1.32f * life + (isAdjusting ? .42f * secondary : 0f)) * strength);
+            previousWristOverlay = Quaternion.Euler(.19f * life, 0f,
+                (.23f * life + (isAdjusting ? .08f * harmonic : 0f)) * strength);
+            float secondary = Mathf.Sin(seconds*.61f + 1.2f);
             wrist.localRotation *= previousWristOverlay;
             overlayApplied = true;
 
@@ -133,38 +135,41 @@ namespace Rokas.BedSleep.Argon.Candidate
             // The source ring/little roots have separate, visibly squared mesh
             // islands. Limit articulation in those two until topology QA
             // confirms a safe continuous skin; give index/middle liveliness.
-            float[] pip = { 5.4f, 6.8f, 3.1f, 1.8f };
-            float[] dip = { 2.4f, 3.1f, 1.4f, .8f };
+            // Conservative anatomy: index/little are disconnected skin
+            // islands, so their PIP/DIP must not fold visibly at the socket.
+            // Tiny independent delayed motion, no repeated "wave" gestures.
+            float[] pip = { 1.35f, 1.65f, 1.20f, .65f };
+            float[] dip = { .60f, .78f, .53f, .25f };
             for (int i = 0; i < fingers.Length; ++i)
             {
-                float cycle = Mathf.Sin(seconds*(1.15f+i*.13f)+i*.83f);
-                float independent = Mathf.Sin(seconds*(.47f+i*.087f)+i*1.42f);
+                float cycle = Mathf.Sin(seconds*(.52f+i*.035f)+i*.51f);
+                float independent = Mathf.Sin(seconds*(.28f+i*.02f)+i*.91f);
                 // No perfectly synchronous finger motion; natural tiny
                 // flex compensates for slow wrist/breathing drift.
-                float independentFlex=(.72f*cycle+.28f*independent) *
-                    (i>=2 ? .56f : 1.15f) * strength;
+                float independentFlex=(.65f*cycle+.35f*independent) *
+                    (i==0 ? .48f : i==3 ? .19f : .34f)*strength;
                 // Distributed phalanx timing prevents a rigid parallel
                 // "board" of fingers from riding the entering forearm.
                 // Keep ring/little amplitude conservative until true source
                 // FBX finger-root geometry is repaired.
                 float phaseLag=Mathf.Clamp01(fingerResponse-i*.045f);
-                float flex=strength*(.48f+.52f*phaseLag);
+                float flex=strength*(.70f+.30f*phaseLag);
                 float relaxPulse=Mathf.Sin(phaseLag*Mathf.PI)*
-                    (isLowering ? -.55f : .68f) * strength;
+                    (isLowering ? -.16f : .19f)*strength;
                 float interaction=(isAdjusting && i==0
-                    ? 1.08f*(.5f+.5f*secondary) : 0f)*strength;
-                float limitedRelax=relaxPulse*(i>=2?.40f:1f);
+                    ? .16f*(.5f+.5f*secondary) : 0f)*strength;
+                float limitedRelax=relaxPulse*(i>=2?.34f:1f);
                 float pipDegrees=Mathf.Clamp(
                     flex*pip[i]+independentFlex+interaction+limitedRelax,
-                    -.3f,i>=2 ? 4.2f : 8.6f);
+                    -.15f,i==3 ? 1.05f : (i==0 ? 2.4f : 2.0f));
                 float dipDegrees=Mathf.Clamp(
                     flex*dip[i]+independentFlex*.28f+limitedRelax*.22f,
-                    -.2f,i>=2 ? 2.1f : 3.8f);
+                    -.10f,i==3 ? .45f : 1.15f);
                 Curl(fingers[i]+"_PIP",pipDegrees);
                 Curl(fingers[i]+"_DIP",dipDegrees);
             }
-            Curl("Thumb_IP",strength*3.1f +
-                strength*.85f*Mathf.Sin(seconds*.93f+.52f));
+            Curl("Thumb_IP",strength*1.25f +
+                strength*.36f*Mathf.Sin(seconds*.49f+.52f));
         }
 
         public float FingerBendDegrees(string jointName)
