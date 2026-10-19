@@ -576,6 +576,48 @@ def main():
         path_mode='AUTO',embed_textures=False,
         use_subsurf=False, use_tspace=False)
     require(outfbx.stat().st_size>100_000,"Empty V17 FBX")
+    # Blender 3.0 exporter with "All Actions" bakes armature channels
+    # but writes zeroed shape-key channels for every generated AnimStack.
+    # Export each combined skeletal+corrective clip separately, with BOTH
+    # actions explicitly ACTIVE and both FBX multi-action switches OFF.
+    # This preserves a complete base candidate and three real clip FBXs
+    # without altering the source rig or live V16.
+    clip_files=[]
+    for clip,probe_frame in (("V17_Grip",51),("V17_Index",43),
+                             ("V17_Living",15)):
+        a=bpy.data.actions.get(clip)
+        k=bpy.data.actions.get(clip+"_Corrective")
+        require(a is not None and k is not None,"Missing paired action "+clip)
+        arm.animation_data_create().action=a
+        palm.data.shape_keys.animation_data_create().action=k
+        bpy.context.scene.frame_set(probe_frame)
+        chosen={name:round(float(palm.data.shape_keys.key_blocks[name].value),5)
+                for name in ("Index_MCP_Corrective","Fist_Grip_Corrective")}
+        log("ACTIVE FBX PAIR "+clip+" frame="+str(probe_frame)+
+            " correctives="+repr(chosen))
+        require(chosen["Index_MCP_Corrective"]>.01,
+                "Corrective action not active before FBX export: "+clip)
+        clipfile=out/("ROKAS_V17_"+clip+"_Animated.fbx")
+        bpy.ops.export_scene.fbx(
+            filepath=str(clipfile),use_selection=True,
+            object_types={'MESH','ARMATURE'},
+            axis_forward='-Z',axis_up='Y',add_leaf_bones=False,
+            apply_unit_scale=True,global_scale=1.0,
+            use_mesh_modifiers=True,bake_anim=True,
+            bake_anim_use_all_actions=False,
+            bake_anim_use_nla_strips=False,
+            bake_anim_use_all_bones=True,
+            bake_anim_step=1.,bake_anim_simplify_factor=0.,
+            path_mode='AUTO',embed_textures=False,
+            use_subsurf=False,use_tspace=False)
+        require(clipfile.stat().st_size>100_000,
+                "Single-action FBX did not export: "+clip)
+        clip_files.append(clipfile.name)
+    arm.animation_data.action=None
+    palm.data.shape_keys.animation_data.action=None
+    for key in palm.data.shape_keys.key_blocks:
+        if key.name!="Basis":key.value=0.
+    bpy.context.scene.frame_set(1)
     save_proof(bpy.context.scene,palm,out,"V17_VerificationCamera")
     results=dict(source_vertices=before_v,source_components=before_components,
         candidate_vertices=len(palm.data.vertices),
@@ -585,6 +627,7 @@ def main():
         mcp_collar_polish=collar_metrics,
         corrective_shapes=correctives,
         authored_actions=authored,output_fbx=outfbx.name,
+        paired_corrective_clip_fbxs=clip_files,
         status="CANDIDATE: NOT YET VERIFIED IN UNITY")
     (out/"ROKAS_V17_BuildMetrics.json").write_text(json.dumps(results,indent=2))
     log(json.dumps(results,indent=2))
