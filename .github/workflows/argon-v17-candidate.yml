@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/argon-v17-candidate.yml'
       - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,6 +29,29 @@ jobs:
             --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py \
             -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
             Artifacts/ArgonV17Candidate
+      - name: Re-import exported FBX and prove real finger deformation in authored poses
+        run: |
+          blender --background -noaudio --python-exit-code 2 \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py \
+            -- Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx \
+            Artifacts/ArgonV17Candidate
+      - name: Convert pose proof geometry to reliable images; reject black outputs
+        run: |
+          python3 -m pip install --quiet --user pillow cairosvg
+          python3 - <<'PY'
+          import pathlib,cairosvg,statistics
+          from PIL import Image,ImageStat
+          directory=pathlib.Path('Artifacts/ArgonV17Candidate')
+          files=list(directory.glob('V17_FBX_*.svg'))+list(directory.glob('V17_Index*.svg'))+list(directory.glob('V17_Little*.svg'))
+          assert len(files)>=8, f'Expected real exported-mesh pose visuals, got {len(files)}'
+          for svg in files:
+              target=svg.with_suffix('.png')
+              cairosvg.svg2png(url=str(svg),write_to=str(target))
+              im=Image.open(target).convert('RGB')
+              stats=ImageStat.Stat(im)
+              assert min(stats.stddev)>8, f'Invalid/black pose render: {target}: {stats.stddev}'
+              print('VALID FBX VISUAL',target,im.size,stats.stddev)
+          PY
       - name: Validate actual candidate FBX and deformation metadata
         run: |
           python3 - <<'PY'
@@ -38,7 +62,9 @@ jobs:
           assert j['exposed_edges']==0 and j['nonmanifold_edges']==0, j
           assert len(j['corrective_shapes'])>=5 and len(j['authored_actions'])>=3, j
           assert (d/j['output_fbx']).stat().st_size>100000
-          assert (d/'ROKAS_V17_Candidate_3D.png').stat().st_size>10000
+          assert (d/'ROKAS_V17_FBX_Roundtrip_Motion.json').stat().st_size>300
+          assert (d/'V17_FBX_Neutral.png').stat().st_size>10000
+          assert (d/'V17_FBX_Full_Grip.png').stat().st_size>10000
           print('V17 REAL FBX GENERATED, STRUCTURAL PASS; UNITY VISUAL APPROVAL STILL REQUIRED')
           PY
       - name: Publish unmerged V17 candidate asset and geometry proof
