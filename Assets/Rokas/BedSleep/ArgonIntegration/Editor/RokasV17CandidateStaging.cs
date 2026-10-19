@@ -46,6 +46,15 @@ namespace Rokas.BedSleep.Argon.Editor
             public string result;
         }
 
+        [MenuItem("ROKAS/Bed Sleep/Argon/Stage and verify V17 in Unity (inactive)")]
+        public static void StageAndVerify()
+        {
+            StageInactiveCandidate();
+            RokasV17ImportedPoseProof.ValidateInactiveCandidate();
+            Debug.Log("[ROKAS V17 UNITY EDITOR PASS] Inactive import checked. " +
+                "No game prefab or scene was replaced.");
+        }
+
         [MenuItem("ROKAS/Bed Sleep/Argon/Stage V17 verified FBXs (inactive)")]
         public static void StageInactiveCandidate()
         {
