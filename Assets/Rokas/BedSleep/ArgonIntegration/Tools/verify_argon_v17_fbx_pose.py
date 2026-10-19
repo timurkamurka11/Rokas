@@ -28,6 +28,16 @@ def snapshot(scene,skin,frame,action):
     arm.animation_data.action=action
     scene.frame_set(frame)
     bpy.context.view_layer.update()
+    print("[ROKAS V17 RIG DEBUG] frame",frame,
+          "action",getattr(arm.animation_data.action,"name","NONE"),
+          "rotations",{
+             n:tuple(round(float(x),5) for x in arm.pose.bones[n].rotation_quaternion)
+             for n in ("Index_MCP","Index_PIP","Index_DIP","Little_PIP")
+             if n in arm.pose.bones
+          },
+          "modifier_flags",[(m.name,m.show_viewport,m.show_render)
+                            for m in skin.modifiers if m.type=="ARMATURE"],
+          flush=True)
     dep=bpy.context.evaluated_depsgraph_get()
     evaluated=skin.evaluated_get(dep)
     mesh=evaluated.to_mesh(preserve_all_data_layers=False,depsgraph=dep)
@@ -126,6 +136,12 @@ def main():
           " available="+repr(available[:25]))
     actions={name:next(a for a in bpy.data.actions if name in a.name)
              for name in NEEDED}
+    for name,ac in actions.items():
+        print("[ROKAS V17 RIG DEBUG] imported",name,
+              "fcurves",len(ac.fcurves),
+              "samples",[(fc.data_path,fc.array_index,len(fc.keyframe_points))
+                         for fc in list(ac.fcurves)[:5]],flush=True)
+
     action=actions[NEEDED[0]]
     scene=bpy.context.scene
     neutral,tris=snapshot(scene,skin,1,action)
