@@ -30,17 +30,21 @@ namespace Rokas.BedSleep.Argon.Candidate
         // Small but *visible* movement on real skinned geometry.
         // Earlier V14 oscillated by <0.6 degrees, below pixel visibility.
         // The pinky and index remain conservative at their socket collars.
+        // The V15 3-9 degree limits were indistinguishable at game scale.
+        // This pass uses a slow, staggered grip-and-release envelope and
+        // enough PIP/DIP rotation for actual silhouette movement. Index and
+        // pinky retain lower MCP values to protect their socket seams.
         private static readonly float[] PipBase = {
-            3.5f, 5.8f, 5.0f, 2.0f
+            8.0f, 11.2f, 10.4f, 4.6f
         };
         private static readonly float[] McpBase = {
-            .52f, 1.28f, 1.05f, .22f
+            .85f, 2.1f, 1.8f, .48f
         };
         private static readonly float[] PipAmplitude = {
-            1.65f, 2.45f, 2.05f, .94f
+            3.9f, 5.8f, 5.1f, 2.4f
         };
         private static readonly float[] FingerFrequency = {
-            .57f, .39f, .46f, .31f
+            .43f, .35f, .385f, .31f
         };
         private static readonly float[] FingerPhase = {
             .38f, 1.89f, 3.38f, 4.76f
@@ -174,32 +178,36 @@ namespace Rokas.BedSleep.Argon.Candidate
                 float secondary=Mathf.Sin(
                     seconds*(FingerFrequency[i]*.47f)+
                     FingerPhase[i]*1.57f+.56f);
-                float episode=Mathf.Max(0f,Mathf.Sin(
-                    seconds*.32f+FingerPhase[i]*.73f));
-                episode=episode*episode*episode;
+                // A very slow grip gesture has separated phases rather
+                // than a perpetual robotic sine; neighbouring fingers
+                // partly co-move but do not share identical keyframes.
+                float gripPhase=seconds*.49f+FingerPhase[i]*.40f;
+                float episode=Mathf.Max(0f,Mathf.Sin(gripPhase));
+                episode=episode*episode*(3f-2f*episode);
                 float asymmetry=.65f*primary+.35f*secondary;
                 float settle=arrival*(isLowering ? -.68f : .82f);
                 float pipDegrees=live*(
                     PipBase[i]+PipAmplitude[i]*asymmetry+
-                    (i==3 ? .30f : .94f)*episode+settle);
+                    (i==3 ? 2.6f : 4.5f)*episode+settle);
                 // Human DIP flexion follows PIP at a smaller angle. The
                 // slight delayed term stops the fingertips from moving
                 // as identical rigid rods.
-                float dipDegrees=pipDegrees*.54f+
+                float dipDegrees=pipDegrees*.64f+
                     .25f*live*Mathf.Sin(
                         seconds*(FingerFrequency[i]*.82f)+
                         FingerPhase[i]+.48f);
                 float mcpDegrees=live*(
-                    McpBase[i]+.19f*episode+
-                    .13f*secondary);
+                    McpBase[i]+(i==0 ? .65f :
+                        i==3 ? .35f : 1.25f)*episode+
+                    .24f*secondary);
                 // Bound separate source finger islands at the MCP. The
                 // pinky/index socket remains less mobile than middle/ring.
                 pipDegrees=Mathf.Clamp(pipDegrees,0f,
-                    i==3 ? 3.75f : (i==0 ? 6.15f : 9.0f));
+                    i==3 ? 9.0f : (i==0 ? 15.5f : 21.0f));
                 dipDegrees=Mathf.Clamp(dipDegrees,0f,
-                    i==3 ? 2.2f : (i==0 ? 3.7f : 5.4f));
+                    i==3 ? 6.2f : (i==0 ? 10.4f : 14.2f));
                 mcpDegrees=Mathf.Clamp(mcpDegrees,0f,
-                    i==3 ? .48f : (i==0 ? .90f : 1.7f));
+                    i==3 ? .95f : (i==0 ? 1.65f : 3.8f));
                 Curl(FingerNames[i] + "_MCP", mcpDegrees);
                 Curl(FingerNames[i] + "_PIP", pipDegrees);
                 Curl(FingerNames[i] + "_DIP", dipDegrees);
@@ -212,9 +220,9 @@ namespace Rokas.BedSleep.Argon.Candidate
                 (3f-2f*thumbResponse);
             float thumbLife = strength*(.14f+.86f*thumbResponse);
             Curl("Thumb_MCP", thumbLife *
-                (.42f+.20f*Mathf.Sin(seconds*.38f+1.4f)));
+                (1.05f+.75f*Mathf.Sin(seconds*.33f+1.4f)));
             Curl("Thumb_IP", thumbLife *
-                (2.65f+1.02f*Mathf.Sin(seconds*.45f+2.03f)));
+                (5.2f+3.0f*Mathf.Sin(seconds*.43f+2.03f)));
         }
 
         public float FingerBendDegrees(string jointName)
