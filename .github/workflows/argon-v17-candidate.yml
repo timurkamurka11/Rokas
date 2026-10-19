@@ -1,0 +1,51 @@
+name: Argon V17 actual FBX reconstruction
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/argon-v17-candidate.yml'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-v17:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Parse production reconstruction script
+        run: python3 -m py_compile Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py
+      - name: Install headless Blender
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          blender --version | head -2
+      - name: Build physical unified V17 candidate FBX and authored grip actions
+        run: |
+          blender --background -noaudio --python-exit-code 2 \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonV17Candidate
+      - name: Validate actual candidate FBX and deformation metadata
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          d=pathlib.Path('Artifacts/ArgonV17Candidate')
+          j=json.loads((d/'ROKAS_V17_BuildMetrics.json').read_text())
+          assert j['source_components']==6 and j['candidate_components']==1, j
+          assert j['exposed_edges']==0 and j['nonmanifold_edges']==0, j
+          assert len(j['corrective_shapes'])>=5 and len(j['authored_actions'])>=3, j
+          assert (d/j['output_fbx']).stat().st_size>100000
+          assert (d/'ROKAS_V17_Candidate_3D.png').stat().st_size>10000
+          print('V17 REAL FBX GENERATED, STRUCTURAL PASS; UNITY VISUAL APPROVAL STILL REQUIRED')
+          PY
+      - name: Publish unmerged V17 candidate asset and geometry proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-V17-physical-hand-candidate
+          path: Artifacts/ArgonV17Candidate/
+          if-no-files-found: warn
+          retention-days: 14
