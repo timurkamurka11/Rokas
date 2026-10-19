@@ -202,6 +202,17 @@ def main():
                               "V17 re-import: full grip (frame 51)",highlights=bones)
     files["release"]=draw_svg(released,tris,out/"V17_FBX_Release.svg",
                               "V17 re-import: released hand (frame 96)",highlights=bones)
+    # Side profile is essential: a top-down "fist" can look like short
+    # fingers even when the joints are correctly folding into palm depth.
+    # Reproject genuine deformed mesh as XZ without authoring fake poses.
+    xz=lambda vertices:[Vector((v.x,v.z,v.y)) for v in vertices]
+    bone_xz={name:Vector((p.x,p.z,p.y)) for name,p in bones.items()}
+    files["profile_neutral"]=draw_svg(
+        xz(neutral),tris,out/"V17_FBX_Profile_Neutral.svg",
+        "V17 re-import: side profile / open hand",highlights=bone_xz)
+    files["profile_fist"]=draw_svg(
+        xz(closed),tris,out/"V17_FBX_Profile_FullGrip.svg",
+        "V17 re-import: side profile / fist",highlights=bone_xz)
     for target in ("Index_MCP","Little_MCP"):
         joint=bones.get(target)
         if joint is None:continue
