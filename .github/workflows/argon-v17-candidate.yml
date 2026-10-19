@@ -5,6 +5,7 @@ on:
       - '.github/workflows/argon-v17-candidate.yml'
       - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py'
       - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_single_clip.py'
   workflow_dispatch:
 permissions:
   contents: write
@@ -35,6 +36,14 @@ jobs:
             --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py \
             -- Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx \
             Artifacts/ArgonV17Candidate
+      - name: Prove all three paired corrective+skeletal FBX actions actually animate
+        run: |
+          for clip in V17_Grip V17_Index V17_Living; do
+            blender --background -noaudio --python-exit-code 2 \
+              --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_single_clip.py \
+              -- "Artifacts/ArgonV17Candidate/ROKAS_V17_${clip}_Animated.fbx" "${clip}" \
+              Artifacts/ArgonV17Candidate
+          done
       - name: Convert pose proof geometry to reliable images; reject black outputs
         run: |
           python3 -m pip install --quiet --user pillow cairosvg
@@ -65,6 +74,12 @@ jobs:
           assert (d/'ROKAS_V17_FBX_Roundtrip_Motion.json').stat().st_size>300
           assert (d/'V17_FBX_Neutral.png').stat().st_size>10000
           assert (d/'V17_FBX_Full_Grip.png').stat().st_size>10000
+          assert len(j.get('paired_corrective_clip_fbxs',[]))==3, j
+          for label in ('V17_Grip','V17_Index','V17_Living'):
+            assert (d/f'ROKAS_V17_{label}_Animated.fbx').stat().st_size>100000
+            corrected=json.loads((d/f'ROKAS_{label}_PairedClipQA.json').read_text())
+            assert corrected['corrective_weight_at_peak'] > corrected['corrective_weight_at_start']
+            print('PASS REAL CORRECTIVE CLIP:', label)
           print('V17 REAL FBX GENERATED, STRUCTURAL PASS; UNITY VISUAL APPROVAL STILL REQUIRED')
           PY
       - name: Commit actual V17 FBX as quarantined PR-only candidate (NEVER REPLACE V16)
@@ -88,6 +103,8 @@ jobs:
           git add -f Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx
           git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_BuildMetrics.json
           git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_FBX_Roundtrip_Motion.json
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_*_Animated.fbx
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_*_PairedClipQA.json
           if ! git diff --cached --quiet; then
             git commit -m "WIP: Preserve real skinned V17 FBX as inactive candidate; V16 remains production"
             git push origin HEAD:"$TARGET_BRANCH"
