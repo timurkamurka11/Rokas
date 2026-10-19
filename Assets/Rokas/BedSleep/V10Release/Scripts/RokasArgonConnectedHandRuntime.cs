@@ -144,11 +144,13 @@ namespace Rokas.BedSleep.V10Release
                 // No source FBX, animator, game camera or shader is changed.
                 Transform[] originalSkinBones = skin.bones;
                 bool fingerSkinRetargeted = false;
+                int[][] retargetFingerIslands = null;
                 try
                 {
                     var report = ArgonFingerBindposeRetarget.ApplyCandidate(
                         skin, out runtimeFingerCandidate, out originalSkinBones);
                     fingerSkinRetargeted = true;
+                    retargetFingerIslands = report.FingerVertices;
                     Debug.Log("[ROKAS HAND] Live finger skinning active: " +
                         report.RetargetedVertices + " vertices, " +
                         report.ExtraBoneSlots + " compensated slots; neutral drift=" +
@@ -197,6 +199,8 @@ namespace Rokas.BedSleep.V10Release
                     fingertip, sleeve, face, gameArm, gameOled, russian, camera,
                     gameFoley, skinMaterial, oledMaterial);
                 follow.SetOwnedSkinCandidate(runtimeFingerCandidate);
+                if (fingerSkinRetargeted)
+                    follow.ConfigureFingerMotionProbe(skin, retargetFingerIslands);
                 foreach (var t in joints) t.gameObject.layer = 30;
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                     renderer.enabled = true;
@@ -254,6 +258,23 @@ namespace Rokas.BedSleep.V10Release
         private BedSleepSFXController foley;
         private Material ownedSkinMaterial, ownedOledMaterial;
         private Mesh ownedSkinCandidate;
+        // One-off Unity BakeMesh proof in the ACTUAL BED SCENE.
+        // The previous diagnostic only showed the remap was accepted;
+        // this proves whether live animated skin VERTICES really move.
+        private SkinnedMeshRenderer fingerProbeSkin;
+        private int[][] fingerProbeIslands;
+        private Vector3[] fingerProbeBase;
+        private float fingerProbeBegin = -1f;
+        private bool fingerProbeFinished;
+        internal void ConfigureFingerMotionProbe(
+            SkinnedMeshRenderer skinned, int[][] islands)
+        {
+            fingerProbeSkin=skinned;
+            fingerProbeIslands=islands;
+            fingerProbeBase=null;
+            fingerProbeBegin=-1f;
+            fingerProbeFinished=false;
+        }
         internal void SetOwnedSkinCandidate(Mesh candidate)
         {
             ownedSkinCandidate=candidate;
@@ -507,6 +528,82 @@ namespace Rokas.BedSleep.V10Release
                 visibilityVelocity=0f;
             }
             SnapAndFrame();
+            ProbeFingerMeshMotion();
+        }
+
+        private void ProbeFingerMeshMotion()
+        {
+            if (fingerProbeFinished || fingerProbeSkin == null ||
+                fingerProbeIslands == null || visibility < .985f)
+                return;
+            float now=Time.unscaledTime;
+            if(fingerProbeBegin>=0f && now-fingerProbeBegin<2.8f)
+                return;
+            Mesh sample=new Mesh();
+            try
+            {
+                fingerProbeSkin.BakeMesh(sample);
+                var current=sample.vertices;
+                if(fingerProbeBegin<0f)
+                {
+                    fingerProbeBase=current;
+                    fingerProbeBegin=now;
+                    return;
+                }
+                fingerProbeFinished=true;
+                if(fingerProbeBase==null || current.Length!=fingerProbeBase.Length)
+                    throw new InvalidOperationException(
+                        "Skin vertex count changed during motion probe.");
+                var isFinger=new bool[current.Length];
+                foreach(var group in fingerProbeIslands)
+                    foreach(int vertex in group)
+                        if(vertex>=0 && vertex<isFinger.Length)
+                            isFinger[vertex]=true;
+
+                // Subtract average palm movement to distinguish actual
+                // finger flexion from a global wrist/hand translation.
+                Vector3 palmMotion=Vector3.zero;
+                int palmCount=0;
+                for(int i=0;i<current.Length;i+=13)
+                    if(!isFinger[i])
+                    {
+                        palmMotion+=current[i]-fingerProbeBase[i];
+                        palmCount++;
+                    }
+                if(palmCount>0)palmMotion/=palmCount;
+                float threshold=Mathf.Max(1e-8f,
+                    fingerProbeSkin.sharedMesh.bounds.size.magnitude*.00065f);
+                string[] labels={"Thumb","Index","Middle","Ring","Little"};
+                for(int d=0;d<fingerProbeIslands.Length;d++)
+                {
+                    int moving=0;
+                    float peak=0f;
+                    foreach(int v in fingerProbeIslands[d])
+                    {
+                        float movement=(current[v]-fingerProbeBase[v]-
+                            palmMotion).magnitude;
+                        if(movement>threshold)moving++;
+                        peak=Mathf.Max(peak,movement);
+                    }
+                    string label=d<labels.Length ? labels[d] : d.ToString();
+                    Debug.Log("[ROKAS FINGER MOTION PROOF] "+label+
+                        " skinnedVerticesMoving="+moving+"/"+
+                        fingerProbeIslands[d].Length+
+                        " peak="+peak.ToString("G5")+
+                        " threshold="+threshold.ToString("G5"));
+                    if(moving<10)
+                        Debug.LogWarning("[ROKAS FINGER MOTION PROOF] "+
+                            label+" is visually STATIONARY: bone-to-skin "+
+                            "animation path still needs investigation.");
+                }
+            }
+            catch(Exception error)
+            {
+                fingerProbeFinished=true;
+                Debug.LogWarning("[ROKAS FINGER MOTION PROOF] BakeMesh "+
+                    "diagnostic unavailable: "+error.Message);
+            }
+            finally { Destroy(sample); }
         }
 
         private void OnDestroy()
