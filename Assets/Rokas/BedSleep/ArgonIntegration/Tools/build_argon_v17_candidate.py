@@ -326,11 +326,19 @@ def save_proof(scene,obj,out,cam_name):
     camera_data=bpy.data.cameras.new(cam_name)
     camera=bpy.data.objects.new(cam_name,camera_data)
     scene.collection.objects.link(camera)
-    camera.location=(.05,-.30,.36)
-    target=Vector((-.03,0,0))
+    # Frame ACTUAL object world-space bounds rather than assuming the GLB
+    # mesh and exported armature share identity transforms.
+    points=[obj.matrix_world@Vector(v) for v in obj.bound_box]
+    target=sum(points,Vector())/len(points)
+    xyz=[max(p[i] for p in points)-min(p[i] for p in points)
+         for i in range(3)]
+    camera.location=target+Vector((0,-.48,.34))
     camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
     camera.data.type='ORTHO'
-    camera.data.ortho_scale=.60
+    camera.data.ortho_scale=max(.36,xyz[0]*1.5,xyz[1]*2.2,xyz[2]*1.7)
+    camera.data.lens=50
+    log("Proof camera object bounds="+str([round(i,4) for i in xyz])+
+        " worldCenter="+str(tuple(round(i,4) for i in target)))
     scene.camera=camera
     scene.render.engine="BLENDER_EEVEE"
     scene.render.resolution_x=1280
@@ -340,6 +348,20 @@ def save_proof(scene,obj,out,cam_name):
     scene.render.film_transparent=False
     if scene.world is None: scene.world=bpy.data.worlds.new("ROKAS_V17_GeometryProofWorld")
     scene.world.color=(.07,.08,.10)
+    scene.world.use_nodes=True
+    bg=scene.world.node_tree.nodes.get("Background")
+    if bg:
+        bg.inputs["Color"].default_value=(.08,.10,.14,1)
+        bg.inputs["Strength"].default_value=.85
+    # Use a neutral proof-only skin material override, NOT the exported
+    # textured production material; its job is proving 3D silhouette.
+    qa_mat=bpy.data.materials.new("ROKAS_V17_PROOF_ONLY_UNEXPORTED")
+    qa_mat.use_nodes=True
+    bsdf=qa_mat.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs["Base Color"].default_value=(.83,.49,.40,1)
+        bsdf.inputs["Roughness"].default_value=.62
+    scene.view_layers[0].material_override=qa_mat
     # Workbench requires a display on Blender 3.0 Ubuntu runner.
     # Cycles CPU is headless and produces an actual shaded skin image.
     scene.render.engine="CYCLES"
@@ -356,6 +378,7 @@ def save_proof(scene,obj,out,cam_name):
     obj.hide_render=False
     scene.render.filepath=str(out/"ROKAS_V17_Candidate_3D.png")
     bpy.ops.render.render(write_still=True)
+    scene.view_layers[0].material_override=None
 
 def main():
     args=sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else []
