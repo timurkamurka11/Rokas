@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/argon-anatomy-audit.yml'
       - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/render_argon_topology_views.py'
       - 'Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx'
   workflow_dispatch:
 permissions:
@@ -28,6 +29,12 @@ jobs:
         run: |
           blender --background -noaudio \
             --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/audit_argon_hand_anatomy.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonAnatomyAudit
+      - name: Render real hand source seam wireframes (SVG)
+        run: |
+          blender --background -noaudio \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/render_argon_topology_views.py \
             -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
             Artifacts/ArgonAnatomyAudit
       - name: Summary and hard blocker status
