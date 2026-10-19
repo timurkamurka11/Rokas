@@ -14,6 +14,28 @@ Do not merge this work or claim "AAA hand completed" without in-game visual QA.
 - `ArgonFingerRootSocketBlend` adjusted **842 vertices** in the same logs without changing connected components. It cannot eliminate the mesh disconnection.
 - Blender source FBX and PBR textures exist in the branch, but there is **no accessible running Blender or Unity instance in this session**. Visual completion cannot be claimed.
 
+## Measured source FBX results — Blender/GitHub Actions, 2026-10-19
+- Verified workflow: `Argon anatomical source audit`, successful source run #39304378174.
+- Blender import: **12,240 mesh vertices**, **23,440 triangles**, **6 disconnected components**.
+  Unity's imported runtime representation is separately measured as 12,235 vertices;
+  do not assume vertex indices match across importers.
+- Palm: 5,265 vertices, exactly **one connected 288-edge open boundary loop**.
+- Each individual finger: 1,395 vertices, exactly **one 148-edge open boundary loop**.
+- No non-manifold edges in the inspected source; one 4K-compatible UV channel,
+  **zero existing corrective Blend Shapes**.
+- Proximal finger/palm minimum distances: thumb 1.895mm, **index 0.428mm**,
+  middle 1.089mm, ring 0.713mm, **little 0.256mm**.
+- Bad source weights are directly measured: index island has major
+  `Thumb_Tip`/`Thumb_IP` influences; middle uses `Index_PIP/Index_DIP`,
+  ring uses middle-finger bones; little uses ring/middle-finger bones.
+- Because **each shell has one long open perimeter, not separately matched
+  palm and finger socket rings**, a naive zipper/nearest-vertex bridge is
+  unsafe. First identify and cut/reshape the correct anatomical proximal
+  boundary with a wireframe view; then join with appropriate supporting loops.
+- Actual report is retained as GitHub workflow artifact
+  `argon-anatomy-source-defect-map` (run #39304378174).
+- **No corrected FBX or in-game visual proof has been produced yet**.
+
 ## Source geometry analysis — new audit
 Run the read-only `audit_argon_hand_anatomy.py` against the genuine source FBX.
 It writes `Artifacts/ArgonAnatomyAudit/ROKAS_Argon_Anatomy_DefectMap.json`.
