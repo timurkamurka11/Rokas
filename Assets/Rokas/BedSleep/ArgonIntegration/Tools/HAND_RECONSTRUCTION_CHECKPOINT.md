@@ -36,6 +36,27 @@ Do not merge this work or claim "AAA hand completed" without in-game visual QA.
   `argon-anatomy-source-defect-map` (run #39304378174).
 - **No corrected FBX or in-game visual proof has been produced yet**.
 
+## Source mesh wireframes — actual Blender evidence (2026-10-19)
+- Headless Blender workflow `Argon anatomical source audit` run **#39305668827 PASSED**.
+- Unmodified imported model rendered to actual projected **SVG wireframes**:
+  `full_hand_topology.svg`, `index_base_wireframe.svg`,
+  `little_base_wireframe.svg`. Artifact:
+  `argon-anatomy-source-defect-map` from workflow run #39305668827.
+- Each finger's exposed 148-edge perimeter wraps the visible finger outline,
+  including the proximal side, **not** a clean circular proximal socket.
+  The palm has its own long exposed 288-edge contour. At the finger roots,
+  polygons overlap but do not share connecting topology.
+- The colored wireframes show that **moving the finger mesh socket vertices,
+  adding more bend keys, or joining arbitrary nearest edges will not create
+  anatomically correct connected skin**.
+- This requires authoring a continuous palm-to-digit surface, including
+  real interdigital webbing, new supporting edge rings and controlled
+  weight transfer. Corrective shapes must be sculpted for MCP/PIP closure.
+- The current generated PNG/SVG views are SOURCE-SPACE orthographic
+  topology diagnostics; they are **not** final in-game screenshots.
+- Full surface rebuild, animation pose library, render comparison and
+  installation into the game remain **NOT DONE**.
+
 ## Source geometry analysis — new audit
 Run the read-only `audit_argon_hand_anatomy.py` against the genuine source FBX.
 It writes `Artifacts/ArgonAnatomyAudit/ROKAS_Argon_Anatomy_DefectMap.json`.
