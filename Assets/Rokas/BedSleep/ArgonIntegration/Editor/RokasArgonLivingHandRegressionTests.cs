@@ -40,13 +40,20 @@ namespace Rokas.BedSleep.Argon.Editor
                     minBend = Mathf.Min(minBend, bend);
                     maxBend = Mathf.Max(maxBend, bend);
                     Assert.That((instance.transform.position - basePosition).magnitude,
-                        Is.LessThan(.005f), "Idle root drift exceeds natural 5mm envelope");
+                        Is.LessThan(.00040f),
+                        "Root hand movement should be submillimetre, not an arm sway");
                     Assert.That(Quaternion.Angle(wrist.localRotation, baseWrist),
-                        Is.LessThan(1.8f), "Wrist rotation accumulated instead of breathing");
+                        Is.LessThan(.35f),
+                        "Wrist rotation accumulated rather than softly breathing");
+                    Assert.That(rig.FingerBendDegrees("Index_MCP"),
+                        Is.LessThan(.30f), "Index root collar must not pull open");
+                    Assert.That(rig.FingerBendDegrees("Little_PIP"),
+                        Is.LessThan(.85f), "Pinky must not overbend at seam");
                 }
-                Assert.That(minBend, Is.GreaterThan(4f));
-                Assert.That(maxBend - minBend, Is.GreaterThan(.15f),
-                    "Source PIP joint is static rather than subtly moving");
+                Assert.That(minBend, Is.GreaterThan(.8f));
+                Assert.That(maxBend, Is.LessThan(3.2f));
+                Assert.That(maxBend - minBend, Is.GreaterThan(.20f),
+                    "Middle PIP should move organically without repetitive waving");
             }
             finally
             {
