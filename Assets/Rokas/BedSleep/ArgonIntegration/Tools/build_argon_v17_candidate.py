@@ -340,9 +340,19 @@ def save_proof(scene,obj,out,cam_name):
     scene.render.film_transparent=False
     if scene.world is None: scene.world=bpy.data.worlds.new("ROKAS_V17_GeometryProofWorld")
     scene.world.color=(.07,.08,.10)
-    scene.display.shading.light="STUDIO"
-    scene.display.shading.color_type="MATERIAL"
-    scene.render.engine="BLENDER_WORKBENCH"
+    # Workbench requires a display on Blender 3.0 Ubuntu runner.
+    # Cycles CPU is headless and produces an actual shaded skin image.
+    scene.render.engine="CYCLES"
+    scene.cycles.device="CPU"
+    scene.cycles.samples=12
+    light_data=bpy.data.lights.new("ROKAS_V17_QA_Softbox","AREA")
+    light_data.energy=650
+    light_data.shape="DISK"
+    light_data.size=.75
+    light=bpy.data.objects.new("ROKAS_V17_QA_Softbox",light_data)
+    scene.collection.objects.link(light)
+    light.location=(.08,-.18,.30)
+    light.rotation_euler=(Vector((0,0,0))-light.location).to_track_quat('-Z','Y').to_euler()
     obj.hide_render=False
     scene.render.filepath=str(out/"ROKAS_V17_Candidate_3D.png")
     bpy.ops.render.render(write_still=True)
