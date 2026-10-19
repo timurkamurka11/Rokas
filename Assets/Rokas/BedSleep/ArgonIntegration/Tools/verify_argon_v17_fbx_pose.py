@@ -168,6 +168,10 @@ def main():
         check(len(correction.fcurves)>=8,
               "Incomplete animated knuckle correction: "+correction.name)
         corrective_actions[name]=correction
+        print("[ROKAS V17 CORRECTIVE CURVES]",name,
+              [(fc.data_path,round(fc.evaluate(1),4),
+                round(fc.evaluate(51),4)) for fc in correction.fcurves[:4]],
+              flush=True)
 
     action=actions[NEEDED[0]]
     scene=bpy.context.scene
