@@ -21,11 +21,15 @@ NEEDED=("V17_Grip",
 def check(ok,reason):
     if not ok:raise RuntimeError("[ROKAS V17 FBX ROUNDTRIP] "+reason)
 
-def snapshot(scene,skin,frame,action):
+def snapshot(scene,skin,frame,action,shape_action=None):
     arm=next((m.object for m in skin.modifiers if m.type=="ARMATURE"),None)
     check(arm is not None,"Skin lost Armature modifier during FBX export")
     arm.animation_data_create()
     arm.animation_data.action=action
+    if shape_action is not None:
+        require_keys=skin.data.shape_keys
+        check(require_keys is not None,"FBX skin lost its corrective shapes")
+        require_keys.animation_data_create().action=shape_action
     scene.frame_set(frame)
     bpy.context.view_layer.update()
     print("[ROKAS V17 RIG DEBUG] frame",frame,
@@ -148,13 +152,30 @@ def main():
               "fcurves",len(ac.fcurves),
               "samples",[(fc.data_path,fc.array_index,len(fc.keyframe_points))
                          for fc in list(ac.fcurves)[:5]],flush=True)
+    shape_actions=[a for a in bpy.data.actions if
+        any(fc.data_path.startswith('key_blocks[') for fc in a.fcurves)]
+    corrective_actions={}
+    for name in NEEDED:
+        matches=[a for a in shape_actions if name+"_Corrective" in a.name]
+        check(matches,"Exported V17 missing animated corrective shape action: "+name)
+        correction=matches[0]
+        check(len(correction.fcurves)>=8,
+              "Incomplete animated knuckle correction: "+correction.name)
+        corrective_actions[name]=correction
 
     action=actions[NEEDED[0]]
     scene=bpy.context.scene
-    neutral,tris=snapshot(scene,skin,1,action)
-    half,_=snapshot(scene,skin,30,action)
-    closed,_=snapshot(scene,skin,51,action)
-    released,_=snapshot(scene,skin,96,action)
+    corrected=corrective_actions[NEEDED[0]]
+    neutral,tris=snapshot(scene,skin,1,action,corrected)
+    half,_=snapshot(scene,skin,30,action,corrected)
+    closed,_=snapshot(scene,skin,51,action,corrected)
+    shape_at_grip={name:float(skin.data.shape_keys.key_blocks[name].value)
+                   for name in ("Index_MCP_Corrective","Little_MCP_Corrective",
+                                "Fist_Grip_Corrective")}
+    released,_=snapshot(scene,skin,96,action,corrected)
+    check(all(v>.15 for v in shape_at_grip.values()),
+          "Corrective keys are present but are not animated in the grip: "+
+          repr(shape_at_grip))
     check(len(neutral)==len(half)==len(closed)==len(released),
           "Skin topology changed between animation frames")
     bones=get_bones(arm)
@@ -184,6 +205,23 @@ def main():
             "moved_gt_1mm":sum(v>.001 for v in displacement),
             "moved_gt_3mm":sum(v>.003 for v in displacement)
         }
+    # Also prove V17_Index is genuinely independent: secondary fingers
+    # should not bend when only the index gesture plays.
+    index_action=actions["V17_Index"]
+    index_corrective=corrective_actions["V17_Index"]
+    index_rest,_=snapshot(scene,skin,1,index_action,index_corrective)
+    index_flex,_=snapshot(scene,skin,43,index_action,index_corrective)
+    isolated={}
+    for fn,indices in owned.items():
+        changes=[(index_flex[i]-index_rest[i]).length for i in indices]
+        isolated[fn]={"max_m":round(max(changes),6),
+                      "mean_m":round(sum(changes)/len(changes),6)}
+    check(isolated["Index"]["max_m"]>.003,
+          "Independent index clip does not animate index skin")
+    check(all(isolated[n]["mean_m"]<.002
+              for n in ("Thumb","Middle","Ring","Little")),
+          "Index-only clip inappropriately animates other fingers: "+
+          repr(isolated))
     # Side note: the neutral and fist pose may be impacted by authored
     # hinge orientation. Fail if nothing physically moves; do not infer
     # visually acceptable fists from this metric.
@@ -202,6 +240,9 @@ def main():
                               "V17 re-import: full grip (frame 51)",highlights=bones)
     files["release"]=draw_svg(released,tris,out/"V17_FBX_Release.svg",
                               "V17 re-import: released hand (frame 96)",highlights=bones)
+    files["index_flex"]=draw_svg(index_flex,tris,
+                              out/"V17_FBX_IndexOnly.svg",
+                              "V17 re-import: INDEX finger only",highlights=bones)
     # Side profile is essential: a top-down "fist" can look like short
     # fingers even when the joints are correctly folding into palm depth.
     # Reproject genuine deformed mesh as XZ without authoring fake poses.
@@ -232,6 +273,9 @@ def main():
         "reimport_actions":available,
         "corrective_shape_names":key_names,
         "real_finger_skin_motion":deltas,
+        "index_only_motion":isolated,
+        "corrective_shape_values_at_grip":shape_at_grip,
+        "imported_corrective_actions":[a.name for a in corrective_actions.values()],
         "projected_face_counts":files,
         "result":"FBX round-trip geometry/rig motion proof. NOT an in-game Unity QA."
     }
