@@ -131,6 +131,46 @@ def seat_finger_roots_inside_palm(pieces,arm):
     return metrics
 
 
+def clean_decimation_microdefects(obj):
+    """Repair only tiny topology accidents introduced by Blender Decimate.
+
+    The voxel source is already 1 closed component. The decimator created
+    precisely two open edges and one over-connected edge in V19; never
+    broadly fill authentic finger gaps. Reject anything more extensive.
+    """
+    before_open,before_bad=boundary_and_bad(obj.data)
+    if before_open==0 and before_bad==0:return
+    require(before_open<=12 and before_bad<=6,
+            "V19 decimator damaged more than a tiny local region")
+    bm=bmesh.new()
+    bm.from_mesh(obj.data)
+    try:
+        bm.verts.ensure_lookup_table()
+        bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=0.000001)
+        bmesh.ops.dissolve_degenerate(bm,edges=list(bm.edges),dist=0.000001)
+        bm.edges.ensure_lookup_table()
+        # A single triple-face edge is usually a collapsed microtriangle.
+        # Cull the smallest area face, not an arbitrary neighboring surface.
+        extra=set()
+        for edge in bm.edges:
+            if len(edge.link_faces)>2:
+                faces=sorted(edge.link_faces,key=lambda face:face.calc_area())
+                extra.update(faces[:len(faces)-2])
+        require(len(extra)<=6,"V19 decimate nonmanifold not locally repairable")
+        if extra:
+            bmesh.ops.delete(bm,geom=list(extra),context='FACES_ONLY')
+        bm.edges.ensure_lookup_table()
+        holes=[e for e in bm.edges if e.is_boundary]
+        if holes:
+            require(len(holes)<=20,"V19 hole repair exceeds safe finger collar")
+            bmesh.ops.holes_fill(bm,edges=holes,sides=0)
+        bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
+        bm.to_mesh(obj.data)
+        obj.data.update()
+    finally:
+        bm.free()
+
+
 def rebuild_watertight_surface(candidate, original):
     """Convert overlapped Boolean seam into continuous watertight 3D surface.
     Remesh is a structural intermediate; preserve actual UV by projecting to
@@ -166,6 +206,7 @@ def rebuild_watertight_surface(candidate, original):
         decimate=candidate.modifiers.new("ROKAS_V19_SurfaceSafeDecimate","DECIMATE")
         decimate.ratio=ratio
         bpy.ops.object.modifier_apply(modifier=decimate.name)
+        clean_decimation_microdefects(candidate)
         post_open,post_bad=boundary_and_bad(candidate.data)
         post_parts=groups(candidate.data)
         log("V19 decimation ratio "+str(ratio)+" verts="+
