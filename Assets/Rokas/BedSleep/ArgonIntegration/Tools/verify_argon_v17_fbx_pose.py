@@ -56,7 +56,21 @@ def snapshot(scene,skin,frame,action,shape_action=None):
         evaluated.to_mesh_clear()
     return verts,tris
 
-def draw_svg(vertices,triangles,dst,title,view=None,highlights=None):
+def evaluated_surface(scene,obj):
+    """Read the exact imported FBX sleeve deformed by the native armature."""
+    bpy.context.view_layer.update()
+    depsgraph=bpy.context.evaluated_depsgraph_get()
+    active=obj.evaluated_get(depsgraph)
+    mesh=active.to_mesh(preserve_all_data_layers=False,depsgraph=depsgraph)
+    check(mesh is not None,"V20 cannot evaluate native sleeve")
+    try:
+        return ([obj.matrix_world@v.co for v in mesh.vertices],
+                [tuple(t.vertices) for t in mesh.loop_triangles])
+    finally:
+        active.to_mesh_clear()
+
+
+def draw_svg(vertices,triangles,dst,title,view=None,highlights=None, sleeve=None):
     # Orthographic real-world XY projection of surface triangles.
     # Actual depth is used for painter ordering; this deliberately avoids
     # any GPU-render path which previously generated a fully BLACK image.
@@ -95,6 +109,23 @@ def draw_svg(vertices,triangles,dst,title,view=None,highlights=None):
         pts=" ".join("%.2f,%.2f"%xy(p) for p in (v0,v1,v2))
         faces.append((depth,pts,rgb))
     check(len(faces)>500,"Fewer than 500 projected triangles: FBX model missing/empty")
+    if sleeve is not None:
+        sleeve_points,sleeve_triangles=sleeve
+        check(len(sleeve_triangles)>200,"Missing native sleeve surface in FBX proof")
+        for tri in sleeve_triangles:
+            v0,v1,v2=(sleeve_points[i] for i in tri)
+            if max(v0.x,v1.x,v2.x)<xmin or min(v0.x,v1.x,v2.x)>xmax:
+                continue
+            if max(v0.y,v1.y,v2.y)<ymin or min(v0.y,v1.y,v2.y)>ymax:
+                continue
+            normal=(v1-v0).cross(v2-v0)
+            if normal.length_squared<1e-14:continue
+            normal.normalize()
+            shade=max(.16,min(.95,.38+.52*max(0,normal.z)+.18*max(0,normal.y)))
+            col=(int(138*shade),int(145*shade),int(156*shade))
+            depth=(v0.z+v1.z+v2.z)/3
+            faces.append((depth," ".join("%.2f,%.2f"%xy(p)
+                         for p in (v0,v1,v2)),col))
     faces.sort(key=lambda p:p[0])
     parts=[
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
@@ -192,6 +223,10 @@ def main():
     check(len(neutral)==len(half)==len(closed)==len(released),
           "Skin topology changed between animation frames")
     bones=get_bones(arm)
+    sleeve=next((o for o in bpy.data.objects
+        if o.type=="MESH" and o.name=="Keiko_Homewear_Sleeve_Mesh"),None)
+    check(sleeve is not None,
+          "V20 paired candidate FBX has no authentic matching sleeve")
     names=[n for n in bones if any(n.startswith(f+"_") for f in FINGERS)]
     # Use strong own-finger weights so adjacent palm motion cannot masquerade
     # as finger movement. Report per-digit magnitude and moved vertex count.
@@ -244,7 +279,32 @@ def main():
                if skin.data.shape_keys else [])
     check(len(key_names)>=6,"Most corrective shapes lost in FBX round-trip: "+
           repr(key_names))
+    # Native sleeve MUST be in the same imported FBX as the native skin,
+    # skinned to the same bones, not left behind on old V16 rig. Capture a
+    # geometry-based cuff/skin overlay as part of blocking CI evidence.
+    bones=get_bones(arm)
+    cuffStart=bones["Arm_Wrist"]
+    cuffEnd=bones["Arm_ForearmRoot"]
+    view=(min(cuffStart.x,cuffEnd.x)-.05,
+          max(cuffStart.x,cuffEnd.x)+.07,
+          min(cuffStart.y,cuffEnd.y)-.085,
+          max(cuffStart.y,cuffEnd.y)+.085)
+    scene.frame_set(1)
+    neutralSkin,_=snapshot(scene,skin,1,action,corrected)
+    neutralSleeve=evaluated_surface(scene,sleeve)
+    scene.frame_set(51)
+    bentSkin,_=snapshot(scene,skin,51,action,corrected)
+    bentSleeve=evaluated_surface(scene,sleeve)
+
     files={}
+    files["native_cuff_neutral"]=draw_svg(
+        neutralSkin,tris,out/"V20_FBX_Cuff_Neutral.svg",
+        "V20 same-rig native sleeve and hand / neutral",
+        view=view,highlights=bones,sleeve=neutralSleeve)
+    files["native_cuff_grip"]=draw_svg(
+        bentSkin,tris,out/"V20_FBX_Cuff_Grip.svg",
+        "V20 same-rig native sleeve and hand / grip",
+        view=view,highlights=bones,sleeve=bentSleeve)
     files["neutral"]=draw_svg(neutral,tris,out/"V17_FBX_Neutral.svg",
                               "V17 re-import: neutral hand",highlights=bones)
     files["half_fist"]=draw_svg(half,tris,out/"V17_FBX_Half_Grip.svg",
