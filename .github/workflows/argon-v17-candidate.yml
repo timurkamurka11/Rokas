@@ -51,7 +51,7 @@ jobs:
           import pathlib,cairosvg,statistics
           from PIL import Image,ImageStat
           directory=pathlib.Path('Artifacts/ArgonV17Candidate')
-          files=list(directory.glob('V17_FBX_*.svg'))+list(directory.glob('V17_Index*.svg'))+list(directory.glob('V17_Little*.svg'))
+          files=list(directory.glob('V17_FBX_*.svg'))+list(directory.glob('V17_Index*.svg'))+list(directory.glob('V17_Little*.svg'))+list(directory.glob('V20_FBX_*.svg'))
           assert len(files)>=8, f'Expected real exported-mesh pose visuals, got {len(files)}'
           for svg in files:
               target=svg.with_suffix('.png')
@@ -74,6 +74,11 @@ jobs:
           assert (d/'ROKAS_V17_FBX_Roundtrip_Motion.json').stat().st_size>300
           assert (d/'V17_FBX_Neutral.png').stat().st_size>10000
           assert (d/'V17_FBX_Full_Grip.png').stat().st_size>10000
+          assert (d/'V20_FBX_Cuff_Neutral.png').stat().st_size>10000
+          assert (d/'V20_FBX_Cuff_Grip.png').stat().st_size>10000
+          assert j.get('authored_cuff_fit',{}).get('runtime_triangle_mask') is False
+          assert j.get('authored_cuff_fit',{}).get('affected_vertices',0)>500
+          assert j.get('finger_vertex_owners',{}).get('SourceForearm',0)>500
           assert len(j.get('paired_corrective_clip_fbxs',[]))==3, j
           for label in ('V17_Grip','V17_Index','V17_Living'):
             assert (d/f'ROKAS_V17_{label}_Animated.fbx').stat().st_size>100000
