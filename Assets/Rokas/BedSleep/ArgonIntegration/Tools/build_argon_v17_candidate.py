@@ -489,7 +489,7 @@ def select_influences(candidate,arm,original):
         gweights={}
         if matches:
             rank,fn,t,dist=matches[0]
-            maxradius=.018 if fn=="Thumb" else .014
+            maxradius=.024 if fn=="Thumb" else .020
             start=anchors[fn][1 if fn=="Thumb" else 0][1]
             # Avoid treating nearby palm surface as another digit.
             if -0.055<=t<=1.18 and dist<maxradius:
@@ -512,9 +512,15 @@ def select_influences(candidate,arm,original):
                 frac=max(0.,min(1.,(xyz-p0).dot(p1-p0)/max((p1-p0).length_squared,1e-8)))
                 # Continuous palm-to-MCP influence across first ~35% of finger.
                 # The previous 100% MCP root caused visible cylindrical tearing.
-                near=max(0.,min(1.,(t+.08)/.43))
+                near=max(0.,min(1.,(t+.10)/.50))
                 near=near*near*(3.-2.*near)
-                palm_factor=.72*(1.-near)
+                root_palm=.93*(1.-near)
+                # Fade digit influence radially to avoid 100%-to-0% jumps.
+                inner=.013 if fn=="Thumb" else .011
+                radius_t=max(0.,min(1.,(dist-inner)/
+                              max(1e-7,maxradius-inner)))
+                radius_t=radius_t*radius_t*(3.-2.*radius_t)
+                palm_factor=root_palm+(1.-root_palm)*radius_t
                 gweights[chain[one][0]]=(1.-palm_factor)*(1.-frac)
                 gweights[chain[two][0]]=(1.-palm_factor)*frac
                 if palm_factor>1e-6:
@@ -638,11 +644,13 @@ def animator_actions(arm,candidate):
                     # Convert anatomically planned global hinge axis into
                     # original bone local rotation frame.
                     axis=bone.bone.matrix_local.to_quaternion().inverted()@Vector((0,1,0))
-                    angle=math.radians(amplitude*stagger*(.50 if j==0 else
-                         .76 if j==1 else .48))
+                    # Keep native FBX authored curling inside a safe envelope:
+                    # 70-degree PIP grips tore the rebuilt MCP skin into bands.
+                    angle=math.radians(amplitude*stagger*(.30 if j==0 else
+                         .42 if j==1 else .26))
                     if finger=="Thumb":
                         axis=bone.bone.matrix_local.to_quaternion().inverted()@Vector((0,0,1))
-                        angle*=.60
+                        angle*=.42
                     bone.rotation_quaternion=Quaternion(axis.normalized(),angle)
                     bone.keyframe_insert(data_path="rotation_quaternion",
                                          frame=frame,group=finger)
