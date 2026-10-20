@@ -549,6 +549,85 @@ def select_influences(candidate,arm,original):
                 candidate.vertex_groups[bone].add([v.index],weight/tot,'REPLACE')
     return dict(count)
 
+def regularize_skin_weights_on_surface(candidate,arm):
+    """Smooth the entire SKINNING FIELD over actual mesh edges.
+
+    The previous nearest-joint assignment allowed adjacent 1mm vertices to
+    bind to completely different bones, producing 10x-long triangles under
+    a normal grip. A watertight mesh alone cannot prevent this. Diffuse
+    weights in mesh-geodesic neighborhoods and renormalize every vertex.
+    Freeze the authentic proximal forearm so its sleeve fit stays intact.
+    """
+    mesh=candidate.data
+    n=len(mesh.vertices)
+    names={g.index:g.name for g in candidate.vertex_groups}
+    initial=[]
+    for v in mesh.vertices:
+        values={names[x.group]:x.weight for x in v.groups
+                if x.weight>1.e-7 and x.group in names}
+        total=sum(values.values())
+        require(total>.5,"V22 vertex has no proper skinning "+str(v.index))
+        initial.append({k:value/total for k,value in values.items()})
+    adjacent=[[] for _ in range(n)]
+    for e in mesh.edges:
+        a,b=e.vertices
+        adjacent[a].append(b);adjacent[b].append(a)
+    require(all(len(a)>=2 for a in adjacent),
+            "V22 unconnected/skinning-isolated skin vertex")
+    wrist=arm.matrix_world@arm.pose.bones["Arm_Wrist"].head
+    upper=arm.matrix_world@arm.pose.bones["Arm_ForearmRoot"].head
+    axis=upper-wrist
+    require(axis.length>.01,"V22 invalid forearm axis")
+    axis.normalize()
+    world=candidate.matrix_world
+    # Existing V16 sleeve begins >69mm up forearm. Freeze source skin
+    # weights >55mm from wrist; diffusion must not alter sleeve tracking.
+    locked=[((world@v.co)-wrist).dot(axis)>.055 for v in mesh.vertices]
+    values=initial
+    for iteration in range(28):
+        fresh=[None]*n
+        for i in range(n):
+            if locked[i]:
+                fresh[i]=values[i]
+                continue
+            old=values[i];neighbors=adjacent[i]
+            avg=defaultdict(float)
+            invlen=1./len(neighbors)
+            for j in neighbors:
+                for bone,weight in values[j].items():
+                    avg[bone]+=weight*invlen
+            alpha=.52
+            allbones=set(old)|set(avg)
+            changed={bone:(1.-alpha)*old.get(bone,0.)+
+                     alpha*avg.get(bone,0.) for bone in allbones}
+            changed={bone:value for bone,value in changed.items()
+                     if value>=.0007}
+            denom=sum(changed.values())
+            require(denom>.5,"V22 skin-weight diffusion lost normalized mass")
+            fresh[i]={bone:value/denom for bone,value in changed.items()}
+        values=fresh
+    diffcount=0;maximum=0.
+    for i,(before,after) in enumerate(zip(initial,values)):
+        delta=.5*sum(abs(after.get(b,0.)-before.get(b,0.))
+                       for b in set(before)|set(after))
+        if delta>.05:diffcount+=1
+        maximum=max(maximum,delta)
+    require(diffcount>100,"V22 failed to regularize discontinuous root weights")
+    for group in candidate.vertex_groups:
+        group.remove(list(range(n)))
+    groups={g.name:g for g in candidate.vertex_groups}
+    for i,weights in enumerate(values):
+        for bone,weight in weights.items():
+            if weight>.001:
+                groups[bone].add([i],weight,'REPLACE')
+    result=dict(iterations=28,neighborhood="true_mesh_edges",
+                changed_gt_5pct=diffcount,
+                max_total_variation=round(maximum,5),
+                frozen_authored_sleeve_vertices=sum(locked))
+    log("V22 CONTINUOUS anatomical skin weights "+json.dumps(result))
+    return result
+
+
 def build_correctives(candidate,arm):
     data=candidate.data
     require(data.shape_keys is None,"Unwanted copied corrective forms")
@@ -824,6 +903,7 @@ def main():
     cuff_source_audit=sleeve_radius_audit(src_skin,palm,arm)
     authored_cuff_fit=fit_native_skin_under_native_sleeve(palm,arm)
     weightmap=select_influences(palm,arm,src_skin)
+    skin_weight_smoothing=regularize_skin_weights_on_surface(palm,arm)
     correctives=build_correctives(palm,arm)
     require(len(correctives)>=5,"Candidate shape keys missing")
     # Blender FBX exporter encodes action names as
@@ -911,6 +991,7 @@ def main():
         candidate_triangles=sum(len(x.vertices)-2 for x in palm.data.polygons),
         candidate_components=comp,exposed_edges=bdr,nonmanifold_edges=bad,
         finger_vertex_owners=weightmap,
+        skin_weight_smoothing=skin_weight_smoothing,
         cuff_source_audit=cuff_source_audit,
         authored_cuff_fit=authored_cuff_fit,
         mcp_collar_polish=collar_metrics,
