@@ -94,7 +94,8 @@ def seat_finger_roots_inside_palm(pieces,arm):
     roots={}
     for name in NAMES:
         mcp=arm.matrix_world@arm.pose.bones[name+"_MCP"].head
-        pip=arm.matrix_world@arm.pose.bones[name+"_PIP"].head
+        pip_name=name+"_IP" if name=="Thumb" else name+"_PIP"
+        pip=arm.matrix_world@arm.pose.bones[pip_name].head
         v=pip-mcp
         require(v.length>.0005,"Unsafe MCP-to-PIP axis "+name)
         roots[name]=(mcp,v.normalized())
