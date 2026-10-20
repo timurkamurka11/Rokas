@@ -747,12 +747,20 @@ def main():
     require(before_components==6,"Expected six separate source islands")
     pieces=blender_split_skin(src_skin)
     caps=[fill_open_back(p) for p in pieces]
-    # New true 3D boolean candidate. Keep original FBX untouched.
+    # V19 'EXACT' Boolean fell back to fast solver on Ubuntu Blender 3.0
+    # without GMP and produced 634 nonmanifold edges BEFORE voxel repair.
+    # This leaves an ugly cylinder-socket imprint even when the final
+    # manifold check passes. V21 joins the six CLOSED authentic source
+    # volumes without cutting them, then voxel remeshes their overlap into
+    # ONE new continuous 3D surface. Do not apply Blender Boolean.
     palm=pieces[0]
     root_socket_metrics=seat_finger_roots_inside_palm(pieces,arm)
-    for digit in pieces[1:]:
-        apply_boolean(palm,digit)
-        bpy.data.objects.remove(digit,do_unlink=True)
+    bpy.ops.object.select_all(action="DESELECT")
+    for piece in pieces:piece.select_set(True)
+    bpy.context.view_layer.objects.active=palm
+    bpy.ops.object.join()
+    require(groups(palm.data)==6, "V21 source volume join lost input islands")
+    log("V21 joined 6 authentic skin volumes; union performed by voxel remesh")
     src_skin.name="ROKAS_OriginalSkin_UnmodifiedNotExported"
     palm.name="Keiko_Hand_Skin_Mesh"
     palm.data.name="ROKAS_Keiko_V17_Skin"
@@ -766,7 +774,7 @@ def main():
         palm.data.materials.append(m)
     bdr,bad=boundary_and_bad(palm.data)
     comp=groups(palm.data)
-    log(f"raw boolean vertices={len(palm.data.vertices)} components={comp} boundary={bdr} nonmanifold={bad}")
+    log(f"V21 raw volumetric source vertices={len(palm.data.vertices)} components={comp} boundary={bdr} nonmanifold={bad}")
     if bdr or bad or comp!=1:
         surface=rebuild_watertight_surface(palm,src_skin)
         bdr,bad=boundary_and_bad(palm.data)
