@@ -19,7 +19,8 @@ namespace Rokas.BedSleep.Argon.Candidate
         private float scale, gestureStart, nextMessage;
         private int gesture;
         private bool ready, oldHidden, legacyInput = true;
-        private Mesh ownedCuffMesh;
+        private Renderer[] legacyVisuals, candidateVisuals;
+        private bool[] savedLegacyVisibility;
 
         private readonly Dictionary<Transform, Quaternion> restRotation =
             new Dictionary<Transform, Quaternion>();
@@ -35,12 +36,16 @@ namespace Rokas.BedSleep.Argon.Candidate
         public void Configure(Transform oldWrist, Transform newRoot, Transform newWrist,
             SkinnedMeshRenderer oldSkin, SkinnedMeshRenderer newSkin,
             AnimationClip gripClip, AnimationClip indexClip, AnimationClip livingClip,
-            float relativeScale)
+            float relativeScale, Renderer[] sourceRenderers, Renderer[] candidateRenderers)
         {
             if (oldWrist == null || newRoot == null || newWrist == null ||
                 oldSkin == null || newSkin == null ||
                 gripClip == null || indexClip == null || livingClip == null ||
-                relativeScale <= 0f || float.IsNaN(relativeScale))
+                relativeScale <= 0f || float.IsNaN(relativeScale) ||
+                sourceRenderers == null || sourceRenderers.Length < 3 ||
+                candidateRenderers == null || candidateRenderers.Length < 3 ||
+                sourceRenderers.Any(r => r == null) ||
+                candidateRenderers.Any(r => r == null))
                 throw new InvalidOperationException("Missing native V17, V16 or valid wrist scale");
             targetWrist = oldWrist;
             candidateRoot = newRoot;
@@ -49,6 +54,11 @@ namespace Rokas.BedSleep.Argon.Candidate
             candidateHand = newSkin;
             grip = gripClip; index = indexClip; living = livingClip;
             scale = relativeScale;
+            // One coherent native V17 rig for skin + sleeve + nails.
+            // Original V16 watch/OLED/timer remain untouched.
+            legacyVisuals = sourceRenderers;
+            candidateVisuals = candidateRenderers;
+            savedLegacyVisibility = sourceRenderers.Select(r => r.enabled).ToArray();
 
             // Bind-neutral frame: before any gesture, capture the *native*
             // transforms. Never transfer V16 joint rotations to V17 bindposes.
@@ -76,16 +86,14 @@ namespace Rokas.BedSleep.Argon.Candidate
                 smoothedShapes[i] = 0f;
             }
 
-            // Original source sleeve remains visible. Extend only the proximal
-            // *clone* of V17 skin a small amount under the sleeve opening.
-            // No source FBX, watch mesh or authoritative V16 skin is edited.
-            FitSkinInsideExistingSleeve();
+            // No runtime mesh edits, triangle clipping or fake cuff extension:
+            // the FBX V17 sleeve, nails and hand share native transforms.
             gestureStart = Time.unscaledTime;
             gesture = 0;
             candidateHand.enabled = true;
             ready = true;
             Debug.Log("[ROKAS V17 REAL BED V18] Stable native bone limits, smooth " +
-                "morphs and cuff overlap active; existing Russian OLED/watch untouched. " +
+                "morphs and native-sleeve unity active; existing Russian OLED/watch untouched. " +
                 "F7=Living F8=Safe Grip F9=Safe Index");
         }
 
@@ -121,119 +129,6 @@ namespace Rokas.BedSleep.Argon.Candidate
             if (name.EndsWith("_PIP", StringComparison.Ordinal)) return 35f;
             if (name.EndsWith("_DIP", StringComparison.Ordinal)) return 26f;
             return 28f;
-        }
-
-        private void FitSkinInsideExistingSleeve()
-        {
-            // Sleeve overlap is cosmetic. Never regress the user's playable bed
-            // if a particular FBX mesh import disallows CPU vertex access.
-            try { FitSkinInsideExistingSleeveCore(); }
-            catch (Exception cuffError)
-            {
-                if (ownedCuffMesh != null)
-                {
-                    if (candidateHand != null &&
-                        candidateHand.sharedMesh == ownedCuffMesh)
-                        candidateHand.sharedMesh = originalCuffSourceMesh;
-                    UnityEngine.Object.Destroy(ownedCuffMesh);
-                    ownedCuffMesh = null;
-                }
-                Debug.LogWarning("[ROKAS V17 CUFF FIT] Optional overlap skipped: " +
-                    cuffError.Message + ". Original sleeve/watch remain.");
-            }
-        }
-
-        private Mesh originalCuffSourceMesh;
-
-        private void FitSkinInsideExistingSleeveCore()
-        {
-            Transform forearm = candidateRoot.GetComponentsInChildren<Transform>(true)
-                .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
-            Transform palm = candidateRoot.GetComponentsInChildren<Transform>(true)
-                .FirstOrDefault(t => t.name == "Hand_Palm");
-            Mesh source = candidateHand.sharedMesh;
-            if (forearm == null || palm == null || source == null)
-                return;
-            if (!source.isReadable)
-            {
-                Debug.LogWarning("[ROKAS V17 FOREARM MASK] Source FBX not CPU-readable. " +
-                    "Original V16 sleeve/watch preserved; no mesh edits.");
-                return;
-            }
-
-            Vector3 wristLocal =
-                candidateHand.transform.InverseTransformPoint(candidateWrist.position);
-            Vector3 forearmLocal =
-                candidateHand.transform.InverseTransformPoint(forearm.position);
-            Vector3 palmLocal =
-                candidateHand.transform.InverseTransformPoint(palm.position);
-            Vector3 towardSleeve = forearmLocal - wristLocal;
-            float reach = Vector3.Distance(wristLocal, palmLocal);
-            if (towardSleeve.sqrMagnitude < 1e-8f || reach < .0001f)
-                return;
-            towardSleeve.Normalize();
-
-            // Previous V18 EXTENDED the long candidate forearm farther into the
-            // old sleeve, leaving its pink dorsal surface plainly visible
-            // ABOVE the entire grey sleeve. Mask that surplus region instead.
-            // The preserved V16 sleeve/physical watch are the real authority.
-            float cutoff = reach * .48f; // approx. half a hand behind wrist
-            Vector3[] vertices = source.vertices;
-            float[] projected = new float[vertices.Length];
-            for (int i = 0; i < projected.Length; i++)
-                projected[i] = Vector3.Dot(vertices[i] - wristLocal, towardSleeve);
-
-            Mesh clone = UnityEngine.Object.Instantiate(source);
-            clone.name = "ROKAS_V17_HiddenForearm_Trim_PlayOnly";
-            int inputTris = 0, keptTris = 0;
-            try
-            {
-                for (int sub = 0; sub < clone.subMeshCount; ++sub)
-                {
-                    int[] triangles = source.GetTriangles(sub);
-                    var kept = new List<int>(triangles.Length);
-                    inputTris += triangles.Length / 3;
-                    for (int i = 0; i < triangles.Length; i += 3)
-                    {
-                        // Remove only triangles ENTIRELY behind the cuff
-                        // plane; the boundary is concealed under sleeve
-                        // rather than leaving a visible abrupt cylinder.
-                        int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
-                        if (projected[a] > cutoff &&
-                            projected[b] > cutoff &&
-                            projected[c] > cutoff)
-                            continue;
-                        kept.Add(a); kept.Add(b); kept.Add(c);
-                    }
-                    keptTris += kept.Count / 3;
-                    clone.SetTriangles(kept, sub, false);
-                }
-                float fractionRemoved = inputTris == 0 ? 0f :
-                    (inputTris - keptTris) / (float)inputTris;
-                // Reject uncertain cuts instead of stripping a playable hand.
-                if (fractionRemoved < .03f || fractionRemoved > .78f)
-                {
-                    Debug.LogWarning("[ROKAS V17 FOREARM MASK] Unsafe trim fraction " +
-                        fractionRemoved.ToString("P1") +
-                        "; leaving original V17 asset unchanged.");
-                    UnityEngine.Object.Destroy(clone);
-                    return;
-                }
-                clone.RecalculateBounds();
-                originalCuffSourceMesh = source;
-                ownedCuffMesh = clone;
-                candidateHand.sharedMesh = clone;
-                Debug.Log("[ROKAS V17 FOREARM MASK] Removed " +
-                    (inputTris - keptTris) + "/" + inputTris +
-                    " proximal forearm triangles behind V16 sleeve, cutoffReach=" +
-                    (cutoff / reach).ToString("F2") +
-                    "; retained ALL original wrist/watch/OLED assets.");
-            }
-            catch
-            {
-                UnityEngine.Object.Destroy(clone);
-                throw;
-            }
         }
 
         private void LateUpdate()
@@ -326,14 +221,20 @@ namespace Rokas.BedSleep.Argon.Candidate
                     Quaternion.Inverse(candidateWrist.rotation);
                 candidateRoot.rotation = adjust * candidateRoot.rotation;
                 candidateRoot.position += targetWrist.position - candidateWrist.position;
-                if (!oldHidden) { originalHand.enabled = false; oldHidden = true; }
-                candidateHand.enabled = true;
+                if (!oldHidden)
+                {
+                    for (int i = 0; i < legacyVisuals.Length; ++i)
+                        if (legacyVisuals[i] != null) legacyVisuals[i].enabled = false;
+                    oldHidden = true;
+                }
+                foreach (var renderer in candidateVisuals)
+                    if (renderer != null) renderer.enabled = true;
 
                 if (Time.unscaledTime > nextMessage)
                 {
                     nextMessage = Time.unscaledTime + 30f;
                     Debug.Log("[ROKAS V17 REAL BED V18 ACTIVE] smoothed finger rotations, " +
-                        "capped morphs and cuff fit; original watch/sleeve retained");
+                        "capped morphs and coherent native sleeve; original watch retained");
                 }
             }
             catch (Exception error)
@@ -353,14 +254,15 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void Restore()
         {
-            if (oldHidden && originalHand != null) originalHand.enabled = true;
+            if (oldHidden && legacyVisuals != null)
+            {
+                for (int i = 0; i < legacyVisuals.Length; i++)
+                    if (legacyVisuals[i] != null)
+                        legacyVisuals[i].enabled = savedLegacyVisibility[i];
+            }
             oldHidden = false;
         }
         private void OnDisable() { Restore(); }
-        private void OnDestroy()
-        {
-            Restore();
-            if (ownedCuffMesh != null) UnityEngine.Object.Destroy(ownedCuffMesh);
-        }
+        private void OnDestroy() { Restore(); }
     }
 }
