@@ -126,8 +126,12 @@ namespace Rokas.BedSleep.Argon.Editor
                     correct.SampleAnimation(temp, 0f);
                     skin.BakeMesh(rest);
                     float start = skin.GetBlendShapeWeight(corrective);
-                    correct.SampleAnimation(temp,
-                        Mathf.Max(.005f, correct.length * test.Peak));
+                    // Imported FBX clip duration may contain padded trailing frames:
+                    // sample the actual authored corrective peak, NOT a fraction
+                    // of total Scene/Take duration (which can be all zeros).
+                    float sampleTime = FindCorrectivePeakTime(
+                        correct, temp, skin, "Index_MCP_Corrective");
+                    correct.SampleAnimation(temp, sampleTime);
                     skin.BakeMesh(bent);
                     float end = skin.GetBlendShapeWeight(corrective);
                     if (rest.vertexCount != bent.vertexCount ||
@@ -145,6 +149,11 @@ namespace Rokas.BedSleep.Argon.Editor
                         if (d > .001f) ++moving;
                     }
 
+                    Debug.Log("[ROKAS V17 SAMPLE TIMING] " + test.Name +
+                        " clipLength=" + correct.length.ToString("F3") +
+                        " authoredPeakTime=" + sampleTime.ToString("F3") +
+                        " initialIndexWeight=" + start.ToString("F3") +
+                        " peakIndexWeight=" + end.ToString("F3"));
                     if (end - start < test.MinWeight)
                     {
                         // A true Unity-local failure has two possible causes:
@@ -186,7 +195,7 @@ namespace Rokas.BedSleep.Argon.Editor
                             return t.localToWorldMatrix.MultiplyPoint3x4(
                                 Vector3.zero);
                         }).ToArray();
-                        correct.SampleAnimation(temp, correct.length * test.Peak);
+                        correct.SampleAnimation(temp, sampleTime);
                         for (int i = 0; i < tips.Length; ++i)
                         {
                             var t = joints.First(x => x.name == tips[i]);
@@ -217,6 +226,40 @@ namespace Rokas.BedSleep.Argon.Editor
             Debug.Log("[ROKAS V17 UNITY IMPORT QA COMPLETE] " +
                 "4 imported FBXs, 3 real animated morph poses checked. " +
                 "No scene changes, no V16 replacement, no production enable.");
+        }
+
+        /// <summary>
+        /// Blender FBX may import as Unity "Scene" clip with a long inactive tail
+        /// (e.g. clipLength=8.3s but all useful morph keys end much earlier).
+        /// Find the real nonzero keyframe in the imported curve for the skin.
+        /// An absent/mismatched curve fails QA rather than manufacturing motion.
+        /// </summary>
+        private static float FindCorrectivePeakTime(
+            AnimationClip clip, GameObject root, SkinnedMeshRenderer skin,
+            string shapeName)
+        {
+            string skinPath = AnimationUtility.CalculateTransformPath(
+                skin.transform, root.transform);
+            string property = "blendShape." + shapeName;
+            var match = AnimationUtility.GetCurveBindings(clip)
+                .Where(b => b.path == skinPath &&
+                    b.type == typeof(SkinnedMeshRenderer) &&
+                    b.propertyName == property)
+                .ToArray();
+            if (match.Length != 1)
+                throw new InvalidOperationException(
+                    "V17 imported curve path/type missing or ambiguous for " +
+                    property + " at '" + skinPath + "'; bindings=" + match.Length);
+            AnimationCurve curve = AnimationUtility.GetEditorCurve(clip, match[0]);
+            if (curve == null || curve.keys.Length == 0)
+                throw new InvalidOperationException(
+                    "V17 imported " + property + " has no keyframes");
+            var peak = curve.keys.OrderByDescending(k => k.value).First();
+            if (peak.value <= 0f || peak.time < 0f || peak.time > clip.length + .001f)
+                throw new InvalidOperationException(
+                    "V17 imported " + property + " has invalid positive peak " +
+                    peak.value + " at " + peak.time + "s of clip " + clip.length);
+            return Mathf.Clamp(peak.time, 0f, clip.length);
         }
 
         /// <summary>
