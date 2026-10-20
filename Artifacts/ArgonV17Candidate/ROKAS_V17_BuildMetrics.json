@@ -7,27 +7,107 @@
   "exposed_edges": 0,
   "nonmanifold_edges": 0,
   "finger_vertex_owners": {
-    "Palm": 18958,
-    "Thumb": 1159,
-    "Index": 2455,
-    "Middle": 2386,
-    "Ring": 2014,
-    "Little": 1750
+    "Palm": 18957,
+    "SourceForearm": 9437,
+    "Thumb": 1158,
+    "Index": 2456,
+    "Middle": 2383,
+    "Ring": 2021,
+    "Little": 1747
+  },
+  "cuff_source_audit": {
+    "sleeve_vertex_count": 2067,
+    "skin_vertex_count": 28722,
+    "sleeve_axial_min_m": 0.06965,
+    "sleeve_axial_max_m": 0.27562,
+    "skin_axial_min_m": -0.14251,
+    "skin_axial_max_m": 0.26687,
+    "at_0mm": {
+      "sleeve": null,
+      "skin": {
+        "min": 0.01983,
+        "median": 0.02928,
+        "max": 0.04143,
+        "count": 1039
+      }
+    },
+    "at_15mm": {
+      "sleeve": null,
+      "skin": {
+        "min": 0.02045,
+        "median": 0.02856,
+        "max": 0.04149,
+        "count": 973
+      }
+    },
+    "at_35mm": {
+      "sleeve": null,
+      "skin": {
+        "min": 0.02041,
+        "median": 0.02905,
+        "max": 0.04171,
+        "count": 975
+      }
+    },
+    "at_55mm": {
+      "sleeve": null,
+      "skin": {
+        "min": 0.02117,
+        "median": 0.02892,
+        "max": 0.04166,
+        "count": 684
+      }
+    },
+    "at_75mm": {
+      "sleeve": {
+        "min": 0.02318,
+        "median": 0.03297,
+        "max": 0.04131,
+        "count": 424
+      },
+      "skin": {
+        "min": 0.02218,
+        "median": 0.02977,
+        "max": 0.04153,
+        "count": 517
+      }
+    },
+    "at_105mm": {
+      "sleeve": {
+        "min": 0.02892,
+        "median": 0.03731,
+        "max": 0.04308,
+        "count": 159
+      },
+      "skin": {
+        "min": 0.02439,
+        "median": 0.03188,
+        "max": 0.03978,
+        "count": 469
+      }
+    }
+  },
+  "authored_cuff_fit": {
+    "native_sleeve_lip_from_wrist_m": 0.06965130552870936,
+    "tuck_in_fraction": 0.085,
+    "affected_vertices": 9122,
+    "max_inset_m": 0.003603,
+    "runtime_triangle_mask": false
   },
   "mcp_collar_polish": {
-    "affected_vertices": 953,
-    "max_displacement_m": 0.0010701513156948777,
+    "affected_vertices": 2691,
+    "max_displacement_m": 0.002115228085402683,
     "total_vertices": 28722
   },
   "corrective_shapes": {
     "Index_MCP_Corrective": 527,
     "Index_PIP_Corrective": 149,
     "Index_DIP_Corrective": 26,
-    "Little_MCP_Corrective": 339,
+    "Little_MCP_Corrective": 344,
     "Little_PIP_Corrective": 138,
-    "Thumb_Opposition_Corrective": 306,
-    "Knuckle_Compression_Corrective": 595,
-    "Fist_Grip_Corrective": 1950
+    "Thumb_Opposition_Corrective": 305,
+    "Knuckle_Compression_Corrective": 599,
+    "Fist_Grip_Corrective": 1951
   },
   "authored_actions": [
     "V17_Grip",

@@ -72,16 +72,16 @@
     "Thumb": {
       "owned_vertices": 606,
       "max_m": 0.029284,
-      "mean_m": 0.020648,
+      "mean_m": 0.020644,
       "moved_gt_1mm": 606,
       "moved_gt_3mm": 606
     },
     "Index": {
-      "owned_vertices": 1385,
+      "owned_vertices": 1384,
       "max_m": 0.062894,
-      "mean_m": 0.031697,
-      "moved_gt_1mm": 1385,
-      "moved_gt_3mm": 1385
+      "mean_m": 0.031716,
+      "moved_gt_1mm": 1384,
+      "moved_gt_3mm": 1384
     },
     "Middle": {
       "owned_vertices": 1453,
@@ -112,7 +112,7 @@
     },
     "Index": {
       "max_m": 0.050393,
-      "mean_m": 0.026161
+      "mean_m": 0.026176
     },
     "Middle": {
       "max_m": 0.0,
@@ -138,17 +138,19 @@
     "Key|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living"
   ],
   "projected_face_counts": {
+    "native_cuff_neutral": 45670,
+    "native_cuff_grip": 45611,
     "neutral": 57419,
     "half_fist": 57368,
-    "full_fist": 57343,
+    "full_fist": 57344,
     "release": 57419,
     "index_flex": 57407,
     "profile_neutral": 57419,
-    "profile_fist": 57343,
+    "profile_fist": 57344,
     "Index_MCP_neutral": 20204,
-    "Index_MCP_grip": 21279,
-    "Little_MCP_neutral": 13562,
-    "Little_MCP_grip": 14524
+    "Index_MCP_grip": 21278,
+    "Little_MCP_neutral": 13564,
+    "Little_MCP_grip": 14528
   },
   "result": "FBX round-trip geometry/rig motion proof. NOT an in-game Unity QA."
 }
