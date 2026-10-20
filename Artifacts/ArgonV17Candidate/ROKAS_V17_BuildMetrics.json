@@ -7,13 +7,20 @@
   "exposed_edges": 0,
   "nonmanifold_edges": 0,
   "finger_vertex_owners": {
-    "Palm": 21258,
+    "Palm": 19362,
     "SourceForearm": 9684,
-    "Thumb": 271,
-    "Index": 802,
-    "Middle": 1668,
-    "Ring": 2046,
-    "Little": 1502
+    "Thumb": 613,
+    "Index": 1334,
+    "Middle": 2382,
+    "Ring": 2084,
+    "Little": 1772
+  },
+  "skin_weight_smoothing": {
+    "iterations": 28,
+    "neighborhood": "true_mesh_edges",
+    "changed_gt_5pct": 5280,
+    "max_total_variation": 0.76638,
+    "frozen_authored_sleeve_vertices": 8389
   },
   "cuff_source_audit": {
     "sleeve_vertex_count": 2067,
@@ -100,13 +107,13 @@
     "total_vertices": 27547
   },
   "corrective_shapes": {
-    "Index_MCP_Corrective": 163,
+    "Index_MCP_Corrective": 121,
     "Index_PIP_Corrective": 60,
     "Index_DIP_Corrective": 95,
-    "Little_MCP_Corrective": 99,
+    "Little_MCP_Corrective": 86,
     "Little_PIP_Corrective": 120,
     "Thumb_Opposition_Corrective": 58,
-    "Knuckle_Compression_Corrective": 383,
+    "Knuckle_Compression_Corrective": 299,
     "Fist_Grip_Corrective": 2040
   },
   "authored_actions": [

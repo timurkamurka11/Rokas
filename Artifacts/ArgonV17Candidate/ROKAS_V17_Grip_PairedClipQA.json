@@ -3,12 +3,12 @@
   "source": "ROKAS_V17_V17_Grip_Animated.fbx",
   "bone_action": "RokasV17Rig|Scene|Scene",
   "corrective_action": "Key|Scene|Scene",
-  "bone_curve_delta": 1.6685109961186806,
+  "bone_curve_delta": 0.8812201906619217,
   "shape_curve_delta": 0.5603654384613037,
   "corrective_weight_at_start": 0.0,
   "corrective_weight_at_peak": 0.5603654384613037,
-  "index_vertices": 428,
-  "index_skin_max_displacement_m": 0.06680949054344386,
-  "index_skin_mean_displacement_m": 0.030381329695268414,
+  "index_vertices": 508,
+  "index_skin_max_displacement_m": 0.03575695203891353,
+  "index_skin_mean_displacement_m": 0.01564326914902159,
   "result": "PASS: armature and shape corrections animate inside exported FBX"
 }
