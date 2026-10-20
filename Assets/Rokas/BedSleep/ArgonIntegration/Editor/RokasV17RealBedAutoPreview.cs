@@ -100,11 +100,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 s.name == "Keiko_Hand_Skin_Mesh" &&
                 s.sharedMesh != null && s.enabled &&
                 s.bones != null && s.bones.Length >= 25);
+            var visibleV16 = game.GetComponentsInChildren<Renderer>(true);
+            var originalSleeve = visibleV16.FirstOrDefault(r =>
+                r.name == "Keiko_Homewear_Sleeve_Mesh" && r.enabled);
+            var originalNails = visibleV16.FirstOrDefault(r =>
+                r.name == "Keiko_Fingernails_Mesh" && r.enabled);
             var sourceWrist = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_Wrist");
             var sourceTip = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Middle_Tip");
-            if (originalSkin == null || sourceWrist == null || sourceTip == null)
+            if (originalSkin == null || sourceWrist == null || sourceTip == null ||
+                originalSleeve == null || originalNails == null)
             {
                 string skinInfo = string.Join(", ", liveSkins.Select(s =>
                     s.name + ":mesh=" + (s.sharedMesh != null) +
@@ -130,11 +136,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 rig.name = "ROKAS_V17_SkinnedHand_RealBed_PlayOnly";
                 var skin = rig.GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .FirstOrDefault(s => s.name == "Keiko_Hand_Skin_Mesh");
+                var nativeRenderers = rig.GetComponentsInChildren<Renderer>(true);
+                var nativeSleeve = nativeRenderers.FirstOrDefault(r =>
+                    r.name == "Keiko_Homewear_Sleeve_Mesh");
+                var nativeNails = nativeRenderers.FirstOrDefault(r =>
+                    r.name == "Keiko_Fingernails_Mesh");
                 var wrist = rig.GetComponentsInChildren<Transform>(true)
                     .FirstOrDefault(t => t.name == "Arm_Wrist");
                 var tip = rig.GetComponentsInChildren<Transform>(true)
                     .FirstOrDefault(t => t.name == "Middle_Tip");
                 if (skin == null || skin.sharedMesh == null || wrist == null || tip == null ||
+                    nativeSleeve == null || nativeNails == null ||
                     skin.bones == null || skin.bones.Length != 25 ||
                     skin.sharedMesh.blendShapeCount < 8)
                     throw new InvalidOperationException("V17 native 25-bone mesh/morphs absent");
@@ -169,19 +181,29 @@ namespace Rokas.BedSleep.Argon.Editor
                     throw new InvalidOperationException("Original skin PBR material missing");
                 foreach (var animator in rig.GetComponentsInChildren<Animator>(true))
                     animator.enabled = false;
-                foreach (var render in rig.GetComponentsInChildren<Renderer>(true))
-                    render.enabled = render == skin;
-                skin.sharedMaterial = originalSkin.sharedMaterial;
+                // Original V19 preview accidentally LEFT the V16 sleeve and
+                // fingernails enabled on the OLD skeleton while hiding the
+                // correctly rigged native V17 sleeve/nails. That was a source
+                // of cuff misregistration and ghost geometry below the fingers.
+                // All three visible surfaces must share the native V17 rig.
+                foreach (var render in nativeRenderers)
+                    render.enabled = render == skin ||
+                        render == nativeSleeve || render == nativeNails;
+                skin.sharedMaterials = originalSkin.sharedMaterials;
+                nativeSleeve.sharedMaterials = originalSleeve.sharedMaterials;
+                nativeNails.sharedMaterials = originalNails.sharedMaterials;
                 skin.updateWhenOffscreen = true;
                 foreach (var tr in rig.GetComponentsInChildren<Transform>(true))
                     tr.gameObject.layer = originalSkin.gameObject.layer;
 
                 var follow = rig.AddComponent<RokasV17RealBedPoseFollower>();
                 follow.Configure(sourceWrist, rig.transform, wrist,
-                    originalSkin, skin, clips[0], clips[1], clips[2], ratio);
+                    originalSkin, skin, clips[0], clips[1], clips[2], ratio,
+                    new Renderer[] { originalSkin, originalSleeve, originalNails },
+                    new Renderer[] { skin, nativeSleeve, nativeNails });
                 Debug.Log("[ROKAS V17 REAL BED INSTALL PASS] Original game bed hand " +
-                    "overlay ready, V16 skin kept for rollback, original watch/OLED/sleeve " +
-                    "and save unchanged. No new scene and no merge. Ratio=" + ratio);
+                    "native V17 skin + same-rig sleeve/nails ready; original V16 trio " +
+                    "preserved for rollback; watch/OLED/save untouched. Ratio=" + ratio);
             }
             catch
             {
