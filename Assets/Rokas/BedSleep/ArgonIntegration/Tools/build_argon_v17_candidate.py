@@ -89,6 +89,47 @@ def apply_boolean(palm,finger):
     bpy.ops.object.modifier_apply(modifier=mod.name)
     return palm
 
+def seat_finger_roots_inside_palm(pieces,arm):
+    """Overlap separate authentic finger root caps before watertight union."""
+    roots={}
+    for name in NAMES:
+        mcp=arm.matrix_world@arm.pose.bones[name+"_MCP"].head
+        pip=arm.matrix_world@arm.pose.bones[name+"_PIP"].head
+        v=pip-mcp
+        require(v.length>.0005,"Unsafe MCP-to-PIP axis "+name)
+        roots[name]=(mcp,v.normalized())
+    used=set()
+    metrics={}
+    for piece in pieces[1:]:
+        world=[piece.matrix_world@v.co for v in piece.data.vertices]
+        center=sum(world,Vector())/len(world)
+        choices=sorted(((center-o).length,n) for n,(o,d) in roots.items()
+                       if n not in used)
+        require(bool(choices),"Missing finger candidate")
+        distance,name=choices[0]
+        used.add(name)
+        require(distance<.15,"Source finger does not match MCP "+name)
+        origin,axis=roots[name]
+        positions=[(p-origin).dot(axis) for p in world]
+        low,high=min(positions),max(positions)
+        require(high-low>.008,"Degenerate finger socket "+name)
+        band=min(.013,(high-low)*.24)
+        insertion=.0055 if name in ("Index","Little") else .004
+        inverse=piece.matrix_world.inverted()
+        changed=0
+        for vert,p,t in zip(piece.data.vertices,world,positions):
+            u=max(0.,min(1.,(t-low)/max(1e-8,band)))
+            blend=1.-u*u*(3.-2.*u)
+            if blend<1e-5:continue
+            vert.co=inverse@(p-axis*(insertion*blend))
+            changed+=1
+        piece.data.update()
+        require(changed>=12,"Finger-root seat made no manifold overlap "+name)
+        metrics[name]=dict(affected_vertices=changed,insertion_m=insertion)
+    require(used==set(NAMES),"Unmatched source finger")
+    return metrics
+
+
 def rebuild_watertight_surface(candidate, original):
     """Convert overlapped Boolean seam into continuous watertight 3D surface.
     Remesh is a structural intermediate; preserve actual UV by projecting to
@@ -258,8 +299,7 @@ def select_influences(candidate,arm):
             maxradius=.018 if fn=="Thumb" else .014
             start=anchors[fn][1 if fn=="Thumb" else 0][1]
             # Avoid treating nearby palm surface as another digit.
-            if -0.055<=t<=1.18 and dist<maxradius and \
-               xyz.x>start.x-0.006:
+            if -0.055<=t<=1.18 and dist<maxradius:
                 chain=anchors[fn]
                 # smooth, physiologically reasonable joint blending,
                 # using nearest joint stations and always retaining
@@ -277,11 +317,15 @@ def select_influences(candidate,arm):
                         one,two=close,close+1
                 p0,p1=chain[one][1],chain[two][1]
                 frac=max(0.,min(1.,(xyz-p0).dot(p1-p0)/max((p1-p0).length_squared,1e-8)))
-                # 0.85 weight on finger near its MCP, taper palm.
-                palm_factor=.22*(1.-max(0.,min(1.,t*12.)))
-                gweights[chain[one][0]]=(1-palm_factor)*(1-frac)
-                gweights[chain[two][0]]=(1-palm_factor)*frac
-                if palm_factor>0:gweights["Hand_Palm"]=palm_factor
+                # Continuous palm-to-MCP influence across first ~35% of finger.
+                # The previous 100% MCP root caused visible cylindrical tearing.
+                near=max(0.,min(1.,(t+.08)/.43))
+                near=near*near*(3.-2.*near)
+                palm_factor=.72*(1.-near)
+                gweights[chain[one][0]]=(1.-palm_factor)*(1.-frac)
+                gweights[chain[two][0]]=(1.-palm_factor)*frac
+                if palm_factor>1e-6:
+                    gweights["Hand_Palm"]=palm_factor
                 count[fn]+=1
         if not gweights:
             # Distal arm preserves natural rest pose, smooth wrist transition.
@@ -503,6 +547,7 @@ def main():
     caps=[fill_open_back(p) for p in pieces]
     # New true 3D boolean candidate. Keep original FBX untouched.
     palm=pieces[0]
+    root_socket_metrics=seat_finger_roots_inside_palm(pieces,arm)
     for digit in pieces[1:]:
         apply_boolean(palm,digit)
         bpy.data.objects.remove(digit,do_unlink=True)
