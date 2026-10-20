@@ -273,7 +273,7 @@ namespace Rokas.BedSleep.Argon.Editor
             lines.Add("Diagnosis: curve values > 0 with matchesSkinnedRenderer=false " +
                 "indicate path/type mismatch. All-zero curves indicate FBX export/import " +
                 "loss or an incorrect clip. Do not mark Unity PASS without real playback.");
-            return string.Join("\\n", lines);
+            return string.Join(Environment.NewLine, lines);
         }
 
         private static SkinnedMeshRenderer GetSkin(GameObject model)
