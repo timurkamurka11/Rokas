@@ -279,15 +279,19 @@ def main():
     weight_indices={g.index:g.name for g in skin.vertex_groups}
     owned={f:[] for f in FINGERS}
     for v in skin.data.vertices:
-        candidates=[]
+        # Smooth LBS correctly distributes one finger's influence
+        # across MCP/PIP/DIP: ownership is the SUM of that finger chain,
+        # never the largest weight assigned to one single bone.
+        chain_weights=defaultdict(float)
         for w in v.groups:
             name=weight_indices.get(w.group,"")
             for finger in FINGERS:
                 if name.startswith(finger+"_"):
-                    candidates.append((w.weight,finger))
-        if candidates:
-            strength,fn=max(candidates)
-            if strength>.55:owned[fn].append(v.index)
+                    chain_weights[finger]+=w.weight
+        if chain_weights:
+            strength,fn=max((value,name)
+                            for name,value in chain_weights.items())
+            if strength>.60:owned[fn].append(v.index)
     deltas={}
     for fn,indices in owned.items():
         check(len(indices)>30,"No meaningful skinned vertices belong to "+fn)
