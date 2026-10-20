@@ -303,18 +303,22 @@ def locally_relax_mcp_collars(candidate,arm):
             avg=sum((positions[j] for j in adjacency[i]),Vector())/len(adjacency[i])
             new[i]=positions[i]+(avg-positions[i])*factor*fall
         return new
-    for _ in range(7):
-        xyz=pass_smoothing(xyz,.42)
-        xyz=pass_smoothing(xyz,-.43)
+    # The previous seven weak passes moved only ~1mm and left the
+    # visibly cylindrical MCP socket rings in real Unity Game View.
+    # Work on the original continuous mesh; never split finger islands.
+    for _ in range(18):
+        xyz=pass_smoothing(xyz,.50)
+        xyz=pass_smoothing(xyz,-.48)
     maximum=0.
     displaced=0
     for i,p in enumerate(xyz):
         delta=p-original[i]
         d=delta.length
-        if d>.0024:
-            # Restrict any one socket vertex to 2.4mm in local space.
-            delta*=.0024/d
-            d=.0024
+        if d>.0040:
+            # Limit anatomically localized collar blending to 4mm; no
+            # arbitrary global sleeve, nails or distal digit reshaping.
+            delta*=.0040/d
+            d=.0040
         if d>.00010:displaced+=1
         maximum=max(maximum,d)
         mesh.vertices[i].co=original[i]+delta
@@ -384,6 +388,55 @@ def sleeve_radius_audit(original,candidate,arm):
                     "max":round(near[-1],5),"count":len(near)}
         result["at_"+str(int(s*1000))+"mm"]={"sleeve":section(a),"skin":section(b)}
     log("V20 ORIGINAL SLEEVE AND CANDIDATE SKIN RADIAL AUDIT "+json.dumps(result))
+    return result
+
+
+def fit_native_skin_under_native_sleeve(candidate,arm):
+    """Make the FBX forearm geometry sit UNDER its own authentic cuff.
+
+    This is a SOURCE vertex correction, not runtime clipping. The final
+    FBX keeps one continuous closed hand surface, with native sleeve and
+    nails driven by that exact same armature in Unity.
+    """
+    sleeve=next((o for o in bpy.data.objects if
+        o.type=="MESH" and o.name=="Keiko_Homewear_Sleeve_Mesh"),None)
+    require(sleeve is not None, "V20 cannot find authored grey sleeve")
+    wrist=arm.matrix_world@arm.pose.bones["Arm_Wrist"].head
+    upper=arm.matrix_world@arm.pose.bones["Arm_ForearmRoot"].head
+    axis=upper-wrist
+    require(axis.length>.01,"V20 missing reliable forearm axis")
+    axis.normalize()
+    sleeve_along=[((sleeve.matrix_world@v.co)-wrist).dot(axis)
+                  for v in sleeve.data.vertices]
+    lip=min(sleeve_along)
+    require(.045<lip<.13,
+            "V20 source cuff lip is unexpectedly positioned: "+str(lip))
+    local_inv=candidate.matrix_world.inverted()
+    start=lip-.037
+    full=lip+.052
+    changed=0;max_move=0.
+    for vertex in candidate.data.vertices:
+        world=candidate.matrix_world@vertex.co
+        diff=world-wrist
+        longitudinal=diff.dot(axis)
+        if longitudinal<=start:continue
+        radial=diff-axis*longitudinal
+        # Taper from 0 to 8.5% radial tuck-in over the cuff boundary.
+        u=min(1.,max(0.,(longitudinal-start)/(full-start)))
+        w=u*u*(3.-2.*u)
+        inset=radial*.085*w
+        vertex.co=local_inv@(world-inset)
+        moved=inset.length
+        if moved>1e-5:changed+=1
+        max_move=max(max_move,moved)
+    candidate.data.update()
+    require(changed>500 and .001<max_move<.006,
+            "V20 cuff surface fit did not produce safe inward overlap")
+    result=dict(native_sleeve_lip_from_wrist_m=lip,
+                tuck_in_fraction=.085,affected_vertices=changed,
+                max_inset_m=round(max_move,6),
+                runtime_triangle_mask=False)
+    log("V20 AUTHORED continuous forearm/sleeve fit "+json.dumps(result))
     return result
 
 
@@ -731,6 +784,7 @@ def main():
     require(groups(palm.data)==1 and polished_open==0 and polished_bad==0,
             "Collar polish introduced a broken topological skin")
     cuff_source_audit=sleeve_radius_audit(src_skin,palm,arm)
+    authored_cuff_fit=fit_native_skin_under_native_sleeve(palm,arm)
     weightmap=select_influences(palm,arm,src_skin)
     correctives=build_correctives(palm,arm)
     require(len(correctives)>=5,"Candidate shape keys missing")
@@ -820,6 +874,7 @@ def main():
         candidate_components=comp,exposed_edges=bdr,nonmanifold_edges=bad,
         finger_vertex_owners=weightmap,
         cuff_source_audit=cuff_source_audit,
+        authored_cuff_fit=authored_cuff_fit,
         mcp_collar_polish=collar_metrics,
         corrective_shapes=correctives,
         authored_actions=authored,output_fbx=outfbx.name,
