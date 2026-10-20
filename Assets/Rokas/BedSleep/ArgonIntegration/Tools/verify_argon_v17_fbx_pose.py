@@ -64,8 +64,16 @@ def evaluated_surface(scene,obj):
     mesh=active.to_mesh(preserve_all_data_layers=False,depsgraph=depsgraph)
     check(mesh is not None,"V20 cannot evaluate native sleeve")
     try:
-        return ([obj.matrix_world@v.co for v in mesh.vertices],
-                [tuple(t.vertices) for t in mesh.loop_triangles])
+        # Evaluated meshes may have empty loop_triangles until explicitly
+        # triangulated (unlike pre-triangulated skin FBX meshes). This is not
+        # evidence the real cloth sleeve is missing.
+        if len(mesh.loop_triangles)==0:
+            mesh.calc_loop_triangles()
+        verts=[obj.matrix_world@v.co for v in mesh.vertices]
+        tris=[tuple(t.vertices) for t in mesh.loop_triangles]
+        check(len(tris)>200,
+              "V20 authentic imported sleeve has no valid evaluated triangles")
+        return verts,tris
     finally:
         active.to_mesh_clear()
 
