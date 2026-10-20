@@ -149,14 +149,37 @@ def rebuild_watertight_surface(candidate, original):
     smoothing.factor=.45
     smoothing.iterations=3
     bpy.ops.object.modifier_apply(modifier=smoothing.name)
-    # Controlled topology reduction from 61k voxel vertices toward ~28k;
-    # verify closed manifold surface again after the reduction.
-    decimate=candidate.modifiers.new("ROKAS_V17_OptimizedSkinTris","DECIMATE")
-    decimate.ratio=.46
-    bpy.ops.object.modifier_apply(modifier=decimate.name)
-    post_open,post_bad=boundary_and_bad(candidate.data)
-    require(not(post_open or post_bad) and groups(candidate.data)==1,
-            "Optimization broke anatomical manifold continuity")
+    # A Boolean/voxel repair with deeply overlapped MCP caps changes the
+    # curvature distribution. Fixed .46 decimation may now open collar loops.
+    # Try several surface-preserving reductions; never accept an open seam.
+    pre_open,pre_bad=boundary_and_bad(candidate.data)
+    log("V19 voxel pre-decimate: verts="+str(len(candidate.data.vertices))+
+        " components="+str(groups(candidate.data))+
+        " open="+str(pre_open)+" nonmanifold="+str(pre_bad))
+    require(pre_open==0 and pre_bad==0 and groups(candidate.data)==1,
+            "V19 source overlap produced invalid pre-decimation topology")
+    remeshed=candidate.data.copy()
+    accepted=False
+    chosen_ratio=None
+    for ratio in (.46,.58,.70,.82):
+        candidate.data=remeshed.copy()
+        decimate=candidate.modifiers.new("ROKAS_V19_SurfaceSafeDecimate","DECIMATE")
+        decimate.ratio=ratio
+        bpy.ops.object.modifier_apply(modifier=decimate.name)
+        post_open,post_bad=boundary_and_bad(candidate.data)
+        post_parts=groups(candidate.data)
+        log("V19 decimation ratio "+str(ratio)+" verts="+
+            str(len(candidate.data.vertices))+" components="+str(post_parts)+
+            " open="+str(post_open)+" nonmanifold="+str(post_bad))
+        if post_open==0 and post_bad==0 and post_parts==1:
+            chosen_ratio=ratio
+            accepted=True
+            break
+    require(accepted, "V19 all manifold-preserving decimation ratios failed")
+    require(len(candidate.data.vertices)<=40000,
+            "V19 manifold surface is too expensive for Unity: "+
+            str(len(candidate.data.vertices)))
+    log("V19 preserved continuous skin with decimation="+str(chosen_ratio))
     # Project UV onto authentic original triangles with explicit barycentric
     # mapping. Blender 3.0 DataTransfer does NOT create a new target UV
     # channel automatically on a remeshed surface.
