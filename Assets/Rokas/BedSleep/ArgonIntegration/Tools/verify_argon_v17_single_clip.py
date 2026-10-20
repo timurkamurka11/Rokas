@@ -92,8 +92,9 @@ def main():
     groups={g.index:g.name for g in skin.vertex_groups}
     owner=[]
     for vert in skin.data.vertices:
-        if any(groups.get(vg.group,"").startswith("Index_") and vg.weight>.55
-               for vg in vert.groups):
+        own_weight=sum(vg.weight for vg in vert.groups
+                       if groups.get(vg.group,"").startswith("Index_"))
+        if own_weight>.60:
             owner.append(vert.index)
     require(len(owner)>200,"Skin has too few index vertices for QA")
     delta=[(bent[i]-rest[i]).length for i in owner]
