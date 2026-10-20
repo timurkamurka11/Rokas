@@ -151,67 +151,89 @@ namespace Rokas.BedSleep.Argon.Candidate
                 .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
             Transform palm = candidateRoot.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Hand_Palm");
-            if (forearm == null || palm == null || candidateHand.sharedMesh == null)
+            Mesh source = candidateHand.sharedMesh;
+            if (forearm == null || palm == null || source == null)
                 return;
-            // Read/Write can be disabled in Unity FBX import settings on
-            // different machines. Never let an optional cuff operation hide
-            // the entire V17 overlay or break the normal game.
-            if (!candidateHand.sharedMesh.isReadable)
+            if (!source.isReadable)
             {
-                Debug.LogWarning("[ROKAS V17 CUFF FIT] Imported mesh is not " +
-                    "CPU-readable; skip optional rim extension, preserve the sleeve.");
+                Debug.LogWarning("[ROKAS V17 FOREARM MASK] Source FBX not CPU-readable. " +
+                    "Original V16 sleeve/watch preserved; no mesh edits.");
                 return;
             }
-            originalCuffSourceMesh = candidateHand.sharedMesh;
-            var mesh = UnityEngine.Object.Instantiate(candidateHand.sharedMesh);
-            mesh.name = "ROKAS_V17_CuffOverlap_PlayOnly";
-            Vector3 wristLocal = candidateHand.transform.InverseTransformPoint(candidateWrist.position);
-            Vector3 forearmLocal = candidateHand.transform.InverseTransformPoint(forearm.position);
-            Vector3 palmLocal = candidateHand.transform.InverseTransformPoint(palm.position);
+
+            Vector3 wristLocal =
+                candidateHand.transform.InverseTransformPoint(candidateWrist.position);
+            Vector3 forearmLocal =
+                candidateHand.transform.InverseTransformPoint(forearm.position);
+            Vector3 palmLocal =
+                candidateHand.transform.InverseTransformPoint(palm.position);
             Vector3 towardSleeve = forearmLocal - wristLocal;
             float reach = Vector3.Distance(wristLocal, palmLocal);
             if (towardSleeve.sqrMagnitude < 1e-8f || reach < .0001f)
-            {
-                UnityEngine.Object.Destroy(mesh);
                 return;
-            }
             towardSleeve.Normalize();
-            var vertices = mesh.vertices;
-            float maxProximal = float.NegativeInfinity;
-            for (int i = 0; i < vertices.Length; i++)
-                maxProximal = Mathf.Max(maxProximal,
-                    Vector3.Dot(vertices[i] - wristLocal, towardSleeve));
-            // Shift only the last ~15% of skin length proximal to the wrist.
-            // This hides a cut edge inside the existing cloth rather than
-            // enlarging/moving the entire V17 hand under the physical watch.
-            float band = Mathf.Max(reach * .22f, .0002f);
-            float extension = reach * .027f;
-            int affected = 0;
-            if (maxProximal > band * .25f)
+
+            // Previous V18 EXTENDED the long candidate forearm farther into the
+            // old sleeve, leaving its pink dorsal surface plainly visible
+            // ABOVE the entire grey sleeve. Mask that surplus region instead.
+            // The preserved V16 sleeve/physical watch are the real authority.
+            float cutoff = reach * .48f; // approx. half a hand behind wrist
+            Vector3[] vertices = source.vertices;
+            float[] projected = new float[vertices.Length];
+            for (int i = 0; i < projected.Length; i++)
+                projected[i] = Vector3.Dot(vertices[i] - wristLocal, towardSleeve);
+
+            Mesh clone = UnityEngine.Object.Instantiate(source);
+            clone.name = "ROKAS_V17_HiddenForearm_Trim_PlayOnly";
+            int inputTris = 0, keptTris = 0;
+            try
             {
-                float start = maxProximal - band;
-                for (int i = 0; i < vertices.Length; i++)
+                for (int sub = 0; sub < clone.subMeshCount; ++sub)
                 {
-                    float d = Vector3.Dot(vertices[i] - wristLocal, towardSleeve);
-                    if (d <= start) continue;
-                    float w = Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp01((d - start) / band));
-                    vertices[i] += towardSleeve * (extension * w);
-                    affected++;
+                    int[] triangles = source.GetTriangles(sub);
+                    var kept = new List<int>(triangles.Length);
+                    inputTris += triangles.Length / 3;
+                    for (int i = 0; i < triangles.Length; i += 3)
+                    {
+                        // Remove only triangles ENTIRELY behind the cuff
+                        // plane; the boundary is concealed under sleeve
+                        // rather than leaving a visible abrupt cylinder.
+                        int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
+                        if (projected[a] > cutoff &&
+                            projected[b] > cutoff &&
+                            projected[c] > cutoff)
+                            continue;
+                        kept.Add(a); kept.Add(b); kept.Add(c);
+                    }
+                    keptTris += kept.Count / 3;
+                    clone.SetTriangles(kept, sub, false);
                 }
+                float fractionRemoved = inputTris == 0 ? 0f :
+                    (inputTris - keptTris) / (float)inputTris;
+                // Reject uncertain cuts instead of stripping a playable hand.
+                if (fractionRemoved < .03f || fractionRemoved > .78f)
+                {
+                    Debug.LogWarning("[ROKAS V17 FOREARM MASK] Unsafe trim fraction " +
+                        fractionRemoved.ToString("P1") +
+                        "; leaving original V17 asset unchanged.");
+                    UnityEngine.Object.Destroy(clone);
+                    return;
+                }
+                clone.RecalculateBounds();
+                originalCuffSourceMesh = source;
+                ownedCuffMesh = clone;
+                candidateHand.sharedMesh = clone;
+                Debug.Log("[ROKAS V17 FOREARM MASK] Removed " +
+                    (inputTris - keptTris) + "/" + inputTris +
+                    " proximal forearm triangles behind V16 sleeve, cutoffReach=" +
+                    (cutoff / reach).ToString("F2") +
+                    "; retained ALL original wrist/watch/OLED assets.");
             }
-            if (affected == 0)
+            catch
             {
-                UnityEngine.Object.Destroy(mesh);
-                return;
+                UnityEngine.Object.Destroy(clone);
+                throw;
             }
-            mesh.vertices = vertices;
-            mesh.RecalculateBounds();
-            ownedCuffMesh = mesh;
-            candidateHand.sharedMesh = ownedCuffMesh;
-            Debug.Log("[ROKAS V17 CUFF FIT] Proximal skin-only overlap " +
-                "adjustedVertices=" + affected + " relativeExtension=" +
-                (extension / reach).ToString("F4") + "; original sleeve untouched");
         }
 
         private void LateUpdate()
