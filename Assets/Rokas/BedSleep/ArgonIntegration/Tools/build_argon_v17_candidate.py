@@ -325,7 +325,69 @@ def locally_relax_mcp_collars(candidate,arm):
     return {"affected_vertices":displaced,"max_displacement_m":maximum,
             "total_vertices":len(mesh.vertices)}
 
-def select_influences(candidate,arm):
+def source_forearm_influences(original,arm):
+    """Transfer authentic forearm skinning, NOT the disconnected finger weights.
+
+    V19 rewrote every proximal forearm vertex as Hand_Palm / Arm_Wrist,
+    ignoring Arm_ForearmTwist / Arm_ForearmRoot. That cannot track the native
+    sleeve when the game rotates the wrist, and exposes a dorsal strip.
+    The original Blender FBX forearm weighting is the reference for this area.
+    """
+    from mathutils.kdtree import KDTree
+    tree=KDTree(len(original.data.vertices))
+    names={g.index:g.name for g in original.vertex_groups}
+    for vertex in original.data.vertices:
+        tree.insert(original.matrix_world@vertex.co,vertex.index)
+    tree.balance()
+    allowed={"Arm_Wrist","Arm_ForearmTwist","Arm_ForearmRoot","Hand_Palm"}
+    def weights(world):
+        near,index,d=tree.find(world)
+        vertex=original.data.vertices[index]
+        data={names[g.group]:g.weight for g in vertex.groups
+              if names.get(g.group) in allowed and g.weight>1e-5}
+        total=sum(data.values())
+        return {n:v/total for n,v in data.items()} if total>1e-5 else {}
+    return weights
+
+
+def sleeve_radius_audit(original,candidate,arm):
+    """Measure forearm/cuff relation in authentic source world coordinates."""
+    sleeve=next((o for o in bpy.data.objects
+        if o.type=="MESH" and o.name=="Keiko_Homewear_Sleeve_Mesh"),None)
+    if sleeve is None:
+        raise RuntimeError("V20 source sleeve unavailable for fit")
+    wrist=arm.matrix_world@arm.pose.bones["Arm_Wrist"].head
+    upper=arm.matrix_world@arm.pose.bones["Arm_ForearmRoot"].head
+    axis=upper-wrist
+    require(axis.length>.01,"V20 degenerately short forearm axis")
+    axis.normalize()
+    def samples(obj):
+        vals=[]
+        for v in obj.data.vertices:
+            p=obj.matrix_world@v.co
+            along=(p-wrist).dot(axis)
+            radius=((p-wrist)-axis*along).length
+            vals.append((along,radius))
+        return vals
+    a,b=samples(sleeve),samples(candidate)
+    result={"sleeve_vertex_count":len(a),"skin_vertex_count":len(b),
+            "sleeve_axial_min_m":round(min(x for x,r in a),5),
+            "sleeve_axial_max_m":round(max(x for x,r in a),5),
+            "skin_axial_min_m":round(min(x for x,r in b),5),
+            "skin_axial_max_m":round(max(x for x,r in b),5)}
+    for s in (0.,.015,.035,.055,.075,.105):
+        def section(samples):
+            near=[r for t,r in samples if abs(t-s)<.007]
+            if not near:return None
+            near.sort()
+            return {"min":round(near[0],5),"median":round(near[len(near)//2],5),
+                    "max":round(near[-1],5),"count":len(near)}
+        result["at_"+str(int(s*1000))+"mm"]={"sleeve":section(a),"skin":section(b)}
+    log("V20 ORIGINAL SLEEVE AND CANDIDATE SKIN RADIAL AUDIT "+json.dumps(result))
+    return result
+
+
+def select_influences(candidate,arm,original):
     # Create finger-local weights, never drive little finger by Ring_PIP.
     vertices=candidate.data.vertices
     original_groups={g.name:g for g in candidate.vertex_groups}
@@ -346,6 +408,11 @@ def select_influences(candidate,arm):
     pale=arm.matrix_world@bones["Hand_Palm"].head
     wrist=arm.matrix_world@bones["Arm_Wrist"].head
     count=defaultdict(int)
+    source_weights=source_forearm_influences(original,arm)
+    upper=arm.matrix_world@bones["Arm_ForearmRoot"].head
+    forearm_axis=upper-wrist
+    require(forearm_axis.length>.01, "V20 invalid native forearm axis")
+    forearm_axis.normalize()
     for v in vertices:
         xyz=local_to_world@v.co
         matches=[]
@@ -401,13 +468,22 @@ def select_influences(candidate,arm):
                     gweights["Hand_Palm"]=palm_factor
                 count[fn]+=1
         if not gweights:
-            # Distal arm preserves natural rest pose, smooth wrist transition.
-            disw=(xyz-wrist).length
-            disp=(xyz-pale).length
-            w=disp/(disw+disp+1e-8)
-            w=max(0.,min(1.,w))
-            gweights={"Hand_Palm":max(.05,1-w),"Arm_Wrist":min(.95,w)}
+            # Non-digit regions belong to the HAND or real FOREARM rig,
+            # not a made-up Hand_Palm / Arm_Wrist blend along the whole arm.
+            gweights={"Hand_Palm":1.}
             count["Palm"]+=1
+        proximal=(xyz-wrist).dot(forearm_axis)
+        if proximal>-.004:
+            authored=source_weights(xyz)
+            if authored:
+                # Smooth, stable 4 cm source->new skin weights transition.
+                factor=max(0.,min(1.,(proximal+.004)/.04))
+                factor=factor*factor*(3.-2.*factor)
+                merged=defaultdict(float)
+                for name,value in gweights.items():merged[name]+=(1.-factor)*value
+                for name,value in authored.items():merged[name]+=factor*value
+                gweights=dict(merged)
+                if factor>.98:count["SourceForearm"]+=1
         tot=sum(gweights.values())
         for bone,weight in gweights.items():
             if weight/tot>1e-5:
@@ -654,7 +730,8 @@ def main():
     polished_open,polished_bad=boundary_and_bad(palm.data)
     require(groups(palm.data)==1 and polished_open==0 and polished_bad==0,
             "Collar polish introduced a broken topological skin")
-    weightmap=select_influences(palm,arm)
+    cuff_source_audit=sleeve_radius_audit(src_skin,palm,arm)
+    weightmap=select_influences(palm,arm,src_skin)
     correctives=build_correctives(palm,arm)
     require(len(correctives)>=5,"Candidate shape keys missing")
     # Blender FBX exporter encodes action names as
@@ -742,6 +819,7 @@ def main():
         candidate_triangles=sum(len(x.vertices)-2 for x in palm.data.polygons),
         candidate_components=comp,exposed_edges=bdr,nonmanifold_edges=bad,
         finger_vertex_owners=weightmap,
+        cuff_source_audit=cuff_source_audit,
         mcp_collar_polish=collar_metrics,
         corrective_shapes=correctives,
         authored_actions=authored,output_fbx=outfbx.name,
