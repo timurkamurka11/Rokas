@@ -560,22 +560,44 @@ def build_correctives(candidate,arm):
         ("Knuckle_Compression_Corrective","Middle_MCP",.00028,.012),
         ("Fist_Grip_Corrective","Hand_Palm",.00020,.028)
     ]
+    groupnames={g.index:g.name for g in candidate.vertex_groups}
+    data.calc_normals()
     for keyname,bone,amt,radius in targets:
         center=inv@(arm.matrix_world@arm.pose.bones[bone].head)
+        owner=bone.split("_")[0]
+        source=[]
+        for vert in data.vertices:
+            weights={groupnames.get(g.group,""):g.weight for g in vert.groups}
+            if owner=="Hand":
+                keep=weights.get("Hand_Palm",0.)>.1
+            else:
+                keep=any(name.startswith(owner+"_") and value>.12
+                         for name,value in weights.items())
+            if keep:
+                source.append(((vert.co-center).length,vert.index))
+        source.sort()
+        require(len(source)>=30,
+                "V21 corrective has no anatomically owned vertices: "+keyname)
+        # Joint centers in the original 25-bone rig are not guaranteed to lie
+        # ON the new volumetric surface. Use the nearest 24 vertices belonging
+        # to this one finger to size the falloff; never touch neighboring digits.
+        radius=max(radius,min(.035,source[23][0]*1.18))
         shape=candidate.shape_key_add(name=keyname,from_mix=False)
         n=0
-        for i,pos in enumerate(rest):
-            d=(pos-center).length
-            if d>radius:continue
-            fall=(1.-d/radius)**2
-            # Physically localized knuckle volume, NOT a blank shape key.
-            # Shape layer remains zero until Unity confirms intended driver.
-            shape.data[i].co=pos+Vector((0,0,amt*fall))
+        for dist,i in source:
+            if dist>=radius:break
+            fall=(1.-dist/radius)**2
+            # Volume correction follows local epidermis normal. The old
+            # global +Z bulge produced odd ridges on rotated finger roots.
+            v=data.vertices[i]
+            normal=v.normal.normalized()
+            shape.data[i].co=rest[i]+normal*(amt*fall)
             n+=1
-        if n<3:
-            candidate.shape_key_remove(shape)
-            continue
+        require(n>=12,"V21 corrective has too few owned influenced vertices: "+
+                keyname+" n="+str(n))
         made[keyname]=n
+        log("V21 anatomical corrective "+keyname+" verts="+str(n)+
+            " radius_m="+str(round(radius,5)))
     return made
 
 def animator_actions(arm,candidate):
