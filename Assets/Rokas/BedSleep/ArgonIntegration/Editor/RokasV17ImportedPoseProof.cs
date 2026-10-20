@@ -146,10 +146,20 @@ namespace Rokas.BedSleep.Argon.Editor
                     }
 
                     if (end - start < test.MinWeight)
+                    {
+                        // A true Unity-local failure has two possible causes:
+                        // absent/static imported FBX curves, OR imported curve
+                        // bindings which do not target the instantiated skin.
+                        // Keep QA FAIL (do not fake an animation PASS), but print
+                        // exact curve paths and values so the next fix is targeted.
+                        Debug.LogError(BuildMorphBindingDiagnostic(
+                            test.Name, correct, temp, skin, test.Peak));
                         throw new InvalidOperationException(
-                            test.Name + ": corrective BlendShape remains static " +
+                            test.Name + ": Unity-native imported BlendShape is static " +
                             start.ToString("F3") + " -> " + end.ToString("F3") +
-                            "; expects >= " + test.MinWeight.ToString("F3"));
+                            "; expects >= " + test.MinWeight.ToString("F3") +
+                            ". See [ROKAS V17 MORPH BINDING DIAGNOSTIC].");
+                    }
 
                     if (max < test.MinDisplacement)
                         throw new InvalidOperationException(
@@ -207,6 +217,63 @@ namespace Rokas.BedSleep.Argon.Editor
             Debug.Log("[ROKAS V17 UNITY IMPORT QA COMPLETE] " +
                 "4 imported FBXs, 3 real animated morph poses checked. " +
                 "No scene changes, no V16 replacement, no production enable.");
+        }
+
+        /// <summary>
+        /// Inspect the actual imported Unity clip, NOT Blender QA metadata.
+        /// Diagnostic only: never creates/saves animations or changes production.
+        /// </summary>
+        private static string BuildMorphBindingDiagnostic(
+            string label, AnimationClip clip, GameObject root,
+            SkinnedMeshRenderer skin, float peakFraction)
+        {
+            var lines = new List<string>();
+            lines.Add("[ROKAS V17 MORPH BINDING DIAGNOSTIC] " + label);
+            lines.Add("clip=" + clip.name + " length=" + clip.length.ToString("F4") +
+                " frameRate=" + clip.frameRate.ToString("F2"));
+            string actualSkinPath = AnimationUtility.CalculateTransformPath(
+                skin.transform, root.transform);
+            lines.Add("actualSkinnedRendererPath='" + actualSkinPath +
+                "' actualType=" + skin.GetType().FullName);
+            var bindings = AnimationUtility.GetCurveBindings(clip);
+            lines.Add("floatCurveBindings=" + bindings.Length);
+            var morphs = bindings.Where(b =>
+                b.propertyName.StartsWith("blendShape.", StringComparison.Ordinal)).ToArray();
+            lines.Add("blendShapeBindings=" + morphs.Length);
+            var bones = bindings.Where(b => b.type == typeof(Transform) &&
+                (b.propertyName.IndexOf("Rotation", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 b.propertyName.IndexOf("Euler", StringComparison.OrdinalIgnoreCase) >= 0));
+            var unresolvedBones = bones.Where(b =>
+                (b.path.Length == 0 ? root.transform : root.transform.Find(b.path)) == null)
+                .ToArray();
+            lines.Add("boneRotationBindings=" + bones.Count() +
+                " unresolvedBoneBindings=" + unresolvedBones.Length);
+            foreach (var b in unresolvedBones.Take(8))
+                lines.Add("unresolvedBonePath='" + b.path + "' property='" + b.propertyName + "'");
+            float peak = Mathf.Clamp(clip.length * peakFraction, 0, clip.length);
+            foreach (var b in morphs.Take(30))
+            {
+                var curve = AnimationUtility.GetEditorCurve(clip, b);
+                Transform target = b.path.Length == 0 ? root.transform : root.transform.Find(b.path);
+                float first = curve != null ? curve.Evaluate(0f) : float.NaN;
+                float atPeak = curve != null ? curve.Evaluate(peak) : float.NaN;
+                float max = curve != null && curve.keys.Length > 0 ?
+                    curve.keys.Max(k => k.value) : float.NaN;
+                bool matchesSkin = target == skin.transform &&
+                    b.type == typeof(SkinnedMeshRenderer);
+                lines.Add("binding path='" + b.path + "' type='" + b.type.FullName +
+                    "' property='" + b.propertyName + "' foundTransform=" +
+                    (target != null) + " matchesSkinnedRenderer=" + matchesSkin +
+                    " curveStart=" + first.ToString("G6") +
+                    " curvePeak=" + atPeak.ToString("G6") +
+                    " maxKey=" + max.ToString("G6"));
+            }
+            if (morphs.Length == 0)
+                lines.Add("NO imported BlendShape animation bindings");
+            lines.Add("Diagnosis: curve values > 0 with matchesSkinnedRenderer=false " +
+                "indicate path/type mismatch. All-zero curves indicate FBX export/import " +
+                "loss or an incorrect clip. Do not mark Unity PASS without real playback.");
+            return string.Join("\\n", lines);
         }
 
         private static SkinnedMeshRenderer GetSkin(GameObject model)
