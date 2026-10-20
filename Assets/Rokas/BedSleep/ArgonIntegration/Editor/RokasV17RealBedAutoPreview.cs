@@ -170,13 +170,27 @@ namespace Rokas.BedSleep.Argon.Editor
                         throw new InvalidOperationException("V17 clip morph animation is absent");
                 }
 
-                float oldReach = Vector3.Distance(sourceWrist.position, sourceTip.position);
-                float newReach = Vector3.Distance(wrist.position, tip.position);
-                if (oldReach < .00001f || newReach < .00001f)
-                    throw new InvalidOperationException("Invalid wrist-to-fingertip bind reach");
+                // Wrist-to-fingertip distance is an animated, moving quantity.
+                // Scaling the entire V17 sleeve by that value made the cuff
+                // visibly wider/longer than the authoritative physical watch.
+                // Use original native FOREARM bone distance on both rigs
+                // (never a moving middle-finger tip).
+                var oldForearm = game.GetComponentsInChildren<Transform>(true)
+                    .FirstOrDefault(t => t.name == "Arm_ForearmRoot" &&
+                        t != rig.transform && !t.IsChildOf(rig.transform));
+                var newForearm = rig.GetComponentsInChildren<Transform>(true)
+                    .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
+                if (oldForearm == null || newForearm == null)
+                    throw new InvalidOperationException("Missing native forearm calibration bones");
+                float oldReach = Vector3.Distance(sourceWrist.position, oldForearm.position);
+                float newReach = Vector3.Distance(wrist.position, newForearm.position);
+                if (oldReach < .01f || newReach < .01f)
+                    throw new InvalidOperationException("Invalid static forearm calibration length");
                 float ratio = oldReach / newReach;
-                if (ratio < .2f || ratio > 5f)
-                    throw new InvalidOperationException("Unsafe imported wrist scale ratio " + ratio);
+                if (ratio < .75f || ratio > 1.25f)
+                    throw new InvalidOperationException(
+                        "Unsafe game-to-native forearm scale " + ratio +
+                        ". Do not enlarge sleeve to match animated fingers.");
                 if (originalSkin.sharedMaterial == null)
                     throw new InvalidOperationException("Original skin PBR material missing");
                 foreach (var animator in rig.GetComponentsInChildren<Animator>(true))
