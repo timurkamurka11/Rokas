@@ -164,6 +164,14 @@ def clean_decimation_microdefects(obj):
         if holes:
             require(len(holes)<=20,"V19 hole repair exceeds safe finger collar")
             bmesh.ops.holes_fill(bm,edges=holes,sides=0)
+        # FACES_ONLY can leave isolated vertices/wire edges. The previous
+        # topology counter treats those as an extra disconnected component,
+        # despite the skinned surface itself being closed.
+        orphans=[v for v in bm.verts if not v.link_faces]
+        require(len(orphans)<=12,
+                "V19 decimator left a real detached mesh island, not just orphans")
+        if orphans:
+            bmesh.ops.delete(bm,geom=orphans,context='VERTS')
         bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
         bm.to_mesh(obj.data)
         obj.data.update()
