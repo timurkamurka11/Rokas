@@ -125,6 +125,28 @@ namespace Rokas.BedSleep.Argon.Candidate
 
         private void FitSkinInsideExistingSleeve()
         {
+            // Sleeve overlap is cosmetic. Never regress the user's playable bed
+            // if a particular FBX mesh import disallows CPU vertex access.
+            try { FitSkinInsideExistingSleeveCore(); }
+            catch (Exception cuffError)
+            {
+                if (ownedCuffMesh != null)
+                {
+                    if (candidateHand != null &&
+                        candidateHand.sharedMesh == ownedCuffMesh)
+                        candidateHand.sharedMesh = originalCuffSourceMesh;
+                    UnityEngine.Object.Destroy(ownedCuffMesh);
+                    ownedCuffMesh = null;
+                }
+                Debug.LogWarning("[ROKAS V17 CUFF FIT] Optional overlap skipped: " +
+                    cuffError.Message + ". Original sleeve/watch remain.");
+            }
+        }
+
+        private Mesh originalCuffSourceMesh;
+
+        private void FitSkinInsideExistingSleeveCore()
+        {
             Transform forearm = candidateRoot.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
             Transform palm = candidateRoot.GetComponentsInChildren<Transform>(true)
@@ -140,6 +162,7 @@ namespace Rokas.BedSleep.Argon.Candidate
                     "CPU-readable; skip optional rim extension, preserve the sleeve.");
                 return;
             }
+            originalCuffSourceMesh = candidateHand.sharedMesh;
             var mesh = UnityEngine.Object.Instantiate(candidateHand.sharedMesh);
             mesh.name = "ROKAS_V17_CuffOverlap_PlayOnly";
             Vector3 wristLocal = candidateHand.transform.InverseTransformPoint(candidateWrist.position);
