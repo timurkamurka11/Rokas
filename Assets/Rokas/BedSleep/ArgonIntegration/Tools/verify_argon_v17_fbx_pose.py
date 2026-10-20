@@ -56,6 +56,38 @@ def snapshot(scene,skin,frame,action,shape_action=None):
         evaluated.to_mesh_clear()
     return verts,tris
 
+def measure_edge_strain(rest,flex,triangles):
+    """Reject long stretching ribbons before Unity can display a torn hand.
+
+    Mesh connected-component checks alone missed the user's finger-root
+    deformation because all vertices remained topologically connected.
+    A local triangle edge growing 3x into >8mm during normal grip is a
+    structural artifact, not a credible skin-fold.
+    """
+    edges=set()
+    for a,b,c in triangles:
+        for u,v in ((a,b),(b,c),(c,a)):
+            if u!=v: edges.add((min(u,v),max(u,v)))
+    bad=[];ratios=[]
+    for a,b in edges:
+        neutral=(rest[a]-rest[b]).length
+        posed=(flex[a]-flex[b]).length
+        if neutral<.00003:continue
+        ratio=posed/neutral
+        ratios.append(ratio)
+        if ratio>3. and posed>.008:
+            bad.append((ratio,a,b,neutral,posed))
+    bad.sort(reverse=True)
+    ratios.sort()
+    return {"tested_edges":len(ratios),
+            "maximum_ratio":round(max(ratios) if ratios else 0,4),
+            "p99_ratio":round(ratios[int(.99*(len(ratios)-1))] if ratios else 0,4),
+            "bad_gt3x_8mm":len(bad),
+            "worst_torn_edges":[{"ratio":round(r,3),"a":a,"b":b,
+                                 "rest_m":round(x,5),"posed_m":round(y,5)}
+                                for r,a,b,x,y in bad[:12]]}
+
+
 def evaluated_surface(scene,obj):
     """Read the exact imported FBX sleeve deformed by the native armature."""
     bpy.context.view_layer.update()
@@ -222,6 +254,12 @@ def main():
                    for name in ("Index_MCP_Corrective","Little_MCP_Corrective",
                                 "Fist_Grip_Corrective")}
     released,_=snapshot(scene,skin,96,action,corrected)
+    edge_strain=measure_edge_strain(neutral,closed,tris)
+    print("[ROKAS V22 EDGE STRAIN] "+json.dumps(edge_strain),flush=True)
+    (out/"ROKAS_V22_EdgeStrainQA.json").write_text(
+        json.dumps(edge_strain,indent=2),encoding="utf-8")
+    check(edge_strain["bad_gt3x_8mm"]==0,
+          "Skin tears detected under authored grip: "+str(edge_strain))
     # Base FBX keeps the three skeletal actions, while the Blender 3.x
     # multi-action exporter zeroes its morph tracks. The actual animated
     # morph curves are validated against each PAIRED single-action FBX
@@ -351,6 +389,7 @@ def main():
     report={
         "fbx":src.name,
         "skin_vertices":len(skin.data.vertices),
+        "edge_strain":edge_strain,
         "reimport_actions":available,
         "corrective_shape_names":key_names,
         "real_finger_skin_motion":deltas,
