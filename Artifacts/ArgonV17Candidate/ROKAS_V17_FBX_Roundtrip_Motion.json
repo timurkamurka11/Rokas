@@ -1,6 +1,6 @@
 {
   "fbx": "ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx",
-  "skin_vertices": 28294,
+  "skin_vertices": 28722,
   "reimport_actions": [
     "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_050",
     "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_05c",
@@ -70,39 +70,39 @@
   ],
   "real_finger_skin_motion": {
     "Thumb": {
-      "owned_vertices": 1079,
+      "owned_vertices": 606,
       "max_m": 0.029284,
-      "mean_m": 0.015465,
-      "moved_gt_1mm": 1078,
-      "moved_gt_3mm": 1063
+      "mean_m": 0.020648,
+      "moved_gt_1mm": 606,
+      "moved_gt_3mm": 606
     },
     "Index": {
-      "owned_vertices": 2207,
+      "owned_vertices": 1385,
       "max_m": 0.062894,
-      "mean_m": 0.022382,
-      "moved_gt_1mm": 2174,
-      "moved_gt_3mm": 1962
+      "mean_m": 0.031697,
+      "moved_gt_1mm": 1385,
+      "moved_gt_3mm": 1385
     },
     "Middle": {
-      "owned_vertices": 2150,
+      "owned_vertices": 1453,
       "max_m": 0.074796,
-      "mean_m": 0.026233,
-      "moved_gt_1mm": 2102,
-      "moved_gt_3mm": 1946
+      "mean_m": 0.036005,
+      "moved_gt_1mm": 1453,
+      "moved_gt_3mm": 1453
     },
     "Ring": {
-      "owned_vertices": 1871,
+      "owned_vertices": 1232,
       "max_m": 0.070908,
-      "mean_m": 0.027801,
-      "moved_gt_1mm": 1861,
-      "moved_gt_3mm": 1775
+      "mean_m": 0.037532,
+      "moved_gt_1mm": 1232,
+      "moved_gt_3mm": 1232
     },
     "Little": {
-      "owned_vertices": 1610,
+      "owned_vertices": 869,
       "max_m": 0.059063,
-      "mean_m": 0.024166,
-      "moved_gt_1mm": 1610,
-      "moved_gt_3mm": 1585
+      "mean_m": 0.035808,
+      "moved_gt_1mm": 869,
+      "moved_gt_3mm": 869
     }
   },
   "index_only_motion": {
@@ -112,7 +112,7 @@
     },
     "Index": {
       "max_m": 0.050393,
-      "mean_m": 0.018377
+      "mean_m": 0.026161
     },
     "Middle": {
       "max_m": 0.0,
@@ -138,17 +138,17 @@
     "Key|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living"
   ],
   "projected_face_counts": {
-    "neutral": 56577,
-    "half_fist": 56563,
-    "full_fist": 56527,
-    "release": 56577,
-    "index_flex": 56575,
-    "profile_neutral": 56577,
-    "profile_fist": 56527,
-    "Index_MCP_neutral": 20247,
-    "Index_MCP_grip": 21353,
-    "Little_MCP_neutral": 13709,
-    "Little_MCP_grip": 14668
+    "neutral": 57419,
+    "half_fist": 57368,
+    "full_fist": 57343,
+    "release": 57419,
+    "index_flex": 57407,
+    "profile_neutral": 57419,
+    "profile_fist": 57343,
+    "Index_MCP_neutral": 20204,
+    "Index_MCP_grip": 21279,
+    "Little_MCP_neutral": 13562,
+    "Little_MCP_grip": 14524
   },
   "result": "FBX round-trip geometry/rig motion proof. NOT an in-game Unity QA."
 }

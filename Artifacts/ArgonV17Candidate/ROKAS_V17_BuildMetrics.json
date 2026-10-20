@@ -1,33 +1,33 @@
 {
   "source_vertices": 12240,
   "source_components": 6,
-  "candidate_vertices": 28294,
-  "candidate_triangles": 56584,
+  "candidate_vertices": 28722,
+  "candidate_triangles": 57440,
   "candidate_components": 1,
   "exposed_edges": 0,
   "nonmanifold_edges": 0,
   "finger_vertex_owners": {
-    "Palm": 18544,
-    "Thumb": 1154,
-    "Index": 2403,
-    "Middle": 2391,
-    "Ring": 2057,
-    "Little": 1745
+    "Palm": 18958,
+    "Thumb": 1159,
+    "Index": 2455,
+    "Middle": 2386,
+    "Ring": 2014,
+    "Little": 1750
   },
   "mcp_collar_polish": {
-    "affected_vertices": 981,
-    "max_displacement_m": 0.0010702204011483873,
-    "total_vertices": 28294
+    "affected_vertices": 953,
+    "max_displacement_m": 0.0010701513156948777,
+    "total_vertices": 28722
   },
   "corrective_shapes": {
-    "Index_MCP_Corrective": 523,
-    "Index_PIP_Corrective": 158,
+    "Index_MCP_Corrective": 527,
+    "Index_PIP_Corrective": 149,
     "Index_DIP_Corrective": 26,
-    "Little_MCP_Corrective": 344,
+    "Little_MCP_Corrective": 339,
     "Little_PIP_Corrective": 138,
-    "Thumb_Opposition_Corrective": 299,
-    "Knuckle_Compression_Corrective": 587,
-    "Fist_Grip_Corrective": 1975
+    "Thumb_Opposition_Corrective": 306,
+    "Knuckle_Compression_Corrective": 595,
+    "Fist_Grip_Corrective": 1950
   },
   "authored_actions": [
     "V17_Grip",

@@ -7,8 +7,8 @@
   "shape_curve_delta": 0.036097584292292595,
   "corrective_weight_at_start": 0.024421053007245064,
   "corrective_weight_at_peak": 0.06051863729953766,
-  "index_vertices": 2207,
-  "index_skin_max_displacement_m": 0.006520774761056008,
-  "index_skin_mean_displacement_m": 0.0024498276324109586,
+  "index_vertices": 1385,
+  "index_skin_max_displacement_m": 0.006520772111002375,
+  "index_skin_mean_displacement_m": 0.0034992774182325843,
   "result": "PASS: armature and shape corrections animate inside exported FBX"
 }
