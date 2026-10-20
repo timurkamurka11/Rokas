@@ -131,6 +131,15 @@ namespace Rokas.BedSleep.Argon.Candidate
                 .FirstOrDefault(t => t.name == "Hand_Palm");
             if (forearm == null || palm == null || candidateHand.sharedMesh == null)
                 return;
+            // Read/Write can be disabled in Unity FBX import settings on
+            // different machines. Never let an optional cuff operation hide
+            // the entire V17 overlay or break the normal game.
+            if (!candidateHand.sharedMesh.isReadable)
+            {
+                Debug.LogWarning("[ROKAS V17 CUFF FIT] Imported mesh is not " +
+                    "CPU-readable; skip optional rim extension, preserve the sleeve.");
+                return;
+            }
             var mesh = UnityEngine.Object.Instantiate(candidateHand.sharedMesh);
             mesh.name = "ROKAS_V17_CuffOverlap_PlayOnly";
             Vector3 wristLocal = candidateHand.transform.InverseTransformPoint(candidateWrist.position);
