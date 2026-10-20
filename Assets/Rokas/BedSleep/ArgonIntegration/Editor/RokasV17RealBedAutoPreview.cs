@@ -105,6 +105,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 r.name == "Keiko_Homewear_Sleeve_Mesh" && r.enabled);
             var originalNails = visibleV16.FirstOrDefault(r =>
                 r.name == "Keiko_Fingernails_Mesh" && r.enabled);
+            // V16's independent dorsal-vein overlay is generated under the
+            // OLD Hand_Palm by ArgonDorsalVeinDetail.TryAttach. Hiding only
+            // V16 skin/sleeve/nails leaves these translucent ribbons dangling
+            // below V17 skin. Hide it only while native V17 is active.
+            // There may be no overlay when the optional V16 probe failed.
+            var originalVeinOverlays = visibleV16.Where(r =>
+                r != null && r.name == "ROKAS_Subtle_DorsalHandVeins" &&
+                r.enabled).ToArray();
             var sourceWrist = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_Wrist");
             var sourceTip = game.GetComponentsInChildren<Transform>(true)
@@ -213,11 +221,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 var follow = rig.AddComponent<RokasV17RealBedPoseFollower>();
                 follow.Configure(sourceWrist, rig.transform, wrist,
                     originalSkin, skin, clips[0], clips[1], clips[2], ratio,
-                    new Renderer[] { originalSkin, originalSleeve, originalNails },
+                    new Renderer[] { originalSkin, originalSleeve, originalNails }
+                        .Concat(originalVeinOverlays).ToArray(),
                     new Renderer[] { skin, nativeSleeve, nativeNails });
                 Debug.Log("[ROKAS V17 REAL BED INSTALL PASS] Original game bed hand " +
                     "native V17 skin + same-rig sleeve/nails ready; original V16 trio " +
-                    "preserved for rollback; watch/OLED/save untouched. Ratio=" + ratio);
+                    "preserved for rollback; original dorsal veins hidden=" +
+                    originalVeinOverlays.Length +
+                    "; watch/OLED/save untouched. Ratio=" + ratio);
             }
             catch
             {
