@@ -90,17 +90,36 @@ namespace Rokas.BedSleep.Argon.Editor
                     throw new InvalidOperationException("No imported morph clip: " + filenames[i]);
             }
 
-            var originalSkin = game.GetComponentsInChildren<SkinnedMeshRenderer>(true)
-                .FirstOrDefault(s => s.name == "Keiko_Hand_Skin_Mesh" &&
-                    s.sharedMesh != null && s.enabled);
+            // The original Argon asset has 25 bones, but the EXISTING V16
+            // gameplay retargeter, ArgonFingerBindposeRetarget.ApplyCandidate,
+            // intentionally APPENDS compensated bone slots at runtime.
+            // Requiring exactly 25 on the LIVE renderer rejects a healthy V16.
+            // Find the authentic source hand, not a V17 overlay or other skinned mesh.
+            var liveSkins = game.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var originalSkin = liveSkins.FirstOrDefault(s =>
+                s.name == "Keiko_Hand_Skin_Mesh" &&
+                s.sharedMesh != null && s.enabled &&
+                s.bones != null && s.bones.Length >= 25);
             var sourceWrist = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_Wrist");
             var sourceTip = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Middle_Tip");
-            if (originalSkin == null || sourceWrist == null || sourceTip == null ||
-                originalSkin.bones == null || originalSkin.bones.Length != 25)
-                throw new InvalidOperationException("Full original Argon hand is unavailable. " +
-                    "No modifications applied; keep V16.");
+            if (originalSkin == null || sourceWrist == null || sourceTip == null)
+            {
+                string skinInfo = string.Join(", ", liveSkins.Select(s =>
+                    s.name + ":mesh=" + (s.sharedMesh != null) +
+                    ":enabled=" + s.enabled + ":bones=" +
+                    (s.bones == null ? -1 : s.bones.Length)));
+                throw new InvalidOperationException(
+                    "Original Argon hand is missing or not fully initialized. " +
+                    "skinRenderers=[" + skinInfo + "] Arm_Wrist=" +
+                    (sourceWrist != null) + " Middle_Tip=" + (sourceTip != null) +
+                    ". V16 remains untouched.");
+            }
+            Debug.Log("[ROKAS V17 REAL BED SOURCE] Original active renderer bones=" +
+                originalSkin.bones.Length + " (25 original + optional V16 runtime remap slots)" +
+                " originalMesh=" + originalSkin.sharedMesh.vertexCount +
+                " originalWatchPreserved=true");
 
             GameObject rig = null;
             try
