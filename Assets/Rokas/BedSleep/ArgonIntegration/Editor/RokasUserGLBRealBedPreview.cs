@@ -129,10 +129,19 @@ namespace Rokas.BedSleep.Argon.Editor
                 r.name == "Keiko_Homewear_Sleeve_Mesh" && r.enabled);
             var oldNails = all.FirstOrDefault(r =>
                 r.name == "Keiko_Fingernails_Mesh" && r.enabled);
-            var watch = all.FirstOrDefault(r =>
+            var watch = all.OfType<MeshRenderer>().FirstOrDefault(r =>
                 r.name == "Watch_OLED_Display" && r.enabled);
             var watchParts = all.Where(r =>
                 r.enabled && r.name.StartsWith("Watch_", StringComparison.Ordinal)).ToArray();
+            // Move the entire ORIGINAL smartwatch tree as one unit,
+            // never just the display or a few watch parts.
+            var physicalWatchRoot = game.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "ROKAS_Smartwatch_HighDetail");
+            if (physicalWatchRoot != null && watchParts.Any(r =>
+                !r.transform.IsChildOf(physicalWatchRoot)))
+                throw new InvalidOperationException(
+                    "Original seven-part ROKAS watch has an unexpected hierarchy; " +
+                    "cannot safely move only part of physical watch.");
             var oldWrist = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_Wrist");
             var originalBones = game.GetComponentsInChildren<Transform>(true);
@@ -142,6 +151,7 @@ namespace Rokas.BedSleep.Argon.Editor
             var oldLittleRoot = originalBones.FirstOrDefault(t => t.name == "Little_MCP");
             if (oldSkin == null || oldSleeve == null || oldNails == null ||
                 watch == null || watchParts.Length < 6 ||
+                physicalWatchRoot == null ||
                 oldWrist == null || oldForearm == null || oldMiddleTip == null ||
                 oldIndexRoot == null || oldLittleRoot == null)
                 throw new InvalidOperationException(
@@ -226,16 +236,24 @@ namespace Rokas.BedSleep.Argon.Editor
                     r.name == "ROKAS_Subtle_DorsalHandVeins").ToArray();
                 // No Watch_* renderer is ever added to hidden list.
                 bool[] visibility = oldVisuals.Select(r => r.enabled).ToArray();
+                var calibration = RokasUserHandStudioWindow.LoadOrCreateProfile();
+                var bedCamera = Camera.allCameras.FirstOrDefault(c =>
+                    c != null && c.enabled &&
+                    (c.cullingMask & (1 << oldSkin.gameObject.layer)) != 0) ?? Camera.main;
+                if (bedCamera == null)
+                    throw new InvalidOperationException(
+                        "Bed presentation camera not ready. V16 remains active.");
                 var follower = instance.AddComponent<RokasUserGLBRealBedFollower>();
                 follower.Initialize(instance.transform, wrist, oldWrist,
                     oldMiddleTip, oldIndexRoot, oldLittleRoot,
-                    animation, scale, oldVisuals, visibility, skin, temporarySkin);
+                    animation, scale, oldVisuals, visibility, skin, temporarySkin,
+                    physicalWatchRoot, watch, calibration, bedCamera);
                 Debug.Log("[ROKAS NEW GLB REAL BED] Imported user's 23-bone rig and " +
                     animation.name + "; old V16 visual hand/sleeve/nails hidden " +
                     "ONLY IN PLAY MODE. Real ROKAS watch+strap and Russian OLED kept. " +
                     "Original wrist-to-finger scale=" + scale.ToString("F4") +
-                    "; approved horizontal V16 composition; only gentle finger idle. " +
-                    "Actual Game View QA still required.");
+                    "; open ROKAS > Bed Sleep > Hand Studio to adjust cuff, watch, " +
+                    "OLED brightness and micro-movement live. Game View QA required.");
                 temporarySkin = null; // follower owns disposable Play Mode material
             }
             catch
