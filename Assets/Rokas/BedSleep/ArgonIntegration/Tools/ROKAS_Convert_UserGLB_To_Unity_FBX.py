@@ -79,7 +79,7 @@ def main():
     bpy.ops.export_scene.fbx(filepath=target,use_selection=True,
         object_types={"ARMATURE","MESH"},apply_unit_scale=True,
         axis_forward="-Z",axis_up="Y",add_leaf_bones=False,
-        use_anim=True,bake_anim=True,bake_anim_use_all_bones=True,
+        bake_anim=True,bake_anim_use_all_bones=True,
         bake_anim_use_nla_strips=True,bake_anim_use_all_actions=True,
         bake_anim_step=1.0,bake_anim_simplify_factor=0.0,
         path_mode="AUTO",use_mesh_modifiers=False)
