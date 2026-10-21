@@ -32,6 +32,13 @@ namespace Rokas.BedSleep.Argon.Editor
             // procedural V17/V22. This editor preference never changes a
             // runtime prefab, scene or any source file.
             EditorPrefs.SetBool("ROKAS.V17.RealBedPreview.Enabled", false);
+            // Create the persistent profile in EDIT mode. Creating/importing an
+            // .asset during live Play Mode would trigger an unwanted reload.
+            EditorApplication.delayCall += () =>
+            {
+                if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                    RokasUserHandStudioWindow.LoadOrCreateProfile();
+            };
             EditorApplication.update += Tick;
             EditorApplication.playModeStateChanged += state =>
             {
@@ -237,9 +244,12 @@ namespace Rokas.BedSleep.Argon.Editor
                 // No Watch_* renderer is ever added to hidden list.
                 bool[] visibility = oldVisuals.Select(r => r.enabled).ToArray();
                 var calibration = RokasUserHandStudioWindow.LoadOrCreateProfile();
-                var bedCamera = Camera.allCameras.FirstOrDefault(c =>
+                var bedCamera = Camera.allCameras.Where(c =>
                     c != null && c.enabled &&
-                    (c.cullingMask & (1 << oldSkin.gameObject.layer)) != 0) ?? Camera.main;
+                    (c.cullingMask & (1 << oldSkin.gameObject.layer)) != 0)
+                    .OrderByDescending(c =>
+                        c.cullingMask == (1 << oldSkin.gameObject.layer) ? 1 : 0)
+                    .FirstOrDefault() ?? Camera.main;
                 if (bedCamera == null)
                     throw new InvalidOperationException(
                         "Bed presentation camera not ready. V16 remains active.");
