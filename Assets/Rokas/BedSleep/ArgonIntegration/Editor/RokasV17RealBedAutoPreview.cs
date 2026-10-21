@@ -51,6 +51,10 @@ namespace Rokas.BedSleep.Argon.Editor
 
         private static void OnUpdate()
         {
+            // The user-provided 23-joint GLB supersedes the old reconstructed
+            // V17/V22 hand. Never install two competing skins on one bed actor.
+            if (EditorPrefs.GetBool(RokasUserGLBRealBedPreview.EnabledKey, true))
+                return;
             if (!EditorApplication.isPlaying || !EditorPrefs.GetBool(Key, true))
                 return;
             var game = GameObject.Find("ROKAS_Argon_Complete_Hand_Watch_InGame");
