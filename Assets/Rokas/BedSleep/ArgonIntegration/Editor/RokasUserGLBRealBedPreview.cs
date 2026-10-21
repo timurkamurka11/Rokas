@@ -135,11 +135,15 @@ namespace Rokas.BedSleep.Argon.Editor
                 r.enabled && r.name.StartsWith("Watch_", StringComparison.Ordinal)).ToArray();
             var oldWrist = game.GetComponentsInChildren<Transform>(true)
                 .FirstOrDefault(t => t.name == "Arm_Wrist");
-            var oldForearm = game.GetComponentsInChildren<Transform>(true)
-                .FirstOrDefault(t => t.name == "Arm_ForearmRoot");
+            var originalBones = game.GetComponentsInChildren<Transform>(true);
+            var oldForearm = originalBones.FirstOrDefault(t => t.name == "Arm_ForearmRoot");
+            var oldMiddleTip = originalBones.FirstOrDefault(t => t.name == "Middle_Tip");
+            var oldIndexRoot = originalBones.FirstOrDefault(t => t.name == "Index_MCP");
+            var oldLittleRoot = originalBones.FirstOrDefault(t => t.name == "Little_MCP");
             if (oldSkin == null || oldSleeve == null || oldNails == null ||
                 watch == null || watchParts.Length < 6 ||
-                oldWrist == null || oldForearm == null)
+                oldWrist == null || oldForearm == null || oldMiddleTip == null ||
+                oldIndexRoot == null || oldLittleRoot == null)
                 throw new InvalidOperationException(
                     "Existing original bed actor, wrist or physical watch/OLED not ready. " +
                     "Do not hide the playable old hand.");
@@ -157,21 +161,35 @@ namespace Rokas.BedSleep.Argon.Editor
                     .FirstOrDefault(t => t.name == "wrist");
                 var forearm = instance.GetComponentsInChildren<Transform>(true)
                     .FirstOrDefault(t => t.name == "forearm");
-                var digits = instance.GetComponentsInChildren<Transform>(true)
-                    .Where(t => t.name.EndsWith("_proximal", StringComparison.Ordinal))
-                    .ToArray();
+                var nativeBones = instance.GetComponentsInChildren<Transform>(true);
+                var digits = nativeBones.Where(t =>
+                    t.name.EndsWith("_proximal", StringComparison.Ordinal)).ToArray();
+                var nativeMiddleDistal = nativeBones.FirstOrDefault(t =>
+                    t.name == "middle_distal");
+                var nativeMiddleMid = nativeBones.FirstOrDefault(t =>
+                    t.name == "middle_middle");
                 if (skin == null || wrist == null || forearm == null ||
+                    nativeMiddleDistal == null || nativeMiddleMid == null ||
                     digits.Length < 5 || skin.bones == null || skin.bones.Length < 20)
                     throw new InvalidOperationException(
                         "Imported user-GLB does not have the authentic hand skin + 5 finger chains.");
 
-                float gameLength = Vector3.Distance(oldWrist.position, oldForearm.position);
-                float candidateLength = Vector3.Distance(wrist.position, forearm.position);
-                if (gameLength <= .001f || candidateLength <= .001f)
-                    throw new InvalidOperationException("Cannot calibrate new native hand forearm.");
-                float scale = gameLength / candidateLength;
-                if (scale < .08f || scale > 6f)
-                    throw new InvalidOperationException("Unsafe wrist scale ratio: " + scale);
+                // Prior calibration used forearm bone length, but user GLB
+                // and V16 have different forearm-to-hand proportions: it
+                // oversized the new hand and filled the entire camera.
+                // Match actual wrist-to-middle-fingertip span instead.
+                float originalReach = Vector3.Distance(
+                    oldWrist.position, oldMiddleTip.position);
+                float nativeReach = Vector3.Distance(
+                    wrist.position, nativeMiddleDistal.position) +
+                    .75f * Vector3.Distance(nativeMiddleDistal.position,
+                                            nativeMiddleMid.position);
+                if (originalReach <= .001f || nativeReach <= .001f)
+                    throw new InvalidOperationException("Cannot match the two hand reaches");
+                float scale = originalReach / nativeReach;
+                if (scale < .04f || scale > 3f)
+                    throw new InvalidOperationException(
+                        "Unsafe authentic user-GLB wrist-to-finger scale " + scale);
 
                 var image = AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath);
                 if (image == null)
@@ -210,11 +228,14 @@ namespace Rokas.BedSleep.Argon.Editor
                 bool[] visibility = oldVisuals.Select(r => r.enabled).ToArray();
                 var follower = instance.AddComponent<RokasUserGLBRealBedFollower>();
                 follower.Initialize(instance.transform, wrist, oldWrist,
+                    oldMiddleTip, oldIndexRoot, oldLittleRoot,
                     animation, scale, oldVisuals, visibility, skin, temporarySkin);
                 Debug.Log("[ROKAS NEW GLB REAL BED] Imported user's 23-bone rig and " +
                     animation.name + "; old V16 visual hand/sleeve/nails hidden " +
                     "ONLY IN PLAY MODE. Real ROKAS watch+strap and Russian OLED kept. " +
-                    "Scale=" + scale.ToString("F4") + " (visual acceptance pending)");
+                    "Original wrist-to-finger scale=" + scale.ToString("F4") +
+                    "; approved horizontal V16 composition; only gentle finger idle. " +
+                    "Actual Game View QA still required.");
                 temporarySkin = null; // follower owns disposable Play Mode material
             }
             catch
