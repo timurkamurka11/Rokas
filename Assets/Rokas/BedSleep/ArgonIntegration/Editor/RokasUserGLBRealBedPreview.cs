@@ -27,6 +27,10 @@ namespace Rokas.BedSleep.Argon.Editor
 
         static RokasUserGLBRealBedPreview()
         {
+            // User's newly uploaded animated hand takes precedence over old
+            // procedural V17/V22. This editor preference never changes a
+            // runtime prefab, scene or any source file.
+            EditorPrefs.SetBool("ROKAS.V17.RealBedPreview.Enabled", false);
             EditorApplication.update += Tick;
             EditorApplication.playModeStateChanged += state =>
             {
