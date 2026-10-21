@@ -322,5 +322,25 @@ namespace Rokas.BedSleep.Argon.Editor
             if (ownedMaterial != null) UnityEngine.Object.Destroy(ownedMaterial);
         }
     }
+
+    /// <summary>
+    /// Imports just the converted, user-supplied GLB FBX as a Generic rig with
+    /// its authored finger animation. Does not modify any V16 or V17 model.
+    /// </summary>
+    public sealed class RokasUserGLBModelImportSettings : AssetPostprocessor
+    {
+        private void OnPreprocessModel()
+        {
+            if (assetPath !=
+                "Assets/Rokas/BedSleep/ArgonIntegration/NewUserGLB/Imported/ROKAS_NewHand_Rigged.fbx")
+                return;
+            var importer = assetImporter as ModelImporter;
+            if (importer == null) return;
+            importer.animationType = ModelImporterAnimationType.Generic;
+            importer.importAnimation = true;
+            importer.importNormals = ModelImporterNormals.Import;
+            importer.importMaterials = false;
+        }
+    }
 }
 #endif
