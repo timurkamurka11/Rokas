@@ -75,6 +75,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 Install(game);
                 Installed.Add(id);
             }
+            catch (InvalidOperationException notYet)
+            {
+                // The old actor is created before its watch materials / OLED
+                // finish initializing. Retry on the next Editor tick instead
+                // of permanently rejecting a healthy first Bed click.
+                if (notYet.Message.Contains("not ready"))
+                    return;
+                Rejected.Add(id);
+                Debug.LogError("[ROKAS NEW GLB] Candidate NOT installed: " +
+                    notYet + ". Existing V16 skin and watch stay visible.");
+            }
             catch (Exception error)
             {
                 Rejected.Add(id);
