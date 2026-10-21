@@ -5,10 +5,9 @@ using UnityEngine;
 namespace Rokas.BedSleep.Argon.Candidate
 {
     /// <summary>
-    /// Reversible Editor Play Mode preview of the exact user-supplied
-    /// 23-joint FBX. The original 4-second clip is a rig/skin QA animation,
-    /// NOT an idle loop for a sleeping first-person character.
-    /// Keep the original in-game watch/OLED and approved wrist trajectory.
+    /// User-authored ROKAS Bed shot. Real user GLB mesh/skin, existing original
+    /// seven-part ROKAS watch, Russian OLED and bed gameplay. Scene objects are
+    /// changed ONLY during Unity Play Mode; no source mesh/prefab modified.
     /// </summary>
     [DefaultExecutionOrder(32010)]
     public sealed class RokasUserGLBRealBedFollower : MonoBehaviour
@@ -17,34 +16,52 @@ namespace Rokas.BedSleep.Argon.Candidate
         {
             public Transform Bone;
             public Quaternion Rest;
-            public float Degrees;
-            public float Period;
+            public int Family;
             public float Phase;
+            public float Speed;
+            public float Part;
         }
 
+        private readonly List<Finger> fingers = new List<Finger>(14);
         private Transform candidateRoot, candidateWrist, originalWrist;
         private Transform originalMiddleTip, originalIndexRoot, originalLittleRoot;
         private Transform nativeMiddleTip, nativeIndexRoot, nativeLittleRoot;
-        private readonly List<Finger> fingers = new List<Finger>(14);
+        private Transform watchRoot;
+        private MeshRenderer watchFace;
+        private MaterialPropertyBlock initialOledBlock, workingOledBlock;
+        private RokasUserHandStudioProfile profile;
         private Renderer[] oldVisuals;
         private bool[] oldVisibility;
         private Renderer newSkin;
-        private Material ownedMaterial;
-        private float scale, startedAt;
-        private bool active, oldHidden;
+        private Material skinMaterial;
+        private Camera sceneCamera;
+        private Vector3 watchRestLocalPosition, watchRestLocalScale;
+        private Quaternion watchRestLocalRotation, watchRestRelativeRotation;
+        private Vector3 watchRestRelativePosition;
+        private float scale, began;
+        private bool running, oldHidden;
+
+        public Transform HandGizmo => candidateWrist;
+        public Transform WatchGizmo => watchRoot;
+        public Transform NativeWrist => candidateWrist;
+        public Camera GameplayCamera => sceneCamera;
+        public RokasUserHandStudioProfile Settings => profile;
 
         public void Initialize(
             Transform root, Transform wrist, Transform original,
             Transform originalTip, Transform originalIndex, Transform originalLittle,
             AnimationClip sourceClip, float nativeScale,
-            Renderer[] legacy, bool[] visibility, Renderer skin, Material material)
+            Renderer[] legacy, bool[] visibility, Renderer skin, Material material,
+            Transform sourceWatchRoot, MeshRenderer sourceWatchFace,
+            RokasUserHandStudioProfile settings, Camera camera)
         {
             if (root == null || wrist == null || original == null ||
                 originalTip == null || originalIndex == null || originalLittle == null ||
-                sourceClip == null || skin == null ||
+                sourceClip == null || skin == null || material == null ||
+                sourceWatchRoot == null || sourceWatchFace == null || settings == null ||
                 legacy == null || visibility == null || legacy.Length != visibility.Length ||
                 nativeScale <= 0f || float.IsNaN(nativeScale))
-                throw new InvalidOperationException("Incomplete safe hand/pose calibration");
+                throw new InvalidOperationException("Hand Studio requires actual original game wrist/watch");
 
             candidateRoot = root;
             candidateWrist = wrist;
@@ -56,47 +73,59 @@ namespace Rokas.BedSleep.Argon.Candidate
             oldVisuals = legacy;
             oldVisibility = visibility;
             newSkin = skin;
-            ownedMaterial = material;
+            skinMaterial = material;
+            watchRoot = sourceWatchRoot;
+            watchFace = sourceWatchFace;
+            profile = settings;
+            sceneCamera = camera;
 
-            // Import the ORIGINAL animation, but only take its initial open
-            // resting frame. Never play the aggressive 4-second fist showcase
-            // on a loop. Palm, wrist and forearm stay untouched thereafter.
+            // Capture original WATCH ROOT pose. All watch meshes / sapphire /
+            // OLED / crown and button are descendants of the same root.
+            watchRestLocalPosition = watchRoot.localPosition;
+            watchRestLocalRotation = watchRoot.localRotation;
+            watchRestLocalScale = watchRoot.localScale;
+            watchRestRelativePosition = Quaternion.Inverse(originalWrist.rotation) *
+                (watchRoot.position - originalWrist.position);
+            watchRestRelativeRotation = Quaternion.Inverse(originalWrist.rotation) *
+                watchRoot.rotation;
+            initialOledBlock = new MaterialPropertyBlock();
+            workingOledBlock = new MaterialPropertyBlock();
+            watchFace.GetPropertyBlock(initialOledBlock);
+
+            // Native 4-second full-fist clip is a QA take, NOT our sleep idle.
             sourceClip.SampleAnimation(candidateRoot.gameObject, 0f);
             nativeMiddleTip = FindBone("middle_distal");
             nativeIndexRoot = FindBone("index_proximal");
             nativeLittleRoot = FindBone("little_proximal");
-            if (nativeMiddleTip == null || nativeIndexRoot == null ||
-                nativeLittleRoot == null)
-                throw new InvalidOperationException("Five-finger GLB joints not found");
+            if (nativeMiddleTip == null || nativeIndexRoot == null || nativeLittleRoot == null)
+                throw new InvalidOperationException("Native user rig missing pose landmarks");
 
-            AddFinger("thumb_proximal", 1.25f, 9.1f, 0.70f);
-            AddFinger("thumb_distal", .5f, 9.1f, 1.00f);
-            AddFinger("index_proximal", 2.1f, 7.1f, 1.50f);
-            AddFinger("index_middle", .9f, 7.1f, 1.80f);
-            AddFinger("index_distal", .35f, 7.1f, 2.10f);
-            AddFinger("middle_proximal", 1.8f, 8.3f, 2.60f);
-            AddFinger("middle_middle", .8f, 8.3f, 2.90f);
-            AddFinger("middle_distal", .3f, 8.3f, 3.20f);
-            AddFinger("ring_proximal", 2.4f, 6.8f, 4.10f);
-            AddFinger("ring_middle", 1.0f, 6.8f, 4.40f);
-            AddFinger("ring_distal", .35f, 6.8f, 4.70f);
-            AddFinger("little_proximal", 2.7f, 7.7f, 5.20f);
-            AddFinger("little_middle", 1.1f, 7.7f, 5.50f);
-            AddFinger("little_distal", .4f, 7.7f, 5.80f);
+            AddFinger("thumb_proximal", 0, .70f, .94f, 1f);
+            AddFinger("thumb_distal", 0, 1.00f, .94f, .4f);
+            AddFinger("index_proximal", 1, 1.50f, 1.04f, 1f);
+            AddFinger("index_middle", 1, 1.80f, 1.04f, .44f);
+            AddFinger("index_distal", 1, 2.10f, 1.04f, .17f);
+            AddFinger("middle_proximal", 2, 2.60f, .88f, 1f);
+            AddFinger("middle_middle", 2, 2.90f, .88f, .43f);
+            AddFinger("middle_distal", 2, 3.20f, .88f, .16f);
+            AddFinger("ring_proximal", 3, 4.10f, 1.10f, 1f);
+            AddFinger("ring_middle", 3, 4.40f, 1.10f, .45f);
+            AddFinger("ring_distal", 3, 4.70f, 1.10f, .17f);
+            AddFinger("little_proximal", 4, 5.20f, .99f, 1f);
+            AddFinger("little_middle", 4, 5.50f, .99f, .43f);
+            AddFinger("little_distal", 4, 5.80f, .99f, .16f);
             if (fingers.Count != 14)
-                throw new InvalidOperationException("Native finger idle rig incomplete");
+                throw new InvalidOperationException("Native animated finger rig incomplete");
 
-            startedAt = Time.unscaledTime;
-            // Don't hide V16 or the original watch until the new candidate
-            // has been fully initialized and can align to the approved pose.
-            AlignAndAnimate(0f);
+            began = Time.unscaledTime;
+            // Fail before hiding V16. Never turn off OLED or Watch_* pieces.
+            ApplyPose(0f);
             for (int i = 0; i < oldVisuals.Length; i++)
                 if (oldVisuals[i] != null) oldVisuals[i].enabled = false;
             oldHidden = true;
-            active = true;
-            Debug.Log("[ROKAS NEW HAND SUBTLE IDLE] Original four-second fist clip " +
-                "disabled as loop. Individual finger curls <= 2.7 degrees; " +
-                "hand heading + palm spread matched to approved V16 bed pose.");
+            running = true;
+            Debug.Log("[ROKAS HAND STUDIO] User hand and original watch active. " +
+                "Edit live in ROKAS > Bed Sleep > Hand Studio. V16 kept for fallback.");
         }
 
         private Transform FindBone(string name)
@@ -106,131 +135,190 @@ namespace Rokas.BedSleep.Argon.Candidate
             return null;
         }
 
-        private void AddFinger(string name, float amplitude, float period, float phase)
+        private void AddFinger(string name, int family, float phase, float speed, float part)
         {
-            Transform t = FindBone(name);
-            if (t == null)
-                throw new InvalidOperationException("Missing authentic finger bone " + name);
+            Transform tr = FindBone(name);
+            if (tr == null)
+                throw new InvalidOperationException("Native GLB missing finger " + name);
             fingers.Add(new Finger
             {
-                Bone = t,
-                Rest = t.localRotation,
-                Degrees = amplitude,
-                Period = period,
-                Phase = phase
+                Bone = tr,
+                Rest = tr.localRotation,
+                Family = family,
+                Phase = phase,
+                Speed = speed,
+                Part = part
             });
         }
 
-        private static bool BuildBasis(Vector3 forward, Vector3 across, out Quaternion basis)
+        private float DegreesForFamily(int family)
         {
-            basis = Quaternion.identity;
-            if (forward.sqrMagnitude < .000001f) return false;
+            switch (family)
+            {
+                case 0: return profile.thumbDegrees;
+                case 1: return profile.indexDegrees;
+                case 2: return profile.middleDegrees;
+                case 3: return profile.ringDegrees;
+                default: return profile.littleDegrees;
+            }
+        }
+
+        private static bool Basis(Vector3 forward, Vector3 across, out Quaternion rotation)
+        {
+            rotation = Quaternion.identity;
+            if (forward.sqrMagnitude < 1e-7f) return false;
             forward.Normalize();
             across -= Vector3.Dot(across, forward) * forward;
-            if (across.sqrMagnitude < .000001f) return false;
-            basis = Quaternion.LookRotation(forward, across.normalized);
+            if (across.sqrMagnitude < 1e-7f) return false;
+            rotation = Quaternion.LookRotation(forward, across.normalized);
             return true;
         }
 
-        private void AlignAndAnimate(float elapsed)
+        private void ApplyPose(float elapsed)
         {
             candidateRoot.localPosition = Vector3.zero;
             candidateRoot.localRotation = Quaternion.identity;
-            candidateRoot.localScale = Vector3.one * scale;
+            candidateRoot.localScale = Vector3.one * (scale * profile.handScale);
 
-            // Asynchronous, sub-3-degree relaxation only. No fist, no wrist
-            // swing and no translation of any joints. Smooth ramp at entry.
             float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / 1.4f));
+            float runningTime = elapsed * Mathf.Max(.15f, profile.motionSpeed);
             for (int i = 0; i < fingers.Count; i++)
             {
                 Finger f = fingers[i];
-                float cycle = Mathf.Sin(elapsed * (Mathf.PI * 2f / f.Period) + f.Phase);
-                float amount = f.Degrees * .5f * (1f + cycle) * fade;
+                float amount = profile.freezeAnimation ? 0f :
+                    DegreesForFamily(f.Family) * f.Part * fade * .5f *
+                    (1f + Mathf.Sin(runningTime * f.Speed + f.Phase));
                 f.Bone.localRotation = f.Rest *
                     Quaternion.AngleAxis(amount, Vector3.right);
             }
 
-            // V16 is the approved anatomical layout: align BOTH the
-            // wrist->middle-finger direction and index->little spread.
-            // Matching only wrist.rotation was the cause of the vertical,
-            // giant-looking hand close-up in the user's in-game recording.
-            Quaternion candidateBasis, approvedBasis;
-            if (!BuildBasis(nativeMiddleTip.position - candidateWrist.position,
-                    nativeIndexRoot.position - nativeLittleRoot.position,
-                    out candidateBasis))
-                throw new InvalidOperationException("Candidate palm plane is degenerate");
-            Vector3 desiredForward = originalMiddleTip.position - originalWrist.position;
-            Vector3 desiredAcross = originalIndexRoot.position - originalLittleRoot.position;
+            Quaternion nativeBasis, targetBasis;
+            if (!Basis(nativeMiddleTip.position - candidateWrist.position,
+                nativeIndexRoot.position - nativeLittleRoot.position,
+                out nativeBasis))
+                throw new InvalidOperationException("Native palm orientation invalid");
 
-            // Camera safety: if source controller rotates the palm so that
-            // fingers point nearly vertically or to screen-left, retain the
-            // wrist animation but orient the replacement horizontally right.
-            // This does not move the camera or change the original watch.
-            Camera cam = Camera.main;
-            if (cam != null)
+            Vector3 heading = originalMiddleTip.position - originalWrist.position;
+            Vector3 spread = originalIndexRoot.position - originalLittleRoot.position;
+            if (sceneCamera != null)
             {
-                Vector3 a = cam.WorldToViewportPoint(originalWrist.position);
-                Vector3 b = cam.WorldToViewportPoint(originalMiddleTip.position);
-                float dx = b.x - a.x, dy = b.y - a.y;
+                Vector3 a = sceneCamera.WorldToViewportPoint(originalWrist.position);
+                Vector3 b = sceneCamera.WorldToViewportPoint(originalMiddleTip.position);
                 if (a.z > 0f && b.z > 0f &&
-                    (dx < .04f || Mathf.Abs(dy) > Mathf.Abs(dx) * .45f))
-                {
-                    desiredForward = cam.transform.right +
-                        cam.transform.up * .035f;
-                    // Keep the V16 anatomical finger-spread orientation.
-                    desiredAcross -= Vector3.Dot(desiredAcross,
-                        desiredForward.normalized) * desiredForward.normalized;
-                }
+                    (b.x - a.x < .04f ||
+                     Mathf.Abs(b.y - a.y) > Mathf.Abs(b.x - a.x) * .45f))
+                    heading = sceneCamera.transform.right +
+                              sceneCamera.transform.up * .035f;
             }
-            if (!BuildBasis(desiredForward, desiredAcross, out approvedBasis))
-                throw new InvalidOperationException("Original V16 palm plane unavailable");
-            candidateRoot.rotation =
-                (approvedBasis * Quaternion.Inverse(candidateBasis)) *
-                candidateRoot.rotation;
-            // Old game wrist keeps the existing entrance/exit choreography,
-            // position and original physical watch/OLED.
-            candidateRoot.position += originalWrist.position - candidateWrist.position;
-            newSkin.enabled = true;
+            if (!Basis(heading, spread, out targetBasis))
+                throw new InvalidOperationException("Original ROKAS palm orientation missing");
+
+            Quaternion aligned = (targetBasis * Quaternion.Inverse(nativeBasis)) *
+                                 candidateRoot.rotation;
+            Quaternion poseRotation = Quaternion.Euler(profile.handEuler);
+            float wristAngle = profile.freezeAnimation ? 0f :
+                profile.wristDegrees * fade *
+                Mathf.Sin(runningTime * .7f + .65f);
+            Quaternion wristMotion = Quaternion.AngleAxis(
+                wristAngle, sceneCamera != null
+                    ? sceneCamera.transform.right : Vector3.right);
+            candidateRoot.rotation = wristMotion * poseRotation * aligned;
+
+            // Translate in REAL game-camera directions so the user can extend
+            // the forearm off the left edge of screen, never fake a sleeve cap.
+            Vector3 offset = sceneCamera != null
+                ? sceneCamera.transform.TransformVector(profile.handCameraOffset)
+                : profile.handCameraOffset;
+            candidateRoot.position += originalWrist.position + offset -
+                                      candidateWrist.position;
+            if (newSkin != null) newSkin.enabled = true;
+
+            // Place the actual full watch rig (case/strap/OLED/crown/buttons)
+            // around the NEW skinned wrist. The old game watch remains live;
+            // we never fabricate a new UI, texture or mesh.
+            Vector3 fingerAxis = nativeMiddleTip.position - candidateWrist.position;
+            if (fingerAxis.sqrMagnitude < 1e-7f)
+                throw new InvalidOperationException("Cannot locate candidate finger axis");
+            Vector3 towardsFingers =
+                Quaternion.Inverse(candidateWrist.rotation) * fingerAxis.normalized;
+            Vector3 localWristOffset = watchRestRelativePosition +
+                towardsFingers * profile.watchTowardsFingers +
+                profile.watchWristOffset;
+            watchRoot.position = candidateWrist.position +
+                candidateWrist.rotation * localWristOffset;
+            watchRoot.rotation = candidateWrist.rotation * watchRestRelativeRotation *
+                Quaternion.Euler(profile.watchEuler);
+            watchRoot.localScale = watchRestLocalScale * profile.watchScale;
+
+            // Instance of the newly imported hand's material ONLY.
+            float skinBrightness = Mathf.Clamp(profile.handBrightness, .35f, 1.5f);
+            if (skinMaterial != null)
+            {
+                if (skinMaterial.HasProperty("_BaseColor"))
+                    skinMaterial.SetColor("_BaseColor",
+                        new Color(skinBrightness,skinBrightness,skinBrightness,1f));
+                if (skinMaterial.HasProperty("_Color"))
+                    skinMaterial.SetColor("_Color",
+                        new Color(skinBrightness,skinBrightness,skinBrightness,1f));
+            }
+
+            // PropertyBlock maintains the existing Russian OLED texture,
+            // presenters and interactive timer; never alter shared material.
+            if (watchFace != null)
+            {
+                watchFace.GetPropertyBlock(workingOledBlock);
+                float b = Mathf.Clamp(profile.oledBrightness, .25f, 2f);
+                Color tint = new Color(b, b, b, 1f);
+                workingOledBlock.SetColor("_BaseColor", tint);
+                workingOledBlock.SetColor("_Color", tint);
+                workingOledBlock.SetColor("_EmissionColor", tint);
+                watchFace.SetPropertyBlock(workingOledBlock);
+            }
         }
 
         private void LateUpdate()
         {
-            if (!active) return;
+            if (!running) return;
             if (candidateRoot == null || candidateWrist == null ||
-                originalWrist == null || originalMiddleTip == null ||
-                newSkin == null)
+                originalWrist == null || watchRoot == null || profile == null ||
+                originalMiddleTip == null || newSkin == null)
             {
                 Restore();
-                active = false;
+                running = false;
                 return;
             }
-            try
-            {
-                AlignAndAnimate(Mathf.Max(0f, Time.unscaledTime - startedAt));
-            }
+            try { ApplyPose(Mathf.Max(0f, Time.unscaledTime - began)); }
             catch (Exception error)
             {
-                Debug.LogError("[ROKAS NEW HAND] Safe fallback to V16: " + error);
+                Debug.LogError("[ROKAS HAND STUDIO] Restoring original V16: " + error);
                 Restore();
-                active = false;
+                running = false;
                 gameObject.SetActive(false);
             }
         }
 
         private void Restore()
         {
+            if (watchRoot != null)
+            {
+                watchRoot.localPosition = watchRestLocalPosition;
+                watchRoot.localRotation = watchRestLocalRotation;
+                watchRoot.localScale = watchRestLocalScale;
+            }
+            if (watchFace != null)
+                watchFace.SetPropertyBlock(initialOledBlock);
             if (!oldHidden) return;
             for (int i = 0; i < oldVisuals.Length; i++)
-                if (oldVisuals[i] != null) oldVisuals[i].enabled = oldVisibility[i];
+                if (oldVisuals[i] != null)
+                    oldVisuals[i].enabled = oldVisibility[i];
             oldHidden = false;
         }
 
         private void OnDisable() { Restore(); }
-
         private void OnDestroy()
         {
             Restore();
-            if (ownedMaterial != null) Destroy(ownedMaterial);
+            if (skinMaterial != null) Destroy(skinMaterial);
         }
     }
 }
