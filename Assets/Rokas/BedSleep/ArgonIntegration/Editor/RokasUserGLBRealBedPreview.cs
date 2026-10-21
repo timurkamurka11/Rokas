@@ -243,7 +243,7 @@ namespace Rokas.BedSleep.Argon.Editor
             importer.animationType = ModelImporterAnimationType.Generic;
             importer.importAnimation = true;
             importer.importNormals = ModelImporterNormals.Import;
-            importer.importMaterials = false;
+            importer.materialImportMode = ModelImporterMaterialImportMode.None;
         }
     }
 }
