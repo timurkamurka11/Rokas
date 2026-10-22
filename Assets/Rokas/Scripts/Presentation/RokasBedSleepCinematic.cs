@@ -57,6 +57,7 @@ namespace Rokas.Presentation
         private RectTransform watchHitRect;
         private AudioSource audio;
         private AudioClip tickClip;
+        private AudioClip recordedWheelClip;
         private Coroutine sequence;
         private State state = State.Idle;
         private float selectedHours = 7f, startHours;
@@ -282,7 +283,7 @@ namespace Rokas.Presentation
                 productionRig.SetDuration(selectedHours);
                 productionRig.CrownStep(direction);
             }
-            PlayTick();
+            PlayWheelTick();
         }
 
         private void SetDurationFromDial(float normalizedAngle)
@@ -299,7 +300,7 @@ namespace Rokas.Presentation
                 productionRig.SetDuration(selectedHours);
                 productionRig.CrownStep(steps);
             }
-            PlayTick();
+            PlayWheelTick();
         }
 
         private void CycleWatchTab()
@@ -559,6 +560,8 @@ namespace Rokas.Presentation
             audio.spatialBlend = 0f;
             audio.volume = .30f;
             tickClip = BuildTick();
+            recordedWheelClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Watch_Wheel_Single");
             if (productionRig != null && productionRig.Ready)
             {
                 pngTabs = watchControls.gameObject.AddComponent<RokasBedWatchPngTabs>();
@@ -574,12 +577,14 @@ namespace Rokas.Presentation
         private IEnumerator Play()
         {
             state = State.TransitionIn;
-            // Same dark-curtain handoff grammar as the laptop; no FPS
-            // transform or Camera.main. Midpoint hides the art change.
-            yield return FadeCurtain(0f, 1f, .60f);
+            // Cinematic slow ease: completely occlude the room before
+            // swapping to ceiling POV, then gently reveal bed framing.
+            // Preserve the original hub click and existing camera/scene.
+            yield return FadeCurtain(0f, 1f, .96f);
             if (cancelRequested) yield break;
+            yield return Wait(.10f);
             lyingPov.color = Color.white;
-            yield return FadeCurtain(1f, 0f, .65f);
+            yield return FadeCurtain(1f, 0f, 1.08f);
 
             state = State.LyingViewActive;
             yield return Wait(.35f);
@@ -763,14 +768,21 @@ namespace Rokas.Presentation
             group.alpha = to;
         }
 
+        private static float CinematicEase(float t)
+        {
+            // Quintic ease has zero first AND second derivatives at the ends.
+            // Avoid the visible snap of the previous short 0.6-second fade.
+            t = Mathf.Clamp01(t);
+            return t * t * t * (t * (t * 6f - 15f) + 10f);
+        }
+
         private IEnumerator FadeCurtain(float from, float to, float duration)
         {
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
                 curtain.color = new Color(.008f, .013f, .021f,
-                    Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp01(t / duration))));
+                    Mathf.Lerp(from, to, CinematicEase(Mathf.Clamp01(t / duration)));
                 yield return null;
             }
             curtain.color = new Color(.008f, .013f, .021f, to);
@@ -814,6 +826,20 @@ namespace Rokas.Presentation
                 currentClock.text = "СЕЙЧАС  " + ClockText(startHours) +
                     "   •   ПОДЪЁМ  " +
                     ClockText(WakeHour(startHours, selectedHours));
+        }
+
+        private void PlayWheelTick()
+        {
+            // Real 3D watch SFX owns crown rotation/audio if present.
+            // Never double-play a duplicate UI tick at the same notch.
+            if (productionRig != null && productionRig.Ready) return;
+            if (audio == null) return;
+            if (recordedWheelClip != null)
+            {
+                audio.pitch = 1f;
+                audio.PlayOneShot(recordedWheelClip, .21f);
+            }
+            else PlayTick();
         }
 
         private void PlayTick()
@@ -887,6 +913,7 @@ namespace Rokas.Presentation
             if (tickClip != null)
                 UnityEngine.Object.Destroy(tickClip);
             tickClip = null;
+            recordedWheelClip = null; // Resources-managed: never Destroy()
             alarmControls = watchControls = null;
             alarmButton = confirmButton = focusButton = exitBedButton = null;
             pngTabs = null;
