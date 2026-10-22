@@ -58,6 +58,7 @@ namespace Rokas.Presentation
         private AudioSource audio;
         private AudioClip tickClip;
         private AudioClip recordedWheelClip;
+        private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
         private float selectedHours = 7f, startHours;
@@ -830,10 +831,13 @@ namespace Rokas.Presentation
 
         private void PlayWheelTick()
         {
-            // Real 3D watch SFX owns crown rotation/audio if present.
-            // Never double-play a duplicate UI tick at the same notch.
-            if (productionRig != null && productionRig.Ready) return;
+            // The hub watch presenter receives scroll even when its native
+            // bridge drives the physical crown. The bridge rotates hardware
+            // but does not necessarily emit a native SFX event; play the
+            // user's wheel recording here for THIS UI-owned dial step.
             if (audio == null) return;
+            if (Time.unscaledTime - lastRecordedWheelTime < .07f) return;
+            lastRecordedWheelTime = Time.unscaledTime;
             if (recordedWheelClip != null)
             {
                 audio.pitch = 1f;
