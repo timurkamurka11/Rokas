@@ -346,9 +346,14 @@ namespace Rokas.Presentation
             if (watchFocus) focusAnchorCaptured = false;
             if (focusButton != null)
             {
-                var label = focusButton.GetComponentInChildren<Text>();
-                if (label != null) label.text = watchFocus
-                    ? "ВЕРНУТЬСЯ К РУКЕ" : "НАСТРОИТЬ ВРЕМЯ";
+                var authored = focusButton.GetComponent<RokasBedAuthoredActionButton>();
+                if (authored != null) authored.SetReturnToHand(watchFocus);
+                else
+                {
+                    var label = focusButton.GetComponentInChildren<Text>(true);
+                    if (label != null) label.text = watchFocus
+                        ? "ВЕРНУТЬСЯ К РУКЕ" : "НАСТРОИТЬ ВРЕМЯ";
+                }
             }
             PlayTick();
         }
