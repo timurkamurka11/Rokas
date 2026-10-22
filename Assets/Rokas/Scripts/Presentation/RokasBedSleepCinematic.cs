@@ -58,6 +58,10 @@ namespace Rokas.Presentation
         private AudioSource audio;
         private AudioClip tickClip;
         private AudioClip recordedWheelClip;
+        private AudioClip sitOnBedClip, settlingToSleepClip, recordedWakeClip;
+        // Black-screen time is cinematic time only. The approved save logic
+        // still advances the chosen 1-12 in-game hours once, not in real time.
+        private const float RestingInDarkSeconds = 7.5f;
         private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
@@ -126,6 +130,9 @@ namespace Rokas.Presentation
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
             BuildOverlay();
+            // This replaces the generic hub button click: play exactly once
+            // after the bed-trigger state has been accepted.
+            PlayAuthoredFoley(sitOnBedClip, .88f);
             sequence = runner.StartCoroutine(Play());
         }
 
@@ -459,8 +466,9 @@ namespace Rokas.Presentation
             alarmControls.blocksRaycasts = false;
             alarmControls.interactable = false;
             alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
-                "ПОСТАВИТЬ БУДИЛЬНИК", 722, 941, 476, 75,
+                "ПОСТАВИТЬ БУДИЛЬНИК", 705, 900, 510, 170,
                 OpenAlarm, true);
+            RokasBedAuthoredActionButton.Apply(alarmButton, "SetAlarmButton");
             if (!armWatchAvailable)
             {
                 alarmButton.interactable = false;
@@ -538,8 +546,9 @@ namespace Rokas.Presentation
             {
                 focusButton = ui.Button(watchControls.transform,
                     "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
-                    741, 953, 438, 69, ToggleWatchFocus, true);
+                    710, 900, 500, 167, ToggleWatchFocus, true);
                 focusButton.gameObject.AddComponent<RokasBedWatchFocusButton>();
+                RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
             }
 
             exitBedButton = ui.Button(root, "ReturnFromBed",
@@ -563,6 +572,12 @@ namespace Rokas.Presentation
             tickClip = BuildTick();
             recordedWheelClip = Resources.Load<AudioClip>(
                 "BedSleep/Audio/Watch_Wheel_Single");
+            sitOnBedClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Sit_On_Bed");
+            settlingToSleepClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Going_To_Sleep");
+            recordedWakeClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Wake_Up_Alarm");
             if (productionRig != null && productionRig.Ready)
             {
                 pngTabs = watchControls.gameObject.AddComponent<RokasBedWatchPngTabs>();
@@ -675,6 +690,9 @@ namespace Rokas.Presentation
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
             state = State.EyesClose;
+            // Sound when sleep is the player's natural settling/yawn. Trigger
+            // ONCE at the start of lying down; not on a watch UI button.
+            PlayAuthoredFoley(settlingToSleepClip, .85f);
             // An intentionally heavy partial blink precedes the last close.
             yield return FadeEyelids(0f, .45f, .46f);
             yield return Wait(.16f);
@@ -701,20 +719,44 @@ namespace Rokas.Presentation
                 session.State.hubSleepInitialized = true;
                 save?.Invoke();
             }
-            yield return Wait(.70f);
-            // Wake mode is deliberately audible and distinct: Soft is
-            // shorter/quieter, Standard balanced, Strong pronounced. No
-            // second clock/save system is created by this option.
-            AudioClip wakeCue=null;
-            if(alarmEnabled && audio!=null)
+            // Formerly there was only .70 seconds of black before instantly
+            // waking. Keep real cinematic darkness long enough for an audible
+            // sleep interval while the chosen hours advance in game state.
+            yield return Wait(RestingInDarkSeconds);
+            AudioClip wakeCue = null;
+            bool generatedWakeCue = false;
+            if (alarmEnabled && audio != null)
             {
-                wakeCue=BuildWakeCue(alarmMode);
+                wakeCue = recordedWakeClip;
+                if (wakeCue == null)
+                {
+                    wakeCue = BuildWakeCue(alarmMode);
+                    generatedWakeCue = true;
+                }
+                // Preserve the existing soft/standard/strong setting.
                 audio.PlayOneShot(wakeCue,
-                    alarmMode==0 ? .22f : (alarmMode==1 ? .40f : .57f));
+                    alarmMode == 0 ? .48f : (alarmMode == 1 ? .72f : .86f));
+                // Allow the actual alarm recording to ring while the
+                // character's eyes stay shut. Opening is never instantaneous.
+                yield return Wait(Mathf.Max(1.25f,
+                    wakeCue != null ? wakeCue.length : 1.25f));
             }
-            yield return FadeEyelids(1f, 0f, 1.0f);
-            if(wakeCue!=null) UnityEngine.Object.Destroy(wakeCue);
+            yield return FadeEyelids(1f, 0f, 1.65f);
+            if (generatedWakeCue && wakeCue != null)
+                UnityEngine.Object.Destroy(wakeCue);
+            // The same mattress/fabric sample is heard once when sitting
+            // down and once when finally getting UP, never a generic click.
+            PlayAuthoredFoley(sitOnBedClip, .88f);
+            yield return Wait(sitOnBedClip != null ?
+                Mathf.Max(.9f, sitOnBedClip.length) : .9f);
             Complete();
+        }
+
+        private void PlayAuthoredFoley(AudioClip clip, float gain)
+        {
+            if (audio == null || clip == null || cancelRequested) return;
+            audio.pitch = 1f;
+            audio.PlayOneShot(clip, Mathf.Clamp01(gain));
         }
 
         private IEnumerator FadeArm(float from, float to, float duration)
@@ -918,6 +960,7 @@ namespace Rokas.Presentation
                 UnityEngine.Object.Destroy(tickClip);
             tickClip = null;
             recordedWheelClip = null; // Resources-managed: never Destroy()
+            sitOnBedClip = settlingToSleepClip = recordedWakeClip = null;
             alarmControls = watchControls = null;
             alarmButton = confirmButton = focusButton = exitBedButton = null;
             pngTabs = null;
