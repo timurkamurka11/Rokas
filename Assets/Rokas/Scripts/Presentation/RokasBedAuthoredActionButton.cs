@@ -71,6 +71,29 @@ namespace Rokas.Presentation
             return true;
         }
 
+        // Focus button remains the SAME existing toggle. A small caption
+        // appears ABOVE the source artwork while the watch is zoomed in,
+        // so the player can still discover how to return to the whole hand.
+        public void SetReturnToHand(bool focused)
+        {
+            Transform title = transform.Find("Title");
+            if (title == null) return;
+            Text text = title.GetComponent<Text>();
+            if (text == null) return;
+            title.gameObject.SetActive(focused);
+            if (!focused) return;
+            text.text = "НАЖМИ ЕЩЁ РАЗ — ВЕРНУТЬСЯ К РУКЕ";
+            text.fontSize = 16;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color(1f, .83f, .46f, .96f);
+            RectTransform t = (RectTransform)title;
+            t.anchorMin = new Vector2(.5f, 1f);
+            t.anchorMax = new Vector2(.5f, 1f);
+            t.pivot = new Vector2(.5f, 0f);
+            t.anchoredPosition = new Vector2(0f, 4f);
+            t.sizeDelta = new Vector2(480f, 26f);
+        }
+
         private void Initialize(Button button, Image view, Sprite sprite)
         {
             action = button;
