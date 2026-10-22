@@ -127,9 +127,33 @@ namespace Rokas.Presentation
                 audio.Click();
                 enterBedSleep?.Invoke();
             });
-            ui.Label(parent, "BedSleep_InteractionHint",
-                "ЛЕЧЬ СПАТЬ", 494f, 634f, 270f, 38f,
-                22, UiKit.Gold);
+            // The user's ORIGINAL transparent amber sleep icon replaces
+            // the plain "ЛЕЧЬ СПАТЬ" label. Its Button/hotspot remains the
+            // exact original gameplay hit target, not a second action.
+            Texture2D authoredSleepIcon = Resources.Load<Texture2D>(
+                "BedSleep/UI/BedSleep_Icon");
+            if (authoredSleepIcon != null)
+            {
+                Sprite sleepSprite = Sprite.Create(authoredSleepIcon,
+                    new Rect(0, 0, authoredSleepIcon.width, authoredSleepIcon.height),
+                    new Vector2(.5f, .5f), 100f);
+                var sleepImage = ui.Box(bedHit.transform, "BedSleep_AuthoredSleepIcon",
+                    122f, 28f, 116f, 116f, Color.white);
+                sleepImage.sprite = sleepSprite;
+                sleepImage.preserveAspect = true;
+                sleepImage.raycastTarget = false; // original bed hitbox owns click
+                var visual = bedHit.gameObject.AddComponent<HomeBedSleepIconFeedback>();
+                visual.Initialize(bedButton, sleepImage);
+            }
+            else
+            {
+                // Missing optional authored icon must never remove the sleep
+                // interaction or make the bed inaccessible.
+                ui.Label(parent, "BedSleep_InteractionHint",
+                    "ЛЕЧЬ СПАТЬ", 494f, 634f, 270f, 38f,
+                    22, UiKit.Gold);
+                Debug.LogWarning("[ROKAS BedSleep] Authored sleep icon missing; text fallback.");
+            }
             Refresh();
         }
 
@@ -606,4 +630,71 @@ namespace Rokas.Presentation
             if (rect) rect.anchoredPosition = origin;
         }
     }
+    /// <summary>
+    /// Exactly the same restrained hover/press language as other hub icons,
+    /// on the original bed button. Source pixels/glow are never repainted.
+    /// </summary>
+    public sealed class HomeBedSleepIconFeedback : MonoBehaviour,
+        IPointerEnterHandler, IPointerExitHandler, ISelectHandler,
+        IDeselectHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        private Button button;
+        private Image image;
+        private RectTransform iconRect;
+        private Vector2 startPosition;
+        private bool hovered, focused, pressed;
+        private float hoverAmount;
+
+        public void Initialize(Button bedButton, Image authoredIcon)
+        {
+            button = bedButton;
+            image = authoredIcon;
+            iconRect = authoredIcon != null ? authoredIcon.rectTransform : null;
+            if (iconRect != null) startPosition = iconRect.anchoredPosition;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData) { hovered = true; }
+        public void OnPointerExit(PointerEventData eventData)
+        { hovered = false; pressed = false; }
+        public void OnSelect(BaseEventData eventData) { focused = true; }
+        public void OnDeselect(BaseEventData eventData)
+        { focused = false; pressed = false; }
+        public void OnPointerDown(PointerEventData eventData)
+        { if (eventData.button == PointerEventData.InputButton.Left) pressed = true; }
+        public void OnPointerUp(PointerEventData eventData) { pressed = false; }
+
+        private void Update()
+        {
+            if (button == null || image == null || iconRect == null) return;
+            float dt = Mathf.Max(0f, Time.unscaledDeltaTime);
+            float blend = 1f - Mathf.Exp(-13f * dt);
+            bool active = button.IsInteractable() && (hovered || focused);
+            hoverAmount = Mathf.Lerp(hoverAmount, active ? 1f : 0f, blend);
+            float breathing = Mathf.Sin(Time.unscaledTime * 2.25f);
+            float pulse = Mathf.Sin(Time.unscaledTime * 4.2f);
+            float alpha = Mathf.Lerp(.86f + .10f * breathing,
+                .96f + .04f * pulse, hoverAmount);
+            image.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
+            float size = Mathf.Lerp(1f, 1.065f, hoverAmount) *
+                (pressed ? .955f : 1f);
+            iconRect.localScale = Vector3.Lerp(iconRect.localScale,
+                Vector3.one * size, blend);
+            float y = Mathf.Lerp(Mathf.Sin(Time.unscaledTime * 1.4f) * 1.5f,
+                -3f, hoverAmount);
+            iconRect.anchoredPosition = Vector2.Lerp(iconRect.anchoredPosition,
+                startPosition + new Vector2(0f, y), blend);
+        }
+
+        private void OnDisable()
+        {
+            hovered = focused = pressed = false;
+            hoverAmount = 0f;
+            if (iconRect != null)
+            {
+                iconRect.localScale = Vector3.one;
+                iconRect.anchoredPosition = startPosition;
+            }
+        }
+    }
+
 }
