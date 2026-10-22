@@ -40,6 +40,22 @@ namespace Rokas.BedSleep.V10Release
                 _source.playOnAwake = false;
                 _source.spatialBlend = 0f;
             }
+            // User-authoritative October 22 recordings, tied to REAL actions:
+            // arm Raise, one crown detent, and the physical watch button.
+            // Resources import the original recorded sound (not a synthesized
+            // tick). Missing optional assets fall back to existing safe Foley.
+            AudioClip recordedArm = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Arm_Raise_Cloth");
+            AudioClip recordedWheel = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Watch_Wheel_Single");
+            AudioClip recordedButton = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Watch_Button_Click");
+            if (recordedArm != null && !ownsRaise)
+                sleeveRaiseClip = recordedArm;
+            if (recordedWheel != null && !ownsCrown)
+                watchCrownClickClip = recordedWheel;
+            if (recordedButton != null && !ownsButtonMechanical)
+                watchButtonMechanicalClip = recordedButton;
             // V10's Inspector audio fields were empty in the integrated game.
             // Populate only missing slots from the already-authored Argon Foley.
             // Existing developer-assigned sound assets always take priority.
@@ -210,7 +226,8 @@ namespace Rokas.BedSleep.V10Release
                 ? generatedCrownTicks[(crownVariation++ % generatedCrownTicks.Length)]
                 : watchCrownClickClip;
             if (detent != null)
-                _source.PlayOneShot(detent, masterVolume * 1.02f);
+                _source.PlayOneShot(detent, masterVolume *
+                    (generatedCrownTicks == null ? .70f : 1.02f));
         }
         private void OnDestroy()
         {
