@@ -115,7 +115,9 @@ namespace Rokas.Presentation
             // collision scene. Attach an accessible hotspot directly
             // to the bed region, above decoration but away from laptop.
             var bedHit = ui.Box(parent, "BedInteractable_Hotspot",
-                470f, 657f, 365f, 190f,
+                // Real blanket, not the wooden table: same coordinates and
+                // hit target as the golden sleep icon, in 1920x1080 UI space.
+                238f, 510f, 320f, 210f,
                 new Color(1f, 1f, 1f, .001f), true);
             var bedButton = bedHit.gameObject.AddComponent<Button>();
             bedButton.targetGraphic = bedHit;
@@ -124,7 +126,8 @@ namespace Rokas.Presentation
                 mode = Navigation.Mode.Automatic };
             bedButton.onClick.AddListener(() =>
             {
-                audio.Click();
+                // The unique user SitOnBed clip plays on the bed cinematic
+                // entry, not the generic UI click. No doubled sounds.
                 enterBedSleep?.Invoke();
             });
             // The user's ORIGINAL transparent amber sleep icon replaces
@@ -138,7 +141,7 @@ namespace Rokas.Presentation
                     new Rect(0, 0, authoredSleepIcon.width, authoredSleepIcon.height),
                     new Vector2(.5f, .5f), 100f);
                 var sleepImage = ui.Box(bedHit.transform, "BedSleep_AuthoredSleepIcon",
-                    122f, 28f, 116f, 116f, Color.white);
+                    105f, 62f, 116f, 116f, Color.white);
                 sleepImage.sprite = sleepSprite;
                 sleepImage.preserveAspect = true;
                 sleepImage.raycastTarget = false; // original bed hitbox owns click
@@ -150,7 +153,7 @@ namespace Rokas.Presentation
                 // Missing optional authored icon must never remove the sleep
                 // interaction or make the bed inaccessible.
                 ui.Label(parent, "BedSleep_InteractionHint",
-                    "ЛЕЧЬ СПАТЬ", 494f, 634f, 270f, 38f,
+                    "ЛЕЧЬ СПАТЬ", 285f, 598f, 240f, 38f,
                     22, UiKit.Gold);
                 Debug.LogWarning("[ROKAS BedSleep] Authored sleep icon missing; text fallback.");
             }
