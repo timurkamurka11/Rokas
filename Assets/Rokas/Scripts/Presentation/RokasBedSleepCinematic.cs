@@ -782,7 +782,7 @@ namespace Rokas.Presentation
                 Time.unscaledDeltaTime, .002f))
             {
                 curtain.color = new Color(.008f, .013f, .021f,
-                    Mathf.Lerp(from, to, CinematicEase(Mathf.Clamp01(t / duration)));
+                    Mathf.Lerp(from, to, CinematicEase(Mathf.Clamp01(t / duration))));
                 yield return null;
             }
             curtain.color = new Color(.008f, .013f, .021f, to);
