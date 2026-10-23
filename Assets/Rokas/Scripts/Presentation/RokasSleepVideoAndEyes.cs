@@ -130,6 +130,13 @@ namespace Rokas.Presentation
                 yield return null;
             }
         }
+        // ScreenSpaceOverlay draw order: the dream MUST be above the
+        // closed eyelids during sleep, but BELOW the opening-eyes layer
+        // after the video fades out.
+        public void BringToFront()
+        {
+            if (gameObject != null) gameObject.transform.SetAsLastSibling();
+        }
         public void End()
         {
             if (group != null) group.alpha = 0f;
@@ -162,7 +169,10 @@ namespace Rokas.Presentation
     /// </summary>
     internal sealed class RokasSleepEyeAperture : IDisposable
     {
-        private const int Steps = 32;
+        // Old 33 x 640x360 precomputed masks took millions of expensive
+        // per-pixel Mathf.Exp/Pow calls on the FIRST bed click and visibly
+        // stalled the room-to-ceiling fade. Cache lightweight masks once.
+        private const int Steps = 16;
         private readonly GameObject gameObject;
         private readonly RawImage image;
         private readonly Texture2D[] frames = new Texture2D[Steps + 1];
@@ -185,7 +195,8 @@ namespace Rokas.Presentation
             black.SetPixel(0, 0, Color.black);
             black.Apply(false, true);
             frames[0] = black;
-            // First image shape is invisible at 100% open.
+            // Build only 17 small textures (~900k pixels), never 33 large
+            // textures (~7.6m pixels) during the first room transition.
             for (int i = 1; i <= Steps; i++)
                 frames[i] = RenderMask(i / (float)Steps);
             SetOpen(1f);
@@ -193,7 +204,7 @@ namespace Rokas.Presentation
 
         private static Texture2D RenderMask(float open)
         {
-            const int w = 640, h = 360;
+            const int w = 320, h = 180;
             var data = new Color32[w * h];
             // 0 = closed; 1 = fully open. Semioval upper+lower lids.
             float openShape = Mathf.Sin(Mathf.PI * .5f * open);
@@ -224,7 +235,9 @@ namespace Rokas.Presentation
                 }
                 // A subtle dark bridge between both pupils adds a believable
                 // first-person brow/nose silhouette at the intermediate state.
-                float nose = Mathf.Exp(-Mathf.Pow((u-.5f)/.028f,2f))*.42f;
+                float noseX = Mathf.Abs(u-.5f)/.028f;
+                float nose = .42f * Mathf.Max(0f,
+                    1f - noseX * noseX);
                 float opacity = Mathf.Clamp01(1f-transparency*(1f-nose));
                 // Fade residual peripheral darkness completely at the end.
                 opacity *= 1f-Mathf.SmoothStep(.86f, 1f, open);
@@ -239,6 +252,13 @@ namespace Rokas.Presentation
             tex.SetPixels32(data);
             tex.Apply(false,true);
             return tex;
+        }
+
+        // Make the two half-oval lids render OVER the ceiling while closing
+        // and reopening; don't let the authored dream video occlude them.
+        public void BringToFront()
+        {
+            if (gameObject != null) gameObject.transform.SetAsLastSibling();
         }
 
         public void SetOpen(float openness)
