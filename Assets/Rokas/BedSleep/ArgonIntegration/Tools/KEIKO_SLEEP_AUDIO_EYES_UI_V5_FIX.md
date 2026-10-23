@@ -1,0 +1,15 @@
+# ROKAS — Keiko Sleep V5 corrective hotfix (PR #13, draft)
+
+User's actual `bandicam 2026-10-24 00-55-23-116.mp4` lasts 50.87 seconds. Examined sampled frames show: normal bed/clock UI until about 21s; original Keiko dream playback **is visible from ~24 to ~43s**; by ~45s ceiling visible again. Thus V4 video was already installed and did run, contrary to assuming the movie never appeared. Failures: silent V4 loop (user wants original audio), music and rain ducked immediately at bed click (user wants duck after clock confirm/yawn), blue old focus button/toggle hint still in local UI, weak hover, and oval-eye reveal was not visually apparent.
+
+V5 code corrections in same existing draft branch:
+- `RokasAudio.cs`: fade room rain/home ambience as well as music when `SetBedSleepMusicDucking(true)`, with SFX separate, while rest of the game unchanged.
+- `RokasBedSleepCinematic.cs`: don't duck in `Begin()`; start duck at `State.EyesClose` *after* clock confirmation and hand lowering; restore at `Complete()`; ~2.1s fade-in and 2.0s fade-out for Keiko video, ~3s wake eye opening. Actual bed source video gains audio through the new helper. Eliminate legacy blue `RokasBedWatchFocusButton` behaviour on the gold PNG, remove re-click caption in live toggle; always leave same original button action and watch controls.
+- `RokasBedAuthoredActionButton.cs`: authentic PNG maintains aspect via `AspectRatioFitter`, larger 8.2% laptop-style hover scale while no extra coloured backing layer.
+- `RokasSleepVideoAndEyes.cs`: change `VideoPlayer` from `None` audio to a controlled dedicated `AudioSource` that uses the original user-provided AAC soundtrack and fades volume with video alpha. Fix the two mask apertures' older **overlapping** 0.345 widths (which produced one oversized opening instead of two oval eyes) to two non-overlapping soft semiovals, pre-render 640x360 masks.
+
+V5 media: original user-provided 10.005s H.264/AAC Keiko dream clip -> same prepared visual 7.208s loop from V4 + preserved original sound wrapped with crossfade at audio endpoint. New `Assets/StreamingAssets/BedSleep/KeikoSleepLoop.mp4` should replace the V4 silent asset in the EXISTING project; no redo of FFmpeg/Blender on user Windows. The WAV/MP3 SFX of V3, physical watch, rigged user hand, Hand Studio, existing original Hub/Bed/scene/V16 stay untouched.
+
+**Very important local integration:** The user frequently has unknown local C# edits; do NOT copy whole Cinematic, RokasAudio or button class wholesale unless their contents are known. A V5 one-BAT PowerShell package should perform unique-anchor/guarded scoped patches with preflight, original byte backup and rollback, replacing full helper only if its Git blob equals V4 exact blob. Do not execute an old V3/V4 full installer first. The user has already confirmed the video ran in-game.
+
+Unity Editor Game View, watch focus UI, real sleep audio, ambient rain timing, and eyelid mask remain unverified after source commit. Do not claim production PASS or merge PR #13. 
