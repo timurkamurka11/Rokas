@@ -1,0 +1,23 @@
+# ROKAS Bed Sleep V4 — exact user's Keiko chibi video, curved eyelids and music fade
+
+**Continues draft PR #13; do not merge before real in-game QA.** Does not change V16 or the user's animated 23-joint hand FBX/Hand Studio, real watch case, physical strap, or Russian OLED.
+
+## Source and actual media artifact
+- User supplied `gemini_generated_video_eec195e3.mp4`: 1280×720, 24 fps, ~10 sec, contains a sleeping chibi Keiko with several animated dream thought clouds, ending in a black fade. The supplied embedded audio track is NOT reused (music should be controlled solely by ROKAS).
+- A **silent, seam-dissolved 7.208s H.264** loop has been generated from that same clip (not a regenerated/different character). Last ~1.2s is crossfaded cyclically into the first ~1.2s. Final adjacent edge frame mean pixel difference ~2.3/255 in an OpenCV visual seam check.
+- `Assets/StreamingAssets/BedSleep/KeikoSleepLoop.mp4`, SHA-256 **`2985b9d58922c27e65f2328da9c605dff11b9f37d38cedec39440910d50616c7`**. Binary is distributed inside the attached self-contained one-BAT package, **not** committed to this GitHub source-only branch.
+
+## Committed changes in PR #13
+- `RokasSleepVideoAndEyes.cs`: a silent URL `VideoPlayer` feeding a 1280×720 RenderTexture beneath the existing ScreenSpaceOverlay Canvas; loops user footage only while asleep, fades in/out, stops and releases RenderTexture on exit. Also produces 25 cached 320×180 antialiased masks for **curved binocular semioval eyelids**, with soft edge and no straight rectangle bars, as well as a gentle central bridge at partial openness. No per-frame Texture2D allocation.
+- `RokasBedSleepCinematic.cs`: keeps the existing bed gameplay, time/day/fatigue and wake alarm ownership. After eye closure + save, waits for original video prepare, shows Keiko looping for 18s of cinematic time, fades it off before the alarm. Alarm plays **while eyes begin opening** 0.2sec later (previous implementation waited entire alarm before opening). Eyelids use curved first-person mask, with 2.15-second gradual opening and `BedCeilingPOV_Soft` blurred plate if present (otherwise one-time GPU-downsampled soft room image). Missing/failed optional movie safely falls back to dark sleep. Clipped audio track is deliberately disabled.
+- Proportional, compact original authored `SetAlarmButton.png` and `ConfigureTimeButton.png`: 352×117 UI rectangles preserving source 2048×682 ≈ 3:1 aspect, rather than filling ~510×170 areas. Original button click/hover/focus behaviour stays.
+- `RokasAudio.cs`: `SetBedSleepMusicDucking(bool)` uses the existing main audio Tick and a 3-second volume mix ramp; no fighting a separate AudioSource tween. Only HOME background music is ducked; user-provided watch click/clock alarm/sleep Foley continue. When bed completes or is canceled, reset the music target.
+- `RokasView.cs`: passes the existing `RokasAudio` owner to the bed cinematic; no duplicate audio source.
+
+## One-BAT handoff
+- `ROKAS_KEIKO_SLEEP_LOOP_EYES_MUSIC_UI_V4.zip` (5.8 MB) consists of the intact original V3 bed-UI media, V3 safe HomeView local merge script, new silent seamless video, one top-level BAT + V4 safe patch script and README. Single BAT first executes V3's original verified and backed-up resources/UI install/merge, then verifies/stages the V4 source changes pinned to GitHub HEAD `7bd6bdeb650af921763a946226f87cd14121bca6`.
+- V4 **surgically patches local `RokasAudio.cs` and `RokasView.cs`** (preserves unrelated local C#) and guards the entire replacement of `RokasBedSleepCinematic.cs` by allowed baseline blob SHA `3800d744c90b4f101b1e40ac8bc2f96c42644568`. Downloads this exact file and new video/eye helper, verifies Git blob SHA1 `dccc3da5a13549a8ed77783a4993653aa4a4f47f` and `246c2cc852cdd59e54f48d3bc366b775e055bdcf`; verifies supplied MP4 SHA256. Backs up all modified files and restores them on V4 failure. Does NOT run Blender, edit source FBX, switch Git branch, create a new Unity scene, or merge the PR.
+- ZIP integrity PASS, media SHA256 PASS, C# delimiter balance PASS; **Unity 6000.3 Play Mode, VideoPlayer runtime playback, oval-mask rendering and actual sleep button dimensions have NOT been tested in the user's Windows Game View**. No success should be claimed before video QA.
+
+## Real Unity QA
+Open Unity after installing with Editor fully shut first. In the real Hub bed flow: verify new 3:1 alarm/config buttons fit, hover behaves as before, confirm alarm, music ramps to silence, Keiko appears and dreams loop without a seam or audio, the recorded alarm rings as natural soft curved oval eyes open over a visibly blurred ceiling, and original Sit On Bed sound + gameplay return work. ESC/Cancel must restore music and original scene. Keep PR #13 DRAFT/unmerged.
