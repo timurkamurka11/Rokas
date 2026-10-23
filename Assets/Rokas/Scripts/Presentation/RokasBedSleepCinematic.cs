@@ -36,12 +36,17 @@ namespace Rokas.Presentation
         private readonly GameSession session;
         private readonly Action save;
         private readonly Action onFinished;
+        private readonly RokasAudio backgroundAudio;
         private readonly Action<float> moveHomeCamera;
         private readonly Texture originalRoom;
         private RectTransform root;
         private RawImage lyingPov, armPov, blurredPov, real3DArmPov;
         private RokasBedSleepProductionRigBridge productionRig;
         private Image curtain, topEyelid, bottomEyelid;
+        private RokasKeikoDreamLoop keikoDream;
+        private RokasSleepEyeAperture eyeAperture;
+        private RenderTexture runtimeBlur;
+        private bool wakingReveal;
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
         private Button alarmButton, confirmButton, focusButton, exitBedButton;
@@ -61,7 +66,7 @@ namespace Rokas.Presentation
         private AudioClip sitOnBedClip, settlingToSleepClip, recordedWakeClip;
         // Black-screen time is cinematic time only. The approved save logic
         // still advances the chosen 1-12 in-game hours once, not in real time.
-        private const float RestingInDarkSeconds = 7.5f;
+        private const float RestingInDarkSeconds = 18f;
         private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
@@ -79,7 +84,7 @@ namespace Rokas.Presentation
         public RokasBedSleepCinematic(MonoBehaviour runner, UiKit ui,
             Transform layer, Texture originalRoom,
             GameSession session, Action save, Action onFinished,
-            Action<float> moveHomeCamera)
+            Action<float> moveHomeCamera, RokasAudio backgroundAudio)
         {
             this.runner = runner;
             this.ui = ui;
@@ -89,6 +94,7 @@ namespace Rokas.Presentation
             this.save = save;
             this.onFinished = onFinished;
             this.moveHomeCamera = moveHomeCamera;
+            this.backgroundAudio = backgroundAudio;
         }
 
         public static float QuantizeDuration(float hours)
@@ -130,6 +136,9 @@ namespace Rokas.Presentation
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
             BuildOverlay();
+            // Duck only the HOME background music over ~3 sec, never watch,
+            // sit/cloth, dream visuals or the wake-up alarm effect channel.
+            backgroundAudio?.SetBedSleepMusicDucking(true);
             // This replaces the generic hub button click: play exactly once
             // after the bed-trigger state has been accepted.
             PlayAuthoredFoley(sitOnBedClip, .88f);
@@ -430,9 +439,25 @@ namespace Rokas.Presentation
                 0, 0, 1920, 1080);
             // Begin in the untouched home view, then swap under darkness.
             lyingPov.color = new Color(1f, 1f, 1f, 0f);
-            blurredPov = soft == null ? null :
+            // If the authored soft plate is missing, generate a very cheap
+            // low-resolution bilinear approximation ONCE, not each frame.
+            if (soft == null && ceiling != null)
+            {
+                RenderTexture down = RenderTexture.GetTemporary(96, 54, 0);
+                down.filterMode = FilterMode.Bilinear;
+                runtimeBlur = new RenderTexture(256, 144, 0,
+                    RenderTextureFormat.ARGB32);
+                runtimeBlur.filterMode = FilterMode.Bilinear;
+                runtimeBlur.Create();
+                Graphics.Blit(ceiling, down);
+                Graphics.Blit(down, runtimeBlur);
+                RenderTexture.ReleaseTemporary(down);
+            }
+            Texture blurredTexture = soft != null ?
+                (Texture)soft : (Texture)runtimeBlur;
+            blurredPov = blurredTexture == null ? null :
                 ui.Art(root, "LyingCeilingPOV_SoftBlur",
-                    soft, 0, 0, 1920, 1080);
+                    blurredTexture, 0, 0, 1920, 1080);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, 0f);
             armPov = ui.Art(root, "KeikoArmWatch_ApprovedComposite",
@@ -471,7 +496,7 @@ namespace Rokas.Presentation
             alarmControls.blocksRaycasts = false;
             alarmControls.interactable = false;
             alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
-                "ПОСТАВИТЬ БУДИЛЬНИК", 705, 900, 510, 170,
+                "ПОСТАВИТЬ БУДИЛЬНИК", 784, 923, 352, 117,
                 OpenAlarm, true);
             RokasBedAuthoredActionButton.Apply(alarmButton, "SetAlarmButton");
             if (!armWatchAvailable)
@@ -551,7 +576,7 @@ namespace Rokas.Presentation
             {
                 focusButton = ui.Button(watchControls.transform,
                     "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
-                    710, 900, 500, 167, ToggleWatchFocus, true);
+                    784, 925, 352, 117, ToggleWatchFocus, true);
                 focusButton.gameObject.AddComponent<RokasBedWatchFocusButton>();
                 RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
             }
@@ -568,6 +593,13 @@ namespace Rokas.Presentation
                 new Color(.008f, .013f, .021f, 0f), false);
             // Transparent end-of-frame curtain never blocks the watch.
             curtain.raycastTarget = false;
+            // Black bars are replaced by two organic elliptical apertures.
+            // We retain the old components as a fallback, but disable them
+            // when the curved face-mask is successfully constructed.
+            eyeAperture = new RokasSleepEyeAperture(root);
+            if (topEyelid != null) topEyelid.enabled = false;
+            if (bottomEyelid != null) bottomEyelid.enabled = false;
+            keikoDream = new RokasKeikoDreamLoop(root); // on top, fades to zero
             SetEyelids(0f);
 
             audio = root.gameObject.AddComponent<AudioSource>();
@@ -724,10 +756,24 @@ namespace Rokas.Presentation
                 session.State.hubSleepInitialized = true;
                 save?.Invoke();
             }
-            // Formerly there was only .70 seconds of black before instantly
-            // waking. Keep real cinematic darkness long enough for an audible
-            // sleep interval while the chosen hours advance in game state.
-            yield return Wait(RestingInDarkSeconds);
+            // Keep the eye mask CLOSED while Keiko dreams on the supplied
+            // black-backed animated art. The video was crossfaded end-to-start
+            // to a 7.2s seamless, SILENT loop. Unity's background music is
+            // already faded independently through RokasAudio.Tick.
+            bool dreamPlaying = false;
+            if (keikoDream != null && keikoDream.Available)
+            {
+                yield return keikoDream.AwaitPrepared(2.5f);
+                dreamPlaying = keikoDream.Begin();
+            }
+            if (dreamPlaying)
+            {
+                yield return FadeDream(0f, 1f, .8f);
+                yield return Wait(RestingInDarkSeconds);
+                yield return FadeDream(1f, 0f, .85f);
+                keikoDream.End();
+            }
+            else yield return Wait(RestingInDarkSeconds);
             AudioClip wakeCue = null;
             bool generatedWakeCue = false;
             if (alarmEnabled && audio != null)
@@ -741,12 +787,17 @@ namespace Rokas.Presentation
                 // Preserve the existing soft/standard/strong setting.
                 audio.PlayOneShot(wakeCue,
                     alarmMode == 0 ? .48f : (alarmMode == 1 ? .72f : .86f));
-                // Allow the actual alarm recording to ring while the
-                // character's eyes stay shut. Opening is never instantaneous.
-                yield return Wait(Mathf.Max(1.25f,
-                    wakeCue != null ? wakeCue.length : 1.25f));
+                // Start opening WHILE the actual alarm rings, not after
+                // waiting for the entire sound to finish in darkness.
+                yield return Wait(.20f);
             }
-            yield return FadeEyelids(1f, 0f, 1.65f);
+            wakingReveal = true;
+            if (blurredPov != null)
+                blurredPov.color = new Color(1f,1f,1f,.88f);
+            yield return FadeEyelids(1f, 0f, 2.15f);
+            wakingReveal = false;
+            if (blurredPov != null)
+                blurredPov.color = new Color(1f,1f,1f,0f);
             if (generatedWakeCue && wakeCue != null)
                 UnityEngine.Object.Destroy(wakeCue);
             // The same mattress/fabric sample is heard once when sitting
@@ -755,6 +806,19 @@ namespace Rokas.Presentation
             yield return Wait(sitOnBedClip != null ?
                 Mathf.Max(.9f, sitOnBedClip.length) : .9f);
             Complete();
+        }
+
+        private IEnumerator FadeDream(float from, float to, float duration)
+        {
+            if (keikoDream == null) yield break;
+            for (float t = 0f; t < duration;
+                t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                keikoDream.Alpha = Mathf.Lerp(from,to,
+                    CinematicEase(Mathf.Clamp01(t/duration)));
+                yield return null;
+            }
+            keikoDream.Alpha = to;
         }
 
         private void PlayAuthoredFoley(AudioClip clip, float gain)
@@ -841,9 +905,15 @@ namespace Rokas.Presentation
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
-                SetEyelids(Mathf.Lerp(from, to,
-                    Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp01(t / duration))));
+                float amount = Mathf.Lerp(from, to,
+                    CinematicEase(Mathf.Clamp01(t / duration)));
+                SetEyelids(amount);
+                if (wakingReveal && blurredPov != null)
+                {
+                    float clear = 1f - amount;
+                    float blur = .88f * (1f-clear) * (1f-clear);
+                    blurredPov.color = new Color(1f,1f,1f,blur);
+                }
                 yield return null;
             }
             SetEyelids(to);
@@ -851,6 +921,11 @@ namespace Rokas.Presentation
 
         private void SetEyelids(float closure)
         {
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetOpen(1f - Mathf.Clamp01(closure));
+                return;
+            }
             float height = 540f * Mathf.Clamp01(closure);
             if (topEyelid != null)
                 topEyelid.rectTransform.sizeDelta = new Vector2(1920, height);
@@ -951,6 +1026,17 @@ namespace Rokas.Presentation
             if (state == State.Idle && root == null) return;
             state = State.Idle;
             sequence = null;
+            // Always restore real background music even if the player
+            // cancelled mid-sleep or video decoding failed.
+            backgroundAudio?.SetBedSleepMusicDucking(false);
+            if (keikoDream != null) { keikoDream.Dispose(); keikoDream = null; }
+            if (eyeAperture != null) { eyeAperture.Dispose(); eyeAperture = null; }
+            if (runtimeBlur != null)
+            {
+                runtimeBlur.Release();
+                UnityEngine.Object.Destroy(runtimeBlur);
+                runtimeBlur = null;
+            }
             productionRig?.Dispose();
             productionRig = null;
             real3DArmPov = null;
