@@ -116,6 +116,16 @@ namespace Rokas.Presentation
         {
             bedSleepMusicTarget = sleeping ? 0f : 1f;
             bedSleepRainTarget = sleeping ? 0f : 1f;
+            // Silence any already playing thunder at the sleep boundary;
+            // it is a generated one-shot on the shared FX bank rather than
+            // the looped 'ambience' AudioSource.
+            if (sleeping)
+                foreach (AudioSource source in effects)
+                    if (source != null && source.isPlaying &&
+                        source.clip != null &&
+                        source.clip.name.StartsWith("HomeThunderDistant",
+                            System.StringComparison.Ordinal))
+                        source.Stop();
         }
 
         public void SetVnMuted(bool muted)
@@ -251,6 +261,9 @@ namespace Rokas.Presentation
 
         public void PlayThunder(int variant, float volume)
         {
+            // Rain/ambient thunder must NOT cut through a sleeping scene.
+            // Fade begins at EyesClose after the alarm is confirmed.
+            if (bedSleepRainTarget < .99f) return;
             EnsureThunderBank();
             int index = Mathf.Abs(variant) % thunderBank.Length;
             PlayScaled(thunderBank[index], Mathf.Clamp01(volume) * .72f);
