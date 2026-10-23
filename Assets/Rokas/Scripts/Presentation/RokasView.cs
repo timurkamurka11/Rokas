@@ -215,7 +215,7 @@ namespace Rokas.Presentation
                 () => session.HallwayLightOn);
             bedSleep = new RokasBedSleepCinematic(
                 owner, ui, transitions, assets.home, session, save,
-                OnBedSleepFinished, UpdateHomeCameraBlend);
+                OnBedSleepFinished, UpdateHomeCameraBlend, audio);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
