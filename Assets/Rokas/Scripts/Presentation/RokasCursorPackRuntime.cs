@@ -42,6 +42,7 @@ namespace Rokas.Presentation
             new Vector2(87, 57)
         };
 
+        private static RokasCursorPackRuntime owner;
         private readonly Texture2D[] textures = new Texture2D[6];
         private readonly List<RaycastResult> hits = new List<RaycastResult>(32);
         private PointerEventData pointer;
@@ -54,6 +55,15 @@ namespace Rokas.Presentation
 
         private void Awake()
         {
+            // A previously installed Bootstrap hook may coexist with the
+            // self-registering cursor pack. Keep ONE cursor owner only.
+            if (owner != null && owner != this)
+            {
+                enabled = false;
+                Destroy(this);
+                return;
+            }
+            owner = this;
             bool foundAll = true;
             for (int i = 0; i < textures.Length; ++i)
             {
@@ -167,6 +177,7 @@ namespace Rokas.Presentation
 
         private void OnApplicationFocus(bool focused)
         {
+            if (owner != this) return;
             hasFocus = focused;
             if (!focused)
             {
@@ -176,11 +187,14 @@ namespace Rokas.Presentation
         }
         private void OnDisable()
         {
+            if (owner != this) return;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             current = (HandCursor)(-1);
         }
         private void OnDestroy()
         {
+            if (owner != this) return;
+            owner = null;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
     }
