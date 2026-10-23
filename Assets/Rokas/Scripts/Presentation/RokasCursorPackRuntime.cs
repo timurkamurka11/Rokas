@@ -31,15 +31,15 @@ namespace Rokas.Presentation
         };
 
         // Each hotspot is located exactly at the active fingertip/contact.
-        // These are already normalized to the prepared 128x128 cursor PNGs.
+        // These are normalized to the prepared 96x96 cursor PNGs.
         private static readonly Vector2[] Hotspots =
         {
-            new Vector2(119, 38),
-            new Vector2(119, 43),
-            new Vector2(115, 115),
-            new Vector2(111, 51),
-            new Vector2(112, 46),
-            new Vector2(116, 56)
+            new Vector2(90, 29),
+            new Vector2(90, 32),
+            new Vector2(88, 34),
+            new Vector2(83, 32),
+            new Vector2(82, 38),
+            new Vector2(87, 57)
         };
 
         private readonly Texture2D[] textures = new Texture2D[6];
@@ -59,7 +59,7 @@ namespace Rokas.Presentation
             {
                 textures[i] = Resources.Load<Texture2D>(ResourceNames[i]);
                 if (textures[i] == null ||
-                    textures[i].width != 128 || textures[i].height != 128)
+                    textures[i].width != 96 || textures[i].height != 96)
                 {
                     foundAll = false;
                     Debug.LogWarning("[ROKAS CURSOR] Missing/non-128 source: " +
