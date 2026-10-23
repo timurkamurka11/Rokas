@@ -410,10 +410,22 @@ namespace Rokas.Presentation
             if (runner != null && sequence != null)
                 runner.StopCoroutine(sequence);
             sequence = null;
-            Complete();
+            // ESC / return from bed follows the same fade-to-black,
+            // no instantaneous cut back to the old home illustration.
+            if (runner != null && curtain != null)
+                sequence = runner.StartCoroutine(ExitBedToHub());
+            else Complete(false);
         }
 
-        public void Dispose() => Cancel();
+        // Disposal on scene teardown must not start a new coroutine.
+        public void Dispose()
+        {
+            if (runner != null && sequence != null)
+                runner.StopCoroutine(sequence);
+            sequence = null;
+            cancelRequested = true;
+            Complete(false);
+        }
 
         private void BuildOverlay()
         {
@@ -802,7 +814,9 @@ namespace Rokas.Presentation
             PlayAuthoredFoley(sitOnBedClip, .88f);
             yield return Wait(sitOnBedClip != null ?
                 Mathf.Max(.9f, sitOnBedClip.length) : .9f);
-            Complete();
+            // Getting up must close down into complete darkness, just like
+            // the entry transition. A separate black fade then reveals Hub.
+            yield return ExitBedToHub();
         }
 
         private IEnumerator FadeDream(float from, float to, float duration)
@@ -1018,8 +1032,49 @@ namespace Rokas.Presentation
                 yield return null;
         }
 
-        private void Complete()
+        private IEnumerator ExitBedToHub()
         {
+            if (curtain != null)
+            {
+                float start = curtain.color.a;
+                yield return FadeCurtain(start, 1f, .94f);
+            }
+            if (cancelRequested && audio != null && sitOnBedClip != null)
+            {
+                // When ESC cancels early, rising still has the mattress sound.
+                audio.PlayOneShot(sitOnBedClip, .88f);
+                yield return Wait(Mathf.Min(.9f, sitOnBedClip.length));
+            }
+            Complete(true);
+        }
+
+        private IEnumerator RevealHubCurtain(Image overlay)
+        {
+            if (overlay == null) yield break;
+            for (float t=0f; t<.88f; t+=Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                if (overlay == null) yield break;
+                float a=1f-CinematicEase(Mathf.Clamp01(t/.88f));
+                overlay.color = new Color(.008f,.013f,.021f,a);
+                yield return null;
+            }
+            if (overlay != null)
+                UnityEngine.Object.Destroy(overlay.gameObject);
+        }
+
+        private void Complete(bool crossfadeToHub = false)
+        {
+            // The original bed root is destroyed below. Duplicate ONLY a
+            // transient black rectangle ABOVE it, then reveal restored home.
+            // This independent overlay survives the bed-root destruction.
+            if (crossfadeToHub && layer != null && runner != null)
+            {
+                var black = ui.Box(layer,"ROKAS_Sleep_Exit_HubFade",
+                    0,0,1920,1080,new Color(.008f,.013f,.021f,1f));
+                black.raycastTarget=false;
+                black.transform.SetAsLastSibling();
+                runner.StartCoroutine(RevealHubCurtain(black));
+            }
             if (state == State.Idle && root == null) return;
             state = State.Idle;
             sequence = null;
