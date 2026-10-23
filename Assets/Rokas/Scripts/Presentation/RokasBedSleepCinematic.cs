@@ -885,8 +885,11 @@ namespace Rokas.Presentation
             PlayAuthoredFoley(sitOnBedClip, .88f);
             yield return Wait(sitOnBedClip != null ?
                 Mathf.Max(.9f, sitOnBedClip.length) : .9f);
-            // Getting up must close down into complete darkness, just like
-            // the entry transition. A separate black fade then reveals Hub.
+            // In first person Keiko blinks CLOSED again when getting out of
+            // bed: two real semioval lids, then a full black curtain before
+            // transitioning to the unaltered original Hub.
+            if (eyeAperture != null) eyeAperture.BringToFront();
+            yield return FadeEyelids(0f, 1f, .85f);
             yield return ExitBedToHub();
         }
 
