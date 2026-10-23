@@ -136,9 +136,10 @@ namespace Rokas.Presentation
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
             BuildOverlay();
-            // Duck only the HOME background music over ~3 sec, never watch,
-            // sit/cloth, dream visuals or the wake-up alarm effect channel.
-            backgroundAudio?.SetBedSleepMusicDucking(true);
+            // Do NOT lower music or rain when the player merely sits down.
+            // They remain audible during clock setup and start fading only
+            // after the player confirms the alarm and begins lying down.
+            backgroundAudio?.SetBedSleepMusicDucking(false);
             // This replaces the generic hub button click: play exactly once
             // after the bed-trigger state has been accepted.
             PlayAuthoredFoley(sitOnBedClip, .88f);
@@ -355,10 +356,21 @@ namespace Rokas.Presentation
             if (watchFocus) focusAnchorCaptured = false;
             if (focusButton != null)
             {
-                // Keep the SAME source-authored gold image and one toggle
-                // action. No caption, blue panel, or secondary return button.
-                var caption = focusButton.transform.Find("Title");
-                if (caption != null) caption.gameObject.SetActive(false);
+                // Never reveal the earlier "PRESS AGAIN" caption or blue
+                // background regardless of the locally installed UI version.
+                foreach (string name in new [] { "Title", "TopRule", "LeftRule" })
+                {
+                    Transform child = focusButton.transform.Find(name);
+                    if (child != null) child.gameObject.SetActive(false);
+                }
+                var bg = focusButton.GetComponent<Image>();
+                if (bg != null)
+                {
+                    bg.color = new Color(1f, 1f, 1f, .001f);
+                    bg.raycastTarget = true;
+                }
+                var legacyBlue = focusButton.GetComponent<RokasBedWatchFocusButton>();
+                if (legacyBlue != null) legacyBlue.enabled = false;
             }
             PlayTick();
         }
@@ -588,6 +600,10 @@ namespace Rokas.Presentation
                 // Legacy focus feedback paints a blue rectangle over the
                 // user's authored gold PNG. Only the new gold hover remains.
                 RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
+                // Old focus component re-tints this Button's Graphic blue.
+                // Our authored PNG already owns all hover feedback.
+                var legacyFocus = focusButton.GetComponent<RokasBedWatchFocusButton>();
+                if (legacyFocus != null) legacyFocus.enabled = false;
             }
 
             exitBedButton = ui.Button(root, "ReturnFromBed",
@@ -736,6 +752,7 @@ namespace Rokas.Presentation
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
             state = State.EyesClose;
+            backgroundAudio?.SetBedSleepMusicDucking(true);
             // Sound when sleep is the player's natural settling/yawn. Trigger
             // ONCE at the start of lying down; not on a watch UI button.
             PlayAuthoredFoley(settlingToSleepClip, .85f);
@@ -773,6 +790,9 @@ namespace Rokas.Presentation
             if (keikoDream != null && keikoDream.Available)
             {
                 yield return keikoDream.AwaitPrepared(2.5f);
+                keikoDream.SetAudioMix(backgroundAudio != null &&
+                    backgroundAudio.VnMuted ? 0f :
+                    (backgroundAudio != null ? backgroundAudio.VideoVolume * .65f : .42f));
                 dreamPlaying = keikoDream.Begin();
             }
             Debug.Log("[ROKAS DREAM V5] Video asset " +
@@ -782,9 +802,11 @@ namespace Rokas.Presentation
                 "; musicDucking=active. StreamingAssets/BedSleep/KeikoSleepLoop.mp4");
             if (dreamPlaying)
             {
-                yield return FadeDream(0f, 1f, .8f);
+                // Slow dissolve into the authored dreaming animation;
+                // sound follows the SAME curve for clean, seamless entry.
+                yield return FadeDream(0f, 1f, 2.1f);
                 yield return Wait(RestingInDarkSeconds);
-                yield return FadeDream(1f, 0f, .85f);
+                yield return FadeDream(1f, 0f, 2.0f);
                 keikoDream.End();
             }
             else yield return Wait(RestingInDarkSeconds);
@@ -808,7 +830,9 @@ namespace Rokas.Presentation
             wakingReveal = true;
             if (blurredPov != null)
                 blurredPov.color = new Color(1f,1f,1f,.88f);
-            yield return FadeEyelids(1f, 0f, 2.15f);
+            // Make two curved half-oval openings visible with a blurred
+            // ceiling beneath. A longer natural blink removes hard cuts.
+            yield return FadeEyelids(1f, 0f, 3.0f);
             wakingReveal = false;
             if (blurredPov != null)
                 blurredPov.color = new Color(1f,1f,1f,0f);
