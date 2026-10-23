@@ -775,6 +775,11 @@ namespace Rokas.Presentation
                 yield return keikoDream.AwaitPrepared(2.5f);
                 dreamPlaying = keikoDream.Begin();
             }
+            Debug.Log("[ROKAS DREAM V5] Video asset " +
+                (keikoDream != null && keikoDream.Available ? "loaded" : "missing/failed") +
+                "; prepared=" + dreamPlaying +
+                "; gameSleepHours=" + selectedHours.ToString("0.#") +
+                "; musicDucking=active. StreamingAssets/BedSleep/KeikoSleepLoop.mp4");
             if (dreamPlaying)
             {
                 yield return FadeDream(0f, 1f, .8f);
