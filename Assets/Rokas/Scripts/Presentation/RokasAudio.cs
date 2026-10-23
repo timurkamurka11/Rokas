@@ -34,6 +34,8 @@ namespace Rokas.Presentation
         private float hubVoiceScale = .34f;
         private float bedSleepMusicMix = 1f;
         private float bedSleepMusicTarget = 1f;
+        private float bedSleepRainMix = 1f;
+        private float bedSleepRainTarget = 1f;
 
         public float VideoVolume { get { return Mathf.Clamp01(settings.masterVolume * settings.sfxVolume); } }
         public bool VnMuted { get { return vnMuted; } }
@@ -113,6 +115,7 @@ namespace Rokas.Presentation
         public void SetBedSleepMusicDucking(bool sleeping)
         {
             bedSleepMusicTarget = sleeping ? 0f : 1f;
+            bedSleepRainTarget = sleeping ? 0f : 1f;
         }
 
         public void SetVnMuted(bool muted)
@@ -132,7 +135,14 @@ namespace Rokas.Presentation
         {
             float master = focused && !vnMuted ? Mathf.Clamp01(settings.masterVolume) : 0;
             float weather = mission ? 1f : homeWeatherMix;
-            ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
+            // Bed sleep only: home rain/ambience fades WITH home music
+            // after watch confirmation. UI clicks/alarm and Keiko dream audio
+            // use separate audio sources and are never ducked.
+            bedSleepRainMix = Mathf.MoveTowards(bedSleepRainMix,
+                bedSleepRainTarget, Mathf.Max(0f,dt) / 3.4f);
+            ambience.volume = Mathf.MoveTowards(ambience.volume,
+                master * settings.sfxVolume * .65f * weather *
+                (mission ? 1f : bedSleepRainMix), dt);
             bedSleepMusicMix = Mathf.MoveTowards(bedSleepMusicMix,
                 bedSleepMusicTarget, Mathf.Max(0f, dt) / 3.0f);
             float musicTarget = combat && !combatEntryReady ? 0f :
