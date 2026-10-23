@@ -32,6 +32,8 @@ namespace Rokas.Presentation
         private bool lampOn;
         private bool vnMuted;
         private float hubVoiceScale = .34f;
+        private float bedSleepMusicMix = 1f;
+        private float bedSleepMusicTarget = 1f;
 
         public float VideoVolume { get { return Mathf.Clamp01(settings.masterVolume * settings.sfxVolume); } }
         public bool VnMuted { get { return vnMuted; } }
@@ -106,6 +108,13 @@ namespace Rokas.Presentation
 
         public void SetLaptopMode(bool active) { laptopMode = active; }
 
+        // Fade *only* background music, never the actual watch/sleep/alarm SFX.
+        // Tick remains the sole volume owner: no other coroutine may fight it.
+        public void SetBedSleepMusicDucking(bool sleeping)
+        {
+            bedSleepMusicTarget = sleeping ? 0f : 1f;
+        }
+
         public void SetVnMuted(bool muted)
         {
             if (vnMuted == muted) return;
@@ -124,8 +133,11 @@ namespace Rokas.Presentation
             float master = focused && !vnMuted ? Mathf.Clamp01(settings.masterVolume) : 0;
             float weather = mission ? 1f : homeWeatherMix;
             ambience.volume = Mathf.MoveTowards(ambience.volume, master * settings.sfxVolume * .65f * weather, dt);
+            bedSleepMusicMix = Mathf.MoveTowards(bedSleepMusicMix,
+                bedSleepMusicTarget, Mathf.Max(0f, dt) / 3.0f);
             float musicTarget = combat && !combatEntryReady ? 0f :
-                master * settings.musicVolume * (combat ? .25f : .6f);
+                master * settings.musicVolume * (combat ? .25f : .6f)
+                * bedSleepMusicMix;
             music.volume = Mathf.MoveTowards(music.volume, musicTarget, dt * (combat ? .35f : 1f));
             if (hubVoice && hubVoice.isPlaying)
                 hubVoice.volume = vnMuted
