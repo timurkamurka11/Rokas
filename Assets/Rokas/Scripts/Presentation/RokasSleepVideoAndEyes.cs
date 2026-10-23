@@ -8,14 +8,16 @@ using UnityEngine.Video;
 namespace Rokas.Presentation
 {
     /// <summary>
-    /// Original user-supplied chibi Keiko dreaming clip. Video-only loop:
-    /// source soundtrack is deliberately disabled. StreamingAssets works
+    /// Original user-supplied chibi Keiko dreaming clip with its original
+    /// audio crossfaded for seamless looping. StreamingAssets works
     /// in Unity Editor and Windows builds; no Resources video import needed.
     /// </summary>
     internal sealed class RokasKeikoDreamLoop : IDisposable
     {
         private readonly GameObject gameObject;
         private readonly VideoPlayer player;
+        private readonly AudioSource dreamAudio;
+        private float audioMix = .50f;
         private readonly RenderTexture target;
         private readonly RawImage image;
         private readonly CanvasGroup group;
@@ -23,7 +25,20 @@ namespace Rokas.Presentation
         private bool failed;
         public bool Available { get; private set; }
         public float Alpha { get { return group != null ? group.alpha : 0f; }
-                             set { if(group != null) group.alpha = Mathf.Clamp01(value); } }
+                             set {
+                                 if(group != null) group.alpha = Mathf.Clamp01(value);
+                                 RefreshVolume();
+                             } }
+        public void SetAudioMix(float mix)
+        {
+            audioMix = Mathf.Clamp01(mix);
+            RefreshVolume();
+        }
+        private void RefreshVolume()
+        {
+            if (dreamAudio != null)
+                dreamAudio.volume = (group != null ? group.alpha : 0f) * audioMix;
+        }
 
         public RokasKeikoDreamLoop(RectTransform parent)
         {
@@ -37,7 +52,8 @@ namespace Rokas.Presentation
             }
             gameObject = new GameObject("Keiko_Original_Dreams_Seamless_Loop",
                 typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(RawImage), typeof(CanvasGroup), typeof(VideoPlayer));
+                typeof(RawImage), typeof(CanvasGroup), typeof(VideoPlayer),
+                typeof(AudioSource));
             gameObject.transform.SetParent(parent, false);
             RectTransform rect = (RectTransform)gameObject.transform;
             rect.anchorMin = Vector2.zero;
@@ -56,13 +72,19 @@ namespace Rokas.Presentation
             group.alpha = 0f;
             group.interactable = false;
             group.blocksRaycasts = false;
+            dreamAudio = gameObject.GetComponent<AudioSource>();
+            dreamAudio.playOnAwake = false;
+            dreamAudio.loop = false;
+            dreamAudio.spatialBlend = 0f;
+            dreamAudio.volume = 0f;
             player = gameObject.GetComponent<VideoPlayer>();
             player.playOnAwake = false;
             player.source = VideoSource.Url;
             player.url = uri;
             player.renderMode = VideoRenderMode.RenderTexture;
             player.targetTexture = target;
-            player.audioOutputMode = VideoAudioOutputMode.None;
+            player.audioOutputMode = VideoAudioOutputMode.AudioSource;
+            player.controlledAudioTrackCount = 1;
             player.isLooping = true;
             player.waitForFirstFrame = true;
             player.skipOnDrop = true;
@@ -75,6 +97,14 @@ namespace Rokas.Presentation
         private void OnPrepared(VideoPlayer source)
         {
             if (source != player) return;
+            // Original audio is part of the prepared loop asset; only this
+            // dedicated AudioSource carries it, so home music/rain ducking
+            // does not accidentally mute the dream recording.
+            if (player.audioTrackCount > 0)
+            {
+                player.EnableAudioTrack(0, true);
+                player.SetTargetAudioSource(0, dreamAudio);
+            }
             prepared = true;
         }
         private void OnError(VideoPlayer source, string error)
@@ -87,6 +117,7 @@ namespace Rokas.Presentation
         {
             if (!Available || failed || !prepared || player == null) return false;
             player.time = 0;
+            RefreshVolume();
             player.Play();
             return true;
         }
@@ -102,6 +133,7 @@ namespace Rokas.Presentation
         public void End()
         {
             if (group != null) group.alpha = 0f;
+            RefreshVolume();
             if (player != null && player.isPlaying) player.Stop();
         }
         public void Dispose()
@@ -130,7 +162,7 @@ namespace Rokas.Presentation
     /// </summary>
     internal sealed class RokasSleepEyeAperture : IDisposable
     {
-        private const int Steps = 24;
+        private const int Steps = 32;
         private readonly GameObject gameObject;
         private readonly RawImage image;
         private readonly Texture2D[] frames = new Texture2D[Steps + 1];
@@ -161,12 +193,15 @@ namespace Rokas.Presentation
 
         private static Texture2D RenderMask(float open)
         {
-            const int w = 320, h = 180;
+            const int w = 640, h = 360;
             var data = new Color32[w * h];
             // 0 = closed; 1 = fully open. Semioval upper+lower lids.
             float openShape = Mathf.Sin(Mathf.PI * .5f * open);
-            float wide = .345f;
-            float tall = .48f * openShape;
+            // The old 0.345 radii caused both eye apertures to overlap
+            // into a single oversized opening. These independent, wide
+            // half-ovals resemble real upper/lower eyelids in first person.
+            float wide = .222f;
+            float tall = .255f * openShape;
             for (int y = 0; y < h; ++y)
             for (int x = 0; x < w; ++x)
             {
@@ -174,14 +209,14 @@ namespace Rokas.Presentation
                 float transparency = 0f;
                 for (int eye = 0; eye < 2; ++eye)
                 {
-                    float cx = eye == 0 ? .265f : .735f;
+                    float cx = eye == 0 ? .26f : .74f;
                     float dx = (u-cx)/wide;
                     if (Mathf.Abs(dx) > 1.12f) continue;
                     // Asymmetric organic eye curve with drooping outer edge.
                     float lidCurve = Mathf.Sqrt(Mathf.Max(0f, 1f-dx*dx));
-                    float top = .51f + tall*lidCurve*.87f - .018f*dx;
-                    float bottom = .51f - tall*lidCurve*.73f - .008f*dx;
-                    float feather = .026f + .016f*(1f-open);
+                    float top = .515f + tall*lidCurve*.96f - .012f*dx;
+                    float bottom = .515f - tall*lidCurve*.69f - .010f*dx;
+                    float feather = .012f + .015f*(1f-open);
                     float a = Mathf.SmoothStep(bottom-feather,
                         bottom+feather, v) *
                         (1f-Mathf.SmoothStep(top-feather, top+feather, v));
@@ -189,10 +224,10 @@ namespace Rokas.Presentation
                 }
                 // A subtle dark bridge between both pupils adds a believable
                 // first-person brow/nose silhouette at the intermediate state.
-                float nose = Mathf.Exp(-Mathf.Pow((u-.5f)/.033f,2f))*.36f;
+                float nose = Mathf.Exp(-Mathf.Pow((u-.5f)/.028f,2f))*.42f;
                 float opacity = Mathf.Clamp01(1f-transparency*(1f-nose));
                 // Fade residual peripheral darkness completely at the end.
-                opacity *= 1f-Mathf.SmoothStep(.82f, 1f, open);
+                opacity *= 1f-Mathf.SmoothStep(.86f, 1f, open);
                 data[y*w+x] = new Color32(0,0,0,
                     (byte)Mathf.RoundToInt(opacity*255f));
             }
