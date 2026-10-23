@@ -46,6 +46,7 @@ namespace Rokas.Presentation
         private readonly Texture2D[] textures = new Texture2D[6];
         private readonly List<RaycastResult> hits = new List<RaycastResult>(32);
         private PointerEventData pointer;
+        private EventSystem boundEventSystem;
         private HandCursor current = (HandCursor)(-1);
         private bool packReady;
         private bool dragging;
@@ -72,7 +73,7 @@ namespace Rokas.Presentation
                     textures[i].width != 96 || textures[i].height != 96)
                 {
                     foundAll = false;
-                    Debug.LogWarning("[ROKAS CURSOR] Missing/non-128 source: " +
+                    Debug.LogWarning("[ROKAS CURSOR] Missing/non-96 source: " +
                                      ResourceNames[i] + "; system cursor retained.");
                 }
             }
@@ -88,8 +89,14 @@ namespace Rokas.Presentation
                 Apply(HandCursor.Point);
                 return;
             }
-            if (pointer == null || pointer.eventSystem != EventSystem.current)
-                pointer = new PointerEventData(EventSystem.current);
+            // Unity 6000.3: PointerEventData has no public eventSystem
+            // property. Track the EventSystem used to construct it ourselves.
+            EventSystem active = EventSystem.current;
+            if (pointer == null || boundEventSystem != active)
+            {
+                boundEventSystem = active;
+                pointer = new PointerEventData(active);
+            }
             pointer.Reset();
             pointer.position = Input.mousePosition;
             hits.Clear();
