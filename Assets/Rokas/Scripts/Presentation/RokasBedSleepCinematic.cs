@@ -45,6 +45,8 @@ namespace Rokas.Presentation
         private Image curtain, topEyelid, bottomEyelid;
         private RokasKeikoDreamLoop keikoDream;
         private RokasSleepEyeAperture eyeAperture;
+        private AudioSource keikoDreamAudio;
+        private AudioClip keikoDreamClip;
         private RenderTexture runtimeBlur;
         private bool wakingReveal;
         private CanvasGroup alarmControls, watchControls;
@@ -66,7 +68,9 @@ namespace Rokas.Presentation
         private AudioClip sitOnBedClip, settlingToSleepClip, recordedWakeClip;
         // Black-screen time is cinematic time only. The approved save logic
         // still advances the chosen 1-12 in-game hours once, not in real time.
-        private const float RestingInDarkSeconds = 18f;
+        // User-approved dream is ONE short 7s sequence, not 3 repeated
+        // cycles (old V4 kept the source 7.2s loop running for ~22 seconds).
+        private const float RestingInDarkSeconds = 5.25f;
         private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
@@ -624,7 +628,22 @@ namespace Rokas.Presentation
             eyeAperture = new RokasSleepEyeAperture(root);
             if (topEyelid != null) topEyelid.enabled = false;
             if (bottomEyelid != null) bottomEyelid.enabled = false;
-            keikoDream = new RokasKeikoDreamLoop(root); // on top, fades to zero
+            keikoDream = new RokasKeikoDreamLoop(root); // hidden until sleeping
+            // Independent streaming-audio fallback: Unity VideoPlayer sometimes
+            // renders the clip while losing its embedded AAC audio on Windows.
+            // This is the exact user-supplied video's looped soundtrack, not a
+            // generated chime. Dedicated source avoids muting with rain/BGM.
+            keikoDreamClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/KeikoDreamAudio");
+            if (keikoDreamClip != null)
+            {
+                keikoDreamAudio = root.gameObject.AddComponent<AudioSource>();
+                keikoDreamAudio.playOnAwake = false;
+                keikoDreamAudio.loop = true;
+                keikoDreamAudio.spatialBlend = 0f;
+                keikoDreamAudio.volume = 0f;
+                keikoDreamAudio.clip = keikoDreamClip;
+            }
             SetEyelids(0f);
 
             audio = root.gameObject.AddComponent<AudioSource>();
@@ -658,11 +677,14 @@ namespace Rokas.Presentation
             // Cinematic slow ease: completely occlude the room before
             // swapping to ceiling POV, then gently reveal bed framing.
             // Preserve the original hub click and existing camera/scene.
-            yield return FadeCurtain(0f, 1f, .96f);
+            // Curtain must render ON TOP of the authored room, video and eye
+            // overlays, otherwise it looks like a hard cut on first bed click.
+            if (curtain != null) curtain.transform.SetAsLastSibling();
+            yield return FadeCurtain(0f, 1f, 1.25f);
             if (cancelRequested) yield break;
-            yield return Wait(.10f);
+            yield return Wait(.16f);
             lyingPov.color = Color.white;
-            yield return FadeCurtain(1f, 0f, 1.08f);
+            yield return FadeCurtain(1f, 0f, 1.25f);
 
             state = State.LyingViewActive;
             yield return Wait(.35f);
@@ -752,6 +774,7 @@ namespace Rokas.Presentation
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
             state = State.EyesClose;
+            if (eyeAperture != null) eyeAperture.BringToFront();
             backgroundAudio?.SetBedSleepMusicDucking(true);
             // Sound when sleep is the player's natural settling/yawn. Trigger
             // ONCE at the start of lying down; not on a watch UI button.
@@ -790,10 +813,22 @@ namespace Rokas.Presentation
             if (keikoDream != null && keikoDream.Available)
             {
                 yield return keikoDream.AwaitPrepared(2.5f);
-                keikoDream.SetAudioMix(backgroundAudio != null &&
-                    backgroundAudio.VnMuted ? 0f :
-                    (backgroundAudio != null ? backgroundAudio.VideoVolume * .65f : .42f));
+                // Prefer original separately imported soundtrack: video
+                // decoder remains visual-only and cannot silently drop audio.
+                bool dedicatedAudio = keikoDreamAudio != null;
+                keikoDream.SetAudioMix(dedicatedAudio ? 0f :
+                    (backgroundAudio != null && backgroundAudio.VnMuted ? 0f :
+                    (backgroundAudio != null ? backgroundAudio.VideoVolume * .8f : .55f)));
                 dreamPlaying = keikoDream.Begin();
+                if (dreamPlaying)
+                {
+                    keikoDream.BringToFront();
+                    if (dedicatedAudio)
+                    {
+                        keikoDreamAudio.time = 0f;
+                        keikoDreamAudio.Play();
+                    }
+                }
             }
             Debug.Log("[ROKAS DREAM V5] Video asset " +
                 (keikoDream != null && keikoDream.Available ? "loaded" : "missing/failed") +
@@ -804,12 +839,19 @@ namespace Rokas.Presentation
             {
                 // Slow dissolve into the authored dreaming animation;
                 // sound follows the SAME curve for clean, seamless entry.
-                yield return FadeDream(0f, 1f, 2.1f);
+                // Total dream screen time 0.9 + 5.25 + 0.9 = 7.05s,
+                // enough for all supplied thought clouds once.
+                yield return FadeDream(0f, 1f, .90f);
                 yield return Wait(RestingInDarkSeconds);
-                yield return FadeDream(1f, 0f, 2.0f);
+                yield return FadeDream(1f, 0f, .90f);
+                if (keikoDreamAudio != null) keikoDreamAudio.Stop();
                 keikoDream.End();
             }
             else yield return Wait(RestingInDarkSeconds);
+            // Important: the DREAM is layered on top of eye closure. Bring
+            // the translucent two-oval eye mask over the ceiling BEFORE
+            // sounding the real alarm and opening Keiko's eyes.
+            if (eyeAperture != null) eyeAperture.BringToFront();
             AudioClip wakeCue = null;
             bool generatedWakeCue = false;
             if (alarmEnabled && audio != null)
@@ -856,9 +898,19 @@ namespace Rokas.Presentation
             {
                 keikoDream.Alpha = Mathf.Lerp(from,to,
                     CinematicEase(Mathf.Clamp01(t/duration)));
+                if (keikoDreamAudio != null)
+                    keikoDreamAudio.volume = keikoDream.Alpha *
+                        (backgroundAudio != null && backgroundAudio.VnMuted ?
+                        0f : (backgroundAudio != null ?
+                        backgroundAudio.VideoVolume * .82f : .55f));
                 yield return null;
             }
             keikoDream.Alpha = to;
+            if (keikoDreamAudio != null)
+                keikoDreamAudio.volume = to *
+                    (backgroundAudio != null && backgroundAudio.VnMuted ?
+                    0f : (backgroundAudio != null ?
+                    backgroundAudio.VideoVolume * .82f : .55f));
         }
 
         private void PlayAuthoredFoley(AudioClip clip, float gain)
@@ -1065,6 +1117,9 @@ namespace Rokas.Presentation
         {
             if (curtain != null)
             {
+                // Real opaque black transition on rising, not just an
+                // immediate visual swap hidden behind the eyelid mask.
+                curtain.transform.SetAsLastSibling();
                 float start = curtain.color.a;
                 yield return FadeCurtain(start, 1f, .94f);
             }
@@ -1110,6 +1165,12 @@ namespace Rokas.Presentation
             // Always restore real background music even if the player
             // cancelled mid-sleep or video decoding failed.
             backgroundAudio?.SetBedSleepMusicDucking(false);
+            if (keikoDreamAudio != null)
+            {
+                keikoDreamAudio.Stop();
+                keikoDreamAudio = null; // root owns the component
+            }
+            keikoDreamClip = null; // Resources-owned, don't destroy
             if (keikoDream != null) { keikoDream.Dispose(); keikoDream = null; }
             if (eyeAperture != null) { eyeAperture.Dispose(); eyeAperture = null; }
             if (runtimeBlur != null)
