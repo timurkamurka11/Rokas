@@ -355,14 +355,10 @@ namespace Rokas.Presentation
             if (watchFocus) focusAnchorCaptured = false;
             if (focusButton != null)
             {
-                var authored = focusButton.GetComponent<RokasBedAuthoredActionButton>();
-                if (authored != null) authored.SetReturnToHand(watchFocus);
-                else
-                {
-                    var label = focusButton.GetComponentInChildren<Text>(true);
-                    if (label != null) label.text = watchFocus
-                        ? "ВЕРНУТЬСЯ К РУКЕ" : "НАСТРОИТЬ ВРЕМЯ";
-                }
+                // Keep the SAME source-authored gold image and one toggle
+                // action. No caption, blue panel, or secondary return button.
+                var caption = focusButton.transform.Find("Title");
+                if (caption != null) caption.gameObject.SetActive(false);
             }
             PlayTick();
         }
@@ -577,7 +573,8 @@ namespace Rokas.Presentation
                 focusButton = ui.Button(watchControls.transform,
                     "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
                     784, 925, 352, 117, ToggleWatchFocus, true);
-                focusButton.gameObject.AddComponent<RokasBedWatchFocusButton>();
+                // Legacy focus feedback paints a blue rectangle over the
+                // user's authored gold PNG. Only the new gold hover remains.
                 RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
             }
 
