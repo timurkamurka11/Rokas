@@ -95,6 +95,11 @@ namespace Rokas.Presentation
         private void PrepareRuntime(string saveDirectory)
         {
             if (Session != null) return;
+            // One presentation-only Keiko hand cursor router for the entire
+            // game, including Hub, laptop, bed, combat UI and menu.
+            // No changes to input gameplay or existing hover feedback.
+            if (GetComponent<RokasCursorPackRuntime>() == null)
+                gameObject.AddComponent<RokasCursorPackRuntime>();
             EnsureVideoPresenter();
             var assets = Resources.Load<RokasAssets>("RokasAssets");
             if (!assets || !assets.IsComplete())
