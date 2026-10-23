@@ -66,6 +66,13 @@ namespace Rokas.Presentation
             image.sprite = sprite;
             image.preserveAspect = true;
             image.raycastTarget = false;
+            // Keep the PNG itself at its authored ratio even when another
+            // UI scale setting changes the parent button's rectangle.
+            var fitter = imageGo.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = texture.width / (float)texture.height;
+            var oldBlue = button.GetComponent<RokasBedWatchFocusButton>();
+            if (oldBlue != null) oldBlue.enabled = false;
             var feedback = button.gameObject.AddComponent<RokasBedAuthoredActionButton>();
             feedback.Initialize(button, image, sprite);
             return true;
@@ -99,7 +106,9 @@ namespace Rokas.Presentation
             bool active = action.IsInteractable() && (hovering || selected);
             blend = Mathf.Lerp(blend, active ? 1f : 0f, k);
             float pressScale = pressing ? .975f : 1f;
-            float scale = Mathf.Lerp(1f, 1.052f, blend) * pressScale;
+            // Visibly readable gold PNG hover like the laptop buttons:
+            // 8% lift/scale, restrained authored-glow emphasis.
+            float scale = Mathf.Lerp(1f, 1.082f, blend) * pressScale;
             rect.localScale = Vector3.Lerp(rect.localScale,
                 restScale * scale, k);
             rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition,
