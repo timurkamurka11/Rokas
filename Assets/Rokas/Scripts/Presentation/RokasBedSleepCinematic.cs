@@ -42,7 +42,7 @@ namespace Rokas.Presentation
         private RectTransform root;
         private RawImage lyingPov, armPov, blurredPov, real3DArmPov;
         private RokasBedSleepProductionRigBridge productionRig;
-        private Image curtain, topEyelid, bottomEyelid;
+        private Image curtain, topEyelid, bottomEyelid, entryCurtain;
         private RokasKeikoDreamLoop keikoDream;
         private RokasSleepEyeAperture eyeAperture;
         private AudioSource keikoDreamAudio;
@@ -139,14 +139,19 @@ namespace Rokas.Presentation
             startDay = session.State.hubSleepInitialized
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
-            BuildOverlay();
+            // Create ONLY a lightweight black curtain immediately at click.
+            // Heavy presentation/3D rig setup happens BEHIND it, not before
+            // the player sees the transition begin.
+            entryCurtain = ui.Box(layer,
+                "ROKAS_Instant_BedEntry_BlackCurtain", 0, 0,
+                1920, 1080, new Color(.008f,.013f,.021f,0f), false);
+            entryCurtain.transform.SetAsLastSibling();
             // Do NOT lower music or rain when the player merely sits down.
             // They remain audible during clock setup and start fading only
             // after the player confirms the alarm and begins lying down.
             backgroundAudio?.SetBedSleepMusicDucking(false);
             // This replaces the generic hub button click: play exactly once
             // after the bed-trigger state has been accepted.
-            PlayAuthoredFoley(sitOnBedClip, .88f);
             sequence = runner.StartCoroutine(Play());
         }
 
@@ -677,19 +682,21 @@ namespace Rokas.Presentation
         private IEnumerator Play()
         {
             state = State.TransitionIn;
-            // Cinematic slow ease: completely occlude the room before
-            // swapping to ceiling POV, then gently reveal bed framing.
-            // Preserve the original hub click and existing camera/scene.
-            // Curtain must render ON TOP of the authored room, video and eye
-            // overlays, otherwise it looks like a hard cut on first bed click.
-            if (curtain != null) curtain.transform.SetAsLastSibling();
-            // The room fades quickly, but never flashes to the ceiling.
-            // Previous 1.25s + 1.25s was perceived as slow/laggy.
-            yield return FadeCurtain(0f, 1f, .62f);
+            // Immediate fade starts BEFORE the expensive production watch,
+            // video and editor sources are constructed.
+            yield return FadeEntryCurtain(0f, 1f, .55f);
             if (cancelRequested) yield break;
-            yield return Wait(.10f);
-            lyingPov.color = Color.white;
-            yield return FadeCurtain(1f, 0f, .68f);
+            BuildOverlay();
+            PlayAuthoredFoley(sitOnBedClip, .88f);
+            if (entryCurtain != null)
+                entryCurtain.transform.SetAsLastSibling();
+            if (lyingPov != null) lyingPov.color = Color.white;
+            yield return FadeEntryCurtain(1f, 0f, .62f);
+            if (entryCurtain != null)
+            {
+                UnityEngine.Object.Destroy(entryCurtain.gameObject);
+                entryCurtain = null;
+            }
 
             state = State.LyingViewActive;
             yield return Wait(.10f);
@@ -854,6 +861,9 @@ namespace Rokas.Presentation
                 keikoDream.End();
             }
             else yield return Wait(RestingInDarkSeconds);
+            // Let the completely closed eyelids stay black for a beat AFTER
+            // Keiko's final cloud disappears, BEFORE the alarm rings.
+            yield return Wait(.85f);
             // Important: the DREAM is layered on top of eye closure. Bring
             // the translucent two-oval eye mask over the ceiling BEFORE
             // sounding the real alarm and opening Keiko's eyes.
@@ -987,6 +997,24 @@ namespace Rokas.Presentation
             // Avoid the visible snap of the previous short 0.6-second fade.
             t = Mathf.Clamp01(t);
             return t * t * t * (t * (t * 6f - 15f) + 10f);
+        }
+
+        private IEnumerator FadeEntryCurtain(float from, float to,
+            float duration)
+        {
+            if (entryCurtain == null) yield break;
+            for (float t = 0f; t < duration;
+                t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                if (entryCurtain == null) yield break;
+                entryCurtain.color = new Color(.008f, .013f, .021f,
+                    Mathf.Lerp(from, to,
+                        CinematicEase(Mathf.Clamp01(t/duration))));
+                yield return null;
+            }
+            if (entryCurtain != null)
+                entryCurtain.color =
+                    new Color(.008f,.013f,.021f,to);
         }
 
         private IEnumerator FadeCurtain(float from, float to, float duration)
@@ -1159,6 +1187,11 @@ namespace Rokas.Presentation
         {
             // The original bed root is destroyed below. Duplicate ONLY a
             // transient black rectangle ABOVE it, then reveal restored home.
+            if (entryCurtain != null)
+            {
+                UnityEngine.Object.Destroy(entryCurtain.gameObject);
+                entryCurtain = null;
+            }
             // This independent overlay survives the bed-root destruction.
             if (crossfadeToHub && layer != null && runner != null)
             {
