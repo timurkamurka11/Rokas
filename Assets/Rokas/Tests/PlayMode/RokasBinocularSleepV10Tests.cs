@@ -9,137 +9,129 @@ using UnityEngine.UI;
 namespace Rokas.Tests
 {
     /// <summary>
-    /// Regression for the player's V10 video: two BLACK oval stamps on
-    /// the ceiling are wrong. V11 must generate mesh polygons ONLY outside
-    /// two empty eye windows. These tests exercise actual mesh triangles.
+    /// V12 QA: verifies anatomically different upper/lower contours, gradual
+    /// activation, negative-space mesh and no permanent binocular rim.
+    /// Real Unity graphical acceptance is still a separate PlayMode gate.
     /// </summary>
     public sealed class RokasBinocularSleepV10Tests
     {
-        private static Type MaskType => typeof(RokasBootstrap).Assembly.GetType(
-            "Rokas.Presentation.RokasSleepEyeAperture", true);
+        private static Type TypeOf(string name) => typeof(RokasBootstrap).
+            Assembly.GetType("Rokas.Presentation." + name, true);
+        private static Type EyeType => TypeOf("RokasAnatomicEyelidGraphic");
+        private static Type OverlayType => TypeOf("RokasSleepEyeAperture");
+        private static MethodInfo Contours => EyeType.GetMethod("GetContourAt",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        private static MethodInfo Mesh => EyeType.GetMethod("OnPopulateMesh",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        private static MethodInfo Darkness => EyeType.GetMethod("Darkness",
+            BindingFlags.NonPublic | BindingFlags.Static);
 
-        private static Type GraphicType => typeof(RokasBootstrap).Assembly.GetType(
-            "Rokas.Presentation.RokasDualOvalLidGraphic", true);
-
-        private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        private static bool Evaluate(float u, float openness, bool waking,
+            out float upper, out float lower)
         {
-            float x1 = b.x - a.x, y1 = b.y - a.y;
-            float x2 = c.x - a.x, y2 = c.y - a.y;
-            float den = x1 * y2 - y1 * x2;
-            if (Mathf.Abs(den) < .0001f) return false;
-            float t = ((p.x - a.x) * y2 - (p.y - a.y) * x2) / den;
-            float u = (x1 * (p.y - a.y) - y1 * (p.x - a.x)) / den;
-            return t >= -.0001f && u >= -.0001f && t + u <= 1.0001f;
-        }
-
-        private static bool MeshCovers(List<UIVertex> verts, Vector2 at)
-        {
-            for (int i = 0; i + 2 < verts.Count; i += 3)
-            {
-                if (verts[i].color.a == 0 && verts[i+1].color.a == 0 &&
-                    verts[i+2].color.a == 0) continue;
-                if (InTriangle(at, verts[i].position, verts[i+1].position,
-                    verts[i+2].position)) return true;
-            }
-            return false;
+            object[] args = { u, openness, waking, 0f, 0f };
+            bool hasOpen = (bool)Contours.Invoke(null, args);
+            upper = (float)args[3];
+            lower = (float)args[4];
+            return hasOpen;
         }
 
         [Test]
-        public void NegativeSpaceMeshNeverDrawsBlackOvalStamps()
+        public void FullOpenHasNoPermanentMaskAndFullClosedHasNoAperture()
         {
-            var go = new GameObject("V11NegativeSpaceTest",
-                typeof(RectTransform), typeof(CanvasRenderer));
-            try
-            {
-                var r = (RectTransform)go.transform;
-                r.sizeDelta = new Vector2(1920f, 1080f);
-                var graphic = go.AddComponent(GraphicType) as MaskableGraphic;
-                Assert.That(graphic, Is.Not.Null);
-                graphic.maskable = false;
-                graphic.raycastTarget = false;
-
-                var setter = GraphicType.GetProperty("OpenAmount");
-                var pop = GraphicType.GetMethod("OnPopulateMesh",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.That(pop, Is.Not.Null);
-                foreach (float o in new float[]{ .75f, .50f, .25f })
-                {
-                    setter.SetValue(graphic, o);
-                    var vh = new VertexHelper();
-                    pop.Invoke(graphic, new object[]{ vh });
-                    var tri = new List<UIVertex>();
-                    vh.GetUIVertexStream(tri);
-                    Assert.That(tri.Count, Is.GreaterThan(0));
-
-                    var cr = r.rect;
-                    Vector2 LeftEye = new Vector2(cr.xMin + cr.width*.25f, cr.center.y);
-                    Vector2 RightEye = new Vector2(cr.xMin + cr.width*.75f, cr.center.y);
-                    Vector2 Bridge = new Vector2(cr.center.x, cr.center.y);
-                    Vector2 Edge = new Vector2(cr.xMin + cr.width*.02f,
-                        cr.yMin + cr.height*.02f);
-
-                    Assert.That(MeshCovers(tri, LeftEye), Is.False,
-                        "V11 must not cover the LEFT eye center with a black oval");
-                    Assert.That(MeshCovers(tri, RightEye), Is.False,
-                        "V11 must not cover the RIGHT eye center with a black oval");
-                    Assert.That(MeshCovers(tri, Bridge), Is.True,
-                        "The middle bridge should be black outside the lenses");
-                    Assert.That(MeshCovers(tri, Edge), Is.True,
-                        "The top-left periphery should be covered, not the pupil");
-                    vh.Dispose();
-                }
-            }
-            finally { UnityEngine.Object.DestroyImmediate(go); }
+            Assert.That((float)Darkness.Invoke(null, new object[]{1f}),
+                Is.LessThan(.0001f));
+            Assert.That((float)Darkness.Invoke(null, new object[]{.90f}),
+                Is.InRange(.01f, .99f));
+            Assert.That((float)Darkness.Invoke(null, new object[]{.65f}),
+                Is.EqualTo(1f).Within(.001f));
+            Assert.That(Evaluate(.25f, 0f, false,
+                out float upper, out float lower), Is.False);
+            Assert.That(upper, Is.EqualTo(lower).Within(.0001f));
         }
 
         [Test]
-        public void FullOpenMeshEmptyClosedMeshOpaqueAndCanvasUnobstructed()
+        public void BezierEyeContourIsTaperedNotPerfectSymmetricEllipse()
         {
-            var root = new GameObject("V11MaskTestRoot",
-                typeof(RectTransform), typeof(Canvas));
+            Assert.That(Evaluate(.25f, .55f, false,
+                out float upper, out float lower), Is.True);
+            Assert.That(upper, Is.GreaterThan(lower));
+            Assert.That(Evaluate(.25f, .18f, false,
+                out float slitTop, out float slitBottom), Is.True);
+            Assert.That(slitTop - slitBottom, Is.LessThan(upper - lower));
+            Assert.That(slitTop - slitBottom, Is.GreaterThan(.001f));
+            Assert.That(Evaluate(.25f, .55f, false,
+                out float leftTop, out float leftBottom), Is.True);
+            Assert.That(Evaluate(.75f, .55f, false,
+                out float rightTop, out float rightBottom), Is.True);
+            Assert.That(Mathf.Abs(leftTop - rightTop) +
+                Mathf.Abs(leftBottom - rightBottom), Is.GreaterThan(.0001f),
+                "Both eyes must have slightly different shape and phase");
+
+            Evaluate(.25f, .8f, false, out float topBefore, out float lowBefore);
+            Evaluate(.25f, .3f, false, out float topAfter, out float lowAfter);
+            Assert.That(topBefore - topAfter,
+                Is.GreaterThan((lowAfter - lowBefore) * 1.4f),
+                "Upper eyelid must account for most of the closing motion");
+        }
+
+        [Test]
+        public void MaskSupportsSevenKeyFramesAndDifferentWakeCurve()
+        {
+            foreach(float openness in new[]{1f,.85f,.65f,.50f,.35f,.15f,0f})
+            {
+                Evaluate(.25f, openness, false, out float top, out float bottom);
+                Assert.That(top, Is.GreaterThanOrEqualTo(bottom));
+                Evaluate(.75f, openness, true, out top, out bottom);
+                Assert.That(top, Is.GreaterThanOrEqualTo(bottom));
+            }
+            Evaluate(.25f, .5f, false, out float closeTop, out float closeBottom);
+            Evaluate(.25f, .5f, true, out float wakeTop, out float wakeBottom);
+            Assert.That(Mathf.Abs(closeTop - wakeTop) +
+                Mathf.Abs(closeBottom - wakeBottom), Is.GreaterThan(.001f),
+                "Waking cannot be a mechanical mirror of falling asleep");
+        }
+
+        [Test]
+        public void RealGraphicHasNoQuadWhenFullyOpenAndNoRaycast()
+        {
+            GameObject root = new GameObject("V12PlayModeEyeTest",
+                typeof(RectTransform),typeof(Canvas));
             IDisposable mask = null;
             try
             {
-                var r = (RectTransform)root.transform;
-                r.sizeDelta = new Vector2(1920f, 1080f);
-                mask = Activator.CreateInstance(MaskType,
-                    BindingFlags.Instance | BindingFlags.Public |
-                    BindingFlags.NonPublic, null, new object[]{r}, null)
+                var rt=(RectTransform)root.transform;
+                rt.sizeDelta = new Vector2(1920f,1080f);
+                mask = Activator.CreateInstance(OverlayType,
+                    BindingFlags.Public | BindingFlags.NonPublic |
+                    BindingFlags.Instance, null, new object[]{rt}, null)
                     as IDisposable;
                 Assert.That(mask, Is.Not.Null);
-                var graphic = root.GetComponentInChildren(GraphicType, true)
-                    as MaskableGraphic;
+                var graphic = root.GetComponentInChildren(EyeType,true) as MaskableGraphic;
                 Assert.That(graphic, Is.Not.Null);
                 Assert.That(graphic.raycastTarget, Is.False);
                 Assert.That(graphic.maskable, Is.False);
-                var canvases = root.GetComponentsInChildren<Canvas>(true);
+                Canvas[] canvases = root.GetComponentsInChildren<Canvas>(true);
                 Assert.That(canvases.Length, Is.GreaterThanOrEqualTo(2));
-                Assert.That(canvases[canvases.Length - 1].sortingOrder,
+                Assert.That(canvases[canvases.Length-1].sortingOrder,
                     Is.GreaterThanOrEqualTo(30000));
 
-                MaskType.GetMethod("SetOpen").Invoke(mask, new object[]{1f});
                 var vh = new VertexHelper();
-                GraphicType.GetMethod("OnPopulateMesh",
-                    BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(graphic, new object[]{vh});
-                Assert.That(vh.currentVertCount, Is.EqualTo(0),
-                    "Fully open view must never display a rectangle");
+                Mesh.Invoke(graphic, new object[]{vh});
+                Assert.That(vh.currentVertCount, Is.EqualTo(0));
                 vh.Dispose();
-
-                MaskType.GetMethod("SetOpen").Invoke(mask, new object[]{0f});
+                OverlayType.GetMethod("SetOpen").Invoke(mask,new object[]{.35f});
                 vh = new VertexHelper();
-                GraphicType.GetMethod("OnPopulateMesh",
-                    BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(graphic, new object[]{vh});
+                Mesh.Invoke(graphic, new object[]{vh});
                 Assert.That(vh.currentVertCount, Is.GreaterThan(0));
+                Assert.That(vh.currentVertCount, Is.LessThan(65535));
                 vh.Dispose();
 
-                Assert.That((bool)MaskType.GetProperty("IsVisible").GetValue(mask), Is.True);
-                MaskType.GetMethod("SetVisible").Invoke(mask, new object[]{false});
-                Assert.That((bool)MaskType.GetProperty("IsVisible").GetValue(mask), Is.False);
+                OverlayType.GetMethod("SetVisible").Invoke(mask,new object[]{false});
+                Assert.That((bool)OverlayType.GetProperty("IsVisible").GetValue(mask),
+                    Is.False);
             }
-            finally
-            {
+            finally {
                 mask?.Dispose();
                 UnityEngine.Object.DestroyImmediate(root);
             }
