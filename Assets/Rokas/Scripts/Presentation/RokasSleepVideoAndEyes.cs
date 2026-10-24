@@ -163,124 +163,159 @@ namespace Rokas.Presentation
     }
 
     /// <summary>
-    /// V11: Real negative-space binocular eyelids. Black geometry is drawn
-    /// ONLY OUTSIDE two transparent eye windows; nothing can be painted into
-    /// the openings. Replaces V7-V10 texture-alpha masks, avoiding the
-    /// inverted black ellipses visible in the player's 25-Oct recording.
+    /// V12 first-person human eyelids. Independent upper/lower asymmetric
+    /// cubic-Bezier contours. Black geometry is ONLY outside the visible
+    /// eye field, initially continuous and separating into tapered slits
+    /// late in closure. No textures, inverted alpha or binocular circles.
     /// </summary>
-    internal sealed class RokasDualOvalLidGraphic : MaskableGraphic
+    internal sealed class RokasAnatomicEyelidGraphic : MaskableGraphic
     {
-        private const int HorizontalBands = 288;
-        private float openAmount = 1f;
+        private const int Columns = 512;
+        private float openness = 1f;
+        private bool waking;
 
         public float OpenAmount
         {
-            get { return openAmount; }
-            set
-            {
-                float next = Mathf.Clamp01(value);
-                if (Mathf.Abs(openAmount - next) < .0005f) return;
-                openAmount = next;
+            get { return openness; }
+            set {
+                float clamped = Mathf.Clamp01(value);
+                if (Mathf.Abs(clamped - openness) < .0001f) return;
+                openness = clamped;
                 SetVerticesDirty();
             }
         }
 
-        // Dark contour fades in, rather than abruptly appearing at open=0.99.
-        internal static float Darkness(float open)
+        public void SetWaking(bool value)
         {
-            float t = Mathf.Clamp01((1f - Mathf.Clamp01(open)) / .28f);
+            if (waking == value) return;
+            waking = value;
+            SetVerticesDirty();
+        }
+
+        private static float Ease(float t)
+        {
+            t = Mathf.Clamp01(t);
             return t * t * (3f - 2f * t);
         }
 
-        internal static float RelativeHalfHeight(float open)
+        private static float Bezier(float t, float c1, float c2)
         {
-            return .53f * Mathf.Pow(Mathf.Clamp01(open), 1.16f);
+            float q = 1f - t;
+            return 3f * q * q * t * c1 + 3f * q * t * t * c2;
         }
 
-        internal static float RelativeHalfWidth(float open)
+        internal static float Darkness(float open)
         {
-            return Mathf.Lerp(.212f, .242f, Mathf.Clamp01(open * 3f));
+            return Ease((1f - Mathf.Clamp01(open)) / .17f);
         }
 
-        internal static bool InsideWindow(float u, float v, float open)
+        private static bool EyeContour(float x, float closure, bool right,
+            bool waking, out float upper, out float lower)
         {
-            float ry = RelativeHalfHeight(open);
-            if (ry < .0001f) return false;
-            float y = (v - .5f) / ry;
-            if (Mathf.Abs(y) >= 1f) return false;
-            float rx = RelativeHalfWidth(open);
-            float left = (u - .25f) / rx;
-            float right = (u - .75f) / rx;
-            return left * left + y * y < 1f ||
-                   right * right + y * y < 1f;
+            upper = lower = .415f;
+            float lag = right ? (waking ? .022f : .030f) : 0f;
+            float c = Mathf.Clamp01((closure - lag) / (1f - lag));
+            float halfWidth = Mathf.Lerp(.222f, .316f,
+                Ease(Mathf.Clamp01((1f - c) / .76f)));
+            float centerX = right ? .750f : .250f;
+            float t = (x - (centerX - halfWidth)) / (2f * halfWidth);
+            if (t <= 0f || t >= 1f) return false;
+
+            // Different independent Bezier upper/lower arches, both tapered
+            // to a real canthus rather than semicircle ends.
+            float topArch = Bezier(t, right ? 1.20f : 1.30f,
+                right ? 1.02f : .92f) / .83f;
+            float bottomArch = Bezier(t, right ? .85f : .72f,
+                right ? .83f : 1.02f) / .69f;
+            // Upper lid carries ~75% of the movement, lower follows gently.
+            float upperMotion = Mathf.Pow(c, waking ? .93f : .79f);
+            float lowerMotion = Mathf.Pow(c, waking ? 1.19f : 1.36f);
+            float tilt = (right ? -.006f : .008f) * (2f * t - 1f) *
+                Mathf.Sin(Mathf.PI * t) * (1f - c);
+            upper = .415f + .555f * (1f - upperMotion) * topArch + tilt;
+            lower = .415f - .205f * (1f - lowerMotion) * bottomArch + tilt;
+            return upper > lower;
+        }
+
+        internal static bool GetContourAt(float x, float open, bool waking,
+            out float upper, out float lower)
+        {
+            float closure = 1f - Mathf.Clamp01(open);
+            bool left = EyeContour(x, closure, false, waking,
+                out float lu, out float ll);
+            bool right = EyeContour(x, closure, true, waking,
+                out float ru, out float rl);
+            if (!left && !right) {
+                upper = lower = .415f;
+                return false;
+            }
+            upper = left ? lu : ru;
+            lower = left ? ll : rl;
+            if (right) {
+                upper = Mathf.Max(upper, ru);
+                lower = Mathf.Min(lower, rl);
+            }
+            return upper - lower > .0001f;
         }
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            float darkness = Darkness(openAmount);
-            if (darkness <= .0001f) return;
-
-            Rect rect = GetPixelAdjustedRect();
-            if (rect.width <= 0f || rect.height <= 0f) return;
-            float halfWidth = RelativeHalfWidth(openAmount) * rect.width;
-            float halfHeight = RelativeHalfHeight(openAmount) * rect.height;
-            float centerY = rect.center.y;
-            float cxL = rect.xMin + rect.width * .25f;
-            float cxR = rect.xMin + rect.width * .75f;
-            float feather = Mathf.Max(1.5f, rect.width * .00125f);
-            byte dark = (byte)Mathf.RoundToInt(darkness * 255f);
-
-            // ONLY opaque strips outside the apertures are triangulated.
-            for (int row = 0; row < HorizontalBands; row++)
+            float darkness = Darkness(openness);
+            if (darkness < .0001f) return;
+            Rect r = GetPixelAdjustedRect();
+            if (r.width <= 0f || r.height <= 0f) return;
+            byte opaque = (byte)Mathf.RoundToInt(darkness * 255f);
+            float feather = Mathf.Max(.0015f, 2.5f / Mathf.Max(480f, r.height)) * r.height;
+            // 512 columns and four quad strips: smooth 1080p contours.
+            // The clear region has NO geometry, so negative-space cannot invert.
+            for (int i = 0; i < 512; ++i)
             {
-                float y0 = Mathf.Lerp(rect.yMin, rect.yMax,
-                    row / (float)HorizontalBands);
-                float y1 = Mathf.Lerp(rect.yMin, rect.yMax,
-                    (row + 1f) / HorizontalBands);
-                float ym = .5f * (y0 + y1);
-                float yNorm = halfHeight > .0001f ?
-                    (ym - centerY) / halfHeight : 99f;
-                if (Mathf.Abs(yNorm) >= 1f)
-                {
-                    AddQuad(vh, rect.xMin, rect.xMax, y0, y1,
-                        dark, dark);
+                float u0 = i / 512f;
+                float u1 = (i + 1f) / 512f;
+                bool open0 = GetContourAt(u0, openness, waking, out float a0, out float b0);
+                bool open1 = GetContourAt(u1, openness, waking, out float a1, out float b1);
+                float x0 = r.xMin + u0 * r.width;
+                float x1 = r.xMin + u1 * r.width;
+                if (!open0 && !open1) {
+                    AddQuad(vh, x0, x1, r.yMin, r.yMin, r.yMax, r.yMax,
+                        opaque, opaque);
                     continue;
                 }
-
-                float xRadius = halfWidth * Mathf.Sqrt(Mathf.Max(0f,
-                    1f - yNorm * yNorm));
-                float l0 = cxL - xRadius;
-                float l1 = cxL + xRadius;
-                float r0 = cxR - xRadius;
-                float r1 = cxR + xRadius;
-                // Feather alpha out at each of the four curved boundaries.
-                AddQuad(vh, rect.xMin, l0 - feather, y0, y1, dark, dark);
-                AddQuad(vh, l0 - feather, l0 + feather, y0, y1, dark, 0);
-                AddQuad(vh, l1 - feather, l1 + feather, y0, y1, 0, dark);
-                AddQuad(vh, l1 + feather, r0 - feather, y0, y1, dark, dark);
-                AddQuad(vh, r0 - feather, r0 + feather, y0, y1, dark, 0);
-                AddQuad(vh, r1 - feather, r1 + feather, y0, y1, 0, dark);
-                AddQuad(vh, r1 + feather, rect.xMax, y0, y1, dark, dark);
+                if (!open0) { a0 = b0 = .415f; }
+                if (!open1) { a1 = b1 = .415f; }
+                float upper0 = r.yMin + a0 * r.height;
+                float upper1 = r.yMin + a1 * r.height;
+                float lower0 = r.yMin + b0 * r.height;
+                float lower1 = r.yMin + b1 * r.height;
+                float edge0 = Mathf.Min(feather, Mathf.Max(0f,
+                    (upper0 - lower0) * .22f));
+                float edge1 = Mathf.Min(feather, Mathf.Max(0f,
+                    (upper1 - lower1) * .22f));
+                AddQuad(vh, x0, x1, r.yMin, r.yMin,
+                    lower0 - edge0, lower1 - edge1, opaque, opaque);
+                AddQuad(vh, x0, x1, lower0 - edge0, lower1 - edge1,
+                    lower0 + edge0, lower1 + edge1, opaque, 0);
+                AddQuad(vh, x0, x1, upper0 - edge0, upper1 - edge1,
+                    upper0 + edge0, upper1 + edge1, 0, opaque);
+                AddQuad(vh, x0, x1, upper0 + edge0, upper1 + edge1,
+                    r.yMax, r.yMax, opaque, opaque);
             }
         }
 
-        private static void AddQuad(VertexHelper vh, float left, float right,
-            float bottom, float top, byte alphaLeft, byte alphaRight)
+        private static void AddQuad(VertexHelper vh, float x0, float x1,
+            float yBottom0, float yBottom1, float yTop0, float yTop1,
+            byte bottomAlpha, byte topAlpha)
         {
-            if (right <= left) return;
+            if (x1 <= x0 || (yTop0 <= yBottom0 && yTop1 <= yBottom1)) return;
             int start = vh.currentVertCount;
-            var vl = UIVertex.simpleVert;
-            vl.color = new Color32(0, 0, 0, alphaLeft);
-            vl.position = new Vector3(left, bottom, 0f);
-            vh.AddVert(vl);
-            vl.position = new Vector3(left, top, 0f);
-            vh.AddVert(vl);
-            vl.color = new Color32(0, 0, 0, alphaRight);
-            vl.position = new Vector3(right, top, 0f);
-            vh.AddVert(vl);
-            vl.position = new Vector3(right, bottom, 0f);
-            vh.AddVert(vl);
+            UIVertex v = UIVertex.simpleVert;
+            v.color = new Color32(0, 0, 0, bottomAlpha);
+            v.position = new Vector3(x0, yBottom0, 0f); vh.AddVert(v);
+            v.position = new Vector3(x1, yBottom1, 0f); vh.AddVert(v);
+            v.color = new Color32(0, 0, 0, topAlpha);
+            v.position = new Vector3(x1, yTop1, 0f); vh.AddVert(v);
+            v.position = new Vector3(x0, yTop0, 0f); vh.AddVert(v);
             vh.AddTriangle(start, start + 1, start + 2);
             vh.AddTriangle(start, start + 2, start + 3);
         }
@@ -288,76 +323,55 @@ namespace Rokas.Presentation
 
     internal sealed class RokasSleepEyeAperture : IDisposable
     {
-        private readonly GameObject overlayCanvas;
-        private readonly RokasDualOvalLidGraphic graphic;
-        private bool midpointReported;
+        private readonly GameObject overlay;
+        private readonly RokasAnatomicEyelidGraphic graphic;
+        private bool reported;
 
         public RokasSleepEyeAperture(RectTransform root)
         {
-            overlayCanvas = new GameObject("ROKAS_V11_Real_Black_Eyelid_Cutout_Canvas",
+            overlay = new GameObject("ROKAS_V12_Natural_FirstPerson_Eyelids",
                 typeof(RectTransform), typeof(Canvas));
-            overlayCanvas.transform.SetParent(root, false);
-            var canvasRect = (RectTransform)overlayCanvas.transform;
-            canvasRect.anchorMin = Vector2.zero;
-            canvasRect.anchorMax = Vector2.one;
-            canvasRect.offsetMin = Vector2.zero;
-            canvasRect.offsetMax = Vector2.zero;
-            Canvas canvas = overlayCanvas.GetComponent<Canvas>();
+            overlay.transform.SetParent(root, false);
+            RectTransform panel = (RectTransform)overlay.transform;
+            panel.anchorMin = Vector2.zero;
+            panel.anchorMax = Vector2.one;
+            panel.offsetMin = panel.offsetMax = Vector2.zero;
+            Canvas canvas = overlay.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = 30000;
-
-            var image = new GameObject("ROKAS_V11_Two_Transparent_Eye_Windows",
+            var surface = new GameObject("ROKAS_V12_Bezier_UpperLower_Lids",
                 typeof(RectTransform), typeof(CanvasRenderer));
-            image.transform.SetParent(overlayCanvas.transform, false);
-            var r = (RectTransform)image.transform;
-            r.anchorMin = Vector2.zero;
-            r.anchorMax = Vector2.one;
-            r.offsetMin = Vector2.zero;
-            r.offsetMax = Vector2.zero;
-            graphic = image.AddComponent<RokasDualOvalLidGraphic>();
-            graphic.color = Color.white;
-            graphic.maskable = false;
+            surface.transform.SetParent(overlay.transform, false);
+            var rect = (RectTransform)surface.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            graphic = surface.AddComponent<RokasAnatomicEyelidGraphic>();
             graphic.raycastTarget = false;
+            graphic.maskable = false;
+            graphic.color = Color.white;
             graphic.OpenAmount = 1f;
-            Debug.Log("[ROKAS V11 EYES] Mesh-based negative-space " +
-                "binocular eyelids enabled; no alpha texture or rectangle fallback.");
         }
 
-        public void WarmupOneFrame() { } // No cached textures to build.
-        public void BringToFront()
-        {
-            if (overlayCanvas != null) overlayCanvas.transform.SetAsLastSibling();
-        }
-        public void SetVisible(bool visible)
-        {
-            if (graphic != null) graphic.enabled = visible;
-        }
-        public bool IsVisible
-        {
-            get
-            {
-                if (overlayCanvas == null || graphic == null) return false;
-                Canvas canvas = overlayCanvas.GetComponent<Canvas>();
-                return canvas != null && canvas.enabled && canvas.sortingOrder >= 30000 &&
-                    graphic.isActiveAndEnabled && overlayCanvas.activeInHierarchy;
+        public void WarmupOneFrame() { }
+        public void BringToFront() { if (overlay != null) overlay.transform.SetAsLastSibling(); }
+        public void SetVisible(bool visible) { if (graphic != null) graphic.enabled = visible; }
+        public void SetWaking(bool waking) { if (graphic != null) graphic.SetWaking(waking); }
+        public bool IsVisible {
+            get {
+                return overlay != null && overlay.activeInHierarchy && graphic != null &&
+                    graphic.isActiveAndEnabled && overlay.GetComponent<Canvas>().sortingOrder >= 30000;
             }
         }
-        public void SetOpen(float openness)
+        public void SetOpen(float open)
         {
             if (graphic == null) return;
-            graphic.OpenAmount = openness;
-            if (!midpointReported && openness > .35f && openness < .65f)
-            {
-                midpointReported = true;
-                Debug.Log("[ROKAS V11 EYES] Two clear eye windows: " +
-                    "open=" + openness.ToString("0.00") +
-                    " canvasVisible=" + IsVisible);
+            graphic.OpenAmount = open;
+            if (!reported && open > .35f && open < .65f) {
+                reported = true;
+                Debug.Log("[ROKAS V12 EYES] Organic contours active; visible=" + IsVisible);
             }
         }
-        public void Dispose()
-        {
-            if (overlayCanvas != null)
-                UnityEngine.Object.Destroy(overlayCanvas);
-        }
+        public void Dispose() { if (overlay != null) UnityEngine.Object.Destroy(overlay); }
     }
 }
