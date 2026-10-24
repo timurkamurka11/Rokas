@@ -474,22 +474,24 @@ namespace Rokas.Presentation
                 0, 0, 1920, 1080);
             // Begin in the untouched home view, then swap under darkness.
             lyingPov.color = new Color(1f, 1f, 1f, 0f);
-            // If the authored soft plate is missing, generate a very cheap
-            // low-resolution bilinear approximation ONCE, not each frame.
-            if (soft == null && ceiling != null)
+            // Build a stronger, but still subtle, wake-only defocus plate.
+            // This inexpensive 2-pass downsample runs ONCE behind the bed
+            // entry curtain, not during the 3D arm animation or each frame.
+            // The earlier soft photo was sometimes essentially sharp.
+            if (ceiling != null)
             {
-                RenderTexture down = RenderTexture.GetTemporary(96, 54, 0);
+                RenderTexture down = RenderTexture.GetTemporary(72, 40, 0);
                 down.filterMode = FilterMode.Bilinear;
                 runtimeBlur = new RenderTexture(256, 144, 0,
                     RenderTextureFormat.ARGB32);
                 runtimeBlur.filterMode = FilterMode.Bilinear;
                 runtimeBlur.Create();
-                Graphics.Blit(ceiling, down);
+                Graphics.Blit(soft != null ? (Texture)soft : ceiling, down);
                 Graphics.Blit(down, runtimeBlur);
                 RenderTexture.ReleaseTemporary(down);
             }
-            Texture blurredTexture = soft != null ?
-                (Texture)soft : (Texture)runtimeBlur;
+            Texture blurredTexture = runtimeBlur != null ?
+                (Texture)runtimeBlur : (Texture)soft;
             blurredPov = blurredTexture == null ? null :
                 ui.Art(root, "LyingCeilingPOV_SoftBlur",
                     blurredTexture, 0, 0, 1920, 1080);
@@ -911,13 +913,26 @@ namespace Rokas.Presentation
             }
             wakingReveal = true;
             if (blurredPov != null)
-                blurredPov.color = new Color(1f,1f,1f,.88f);
+                blurredPov.color = new Color(1f,1f,1f,.96f);
             // Make two curved half-oval openings visible with a blurred
             // ceiling beneath. A longer natural blink removes hard cuts.
             yield return FadeEyelids(1f, 0f, 3.10f);
             wakingReveal = false;
+            // Keep a faint defocus AFTER the eyelids finish opening, then
+            // regain focus gently. Do not snap the overlay to alpha=0.
             if (blurredPov != null)
+            {
+                const float settleTime = .90f;
+                for (float t = 0f; t < settleTime;
+                    t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+                {
+                    float remaining = 1f - CinematicEase(
+                        Mathf.Clamp01(t / settleTime));
+                    blurredPov.color = new Color(1f, 1f, 1f, .20f * remaining);
+                    yield return null;
+                }
                 blurredPov.color = new Color(1f,1f,1f,0f);
+            }
             if (generatedWakeCue && wakeCue != null)
                 UnityEngine.Object.Destroy(wakeCue);
             // The same mattress/fabric sample is heard once when sitting
@@ -925,11 +940,12 @@ namespace Rokas.Presentation
             PlayAuthoredFoley(sitOnBedClip, .88f);
             yield return Wait(sitOnBedClip != null ?
                 Mathf.Max(.9f, sitOnBedClip.length) : .9f);
-            // In first person Keiko blinks CLOSED again when getting out of
-            // bed: two real semioval lids, then a full black curtain before
-            // transitioning to the unaltered original Hub.
-            if (eyeAperture != null) eyeAperture.BringToFront();
-            yield return FadeEyelids(0f, 1f, 1.35f);
+            // One sleep closure, one awakening opening; NO third blink.
+            // Return to the hub using only its existing cinematic curtain.
+            // Disable the eye canvas before handoff so its outline cannot
+            // flash on top of the crossfade to the unchanged hub.
+            eyeAperture?.SetVisible(false);
+            lastEyeClosure = 0f;
             yield return ExitBedToHub();
         }
 
@@ -1078,8 +1094,12 @@ namespace Rokas.Presentation
                 if (wakingReveal && blurredPov != null)
                 {
                     float clear = 1f - amount;
-                    float blur = .88f * (1f-clear) * (1f-clear);
-                    blurredPov.color = new Color(1f,1f,1f,blur);
+                    // Mild-to-strong sleepy vision initially, retaining
+                    // a faint haze until the separate focus-settle phase.
+                    float blur = .96f * Mathf.Pow(amount, .60f) +
+                        .20f * (1f - amount);
+                    blurredPov.color = new Color(1f,1f,1f,
+                        Mathf.Clamp01(blur));
                 }
                 yield return null;
             }
