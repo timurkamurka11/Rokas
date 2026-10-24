@@ -528,7 +528,13 @@ namespace Rokas.BedSleep.V10Release
                 visibilityVelocity=0f;
             }
             SnapAndFrame();
+            // Full skinned-mesh BakeMesh + vertex-array comparison is a
+            // costly diagnostic, especially on the first hand raise. In V12
+            // it ran inside normal LateUpdate and caused frame-time spikes.
+            // Enable explicitly in a profiling/QA build if needed.
+#if ROKAS_FINGER_MOTION_DIAGNOSTICS
             ProbeFingerMeshMotion();
+#endif
         }
 
         private void ProbeFingerMeshMotion()
