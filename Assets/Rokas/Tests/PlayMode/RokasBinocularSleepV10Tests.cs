@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using Rokas.Presentation;
@@ -8,122 +9,139 @@ using UnityEngine.UI;
 namespace Rokas.Tests
 {
     /// <summary>
-    /// Prevent a regression to a single opaque fade or solid rectangular
-    /// eye shutters. Inspects the exact pixels used by the real runtime
-    /// Texture2D generation, without requiring a GPU/headless screenshot.
+    /// Regression for the player's V10 video: two BLACK oval stamps on
+    /// the ceiling are wrong. V11 must generate mesh polygons ONLY outside
+    /// two empty eye windows. These tests exercise actual mesh triangles.
     /// </summary>
     public sealed class RokasBinocularSleepV10Tests
     {
-        private static Type MaskType
+        private static Type MaskType => typeof(RokasBootstrap).Assembly.GetType(
+            "Rokas.Presentation.RokasSleepEyeAperture", true);
+
+        private static Type GraphicType => typeof(RokasBootstrap).Assembly.GetType(
+            "Rokas.Presentation.RokasDualOvalLidGraphic", true);
+
+        private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
         {
-            get
+            float x1 = b.x - a.x, y1 = b.y - a.y;
+            float x2 = c.x - a.x, y2 = c.y - a.y;
+            float den = x1 * y2 - y1 * x2;
+            if (Mathf.Abs(den) < .0001f) return false;
+            float t = ((p.x - a.x) * y2 - (p.y - a.y) * x2) / den;
+            float u = (x1 * (p.y - a.y) - y1 * (p.x - a.x)) / den;
+            return t >= -.0001f && u >= -.0001f && t + u <= 1.0001f;
+        }
+
+        private static bool MeshCovers(List<UIVertex> verts, Vector2 at)
+        {
+            for (int i = 0; i + 2 < verts.Count; i += 3)
             {
-                var type = typeof(RokasBootstrap).Assembly.GetType(
-                    "Rokas.Presentation.RokasSleepEyeAperture", false);
-                Assert.That(type, Is.Not.Null, "ROKAS binocular runtime missing");
-                return type;
+                if (verts[i].color.a == 0 && verts[i+1].color.a == 0 &&
+                    verts[i+2].color.a == 0) continue;
+                if (InTriangle(at, verts[i].position, verts[i+1].position,
+                    verts[i+2].position)) return true;
             }
-        }
-
-        private static Color32[] Frame(float openness)
-        {
-            var method = MaskType.GetMethod("RasterizeMask",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.That(method, Is.Not.Null,
-                "The production mask must offer its real CPU raster for QA");
-            var result = method.Invoke(null, new object[] { openness }) as Color32[];
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.Length, Is.EqualTo(320 * 180));
-            return result;
-        }
-
-        private static int Alpha(Color32[] pixels, float u, float v)
-        {
-            int x = Mathf.Clamp(Mathf.FloorToInt(u * 320), 0, 319);
-            int y = Mathf.Clamp(Mathf.FloorToInt(v * 180), 0, 179);
-            return pixels[y * 320 + x].a;
+            return false;
         }
 
         [Test]
-        public void TwoSeparateOvalOpeningsShrinkInHeightButKeepWidth()
+        public void NegativeSpaceMeshNeverDrawsBlackOvalStamps()
         {
-            var open = Frame(1f);
-            var large = Frame(.75f);
-            var medium = Frame(.50f);
-            var slit = Frame(.25f);
-            var closed = Frame(0f);
+            var go = new GameObject("V11NegativeSpaceTest",
+                typeof(RectTransform), typeof(CanvasRenderer));
+            try
+            {
+                var r = (RectTransform)go.transform;
+                r.sizeDelta = new Vector2(1920f, 1080f);
+                var graphic = go.AddComponent(GraphicType) as MaskableGraphic;
+                Assert.That(graphic, Is.Not.Null);
+                graphic.maskable = false;
+                graphic.raycastTarget = false;
 
-            Assert.That(Alpha(open, 0f, 0f), Is.EqualTo(0),
-                "Open eyes must have a transparent full screen, no rectangle");
-            Assert.That(Alpha(large, .25f, .50f), Is.LessThan(20),
-                "Left oval interior must show the room");
-            Assert.That(Alpha(large, .75f, .50f), Is.LessThan(20),
-                "Right oval interior must show the room");
-            Assert.That(Alpha(large, .50f, .50f), Is.GreaterThan(220),
-                "Two separate eyes must have an opaque black middle bridge");
-            Assert.That(Alpha(large, .02f, .04f), Is.GreaterThan(240),
-                "Periphery must be black, not a uniform fullscreen fade");
+                var setter = GraphicType.GetProperty("OpenAmount");
+                var pop = GraphicType.GetMethod("OnPopulateMesh",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(pop, Is.Not.Null);
+                foreach (float o in new float[]{ .75f, .50f, .25f })
+                {
+                    setter.SetValue(graphic, o);
+                    var vh = new VertexHelper();
+                    pop.Invoke(graphic, new object[]{ vh });
+                    var tri = new List<UIVertex>();
+                    vh.GetUIVertexStream(tri);
+                    Assert.That(tri.Count, Is.GreaterThan(0));
 
-            Assert.That(Alpha(medium, .25f, .70f), Is.LessThan(60),
-                "Midway through transition the eye must still be open");
-            Assert.That(Alpha(slit, .25f, .70f), Is.GreaterThan(230),
-                "Upper/lower curved boundaries must actually close inwards");
-            Assert.That(Alpha(slit, .25f, .50f), Is.LessThan(20),
-                "An oval slit must remain before full closure");
-            Assert.That(Alpha(slit, .75f, .50f), Is.LessThan(20));
-            Assert.That(Alpha(slit, .08f, .50f), Is.LessThan(60),
-                "At nearly closed, the opening must stay horizontally wide");
-            Assert.That(Alpha(closed, .25f, .50f), Is.EqualTo(255),
-                "Two windows must eventually close fully");
+                    var cr = r.rect;
+                    Vector2 LeftEye = new Vector2(cr.xMin + cr.width*.25f, cr.center.y);
+                    Vector2 RightEye = new Vector2(cr.xMin + cr.width*.75f, cr.center.y);
+                    Vector2 Bridge = new Vector2(cr.center.x, cr.center.y);
+                    Vector2 Edge = new Vector2(cr.xMin + cr.width*.02f,
+                        cr.yMin + cr.height*.02f);
+
+                    Assert.That(MeshCovers(tri, LeftEye), Is.False,
+                        "V11 must not cover the LEFT eye center with a black oval");
+                    Assert.That(MeshCovers(tri, RightEye), Is.False,
+                        "V11 must not cover the RIGHT eye center with a black oval");
+                    Assert.That(MeshCovers(tri, Bridge), Is.True,
+                        "The middle bridge should be black outside the lenses");
+                    Assert.That(MeshCovers(tri, Edge), Is.True,
+                        "The top-left periphery should be covered, not the pupil");
+                    vh.Dispose();
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void DedicatedOverlayCanvasIsVisibleAndDoesNotBlockMouse()
+        public void FullOpenMeshEmptyClosedMeshOpaqueAndCanvasUnobstructed()
         {
-            GameObject root = null;
+            var root = new GameObject("V11MaskTestRoot",
+                typeof(RectTransform), typeof(Canvas));
             IDisposable mask = null;
             try
             {
-                root = new GameObject("BinocularEye_TestRoot",
-                    typeof(RectTransform), typeof(Canvas));
-                var type = MaskType;
-                mask = Activator.CreateInstance(type,
-                    BindingFlags.Instance | BindingFlags.NonPublic |
-                    BindingFlags.Public, null,
-                    new object[] { (RectTransform)root.transform }, null)
+                var r = (RectTransform)root.transform;
+                r.sizeDelta = new Vector2(1920f, 1080f);
+                mask = Activator.CreateInstance(MaskType,
+                    BindingFlags.Instance | BindingFlags.Public |
+                    BindingFlags.NonPublic, null, new object[]{r}, null)
                     as IDisposable;
                 Assert.That(mask, Is.Not.Null);
-
-                type.GetMethod("SetOpen").Invoke(mask, new object[] { .50f });
-                var canvas = root.GetComponentInChildren<Canvas>(true);
-                // GetComponentInChildren returns root Canvas first. Find the
-                // dedicated nested overlay by its exact authored name.
-                var overlays = root.GetComponentsInChildren<Canvas>(true);
-                Canvas overlay = null;
-                foreach (Canvas candidate in overlays)
-                    if (candidate.name.StartsWith("ROKAS_Eyelids_ScreenOverlay"))
-                        overlay = candidate;
-                Assert.That(overlay, Is.Not.Null);
-                Assert.That(overlay.overrideSorting, Is.True);
-                Assert.That(overlay.sortingOrder, Is.GreaterThanOrEqualTo(30000));
-
-                var graphic = overlay.GetComponentInChildren<RawImage>(true);
+                var graphic = root.GetComponentInChildren(GraphicType, true)
+                    as MaskableGraphic;
                 Assert.That(graphic, Is.Not.Null);
                 Assert.That(graphic.raycastTarget, Is.False);
                 Assert.That(graphic.maskable, Is.False);
-                Assert.That(graphic.texture, Is.Not.Null);
-                Assert.That(graphic.texture.name, Does.StartWith("ROKAS_DualOvalVision_"));
-                Assert.That((bool)type.GetProperty("IsVisible").GetValue(mask), Is.True);
+                var canvases = root.GetComponentsInChildren<Canvas>(true);
+                Assert.That(canvases.Length, Is.GreaterThanOrEqualTo(2));
+                Assert.That(canvases[canvases.Length - 1].sortingOrder,
+                    Is.GreaterThanOrEqualTo(30000));
 
-                type.GetMethod("SetVisible").Invoke(mask, new object[] { false });
-                Assert.That((bool)type.GetProperty("IsVisible").GetValue(mask), Is.False);
-                type.GetMethod("SetVisible").Invoke(mask, new object[] { true });
-                Assert.That((bool)type.GetProperty("IsVisible").GetValue(mask), Is.True);
+                MaskType.GetMethod("SetOpen").Invoke(mask, new object[]{1f});
+                var vh = new VertexHelper();
+                GraphicType.GetMethod("OnPopulateMesh",
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(graphic, new object[]{vh});
+                Assert.That(vh.currentVertCount, Is.EqualTo(0),
+                    "Fully open view must never display a rectangle");
+                vh.Dispose();
+
+                MaskType.GetMethod("SetOpen").Invoke(mask, new object[]{0f});
+                vh = new VertexHelper();
+                GraphicType.GetMethod("OnPopulateMesh",
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(graphic, new object[]{vh});
+                Assert.That(vh.currentVertCount, Is.GreaterThan(0));
+                vh.Dispose();
+
+                Assert.That((bool)MaskType.GetProperty("IsVisible").GetValue(mask), Is.True);
+                MaskType.GetMethod("SetVisible").Invoke(mask, new object[]{false});
+                Assert.That((bool)MaskType.GetProperty("IsVisible").GetValue(mask), Is.False);
             }
             finally
             {
                 mask?.Dispose();
-                if (root != null) UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(root);
             }
         }
     }
