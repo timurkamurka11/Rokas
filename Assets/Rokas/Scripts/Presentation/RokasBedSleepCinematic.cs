@@ -1057,11 +1057,15 @@ namespace Rokas.Presentation
         {
             if (eyeAperture != null)
             {
+                // Opening has a distinct anatomical timing curve: upper lid
+                // retracts ahead of the lower lid. Preserve existing scene
+                // timing, video and save logic without additional fades.
+                eyeAperture.SetWaking(from > to);
                 eyeAperture.SetVisible(true);
                 eyeAperture.BringToFront();
                 if (!eyeAperture.IsVisible && !warnedHiddenVisionMask)
                 {
-                    Debug.LogError("[ROKAS BINOCULAR V10] Eye Canvas is not visible at transition start.");
+                    Debug.LogError("[ROKAS ANATOMIC V12] Eye Canvas is not visible at transition start.");
                     warnedHiddenVisionMask = true;
                 }
             }
@@ -1093,7 +1097,7 @@ namespace Rokas.Presentation
             if (!warnedMissingVisionMask)
             {
                 warnedMissingVisionMask = true;
-                Debug.LogError("[ROKAS BINOCULAR V10] Missing dual-oval mask; " +
+                Debug.LogError("[ROKAS ANATOMIC V12] Missing organic eyelid overlay; " +
                     "rectangular fallback is forbidden. Check Unity Console.");
             }
         }
