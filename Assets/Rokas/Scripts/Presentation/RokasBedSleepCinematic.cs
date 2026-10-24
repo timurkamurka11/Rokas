@@ -762,8 +762,6 @@ namespace Rokas.Presentation
                     productionRig.SetDuration(selectedHours);
                 }
             }
-            int quietMask=productionRig != null && productionRig.Ready ?
-                productionRig.GetWatchSetting(2) : 7;
             int alarmMode=productionRig != null && productionRig.Ready ?
                 productionRig.GetWatchSetting(0) : 1;
             bool alarmEnabled=productionRig == null ||
