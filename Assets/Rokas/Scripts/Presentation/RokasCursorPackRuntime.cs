@@ -110,12 +110,23 @@ namespace Rokas.Presentation
             softwareCursorRect.sizeDelta = new Vector2(176f, 176f);
             softwareCursorImage = display.GetComponent<RawImage>();
             softwareCursorImage.raycastTarget = false;
+            softwareCursorImage.maskable = false;
+            // V7 hid the OS cursor before verifying that the overlay was
+            // actually visible. Keep a native pointer as a guaranteed
+            // fallback: two pointers during QA is safer than no pointer.
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            Cursor.visible = true;
         }
 
         private void Update()
         {
-            if (!packReady || !hasFocus) return;
+            // Never let a missing PNG or a failed Canvas make the pointer
+            // disappear. Software art is decorative, the native cursor isn't.
+            if (!packReady || !hasFocus)
+            {
+                Cursor.visible = true;
+                return;
+            }
             bool showInGame = true;
 #if UNITY_EDITOR
             // Do not hide the native pointer over Inspector, Scene or other
@@ -128,7 +139,9 @@ namespace Rokas.Presentation
             if (softwareCursorImage != null)
             {
                 softwareCursorImage.enabled = showInGame;
-                Cursor.visible = !showInGame;
+                // Do not suppress Windows/Unity's real cursor until the
+                // large hand has been confirmed visible on the target PC.
+                Cursor.visible = true;
                 if (showInGame && softwareCursorRect != null)
                     softwareCursorRect.anchoredPosition =
                         new Vector2(Input.mousePosition.x,
