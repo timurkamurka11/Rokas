@@ -178,6 +178,7 @@ namespace Rokas.Presentation
         private readonly Texture2D[] frames = new Texture2D[Steps + 1];
         private readonly Texture2D black;
         private float lastOpen = -1f;
+        private int nextWarmup = 1;
         public RokasSleepEyeAperture(RectTransform root)
         {
             gameObject = new GameObject("Keiko_Real_Eyelid_Curved_Apertures",
@@ -195,10 +196,13 @@ namespace Rokas.Presentation
             black.SetPixel(0, 0, Color.black);
             black.Apply(false, true);
             frames[0] = black;
-            // Build only 17 small textures (~900k pixels), never 33 large
-            // textures (~7.6m pixels) during the first room transition.
-            for (int i = 1; i <= Steps; i++)
-                frames[i] = RenderMask(i / (float)Steps);
+            // A completely OPEN mask is transparent; don't generate the
+            // intermediate 16 masks on the user's FIRST BED CLICK.
+            Texture2D clear = new Texture2D(1, 1,
+                TextureFormat.RGBA32, false);
+            clear.SetPixel(0, 0, Color.clear);
+            clear.Apply(false, true);
+            frames[Steps] = clear;
             SetOpen(1f);
         }
 
@@ -254,6 +258,18 @@ namespace Rokas.Presentation
             return tex;
         }
 
+        // Precompute only ONE frame per Update while the watch is being
+        // configured. This eliminates expensive synchronous image-generation
+        // spikes on the first transition from the Hub.
+        public void WarmupOneFrame()
+        {
+            if (nextWarmup >= Steps) return;
+            if (frames[nextWarmup] == null)
+                frames[nextWarmup] =
+                    RenderMask(nextWarmup / (float)Steps);
+            nextWarmup++;
+        }
+
         // Make the two half-oval lids render OVER the ceiling while closing
         // and reopening; don't let the authored dream video occlude them.
         public void BringToFront()
@@ -267,6 +283,8 @@ namespace Rokas.Presentation
             if (Mathf.Abs(lastOpen-v) < .008f) return;
             lastOpen = v;
             int idx = Mathf.Clamp(Mathf.RoundToInt(v*Steps),0,Steps);
+            if (frames[idx] == null)
+                frames[idx] = RenderMask(idx / (float)Steps);
             if (image != null) image.texture = frames[idx];
         }
         public void Dispose()
