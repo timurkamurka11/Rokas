@@ -163,185 +163,201 @@ namespace Rokas.Presentation
     }
 
     /// <summary>
-    /// Reference-matched binocular POV: a black presentation mask with TWO
-    /// continuously narrowing horizontal oval windows. This is not a rectangular
-    /// blackout or a pair of sliding bars. Only the cached texture changes.
+    /// V11: Real negative-space binocular eyelids. Black geometry is drawn
+    /// ONLY OUTSIDE two transparent eye windows; nothing can be painted into
+    /// the openings. Replaces V7-V10 texture-alpha masks, avoiding the
+    /// inverted black ellipses visible in the player's 25-Oct recording.
     /// </summary>
+    internal sealed class RokasDualOvalLidGraphic : MaskableGraphic
+    {
+        private const int HorizontalBands = 288;
+        private float openAmount = 1f;
+
+        public float OpenAmount
+        {
+            get { return openAmount; }
+            set
+            {
+                float next = Mathf.Clamp01(value);
+                if (Mathf.Abs(openAmount - next) < .0005f) return;
+                openAmount = next;
+                SetVerticesDirty();
+            }
+        }
+
+        // Dark contour fades in, rather than abruptly appearing at open=0.99.
+        internal static float Darkness(float open)
+        {
+            float t = Mathf.Clamp01((1f - Mathf.Clamp01(open)) / .28f);
+            return t * t * (3f - 2f * t);
+        }
+
+        internal static float RelativeHalfHeight(float open)
+        {
+            return .53f * Mathf.Pow(Mathf.Clamp01(open), 1.16f);
+        }
+
+        internal static float RelativeHalfWidth(float open)
+        {
+            return Mathf.Lerp(.212f, .242f, Mathf.Clamp01(open * 3f));
+        }
+
+        internal static bool InsideWindow(float u, float v, float open)
+        {
+            float ry = RelativeHalfHeight(open);
+            if (ry < .0001f) return false;
+            float y = (v - .5f) / ry;
+            if (Mathf.Abs(y) >= 1f) return false;
+            float rx = RelativeHalfWidth(open);
+            float left = (u - .25f) / rx;
+            float right = (u - .75f) / rx;
+            return left * left + y * y < 1f ||
+                   right * right + y * y < 1f;
+        }
+
+        protected override void OnPopulateMesh(VertexHelper vh)
+        {
+            vh.Clear();
+            float darkness = Darkness(openAmount);
+            if (darkness <= .0001f) return;
+
+            Rect rect = GetPixelAdjustedRect();
+            if (rect.width <= 0f || rect.height <= 0f) return;
+            float halfWidth = RelativeHalfWidth(openAmount) * rect.width;
+            float halfHeight = RelativeHalfHeight(openAmount) * rect.height;
+            float centerY = rect.center.y;
+            float cxL = rect.xMin + rect.width * .25f;
+            float cxR = rect.xMin + rect.width * .75f;
+            float feather = Mathf.Max(1.5f, rect.width * .00125f);
+            byte dark = (byte)Mathf.RoundToInt(darkness * 255f);
+
+            // ONLY opaque strips outside the apertures are triangulated.
+            for (int row = 0; row < HorizontalBands; row++)
+            {
+                float y0 = Mathf.Lerp(rect.yMin, rect.yMax,
+                    row / (float)HorizontalBands);
+                float y1 = Mathf.Lerp(rect.yMin, rect.yMax,
+                    (row + 1f) / HorizontalBands);
+                float ym = .5f * (y0 + y1);
+                float yNorm = halfHeight > .0001f ?
+                    (ym - centerY) / halfHeight : 99f;
+                if (Mathf.Abs(yNorm) >= 1f)
+                {
+                    AddQuad(vh, rect.xMin, rect.xMax, y0, y1,
+                        dark, dark);
+                    continue;
+                }
+
+                float xRadius = halfWidth * Mathf.Sqrt(Mathf.Max(0f,
+                    1f - yNorm * yNorm));
+                float l0 = cxL - xRadius;
+                float l1 = cxL + xRadius;
+                float r0 = cxR - xRadius;
+                float r1 = cxR + xRadius;
+                // Feather alpha out at each of the four curved boundaries.
+                AddQuad(vh, rect.xMin, l0 - feather, y0, y1, dark, dark);
+                AddQuad(vh, l0 - feather, l0 + feather, y0, y1, dark, 0);
+                AddQuad(vh, l1 - feather, l1 + feather, y0, y1, 0, dark);
+                AddQuad(vh, l1 + feather, r0 - feather, y0, y1, dark, dark);
+                AddQuad(vh, r0 - feather, r0 + feather, y0, y1, dark, 0);
+                AddQuad(vh, r1 - feather, r1 + feather, y0, y1, 0, dark);
+                AddQuad(vh, r1 + feather, rect.xMax, y0, y1, dark, dark);
+            }
+        }
+
+        private static void AddQuad(VertexHelper vh, float left, float right,
+            float bottom, float top, byte alphaLeft, byte alphaRight)
+        {
+            if (right <= left) return;
+            int start = vh.currentVertCount;
+            var vl = UIVertex.simpleVert;
+            vl.color = new Color32(0, 0, 0, alphaLeft);
+            vl.position = new Vector3(left, bottom, 0f);
+            vh.AddVert(vl);
+            vl.position = new Vector3(left, top, 0f);
+            vh.AddVert(vl);
+            vl.color = new Color32(0, 0, 0, alphaRight);
+            vl.position = new Vector3(right, top, 0f);
+            vh.AddVert(vl);
+            vl.position = new Vector3(right, bottom, 0f);
+            vh.AddVert(vl);
+            vh.AddTriangle(start, start + 1, start + 2);
+            vh.AddTriangle(start, start + 2, start + 3);
+        }
+    }
+
     internal sealed class RokasSleepEyeAperture : IDisposable
     {
-        // 72 cached states at 320x180 give smoother 30/60fps transitions
-        // without generating thousands of pixels synchronously on bed click.
-        // Incremental warmup during alarm selection avoids a first-use stall.
-        private const int Steps = 72;
-        private readonly GameObject gameObject;
         private readonly GameObject overlayCanvas;
-        private readonly RawImage image;
-        private readonly Texture2D[] frames = new Texture2D[Steps + 1];
-        private readonly Texture2D black;
-        private float lastOpen = -1f;
-        private int nextWarmup = 1;
+        private readonly RokasDualOvalLidGraphic graphic;
         private bool midpointReported;
+
         public RokasSleepEyeAperture(RectTransform root)
         {
-            // A dedicated high-sorting Canvas fixes V7/V8 masks being
-            // visually covered by the room/game transitional curtains.
-            overlayCanvas = new GameObject("ROKAS_Eyelids_ScreenOverlay_30000",
+            overlayCanvas = new GameObject("ROKAS_V11_Real_Black_Eyelid_Cutout_Canvas",
                 typeof(RectTransform), typeof(Canvas));
             overlayCanvas.transform.SetParent(root, false);
             var canvasRect = (RectTransform)overlayCanvas.transform;
             canvasRect.anchorMin = Vector2.zero;
             canvasRect.anchorMax = Vector2.one;
-            canvasRect.offsetMin = canvasRect.offsetMax = Vector2.zero;
+            canvasRect.offsetMin = Vector2.zero;
+            canvasRect.offsetMax = Vector2.zero;
             Canvas canvas = overlayCanvas.GetComponent<Canvas>();
             canvas.overrideSorting = true;
-            canvas.sortingOrder = 30000; // Above the room, curtain and dream, but not the Keiko cursor.
-            gameObject = new GameObject("Keiko_Real_Eyelid_Curved_Apertures",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
-            gameObject.transform.SetParent(overlayCanvas.transform, false);
-            RectTransform r = (RectTransform)gameObject.transform;
+            canvas.sortingOrder = 30000;
+
+            var image = new GameObject("ROKAS_V11_Two_Transparent_Eye_Windows",
+                typeof(RectTransform), typeof(CanvasRenderer));
+            image.transform.SetParent(overlayCanvas.transform, false);
+            var r = (RectTransform)image.transform;
             r.anchorMin = Vector2.zero;
             r.anchorMax = Vector2.one;
-            r.offsetMin = r.offsetMax = Vector2.zero;
-            image = gameObject.GetComponent<RawImage>();
-            image.raycastTarget = false;
-            image.maskable = false;
-            image.color = Color.white;
-
-            black = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            black.SetPixel(0, 0, Color.black);
-            black.Apply(false, true);
-            frames[0] = black;
-            // Completely open = transparent, and completely shut = opaque.
-            // Neither end state is created via a fullscreen curtain fade.
-            Texture2D clear = new Texture2D(1, 1,
-                TextureFormat.RGBA32, false);
-            clear.SetPixel(0, 0, Color.clear);
-            clear.Apply(false, true);
-            frames[Steps] = clear;
-            SetOpen(1f);
+            r.offsetMin = Vector2.zero;
+            r.offsetMax = Vector2.zero;
+            graphic = image.AddComponent<RokasDualOvalLidGraphic>();
+            graphic.color = Color.white;
+            graphic.maskable = false;
+            graphic.raycastTarget = false;
+            graphic.OpenAmount = 1f;
+            Debug.Log("[ROKAS V11 EYES] Mesh-based negative-space " +
+                "binocular eyelids enabled; no alpha texture or rectangle fallback.");
         }
 
-        // Transparent inside the two ovals; opaque black outside. Lens width
-        // stays almost constant as height collapses into narrow eye-slits.
-        // Normalized values are calibrated to the user's 24-Oct reference.
-        // Pure CPU rasterization so PlayMode tests can inspect actual pixel
-        // alpha without requiring GPU readback / a graphical CI runner.
-        private static Color32[] RasterizeMask(float open)
-        {
-            const int w = 320, h = 180;
-            var pixels = new Color32[w*h];
-            float openness = Mathf.Clamp01(open);
-            float perimeterReveal = Mathf.SmoothStep(0f, 1f,
-                Mathf.Clamp01((1f - openness) / .14f));
-
-            if (openness <= .0001f)
-            {
-                for (int i = 0; i < pixels.Length; i++)
-                    pixels[i] = new Color32(0, 0, 0, 255);
-            }
-            else
-            {
-                float halfWidth = Mathf.Lerp(.218f, .241f,
-                    Mathf.Clamp01(openness * 3f));
-                float halfHeight = .535f * Mathf.Pow(openness, 1.10f);
-                float invWidthSquared = 1f / (halfWidth * halfWidth);
-                float invHeightSquared = 1f / (halfHeight * halfHeight);
-                float feather = .022f + .010f * (1f - openness);
-
-                for (int y=0; y<h; ++y)
-                {
-                    float dy = (y+.5f)/(float)h - .5f;
-                    float vertical = dy*dy*invHeightSquared;
-                    for (int x=0; x<w; ++x)
-                    {
-                        float u=(x+.5f)/(float)w;
-                        float leftDx = u-.25f;
-                        float rightDx = u-.75f;
-                        float leftMetric = leftDx*leftDx*invWidthSquared + vertical;
-                        float rightMetric = rightDx*rightDx*invWidthSquared + vertical;
-                        float lensMetric = Mathf.Sqrt(Mathf.Min(leftMetric,rightMetric));
-                        float outside = Mathf.SmoothStep(1f-feather, 1f+feather,
-                            lensMetric);
-                        float opacity = perimeterReveal * outside;
-                        pixels[y*w+x] = new Color32(0,0,0,
-                            (byte)Mathf.RoundToInt(opacity*255f));
-                    }
-                }
-            }
-
-            return pixels;
-        }
-
-        private static Texture2D RenderMask(float open)
-        {
-            const int w = 320, h = 180;
-            Color32[] pixels = RasterizeMask(open);
-            var mask = new Texture2D(w,h,TextureFormat.RGBA32,false);
-            mask.name="ROKAS_DualOvalVision_"+Mathf.RoundToInt(Mathf.Clamp01(open)*1000f);
-            mask.wrapMode=TextureWrapMode.Clamp;
-            mask.filterMode=FilterMode.Bilinear;
-            mask.SetPixels32(pixels);
-            mask.Apply(false,true);
-            return mask;
-        }
-
-        // Precompute only ONE frame per Update while the watch is being
-        // configured. This eliminates expensive synchronous image-generation
-        // spikes on the first transition from the Hub.
-        public void WarmupOneFrame()
-        {
-            if (nextWarmup >= Steps) return;
-            if (frames[nextWarmup] == null)
-                frames[nextWarmup] =
-                    RenderMask(nextWarmup / (float)Steps);
-            nextWarmup++;
-        }
-
-        // Make the two half-oval lids render OVER the ceiling while closing
-        // and reopening; don't let the authored dream video occlude them.
+        public void WarmupOneFrame() { } // No cached textures to build.
         public void BringToFront()
         {
             if (overlayCanvas != null) overlayCanvas.transform.SetAsLastSibling();
         }
-
         public void SetVisible(bool visible)
         {
-            if (image != null) image.enabled = visible;
+            if (graphic != null) graphic.enabled = visible;
         }
-
         public bool IsVisible
         {
-            get {
-                return overlayCanvas != null && overlayCanvas.activeInHierarchy &&
-                    image != null && image.isActiveAndEnabled &&
-                    overlayCanvas.GetComponent<Canvas>() != null &&
-                    overlayCanvas.GetComponent<Canvas>().sortingOrder >= 30000;
+            get
+            {
+                if (overlayCanvas == null || graphic == null) return false;
+                Canvas canvas = overlayCanvas.GetComponent<Canvas>();
+                return canvas != null && canvas.enabled && canvas.sortingOrder >= 30000 &&
+                    graphic.isActiveAndEnabled && overlayCanvas.activeInHierarchy;
             }
         }
-
         public void SetOpen(float openness)
         {
-            float v = Mathf.Clamp01(openness);
-            if (Mathf.Abs(lastOpen-v) < .008f) return;
-            lastOpen = v;
-            int idx = Mathf.Clamp(Mathf.RoundToInt(v*Steps),0,Steps);
-            if (frames[idx] == null)
-                frames[idx] = RenderMask(idx / (float)Steps);
-            if (image != null) image.texture = frames[idx];
-            if (!midpointReported && v > .35f && v < .65f)
+            if (graphic == null) return;
+            graphic.OpenAmount = openness;
+            if (!midpointReported && openness > .35f && openness < .65f)
             {
                 midpointReported = true;
-                Debug.Log("[ROKAS BINOCULAR V10] Mid-transition: visible=" +
-                    IsVisible + " eyeOpen=" + v.ToString("0.00") +
-                    " frame=" + idx + "/" + Steps +
-                    " screen=" + Screen.width + "x" + Screen.height);
+                Debug.Log("[ROKAS V11 EYES] Two clear eye windows: " +
+                    "open=" + openness.ToString("0.00") +
+                    " canvasVisible=" + IsVisible);
             }
         }
         public void Dispose()
         {
-            foreach (Texture2D t in frames)
-                if (t != null) UnityEngine.Object.Destroy(t);
-            if (overlayCanvas != null) UnityEngine.Object.Destroy(overlayCanvas);
+            if (overlayCanvas != null)
+                UnityEngine.Object.Destroy(overlayCanvas);
         }
     }
 }
