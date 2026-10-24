@@ -25,7 +25,14 @@ namespace Rokas.BedSleep.V10Release
             physicalOled = null;
             physicalCollider = null;
             if (gameArm == null || oldWatch == null || gameOled == null || camera == null)
+            {
+                Debug.LogError("[ROKAS HAND V14] Missing V10 driver prerequisites: " +
+                    "arm=" + (gameArm != null) +
+                    " watch=" + (oldWatch != null) +
+                    " OLED=" + (gameOled != null) +
+                    " camera=" + (camera != null));
                 return false;
+            }
 
             GameObject prefab = Resources.Load<GameObject>(AssetResource);
 #if UNITY_EDITOR
@@ -38,8 +45,9 @@ namespace Rokas.BedSleep.V10Release
 #endif
             if (prefab == null)
             {
-                Debug.LogWarning("[ROKAS Bed Sleep] Authentic full Argon watch/hand " +
-                    "prefab missing. Preserving the playable old V10 visuals.");
+                Debug.LogError("[ROKAS HAND V14] Argon hand Resources.Load MISSING in " +
+                    Application.platform + ": " + AssetResource +
+                    ". Standalone players cannot use AssetDatabase fallback.");
                 return false;
             }
 
@@ -228,8 +236,8 @@ namespace Rokas.BedSleep.V10Release
                 if (instance != null) UnityEngine.Object.Destroy(instance);
                 if (runtimeFingerCandidate != null)
                     UnityEngine.Object.Destroy(runtimeFingerCandidate);
-                Debug.LogError("[ROKAS Bed Sleep] Complete Argon model unavailable: " +
-                    ex.Message + ". Old visuals remain active.");
+                Debug.LogError("[ROKAS HAND V14] Full Argon activation FAILED. " +
+                    "Old V10 visual fallback used. Stage details: " + ex.ToString());
                 return false;
             }
         }
