@@ -224,7 +224,9 @@ namespace Rokas.Presentation
         // Transparent inside the two ovals; opaque black outside. Lens width
         // stays almost constant as height collapses into narrow eye-slits.
         // Normalized values are calibrated to the user's 24-Oct reference.
-        private static Texture2D RenderMask(float open)
+        // Pure CPU rasterization so PlayMode tests can inspect actual pixel
+        // alpha without requiring GPU readback / a graphical CI runner.
+        private static Color32[] RasterizeMask(float open)
         {
             const int w = 320, h = 180;
             var pixels = new Color32[w*h];
@@ -267,8 +269,15 @@ namespace Rokas.Presentation
                 }
             }
 
+            return pixels;
+        }
+
+        private static Texture2D RenderMask(float open)
+        {
+            const int w = 320, h = 180;
+            Color32[] pixels = RasterizeMask(open);
             var mask = new Texture2D(w,h,TextureFormat.RGBA32,false);
-            mask.name="ROKAS_DualOvalVision_"+Mathf.RoundToInt(openness*1000f);
+            mask.name="ROKAS_DualOvalVision_"+Mathf.RoundToInt(Mathf.Clamp01(open)*1000f);
             mask.wrapMode=TextureWrapMode.Clamp;
             mask.filterMode=FilterMode.Bilinear;
             mask.SetPixels32(pixels);
