@@ -798,8 +798,19 @@ namespace Rokas.Presentation
                 Mathf.Max(.20f, settlingToSleepClip.length - .12f) : .65f);
             if (eyeAperture != null) eyeAperture.BringToFront();
             yield return FadeEyelids(0f, 1f,
-                (quietMask & 2) != 0 ? 1.45f : 1.25f);
+                (quietMask & 2) != 0 ? 1.65f : 1.50f);
             yield return Wait(.22f);
+            // Keep a solid black bed background behind the author video,
+            // including its exit dissolve and dark pause. It must NOT
+            // crossfade to the ceiling before the real alarm begins.
+            if (curtain != null)
+            {
+                curtain.color = new Color(.008f,.013f,.021f,1f);
+                curtain.transform.SetAsLastSibling();
+            }
+            // This independently sorted canvas sits above ordinary videos:
+            // disable while sleeping, restore it closed before waking.
+            eyeAperture?.SetVisible(false);
             state = State.SleepCommitted;
             // ROKAS remains the ONLY owner of the durable save.
             // V3's optional event must not create a parallel save path.
@@ -868,7 +879,17 @@ namespace Rokas.Presentation
             // Important: the DREAM is layered on top of eye closure. Bring
             // the translucent two-oval eye mask over the ceiling BEFORE
             // sounding the real alarm and opening Keiko's eyes.
-            if (eyeAperture != null) eyeAperture.BringToFront();
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetOpen(0f);
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+            }
+            // The closed halfovals shield the curtain handoff; release the
+            // blackout here so the ceiling becomes visible INSIDE the two
+            // opening eye shapes instead of a uniform rectangular fade.
+            if (curtain != null)
+                curtain.color = new Color(.008f,.013f,.021f,0f);
             AudioClip wakeCue = null;
             bool generatedWakeCue = false;
             if (alarmEnabled && audio != null)
@@ -891,7 +912,7 @@ namespace Rokas.Presentation
                 blurredPov.color = new Color(1f,1f,1f,.88f);
             // Make two curved half-oval openings visible with a blurred
             // ceiling beneath. A longer natural blink removes hard cuts.
-            yield return FadeEyelids(1f, 0f, 2.6f);
+            yield return FadeEyelids(1f, 0f, 2.85f);
             wakingReveal = false;
             if (blurredPov != null)
                 blurredPov.color = new Color(1f,1f,1f,0f);
