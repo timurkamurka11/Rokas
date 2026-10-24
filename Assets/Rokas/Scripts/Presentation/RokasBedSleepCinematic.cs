@@ -70,7 +70,7 @@ namespace Rokas.Presentation
         // still advances the chosen 1-12 in-game hours once, not in real time.
         // User-approved dream is ONE short 7s sequence, not 3 repeated
         // cycles (old V4 kept the source 7.2s loop running for ~22 seconds).
-        private const float RestingInDarkSeconds = 5.25f;
+        private const float RestingInDarkSeconds = 4.05f;
         private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
@@ -852,11 +852,12 @@ namespace Rokas.Presentation
             {
                 // Slow dissolve into the authored dreaming animation;
                 // sound follows the SAME curve for clean, seamless entry.
-                // Total dream screen time 0.9 + 5.25 + 0.9 = 7.05s,
-                // enough for all supplied thought clouds once.
+                // End more softly, without another loop of the 7.2s clip:
+                // 0.90s entry + 4.05s hold + 1.90s exit = 6.85s.
+                // Picture and recorded audio follow the same fade curve.
                 yield return FadeDream(0f, 1f, .90f);
                 yield return Wait(RestingInDarkSeconds);
-                yield return FadeDream(1f, 0f, .90f);
+                yield return FadeDream(1f, 0f, 1.90f);
                 if (keikoDreamAudio != null) keikoDreamAudio.Stop();
                 keikoDream.End();
             }
