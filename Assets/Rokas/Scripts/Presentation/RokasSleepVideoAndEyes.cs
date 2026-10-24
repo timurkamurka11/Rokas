@@ -174,6 +174,7 @@ namespace Rokas.Presentation
         // stalled the room-to-ceiling fade. Cache lightweight masks once.
         private const int Steps = 32;
         private readonly GameObject gameObject;
+        private readonly GameObject overlayCanvas;
         private readonly RawImage image;
         private readonly Texture2D[] frames = new Texture2D[Steps + 1];
         private readonly Texture2D black;
@@ -181,15 +182,28 @@ namespace Rokas.Presentation
         private int nextWarmup = 1;
         public RokasSleepEyeAperture(RectTransform root)
         {
+            // A dedicated high-sorting Canvas fixes V7/V8 masks being
+            // visually covered by the room/game transitional curtains.
+            overlayCanvas = new GameObject("ROKAS_Eyelids_ScreenOverlay_30000",
+                typeof(RectTransform), typeof(Canvas));
+            overlayCanvas.transform.SetParent(root, false);
+            var canvasRect = (RectTransform)overlayCanvas.transform;
+            canvasRect.anchorMin = Vector2.zero;
+            canvasRect.anchorMax = Vector2.one;
+            canvasRect.offsetMin = canvasRect.offsetMax = Vector2.zero;
+            Canvas canvas = overlayCanvas.GetComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 30000;
             gameObject = new GameObject("Keiko_Real_Eyelid_Curved_Apertures",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
-            gameObject.transform.SetParent(root, false);
+            gameObject.transform.SetParent(overlayCanvas.transform, false);
             RectTransform r = (RectTransform)gameObject.transform;
             r.anchorMin = Vector2.zero;
             r.anchorMax = Vector2.one;
             r.offsetMin = r.offsetMax = Vector2.zero;
             image = gameObject.GetComponent<RawImage>();
             image.raycastTarget = false;
+            image.maskable = false;
             image.color = Color.white;
 
             black = new Texture2D(1, 1, TextureFormat.RGBA32, false);
@@ -209,49 +223,39 @@ namespace Rokas.Presentation
         private static Texture2D RenderMask(float open)
         {
             const int w = 320, h = 180;
-            var data = new Color32[w * h];
+            var data = new Color32[w*h];
             float openness = Mathf.Clamp01(open);
-            // IMPORTANT: In V7 every partially-open frame painted the entire
-            // periphery black at once, so the user saw a rectangular blackout.
-            // Instead the upper/lower lids must ENTER FROM OFFSCREEN and
-            // progressively meet along two gently curved eye contours.
-            for (int x = 0; x < w; ++x)
+            // Each eye has a real upper and lower semi-ellipse. These
+            // OPENINGS collapse toward the horizontal center independently.
+            // Moving boundaries, no global rectangular fade.
+            for (int x=0; x<w; ++x)
             {
-                float u = (x + .5f) / w;
-                float eyeCenter = u < .5f ? .255f : .745f;
-                float corner = Mathf.Pow(Mathf.Clamp01(
-                    Mathf.Abs(u - eyeCenter) / .255f), 1.6f);
-                // Slightly narrower at the outer/inner corners: two oval
-                // openings, not rectangular horizontal black shutters.
-                float eyelidBend = openness * (1f - openness) * corner;
-                float topEdge = .5f + .52f * openness - .22f * eyelidBend;
-                float bottomEdge = .5f - .52f * openness + .18f * eyelidBend;
-                float feather = .008f + .006f * (1f - openness);
-                // The narrow nasal bridge becomes visible only once the
-                // eye movement is underway; never pop a black band at start.
-                float nose = Mathf.SmoothStep(.32f, .76f, 1f - openness) *
-                    (1f - Mathf.SmoothStep(.014f, .048f, Mathf.Abs(u - .5f)));
-                for (int y = 0; y < h; ++y)
+                float u=(x+.5f)/w;
+                float eyeCenter = u<.5f ? .25f : .75f;
+                float dx = (u-eyeCenter)/.25f;
+                float arc = Mathf.Pow(Mathf.Sqrt(
+                    Mathf.Max(0f,1f-dx*dx)),.80f);
+                float halfOpen = .535f*openness*arc;
+                float topEdge=.5f+halfOpen, bottomEdge=.5f-halfOpen;
+                float feather=.009f;
+                float firstContact = Mathf.Clamp01((1f-openness)*9f);
+                for(int y=0; y<h; ++y)
                 {
-                    float v = (y + .5f) / h;
-                    float upperLid = Mathf.SmoothStep(
-                        topEdge - feather, topEdge + feather, v);
-                    float lowerLid = 1f - Mathf.SmoothStep(
-                        bottomEdge - feather, bottomEdge + feather, v);
-                    float opacity = Mathf.Max(nose,
-                        Mathf.Max(upperLid, lowerLid));
-                    data[y * w + x] = new Color32(0, 0, 0,
-                        (byte)Mathf.RoundToInt(Mathf.Clamp01(opacity) * 255f));
+                    float v=(y+.5f)/h;
+                    float topLid=Mathf.SmoothStep(topEdge-feather,topEdge+feather,v);
+                    float bottomLid=1f-Mathf.SmoothStep(bottomEdge-feather,bottomEdge+feather,v);
+                    float alpha=firstContact*Mathf.Max(topLid,bottomLid);
+                    data[y*w+x]=new Color32(0,0,0,
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha)*255f));
                 }
             }
-            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            tex.name = "ROKAS_Eyes_Curved_Open_" +
-                Mathf.RoundToInt(open * 100f);
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.SetPixels32(data);
-            tex.Apply(false, true);
-            return tex;
+            var texture=new Texture2D(w,h,TextureFormat.RGBA32,false);
+            texture.name="ROKAS_Two_Semioval_Eyes_"+Mathf.RoundToInt(open*100f);
+            texture.filterMode=FilterMode.Bilinear;
+            texture.wrapMode=TextureWrapMode.Clamp;
+            texture.SetPixels32(data);
+            texture.Apply(false,true);
+            return texture;
         }
 
         // Precompute only ONE frame per Update while the watch is being
@@ -270,7 +274,12 @@ namespace Rokas.Presentation
         // and reopening; don't let the authored dream video occlude them.
         public void BringToFront()
         {
-            if (gameObject != null) gameObject.transform.SetAsLastSibling();
+            if (overlayCanvas != null) overlayCanvas.transform.SetAsLastSibling();
+        }
+
+        public void SetVisible(bool visible)
+        {
+            if (image != null) image.enabled = visible;
         }
 
         public void SetOpen(float openness)
@@ -287,7 +296,7 @@ namespace Rokas.Presentation
         {
             foreach (Texture2D t in frames)
                 if (t != null) UnityEngine.Object.Destroy(t);
-            if (gameObject != null) UnityEngine.Object.Destroy(gameObject);
+            if (overlayCanvas != null) UnityEngine.Object.Destroy(overlayCanvas);
         }
     }
 }
