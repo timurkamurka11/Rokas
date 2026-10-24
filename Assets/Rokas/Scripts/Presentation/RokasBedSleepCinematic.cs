@@ -505,8 +505,12 @@ namespace Rokas.Presentation
             // If the corrected V3 production asset package is installed,
             // place the REAL skinned 3D hand/watch above the ceiling plate.
             // Without it the previous photo presentation remains available.
+            float rigInitStarted = Time.realtimeSinceStartup;
             productionRig = RokasBedSleepProductionRigBridge.TryCreate(
                 startHours, session.State.lampOn);
+            Debug.Log("[ROKAS BED PERF V13] hand rig initialization=" +
+                ((Time.realtimeSinceStartup - rigInitStarted) * 1000f).ToString("0.0") +
+                "ms, genuine3D=" + (productionRig != null && productionRig.Ready));
             if (productionRig != null && productionRig.Ready)
             {
                 real3DArmPov = ui.Art(root,
@@ -981,9 +985,12 @@ namespace Rokas.Presentation
 
         private IEnumerator FadeArm(float from, float to, float duration)
         {
+            float longestFrameMs = 0f;
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
+                longestFrameMs = Mathf.Max(longestFrameMs,
+                    Time.unscaledDeltaTime * 1000f);
                 float u = Mathf.SmoothStep(0f, 1f,
                     Mathf.Clamp01(t / duration));
                 handOpacity = Mathf.Lerp(from, to, u);
@@ -1015,6 +1022,11 @@ namespace Rokas.Presentation
                 armPov.color = new Color(1f, 1f, 1f, to);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, .12f * to);
+            if (to > from)
+                Debug.Log("[ROKAS BED PERF V13] raise worst-frame=" +
+                    longestFrameMs.ToString("0.0") + "ms (" +
+                    (1000f / Mathf.Max(1f, longestFrameMs)).ToString("0") +
+                    "fps minimum). Compare Profiler CPU/GPU timelines.");
         }
 
         private IEnumerator FadeControls(CanvasGroup group, float from,
