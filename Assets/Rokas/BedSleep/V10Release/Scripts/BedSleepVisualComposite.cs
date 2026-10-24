@@ -9,6 +9,7 @@ namespace Rokas.BedSleep.V10Release
     /// 3D-to-UI projection for the dedicated Watch_OLED_Screen_Mesh surface.
     /// </summary>
     [DisallowMultipleComponent]
+    [UnityEngine.Scripting.Preserve]
     public sealed class BedSleepVisualComposite : MonoBehaviour
     {
         // Framing is computed from genuine imported mesh bounds, not the old
@@ -32,17 +33,24 @@ namespace Rokas.BedSleep.V10Release
 
         // Exposed directly to the ROKAS bridge. The old reflection-only
         // bridge could not prove that the standalone build installed Argon.
+        [UnityEngine.Scripting.Preserve]
         public bool ArgonFullVisualActive => _argonFullVisualActive;
         public string ArgonVisualStatus => _argonFullVisualActive
             ? "ARGON_FULL_ACTIVE" : "ARGON_NOT_INSTALLED";
+        [UnityEngine.Scripting.Preserve]
         public Camera PresentationCamera => _presentationCamera;
+        [UnityEngine.Scripting.Preserve]
         public RenderTexture CompositeRenderTexture { get; private set; }
+        [UnityEngine.Scripting.Preserve]
         public KeikoFPSArmRigController ArmRig { get; private set; }
+        [UnityEngine.Scripting.Preserve]
         public Smartwatch3DController Watch { get; private set; }
+        [UnityEngine.Scripting.Preserve]
         public SmartwatchOLEDPresenter Oled { get; private set; }
         public SmartwatchInputRouter InputRouter { get; private set; }
         public BedSleepSFXController Sfx { get; private set; }
 
+        [UnityEngine.Scripting.Preserve]
         public void InitializeComposite(RectTransform targetUiRect = null)
         {
             if (CompositeRenderTexture != null && ArmRig != null) return;
