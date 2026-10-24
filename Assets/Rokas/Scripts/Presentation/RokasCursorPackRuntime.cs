@@ -31,15 +31,15 @@ namespace Rokas.Presentation
         };
 
         // Each hotspot is located exactly at the active fingertip/contact.
-        // These are normalized to the prepared 96x96 cursor PNGs.
+        // These are normalized to the prepared 176x176 cursor PNGs.
         private static readonly Vector2[] Hotspots =
         {
-            new Vector2(90, 29),
-            new Vector2(90, 32),
-            new Vector2(88, 34),
-            new Vector2(83, 32),
-            new Vector2(82, 38),
-            new Vector2(87, 57)
+            new Vector2(165, 53),
+            new Vector2(165, 59),
+            new Vector2(161, 62),
+            new Vector2(152, 59),
+            new Vector2(150, 70),
+            new Vector2(159, 104)
         };
 
         private static RokasCursorPackRuntime owner;
@@ -70,10 +70,10 @@ namespace Rokas.Presentation
             {
                 textures[i] = Resources.Load<Texture2D>(ResourceNames[i]);
                 if (textures[i] == null ||
-                    textures[i].width != 96 || textures[i].height != 96)
+                    textures[i].width != 176 || textures[i].height != 176)
                 {
                     foundAll = false;
-                    Debug.LogWarning("[ROKAS CURSOR] Missing/non-96 source: " +
+                    Debug.LogWarning("[ROKAS CURSOR] Missing/non-176 source: " +
                                      ResourceNames[i] + "; system cursor retained.");
                 }
             }
