@@ -206,7 +206,7 @@ namespace Rokas.Presentation
 
         internal static float Darkness(float open)
         {
-            return Ease((1f - Mathf.Clamp01(open)) / .17f);
+            return Ease((1f - Mathf.Clamp01(open)) / .38f);
         }
 
         private static bool EyeContour(float x, float closure, bool right,
@@ -255,6 +255,14 @@ namespace Rokas.Presentation
                 upper = Mathf.Max(upper, ru);
                 lower = Mathf.Min(lower, rl);
             }
+            // Keep the central first-person visual field connected until
+            // late closure; prevent the V11 abrupt binocular nose bridge.
+            float centerBlend = Ease((open - .38f) / .30f) *
+                Ease(1f - Mathf.Abs(x - .5f) / .18f);
+            upper = Mathf.Lerp(upper, Mathf.Max(upper,
+                .415f + .45f * open), centerBlend);
+            lower = Mathf.Lerp(lower, Mathf.Min(lower,
+                .415f - .16f * open), centerBlend);
             return upper - lower > .0001f;
         }
 
