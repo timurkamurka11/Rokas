@@ -27,6 +27,21 @@ namespace Rokas.BedSleep.Argon.Editor
                 throw new BuildFailedException(
                     "[ROKAS V13] Argon Resources hand prefab missing: " + ArgonPath);
 
+            // A prefab can exist but contain broken/missing imported FBX
+            // children. Prevent the player from silently choosing old visuals.
+            bool hasSkin = false, hasSleeve = false, hasFace = false;
+            foreach (Transform part in argon.GetComponentsInChildren<Transform>(true))
+            {
+                if (part.name == "Keiko_Hand_Skin_Mesh") hasSkin = true;
+                if (part.name == "Keiko_Homewear_Sleeve_Mesh") hasSleeve = true;
+                if (part.name == "Watch_OLED_Display") hasFace = true;
+            }
+            if (!hasSkin || !hasSleeve || !hasFace)
+                throw new BuildFailedException(
+                    "[ROKAS V13] Argon Resources prefab is incomplete. " +
+                    "Skin=" + hasSkin + " sleeve=" + hasSleeve +
+                    " physical OLED=" + hasFace + ". Reimport genuine FBX.");
+
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CompositePath);
             if (prefab == null)
             {
