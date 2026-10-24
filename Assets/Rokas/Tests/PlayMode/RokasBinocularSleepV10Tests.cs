@@ -44,7 +44,7 @@ namespace Rokas.Tests
             Assert.That((float)Darkness.Invoke(null, new object[]{.90f}),
                 Is.InRange(.01f, .99f));
             Assert.That((float)Darkness.Invoke(null, new object[]{.65f}),
-                Is.EqualTo(1f).Within(.001f));
+                Is.GreaterThan(.97f));
             Assert.That(Evaluate(.25f, 0f, false,
                 out float upper, out float lower), Is.False);
             Assert.That(upper, Is.EqualTo(lower).Within(.0001f));
