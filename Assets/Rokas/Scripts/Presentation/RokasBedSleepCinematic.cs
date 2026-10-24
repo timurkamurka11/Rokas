@@ -153,6 +153,9 @@ namespace Rokas.Presentation
         public void Tick(float dt)
         {
             if (!Active) return;
+            // Amortize eye-mask generation: no huge initialization cost when
+            // the player clicks the bed. Keep one mask per frame at most.
+            eyeAperture?.WarmupOneFrame();
             elapsedVisual += Mathf.Max(0f, dt);
             // Very restrained breathing and cursor parallax in the authored
             // photographic plate; only a small movement, never a 3D camera.
@@ -520,7 +523,7 @@ namespace Rokas.Presentation
             alarmControls.blocksRaycasts = false;
             alarmControls.interactable = false;
             alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
-                "ПОСТАВИТЬ БУДИЛЬНИК", 784, 923, 352, 117,
+                "ПОСТАВИТЬ БУДИЛЬНИК", 744, 910, 432, 144,
                 OpenAlarm, true);
             RokasBedAuthoredActionButton.Apply(alarmButton, "SetAlarmButton");
             if (!armWatchAvailable)
@@ -600,7 +603,7 @@ namespace Rokas.Presentation
             {
                 focusButton = ui.Button(watchControls.transform,
                     "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
-                    784, 925, 352, 117, ToggleWatchFocus, true);
+                    744, 910, 432, 144, ToggleWatchFocus, true);
                 // Legacy focus feedback paints a blue rectangle over the
                 // user's authored gold PNG. Only the new gold hover remains.
                 RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
@@ -680,16 +683,18 @@ namespace Rokas.Presentation
             // Curtain must render ON TOP of the authored room, video and eye
             // overlays, otherwise it looks like a hard cut on first bed click.
             if (curtain != null) curtain.transform.SetAsLastSibling();
-            yield return FadeCurtain(0f, 1f, 1.25f);
+            // The room fades quickly, but never flashes to the ceiling.
+            // Previous 1.25s + 1.25s was perceived as slow/laggy.
+            yield return FadeCurtain(0f, 1f, .62f);
             if (cancelRequested) yield break;
-            yield return Wait(.16f);
+            yield return Wait(.10f);
             lyingPov.color = Color.white;
-            yield return FadeCurtain(1f, 0f, 1.25f);
+            yield return FadeCurtain(1f, 0f, .68f);
 
             state = State.LyingViewActive;
-            yield return Wait(.35f);
+            yield return Wait(.10f);
             state = State.AlarmButtonVisible;
-            yield return FadeControls(alarmControls, 0f, 1f, .38f);
+            yield return FadeControls(alarmControls, 0f, 1f, .22f);
             alarmControls.blocksRaycasts = true;
             alarmControls.interactable = true;
             sequence = null;
@@ -779,14 +784,15 @@ namespace Rokas.Presentation
             // Sound when sleep is the player's natural settling/yawn. Trigger
             // ONCE at the start of lying down; not on a watch UI button.
             PlayAuthoredFoley(settlingToSleepClip, .85f);
-            // An intentionally heavy partial blink precedes the last close.
-            yield return FadeEyelids(0f, .45f, .46f);
-            yield return Wait(.16f);
-            yield return FadeEyelids(.45f, .20f, .38f);
-            // The "Soft Fade" quiet-watch option actually changes the
-            // sleep transition without modifying the room/hand composition.
-            yield return FadeEyelids(.20f, 1f,
-                (quietMask & 2) != 0 ? 1.42f : 1.12f);
+            // The player yawns FIRST. Only after the recorded yawn has
+            // finished do two real curved black lids close over the room.
+            // No full-screen fade may replace their physical silhouette.
+            yield return Wait(settlingToSleepClip != null ?
+                Mathf.Max(.20f, settlingToSleepClip.length - .12f) : .65f);
+            if (eyeAperture != null) eyeAperture.BringToFront();
+            yield return FadeEyelids(0f, 1f,
+                (quietMask & 2) != 0 ? 1.45f : 1.25f);
+            yield return Wait(.22f);
             state = State.SleepCommitted;
             // ROKAS remains the ONLY owner of the durable save.
             // V3's optional event must not create a parallel save path.
@@ -874,7 +880,7 @@ namespace Rokas.Presentation
                 blurredPov.color = new Color(1f,1f,1f,.88f);
             // Make two curved half-oval openings visible with a blurred
             // ceiling beneath. A longer natural blink removes hard cuts.
-            yield return FadeEyelids(1f, 0f, 3.0f);
+            yield return FadeEyelids(1f, 0f, 2.6f);
             wakingReveal = false;
             if (blurredPov != null)
                 blurredPov.color = new Color(1f,1f,1f,0f);
