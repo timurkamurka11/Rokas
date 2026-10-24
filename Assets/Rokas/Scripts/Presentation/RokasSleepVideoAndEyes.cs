@@ -164,7 +164,7 @@ namespace Rokas.Presentation
 
     /// <summary>
     /// Real eye-shaped upper+lower eyelid silhouettes, not two black bars.
-    /// Precomputed antialiased two-eye aperture masks. 25 fixed textures
+    /// Precomputed antialiased two-eye aperture masks. 33 fixed textures
     /// rather than rebuilding textures each frame, keeping GC silent.
     /// </summary>
     internal sealed class RokasSleepEyeAperture : IDisposable
@@ -172,7 +172,7 @@ namespace Rokas.Presentation
         // Old 33 x 640x360 precomputed masks took millions of expensive
         // per-pixel Mathf.Exp/Pow calls on the FIRST bed click and visibly
         // stalled the room-to-ceiling fade. Cache lightweight masks once.
-        private const int Steps = 16;
+        private const int Steps = 32;
         private readonly GameObject gameObject;
         private readonly RawImage image;
         private readonly Texture2D[] frames = new Texture2D[Steps + 1];
@@ -210,51 +210,47 @@ namespace Rokas.Presentation
         {
             const int w = 320, h = 180;
             var data = new Color32[w * h];
-            // 0 = closed; 1 = fully open. Semioval upper+lower lids.
-            float openShape = Mathf.Sin(Mathf.PI * .5f * open);
-            // The old 0.345 radii caused both eye apertures to overlap
-            // into a single oversized opening. These independent, wide
-            // half-ovals resemble real upper/lower eyelids in first person.
-            float wide = .222f;
-            float tall = .255f * openShape;
-            for (int y = 0; y < h; ++y)
+            float openness = Mathf.Clamp01(open);
+            // IMPORTANT: In V7 every partially-open frame painted the entire
+            // periphery black at once, so the user saw a rectangular blackout.
+            // Instead the upper/lower lids must ENTER FROM OFFSCREEN and
+            // progressively meet along two gently curved eye contours.
             for (int x = 0; x < w; ++x)
             {
-                float u = (x+.5f) / w, v = (y+.5f) / h;
-                float transparency = 0f;
-                for (int eye = 0; eye < 2; ++eye)
+                float u = (x + .5f) / w;
+                float eyeCenter = u < .5f ? .255f : .745f;
+                float corner = Mathf.Pow(Mathf.Clamp01(
+                    Mathf.Abs(u - eyeCenter) / .255f), 1.6f);
+                // Slightly narrower at the outer/inner corners: two oval
+                // openings, not rectangular horizontal black shutters.
+                float eyelidBend = openness * (1f - openness) * corner;
+                float topEdge = .5f + .52f * openness - .22f * eyelidBend;
+                float bottomEdge = .5f - .52f * openness + .18f * eyelidBend;
+                float feather = .008f + .006f * (1f - openness);
+                // The narrow nasal bridge becomes visible only once the
+                // eye movement is underway; never pop a black band at start.
+                float nose = Mathf.SmoothStep(.32f, .76f, 1f - openness) *
+                    (1f - Mathf.SmoothStep(.014f, .048f, Mathf.Abs(u - .5f)));
+                for (int y = 0; y < h; ++y)
                 {
-                    float cx = eye == 0 ? .26f : .74f;
-                    float dx = (u-cx)/wide;
-                    if (Mathf.Abs(dx) > 1.12f) continue;
-                    // Asymmetric organic eye curve with drooping outer edge.
-                    float lidCurve = Mathf.Sqrt(Mathf.Max(0f, 1f-dx*dx));
-                    float top = .515f + tall*lidCurve*.96f - .012f*dx;
-                    float bottom = .515f - tall*lidCurve*.69f - .010f*dx;
-                    float feather = .012f + .015f*(1f-open);
-                    float a = Mathf.SmoothStep(bottom-feather,
-                        bottom+feather, v) *
-                        (1f-Mathf.SmoothStep(top-feather, top+feather, v));
-                    transparency = Mathf.Max(transparency,a);
+                    float v = (y + .5f) / h;
+                    float upperLid = Mathf.SmoothStep(
+                        topEdge - feather, topEdge + feather, v);
+                    float lowerLid = 1f - Mathf.SmoothStep(
+                        bottomEdge - feather, bottomEdge + feather, v);
+                    float opacity = Mathf.Max(nose,
+                        Mathf.Max(upperLid, lowerLid));
+                    data[y * w + x] = new Color32(0, 0, 0,
+                        (byte)Mathf.RoundToInt(Mathf.Clamp01(opacity) * 255f));
                 }
-                // A subtle dark bridge between both pupils adds a believable
-                // first-person brow/nose silhouette at the intermediate state.
-                float noseX = Mathf.Abs(u-.5f)/.028f;
-                float nose = .42f * Mathf.Max(0f,
-                    1f - noseX * noseX);
-                float opacity = Mathf.Clamp01(1f-transparency*(1f-nose));
-                // Fade residual peripheral darkness completely at the end.
-                opacity *= 1f-Mathf.SmoothStep(.86f, 1f, open);
-                data[y*w+x] = new Color32(0,0,0,
-                    (byte)Mathf.RoundToInt(opacity*255f));
             }
-            Texture2D tex = new Texture2D(w,h,TextureFormat.RGBA32,false);
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             tex.name = "ROKAS_Eyes_Curved_Open_" +
-                Mathf.RoundToInt(open*100f);
+                Mathf.RoundToInt(open * 100f);
             tex.wrapMode = TextureWrapMode.Clamp;
             tex.filterMode = FilterMode.Bilinear;
             tex.SetPixels32(data);
-            tex.Apply(false,true);
+            tex.Apply(false, true);
             return tex;
         }
 
