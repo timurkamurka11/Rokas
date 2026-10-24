@@ -53,6 +53,9 @@ namespace Rokas.Presentation
             // pre-existing V3/2D behaviour completely intact.
             var v10 = TryCreateV10(currentClockHours);
             if (v10 != null) return v10;
+            Debug.LogError("[ROKAS HAND V14] V10 driver unavailable. " +
+                "Attempting OLD V3 fallback only to preserve playability. " +
+                "This is not a successful 3D Argon hand load.");
             // A missing installer must NEVER break the existing hub.
             Type controllerType = FindType("ROKAS.BedSleep.BedSleepCinematicController");
             Type phaseType = FindType("ROKAS.BedSleep.BedSleepStateV3");
@@ -157,53 +160,85 @@ namespace Rokas.Presentation
 
         private static RokasBedSleepProductionRigBridge TryCreateV10(float clock)
         {
-            const string resource = "BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate";
+            const string resource =
+                "BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate";
             GameObject prefab = Resources.Load<GameObject>(resource);
-            if (prefab == null) return null;
+            if (prefab == null)
+            {
+                Debug.LogError("[ROKAS HAND V14] Genuine V10 driver prefab NOT FOUND " +
+                    "by Resources.Load in " + Application.platform +
+                    ": " + resource + ". V13 build-time file check was not runtime proof.");
+                return null;
+            }
+
             GameObject instance = null;
             try
             {
                 instance = UnityEngine.Object.Instantiate(prefab);
                 instance.name = "ROKAS_BedSleep_V10_RealFBX_Rig";
-                var compositeType = FindType("Rokas.BedSleep.V10Release.BedSleepVisualComposite");
-                if (compositeType == null)
-                    throw new MissingMemberException("V10 real composite MonoBehaviour was not imported");
-                MonoBehaviour composite = null;
-                foreach (var behaviour in instance.GetComponents<MonoBehaviour>())
-                    if (behaviour != null && behaviour.GetType() == compositeType)
-                        { composite = behaviour; break; }
+
+                // Strong direct component/method/property references make
+                // standalone/IL2CPP linking deterministic. Old reflection-
+                // only activation could fail on a stripped player build.
+                var composite = instance.GetComponent<
+                    Rokas.BedSleep.V10Release.BedSleepVisualComposite>();
                 if (composite == null)
-                    throw new MissingComponentException("V10 prefab lacks imported composite component");
-                Call(composite, "InitializeComposite", (object)null);
-                var rt = GetProperty(composite, "CompositeRenderTexture") as RenderTexture;
-                var cam = GetProperty(composite, "PresentationCamera") as Camera;
-                object rig = GetProperty(composite, "ArmRig");
-                object watch3d = GetProperty(composite, "Watch");
-                object display = GetProperty(composite, "Oled");
-                var skin = rig == null ? null :
-                    GetProperty(rig, "SkinnedRenderer") as SkinnedMeshRenderer;
+                    throw new MissingComponentException(
+                        "Genuine V10 prefab has NO BedSleepVisualComposite in player.");
+                composite.InitializeComposite();
+                if (!composite.ArgonFullVisualActive)
+                    Debug.LogError("[ROKAS HAND V14] V10 driver initialized but " +
+                        "complete Argon replacement did NOT activate. " +
+                        "Check earlier errors for the failed step.");
+
+                var rt = composite.CompositeRenderTexture;
+                var cam = composite.PresentationCamera;
+                var rig = composite.ArmRig;
+                var watch3d = composite.Watch;
+                var display = composite.Oled;
+                var skin = rig != null ? rig.SkinnedRenderer : null;
+
                 if (rt == null || !rt.IsCreated() || cam == null ||
                     skin == null || skin.sharedMesh == null ||
                     skin.bones == null || skin.bones.Length != 25 ||
                     skin.sharedMesh.subMeshCount != 3 ||
                     watch3d == null || display == null)
-                    throw new InvalidOperationException("V10 genuine FBX/RenderTexture preflight failed");
+                    throw new InvalidOperationException(
+                        "V10 compositor failed mesh/RenderTexture/controller " +
+                        "preflight in standalone player.");
+
                 int watchParts = 0;
-                var uniqueMeshes = new System.Collections.Generic.HashSet<Mesh>();
-                foreach (MeshFilter filter in instance.GetComponentsInChildren<MeshFilter>(true))
-                    if (filter.sharedMesh != null && uniqueMeshes.Add(filter.sharedMesh)) watchParts++;
+                var uniqueMeshes =
+                    new System.Collections.Generic.HashSet<Mesh>();
+                foreach (MeshFilter filter in
+                    instance.GetComponentsInChildren<MeshFilter>(true))
+                    if (filter.sharedMesh != null &&
+                        uniqueMeshes.Add(filter.sharedMesh))
+                        watchParts++;
                 if (watchParts < 7)
-                    throw new InvalidOperationException("V10 requires seven unique real watch meshes");
+                    throw new InvalidOperationException(
+                        "V10 driver expected seven watch meshes, found " + watchParts);
+
                 var bridge = new RokasBedSleepProductionRigBridge(
-                    instance, cam, rt, composite, display, rig, watch3d, null, true);
+                    instance, cam, rt, composite, display, rig, watch3d,
+                    null, true);
                 bridge.ConfigureClock(clock);
                 bridge.ChangeState("LyingViewActive");
+                Debug.Log("[ROKAS HAND V14] Driver READY in " +
+                    Application.platform + "; ArgonFull=" +
+                    composite.ArgonFullVisualActive +
+                    "; RT=" + rt.width + "x" + rt.height +
+                    "; 3D skin vertices=" + skin.sharedMesh.vertexCount);
                 return bridge;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Debug.LogWarning("[ROKAS BedSleep V10] Real FBX composite rejected; original 2D fallback remains: " + e);
-                if (instance != null) UnityEngine.Object.Destroy(instance);
+                // Log the complete exception: older V13 only logged one
+                // message, hiding reflection and nested build failures.
+                Debug.LogError("[ROKAS HAND V14] Production driver FAILED: " +
+                    ex.ToString());
+                if (instance != null)
+                    UnityEngine.Object.Destroy(instance);
                 return null;
             }
         }
