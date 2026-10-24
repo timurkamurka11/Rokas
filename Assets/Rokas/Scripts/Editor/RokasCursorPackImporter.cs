@@ -27,7 +27,7 @@ namespace Rokas.Presentation.Editor
             importer.alphaSource = TextureImporterAlphaSource.FromInput;
             importer.alphaIsTransparency = true;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.maxTextureSize = 128;
+            importer.maxTextureSize = 256; // preserve sharp original 176px cursors
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.filterMode = FilterMode.Bilinear;
             importer.sRGBTexture = true;
