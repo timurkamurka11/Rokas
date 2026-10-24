@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -56,6 +57,9 @@ namespace Rokas.Presentation
         private GameObject cursorCanvas;
         private RectTransform softwareCursorRect;
         private RawImage softwareCursorImage;
+        private bool guiCursorDrawn;
+        private bool guiCursorAllowed;
+        private bool warnedHardware;
 
         private void Awake()
         {
@@ -69,23 +73,49 @@ namespace Rokas.Presentation
             }
             owner = this;
             bool foundAll = true;
-            for (int i = 0; i < textures.Length; ++i)
+            for (int i=0; i<textures.Length; ++i)
             {
-                textures[i] = Resources.Load<Texture2D>(ResourceNames[i]);
-                if (textures[i] == null ||
-                    textures[i].width != 176 || textures[i].height != 176)
+                textures[i] = LoadAuthenticCursor(ResourceNames[i]);
+                if (textures[i] == null)
                 {
                     foundAll = false;
-                    Debug.LogWarning("[ROKAS CURSOR] Missing/non-176 source: " +
-                                     ResourceNames[i] + "; system cursor retained.");
+                    Debug.LogError("[ROKAS CURSOR V9] Missing authentic Keiko hand image: " + ResourceNames[i]);
                 }
             }
             packReady = foundAll;
             if (packReady)
             {
-                InitializeSoftwareCursor();
                 Apply(HandCursor.Point);
+                Debug.Log("[ROKAS CURSOR V9] All six original cursor images loaded.");
             }
+            else
+            {
+                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                Cursor.visible = true;
+            }
+        }
+
+        private static Texture2D LoadAuthenticCursor(string resource)
+        {
+            var tex = Resources.Load<Texture2D>(resource);
+            if (tex != null && tex.width > 0 && tex.height > 0) return tex;
+#if UNITY_EDITOR
+            string full = Path.Combine(Application.dataPath, "Resources",
+                resource.Replace('/', Path.DirectorySeparatorChar) + ".png");
+            if (File.Exists(full))
+            {
+                try {
+                    var loaded = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    if (ImageConversion.LoadImage(loaded, File.ReadAllBytes(full)))
+                        return loaded;
+                    UnityEngine.Object.Destroy(loaded);
+                }
+                catch (Exception ex) {
+                    Debug.LogWarning("[ROKAS CURSOR V9] PNG load failed: " + ex.Message);
+                }
+            }
+#endif
+            return null;
         }
 
         private void InitializeSoftwareCursor()
@@ -120,34 +150,20 @@ namespace Rokas.Presentation
 
         private void Update()
         {
-            // Never let a missing PNG or a failed Canvas make the pointer
-            // disappear. Software art is decorative, the native cursor isn't.
             if (!packReady || !hasFocus)
             {
                 Cursor.visible = true;
                 return;
             }
-            bool showInGame = true;
+            guiCursorAllowed = true;
 #if UNITY_EDITOR
-            // Do not hide the native pointer over Inspector, Scene or other
-            // editor windows. The large pointer is ONLY for Game View.
-            var overWindow = UnityEditor.EditorWindow.mouseOverWindow;
-            if (overWindow != null &&
-                overWindow.GetType().Name != "GameView")
-                showInGame = false;
+            var over = UnityEditor.EditorWindow.mouseOverWindow;
+            if (over != null && over.GetType().Name != "GameView")
+                guiCursorAllowed = false;
 #endif
-            if (softwareCursorImage != null)
-            {
-                softwareCursorImage.enabled = showInGame;
-                // Do not suppress Windows/Unity's real cursor until the
-                // large hand has been confirmed visible on the target PC.
-                Cursor.visible = true;
-                if (showInGame && softwareCursorRect != null)
-                    softwareCursorRect.anchoredPosition =
-                        new Vector2(Input.mousePosition.x,
-                                    Input.mousePosition.y);
-            }
-            if (!showInGame) return;
+            // Never show a blank pointer: hide native only after IMGUI drew.
+            Cursor.visible = !(guiCursorAllowed && guiCursorDrawn);
+            if (!guiCursorAllowed) return;
             if (EventSystem.current == null)
             {
                 Apply(HandCursor.Point);
@@ -232,34 +248,48 @@ namespace Rokas.Presentation
             if (!packReady || state == current) return;
             int i = (int)state;
             if (i < 0 || i >= textures.Length || textures[i] == null) return;
-            try
-            {
-                if (softwareCursorImage != null &&
-                    softwareCursorRect != null)
-                {
-                    softwareCursorImage.texture = textures[i];
-                    softwareCursorRect.pivot = new Vector2(
-                        Mathf.Clamp01(Hotspots[i].x / 176f),
-                        1f - Mathf.Clamp01(Hotspots[i].y / 176f));
+            current = state;
+            try {
+                Vector2 hotspot = new Vector2(
+                    Mathf.Clamp(Hotspots[i].x * textures[i].width / 176f, 0f, textures[i].width-1f),
+                    Mathf.Clamp(Hotspots[i].y * textures[i].height / 176f, 0f, textures[i].height-1f));
+                // Keiko art is the native cursor too; not a Windows arrow.
+                Cursor.SetCursor(textures[i], hotspot, CursorMode.Auto);
+            }
+            catch(Exception ex) {
+                if (!warnedHardware) {
+                    Debug.LogWarning("[ROKAS CURSOR V9] Native hand failed, using IMGUI: " + ex.Message);
+                    warnedHardware = true;
                 }
-                else Cursor.SetCursor(textures[i],
-                    Hotspots[i], CursorMode.Auto);
-                current = state;
             }
-            catch (Exception ex)
-            {
-                // A faulty import never blocks input; restore system pointer.
-                Debug.LogError("[ROKAS CURSOR] Unity cursor import failed: " + ex.Message);
-                packReady = false;
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-                Cursor.visible = true;
+        }
+
+        private void OnGUI()
+        {
+            if (!packReady || !hasFocus || !guiCursorAllowed ||
+                Event.current == null || Event.current.type != EventType.Repaint) return;
+            int i = (int)current;
+            if (i < 0 || i >= textures.Length || textures[i] == null) return;
+            var mouse = Input.mousePosition;
+            if (mouse.x < 0 || mouse.y < 0 ||
+                mouse.x > Screen.width || mouse.y > Screen.height) {
+                guiCursorDrawn = false;
+                return;
             }
+            GUI.depth = -10000;
+            GUI.color = Color.white;
+            const float cursorSize = 176f;
+            GUI.DrawTexture(new Rect(mouse.x-Hotspots[i].x,
+                Screen.height-mouse.y-Hotspots[i].y,
+                cursorSize, cursorSize), textures[i], ScaleMode.ScaleToFit, true);
+            guiCursorDrawn = true;
         }
 
         private void OnApplicationFocus(bool focused)
         {
             if (owner != this) return;
             hasFocus = focused;
+            guiCursorDrawn = false;
             if (!focused)
             {
                 Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
