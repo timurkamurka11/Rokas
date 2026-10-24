@@ -53,6 +53,9 @@ namespace Rokas.Presentation
         private GameObject dragTarget;
         private Vector2 pointerDownAt;
         private bool hasFocus = true;
+        private GameObject cursorCanvas;
+        private RectTransform softwareCursorRect;
+        private RawImage softwareCursorImage;
 
         private void Awake()
         {
@@ -78,12 +81,60 @@ namespace Rokas.Presentation
                 }
             }
             packReady = foundAll;
-            if (packReady) Apply(HandCursor.Point);
+            if (packReady)
+            {
+                InitializeSoftwareCursor();
+                Apply(HandCursor.Point);
+            }
+        }
+
+        private void InitializeSoftwareCursor()
+        {
+            // Windows may apply OS cursor scaling no matter whether the
+            // source file is 96px or 176px. This non-interactive overlay
+            // guarantees the game actually displays a 176px Keiko hand.
+            cursorCanvas = new GameObject("ROKAS_Large_Keiko_Cursor",
+                typeof(RectTransform), typeof(Canvas));
+            cursorCanvas.transform.SetParent(transform, false);
+            Canvas canvas = cursorCanvas.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 32760;
+            GameObject display = new GameObject("KeikoCursor_Image_NoRaycast",
+                typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(RawImage));
+            display.transform.SetParent(cursorCanvas.transform, false);
+            softwareCursorRect = display.GetComponent<RectTransform>();
+            softwareCursorRect.anchorMin = Vector2.zero;
+            softwareCursorRect.anchorMax = Vector2.zero;
+            softwareCursorRect.sizeDelta = new Vector2(176f, 176f);
+            softwareCursorImage = display.GetComponent<RawImage>();
+            softwareCursorImage.raycastTarget = false;
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
 
         private void Update()
         {
             if (!packReady || !hasFocus) return;
+            bool showInGame = true;
+#if UNITY_EDITOR
+            // Do not hide the native pointer over Inspector, Scene or other
+            // editor windows. The large pointer is ONLY for Game View.
+            var overWindow = UnityEditor.EditorWindow.mouseOverWindow;
+            if (overWindow != null &&
+                overWindow.GetType().Name != "GameView")
+                showInGame = false;
+#endif
+            if (softwareCursorImage != null)
+            {
+                softwareCursorImage.enabled = showInGame;
+                Cursor.visible = !showInGame;
+                if (showInGame && softwareCursorRect != null)
+                    softwareCursorRect.anchoredPosition =
+                        new Vector2(Input.mousePosition.x,
+                                    Input.mousePosition.y);
+            }
+            if (!showInGame) return;
             if (EventSystem.current == null)
             {
                 Apply(HandCursor.Point);
@@ -170,7 +221,16 @@ namespace Rokas.Presentation
             if (i < 0 || i >= textures.Length || textures[i] == null) return;
             try
             {
-                Cursor.SetCursor(textures[i], Hotspots[i], CursorMode.Auto);
+                if (softwareCursorImage != null &&
+                    softwareCursorRect != null)
+                {
+                    softwareCursorImage.texture = textures[i];
+                    softwareCursorRect.pivot = new Vector2(
+                        Mathf.Clamp01(Hotspots[i].x / 176f),
+                        1f - Mathf.Clamp01(Hotspots[i].y / 176f));
+                }
+                else Cursor.SetCursor(textures[i],
+                    Hotspots[i], CursorMode.Auto);
                 current = state;
             }
             catch (Exception ex)
@@ -179,6 +239,7 @@ namespace Rokas.Presentation
                 Debug.LogError("[ROKAS CURSOR] Unity cursor import failed: " + ex.Message);
                 packReady = false;
                 Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                Cursor.visible = true;
             }
         }
 
@@ -189,6 +250,9 @@ namespace Rokas.Presentation
             if (!focused)
             {
                 Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                Cursor.visible = true;
+                if (softwareCursorImage != null)
+                    softwareCursorImage.enabled = false;
                 current = (HandCursor)(-1);
             }
         }
@@ -196,6 +260,9 @@ namespace Rokas.Presentation
         {
             if (owner != this) return;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            Cursor.visible = true;
+            if (softwareCursorImage != null)
+                softwareCursorImage.enabled = false;
             current = (HandCursor)(-1);
         }
         private void OnDestroy()
@@ -203,6 +270,9 @@ namespace Rokas.Presentation
             if (owner != this) return;
             owner = null;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            Cursor.visible = true;
+            if (cursorCanvas != null)
+                Destroy(cursorCanvas);
         }
     }
 }
