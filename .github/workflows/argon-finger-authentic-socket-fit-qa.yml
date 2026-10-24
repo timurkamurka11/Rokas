@@ -1,0 +1,43 @@
+name: ROKAS Argon - Two Real Palm Socket Contour Fit
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_PALM_SOCKET_FIT_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-real-socket-finger-stitch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source anatomy and Blender script syntax
+        run: |
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/authentic_palm_socket_match.py
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Fit exact source digit rings to existing original palm sockets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonTruePalmSocket
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/authentic_palm_socket_match.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonTruePalmSocket \
+            2>&1 | tee Artifacts/ArgonTruePalmSocket/blender_socket_fit_log.txt
+          test -s Artifacts/ArgonTruePalmSocket/real_source_socket_fit_report.json
+      - name: Store topology evidence, not experimental proprietary FBX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-OriginalTwoPalmSocket-FingerSurfaceTopology
+          path: |
+            Artifacts/ArgonTruePalmSocket/real_source_socket_fit_report.json
+            Artifacts/ArgonTruePalmSocket/blender_socket_fit_log.txt
+          retention-days: 7
+          if-no-files-found: warn

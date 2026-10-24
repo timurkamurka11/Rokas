@@ -1,0 +1,105 @@
+name: ROKAS Argon - Local Root Bridge Geometry Candidate
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_LOCAL_ROOT_BRIDGE_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  finger-root-quads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original FBX and correct patch script
+        run: |
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/local_finger_root_bridge_candidate.py
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+      - name: Install Blender and FBX numpy prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Candidate local finger root joins — preserve every source vertex and UV
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonFingerLocalBridge
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/local_finger_root_bridge_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonFingerLocalBridge \
+            2>&1 | tee Artifacts/ArgonFingerLocalBridge/blender_qa_log.txt
+          test -s Artifacts/ArgonFingerLocalBridge/local_root_bridge_report.json
+          test -s Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+      - name: Stage generated original-bone QA FBX inside TEMPORARY Unity checkout
+        run: |
+          mkdir -p Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA
+          cp Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx \
+            Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/
+          test -s Assets/Rokas/BedSleep/ArgonIntegration/LocalRootBridgeQA/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+          # Stage THE SAME genuine 25-bone FBX into its real runtime
+          # Resources path in CI only. Do not commit proprietary binary.
+          mkdir -p Assets/Rokas/Resources/BedSleep/ArgonConnectedHand
+          cp Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx \
+            Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/ROKAS_Argon_ConnectedHand_25Bone.fbx
+          test -s Assets/Rokas/Resources/BedSleep/ArgonConnectedHand/ROKAS_Argon_ConnectedHand_25Bone.fbx
+      - name: Unity - actual source hand versus Blender root-joined skinned FBX
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonLocalBridgeUnityTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS authentic 25 bone connected finger root Unity deform and 1280x720 comparison
+      - name: Encode true Unity joint deformation frames into before-after H264 MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y ffmpeg; }
+          BASE=Artifacts/ArgonLocalBridgeUnity
+          test "$(find "$BASE/AnimatedOriginal" -name 'frame_*.png' | wc -l)" -eq 72
+          test "$(find "$BASE/AnimatedCandidate" -name 'frame_*.png' | wc -l)" -eq 72
+          sudo ffmpeg -hide_banner -loglevel warning -y \
+            -framerate 24 -i "$BASE/AnimatedOriginal/frame_%03d.png" \
+            -framerate 24 -i "$BASE/AnimatedCandidate/frame_%03d.png" \
+            -filter_complex "[0:v]scale=960:540[left];[1:v]scale=960:540[right];[left][right]hstack=inputs=2,format=yuv420p[out]" \
+            -map "[out]" -c:v libx264 -crf 20 -preset medium -movflags +faststart \
+            "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
+          sudo chmod 644 "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
+          ffprobe -v error -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
+          test -s "$BASE/ROKAS_GenuineUnity_OriginalLeft_ConnectedRight_24fps.mp4"
+      # Private build artifact for local Unity inspection. The repository is
+      # public; DO NOT commit/export the modified FBX into Git or Releases.
+      # User retrieves this only with their authenticated gh CLI.
+      - name: Upload candidate hand mesh for authenticated Unity local preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Unity-PrivateHandModel
+          path: Artifacts/ArgonFingerLocalBridge/ROKAS_Argon_LocalRootBridge_RIG_QA_ONLY.fbx
+          retention-days: 3
+          if-no-files-found: error
+      - name: Keep diagnostics without distributing proprietary experimental FBX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-LocalRootBridge-Candidate-PrivateQA
+          path: |
+            Artifacts/ArgonFingerLocalBridge/local_root_bridge_report.json
+            Artifacts/ArgonFingerLocalBridge/blender_qa_log.txt
+            Artifacts/ArgonLocalBridgeUnity/*.png
+            Artifacts/ArgonLocalBridgeUnity/*.txt
+            Artifacts/ArgonLocalBridgeUnity/*.mp4
+            ${{ steps.unity.outputs.artifactsPath }}
+          retention-days: 7
+          if-no-files-found: warn

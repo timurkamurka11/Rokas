@@ -1,0 +1,41 @@
+name: ROKAS Argon - Real Skin PBR Quality A-B
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_SKIN_MATERIAL_FILTER_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  authentic-skin-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unity - original skin texture vs flat diagnostic vs filtered PBR
+        uses: game-ci/unity-test-runner@v4.3.1
+        id: unity
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonSkinMaterialVisualTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: ROKAS original skin PBR frequency filtered versus flat versus aliased
+      - name: Upload genuine Unity 720p skin closeups and filter report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-AuthenticSkin-FilteredPBR-RealUnity
+          path: |
+            Artifacts/ArgonSkinPBRComparison/*.png
+            Artifacts/ArgonSkinPBRComparison/*.txt
+            ${{ steps.unity.outputs.artifactsPath }}
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Rokas.BedSleep.V10Release
@@ -13,6 +14,11 @@ namespace Rokas.BedSleep.V10Release
         // Framing is computed from genuine imported mesh bounds, not the old
         // fixed V9 camera offset, which could leave the whole watch outside FOV.
         private bool _hasReportedCameraFraming;
+        private bool _argonFullVisualActive;
+        private MeshRenderer _argonOledRenderer;
+        private MeshCollider _argonOledCollider;
+        private RokasArgonFullHandFollower _argonHand;
+        private Light _argonWarmKey, _argonSoftFill;
 
         public int renderWidth = 1920;
         public int renderHeight = 1080;
@@ -36,13 +42,23 @@ namespace Rokas.BedSleep.V10Release
         {
             if (CompositeRenderTexture != null && ArmRig != null) return;
 
+            // Close-up UI previously cropped a 1920px composite 2.1x,
+            // making the watch text look soft even with 1024px OLED source.
+            // Render the SAME original camera at 1.5x linear pixel density;
+            // never change its FOV, pose, 3D lighting or body animation.
+            // Preserve close-up clarity but stop rendering an always-on
+            // 2880x1620 MSAA4 texture before the player even zooms.
+            // 2560x1440 MSAA2 halves the expensive multi-sample workload
+            // while the watch's authored UI remains sharp at 1024x1024.
+            renderWidth = 2560;
+            renderHeight = 1440;
             transform.position = new Vector3(0f, -50f, 0f);
             transform.rotation = Quaternion.identity;
 
             CompositeRenderTexture = new RenderTexture(renderWidth, renderHeight, 24, RenderTextureFormat.ARGB32)
             {
                 name = "RT_ROKAS_BedSleep_3DComposite_V6",
-                antiAliasing = 4
+                antiAliasing = 2
             };
             CompositeRenderTexture.Create();
 
@@ -109,15 +125,316 @@ namespace Rokas.BedSleep.V10Release
             Watch.SeatOledAboveBezel(_presentationCamera);
             FrameImportedArmAndWatch();
 
-            Sfx = GetComponent<BedSleepSFXController>() ?? gameObject.AddComponent<BedSleepSFXController>();
+            // The existing bed click is the only entry point. Replace the WHOLE
+            // visual set with the authentic Argon hand, sleeve and premium watch,
+            // not the old V10 watch with an Argon skin graft.
+            Sfx = GetComponent<BedSleepSFXController>();
+            if (Sfx == null) Sfx = gameObject.AddComponent<BedSleepSFXController>();
             Sfx.InitializeAudio();
+            _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
+                ArmRig, Watch, Oled, _presentationCamera, Sfx,
+                out _argonOledRenderer, out _argonOledCollider);
+            if (_argonFullVisualActive)
+            {
+                _argonHand = GetComponentInChildren<RokasArgonFullHandFollower>(true);
+                ConfigureArgonGameLighting();
+            }
 
-            InputRouter = GetComponent<SmartwatchInputRouter>() ?? gameObject.AddComponent<SmartwatchInputRouter>();
-            InputRouter.ConfigureRouter(_presentationCamera, Watch.OledMeshCollider, targetUiRect);
+            InputRouter = GetComponent<SmartwatchInputRouter>();
+            if (InputRouter == null) InputRouter = gameObject.AddComponent<SmartwatchInputRouter>();
+            InputRouter.ConfigureRouter(_presentationCamera,
+                _argonFullVisualActive ? _argonOledCollider : Watch.OledMeshCollider,
+                targetUiRect);
+            if (_argonFullVisualActive)
+            {
+                // Existing gameplay handlers retain the timer/save state.
+                // These extra listeners provide Foley only, never a second
+                // gameplay input/confirmation handler.
+                InputRouter.OnStepHalfHours += OnArgonCrownStep;
+                InputRouter.OnSetAbsoluteHalfHours += OnArgonCrownAbsolute;
+                InputRouter.OnConfirm += OnArgonWatchConfirm;
+                InputRouter.UseArgonFaceNavigation = true;
+                InputRouter.OnPhysicalOledTap += OnArgonPhysicalOledTap;
+                InputRouter.OnCycleOledScreen += OnArgonCycleOledScreen;
+            }
+        }
+
+        private void OnArgonPhysicalOledTap(Vector2 uv)
+        {
+            NavigatePhysicalOledTap(uv,
+                InputRouter.SetHalfHoursFromPhysicalOled,
+                InputRouter.ConfirmFromPhysicalOled);
+        }
+
+        // Called both by the existing native BedSleep UI and (when enabled)
+        // the dedicated 3D pointer. Single gameplay owner for each event.
+        public bool NavigatePhysicalOledTap(Vector2 uv,
+            Action<int> applyHalfHours, Action confirm)
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return false;
+            var oled = _argonHand.WatchScreen;
+            if (oled == null) return false;
+            _argonHand.NotifyWatchInteraction();
+            // Surface tap is a lightweight OLED click, not a physical top
+            // button press. Physical hardware is animated only when used.
+            Sfx?.PlayUiSelect();
+            switch (oled.Screen)
+            {
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
+                {
+                    // New authored screen is a genuine circular 0.5–12h dial,
+                    // not the old five stacked preset rows. Keep its active
+                    // page visible while the user rotates/taps the ring.
+                    Vector2 fromCenter=uv-new Vector2(.5f,.5f);
+                    int choice=oled.SelectedHalfHours;
+                    if(fromCenter.magnitude < .19f)
+                    {
+                        // Top/bottom chevrons are +/-30 minute buttons.
+                        if(fromCenter.y>.06f) choice++;
+                        else if(fromCenter.y<-.06f) choice--;
+                    }
+                    else
+                    {
+                        float angle=Mathf.Atan2(fromCenter.x,fromCenter.y);
+                        float normalized=Mathf.InverseLerp(-2.36f,2.36f,angle);
+                        choice=Mathf.RoundToInt(Mathf.Lerp(1f,24f,normalized));
+                    }
+                    choice=Mathf.Clamp(choice,2,24);
+                    applyHalfHours?.Invoke(choice);
+                    return true;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Alarm:
+                {
+                    // Top-right switch and three genuine on-face alarm modes.
+                    if (uv.x > .71f && uv.y > .72f)
+                    {
+                        oled.ToggleAlarm();
+                        Sfx?.PlayUiToggle();
+                    }
+                    else if (uv.y >= .14f && uv.y <= .39f)
+                    {
+                        oled.SetAlarmMode(Mathf.Clamp(
+                            Mathf.FloorToInt(uv.x * 3f),0,2));
+                        Sfx?.PlayUiToggle();
+                    }
+                    else if (uv.y>.40f && uv.y<.62f)
+                    {
+                        // Arrow keys on the watch face change the actual
+                        // wake time through the existing sleep-duration owner.
+                        int alarmStepDelta = uv.x < .32f ? -1 : (uv.x > .68f ? 1 : 0);
+                        if (alarmStepDelta != 0)
+                            applyHalfHours?.Invoke(Mathf.Clamp(
+                                oled.SelectedHalfHours + alarmStepDelta, 2, 24));
+                    }
+                    return true;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
+                {
+                    // Each of the 3 cards is independently toggleable.
+                    if (uv.y>=.205f && uv.y<=.49f)
+                    {
+                        int index=Mathf.Clamp(
+                            Mathf.FloorToInt(uv.x*3f),0,2);
+                        oled.ToggleQuietOption(index);
+                        Sfx?.PlayUiToggle();
+                    }
+                    else if (uv.x>.67f && uv.y>.70f)
+                    {
+                        // Top toggle enables/disables all quiet modes.
+                        oled.SetQuietMask(oled.QuietMask==0 ? 7 : 0);
+                        Sfx?.PlayUiToggle();
+                    }
+                    return true;
+                }
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Phases:
+                    // Only tapping the ACTUAL chart enables planning.
+                    // Touching labels or the footer should not alter it.
+                    if (uv.y>=.48f && uv.y<=.76f)
+                    {
+                        oled.TogglePhasePlanning();
+                        Sfx?.PlayUiToggle();
+                    }
+                    return true;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
+                    if (uv.y > .76f) oled.ShowDial();
+                    else if (uv.y < .20f) confirm?.Invoke();
+                    else oled.ShowRelaxation();
+                    return true;
+
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Confirmed:
+                    oled.SetFallingAsleep();
+                    return true;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Cancelled:
+                    oled.ShowDial();
+                    return true;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.FallingAsleep:
+                    return true;
+            }
+            // DIAL: top text opens physical watch presets; large central
+            // sleep-time number opens plan screens; bottom confirms in
+            // existing game flow; touch ring sets a real duration.
+            if (uv.y > .76f) { oled.ShowPresets(); return true; }
+            if (uv.y < .20f) { confirm?.Invoke(); return true; }
+            Vector2 delta = uv - new Vector2(.5f, .5f);
+            if (Mathf.Abs(delta.x) < .21f && Mathf.Abs(delta.y) < .19f)
+            {
+                oled.ShowOverview();
+                return true;
+            }
+            float radius = delta.magnitude;
+            if (radius >= .26f && radius <= .50f)
+            {
+                float angle = Mathf.Atan2(delta.x, delta.y);
+                float progress = Mathf.InverseLerp(-.73f * Mathf.PI,
+                    .73f * Mathf.PI, angle);
+                int steps = Mathf.RoundToInt(Mathf.Lerp(2f, 24f, progress));
+                applyHalfHours?.Invoke(steps);
+            }
+            return true;
+        }
+
+        private void OnArgonCycleOledScreen()
+        {
+            CyclePhysicalOledScreen();
+        }
+
+        public void StepPhysicalCrown(int steps)
+        {
+            if (_argonFullVisualActive && _argonHand != null)
+            {
+                _argonHand.RotatePhysicalCrown(steps);
+                Sfx?.PlayCrownClick();
+            }
+        }
+
+        public void PressPhysicalWatchButton()
+        {
+            if (_argonFullVisualActive && _argonHand != null)
+            {
+                _argonHand.PressPhysicalButton();
+                Sfx?.PlayButtonMechanical();
+            }
+        }
+
+        public void HoverPhysicalOled(Vector2 uv,bool active)
+        {
+            if (_argonFullVisualActive && _argonHand != null &&
+                _argonHand.WatchScreen != null)
+                _argonHand.WatchScreen.SetHover(uv,active);
+        }
+
+        public int GetPhysicalOledTab()
+        {
+            if (!_argonFullVisualActive || _argonHand == null ||
+                _argonHand.WatchScreen == null) return 0;
+            switch (_argonHand.WatchScreen.Screen)
+            {
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Presets:
+                    return 1;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Alarm:
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Overview:
+                    return 2;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Relaxation:
+                    return 3;
+                case Rokas.BedSleep.Argon.Candidate.ArgonRussianWatchScreen.Phases:
+                    return 4;
+                default: return 0;
+            }
+        }
+
+        // Read-only settings exposure to the existing ROKAS sleep owner.
+        // 0 alarm mode, 1 alarm on, 2 quiet bitmask, 3 cycle planning.
+        public int GetPhysicalWatchSetting(int key)
+        {
+            if (!_argonFullVisualActive || _argonHand == null ||
+                _argonHand.WatchScreen == null) return key == 2 ? 7 : (key == 1 ? 1 : 0);
+            var oled=_argonHand.WatchScreen;
+            switch(key)
+            {
+                case 0: return oled.AlarmMode;
+                case 1: return oled.AlarmEnabled ? 1 : 0;
+                case 2: return oled.QuietMask;
+                case 3: return oled.PhasePlanningEnabled ? 1 : 0;
+                default: return 0;
+            }
+        }
+
+        public bool SelectPhysicalOledTab(int tab)
+        {
+            if (!_argonFullVisualActive || _argonHand == null) return false;
+            var oled = _argonHand.WatchScreen;
+            if (oled == null) return false;
+            _argonHand.NotifyWatchInteraction();
+            Sfx?.PlayUiSelect();
+            switch (tab)
+            {
+                case 0: oled.ShowDial(); break;
+                case 1: oled.ShowPresets(); break;
+                case 2: oled.ShowAlarm(); break;
+                case 3: oled.ShowRelaxation(); break;
+                case 4: oled.ShowPhases(); break;
+                default: return false;
+            }
+            return true;
+        }
+
+        public bool CyclePhysicalOledScreen()
+        {
+            if (!_argonFullVisualActive) return false;
+            return SelectPhysicalOledTab((GetPhysicalOledTab() + 1) % 5);
+        }
+
+        private void OnArgonCrownStep(int direction)
+        {
+            if (direction != 0) Sfx?.PlayCrownClick();
+        }
+        private void OnArgonCrownAbsolute(int selectedHalfHours)
+        {
+            Sfx?.PlayCrownClick(selectedHalfHours);
+        }
+        private void OnArgonWatchConfirm()
+        {
+            Sfx?.PlayConfirm();
+        }
+
+        private void ConfigureArgonGameLighting()
+        {
+            // The 3D hand is rendered on layer 30 in its own RT, while the
+            // BEDROOM backdrop remains the original 2D scene. Give that 3D
+            // skin a local night-room key/fill rather than the grey unlit look.
+            _argonWarmKey = CreateArgonLight(
+                "ROKAS_Argon_SoftWarmRoomKey", new Color(1f, .77f, .59f),
+                .96f, Quaternion.Euler(21f, -36f, 0f));
+            _argonSoftFill = CreateArgonLight(
+                "ROKAS_Argon_NightWindowFill", new Color(.64f, .76f, 1f),
+                .27f, Quaternion.Euler(-20f, 50f, 0f));
+        }
+
+        private Light CreateArgonLight(string name, Color tint,
+            float intensity, Quaternion cameraRelativeRotation)
+        {
+            Transform existing = _presentationCamera.transform.Find(name);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(name);
+            go.transform.SetParent(_presentationCamera.transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = cameraRelativeRotation;
+            Light light = go.GetComponent<Light>();
+            if (light == null) light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.color = tint;
+            light.intensity = intensity;
+            light.shadows = LightShadows.None;
+            light.cullingMask = 1 << 30;
+            light.renderMode = LightRenderMode.ForcePixel;
+            light.enabled = true;
+            return light;
         }
 
         private void LateUpdate()
         {
+            // The Argon presenter has its own fixed horizontal camera framing.
+            // Do not let the legacy V10 raised-from-bottom camera override it.
+            if (_argonFullVisualActive) return;
             // Animator and bone attachments settle before LateUpdate, so the
             // camera frames the actual animated wrist. This does not depend
             // on ROKAS View.Tick being called in a focused frame.
@@ -135,7 +452,9 @@ namespace Rokas.BedSleep.V10Release
         public Rect GetProjectedOledRect(RectTransform referenceRect)
         {
             if (_presentationCamera == null || Watch == null) return new Rect(0f, 0f, 0f, 0f);
-            Transform oledTr = Watch.OledRenderer != null ? Watch.OledRenderer.transform : Watch.transform;
+            Transform oledTr = _argonFullVisualActive && _argonOledRenderer != null
+                ? _argonOledRenderer.transform
+                : (Watch.OledRenderer != null ? Watch.OledRenderer.transform : Watch.transform);
 
             Vector3[] localCorners = new Vector3[4]
             {
@@ -147,7 +466,32 @@ namespace Rokas.BedSleep.V10Release
 
             float minX = float.MaxValue, minY = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue;
-            Rect refBounds = referenceRect != null ? referenceRect.rect : new Rect(0f, 0f, renderWidth, renderHeight);
+            // Return logical ROKAS UI coordinates regardless of internal render
+            // target pixel density. The native pointer uses 1920x1080.
+            Rect refBounds = referenceRect != null ? referenceRect.rect :
+                new Rect(0f, 0f, 1920f, 1080f);
+
+            if (_argonFullVisualActive && _argonOledRenderer != null)
+            {
+                // Project the actual imported face bounds: its origin and
+                // dimensions differ from the hard-coded old V10 quad.
+                Bounds realFace = _argonOledRenderer.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 point = new Vector3(
+                        (i & 1) == 0 ? realFace.min.x : realFace.max.x,
+                        (i & 2) == 0 ? realFace.min.y : realFace.max.y,
+                        (i & 4) == 0 ? realFace.min.z : realFace.max.z);
+                    Vector3 vp = _presentationCamera.WorldToViewportPoint(point);
+                    if (vp.z <= 0f) continue;
+                    float x = refBounds.xMin + vp.x * refBounds.width;
+                    float y = refBounds.yMin + vp.y * refBounds.height;
+                    minX = Mathf.Min(minX, x); minY = Mathf.Min(minY, y);
+                    maxX = Mathf.Max(maxX, x); maxY = Mathf.Max(maxY, y);
+                }
+                if (maxX > minX && maxY > minY)
+                    return Rect.MinMaxRect(minX, minY, maxX, maxY);
+            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -355,6 +699,15 @@ namespace Rokas.BedSleep.V10Release
 
         private void OnDestroy()
         {
+            if (InputRouter != null)
+            {
+                InputRouter.OnPhysicalOledTap -= OnArgonPhysicalOledTap;
+                InputRouter.OnCycleOledScreen -= OnArgonCycleOledScreen;
+                InputRouter.UseArgonFaceNavigation = false;
+                InputRouter.OnStepHalfHours -= OnArgonCrownStep;
+                InputRouter.OnSetAbsoluteHalfHours -= OnArgonCrownAbsolute;
+                InputRouter.OnConfirm -= OnArgonWatchConfirm;
+            }
             if (CompositeRenderTexture != null)
             {
                 if (_presentationCamera != null) _presentationCamera.targetTexture = null;

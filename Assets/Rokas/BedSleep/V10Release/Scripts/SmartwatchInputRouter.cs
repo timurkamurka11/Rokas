@@ -19,6 +19,14 @@ namespace Rokas.BedSleep.V10Release
         public event Action<int> OnSetAbsoluteHalfHours;
         public event Action OnConfirm;
         public event Action OnCancel;
+        // Physical Argon OLED taps are routed to the actual Russian screen
+        // controller, not interpreted as legacy V10 confirm-only clicks.
+        public event Action<Vector2> OnPhysicalOledTap;
+        public event Action OnCycleOledScreen;
+        public bool UseArgonFaceNavigation { get; set; }
+        public void ConfirmFromPhysicalOled() => OnConfirm?.Invoke();
+        public void SetHalfHoursFromPhysicalOled(int halfHours) =>
+            OnSetAbsoluteHalfHours?.Invoke(Mathf.Clamp(halfHours, 2, 24));
 
         private Camera _presentationCamera;
         private MeshCollider _oledCollider;
@@ -46,6 +54,11 @@ namespace Rokas.BedSleep.V10Release
             if (!Interactive) return;
 
             if (WasCancelPressed()) { OnCancel?.Invoke(); return; }
+            if (UseArgonFaceNavigation && WasCycleScreenPressed())
+            {
+                OnCycleOledScreen?.Invoke();
+                return;
+            }
             if (WasConfirmKeyPressed()) { OnConfirm?.Invoke(); return; }
 
             if (WasIncrementKeyPressed()) { EmitSingleStep(1); return; }
@@ -59,6 +72,17 @@ namespace Rokas.BedSleep.V10Release
             {
                 if (TryRaycastOledUV(pointerPos, out Vector2 uv))
                 {
+                    if (UseArgonFaceNavigation && OnPhysicalOledTap != null)
+                    {
+                        OnPhysicalOledTap.Invoke(uv);
+                        // Retain direct swipe/drag dial adjustment, but only
+                        // after an actual hit on the physical watch face.
+                        Vector2 c = uv - new Vector2(.5f, .52f);
+                        _isDragging = c.magnitude >= .26f && c.magnitude <= .46f;
+                        _lastDragScreenPos = pointerPos;
+                        _dragAccumulatedPixels = 0f;
+                        return;
+                    }
                     if (uv.y <= 0.24f && uv.x >= 0.20f && uv.x <= 0.80f) { OnConfirm?.Invoke(); return; }
                     Vector2 centered = uv - new Vector2(0.5f, 0.52f);
                     float r = centered.magnitude;
@@ -97,6 +121,18 @@ namespace Rokas.BedSleep.V10Release
             {
                 _isDragging = false;
             }
+        }
+
+        private static bool WasCycleScreenPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame)
+                return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.Tab)) return true;
+#endif
+            return false;
         }
 
         private static bool WasCancelPressed()
@@ -216,7 +252,14 @@ namespace Rokas.BedSleep.V10Release
                 screenPos.x / Mathf.Max(1f, Screen.width),
                 screenPos.y / Mathf.Max(1f, Screen.height));
 
-            if (_compositeRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(_compositeRect, screenPos, null, out Vector2 localPt))
+            Canvas parentCanvas = _compositeRect != null
+                ? _compositeRect.GetComponentInParent<Canvas>() : null;
+            Camera eventCamera = parentCanvas != null &&
+                parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? (parentCanvas.worldCamera != null ? parentCanvas.worldCamera : Camera.main)
+                : null;
+            if (_compositeRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _compositeRect, screenPos, eventCamera, out Vector2 localPt))
             {
                 Rect r = _compositeRect.rect;
                 if (r.width > 1f && r.height > 1f)

@@ -1,0 +1,163 @@
+{
+  "fbx": "ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx",
+  "skin_vertices": 27547,
+  "edge_strain": {
+    "tested_edges": 82635,
+    "maximum_ratio": 7.3904,
+    "p99_ratio": 2.5901,
+    "bad_gt3x_8mm": 0,
+    "worst_torn_edges": []
+  },
+  "reimport_actions": [
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_050",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_05c",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_171",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_2ad",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_32b",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_4ae",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_63b",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_64f",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_6a6",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_6f6",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_737",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_782",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_806",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_8f2",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_9ec",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_a15",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_a51",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_b17",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_b65",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_db8",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_e54",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_e6a",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_e8c",
+    "Key|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Keiko_2_fa8",
+    "Key|RokasV17Rig|V17_Grip|RokasV17Rig|V17_Grip",
+    "Key|RokasV17Rig|V17_Index|RokasV17Rig|V17_Index",
+    "Key|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.001",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.002",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.003",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.004",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.005",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.006",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.007",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.008",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.009",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.010",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.011",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.012",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.013",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.014",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.015",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.016",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.017",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.018",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.019",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.020",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.021",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS.022",
+    "RokasV17Rig|RokasV17Rig|ROKAS_Keiko_25Bone_GenericRig|ROKAS_Kei",
+    "RokasV17Rig|RokasV17Rig|V17_Grip|RokasV17Rig|V17_Grip",
+    "RokasV17Rig|RokasV17Rig|V17_Index|RokasV17Rig|V17_Index",
+    "RokasV17Rig|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living"
+  ],
+  "corrective_shape_names": [
+    "Basis",
+    "Index_MCP_Corrective",
+    "Index_PIP_Corrective",
+    "Index_DIP_Corrective",
+    "Little_MCP_Corrective",
+    "Little_PIP_Corrective",
+    "Thumb_Opposition_Corrective",
+    "Knuckle_Compression_Corrective",
+    "Fist_Grip_Corrective"
+  ],
+  "real_finger_skin_motion": {
+    "Thumb": {
+      "owned_vertices": 71,
+      "max_m": 0.007266,
+      "mean_m": 0.00611,
+      "moved_gt_1mm": 71,
+      "moved_gt_3mm": 71
+    },
+    "Index": {
+      "owned_vertices": 508,
+      "max_m": 0.035785,
+      "mean_m": 0.015656,
+      "moved_gt_1mm": 500,
+      "moved_gt_3mm": 451
+    },
+    "Middle": {
+      "owned_vertices": 1117,
+      "max_m": 0.049001,
+      "mean_m": 0.019226,
+      "moved_gt_1mm": 1113,
+      "moved_gt_3mm": 1063
+    },
+    "Ring": {
+      "owned_vertices": 1480,
+      "max_m": 0.05168,
+      "mean_m": 0.022181,
+      "moved_gt_1mm": 1461,
+      "moved_gt_3mm": 1394
+    },
+    "Little": {
+      "owned_vertices": 1124,
+      "max_m": 0.037951,
+      "mean_m": 0.015491,
+      "moved_gt_1mm": 1095,
+      "moved_gt_3mm": 998
+    }
+  },
+  "index_only_motion": {
+    "Thumb": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    },
+    "Index": {
+      "max_m": 0.02357,
+      "mean_m": 0.010038
+    },
+    "Middle": {
+      "max_m": 0.001658,
+      "mean_m": 2.2e-05
+    },
+    "Ring": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    },
+    "Little": {
+      "max_m": 0.0,
+      "mean_m": 0.0
+    }
+  },
+  "corrective_shape_values_at_grip": {
+    "Index_MCP_Corrective": 0.0,
+    "Little_MCP_Corrective": 0.0,
+    "Fist_Grip_Corrective": 0.0
+  },
+  "imported_corrective_actions": [
+    "Key|RokasV17Rig|V17_Grip|RokasV17Rig|V17_Grip",
+    "Key|RokasV17Rig|V17_Index|RokasV17Rig|V17_Index",
+    "Key|RokasV17Rig|V17_Living|RokasV17Rig|V17_Living"
+  ],
+  "projected_face_counts": {
+    "native_cuff_neutral": 44971,
+    "native_cuff_grip": 44797,
+    "neutral": 55088,
+    "half_fist": 55088,
+    "full_fist": 55088,
+    "release": 55088,
+    "index_flex": 55088,
+    "profile_neutral": 55088,
+    "profile_fist": 55088,
+    "Index_MCP_neutral": 16406,
+    "Index_MCP_grip": 17349,
+    "Little_MCP_neutral": 13598,
+    "Little_MCP_grip": 14610
+  },
+  "result": "FBX round-trip geometry/rig motion proof. NOT an in-game Unity QA."
+}

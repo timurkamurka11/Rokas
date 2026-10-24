@@ -1,0 +1,50 @@
+name: ROKAS Argon - Original Finger to Palm Seam Map
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_FINGER_SEAM_MAP_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check authentic source FBX and script syntax
+        run: |
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/map_original_seams.py
+      - name: Install exact Blender importer prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Map real finger-to-palm boundary contacts without mesh edits
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonFingerSeamMap
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/map_original_seams.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonFingerSeamMap \
+            2>&1 | tee Artifacts/ArgonFingerSeamMap/blender_source_contact_log.txt
+          python3 - <<'PY'
+          import json
+          p='Artifacts/ArgonFingerSeamMap/authentic_finger_palm_contact_atlas.json'
+          d=json.load(open(p))
+          assert d['connected_components']==6
+          assert len(d['components'])==6
+          assert d['components'][0]['vertices']>5000
+          assert all(v['boundary_vertices']>100 for v in d['components'][1:])
+          print('ROKAS VERIFIED AUTHENTIC PALM/FINGER BOUNDARY ATLAS')
+          PY
+      - name: Upload precise original boundary positions and contact correspondences
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Original-Finger-Contact-Atlas
+          path: Artifacts/ArgonFingerSeamMap/*
+          retention-days: 14
+          if-no-files-found: warn

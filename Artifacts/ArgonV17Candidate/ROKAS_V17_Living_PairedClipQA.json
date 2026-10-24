@@ -1,0 +1,14 @@
+{
+  "clip": "V17_Living",
+  "source": "ROKAS_V17_V17_Living_Animated.fbx",
+  "bone_action": "RokasV17Rig|Scene|Scene",
+  "corrective_action": "Key|Scene|Scene",
+  "bone_curve_delta": 0.051598723046491976,
+  "shape_curve_delta": 0.036097584292292595,
+  "corrective_weight_at_start": 0.024421053007245064,
+  "corrective_weight_at_peak": 0.06051863729953766,
+  "index_vertices": 508,
+  "index_skin_max_displacement_m": 0.0025712882576532396,
+  "index_skin_mean_displacement_m": 0.0011197962239986236,
+  "result": "PASS: armature and shape corrections animate inside exported FBX"
+}

@@ -1,0 +1,50 @@
+name: ROKAS Argon - Robust Original Five Digit Manifold Union
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_MANIFOLD_ORIGINAL_SKIN_UNION_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  true-source-shell-only-manifold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source FBX and source-only manifold geometry scripts
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/authentic_manifold_source_union_candidate.py
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/manifold_original_shell_boolean.py
+      - name: Install Blender and real triangle-manifold solid geometry kernel
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy python3-pip
+          python3 -m pip install --break-system-packages --quiet manifold3d
+          python3 -c 'import manifold3d,numpy; print("ROKAS exact original surface manifold engine READY")'
+      - name: Reconstruct five authentic skins with manifold mesh kernel, no voxels
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonRobustManifold
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/authentic_manifold_source_union_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonRobustManifold \
+            2>&1 | tee Artifacts/ArgonRobustManifold/blender_original_manifold_log.txt
+          test -s Artifacts/ArgonRobustManifold/exact_original_skin_union_report.json
+          test -s Artifacts/ArgonRobustManifold/ROKAS_ManifoldOriginalSourceUnion_QA_ONLY.fbx
+      - name: Upload metric proof only, no source FBX nor temporary shell arrays
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-AuthenticFiveDigit-ManifoldGeometrySafetyOnly
+          path: |
+            Artifacts/ArgonRobustManifold/exact_original_skin_union_report.json
+            Artifacts/ArgonRobustManifold/manifold_union_report.json
+            Artifacts/ArgonRobustManifold/blender_original_manifold_log.txt
+          retention-days: 7
+          if-no-files-found: warn

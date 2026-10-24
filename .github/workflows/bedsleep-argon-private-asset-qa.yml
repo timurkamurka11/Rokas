@@ -1,0 +1,146 @@
+name: ROKAS Argon Candidate — Private Release Import QA
+on:
+  # Allows triggering directly on the candidate branch after the original
+  # ZIP appears in the private release, without touching production/default.
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths:
+      - 'Assets/Rokas/BedSleep/ArgonSource/REQUEST_PRIVATE_IMPORT_QA.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+  checks: write
+concurrency:
+  group: rokas-argon-candidate-import
+  cancel-in-progress: false
+jobs:
+  import-actual-argon-fbx:
+    name: Import actual Argon hand/watch assets in Unity 6000.3.19f1
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm exact user-provided existing release asset only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "User uploaded this ZIP to a PUBLIC Release and explicitly requested QA now."
+          echo "This workflow only downloads the already-published asset into ephemeral CI."
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/bedsleep-argon-assets" --jq '.assets[] | select(.name=="ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip") | .id')" = "647623286"
+      - name: Fetch the original 46-file ZIP from the user-provided release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/argon"
+          gh release download bedsleep-argon-assets --repo "$GITHUB_REPOSITORY" \
+            --pattern 'ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip' \
+            --dir "$RUNNER_TEMP/argon"
+          test -s "$RUNNER_TEMP/argon/ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip"
+          echo '60d9a551c2460d5a806be9a63f52dc932960e71ae50cd90ca9631acfdb28f0bd  '"$RUNNER_TEMP/argon/ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip" | sha256sum --check --status
+      - name: Check ZIP integrity and stage FBX / PNG in disposable checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile, os, shutil
+          p = Path(os.environ["RUNNER_TEMP"]) / "argon" / "ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY.zip"
+          dst = Path("Assets/Rokas/BedSleep/ArgonSource")
+          prefix = "ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY/"
+          with zipfile.ZipFile(p) as archive:
+              assert archive.testzip() is None, "Argon ZIP CRC failure"
+              names = archive.namelist()
+              assert len(names) == 46, f"Expected 46 real asset files, got {len(names)}"
+              for name in names:
+                  path = Path(name)
+                  assert not path.is_absolute() and ".." not in path.parts, "Unsafe ZIP path"
+                  assert name.startswith(prefix), "Unexpected ZIP root directory"
+                  rel = Path(name[len(prefix):])
+                  if rel.parts and rel.parts[0] in ("Models", "Animations", "Textures"):
+                      target = dst / rel
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      with archive.open(name) as inp, open(target, "wb") as out:
+                          shutil.copyfileobj(inp, out)
+          assert (dst / "Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx").stat().st_size > 100000
+          assert (dst / "Models/ROKAS_Smartwatch_HighDetail.fbx").stat().st_size > 100000
+          with zipfile.ZipFile(p) as archive:
+              master = archive.read("ROKAS_ARGON_HAND_SMARTWATCH_UNITY_READY/Source/ROKAS_Hand_Smartwatch_Original.glb")
+              (p.parent / "original-master.glb").write_bytes(master)
+          print("Staged original GLB and exact FBX / texture assets.")
+          PY
+      - name: Re-export real skinned FBX from source GLB with Blender
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v blender >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends blender python3-numpy
+          else
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends python3-numpy
+          fi
+          rm -f "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx"
+          rm -f "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Smartwatch_HighDetail.fbx"
+          blender --background --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/reexport_argon_master_glb.py -- "$RUNNER_TEMP/argon/original-master.glb" "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models"
+          test -s "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx"
+          test -s "$GITHUB_WORKSPACE/Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Smartwatch_HighDetail.fbx"
+      - name: Unity EditMode — real FBX, 3 skinned meshes, 25 joints, seven watch parts, eight clips
+        id: unity
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.3.19f1
+          testMode: EditMode
+          customParameters: -testFilter Rokas.BedSleep.Argon.Editor.RokasArgonCandidateImportTests
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          checkName: Argon Genuine FBX Unity Candidate Import QA
+      - name: Publish verified Argon source FBX, PNG and prefab to isolated GitHub branch only
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          gate="Assets/Rokas/BedSleep/ArgonSource/REQUEST_PRIVATE_IMPORT_QA.txt"
+          if ! grep -Fxq 'PUBLISH_CANDIDATE=YES' "$gate"; then
+            echo "QA-only run; no binary files will be committed."
+            exit 0
+          fi
+          if [ "$GITHUB_REF_NAME" != 'codex/bedsleep-argon-import-candidate' ]; then
+            echo "::error::Refusing to commit candidate files outside the isolated Argon branch."
+            exit 1
+          fi
+          root='Assets/Rokas/BedSleep'
+          test -s "$root/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx"
+          test -s "$root/ArgonSource/Models/ROKAS_Smartwatch_HighDetail.fbx"
+          test -s "$root/ArgonCandidate/PF_Argon_Keiko_Hand_Watch_Preview.prefab"
+          git config user.name 'rokas-argon-ci[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Add actual original textures, Blender-native FBX and Unity-generated
+          # GUID metadata together so all prefab/material references survive clones.
+          git add -f "$root/ArgonSource/Models/" "$root/ArgonSource/Textures/" "$root/ArgonCandidate/"
+          if git diff --cached --quiet; then
+            echo "Validated binary candidate already committed; nothing changed."
+            exit 0
+          fi
+          git commit -m 'assets(bedsleep): exact Argon 3D hand/watch Unity QA candidate, not active'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
+
+      - name: Keep Unity EditMode logs and candidate prefab for visual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-Candidate-Unity-Import-Evidence
+          path: |
+            ${{ steps.unity.outputs.artifactsPath }}
+            Assets/Rokas/BedSleep/ArgonCandidate/
+            Artifacts/ArgonCandidate/
+          if-no-files-found: warn
+          retention-days: 14

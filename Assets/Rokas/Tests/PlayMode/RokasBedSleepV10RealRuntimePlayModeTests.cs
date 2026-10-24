@@ -80,8 +80,8 @@ namespace Rokas.Tests
                 BindingFlags.Public | BindingFlags.Instance)?.GetValue(composite) as RenderTexture;
             Assert.That(rt, Is.Not.Null, "V10 RenderTexture failed to initialize.");
             Assert.That(rt.IsCreated(), Is.True);
-            Assert.That(rt.width, Is.EqualTo(1920));
-            Assert.That(rt.height, Is.EqualTo(1080));
+            Assert.That(rt.width, Is.EqualTo(2560));
+            Assert.That(rt.height, Is.EqualTo(1440));
 
             var camera = type.GetProperty("PresentationCamera",
                 BindingFlags.Public | BindingFlags.Instance)?.GetValue(composite) as Camera;

@@ -24,6 +24,8 @@ namespace Rokas.Presentation
         private readonly Type stateType;
         private bool released;
         private readonly bool usesV10;
+        private MethodInfo cachedHoverMethod;
+        private object[] cachedHoverArgs;
 
         public RenderTexture Texture => target;
         public bool Ready => !released && controller != null && camera != null;
@@ -260,6 +262,19 @@ namespace Rokas.Presentation
                 Mathf.Repeat(currentGameTimeHours, 24f) * 60f), h);
         }
 
+        // Updates the native clock without resetting the selected duration.
+        public void SyncComputerClock(float clockHours,float durationHours)
+        {
+            if(!Ready) return;
+            currentGameTimeHours=Mathf.Repeat(clockHours,24f);
+            if(usesV10)
+            {
+                int minutes=Mathf.FloorToInt(currentGameTimeHours*60f) % 1440;
+                int steps=Mathf.Clamp(Mathf.RoundToInt(durationHours*2f),2,24);
+                Call(oled,"ConfigureTime",minutes/60,minutes%60,steps);
+            }
+        }
+
         private float currentGameTimeHours;
         public void ConfigureClock(float clockHours)
         {
@@ -272,12 +287,21 @@ namespace Rokas.Presentation
             if (!Ready || direction == 0) return;
             if (usesV10)
             {
+                // Step the real watch crown only. The hidden V10 hand's
+                // PlayCrownFeedback forced pose-state changes which caused
+                // visible Argon wrist/camera jitter on every wheel notch.
                 Call(watch, "StepCrown", direction);
-                Call(armAnimation, "PlayCrownFeedback", direction);
+                Call(controller, "StepPhysicalCrown", direction);
                 return;
             }
             Call(watch, "RotateCrownForStep", direction);
             Call(armAnimation, "TriggerCrownTickImpulse", direction);
+        }
+
+        public void PressWatchHardware()
+        {
+            if (Ready && usesV10)
+                Call(controller, "PressPhysicalWatchButton");
         }
 
         public void TickIdle(float deltaTime)
@@ -320,6 +344,75 @@ namespace Rokas.Presentation
                 Mathf.Clamp((1f-viewport.y)*1080f-height*.48f,
                     0f, 1080f-height),
                 width, height);
+        }
+
+        // Native BedSleep owns mouse/keyboard input in the actual game.
+        // The V10 router is deliberately disabled, so expose ONLY the
+        // physical Argon watch menu response through the existing UI,
+        // preserving its single duration/confirm gameplay authority.
+        public bool NavigateWatchFace(Vector2 uv,
+            Action<int> applyHalfHours, Action confirm)
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "NavigatePhysicalOledTap", BindingFlags.Public | BindingFlags.Instance);
+            if (method == null) return false;
+            return method.Invoke(controller, new object[] {
+                uv, applyHalfHours, confirm
+            }) is bool navigated && navigated;
+        }
+
+        public int GetSelectedWatchTab()
+        {
+            if (!Ready || !usesV10 || controller == null) return 0;
+            MethodInfo method = controller.GetType().GetMethod(
+                "GetPhysicalOledTab", BindingFlags.Public | BindingFlags.Instance);
+            return method == null ? 0 : (int)method.Invoke(controller, null);
+        }
+
+        public void SetWatchHover(Vector2 uv,bool active)
+        {
+            if(!Ready || !usesV10 || controller==null) return;
+            if(cachedHoverMethod==null)
+                cachedHoverMethod=controller.GetType().GetMethod(
+                    "HoverPhysicalOled",
+                    BindingFlags.Public | BindingFlags.Instance);
+            if(cachedHoverMethod==null)return;
+            if(cachedHoverArgs==null)
+                cachedHoverArgs=new object[2];
+            cachedHoverArgs[0]=uv;
+            cachedHoverArgs[1]=active;
+            cachedHoverMethod.Invoke(controller,cachedHoverArgs);
+        }
+
+        public int GetWatchSetting(int key)
+        {
+            if(!Ready || !usesV10 || controller==null)
+                return key==2 ? 7 : (key==1 ? 1 : 0);
+            var method=controller.GetType().GetMethod("GetPhysicalWatchSetting",
+                BindingFlags.Public | BindingFlags.Instance);
+            if(method==null) return key==2 ? 7 : (key==1 ? 1 : 0);
+            return (int)method.Invoke(controller,new object[]{key});
+        }
+
+        public bool SelectWatchTab(int index)
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "SelectPhysicalOledTab",
+                BindingFlags.Public | BindingFlags.Instance);
+            return method != null &&
+                method.Invoke(controller, new object[] { index })
+                    is bool handled && handled;
+        }
+
+        public bool CycleWatchFace()
+        {
+            if (!Ready || !usesV10 || controller == null) return false;
+            MethodInfo method = controller.GetType().GetMethod(
+                "CyclePhysicalOledScreen", BindingFlags.Public | BindingFlags.Instance);
+            return method != null &&
+                method.Invoke(controller, null) is bool handled && handled;
         }
 
         public void SetStateInputDisabled()

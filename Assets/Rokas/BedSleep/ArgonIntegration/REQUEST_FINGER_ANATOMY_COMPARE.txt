@@ -1,0 +1,4 @@
+ROKAS authentic finger anatomical visual A/B.
+Three separate original FBX prefab instances: unmodified original, rest-safe 25-bone compensated retarget, retarget plus proximal ring/pinky socket blend.
+Render identical animated first-person horizontal hand under real Unity camera, never synthetic placeholder.
+Report actual visual pixels, isolate fingers, only accept evidence. No game V10 merge or source FBX edit.

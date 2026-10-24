@@ -1,0 +1,25 @@
+2026-10-17 ROKAS Argon organic hand entry/exit cinematic polish
+- EXACT approved horizontal sleeve-left/watch-center-left/fingers-right pose
+- Asymmetric wrist-led raise, forearm lag, delayed natural fingers
+- Separate gentle down/away exit, smooth transition; no rigid slide-in
+- Existing FBX, watch, Russian OLED, authentic bedroom resource + cloth sound
+- 58 actual 1280x720 Unity frames at 24fps and short MP4 review
+- Focused Unity tests only; draft PR #13, DO NOT MERGE
+2026-10-17 second visual pass: actual 2.42s Unity preview revealed wrist turn occurring offscreen.
+Re-time wrist lead to remain visible at progress 0.42, forearm follows.
+Additional assertions require >8deg wrist pitch and >4deg forearm secondary rotation while on camera.
+Same approved horizontal final pose; no changes to source FBX, OLED or production V10.
+
+2026-10-17 FINAL TARGETED 82-frame 3.42 second authentic Unity video.
+User screen reference: disconnected pinky/ring finger collars and stiff all-at-once prop arm.
+- Live three-part forearm proximal elbow + twist + wrist lead/lag
+- Existing candidate safe compensated per-finger bindpose and socket geometry only in test movie
+- Exact original neutral pose, original bedroom ceiling, original Russian watch display and audio
+- Slower 28+12+10+32 frames; 720p 24fps; comparison before approval
+- Candidate/QA only, absolutely NO production V10/FBX writes and PR #13 stays DRAFT.
+
+OLED/FINGER POLISH VIDEO CHECK 20261017 V1: physical opaque depth face; seven full-size source-UV states; soft finger variation and revised Russian typography. Genuine 58-frame Unity/MP4, same bedroom/camera, no production V10.
+FINAL ANATOMY+OLED CANDIDATE VIDEO 20261017: 82 authentic 1280x720 Unity frames, ORIGINAL 25-bone FBX with neutral-safe compensated finger weights only; REJECT pinching socket after 3-way photographic QA; physically opaque square OLED; seven real Russian face stills; no text overlap; no V10/main merge.
+OCT17_106_FRAME_NATURAL_FOREARM_WRIST_COUNTER_MOTION_SOFT_PBR_REAL_UNITY_VIDEO
+OCT17_PHYSICAL_SCREEN_PLANE_WRIST_ELBOW_BEND_REMOVE_CHECKER_PBR_106_FRAMES
+CONTINUE_20261017_CANDIDATE_ACTUAL_106FRAME_MATTE_AUTHENTIC_PBR_SKIN_NO_FBXMESH_REPLACEMENT
